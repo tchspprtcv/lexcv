@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** - Phases 1-6 (shipped 2026-05-26) — archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v1.1 UI/UX Alignment** - Phases 7-10 (shipped 2026-05-27) — archive: `.planning/milestones/v1.1-ROADMAP.md`
 - ✅ **v1.2 Utilizador** - Phase 11 (shipped 2026-05-27) — archive: `.planning/milestones/v1.2-ROADMAP.md`
-- 🏃 **v1.3 Security Check** - Phases 12-15 (active)
+- 🏃 **v1.3 Security Check** - Phases 12-17 (active)
 
 ## Phases
 
@@ -170,7 +170,7 @@ Plans:
 </details>
 
 <details>
-<summary>🏃 v1.3 Security Check (Phases 12-15)</summary>
+<summary>🏃 v1.3 Security Check (Phases 12-17)</summary>
 
 ### Phase 12: Infra & Security Tooling
 **Goal**: Fix risky configs, secure secrets, and enable security scanning
@@ -227,12 +227,36 @@ Plans:
 Plans:
 - [x] 15-01: AppSec & RBAC enforcementers, validação de inputs e HTTP headers
 
+### Phase 16: Notificação e Feedback (Toaster)
+**Goal**: Implementar sistema de notificações globais (Toaster) para feedback visual de Sucesso e Erro em toda a aplicação.
+**Depends on**: Phase 15
+**Requirements**: []
+**Success Criteria** (what must be TRUE):
+  1. Configuração global do Toaster Provider no layout raiz da aplicação (`App.tsx` ou `layout.tsx`).
+  2. Implementação visual com ícones e tons adequados (verde/sucesso, vermelho/erro), com animações e auto-fecho (3 a 5 seg).
+  3. Criação de um utilitário/hook (ex: `toast.success()`) de chamada simplificada.
+  4. Interceptor global de erros da API para exibir toasts automáticos em falhas HTTP 400/500.
+**Plans**: 1 plans
+
+Plans:
+- [x] 16-01: Adicionar biblioteca (ex: sonner), configurar provider global, criar hook customizado e interceptor de fetch/axios.
+
+### Phase 17: Ações UI com controlo por permissions
+
+**Goal:** Garantir que ações de novo, editar e menus só aparecem quando a permission efetiva do utilizador permitir `create`, `edit`, `view` ou `gerir`.
+**Requirements**: TBD
+**Depends on:** Phase 16
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 17 to break down)
+
 </details>
 
 ## Progress
 
 **Execution Order:**
-Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15
+Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -251,3 +275,5 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 13. Data Isolation & RLS | v1.3 | 1/1 | Complete | 2026-05-27 |
 | 14. Auth & Session Hardening | v1.3 | 1/1 | Complete | 2026-05-27 |
 | 15. AppSec & RBAC | v1.3 | 1/1 | Complete | 2026-05-27 |
+| 16. Notificação e Feedback (Toaster) | v1.3 | 1/1 | Complete | 2026-05-27 |
+| 17. Ações UI com controlo por permissions | v1.3 | 0/0 | Not Planned | — |

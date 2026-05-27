@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Security Check
-status: in_progress
-last_updated: "2026-05-27T17:20:00.000Z"
-last_activity: 2026-05-27
+status: completed
+stopped_at: Phase 17 context gathered
+last_updated: "2026-05-27T23:15:49.833Z"
+last_activity: 2026-05-27 — Implementação do Toaster via Radix/Shadcn concluída.
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -20,20 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v1.3 (Security Check) — concluir fases 12-15 e atualizar REQUIREMENTS.md/ROADMAP.md
+**Current focus:** Milestone v1.3 (Security Check) — concluir fases 12-16 e atualizar REQUIREMENTS.md/ROADMAP.md
 
 ## Current Position
 
 Phase: Milestone v1.3 (active)
-Plan: 12-01 → 15-01 (security hardening)
-Status: In progress
-Last activity: 2026-05-27 — infra/env hardening e seed RBAC idempotente
+Plan: 16-01 (Notificação e Feedback)
+Status: Complete
+Last activity: 2026-05-27 — Implementação do Toaster via Radix/Shadcn concluída.
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
 - Phase 11 added: Painel de Utilizador
+- Phase 17 added: Ações UI com controlo por permissions
 
 ### Decisions
 
@@ -54,9 +56,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-27
-Stopped at: Preparação de fecho e arquivo de milestones v1.0-v1.2
-Resume file: None
+Last session: 2026-05-27T23:15:49.816Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/phases/LEXCV-17-acoes-com-controle-de-permissions-a-es-de-novo-editar-e-ou-m/17-CONTEXT.md
 
 ## Operator Next Steps
 
