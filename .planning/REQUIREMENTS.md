@@ -3,6 +3,38 @@
 **Defined:** 2026-05-27
 **Core Value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
 
+## v1.6 Requirements (Melhoria nfeature de gestão de clientes)
+
+### Clientes (Enriquecimento, Financeiro e Timeline)
+
+- [ ] **CLI-31**: Enriquecimento cadastral de Clientes: Adicionar campos `categoria`, `ramo_atividade`, `documento_tipo`, `documento_numero` e `detalhes_adicionais` no modelo e formulários.
+- [ ] **CLI-32**: Perfil Financeiro e Faturação: Adicionar preferências de faturamento por cliente, incluindo `valor_hora` (taxa horária), `avenca_mensal`, `moeda` e `iban`.
+- [ ] **CLI-33**: Linha de Tempo de Atividades do Cliente: Timeline unificada no detalhe do cliente que agrega processos, notas, contactos, documentos e registros financeiros.
+- [ ] **CLI-34**: Conflict Check Visual: Validação visual no formulário para alertar se existir correspondência exata ou aproximada de NIF ou nome semelhante no sistema.
+
+## v1.5 Requirements (Melhoria funcionalidades processos)
+
+### Processos (Melhorias)
+
+- [ ] **PRC-21**: Pesquisa multi-campo e filtros avançados na listagem de processos (com UX/performance)
+- [ ] **PRC-22**: Anexos por processo (upload/listagem/download/apagar) com controlo por permissions
+- [ ] **PRC-23**: Checklist de tarefas por processo (CRUD + estado), com seleção de relacionamentos (FKs) quando aplicável
+- [ ] **PRC-24**: Timeline de eventos/movimentações do processo (visão consolidada e navegável)
+- [ ] **PRC-25**: Workflows/estados com validações/transições básicas (produtividade e consistência)
+- [ ] **AGD-21**: Integração forte Processos ↔ Agenda (prazos/alertas/templates simples)
+- [ ] **PRC-26**: Exportar resumo do processo (PDF/CSV)
+
+## v1.4 Requirements (Melhoria módulo clientes)
+
+### Clientes (Melhorias)
+
+- [x] **CLI-21**: Filtros avançados (ex.: tipo, estado, localidade) + pesquisa multi-campo consistente (nome/NIF/telefone/email) com debounce
+- [x] **CLI-22**: Sub-recursos de Cliente: contactos e notas (CRUD) no detalhe do cliente
+- [x] **CLI-23**: Importação de clientes (CSV) com validação e feedback de erros/sucesso
+- [x] **CLI-24**: Exportação de clientes (CSV) respeitando filtros aplicados
+- [x] **CLI-25**: Detecção e merge de clientes duplicados (heurísticas por NIF/email/telefone) com fluxo guiado
+- [x] **CLI-26**: UX/Performance na listagem (loading states consistentes, estados vazios, paginação/virtualização quando aplicável)
+
 ## v1.1 Requirements (UI/UX Alignment)
 
 ### Shell (Sidebar + Top Bar)
@@ -160,4 +192,51 @@
 **Coverage:**
 - v1.1 requirements: 15 total
 - Mapped to phases: 15
+- Unmapped: 0 ✓
+
+## Traceability (v1.4)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CLI-21 | Phase 18 | Complete |
+| CLI-22 | Phase 19 | Complete |
+| CLI-23 | Phase 20 | Complete |
+| CLI-24 | Phase 20 | Complete |
+| CLI-25 | Phase 21 | Complete |
+| CLI-26 | Phase 18 | Complete |
+
+**Coverage:**
+- v1.4 requirements: 6 total
+- Mapped to phases: 6
+- Unmapped: 0 ✓
+
+## Traceability (v1.5)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PRC-21 | Phase 22 | Planned |
+| PRC-22 | Phase 23 | Planned |
+| PRC-23 | Phase 24 | Planned |
+| PRC-24 | Phase 25 | Planned |
+| PRC-25 | Phase 26 | Planned |
+| AGD-21 | Phase 27 | Planned |
+| PRC-26 | Phase 27 | Planned |
+
+**Coverage:**
+- v1.5 requirements: 7 total
+- Mapped to phases: 7
+- Unmapped: 0 ✓
+
+## Traceability (v1.6)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CLI-31 | Phase 28 | Planned |
+| CLI-32 | Phase 29 | Planned |
+| CLI-33 | Phase 30 | Planned |
+| CLI-34 | Phase 31 | Planned |
+
+**Coverage:**
+- v1.6 requirements: 4 total
+- Mapped to phases: 4
 - Unmapped: 0 ✓

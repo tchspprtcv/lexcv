@@ -27,7 +27,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(None — iniciar próximo milestone)
+- Milestone v1.6: **Melhoria nfeature de gestão de clientes** — enriquecimento cadastral (categorias, ramo de atividade, detalhes do documento), perfil financeiro e de faturação, linha de tempo (timeline) de interações e conflict check visual.
 
 ### Out of Scope
 
@@ -62,4 +62,4 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave) | Consistência visual e usabilidade institucional | ✓ Good |
 
 ---
-*Last updated: 2026-05-27 after conclusão do milestone v1.1 (UI/UX)*
+*Last updated: 2026-06-10 after arranque do milestone v1.6 (Melhoria nfeature de gestão de clientes)*

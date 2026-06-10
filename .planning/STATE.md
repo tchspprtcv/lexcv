@@ -1,15 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Security Check
-status: completed
-stopped_at: Phase 17 context gathered
-last_updated: "2026-05-27T23:15:49.833Z"
-last_activity: 2026-05-27 — Implementação do Toaster via Radix/Shadcn concluída.
+milestone: v1.6
+milestone_name: Melhoria nfeature de gestao de clientes
+status: planning
+last_updated: "2026-06-10T15:32:34.247Z"
+last_activity: 2026-06-10
 progress:
-  total_phases: 6
+  total_phases: 0
   completed_phases: 0
-  total_plans: 4
+  total_plans: 0
   completed_plans: 0
   percent: 0
 ---
@@ -18,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-27)
+See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v1.3 (Security Check) — concluir fases 12-16 e atualizar REQUIREMENTS.md/ROADMAP.md
+**Current focus:** Milestone v1.5 (Melhoria funcionalidades processos) — definir requirements e roadmap e iniciar Phase 22
 
 ## Current Position
 
-Phase: Milestone v1.3 (active)
-Plan: 16-01 (Notificação e Feedback)
-Status: Complete
-Last activity: 2026-05-27 — Implementação do Toaster via Radix/Shadcn concluída.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-10 — Milestone v1.6 started
 
 ## Accumulated Context
 
@@ -57,10 +56,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-27T23:15:49.816Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/phases/LEXCV-17-acoes-com-controle-de-permissions-a-es-de-novo-editar-e-ou-m/17-CONTEXT.md
+Stopped at: Milestone v1.5 initialized
+Resume file: .planning/ROADMAP.md
 
 ## Operator Next Steps
 
-- Completar o milestone v1.3 (fases 12-15) e preencher SUMMARY.md por fase
-- Validar/atualizar REQUIREMENTS.md (marcar requisitos completos e traceability)
+- Planear a Phase 22 (/gsd-plan-phase 22) e iniciar execução do milestone v1.5

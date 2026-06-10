@@ -5,7 +5,10 @@
 - ✅ **v1.0 MVP** - Phases 1-6 (shipped 2026-05-26) — archive: `.planning/milestones/v1.0-ROADMAP.md`
 - ✅ **v1.1 UI/UX Alignment** - Phases 7-10 (shipped 2026-05-27) — archive: `.planning/milestones/v1.1-ROADMAP.md`
 - ✅ **v1.2 Utilizador** - Phase 11 (shipped 2026-05-27) — archive: `.planning/milestones/v1.2-ROADMAP.md`
-- 🏃 **v1.3 Security Check** - Phases 12-17 (active)
+- ✅ **v1.3 Security Check** - Phases 12-17 (shipped 2026-06-03) — archive: `.planning/milestones/v1.3-ROADMAP.md`
+- ✅ **v1.4 Melhoria módulo clientes** - Phases 18-21 (shipped 2026-06-03) — archive: `.planning/milestones/v1.4-ROADMAP.md`
+- ⏸ **v1.5 Melhoria funcionalidades processos** - Phases 22-27 (paused/deferred)
+- 🏃 **v1.6 Melhoria nfeature de gestão de clientes** - Phases 28-31 (active)
 
 ## Phases
 
@@ -170,7 +173,7 @@ Plans:
 </details>
 
 <details>
-<summary>🏃 v1.3 Security Check (Phases 12-17)</summary>
+<summary>✅ v1.3 Security Check (Phases 12-17) - SHIPPED 2026-06-03</summary>
 
 ### Phase 12: Infra & Security Tooling
 **Goal**: Fix risky configs, secure secrets, and enable security scanning
@@ -246,17 +249,213 @@ Plans:
 **Goal:** Garantir que ações de novo, editar e menus só aparecem quando a permission efetiva do utilizador permitir `create`, `edit`, `view` ou `gerir`.
 **Requirements**: TBD
 **Depends on:** Phase 16
-**Plans:** 0 plans
+**Plans:** 1 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 17 to break down)
+- [x] 17-01: Ações UI com controlo por permissions
+
+</details>
+
+<details>
+<summary>✅ v1.4 Melhoria módulo clientes (Phases 18-21) - SHIPPED 2026-06-03</summary>
+
+### Phase 18: Clientes — Filtros avançados e UX/Performance
+**Goal**: Melhorar a listagem de clientes com filtros avançados, pesquisa multi-campo e estados de carregamento/erro/vazio consistentes, reduzindo fricção e melhorando performance.
+**Depends on**: Phase 17
+**Requirements**: [CLI-21, CLI-26]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue filtrar por campos adicionais (ex.: tipo, estado, localidade) e pesquisar por múltiplos campos com debounce
+  2. A listagem tem loading/empty/error states consistentes e UX refinada (sem flicker; feedback claro)
+  3. A performance percebida melhora (ex.: menos renderizações desnecessárias; paginação/virtualização quando aplicável)
+**Plans**: 1 plans
+
+Plans:
+- [x] 18-01: Clientes — Filtros avançados e UX/Performance
+
+### Phase 19: Clientes — Contactos e Notas
+**Goal**: Introduzir sub-recursos de Cliente (contactos e notas) no detalhe do cliente, com CRUD mínimo e integração no mock `/api/v1`.
+**Depends on**: Phase 18
+**Requirements**: [CLI-22]
+**Success Criteria** (what must be TRUE):
+  1. Detalhe do cliente permite listar/adicionar/editar/remover contactos
+  2. Detalhe do cliente permite listar/adicionar/editar/remover notas
+  3. As operações usam React Query + RHF/Zod e seguem padrões de toast/erro da app
+**Plans**: 1 plans
+
+Plans:
+- [x] 19-01: Clientes — Contactos e Notas
+
+### Phase 20: Clientes — Import/Export (CSV)
+**Goal**: Permitir importação e exportação de clientes em CSV (respeitando filtros aplicados), com validação e feedback no UI.
+**Depends on**: Phase 19
+**Requirements**: [CLI-23, CLI-24]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue exportar CSV a partir da listagem de clientes (com filtros aplicados)
+  2. Utilizador consegue importar CSV e ver resultados (sucessos/erros) com mensagens claras
+  3. Importação não bloqueia o UI (feedback de progresso/estado) e segue convenções de segurança/validação
+**Plans**: 1 plans
+
+Plans:
+- [x] 20-01: Clientes — Import/Export (CSV)
+
+### Phase 21: Clientes — Merge de duplicados
+**Goal**: Detectar e fundir clientes duplicados com fluxo guiado (regras por NIF/email/telefone) e integração no mock.
+**Depends on**: Phase 20
+**Requirements**: [CLI-25]
+**Success Criteria** (what must be TRUE):
+  1. UI apresenta candidatos a duplicado e permite selecionar registos a fundir
+  2. Fluxo de merge preserva campos e resolve conflitos de forma explícita no UI
+  3. A operação de merge é refletida na listagem e no detalhe do cliente com consistência
+**Plans**: 1 plans
+
+Plans:
+- [x] 21-01: Clientes — Merge de duplicados
+
+</details>
+
+<details>
+<summary>🏃 v1.5 Melhoria funcionalidades processos (Phases 22-27)</summary>
+
+### Phase 22: Processos — Pesquisa/Filtros e UX/Performance
+**Goal**: Melhorar a listagem de processos com pesquisa multi-campo, filtros avançados, sorting e UX/performance (prioridade produtividade).
+**Depends on**: Phase 21
+**Requirements**: [PRC-21]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue pesquisar por múltiplos campos do processo e filtrar por estados/tribunal/área (ou equivalentes do modelo)
+  2. Listagem tem loading/empty/error states consistentes e feedback claro
+  3. A performance percebida melhora (redução de renders e UI responsiva com datasets maiores)
+**Plans**: 1 plans
+
+Plans:
+- [ ] 22-01: Processos — Pesquisa/Filtros e UX/Performance
+
+### Phase 23: Processos — Anexos
+**Goal**: Adicionar anexos por processo (upload/listagem/download/apagar) com controlo por permissions e integração com Documentos quando aplicável.
+**Depends on**: Phase 22
+**Requirements**: [PRC-22]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue anexar ficheiros a um processo e ver a lista de anexos
+  2. Download funciona e apagar respeita permissions
+  3. Upload tem feedback (progresso/sucesso/erro) consistente com o toaster
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 23 to break down)
+
+### Phase 24: Processos — Checklist
+**Goal**: Checklist/to-dos por processo com CRUD e estado, focado em produtividade; suportar seleção de relacionamentos (FKs) quando aplicável.
+**Depends on**: Phase 23
+**Requirements**: [PRC-23]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue criar/editar/remover tarefas e marcar concluído por processo
+  2. UI suporta seleção de referências (FKs) com selects/pickers quando existir (ex.: vincular a evento/documento)
+  3. A checklist é visível no detalhe do processo e atualiza sem refresh
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 24 to break down)
+
+### Phase 25: Processos — Timeline
+**Goal**: Timeline consolidada de eventos/movimentações/anexos/checklist (quando aplicável) para navegação rápida.
+**Depends on**: Phase 24
+**Requirements**: [PRC-24]
+**Success Criteria** (what must be TRUE):
+  1. Timeline mostra itens ordenados por data com metadados e links
+  2. A timeline permite abrir rapidamente detalhe (ex.: evento, documento, movimentação)
+  3. A UX é consistente (chips/ícones/estados) e suporta datasets maiores
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 25 to break down)
+
+### Phase 26: Processos — Workflows/Estados
+**Goal**: Implementar um modelo simples de estados e transições com validações por estado, reduzindo erros e aumentando produtividade.
+**Depends on**: Phase 25
+**Requirements**: [PRC-25]
+**Success Criteria** (what must be TRUE):
+  1. Existem estados definidos e transições permitidas (mínimo viável)
+  2. UI aplica validações básicas conforme estado (ex.: campos obrigatórios/ações bloqueadas)
+  3. Mudança de estado é auditável no UI (via timeline/movimentação)
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 26 to break down)
+
+### Phase 27: Processos — Prazos/Agenda + Export
+**Goal**: Reforçar integração Processos ↔ Agenda (prazos/alertas/templates simples) e exportar resumo do processo (PDF/CSV).
+**Depends on**: Phase 26
+**Requirements**: [AGD-21, PRC-26]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue criar prazos/eventos a partir do processo com UX rápida
+  2. Existem alertas/indicadores mínimos de prazos (ex.: próximos/atrasados)
+  3. Utilizador consegue exportar um resumo do processo (PDF/CSV) com dados principais
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 27 to break down)
+
+</details>
+
+<details>
+<summary>🏃 v1.6 Melhoria nfeature de gestão de clientes (Phases 28-31)</summary>
+
+### Phase 28: Clientes — Enriquecimento cadastral
+**Goal**: Adicionar campos cadastrais novos (`categoria`, `ramoAtividade`, `documentoTipo`, `documentoNumero`, `detalhesAdicionais`) no backend, base de dados e formulários frontend.
+**Depends on**: Phase 21
+**Requirements**: [CLI-31]
+**Success Criteria** (what must be TRUE):
+  1. O modelo `Cliente` no backend inclui as novas propriedades e a persistência JPA funciona (novas colunas criadas).
+  2. O formulário de criação/edição no frontend inclui selects para categoria, ramo de atividade, documento e campo de texto para número de documento e detalhes.
+  3. A alteração é salva com sucesso e refletida na página de detalhe do cliente.
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 28 to break down)
+
+### Phase 29: Clientes — Perfil Financeiro e Faturação
+**Goal**: Adicionar campos de perfil financeiro (`valorHora`, `avencaMensal`, `moeda`, `iban`) no modelo do cliente, com formulário e aba dedicada no detalhe do cliente e validações apropriadas.
+**Depends on**: Phase 28
+**Requirements**: [CLI-32]
+**Success Criteria** (what must be TRUE):
+  1. O cliente possui os campos `valorHora`, `avencaMensal`, `moeda` e `iban` persistidos no backend.
+  2. Existe uma aba "Perfil Financeiro" no detalhe do cliente com formulário que permite visualizar e editar estas definições.
+  3. O campo IBAN possui validação básica de formato no formulário.
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 29 to break down)
+
+### Phase 30: Clientes — Linha de Tempo de Atividades
+**Goal**: Implementar a Linha de Tempo de Atividades (Timeline) no detalhe do cliente, agregando processos, notas, contactos, financeiro (honorários/pagamentos) e documentos associados ordenados por data.
+**Depends on**: Phase 29
+**Requirements**: [CLI-33]
+**Success Criteria** (what must be TRUE):
+  1. Existe um endpoint `/clientes/{id}/timeline` que retorna a lista unificada de eventos ordenados por data decrescente.
+  2. A interface do detalhe do cliente inclui uma aba "Histórico" que apresenta os eventos em um design de timeline premium com ícones específicos para cada tipo de atividade.
+  3. Cada item de timeline permite navegar/linkar para o recurso correspondente (ex: abrir o detalhe do processo).
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 30 to break down)
+
+### Phase 31: Clientes — Conflict Check Visual
+**Goal**: Implementar a funcionalidade de Conflict Check visual e validação de NIF/IBAN na criação/edição de clientes para alertar o utilizador sobre duplicados ou potenciais conflitos de interesse.
+**Depends on**: Phase 30
+**Requirements**: [CLI-34]
+**Success Criteria** (what must be TRUE):
+  1. Ao preencher o NIF ou Nome no formulário de cliente, a aplicação dispara uma consulta para verificar duplicados e exibe um alerta inline claro e não-bloqueante se encontrar registos correspondentes.
+  2. A validação do NIF para Cabo Verde (número de 9 dígitos e algoritmos básicos se aplicável) é imposta no frontend e backend.
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 31 to break down)
 
 </details>
 
 ## Progress
 
 **Execution Order:**
-Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
+Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -276,4 +475,18 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 14. Auth & Session Hardening | v1.3 | 1/1 | Complete | 2026-05-27 |
 | 15. AppSec & RBAC | v1.3 | 1/1 | Complete | 2026-05-27 |
 | 16. Notificação e Feedback (Toaster) | v1.3 | 1/1 | Complete | 2026-05-27 |
-| 17. Ações UI com controlo por permissions | v1.3 | 0/0 | Not Planned | — |
+| 17. Ações UI com controlo por permissions | v1.3 | 1/1 | Complete | 2026-06-03 |
+| 18. Clientes — Filtros avançados e UX/Performance | v1.4 | 1/1 | Complete | 2026-06-03 |
+| 19. Clientes — Contactos e Notas | v1.4 | 1/1 | Complete | 2026-06-03 |
+| 20. Clientes — Import/Export (CSV) | v1.4 | 1/1 | Complete | 2026-06-03 |
+| 21. Clientes — Merge de duplicados | v1.4 | 1/1 | Complete | 2026-06-03 |
+| 22. Processos — Pesquisa/Filtros e UX/Performance | v1.5 | 0/1 | Paused | — |
+| 23. Processos — Anexos | v1.5 | 0/0 | Paused | — |
+| 24. Processos — Checklist | v1.5 | 0/0 | Paused | — |
+| 25. Processos — Timeline | v1.5 | 0/0 | Paused | — |
+| 26. Processos — Workflows/Estados | v1.5 | 0/0 | Paused | — |
+| 27. Processos — Prazos/Agenda + Export | v1.5 | 0/0 | Paused | — |
+| 28. Clientes — Enriquecimento cadastral | v1.6 | 0/0 | Planned | — |
+| 29. Clientes — Perfil Financeiro e Faturação | v1.6 | 0/0 | Planned | — |
+| 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
+| 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
