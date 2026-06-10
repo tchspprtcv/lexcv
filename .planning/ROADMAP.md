@@ -399,6 +399,8 @@ Plans:
 <details>
 <summary>🏃 v1.6 Melhoria nfeature de gestão de clientes (Phases 28-31)</summary>
 
+## v1.6: Melhoria nfeature de gestão de clientes
+
 ### Phase 28: Clientes — Enriquecimento cadastral
 **Goal**: Adicionar campos cadastrais novos (`categoria`, `ramoAtividade`, `documentoTipo`, `documentoNumero`, `detalhesAdicionais`) no backend, base de dados e formulários frontend.
 **Depends on**: Phase 21
