@@ -8,7 +8,8 @@
 - ✅ **v1.3 Security Check** - Phases 12-17 (shipped 2026-06-03) — archive: `.planning/milestones/v1.3-ROADMAP.md`
 - ✅ **v1.4 Melhoria módulo clientes** - Phases 18-21 (shipped 2026-06-03) — archive: `.planning/milestones/v1.4-ROADMAP.md`
 - ⏸ **v1.5 Melhoria funcionalidades processos** - Phases 22-27 (paused/deferred)
-- 🏃 **v1.6 Melhoria nfeature de gestão de clientes** - Phases 28-31 (active)
+- ⏸ **v1.6 Melhoria nfeature de gestão de clientes** - Phases 28-31 (paused/deferred)
+- 🏃 **v1.7 Melhoria no modulo de gestao e acompanhamento de processos** - Phases 32-36 (active)
 
 ## Phases
 
@@ -314,7 +315,7 @@ Plans:
 </details>
 
 <details>
-<summary>🏃 v1.5 Melhoria funcionalidades processos (Phases 22-27)</summary>
+<summary>⏸ v1.5 Melhoria funcionalidades processos (Phases 22-27)</summary>
 
 ### Phase 22: Processos — Pesquisa/Filtros e UX/Performance
 **Goal**: Melhorar a listagem de processos com pesquisa multi-campo, filtros avançados, sorting e UX/performance (prioridade produtividade).
@@ -397,7 +398,7 @@ Plans:
 </details>
 
 <details>
-<summary>🏃 v1.6 Melhoria nfeature de gestão de clientes (Phases 28-31)</summary>
+<summary>⏸ v1.6 Melhoria nfeature de gestão de clientes (Phases 28-31)</summary>
 
 ## v1.6: Melhoria nfeature de gestão de clientes
 
@@ -454,10 +455,84 @@ Plans:
 
 </details>
 
+<details>
+<summary>🏃 v1.7 Melhoria no modulo de gestao e acompanhamento de processos (Phases 32-36)</summary>
+
+## v1.7: Melhoria no modulo de gestao e acompanhamento de processos
+
+### Phase 32: Processos - Intake e Conflict Check
+**Goal**: Formalizar a abertura de processos com intake estruturado e conflict check bloqueante antes da criacao formal do matter/processo.
+**Depends on**: Phase 31
+**Requirements**: [INT-01, CFL-01]
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue registar um potencial cliente e preencher intake estruturado com os campos minimos definidos para o tipo de processo
+  2. Abertura formal do processo fica bloqueada enquanto nao existir conflict check concluido com decisao registada
+  3. O estado da triagem e da decisao de abertura fica visivel no UI e consistente entre listagem e detalhe
+**Plans**: 3 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — Backend: entidade/decisao, RBAC, endpoints intake/conflict-check/decisao/formalizar com bloqueio server-side
+- [ ] 32-02-PLAN.md — Frontend data layer: tipos, schema Zod, hooks TanStack Query, utilitario de nivel
+- [ ] 32-03-PLAN.md — Frontend UI: wizard 3 passos, badge/filtro EM TRIAGEM, seccao conflict check no detalhe
+
+### Phase 33: Processos - Workflow, Gates e Prazos
+**Goal**: Estruturar o acompanhamento do processo com estados, gates de validacao, responsaveis e prazos operacionais com risco e escalonamento.
+**Depends on**: Phase 32
+**Requirements**: [PRC-27, AGD-22]
+**Success Criteria** (what must be TRUE):
+  1. Cada processo utiliza estados definidos com transicoes permitidas e validacoes minimas por gate
+  2. O UI mostra responsavel atual, proximo passo e obrigatorios por estado para reduzir erros operacionais
+  3. Prazos operacionais ficam associados ao processo com prioridade, risco e sinalizacao de proximidade ou atraso
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 33 to break down)
+
+### Phase 34: Processos - Timeline e Auditoria
+**Goal**: Unificar a leitura historica do processo e tornar a operacao rastreavel com timeline funcional e trilha auditavel de eventos sensiveis.
+**Depends on**: Phase 33
+**Requirements**: [PRC-28, AUD-02]
+**Success Criteria** (what must be TRUE):
+  1. Timeline do processo agrega movimentacoes, eventos, tarefas, documentos e decisoes em ordem cronologica navegavel
+  2. Eventos auditaveis sensiveis ficam registados com utilizador, acao, alvo e timestamp
+  3. Utilizador consegue filtrar a linha temporal por tipo de evento, periodo e criticidade
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34 to break down)
+
+### Phase 35: Processos - Governanca Documental e Retencao
+**Goal**: Fortalecer a governanca documental do processo com classificacao, versao, confidencialidade, retencao e legal hold.
+**Depends on**: Phase 34
+**Requirements**: [DOC-11, DOC-12]
+**Success Criteria** (what must be TRUE):
+  1. Documentos do processo possuem categoria, confidencialidade, versao e metadados obrigatorios consistentes
+  2. O sistema suporta regras de retencao e legal hold por processo/documento com bloqueio de eliminacao quando aplicavel
+  3. O estado documental fica visivel no detalhe do processo e utilizavel em filtros/operacao
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 35 to break down)
+
+### Phase 36: Processos - Dashboards e KPI Executivo
+**Goal**: Expor acompanhamento operacional e executivo do modulo de processos com backlog, SLAs, risco e conformidade em paineis orientados a decisao.
+**Depends on**: Phase 35
+**Requirements**: [MON-01, KPI-01]
+**Success Criteria** (what must be TRUE):
+  1. Existe painel operacional com backlog por responsavel, prazos criticos e processos sem atualizacao recente
+  2. Existe painel executivo com tempos medios, conflitos detetados, conformidade documental e exposicao por carteira
+  3. Os indicadores usam dados reais do sistema e permitem navegar para a lista/detalhe correspondente
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 36 to break down)
+
+</details>
+
 ## Progress
 
 **Execution Order:**
-Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31
+Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -492,3 +567,8 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 29. Clientes — Perfil Financeiro e Faturação | v1.6 | 0/0 | Planned | — |
 | 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
+| 32. Processos - Intake e Conflict Check | v1.7 | 0/0 | Planned | — |
+| 33. Processos - Workflow, Gates e Prazos | v1.7 | 0/0 | Planned | — |
+| 34. Processos - Timeline e Auditoria | v1.7 | 0/0 | Planned | — |
+| 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
+| 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
