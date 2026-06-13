@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
-status: executing
-stopped_at: Completed Phase 32, Plan 02 — frontend data layer (types, schema, hooks, conflict helper)
-last_updated: "2026-06-13T20:00:00.000Z"
+status: phase_complete
+stopped_at: Completed Phase 32, Plan 03 — UI surface (wizard, listing badge, detail conflict section)
+last_updated: "2026-06-13T21:00:00.000Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 
 ## Current Position
 
-Phase: 32 (Processos - Intake e Conflict Check) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 32 (Processos - Intake e Conflict Check) — COMPLETE
+Plan: 3 of 3 (all complete)
+Status: Phase complete
 Last activity: 2026-06-13
 
 ## Accumulated Context
@@ -53,6 +53,9 @@ Recent decisions affecting current work:
 - [Phase ?]: ConflictCheckDecisaoRequest extracted to separate file (Java requires one public top-level type per file)
 - [32-02]: ConflictCheckDecisao TypeScript interface uses camelCase (tenantId, processoId, createdAt) to match Spring Boot Jackson default serialization
 - [32-02]: conflictNivelToVariant/conflictNivelToLabel placed in lib/conflict-check.ts as single source of truth for Step 2, Step 3, and detail page
+- [32-03]: Wizard uses local step state — no router.push between steps; all 3 steps live on /processos/novo
+- [32-03]: estado excluded from intake payload (destructured as _estado) — backend enforces TRIAGEM
+- [32-03]: Formalizar disabled check: !decisao.data || nivel==='impeditivo' — UI reflects backend enforcement without re-implementing business logic
 
 ### Pending Todos
 
@@ -64,8 +67,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-13T20:00:00.000Z
-Stopped at: Completed Phase 32, Plan 02 — frontend data layer (types, schema, hooks, conflict helper)
+Last session: 2026-06-13T21:00:00.000Z
+Stopped at: Completed Phase 32, Plan 03 — UI surface (wizard, listing badge, detail conflict section)
 Resume file: None
 
 ## Operator Next Steps

@@ -276,8 +276,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INT-01 | Phase 32 | Planned |
-| CFL-01 | Phase 32 | Planned |
+| INT-01 | Phase 32 | Complete |
+| CFL-01 | Phase 32 | Complete |
 | PRC-27 | Phase 33 | Planned |
 | AGD-22 | Phase 33 | Planned |
 | PRC-28 | Phase 34 | Planned |

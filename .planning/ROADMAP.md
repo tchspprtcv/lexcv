@@ -605,7 +605,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 32-03-PLAN.md — Frontend UI: wizard 3 passos, badge/filtro EM TRIAGEM, seccao conflict check no detalhe
+- [x] 32-03-PLAN.md — Frontend UI: wizard 3 passos, badge/filtro EM TRIAGEM, seccao conflict check no detalhe
 
 ### Phase 33: Processos - Workflow, Gates e Prazos
 
