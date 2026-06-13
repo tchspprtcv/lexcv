@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Completed Phase 32, Plan 01 — intake+conflict-check backend
-last_updated: "2026-06-13T19:06:29.211Z"
+stopped_at: Completed Phase 32, Plan 02 — frontend data layer (types, schema, hooks, conflict helper)
+last_updated: "2026-06-13T20:00:00.000Z"
 last_activity: 2026-06-13
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 ## Current Position
 
 Phase: 32 (Processos - Intake e Conflict Check) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-13
 
@@ -51,6 +51,8 @@ Recent decisions affecting current work:
 - (v1.1) UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave)
 - (v1.1) Aplicação de layout "Anti-Safe Harbor" (sharp edges, cores ousadas) e Dark/Light mode com `next-themes`.
 - [Phase ?]: ConflictCheckDecisaoRequest extracted to separate file (Java requires one public top-level type per file)
+- [32-02]: ConflictCheckDecisao TypeScript interface uses camelCase (tenantId, processoId, createdAt) to match Spring Boot Jackson default serialization
+- [32-02]: conflictNivelToVariant/conflictNivelToLabel placed in lib/conflict-check.ts as single source of truth for Step 2, Step 3, and detail page
 
 ### Pending Todos
 
@@ -62,8 +64,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-13T19:06:29.188Z
-Stopped at: Completed Phase 32, Plan 01 — intake+conflict-check backend
+Last session: 2026-06-13T20:00:00.000Z
+Stopped at: Completed Phase 32, Plan 02 — frontend data layer (types, schema, hooks, conflict helper)
 Resume file: None
 
 ## Operator Next Steps
