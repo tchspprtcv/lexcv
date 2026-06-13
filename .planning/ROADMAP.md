@@ -597,7 +597,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 32-01-PLAN.md — Backend: entidade/decisao, RBAC, endpoints intake/conflict-check/decisao/formalizar com bloqueio server-side
+- [x] 32-01-PLAN.md — Backend: entidade/decisao, RBAC, endpoints intake/conflict-check/decisao/formalizar com bloqueio server-side
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -715,7 +715,7 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 29. Clientes — Perfil Financeiro e Faturação | v1.6 | 0/0 | Planned | — |
 | 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
-| 32. Processos - Intake e Conflict Check | v1.7 | 0/0 | Planned | — |
+| 32. Processos - Intake e Conflict Check | v1.7 | 1/3 | In Progress|  |
 | 33. Processos - Workflow, Gates e Prazos | v1.7 | 0/0 | Planned | — |
 | 34. Processos - Timeline e Auditoria | v1.7 | 0/0 | Planned | — |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |

@@ -3,6 +3,33 @@
 **Defined:** 2026-05-27
 **Core Value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
 
+## v1.7 Requirements (Melhoria no modulo de gestao e acompanhamento de processos)
+
+### Intake e Abertura
+
+- [x] **INT-01**: Utilizador consegue registar um potencial cliente e iniciar um intake estruturado antes da abertura formal do processo, com campos minimos obrigatorios por tipo de matter/processo.
+- [x] **CFL-01**: Utilizador consegue executar um conflict check estruturado por cliente, partes relacionadas, parte contraria e assunto, e o sistema bloqueia a abertura formal do processo ate existir uma decisao registada.
+
+### Workflow e Acompanhamento
+
+- [ ] **PRC-27**: Utilizador consegue gerir o processo por estados definidos, com gates, responsaveis e validacoes minimas por transicao.
+- [ ] **AGD-22**: Utilizador consegue acompanhar prazos operacionais do processo com SLA, prioridade, risco e escalonamento simples quando um prazo estiver proximo ou vencido.
+
+### Timeline e Auditoria
+
+- [ ] **PRC-28**: Utilizador consegue consultar uma timeline unificada do processo com movimentacoes, tarefas, documentos, eventos e decisoes ordenadas por data.
+- [ ] **AUD-02**: Utilizador consegue consultar a trilha auditavel de eventos sensiveis do processo, incluindo consulta, alteracao, exportacao, download e eliminacao.
+
+### Governanca Documental
+
+- [ ] **DOC-11**: Utilizador consegue classificar documentos do processo por categoria, confidencialidade, versao e metadados obrigatorios.
+- [ ] **DOC-12**: Utilizador consegue aplicar regras de retencao e legal hold por processo/documento, impedindo descarte ou eliminacao indevida enquanto existir bloqueio ativo.
+
+### Monitorizacao e KPI
+
+- [ ] **MON-01**: Utilizador consegue acompanhar um painel operacional com backlog por responsavel, prazos criticos, processos sem atualizacao e carga por tipo de processo.
+- [ ] **KPI-01**: Utilizador consegue acompanhar um painel executivo com tempos medios, conflitos detetados, conformidade documental e exposicao operacional/financeira por carteira.
+
 ## v1.6 Requirements (Melhoria nfeature de gestão de clientes)
 
 ### Clientes (Enriquecimento, Financeiro e Timeline)
@@ -121,6 +148,8 @@
 - **DOC-10**: Gestão avançada de versões, revisão e permissões por documento
 - **NOTF-01**: Notificações (in-app/email) e preferências
 - **AUD-01**: Painel de auditoria completo (filtros e detalhe por entidade)
+- **RISK-01**: Deteccao automatica de comportamento anomalo e scoring de risco por processo/cliente
+- **OPS-01**: Sugestoes automáticas de proximos passos e benchmarking entre equipas/unidades
 
 ## Out of Scope
 
@@ -129,6 +158,8 @@
 | Regras de negócio avançadas no frontend | Backend é a fonte de verdade; evitar duplicação e deriva |
 | Contabilidade/ERP completo | Complexidade alta fora do MVP |
 | Multi-tenant exposto em URL | Requisito de segurança e design: resolver via JWT/header |
+| Alertas preditivos e scoring automatizado | Exigem historico maior e regras mais maduras antes de entregar valor confiavel |
+| Automacao documental avancada com IA | Fora do objetivo deste milestone; primeiro consolidar processos, auditoria e governanca |
 
 ## Traceability
 
@@ -239,4 +270,24 @@
 **Coverage:**
 - v1.6 requirements: 4 total
 - Mapped to phases: 4
+- Unmapped: 0 ✓
+
+## Traceability (v1.7)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INT-01 | Phase 32 | Planned |
+| CFL-01 | Phase 32 | Planned |
+| PRC-27 | Phase 33 | Planned |
+| AGD-22 | Phase 33 | Planned |
+| PRC-28 | Phase 34 | Planned |
+| AUD-02 | Phase 34 | Planned |
+| DOC-11 | Phase 35 | Planned |
+| DOC-12 | Phase 35 | Planned |
+| MON-01 | Phase 36 | Planned |
+| KPI-01 | Phase 36 | Planned |
+
+**Coverage:**
+- v1.7 requirements: 10 total
+- Mapped to phases: 10
 - Unmapped: 0 ✓

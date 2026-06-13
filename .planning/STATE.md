@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Milestone v1.7 initialized
-last_updated: "2026-06-13T18:44:08.829Z"
-last_activity: 2026-06-13 -- Phase 32 planning complete
+stopped_at: Completed Phase 32, Plan 01 — intake+conflict-check backend
+last_updated: "2026-06-13T19:06:29.211Z"
+last_activity: 2026-06-13
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v1.7 (Melhoria no modulo de gestao e acompanhamento de processos) — definir requirements e roadmap e iniciar Phase 32
+**Current focus:** Phase 32 — Processos - Intake e Conflict Check
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
+Phase: 32 (Processos - Intake e Conflict Check) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-13 -- Phase 32 planning complete
+Last activity: 2026-06-13
 
 ## Accumulated Context
 
@@ -50,6 +50,7 @@ Recent decisions affecting current work:
 - (v1.0) Mock API dentro do Next.js (route handlers) em `/api/v1/*`
 - (v1.1) UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave)
 - (v1.1) Aplicação de layout "Anti-Safe Harbor" (sharp edges, cores ousadas) e Dark/Light mode com `next-themes`.
+- [Phase ?]: ConflictCheckDecisaoRequest extracted to separate file (Java requires one public top-level type per file)
 
 ### Pending Todos
 
@@ -61,9 +62,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-27T23:15:49.816Z
-Stopped at: Milestone v1.7 initialized
-Resume file: .planning/ROADMAP.md
+Last session: 2026-06-13T19:06:29.188Z
+Stopped at: Completed Phase 32, Plan 01 — intake+conflict-check backend
+Resume file: None
 
 ## Operator Next Steps
 
