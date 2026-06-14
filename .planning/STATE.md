@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
-status: phase_complete
-stopped_at: Completed Phase 32, Plan 03 — UI surface (wizard, listing badge, detail conflict section)
-last_updated: "2026-06-13T21:00:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 32 complete (3/3) — ready to discuss Phase 33
+last_updated: 2026-06-14T12:21:17.778Z
 last_activity: 2026-06-13
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 3
-  completed_plans: 3
+  completed_plans: 8
   percent: 20
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 32 — Processos - Intake e Conflict Check
+**Current focus:** Phase 33 — processos   workflow, gates e prazos
 
 ## Current Position
 
-Phase: 32 (Processos - Intake e Conflict Check) — COMPLETE
-Plan: 3 of 3 (all complete)
-Status: Phase complete
-Last activity: 2026-06-13
+Phase: 33
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-14
 
 ## Accumulated Context
 
