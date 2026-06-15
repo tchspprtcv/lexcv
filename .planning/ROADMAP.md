@@ -627,7 +627,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 33-02-PLAN.md — Frontend data layer: tipos, schemas Zod (justificativa/prazo), lib/prazos.ts (risco->badge), hooks TanStack Query
+- [x] 33-02-PLAN.md — Frontend data layer: tipos, schemas Zod (justificativa/prazo), lib/prazos.ts (risco->badge), hooks TanStack Query
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -725,7 +725,7 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
 | 32. Processos - Intake e Conflict Check | v1.7 | 3/3 | Complete    | 2026-06-14 |
-| 33. Processos - Workflow, Gates e Prazos | v1.7 | 1/3 | Executing | — |
+| 33. Processos - Workflow, Gates e Prazos | v1.7 | 2/3 | In Progress|  |
 | 34. Processos - Timeline e Auditoria | v1.7 | 0/0 | Planned | — |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |

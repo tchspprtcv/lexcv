@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Completed Phase 33, Plan 01 — backend workflow state-machine, Prazo entity, prazos endpoints, enriched listProcessos
-last_updated: "2026-06-15T13:44:07Z"
-last_activity: 2026-06-15 -- Phase 33 Plan 01 complete
+stopped_at: Completed Phase 33, Plan 02 — frontend data layer for workflow and prazos (types, schemas, lib/prazos.ts, hooks)
+last_updated: "2026-06-15T14:05:00Z"
+last_activity: 2026-06-15
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 9
-  completed_plans: 4
-  percent: 27
+  total_plans: 6
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 ## Current Position
 
 Phase: 33 (Processos - Workflow, Gates e Prazos) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 33
-Last activity: 2026-06-15 -- Phase 33 Plan 01 complete (backend workflow, Prazo entity, prazos endpoints)
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-06-15 -- Phase 33 Plan 02 complete (frontend types, schemas, lib/prazos.ts, TanStack Query hooks)
 
 ## Accumulated Context
 
@@ -56,6 +56,9 @@ Recent decisions affecting current work:
 - [32-03]: Wizard uses local step state — no router.push between steps; all 3 steps live on /processos/novo
 - [32-03]: estado excluded from intake payload (destructured as _estado) — backend enforces TRIAGEM
 - [32-03]: Formalizar disabled check: !decisao.data || nivel==='impeditivo' — UI reflects backend enforcement without re-implementing business logic
+- [33-02]: Prazo interface omits processo_id/tenant_id (snake_case) — backend GET /prazos response map does not include those keys; only camelCase fields returned
+- [33-02]: prazosRiscoToVariant/prazosRiscoToLabel placed in lib/prazos.ts as single source of truth for risco->badge mapping (analog to lib/conflict-check.ts)
+- [33-02]: useExecutarTransicao invalidates both workflow and movimentacoes caches on success for immediate refresh
 
 ### Pending Todos
 
@@ -67,8 +70,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-15T13:44:07Z
-Stopped at: Completed Phase 33, Plan 01 — backend workflow state-machine, Prazo entity, prazos endpoints, enriched listProcessos
+Last session: 2026-06-15T14:05:00Z
+Stopped at: Completed Phase 33, Plan 02 — frontend data layer for workflow and prazos (types, schemas, lib/prazos.ts, hooks)
 Resume file: None
 
 ## Operator Next Steps

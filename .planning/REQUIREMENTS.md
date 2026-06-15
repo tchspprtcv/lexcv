@@ -12,8 +12,8 @@
 
 ### Workflow e Acompanhamento
 
-- [ ] **PRC-27**: Utilizador consegue gerir o processo por estados definidos, com gates, responsaveis e validacoes minimas por transicao.
-- [ ] **AGD-22**: Utilizador consegue acompanhar prazos operacionais do processo com SLA, prioridade, risco e escalonamento simples quando um prazo estiver proximo ou vencido.
+- [x] **PRC-27**: Utilizador consegue gerir o processo por estados definidos, com gates, responsaveis e validacoes minimas por transicao.
+- [x] **AGD-22**: Utilizador consegue acompanhar prazos operacionais do processo com SLA, prioridade, risco e escalonamento simples quando um prazo estiver proximo ou vencido.
 
 ### Timeline e Auditoria
 
