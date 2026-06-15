@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Completed Phase 32, Plan 03 — UI surface (wizard, listing badge, detail conflict section)
-last_updated: "2026-06-15T13:37:05.140Z"
-last_activity: 2026-06-15 -- Phase 33 planning complete
+stopped_at: Completed Phase 33, Plan 01 — backend workflow state-machine, Prazo entity, prazos endpoints, enriched listProcessos
+last_updated: "2026-06-15T13:44:07Z"
+last_activity: 2026-06-15 -- Phase 33 Plan 01 complete
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 3
-  percent: 20
+  total_plans: 9
+  completed_plans: 4
+  percent: 27
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 33 — processos   workflow, gates e prazos
+**Current focus:** Phase 33 — Processos - Workflow, Gates e Prazos
 
 ## Current Position
 
-Phase: 33
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-15 -- Phase 33 planning complete
+Phase: 33 (Processos - Workflow, Gates e Prazos) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 33
+Last activity: 2026-06-15 -- Phase 33 Plan 01 complete (backend workflow, Prazo entity, prazos endpoints)
 
 ## Accumulated Context
 
@@ -67,8 +67,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-13T21:00:00.000Z
-Stopped at: Completed Phase 32, Plan 03 — UI surface (wizard, listing badge, detail conflict section)
+Last session: 2026-06-15T13:44:07Z
+Stopped at: Completed Phase 33, Plan 01 — backend workflow state-machine, Prazo entity, prazos endpoints, enriched listProcessos
 Resume file: None
 
 ## Operator Next Steps
