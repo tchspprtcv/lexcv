@@ -618,11 +618,20 @@ Plans:
   2. O UI mostra responsavel atual, proximo passo e obrigatorios por estado para reduzir erros operacionais
   3. Prazos operacionais ficam associados ao processo com prioridade, risco e sinalizacao de proximidade ou atraso
 
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
+**Wave 1**
 
-- [ ] TBD (run /gsd-plan-phase 33 to break down)
+- [ ] 33-01-PLAN.md — Backend: entidade Prazo, responsavel_id, DTOs, maquina de estados + gates server-side, endpoints workflow/transicao/prazos + enriquecimento da listagem
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 33-02-PLAN.md — Frontend data layer: tipos, schemas Zod (justificativa/prazo), lib/prazos.ts (risco->badge), hooks TanStack Query
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 33-03-PLAN.md — Frontend UI: instala Dialog+Textarea, Workflow card + Prazos card + Dialogs no detalhe, sinais de responsavel/risco na listagem
 
 ### Phase 34: Processos - Timeline e Auditoria
 
