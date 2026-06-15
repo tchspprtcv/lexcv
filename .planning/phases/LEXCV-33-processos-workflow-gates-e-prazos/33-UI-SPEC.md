@@ -1,7 +1,8 @@
 ---
 phase: 33
 slug: processos-workflow-gates-e-prazos
-status: draft
+status: approved
+reviewed_at: 2026-06-15T00:00:00Z
 shadcn_initialized: true
 preset: none
 created: 2026-06-15
@@ -203,7 +204,7 @@ The existing processos listing table at `/processos/page.tsx` receives three new
 | Signal | Placement | Rendering |
 |--------|-----------|-----------|
 | Responsável | Below the "Entrada: …" date sub-line in the NÚMERO column cell | `text-[11px] font-medium text-slate-400 dark:text-slate-500` prefix "Resp.:" + user display name, or "—" if unset |
-| Prazo risk | Below the estado Badge in the ESTADO cell | Risco badge (`rounded-none font-bold tracking-wide text-[10px]`) — only when `riscoMaisCritico` is `proximo` or `vencido` (hidden when `ok` or no prazos). If `vencido`: red badge "PRAZO VENCIDO". If `proximo`: amber badge "PRAZO PRÓXIMO". |
+| Prazo risk | Below the estado Badge in the ESTADO cell | Risco badge (`rounded-none font-bold tracking-wide text-[11px]`) — only when `riscoMaisCritico` is `proximo` or `vencido` (hidden when `ok` or no prazos). If `vencido`: red badge "PRAZO VENCIDO". If `proximo`: amber badge "PRAZO PRÓXIMO". |
 | Escalado flag | Inline next to the risco badge | `AlertCircle` icon 12px `text-amber-500` when `escalonado === true` |
 
 Source for placement pattern: existing sub-line in `processos/page.tsx` (line ~330: `text-[11px] font-medium tracking-wider uppercase text-slate-500`).
@@ -304,9 +305,9 @@ Lucide icons to use:
 | Transition button blocked (permission) | When user lacks required scope | `disabled opacity-50 cursor-not-allowed` + `title` attribute with reason text |
 | Dialog open | Justification gate | Dialog overlay `bg-black/50`, `DialogContent rounded-none shadow-2xl` |
 | Dialog Confirmar loading | After form submit | `disabled opacity-50` + text "A processar..." |
-| Risco badge: ok | Prazo row | `Badge variant="green" rounded-none font-bold tracking-wide text-[10px]` — hidden in listing, shown in detail |
-| Risco badge: proximo | Prazo row / listing cell | `Badge variant="amber" rounded-none font-bold tracking-wide text-[10px]` |
-| Risco badge: vencido | Prazo row / listing cell | `Badge variant="red" rounded-none font-bold tracking-wide text-[10px]` |
+| Risco badge: ok | Prazo row | `Badge variant="green" rounded-none font-bold tracking-wide text-[11px]` — hidden in listing, shown in detail |
+| Risco badge: proximo | Prazo row / listing cell | `Badge variant="amber" rounded-none font-bold tracking-wide text-[11px]` |
+| Risco badge: vencido | Prazo row / listing cell | `Badge variant="red" rounded-none font-bold tracking-wide text-[11px]` |
 | Escalonado icon | Next to risco badge | `AlertCircle h-3 w-3 text-amber-500 dark:text-amber-400 inline-block ml-1` |
 | Prazo concluido checked | Concluido toggle icon | `CheckCircle2 h-[14px] w-[14px] text-emerald-600 dark:text-emerald-400 cursor-pointer hover:opacity-70 transition-opacity` |
 | Prazo concluido unchecked | Concluido toggle icon | `Circle h-[14px] w-[14px] text-slate-300 dark:text-slate-600 cursor-pointer hover:text-slate-500 transition-colors` |
