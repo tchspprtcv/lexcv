@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
-status: executing
-stopped_at: Completed Phase 34, Plan 02 — TypeScript types (TimelineItem, TimelineItemType, AuditLogEntry), useTimeline and useAuditLog hooks, extended mutation invalidations
-last_updated: "2026-06-16T19:15:00Z"
-last_activity: 2026-06-16 -- Phase 34 Plan 02 complete
+milestone: v1.8
+milestone_name: Deployment para VPS
+status: planning
+last_updated: "2026-06-16T22:44:14.849Z"
+last_activity: 2026-06-16
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 8
-  percent: 40
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 
 ## Current Position
 
-Phase: 34
-Plan: 02 (complete) — ready for Plan 03
-Status: Executing
-Last activity: 2026-06-16 -- Phase 34 Plan 02 complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-16 — Milestone v1.8 started
 
 ## Accumulated Context
 
@@ -81,4 +80,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Planear a Phase 32 (/gsd-plan-phase 32) e iniciar execucao do milestone v1.7
+- Start the next milestone with /gsd-new-milestone

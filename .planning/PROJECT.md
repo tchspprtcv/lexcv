@@ -24,10 +24,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ UI/UX alinhado ao Figma (Dashboard, Clientes, Processos, Agenda) — v1.1
 - ✓ Layout institucional padronizado (sidebar + top app bar) — v1.1
 - ✓ Componentes UI reutilizáveis (badges, tabelas) para consistência visual — v1.1
+- ✓ Melhoria no modulo de gestao e acompanhamento de processos (intake, conflict check, workflow, timeline, auditoria, governanca documental, dashboards) — v1.7
 
 ### Active
 
-- Milestone v1.7: **Melhoria no modulo de gestao e acompanhamento de processos** — intake e conflict check antes da abertura formal, workflow processual com gates, timeline unificada auditavel, governanca documental por processo e dashboards/KPIs operacionais.
+- Milestone v1.8: **Deployment para VPS** — dockerização de Next.js, Spring Boot e PostgreSQL com reverse proxy e CI/CD via GitHub Actions.
 
 ### Out of Scope
 
@@ -61,16 +62,15 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | Frontend “burro”: sem regras de negócio | Evitar deriva de contrato e duplicação | ✓ Good |
 | UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave) | Consistência visual e usabilidade institucional | ✓ Good |
 
-## Current Milestone: v1.7 Melhoria no modulo de gestao e acompanhamento de processos
+## Current Milestone: v1.8 Deployment para VPS
 
-**Goal:** Evoluir o modulo de processos de um CRUD operacional para uma gestao juridica fim-a-fim, com maior controlo, rastreabilidade e monitorizacao.
+**Goal:** Configurar e realizar o deployment completo da aplicação LexCV numa VPS Hostinger usando Docker Compose e CI/CD.
 
 **Target features:**
-- Intake e conflict check antes da abertura formal do processo
-- Workflow processual com estados, gates, responsaveis e prazos
-- Timeline unificada com eventos funcionais e auditoria
-- Governanca documental por processo com classificacao, versao, retencao e legal hold
-- Dashboards/KPIs de acompanhamento operacional, risco e backlog
+- Containerização e configuração do Docker Compose (Spring Boot, Next.js, PostgreSQL, Reverse Proxy)
+- Configuração de ambiente e segurança na VPS Hostinger
+- Configuração de Reverse Proxy (Caddy/Nginx) com HTTPS
+- Implementação de CI/CD via GitHub Actions para deploy automático na VPS
 
 ## Evolution
 
@@ -90,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-13 after arranque do milestone v1.7 (Melhoria no modulo de gestao e acompanhamento de processos)*
+*Last updated: 2026-06-16 after arranque do milestone v1.8 (Deployment para VPS)*
