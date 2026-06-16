@@ -1,0 +1,24 @@
+services:
+  postgres:
+    restart: unless-stopped
+
+  backend:
+    image: ${REGISTRY:-ghcr.io/lexcv}/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  frontend:
+    image: ${REGISTRY:-ghcr.io/lexcv}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  caddy:
+    restart: unless-stopped
