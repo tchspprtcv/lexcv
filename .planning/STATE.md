@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Deployment para VPS
 status: Defining requirements
-stopped_at: Completed Phase 37, Plan 02 — Docker Compose stack (postgres, backend, frontend, caddy), Caddyfile, .env.example, docker-compose.prod.yml
-last_updated: "2026-06-16T23:15:00.000Z"
+stopped_at: Completed Phase 38, Plan 01 — Caddyfile.prod with automatic HTTPS via Let's Encrypt, docker-compose.prod.yml caddy volumes, .env.example DOMAIN_NAME, DEPLOYMENT.md VPS guide
+last_updated: "2026-06-16T23:30:00.000Z"
 last_activity: 2026-06-16 — Milestone v1.8 started
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 67
 ---
 
 # Project State
@@ -64,6 +64,7 @@ Recent decisions affecting current work:
 - [34-01]: getTimeline() never queries auditLogRepository — operational history (Timeline) vs compliance trail (Audit) are separate surfaces
 - [34-02]: useAuditLog staleTime set to 30_000 (vs 15_000 for useTimeline) — audit log is compliance trail; longer cache reduces API calls without staleness impact
 - [34-02]: Timeline invalidation in useAddProcessoMovimentacao added as sequential await (not merged into Promise.all) — minimal change preserving existing code structure
+- [38-01]: Caddyfile.prod uses {$DOMAIN_NAME} placeholder with no explicit TLS block — Caddy provisions Let's Encrypt automatically when a hostname (not :80) is configured
 
 ### Pending Todos
 
@@ -75,8 +76,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-16T23:15:00.000Z
-Stopped at: Completed Phase 37, Plan 02 — Docker Compose stack (postgres, backend, frontend, caddy), Caddyfile, .env.example, docker-compose.prod.yml
+Last session: 2026-06-16T23:30:00.000Z
+Stopped at: Completed Phase 38, Plan 01 — Caddyfile.prod with automatic HTTPS via Let's Encrypt, docker-compose.prod.yml caddy volumes, .env.example DOMAIN_NAME, DEPLOYMENT.md VPS guide
 Resume file: None
 
 ## Operator Next Steps

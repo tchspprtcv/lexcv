@@ -726,7 +726,7 @@ Plans:
 **Plans**: 1 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 38 to break down)
+- [x] TBD (run /gsd-plan-phase 38 to break down) (completed 2026-06-16)
 
 ### Phase 39: Pipeline de CI/CD
 
@@ -788,5 +788,5 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
 | 37. Containerização e Docker Compose | v1.8 | 2/2 | Complete | 2026-06-16 |
-| 38. Reverse Proxy e HTTPS | v1.8 | 0/1 | Planned | — |
+| 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete   | 2026-06-16 |
 | 39. Pipeline de CI/CD | v1.8 | 0/1 | Planned | — |

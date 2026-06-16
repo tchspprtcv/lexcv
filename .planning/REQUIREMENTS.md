@@ -10,7 +10,7 @@
 - [ ] **DEP-02**: Admin/Dev consegue definir e levantar um ecossistema multi-container usando Docker Compose que inclui Next.js, Spring Boot, PostgreSQL e um Reverse Proxy (Caddy/Nginx), com persistência de dados do PostgreSQL através de volumes.
 
 ### Reverse Proxy e Redirecionamento
-- [ ] **DEP-03**: Admin/Dev consegue configurar o Caddy/Nginx para receber pedidos HTTP/HTTPS na VPS e encaminhá-los internamente para o frontend Next.js (port 3000) e o backend Spring Boot (port 8080/api/v1).
+- [x] **DEP-03**: Admin/Dev consegue configurar o Caddy/Nginx para receber pedidos HTTP/HTTPS na VPS e encaminhá-los internamente para o frontend Next.js (port 3000) e o backend Spring Boot (port 8080/api/v1).
 
 ### CI/CD e Deployment Contínuo
 - [ ] **DEP-04**: Admin/Dev consegue automatizar o processo de deployment na VPS Hostinger via GitHub Actions ao fazer push para o branch `main`, utilizando chaves SSH seguras.
