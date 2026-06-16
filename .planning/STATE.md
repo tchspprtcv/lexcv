@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
-status: executing
-stopped_at: Completed Phase 33, Plan 02 — frontend data layer for workflow and prazos (types, schemas, lib/prazos.ts, hooks)
-last_updated: "2026-06-15T14:05:00Z"
+status: ready_to_plan
+stopped_at: Phase 33 complete (3/3) — ready to discuss Phase 34
+last_updated: 2026-06-16T17:08:15.786Z
 last_activity: 2026-06-15
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 11
   percent: 20
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-13)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 33 — Processos - Workflow, Gates e Prazos
+**Current focus:** Phase 34 — processos   timeline e auditoria
 
 ## Current Position
 
-Phase: 33 (Processos - Workflow, Gates e Prazos) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-06-15 -- Phase 33 Plan 02 complete (frontend types, schemas, lib/prazos.ts, TanStack Query hooks)
+Phase: 34
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-16
 
 ## Accumulated Context
 
