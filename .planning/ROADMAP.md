@@ -711,7 +711,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 37 to break down)
+- [ ] 37-01-PLAN.md — Dockerfiles multi-stage (backend + frontend)
+- [ ] 37-02-PLAN.md — Docker Compose orchestration, Caddyfile e env files
 
 ### Phase 38: Reverse Proxy e HTTPS
 
