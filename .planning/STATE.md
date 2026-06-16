@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Completed Phase 33, Plan 02 — frontend data layer for workflow and prazos (types, schemas, lib/prazos.ts, hooks)
-last_updated: "2026-06-16T18:33:06.051Z"
-last_activity: 2026-06-16 -- Phase 34 planning complete
+stopped_at: Completed Phase 34, Plan 01 — backend foundation (AuditLog entity, AuditLogRepository, TimelineItemDto, Movimentacao.autorId, GET /timeline, GET /audit, 4 audit injection points)
+last_updated: "2026-06-16T18:44:25Z"
+last_activity: 2026-06-16 -- Phase 34 Plan 01 complete
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
-  percent: 40
+  completed_plans: 7
+  percent: 44
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 ## Current Position
 
 Phase: 34
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-16 -- Phase 34 planning complete
+Plan: 01 (complete) — ready for Plan 02
+Status: Executing
+Last activity: 2026-06-16 -- Phase 34 Plan 01 complete
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - [33-02]: Prazo interface omits processo_id/tenant_id (snake_case) — backend GET /prazos response map does not include those keys; only camelCase fields returned
 - [33-02]: prazosRiscoToVariant/prazosRiscoToLabel placed in lib/prazos.ts as single source of truth for risco->badge mapping (analog to lib/conflict-check.ts)
 - [33-02]: useExecutarTransicao invalidates both workflow and movimentacoes caches on success for immediate refresh
+- [34-01]: AuditLog.processoId is nullable (no nullable=false) to accommodate document-level audit events not linked to a processo
+- [34-01]: ConflictCheckDecisao timeline timestamp uses createdAt (LocalDateTime), not dataDecisao (LocalDate) — avoids ClassCastException in sort
+- [34-01]: getTimeline() never queries auditLogRepository — operational history (Timeline) vs compliance trail (Audit) are separate surfaces
 
 ### Pending Todos
 
@@ -70,8 +73,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-15T14:05:00Z
-Stopped at: Completed Phase 33, Plan 02 — frontend data layer for workflow and prazos (types, schemas, lib/prazos.ts, hooks)
+Last session: 2026-06-16T18:44:25Z
+Stopped at: Completed Phase 34, Plan 01 — AuditLog entity, AuditLogRepository, TimelineItemDto, GET /timeline, GET /audit, 4 audit injection points in ResourceController
 Resume file: None
 
 ## Operator Next Steps
