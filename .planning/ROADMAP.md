@@ -9,7 +9,8 @@
 - ✅ **v1.4 Melhoria módulo clientes** - Phases 18-21 (shipped 2026-06-03) — archive: `.planning/milestones/v1.4-ROADMAP.md`
 - ⏸ **v1.5 Melhoria funcionalidades processos** - Phases 22-27 (paused/deferred)
 - ⏸ **v1.6 Melhoria nfeature de gestão de clientes** - Phases 28-31 (paused/deferred)
-- 🏃 **v1.7 Melhoria no modulo de gestao e acompanhamento de processos** - Phases 32-36 (active)
+- 🏃 **v1.7 Melhoria no modulo de gestao e acompanhamento de processos** - Phases 32-36 (active — phases 35-36 deferred)
+- ✅ **v1.8 Deployment para VPS** - Phases 37-39 (shipped 2026-06-16) — archive: `.planning/milestones/v1.8-ROADMAP.md`
 
 ## Phases
 
@@ -696,51 +697,11 @@ Plans:
 </details>
 
 <details>
-<summary>🏃 v1.8 Deployment para VPS (Phases 37-39)</summary>
+<summary>✅ v1.8 Deployment para VPS (Phases 37-39) — SHIPPED 2026-06-16</summary>
 
-### Phase 37: Containerização e Docker Compose
-
-**Goal**: Configurar os Dockerfiles multi-stage para Next.js e Spring Boot e orquestrar o ambiente local e de produção via Docker Compose com volume para PostgreSQL.
-**Depends on**: Phase 34
-**Requirements**: [DEP-01, DEP-02, DEP-05]
-**Success Criteria**:
-  1. Dockerfiles criados compilam e criam imagens leves otimizadas (multi-stage).
-  2. Docker Compose levanta frontend, backend, base de dados e proxy localmente com sucesso.
-  3. Dados do PostgreSQL persistem após restart do container.
-
-**Plans**: 2 plans
-
-Plans:
-- [x] 37-01-PLAN.md — Dockerfiles multi-stage (backend + frontend)
-- [ ] 37-02-PLAN.md — Docker Compose orchestration, Caddyfile e env files
-
-### Phase 38: Reverse Proxy e HTTPS
-
-**Goal**: Configurar o Caddy ou Nginx como reverse proxy para receber pedidos externos na VPS e encaminhá-los para os containers adequados com SSL.
-**Depends on**: Phase 37
-**Requirements**: [DEP-03]
-**Success Criteria**:
-  1. Pedidos ao IP/Domínio público chegam ao Caddy/Nginx e são reencaminhados internamente.
-  2. Configuração de HTTPS automático ou manual mapeada.
-
-**Plans**: 1 plans
-
-Plans:
-- [x] TBD (run /gsd-plan-phase 38 to break down) (completed 2026-06-16)
-
-### Phase 39: Pipeline de CI/CD
-
-**Goal**: Configurar GitHub Actions para compilar imagens/código e implantar de forma contínua na VPS Hostinger via SSH.
-**Depends on**: Phase 38
-**Requirements**: [DEP-04]
-**Success Criteria**:
-  1. Git push para main desencadeia o deploy automático.
-  2. Nova versão corre na VPS sem intervenção manual.
-
-**Plans**: 1 plans
-
-Plans:
-- [ ] 39-01-PLAN.md — GitHub Actions workflow (build Docker images, push to GHCR, deploy to VPS via SSH)
+- [x] Phase 37: Containerização e Docker Compose (2/2 plans) — completed 2026-06-16
+- [x] Phase 38: Reverse Proxy e HTTPS (1/1 plan) — completed 2026-06-16
+- [x] Phase 39: Pipeline de CI/CD (1/1 plan) — completed 2026-06-16
 
 </details>
 
@@ -788,5 +749,5 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
 | 37. Containerização e Docker Compose | v1.8 | 2/2 | Complete | 2026-06-16 |
-| 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete   | 2026-06-16 |
+| 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 39. Pipeline de CI/CD | v1.8 | 1/1 | Complete | 2026-06-16 |

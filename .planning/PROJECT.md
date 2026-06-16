@@ -25,10 +25,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Layout institucional padronizado (sidebar + top app bar) — v1.1
 - ✓ Componentes UI reutilizáveis (badges, tabelas) para consistência visual — v1.1
 - ✓ Melhoria no modulo de gestao e acompanhamento de processos (intake, conflict check, workflow, timeline, auditoria, governanca documental, dashboards) — v1.7
+- ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8
 
 ### Active
 
-- Milestone v1.8: **Deployment para VPS** — dockerização de Next.js, Spring Boot e PostgreSQL com reverse proxy e CI/CD via GitHub Actions.
+- Próximo milestone: continuar fases 35-36 (v1.7 governança documental + dashboards) ou iniciar novo milestone
 
 ### Out of Scope
 
@@ -61,16 +62,16 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | Fixtures/seed alinhadas ao ERD | Facilitar prototipagem e UAT inicial | ✓ Good |
 | Frontend “burro”: sem regras de negócio | Evitar deriva de contrato e duplicação | ✓ Good |
 | UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave) | Consistência visual e usabilidade institucional | ✓ Good |
+| Caddy como reverse proxy com HTTPS automático | Zero config TLS — Let's Encrypt provisionado automaticamente quando domínio real configurado | ✓ Good |
+| GHCR como container registry | Gratuito, integrado GitHub Actions, sem serviço externo | ✓ Good |
+| Next.js output: standalone | Imagem Docker sem node_modules — runtime mínimo com node server.js | ✓ Good |
+| docker-compose.prod.yml como override | Separação dev/prod sem duplicar o compose base | ✓ Good |
 
-## Current Milestone: v1.8 Deployment para VPS
+## Current State
 
-**Goal:** Configurar e realizar o deployment completo da aplicação LexCV numa VPS Hostinger usando Docker Compose e CI/CD.
+**Shipped:** v1.8 (2026-06-16) — LexCV está totalmente containerizado e pronto para VPS. Backend e frontend têm Dockerfiles multi-stage, Docker Compose orquestra 4 serviços com volumes persistentes, Caddy provisiona HTTPS automático via Let's Encrypt, e GitHub Actions faz build + push GHCR + deploy SSH automaticamente a cada push para main.
 
-**Target features:**
-- Containerização e configuração do Docker Compose (Spring Boot, Next.js, PostgreSQL, Reverse Proxy)
-- Configuração de ambiente e segurança na VPS Hostinger
-- Configuração de Reverse Proxy (Caddy/Nginx) com HTTPS
-- Implementação de CI/CD via GitHub Actions para deploy automático na VPS
+**Next:** Retomar fases v1.7 deferred (35: Governança Documental, 36: Dashboards KPI) ou planear novo milestone.
 
 ## Evolution
 
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 after arranque do milestone v1.8 (Deployment para VPS)*
+*Last updated: 2026-06-16 after v1.8 milestone completion (Deployment para VPS)*

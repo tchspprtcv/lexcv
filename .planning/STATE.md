@@ -1,27 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: Deployment para VPS
-status: Defining requirements
-stopped_at: Completed Phase 39, Plan 01 (tasks 1-2) — GitHub Actions CI/CD workflow deploy.yml and DEPLOYMENT.md secrets section; checkpoint:human-verify awaiting pipeline end-to-end validation
-last_updated: "2026-06-16T23:55:00.000Z"
-last_activity: 2026-06-16 — Milestone v1.8 started
+milestone: v1.9
+milestone_name: TBD (next milestone)
+status: Milestone v1.8 complete — planning next
+stopped_at: Milestone v1.8 archived 2026-06-16
+last_updated: "2026-06-16T00:00:00.000Z"
+last_activity: 2026-06-16 — Milestone v1.8 shipped
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-13)
+See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 34 — processos   timeline e auditoria
+**Current focus:** Planning next milestone (v1.9 or resuming v1.5/v1.6/v1.7 deferred phases)
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-06-16:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 37: docker compose startup + Caddy routing + volume persistence | human_needed — requires Docker on VPS |
+| verification_gap | Phase 38: live HTTPS via Let's Encrypt on real domain | human_needed — requires VPS + domain |
+| verification_gap | Phase 39: end-to-end CI/CD pipeline trigger | human_needed — requires push to main + VPS configured |
+
+Known deferred items at close: 3 (see above)
 
 ## Current Position
 
