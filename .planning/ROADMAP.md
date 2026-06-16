@@ -644,11 +644,20 @@ Plans:
   2. Eventos auditaveis sensiveis ficam registados com utilizador, acao, alvo e timestamp
   3. Utilizador consegue filtrar a linha temporal por tipo de evento, periodo e criticidade
 
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
+**Wave 1**
 
-- [ ] TBD (run /gsd-plan-phase 34 to break down)
+- [ ] 34-01-PLAN.md — Backend: AuditLog entity + repository, TimelineItemDto DTO, Movimentacao.autor_id, GET /timeline + GET /audit endpoints, four audit injection points in ResourceController
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 34-02-PLAN.md — Frontend data layer: TimelineItem/AuditLogEntry types, useTimeline + useAuditLog hooks, cache invalidation extensions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 34-03-PLAN.md — Frontend UI: tab system restructure (Timeline default, Auditoria RBAC-gated, Movimentacoes removed), dot-and-line feed, client-side filters, checkpoint
 
 ### Phase 35: Processos - Governanca Documental e Retencao
 
@@ -726,6 +735,6 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
 | 32. Processos - Intake e Conflict Check | v1.7 | 3/3 | Complete    | 2026-06-14 |
 | 33. Processos - Workflow, Gates e Prazos | v1.7 | 3/3 | Complete    | 2026-06-16 |
-| 34. Processos - Timeline e Auditoria | v1.7 | 0/0 | Planned | — |
+| 34. Processos - Timeline e Auditoria | v1.7 | 0/3 | In Progress | — |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
