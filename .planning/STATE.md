@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Deployment para VPS
 status: Defining requirements
-stopped_at: Completed Phase 38, Plan 01 — Caddyfile.prod with automatic HTTPS via Let's Encrypt, docker-compose.prod.yml caddy volumes, .env.example DOMAIN_NAME, DEPLOYMENT.md VPS guide
-last_updated: "2026-06-16T23:30:00.000Z"
+stopped_at: Completed Phase 39, Plan 01 (tasks 1-2) — GitHub Actions CI/CD workflow deploy.yml and DEPLOYMENT.md secrets section; checkpoint:human-verify awaiting pipeline end-to-end validation
+last_updated: "2026-06-16T23:55:00.000Z"
 last_activity: 2026-06-16 — Milestone v1.8 started
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 67
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -65,6 +65,8 @@ Recent decisions affecting current work:
 - [34-02]: useAuditLog staleTime set to 30_000 (vs 15_000 for useTimeline) — audit log is compliance trail; longer cache reduces API calls without staleness impact
 - [34-02]: Timeline invalidation in useAddProcessoMovimentacao added as sequential await (not merged into Promise.all) — minimal change preserving existing code structure
 - [38-01]: Caddyfile.prod uses {$DOMAIN_NAME} placeholder with no explicit TLS block — Caddy provisions Let's Encrypt automatically when a hostname (not :80) is configured
+- [39-01]: IMAGE_TAG=latest on VPS (not SHA) — docker-compose.prod.yml default is :latest and :latest is always updated by the push step; no need for SHA-based rollback on first deploy
+- [39-01]: No --force-recreate in compose up — minimizes downtime per CONTEXT.md decision
 
 ### Pending Todos
 
@@ -76,8 +78,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-16T23:30:00.000Z
-Stopped at: Completed Phase 38, Plan 01 — Caddyfile.prod with automatic HTTPS via Let's Encrypt, docker-compose.prod.yml caddy volumes, .env.example DOMAIN_NAME, DEPLOYMENT.md VPS guide
+Last session: 2026-06-16T23:55:00.000Z
+Stopped at: Completed Phase 39, Plan 01 (tasks 1-2) — GitHub Actions CI/CD workflow deploy.yml and DEPLOYMENT.md secrets section; checkpoint:human-verify awaiting pipeline end-to-end validation
 Resume file: None
 
 ## Operator Next Steps
