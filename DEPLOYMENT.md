@@ -28,7 +28,7 @@ ufw enable
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/lexcv.git
+git clone https://github.com/tchspprtcv/lexcv.git
 cd lexcv
 ```
 
@@ -107,3 +107,34 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ## Certificate Renewal
 
 Caddy renews Let's Encrypt certificates automatically — no cron job or manual intervention needed. Certificates are stored in the `caddy_data` Docker named volume. **Do not delete this volume** or certificates will be re-issued from scratch (subject to Let's Encrypt rate limits).
+
+## GitHub Actions — Required Secrets
+
+Configure the following secrets in the GitHub repository under Settings → Secrets and variables → Actions → New repository secret.
+
+| Secret | Description | Example |
+|---|---|---|
+| `VPS_HOST` | VPS IP address or hostname | `123.45.67.89` |
+| `VPS_USER` | SSH login user on the VPS | `root` or `deploy` |
+| `VPS_SSH_KEY` | Private SSH key (no passphrase). Paste the full key including `-----BEGIN...-----END` lines. Generate with `ssh-keygen -t ed25519 -C lexcv-deploy` and add the public key to `~/.ssh/authorized_keys` on the VPS. | (multiline) |
+| `VPS_PORT` | SSH port on the VPS | `22` |
+| `GHCR_PAT` | GitHub Personal Access Token with `read:packages` scope. Create at github.com → Settings → Developer settings → Personal access tokens (classic). The VPS uses this to `docker login ghcr.io` and pull images. | `ghp_...` |
+
+`GITHUB_TOKEN` is automatically provided by GitHub Actions with `packages: write` permission — no manual setup required.
+
+### Workflow Behavior
+
+| Event | Build images | Push to GHCR | Deploy to VPS |
+|---|---|---|---|
+| Push to `main` | yes | yes | yes |
+| Pull request to `main` | yes | no | no |
+
+Images are tagged with both `:latest` and the git SHA (`:${{ github.sha }}`). The VPS always pulls `:latest`.
+
+### First Deploy Checklist
+
+Before the workflow runs for the first time:
+1. All five secrets above are set in GitHub.
+2. The deploy user's public SSH key is in `~/.ssh/authorized_keys` on the VPS.
+3. `/opt/lexcv` exists on the VPS and contains `docker-compose.yml`, `docker-compose.prod.yml`, `Caddyfile.prod`, and a valid `.env` file (see `.env.example`).
+4. Docker and Docker Compose plugin are installed on the VPS (see Phase 38 setup steps).
