@@ -711,7 +711,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 37-01-PLAN.md — Dockerfiles multi-stage (backend + frontend)
+- [x] 37-01-PLAN.md — Dockerfiles multi-stage (backend + frontend)
 - [ ] 37-02-PLAN.md — Docker Compose orchestration, Caddyfile e env files
 
 ### Phase 38: Reverse Proxy e HTTPS
@@ -787,6 +787,6 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 34. Processos - Timeline e Auditoria | v1.7 | 3/3 | Complete | 2026-06-16 |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
-| 37. Containerização e Docker Compose | v1.8 | 0/2 | Planned | — |
+| 37. Containerização e Docker Compose | v1.8 | 1/2 | In Progress|  |
 | 38. Reverse Proxy e HTTPS | v1.8 | 0/1 | Planned | — |
 | 39. Pipeline de CI/CD | v1.8 | 0/1 | Planned | — |

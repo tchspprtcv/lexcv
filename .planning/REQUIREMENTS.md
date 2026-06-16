@@ -6,7 +6,7 @@
 ## v1.8 Requirements (Deployment para VPS)
 
 ### Containerização e Docker Compose
-- [ ] **DEP-01**: Admin/Dev consegue configurar os Dockerfiles para o frontend Next.js e o backend Spring Boot com builds multi-stage otimizados.
+- [x] **DEP-01**: Admin/Dev consegue configurar os Dockerfiles para o frontend Next.js e o backend Spring Boot com builds multi-stage otimizados.
 - [ ] **DEP-02**: Admin/Dev consegue definir e levantar um ecossistema multi-container usando Docker Compose que inclui Next.js, Spring Boot, PostgreSQL e um Reverse Proxy (Caddy/Nginx), com persistência de dados do PostgreSQL através de volumes.
 
 ### Reverse Proxy e Redirecionamento
