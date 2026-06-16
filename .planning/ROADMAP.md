@@ -740,7 +740,7 @@ Plans:
 **Plans**: 1 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 39 to break down)
+- [ ] 39-01-PLAN.md — GitHub Actions workflow (build Docker images, push to GHCR, deploy to VPS via SSH)
 
 </details>
 
