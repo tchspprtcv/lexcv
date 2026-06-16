@@ -631,7 +631,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 33-03-PLAN.md — Frontend UI: instala Dialog+Textarea, Workflow card + Prazos card + Dialogs no detalhe, sinais de responsavel/risco na listagem
+- [x] 33-03-PLAN.md — Frontend UI: instala Dialog+Textarea, Workflow card + Prazos card + Dialogs no detalhe, sinais de responsavel/risco na listagem
 
 ### Phase 34: Processos - Timeline e Auditoria
 
@@ -725,7 +725,7 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
 | 32. Processos - Intake e Conflict Check | v1.7 | 3/3 | Complete    | 2026-06-14 |
-| 33. Processos - Workflow, Gates e Prazos | v1.7 | 2/3 | In Progress|  |
+| 33. Processos - Workflow, Gates e Prazos | v1.7 | 3/3 | Complete   | 2026-06-16 |
 | 34. Processos - Timeline e Auditoria | v1.7 | 0/0 | Planned | — |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
