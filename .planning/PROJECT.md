@@ -27,7 +27,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-- Milestone v1.6: **Melhoria nfeature de gestão de clientes** — enriquecimento cadastral (categorias, ramo de atividade, detalhes do documento), perfil financeiro e de faturação, linha de tempo (timeline) de interações e conflict check visual.
+- Milestone v1.7: **Melhoria no modulo de gestao e acompanhamento de processos** — intake e conflict check antes da abertura formal, workflow processual com gates, timeline unificada auditavel, governanca documental por processo e dashboards/KPIs operacionais.
 
 ### Out of Scope
 
@@ -61,5 +61,33 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | Frontend “burro”: sem regras de negócio | Evitar deriva de contrato e duplicação | ✓ Good |
 | UI institucional alinhada ao Figma (top bar + sidebar + páginas-chave) | Consistência visual e usabilidade institucional | ✓ Good |
 
+## Current Milestone: v1.7 Melhoria no modulo de gestao e acompanhamento de processos
+
+**Goal:** Evoluir o modulo de processos de um CRUD operacional para uma gestao juridica fim-a-fim, com maior controlo, rastreabilidade e monitorizacao.
+
+**Target features:**
+- Intake e conflict check antes da abertura formal do processo
+- Workflow processual com estados, gates, responsaveis e prazos
+- Timeline unificada com eventos funcionais e auditoria
+- Governanca documental por processo com classificacao, versao, retencao e legal hold
+- Dashboards/KPIs de acompanhamento operacional, risco e backlog
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? -> Move to Out of Scope with reason
+2. Requirements validated? -> Move to Validated with phase reference
+3. New requirements emerged? -> Add to Active
+4. Decisions to log? -> Add to Key Decisions
+5. "What This Is" still accurate? -> Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check - still the right priority?
+3. Audit Out of Scope - reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-06-10 after arranque do milestone v1.6 (Melhoria nfeature de gestão de clientes)*
+*Last updated: 2026-06-13 after arranque do milestone v1.7 (Melhoria no modulo de gestao e acompanhamento de processos)*

@@ -2,7 +2,7 @@
   "mode": "interactive",
   "granularity": "standard",
   "workflow": {
-    "research": false,
+    "research": true,
     "plan_check": true,
     "verifier": true,
     "auto_advance": false,
@@ -18,8 +18,7 @@
     "plan_bounce_passes": 2,
     "cross_ai_execution": false,
     "cross_ai_command": "",
-    "cross_ai_timeout": 300,
-    "_auto_chain_active": false
+    "cross_ai_timeout": 300
   },
   "ship": {
     "pr_body_sections": []
@@ -57,7 +56,7 @@
   "hooks": {
     "context_warnings": true
   },
-  "project_code": "LEXCV",
+  "project_code": null,
   "agent_skills": {},
   "claude_md_path": "./CLAUDE.md"
 }
