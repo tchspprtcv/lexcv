@@ -695,10 +695,58 @@ Plans:
 
 </details>
 
+<details>
+<summary>🏃 v1.8 Deployment para VPS (Phases 37-39)</summary>
+
+### Phase 37: Containerização e Docker Compose
+
+**Goal**: Configurar os Dockerfiles multi-stage para Next.js e Spring Boot e orquestrar o ambiente local e de produção via Docker Compose com volume para PostgreSQL.
+**Depends on**: Phase 34
+**Requirements**: [DEP-01, DEP-02, DEP-05]
+**Success Criteria**:
+  1. Dockerfiles criados compilam e criam imagens leves otimizadas (multi-stage).
+  2. Docker Compose levanta frontend, backend, base de dados e proxy localmente com sucesso.
+  3. Dados do PostgreSQL persistem após restart do container.
+
+**Plans**: 2 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 37 to break down)
+
+### Phase 38: Reverse Proxy e HTTPS
+
+**Goal**: Configurar o Caddy ou Nginx como reverse proxy para receber pedidos externos na VPS e encaminhá-los para os containers adequados com SSL.
+**Depends on**: Phase 37
+**Requirements**: [DEP-03]
+**Success Criteria**:
+  1. Pedidos ao IP/Domínio público chegam ao Caddy/Nginx e são reencaminhados internamente.
+  2. Configuração de HTTPS automático ou manual mapeada.
+
+**Plans**: 1 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 38 to break down)
+
+### Phase 39: Pipeline de CI/CD
+
+**Goal**: Configurar GitHub Actions para compilar imagens/código e implantar de forma contínua na VPS Hostinger via SSH.
+**Depends on**: Phase 38
+**Requirements**: [DEP-04]
+**Success Criteria**:
+  1. Git push para main desencadeia o deploy automático.
+  2. Nova versão corre na VPS sem intervenção manual.
+
+**Plans**: 1 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 39 to break down)
+
+</details>
+
 ## Progress
 
 **Execution Order:**
-Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36
+Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -733,8 +781,11 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 29. Clientes — Perfil Financeiro e Faturação | v1.6 | 0/0 | Planned | — |
 | 30. Clientes — Linha de Tempo de Atividades | v1.6 | 0/0 | Planned | — |
 | 31. Clientes — Conflict Check Visual | v1.6 | 0/0 | Planned | — |
-| 32. Processos - Intake e Conflict Check | v1.7 | 3/3 | Complete    | 2026-06-14 |
-| 33. Processos - Workflow, Gates e Prazos | v1.7 | 3/3 | Complete    | 2026-06-16 |
+| 32. Processos - Intake e Conflict Check | v1.7 | 3/3 | Complete | 2026-06-14 |
+| 33. Processos - Workflow, Gates e Prazos | v1.7 | 3/3 | Complete | 2026-06-16 |
 | 34. Processos - Timeline e Auditoria | v1.7 | 3/3 | Complete | 2026-06-16 |
 | 35. Processos - Governanca Documental e Retencao | v1.7 | 0/0 | Planned | — |
 | 36. Processos - Dashboards e KPI Executivo | v1.7 | 0/0 | Planned | — |
+| 37. Containerização e Docker Compose | v1.8 | 0/2 | Planned | — |
+| 38. Reverse Proxy e HTTPS | v1.8 | 0/1 | Planned | — |
+| 39. Pipeline de CI/CD | v1.8 | 0/1 | Planned | — |
