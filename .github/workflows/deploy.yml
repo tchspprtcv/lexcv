@@ -95,7 +95,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /opt/lexcv
-            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u tchspprtcv --password-stdin
+            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
             export REGISTRY=ghcr.io/tchspprtcv/lexcv
             export IMAGE_TAG=latest
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
