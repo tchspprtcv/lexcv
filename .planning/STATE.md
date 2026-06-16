@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Melhoria no modulo de gestao e acompanhamento de processos
 status: executing
-stopped_at: Completed Phase 34, Plan 01 — backend foundation (AuditLog entity, AuditLogRepository, TimelineItemDto, Movimentacao.autorId, GET /timeline, GET /audit, 4 audit injection points)
-last_updated: "2026-06-16T18:44:25Z"
-last_activity: 2026-06-16 -- Phase 34 Plan 01 complete
+stopped_at: Completed Phase 34, Plan 02 — TypeScript types (TimelineItem, TimelineItemType, AuditLogEntry), useTimeline and useAuditLog hooks, extended mutation invalidations
+last_updated: "2026-06-16T19:15:00Z"
+last_activity: 2026-06-16 -- Phase 34 Plan 02 complete
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 44
+  completed_plans: 8
+  percent: 40
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-13)
 ## Current Position
 
 Phase: 34
-Plan: 01 (complete) — ready for Plan 02
+Plan: 02 (complete) — ready for Plan 03
 Status: Executing
-Last activity: 2026-06-16 -- Phase 34 Plan 01 complete
+Last activity: 2026-06-16 -- Phase 34 Plan 02 complete
 
 ## Accumulated Context
 
@@ -62,6 +62,8 @@ Recent decisions affecting current work:
 - [34-01]: AuditLog.processoId is nullable (no nullable=false) to accommodate document-level audit events not linked to a processo
 - [34-01]: ConflictCheckDecisao timeline timestamp uses createdAt (LocalDateTime), not dataDecisao (LocalDate) — avoids ClassCastException in sort
 - [34-01]: getTimeline() never queries auditLogRepository — operational history (Timeline) vs compliance trail (Audit) are separate surfaces
+- [34-02]: useAuditLog staleTime set to 30_000 (vs 15_000 for useTimeline) — audit log is compliance trail; longer cache reduces API calls without staleness impact
+- [34-02]: Timeline invalidation in useAddProcessoMovimentacao added as sequential await (not merged into Promise.all) — minimal change preserving existing code structure
 
 ### Pending Todos
 
@@ -73,8 +75,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-16T18:44:25Z
-Stopped at: Completed Phase 34, Plan 01 — AuditLog entity, AuditLogRepository, TimelineItemDto, GET /timeline, GET /audit, 4 audit injection points in ResourceController
+Last session: 2026-06-16T19:15:00Z
+Stopped at: Completed Phase 34, Plan 02 — TypeScript types (TimelineItem, TimelineItemType, AuditLogEntry), useTimeline and useAuditLog hooks, extended mutation invalidations
 Resume file: None
 
 ## Operator Next Steps

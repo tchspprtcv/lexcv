@@ -17,8 +17,8 @@
 
 ### Timeline e Auditoria
 
-- [ ] **PRC-28**: Utilizador consegue consultar uma timeline unificada do processo com movimentacoes, tarefas, documentos, eventos e decisoes ordenadas por data.
-- [ ] **AUD-02**: Utilizador consegue consultar a trilha auditavel de eventos sensiveis do processo, incluindo consulta, alteracao, exportacao, download e eliminacao.
+- [x] **PRC-28**: Utilizador consegue consultar uma timeline unificada do processo com movimentacoes, tarefas, documentos, eventos e decisoes ordenadas por data.
+- [x] **AUD-02**: Utilizador consegue consultar a trilha auditavel de eventos sensiveis do processo, incluindo consulta, alteracao, exportacao, download e eliminacao.
 
 ### Governanca Documental
 
