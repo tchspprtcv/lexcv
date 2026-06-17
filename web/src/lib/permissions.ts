@@ -1,7 +1,7 @@
 export type PermissionAction = "view" | "create" | "edit" | "manage";
 
 const ACTION_FALLBACKS: Record<PermissionAction, PermissionAction[]> = {
-  view: ["view"],
+  view: ["view", "edit", "manage", "create"],
   create: ["create", "edit", "manage"],
   edit: ["edit", "manage"],
   manage: ["manage"],

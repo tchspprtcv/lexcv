@@ -10,6 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(of = "nome")
 public class Permission {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -23,11 +23,25 @@ public class UserPrincipal implements UserDetails {
     private final Set<String> permissions;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public static UserPrincipal create(UUID userId, UUID tenantId, String nome, String email, Set<String> roles, Set<String> permissions) {
+    public static UserPrincipal create(UUID userId, UUID tenantId, String nome, String email, Set<String> roles, Set<String> dbPermissions) {
+        Set<String> permissions = new java.util.HashSet<>(dbPermissions);
+        
         Set<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
                 .collect(Collectors.toSet());
         
+        if (roles.contains("ADMIN")) {
+            permissions.addAll(java.util.Arrays.asList(
+                    "clientes:view", "clientes:edit",
+                    "processos:view", "processos:edit",
+                    "processos:create", "processos:manage",
+                    "agenda:view", "agenda:edit",
+                    "documentos:view", "documentos:edit",
+                    "financeiro:view", "financeiro:edit",
+                    "rbac:manage", "users:manage"
+            ));
+        }
+
         permissions.stream()
                 .map(SimpleGrantedAuthority::new)
                 .forEach(authorities::add);
