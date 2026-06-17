@@ -2,9 +2,9 @@ name: "CI/CD — Build and Deploy"
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io/tchspprtcv/lexcv
@@ -57,7 +57,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           platforms: linux/amd64
-          push: ${{ github.ref == 'refs/heads/main' }}
+          push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
             ${{ env.REGISTRY }}/backend:latest
             ${{ env.REGISTRY }}/backend:${{ env.IMAGE_TAG }}
@@ -70,7 +70,7 @@ jobs:
           context: ./web
           file: ./web/Dockerfile
           platforms: linux/amd64
-          push: ${{ github.ref == 'refs/heads/main' }}
+          push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
             ${{ env.REGISTRY }}/frontend:latest
             ${{ env.REGISTRY }}/frontend:${{ env.IMAGE_TAG }}
@@ -80,24 +80,3 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
-  deploy:
-    needs: [build-and-push]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
-            cd /opt/lexcv
-            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-            export REGISTRY=ghcr.io/tchspprtcv/lexcv
-            export IMAGE_TAG=latest
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
-            docker image prune -f
