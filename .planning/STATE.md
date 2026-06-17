@@ -25,15 +25,15 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-06-16:
+Items resolved on 2026-06-17:
 
 | Category | Item | Status |
 |----------|------|--------|
-| verification_gap | Phase 37: docker compose startup + Caddy routing + volume persistence | human_needed — requires Docker on VPS |
-| verification_gap | Phase 38: live HTTPS via Let's Encrypt on real domain | human_needed — requires VPS + domain |
-| verification_gap | Phase 39: end-to-end CI/CD pipeline trigger | human_needed — requires push to main + VPS configured |
+| verification_gap | Phase 37: docker compose startup + Caddy routing + volume persistence | COMPLETED — deployed via Hostinger VPS connector on HTTP |
+| verification_gap | Phase 38: live HTTPS via Let's Encrypt on real domain | SKIPPED — user opted to use public IP address directly |
+| verification_gap | Phase 39: end-to-end CI/CD pipeline trigger | COMPLETED — GitHub workflow builds/pushes public images; deployment triggered via VPS API |
 
-Known deferred items at close: 3 (see above)
+Known deferred items: 0 (all resolved)
 
 ## Current Position
 
