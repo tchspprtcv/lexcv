@@ -50,11 +50,11 @@ function EventoCreateContent() {
   const form = useForm<EventoFormValues>({
     resolver: zodResolver(eventoFormSchema),
     defaultValues: {
-      processo_id: undefined,
+      processoId: undefined,
       titulo: "",
       descricao: undefined,
-      data_inicio: "",
-      data_fim: "",
+      dataInicio: "",
+      dataFim: "",
       prioridade: "MEDIA",
       concluido: false,
     },
@@ -68,11 +68,11 @@ function EventoCreateContent() {
     }
     try {
       const payload: EventoCreateRequest = {
-        processo_id: values.processo_id,
+        processoId: values.processoId,
         titulo: values.titulo,
         descricao: values.descricao,
-        data_inicio: new Date(values.data_inicio).toISOString(),
-        data_fim: new Date(values.data_fim).toISOString(),
+        dataInicio: new Date(values.dataInicio).toISOString().slice(0, 19),
+        dataFim: new Date(values.dataFim).toISOString().slice(0, 19),
         prioridade: values.prioridade,
         concluido: values.concluido,
       };
@@ -103,12 +103,12 @@ function EventoCreateContent() {
         <CardContent>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
-              <Label htmlFor="processo_id">Processo (opcional)</Label>
+              <Label htmlFor="processoId">Processo (opcional)</Label>
               <select
-                id="processo_id"
+                id="processoId"
                 className={selectClassName}
                 disabled={processos.isPending || processos.isError}
-                {...form.register("processo_id")}
+                {...form.register("processoId")}
               >
                 <option value="">
                   {processos.isPending ? "A carregar..." : processos.isError ? "Erro ao carregar" : "Sem vínculo"}
@@ -124,8 +124,8 @@ function EventoCreateContent() {
                   {processos.error instanceof Error ? processos.error.message : "Erro ao carregar processos"}
                 </p>
               ) : null}
-              {form.formState.errors.processo_id ? (
-                <p className="text-sm text-red-600">{form.formState.errors.processo_id.message}</p>
+              {form.formState.errors.processoId ? (
+                <p className="text-sm text-red-600">{form.formState.errors.processoId.message}</p>
               ) : null}
             </div>
 
@@ -151,18 +151,18 @@ function EventoCreateContent() {
               </div>
 
               <div className="space-y-2 sm:col-span-1">
-                <Label htmlFor="data_inicio">Início</Label>
-                <Input id="data_inicio" type="datetime-local" {...form.register("data_inicio")} />
-                {form.formState.errors.data_inicio ? (
-                  <p className="text-sm text-red-600">{form.formState.errors.data_inicio.message}</p>
+                <Label htmlFor="dataInicio">Início</Label>
+                <Input id="dataInicio" type="datetime-local" {...form.register("dataInicio")} />
+                {form.formState.errors.dataInicio ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.dataInicio.message}</p>
                 ) : null}
               </div>
 
               <div className="space-y-2 sm:col-span-1">
-                <Label htmlFor="data_fim">Fim</Label>
-                <Input id="data_fim" type="datetime-local" {...form.register("data_fim")} />
-                {form.formState.errors.data_fim ? (
-                  <p className="text-sm text-red-600">{form.formState.errors.data_fim.message}</p>
+                <Label htmlFor="dataFim">Fim</Label>
+                <Input id="dataFim" type="datetime-local" {...form.register("dataFim")} />
+                {form.formState.errors.dataFim ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.dataFim.message}</p>
                 ) : null}
               </div>
             </div>

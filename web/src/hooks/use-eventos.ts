@@ -15,7 +15,7 @@ function normalizeDateParam(value: string | undefined) {
   if (!value) return undefined;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return undefined;
-  return d.toISOString();
+  return d.toISOString().slice(0, 19);
 }
 
 function buildEventosQuery(filters: EventosListFilters) {

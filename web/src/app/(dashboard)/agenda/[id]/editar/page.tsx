@@ -84,11 +84,11 @@ function EventoEditContent({ id }: { id: number }) {
   const form = useForm<EventoFormValues>({
     resolver: zodResolver(eventoFormSchema),
     defaultValues: {
-      processo_id: "",
+      processoId: "",
       titulo: "",
       descricao: undefined,
-      data_inicio: "",
-      data_fim: "",
+      dataInicio: "",
+      dataFim: "",
       prioridade: "MEDIA",
       concluido: false,
     },
@@ -97,11 +97,11 @@ function EventoEditContent({ id }: { id: number }) {
   React.useEffect(() => {
     if (!evento.data) return;
     form.reset({
-      processo_id: evento.data.processo_id ?? "",
+      processoId: evento.data.processoId ?? "",
       titulo: evento.data.titulo,
       descricao: evento.data.descricao,
-      data_inicio: toDateTimeLocalValue(evento.data.data_inicio),
-      data_fim: toDateTimeLocalValue(evento.data.data_fim),
+      dataInicio: toDateTimeLocalValue(evento.data.dataInicio),
+      dataFim: toDateTimeLocalValue(evento.data.dataFim),
       prioridade: evento.data.prioridade,
       concluido: evento.data.concluido,
     });
@@ -111,11 +111,11 @@ function EventoEditContent({ id }: { id: number }) {
     setServerError(null);
     try {
       const payload: EventoUpdateRequest = {
-        processo_id: values.processo_id || undefined,
+        processoId: values.processoId || undefined,
         titulo: values.titulo,
         descricao: values.descricao,
-        data_inicio: new Date(values.data_inicio).toISOString(),
-        data_fim: new Date(values.data_fim).toISOString(),
+        dataInicio: new Date(values.dataInicio).toISOString().slice(0, 19),
+        dataFim: new Date(values.dataFim).toISOString().slice(0, 19),
         prioridade: values.prioridade,
         concluido: values.concluido,
       };
@@ -157,12 +157,12 @@ function EventoEditContent({ id }: { id: number }) {
           <CardContent>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
               <div className="space-y-2">
-                <Label htmlFor="processo_id">Processo (opcional)</Label>
+                <Label htmlFor="processoId">Processo (opcional)</Label>
                 <select
-                  id="processo_id"
+                  id="processoId"
                   className={selectClassName}
                   disabled={processos.isLoading || processos.isError}
-                  {...form.register("processo_id")}
+                  {...form.register("processoId")}
                 >
                   <option value="">
                     {processos.isLoading ? "A carregar..." : processos.isError ? "Erro ao carregar" : "Sem vínculo"}
@@ -178,8 +178,8 @@ function EventoEditContent({ id }: { id: number }) {
                     {processos.error instanceof Error ? processos.error.message : "Erro ao carregar processos"}
                   </p>
                 ) : null}
-                {form.formState.errors.processo_id ? (
-                  <p className="text-sm text-red-600">{form.formState.errors.processo_id.message}</p>
+                {form.formState.errors.processoId ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.processoId.message}</p>
                 ) : null}
               </div>
 
@@ -205,18 +205,18 @@ function EventoEditContent({ id }: { id: number }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="data_inicio">Início</Label>
-                  <Input id="data_inicio" type="datetime-local" {...form.register("data_inicio")} />
-                  {form.formState.errors.data_inicio ? (
-                    <p className="text-sm text-red-600">{form.formState.errors.data_inicio.message}</p>
+                  <Label htmlFor="dataInicio">Início</Label>
+                  <Input id="dataInicio" type="datetime-local" {...form.register("dataInicio")} />
+                  {form.formState.errors.dataInicio ? (
+                    <p className="text-sm text-red-600">{form.formState.errors.dataInicio.message}</p>
                   ) : null}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="data_fim">Fim</Label>
-                  <Input id="data_fim" type="datetime-local" {...form.register("data_fim")} />
-                  {form.formState.errors.data_fim ? (
-                    <p className="text-sm text-red-600">{form.formState.errors.data_fim.message}</p>
+                  <Label htmlFor="dataFim">Fim</Label>
+                  <Input id="dataFim" type="datetime-local" {...form.register("dataFim")} />
+                  {form.formState.errors.dataFim ? (
+                    <p className="text-sm text-red-600">{form.formState.errors.dataFim.message}</p>
                   ) : null}
                 </div>
               </div>

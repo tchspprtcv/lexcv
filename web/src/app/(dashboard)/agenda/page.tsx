@@ -41,7 +41,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
   const initialMonth = React.useMemo(() => {
     const d = (eventos.data ?? [])
-      .map((e) => new Date(e.data_inicio))
+      .map((e) => new Date(e.dataInicio))
       .filter((x) => !Number.isNaN(x.getTime()))
       .sort((a, b) => a.getTime() - b.getTime())[0];
     const base = d ?? new Date();
@@ -58,7 +58,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
   const eventosByDay = React.useMemo(() => {
     const map = new Map<string, Evento[]>();
     for (const e of eventos.data ?? []) {
-      const d = new Date(e.data_inicio);
+      const d = new Date(e.dataInicio);
       if (Number.isNaN(d.getTime())) continue;
       const key = dayKey(d);
       map.set(key, [...(map.get(key) ?? []), e]);
@@ -70,7 +70,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
     const now = new Date().getTime();
     return (eventos.data ?? [])
       .filter((e) => !e.concluido)
-      .map((e) => ({ e, t: new Date(e.data_inicio).getTime() }))
+      .map((e) => ({ e, t: new Date(e.dataInicio).getTime() }))
       .filter((x) => !Number.isNaN(x.t) && x.t >= now)
       .sort((a, b) => a.t - b.t)
       .slice(0, 4)
@@ -84,7 +84,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
     const active = (eventos.data ?? []).filter((e) => {
       if (e.concluido) return false;
-      const t = new Date(e.data_inicio).getTime();
+      const t = new Date(e.dataInicio).getTime();
       return t >= start.getTime() && t < end.getTime();
     });
 
@@ -241,12 +241,12 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                         {cat.label}
                       </div>
                       <div className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-sm">
-                        {new Date(e.data_inicio).toLocaleTimeString("pt-CV", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(e.dataInicio).toLocaleTimeString("pt-CV", { hour: "2-digit", minute: "2-digit" })}
                       </div>
                     </div>
                     <div className="mt-2 text-sm font-bold text-slate-900 dark:text-white">{e.titulo}</div>
                     <div className="mt-1 text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                      {e.processo_id ? `Proc. nº ${processoLabelById.get(e.processo_id) ?? e.processo_id}` : "—"}
+                      {e.processoId ? `Proc. nº ${processoLabelById.get(e.processoId) ?? e.processoId}` : "—"}
                     </div>
                   </div>
                 );

@@ -716,14 +716,17 @@ Plans:
 **Depends on**: Phase 39
 **Requirements**: AGD-33-01
 **Success Criteria** (what must be TRUE):
+
   1. Todos os tipos TypeScript e interfaces da Agenda usam camelCase (e.g. dataInicio, dataFim, processoId, tenantId).
   2. Zod schemas para formulários e filtros de pesquisa usam camelCase e validam dados correctamente.
   3. A página de lista, de detalhe e de edição de eventos renderizam e submetem dados sem erros de casing.
   4. Query keys e requisições TanStack Query realizam chamadas com parâmetros camelCase.
+
 **Plans**: 1 plan
 
 Plans:
-- [ ] 40-01: Casing refactoring of types, schemas, hooks, and pages
+
+- [x] 40-01: Casing refactoring of types, schemas, hooks, and pages
 
 #### Phase 41: Validação de Intervalo e Tratamento de Erros (Agenda)
 
@@ -731,13 +734,16 @@ Plans:
 **Depends on**: Phase 40
 **Requirements**: AGD-31-01, AGD-33-02, AGD-33-03
 **Success Criteria** (what must be TRUE):
+
   1. O Zod schema no frontend impede que dataFim seja inferior a dataInicio.
   2. O backend rejeita requisições (HTTP 400) em que a dataFim é inferior a dataInicio.
   3. A API do backend valida parâmetros de data de forma robusta e lança erros informativos em vez de silenciar falhas de data.
   4. O frontend exibe toasts de erro informativos se a gravação de eventos falhar ou se campos forem rejeitados.
+
 **Plans**: 1 plan
 
 Plans:
+
 - [ ] 41-01: Date range checks, Spring Boot controller validations, robust query parsing, and error feedback toasts
 
 #### Phase 42: Filtros, Categorias e Visão Unificada (Agenda)
@@ -746,13 +752,16 @@ Plans:
 **Depends on**: Phase 41
 **Requirements**: AGD-31-02, AGD-32-01, AGD-32-02, AGD-32-03
 **Success Criteria** (what must be TRUE):
+
   1. Utilizador pode filtrar o calendário por Categoria de Evento e Estado de Conclusão.
   2. Utilizador pode visualizar prazos de processos e eventos gerais de forma unificada no calendário da agenda.
   3. Utilizador pode filtrar a agenda por Processo específico através de um seletor visual.
   4. Estados de carregamento (loading spinners/skeletons) e de erro são exibidos na tela.
+
 **Plans**: 1 plan
 
 Plans:
+
 - [ ] 42-01: Filters panel, deadlines integration, unified event mapping, and calendar styling/loading improvements
 
 ## Progress
@@ -801,6 +810,6 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 37. Containerização e Docker Compose | v1.8 | 2/2 | Complete | 2026-06-16 |
 | 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 39. Pipeline de CI/CD | v1.8 | 1/1 | Complete | 2026-06-16 |
-| 40. Mapeamento e Alinhamento Casing (Agenda) | v1.9 | 0/1 | Planned | — |
+| 40. Mapeamento e Alinhamento Casing (Agenda) | v1.9 | 1/1 | Complete   | 2026-06-17 |
 | 41. Validação de Intervalo e Tratamento de Erros | v1.9 | 0/1 | Planned | — |
 | 42. Filtros, Categorias e Visão Unificada | v1.9 | 0/1 | Planned | — |

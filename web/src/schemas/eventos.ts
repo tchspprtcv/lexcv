@@ -9,19 +9,19 @@ const optionalTrimmedString = z
 export const eventoPrioridadeSchema = z.enum(["BAIXA", "MEDIA", "ALTA"]);
 
 export const eventoFormSchema = z.object({
-  processo_id: optionalTrimmedString,
+  processoId: optionalTrimmedString,
   titulo: z.string().trim().min(1, "O título é obrigatório"),
   descricao: optionalTrimmedString,
-  data_inicio: z
+  dataInicio: z
     .string()
     .trim()
-    .min(1, "data_inicio é obrigatório")
-    .refine((v) => !Number.isNaN(new Date(v).getTime()), "data_inicio inválida"),
-  data_fim: z
+    .min(1, "dataInicio é obrigatório")
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "dataInicio inválida"),
+  dataFim: z
     .string()
     .trim()
-    .min(1, "data_fim é obrigatório")
-    .refine((v) => !Number.isNaN(new Date(v).getTime()), "data_fim inválida"),
+    .min(1, "dataFim é obrigatório")
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "dataFim inválida"),
   prioridade: eventoPrioridadeSchema,
   concluido: z.boolean(),
 });

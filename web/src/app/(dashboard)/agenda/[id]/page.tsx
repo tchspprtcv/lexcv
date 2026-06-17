@@ -135,8 +135,8 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Processo</dt>
                 <dd className="col-span-2">
-                  {evento.data.processo_id
-                    ? processoLabelById.get(evento.data.processo_id) ?? evento.data.processo_id
+                  {evento.data.processoId
+                    ? processoLabelById.get(evento.data.processoId) ?? evento.data.processoId
                     : "—"}
                 </dd>
 
@@ -144,10 +144,10 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
                 <dd className="col-span-2">{evento.data.prioridade}</dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Início</dt>
-                <dd className="col-span-2">{formatDateTime(evento.data.data_inicio)}</dd>
+                <dd className="col-span-2">{formatDateTime(evento.data.dataInicio)}</dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Fim</dt>
-                <dd className="col-span-2">{formatDateTime(evento.data.data_fim)}</dd>
+                <dd className="col-span-2">{formatDateTime(evento.data.dataFim)}</dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Estado</dt>
                 <dd className="col-span-2">{evento.data.concluido ? "Concluído" : "Pendente"}</dd>

@@ -289,10 +289,10 @@ function PrazosUrgentesCard() {
                 </Badge>
               </div>
               <div className="mt-1.5 text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                {e.processo_id ? `Processo ${e.processo_id}` : "Sem processo"}
+                {e.processoId ? `Processo ${e.processoId}` : "Sem processo"}
               </div>
               <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                {new Date(e.data_inicio).toLocaleString("pt-CV")}
+                {new Date(e.dataInicio).toLocaleString("pt-CV")}
               </div>
             </div>
           ))
