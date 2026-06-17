@@ -69,12 +69,20 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    configs:
-      - source: caddy_config
-        target: /etc/caddy/Caddyfile
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo ":80 {
+            handle /api/* {
+                reverse_proxy backend:8080
+            }
+            handle {
+                reverse_proxy frontend:3000
+            }
+        }" > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     volumes:
       - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - frontend
       - backend
@@ -82,23 +90,10 @@ services:
       - lexcv_net
     restart: unless-stopped
 
-configs:
-  caddy_config:
-    content: |
-      :80 {
-          handle /api/* {
-              reverse_proxy backend:8080
-          }
-          handle {
-              reverse_proxy frontend:3000
-          }
-      }
-
 volumes:
   lexcv_pgdata:
   lexcv_uploads:
   caddy_data:
-  caddy_config:
 
 networks:
   lexcv_net:
