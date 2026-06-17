@@ -1530,6 +1530,16 @@ public class ResourceController {
         return ResponseEntity.ok(eventos);
     }
 
+    @PreAuthorize("hasAuthority('agenda:view')")
+    @GetMapping("/eventos/{id}")
+    public ResponseEntity<?> getEvento(@PathVariable Integer id) {
+        Evento evento = eventoRepository.findById(id).orElse(null);
+        if (evento == null || !evento.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Evento não encontrado"));
+        }
+        return ResponseEntity.ok(evento);
+    }
+
     @PreAuthorize("hasAuthority('agenda:edit')")
     @PostMapping("/eventos")
     public ResponseEntity<?> createEvento(@RequestBody Evento evento) {
