@@ -1,11 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.9
-milestone_name: TBD (next milestone)
-status: Milestone v1.8 complete — planning next
-stopped_at: Milestone v1.8 archived 2026-06-16
-last_updated: "2026-06-16T00:00:00.000Z"
-last_activity: 2026-06-16 — Milestone v1.8 shipped
+milestone_name: Melhoria Módulo Agendamento
+status: planning
+last_updated: "2026-06-17T16:27:17.937Z"
+last_activity: 2026-06-17
 progress:
   total_phases: 0
   completed_phases: 0
@@ -40,7 +39,7 @@ Known deferred items: 0 (all resolved)
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-06-16 — Milestone v1.8 started
+Last activity: 2026-06-17 — Milestone v1.9 started
 
 ## Accumulated Context
 

@@ -25,11 +25,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Layout institucional padronizado (sidebar + top app bar) — v1.1
 - ✓ Componentes UI reutilizáveis (badges, tabelas) para consistência visual — v1.1
 - ✓ Melhoria no modulo de gestao e acompanhamento de processos (intake, conflict check, workflow, timeline, auditoria, governanca documental, dashboards) — v1.7
-- ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8
+- ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8 (implantado via Hostinger VPS Connector)
 
 ### Active
 
-- Próximo milestone: continuar fases 35-36 (v1.7 governança documental + dashboards) ou iniciar novo milestone
+- [ ] AGD-31: Análise de conformidade e tratamento de erros do módulo de agendamento — v1.9
+- [ ] AGD-32: Melhorias visuais e de UX no calendário e filtros de período — v1.9
+- [ ] AGD-33: Consistência de persistência e validações entre frontend e backend — v1.9
 
 ### Out of Scope
 
@@ -69,9 +71,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v1.8 (2026-06-16) — LexCV está totalmente containerizado e pronto para VPS. Backend e frontend têm Dockerfiles multi-stage, Docker Compose orquestra 4 serviços com volumes persistentes, Caddy provisiona HTTPS automático via Let's Encrypt, e GitHub Actions faz build + push GHCR + deploy SSH automaticamente a cada push para main.
+**Shipped:** v1.8 (2026-06-17) — LexCV está totalmente containerizado e implantado com sucesso no Hostinger VPS via Hostinger VPS Connector. Caddy serve tráfego HTTP na porta 80 e está preparado para HTTPS. A imagem do Next.js frontend e Spring Boot backend são buildadas e publicadas automaticamente no GHCR pelo GitHub Actions.
 
-**Next:** Retomar fases v1.7 deferred (35: Governança Documental, 36: Dashboards KPI) ou planear novo milestone.
+**Current Milestone:** v1.9 Melhoria Módulo Agendamento (Análise e Finalização)
 
 ## Evolution
 
@@ -91,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 after v1.8 milestone completion (Deployment para VPS)*
+*Last updated: 2026-06-17 after v1.9 milestone start (Melhoria Módulo Agendamento)*
