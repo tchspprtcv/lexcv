@@ -1,0 +1,56 @@
+import { z } from "zod";
+
+const optionalTrimmedString = z
+  .string()
+  .trim()
+  .transform((v) => (v.length ? v : undefined))
+  .optional();
+
+const optionalEmail = z
+  .string()
+  .trim()
+  .transform((v) => (v.length ? v : undefined))
+  .refine((v) => !v || z.string().email().safeParse(v).success, "Email inválido")
+  .optional();
+
+export const clienteFormSchema = z
+  .object({
+    tipo: optionalTrimmedString,
+    nome: z.string().trim().min(1, "O nome é obrigatório"),
+    nif: optionalTrimmedString,
+    email: optionalEmail,
+    telefone: optionalTrimmedString,
+    morada: optionalTrimmedString,
+    localidade: optionalTrimmedString,
+    ativo: z.boolean().optional(),
+    documento_tipo: optionalTrimmedString,
+    documento_numero: optionalTrimmedString,
+    ramo_atividade: optionalTrimmedString,
+    detalhes_adicionais: z
+      .string()
+      .trim()
+      .max(255, "Os detalhes adicionais não podem exceder 255 caracteres")
+      .optional()
+      .or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    if (data.documento_tipo && !data.documento_numero) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Número de documento é obrigatório se o tipo estiver selecionado",
+        path: ["documento_numero"],
+      });
+    }
+    if (data.documento_tipo === "NIF" && data.documento_numero) {
+      const isDigitsOnly = /^\d+$/.test(data.documento_numero);
+      if (data.documento_numero.length !== 9 || !isDigitsOnly) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "NIF de Cabo Verde deve ter exatamente 9 dígitos",
+          path: ["documento_numero"],
+        });
+      }
+    }
+  });
+
+export type ClienteFormValues = z.infer<typeof clienteFormSchema>;

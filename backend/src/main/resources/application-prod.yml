@@ -1,0 +1,14 @@
+server:
+  error:
+    include-message: never
+
+spring:
+  datasource:
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}

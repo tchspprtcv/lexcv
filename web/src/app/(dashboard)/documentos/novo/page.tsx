@@ -1,0 +1,168 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { useUploadDocumento } from "@/hooks/use-documentos";
+import { usePermissions } from "@/hooks/use-permissions";
+import { documentoUploadFormSchema, type DocumentoUploadFormValues } from "@/schemas/documentos";
+
+export default function DocumentoUploadPage() {
+  const router = useRouter();
+  const upload = useUploadDocumento();
+  const permissions = usePermissions();
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const canCreateDocumentos = permissions.can.create("documentos");
+
+  const form = useForm<DocumentoUploadFormValues>({
+    resolver: zodResolver(documentoUploadFormSchema),
+    defaultValues: { nome: "", tipo: "", processo_id: "", cliente_id: "", confidencialidade: "PUBLICO", replace_id: "" },
+  });
+
+  const onSubmit = async (values: DocumentoUploadFormValues) => {
+    setServerError(null);
+    const file = values.file.item(0);
+    if (!file) return;
+    if (!canCreateDocumentos) {
+      setServerError("Não tem permissão para enviar documentos");
+      return;
+    }
+
+    try {
+      const res = await upload.mutateAsync({
+        file,
+        nome: values.nome,
+        tipo: values.tipo,
+        processo_id: values.processo_id,
+        cliente_id: values.cliente_id,
+        confidencialidade: values.confidencialidade,
+        replace_id: values.replace_id,
+      });
+      router.push(`/documentos/${encodeURIComponent(res.id)}`);
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : "Erro ao fazer upload");
+    }
+  };
+
+  if (!permissions.isLoading && !canCreateDocumentos) {
+    return (
+      <AccessDeniedState
+        description="Não tem permissão para enviar documentos."
+        backHref="/documentos"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Upload de documento</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            Enviar um ficheiro e associá-lo opcionalmente a um processo/cliente.
+          </p>
+        </div>
+
+        <Button asChild variant="outline">
+          <Link href="/documentos">Voltar</Link>
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="space-y-2">
+              <Label htmlFor="file">Ficheiro</Label>
+              <Input id="file" type="file" {...form.register("file")} />
+              {form.formState.errors.file ? (
+                <p className="text-sm text-red-600">{form.formState.errors.file.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome (opcional)</Label>
+              <Input id="nome" {...form.register("nome")} placeholder="Ex.: Procuração" />
+              {form.formState.errors.nome ? (
+                <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo (opcional)</Label>
+              <Input id="tipo" {...form.register("tipo")} placeholder="Ex.: PDF / Contrato" />
+              {form.formState.errors.tipo ? (
+                <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="processo_id">Processo ID (opcional)</Label>
+              <Input id="processo_id" {...form.register("processo_id")} />
+              {form.formState.errors.processo_id ? (
+                <p className="text-sm text-red-600">{form.formState.errors.processo_id.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cliente_id">Cliente ID (opcional)</Label>
+              <Input id="cliente_id" {...form.register("cliente_id")} />
+              {form.formState.errors.cliente_id ? (
+                <p className="text-sm text-red-600">{form.formState.errors.cliente_id.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confidencialidade">Confidencialidade</Label>
+              <select
+                id="confidencialidade"
+                className="flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300"
+                {...form.register("confidencialidade")}
+              >
+                <option value="PUBLICO">Público</option>
+                <option value="INTERNO">Interno</option>
+                <option value="CONFIDENCIAL">Confidencial</option>
+                <option value="RESTRITO">Restrito</option>
+              </select>
+              {form.formState.errors.confidencialidade ? (
+                <p className="text-sm text-red-600">{form.formState.errors.confidencialidade.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="replace_id">ID a substituir (opcional, para Nova Versão)</Label>
+              <Input id="replace_id" {...form.register("replace_id")} placeholder="UUID do documento a substituir" />
+              {form.formState.errors.replace_id ? (
+                <p className="text-sm text-red-600">{form.formState.errors.replace_id.message}</p>
+              ) : null}
+            </div>
+
+            {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting || upload.isPending || permissions.isLoading || !canCreateDocumentos}
+              >
+                {form.formState.isSubmitting || upload.isPending ? "A enviar..." : "Enviar"}
+              </Button>
+              <Button asChild type="button" variant="outline">
+                <Link href="/documentos">Cancelar</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
