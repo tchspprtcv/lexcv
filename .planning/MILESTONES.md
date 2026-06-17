@@ -1,5 +1,17 @@
 # Milestones
 
+## v1.9 v1.9 (Shipped: 2026-06-17)
+
+**Phases completed:** 3 phases, 3 plans, 10 tasks
+
+**Key accomplishments:**
+
+- Refatoração completa do data layer e das páginas do módulo de agenda do LexCV de snake_case para camelCase, com tratamento de fuso horário em campos de data, alinhando com a serialização padrão Jackson/Spring Boot do backend.
+- Validação robusta de intervalos de datas no frontend e no backend, com tratamento de exceções de parsing de data no Spring Boot e exibição de toasts de erro detalhados no Next.js.
+- Exposição global de prazos no backend, unificação de eventos e prazos no calendário mensal da agenda com filtros avançados e spinners de carregamento dinâmico.
+
+---
+
 ## v1.8 Deployment para VPS (Shipped: 2026-06-16)
 
 **Phases completed:** 3 phases (37-39), 4 plans, ~9 tasks

@@ -26,12 +26,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Componentes UI reutilizáveis (badges, tabelas) para consistência visual — v1.1
 - ✓ Melhoria no modulo de gestao e acompanhamento de processos (intake, conflict check, workflow, timeline, auditoria, governanca documental, dashboards) — v1.7
 - ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8 (implantado via Hostinger VPS Connector)
+- ✓ Melhoria Módulo Agendamento — alinhamento camelCase, validações robustas e visão unificada no calendário com filtros por processo/categoria/status — v1.9
 
 ### Active
 
-- [ ] AGD-31: Análise de conformidade e tratamento de erros do módulo de agendamento — v1.9
-- [ ] AGD-32: Melhorias visuais e de UX no calendário e filtros de período — v1.9
-- [ ] AGD-33: Consistência de persistência e validações entre frontend e backend — v1.9
+*(None yet — run /gsd-new-milestone to plan the next milestone)*
 
 ### Out of Scope
 
@@ -68,12 +67,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | GHCR como container registry | Gratuito, integrado GitHub Actions, sem serviço externo | ✓ Good |
 | Next.js output: standalone | Imagem Docker sem node_modules — runtime mínimo com node server.js | ✓ Good |
 | docker-compose.prod.yml como override | Separação dev/prod sem duplicar o compose base | ✓ Good |
+| Validação de intervalo de datas (dataFim >= dataInicio) no cliente e servidor | Garantir integridade dos dados e evitar intervalos negativos | ✓ Good |
+| Redirecionamento de prazos no calendário para o detalhe do processo | Prazos não possuem visualização individual de detalhes; ligá-los ao processo associado | ✓ Good |
 
 ## Current State
 
-**Shipped:** v1.8 (2026-06-17) — LexCV está totalmente containerizado e implantado com sucesso no Hostinger VPS via Hostinger VPS Connector. Caddy serve tráfego HTTP na porta 80 e está preparado para HTTPS. A imagem do Next.js frontend e Spring Boot backend são buildadas e publicadas automaticamente no GHCR pelo GitHub Actions.
+**Shipped:** v1.9 (2026-06-17) — Melhoria Módulo Agendamento. O LexCV agora possui o data layer de agenda completamente em camelCase, validações robustas de data de ponta a ponta e visão unificada de prazos e eventos no calendário com filtros flexíveis. Deploys contínuos e imagens docker de produção automáticos são gerenciados pelo pipeline CI/CD no Hostinger VPS.
 
-**Current Milestone:** v1.9 Melhoria Módulo Agendamento (Análise e Finalização)
+**Current Milestone:** Planning next milestone
 
 ## Evolution
 
@@ -93,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-17 after v1.9 milestone start (Melhoria Módulo Agendamento)*
+*Last updated: 2026-06-17 after v1.9 milestone completion (Melhoria Módulo Agendamento)*
