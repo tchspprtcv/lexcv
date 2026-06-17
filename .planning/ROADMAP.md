@@ -9,8 +9,9 @@
 - ✅ **v1.4 Melhoria módulo clientes** - Phases 18-21 (shipped 2026-06-03) — archive: `.planning/milestones/v1.4-ROADMAP.md`
 - ⏸ **v1.5 Melhoria funcionalidades processos** - Phases 22-27 (paused/deferred)
 - ⏸ **v1.6 Melhoria nfeature de gestão de clientes** - Phases 28-31 (paused/deferred)
-- 🏃 **v1.7 Melhoria no modulo de gestao e acompanhamento de processos** - Phases 32-36 (active — phases 35-36 deferred)
+- ⏸ **v1.7 Melhoria no modulo de gestao e acompanhamento de processos** - Phases 32-36 (paused/deferred — phases 35-36 deferred)
 - ✅ **v1.8 Deployment para VPS** - Phases 37-39 (shipped 2026-06-16) — archive: `.planning/milestones/v1.8-ROADMAP.md`
+- 🚧 **v1.9 Melhoria Módulo Agendamento** - Phases 40-42 (active)
 
 ## Phases
 
@@ -705,10 +706,59 @@ Plans:
 
 </details>
 
+### 🚧 v1.9 Melhoria Módulo Agendamento (In Progress)
+
+**Milestone Goal:** Melhorar o módulo de agendamento (calendário e filtros) com alinhamento camelCase, validações robustas e visão unificada de prazos/eventos.
+
+#### Phase 40: Mapeamento e Alinhamento Casing (Agenda)
+
+**Goal**: Refatorar o data layer da Agenda (tipos, schemas, hooks de query e páginas) para usar camelCase, alinhando com a serialização padrão Jackson do Spring Boot.
+**Depends on**: Phase 39
+**Requirements**: AGD-33-01
+**Success Criteria** (what must be TRUE):
+  1. Todos os tipos TypeScript e interfaces da Agenda usam camelCase (e.g. dataInicio, dataFim, processoId, tenantId).
+  2. Zod schemas para formulários e filtros de pesquisa usam camelCase e validam dados correctamente.
+  3. A página de lista, de detalhe e de edição de eventos renderizam e submetem dados sem erros de casing.
+  4. Query keys e requisições TanStack Query realizam chamadas com parâmetros camelCase.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 40-01: Casing refactoring of types, schemas, hooks, and pages
+
+#### Phase 41: Validação de Intervalo e Tratamento de Erros (Agenda)
+
+**Goal**: Implementar validações de formulário robustas para datas e tratamento de erros de parsing de data na API do backend.
+**Depends on**: Phase 40
+**Requirements**: AGD-31-01, AGD-33-02, AGD-33-03
+**Success Criteria** (what must be TRUE):
+  1. O Zod schema no frontend impede que dataFim seja inferior a dataInicio.
+  2. O backend rejeita requisições (HTTP 400) em que a dataFim é inferior a dataInicio.
+  3. A API do backend valida parâmetros de data de forma robusta e lança erros informativos em vez de silenciar falhas de data.
+  4. O frontend exibe toasts de erro informativos se a gravação de eventos falhar ou se campos forem rejeitados.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 41-01: Date range checks, Spring Boot controller validations, robust query parsing, and error feedback toasts
+
+#### Phase 42: Filtros, Categorias e Visão Unificada (Agenda)
+
+**Goal**: Adicionar filtros visuais por categoria/status/processo na interface e unificar a visualização de prazos e eventos no calendário.
+**Depends on**: Phase 41
+**Requirements**: AGD-31-02, AGD-32-01, AGD-32-02, AGD-32-03
+**Success Criteria** (what must be TRUE):
+  1. Utilizador pode filtrar o calendário por Categoria de Evento e Estado de Conclusão.
+  2. Utilizador pode visualizar prazos de processos e eventos gerais de forma unificada no calendário da agenda.
+  3. Utilizador pode filtrar a agenda por Processo específico através de um seletor visual.
+  4. Estados de carregamento (loading spinners/skeletons) e de erro são exibidos na tela.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 42-01: Filters panel, deadlines integration, unified event mapping, and calendar styling/loading improvements
+
 ## Progress
 
 **Execution Order:**
-Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39
+Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -751,3 +801,6 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 37. Containerização e Docker Compose | v1.8 | 2/2 | Complete | 2026-06-16 |
 | 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 39. Pipeline de CI/CD | v1.8 | 1/1 | Complete | 2026-06-16 |
+| 40. Mapeamento e Alinhamento Casing (Agenda) | v1.9 | 0/1 | Planned | — |
+| 41. Validação de Intervalo e Tratamento de Erros | v1.9 | 0/1 | Planned | — |
+| 42. Filtros, Categorias e Visão Unificada | v1.9 | 0/1 | Planned | — |
