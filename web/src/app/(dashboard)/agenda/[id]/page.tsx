@@ -27,7 +27,8 @@ function formatDateTime(v: string | undefined) {
   return d.toLocaleString("pt-CV");
 }
 
-export default function EventoDetailPage({ params }: PageProps) {
+export default function EventoDetailPage(props: PageProps) {
+  const params = React.use(props.params as unknown as Promise<{ id: string }>);
   const id = parseEventoId(params.id);
   const permissions = usePermissions();
   const canViewAgenda = permissions.can.view("agenda");
@@ -64,7 +65,7 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
   const toggle = useToggleEventoConcluido(id);
 
   const processoLabelById = new Map(
-    (processos.data ?? []).map((p) => [p.id, p.numero ?? p.titulo ?? p.id] as const),
+    (processos.data ?? []).map((p) => [p.id, p.numero || p.titulo || "Sem número"] as const),
   );
 
   const isLoading = evento.isLoading || processos.isLoading;

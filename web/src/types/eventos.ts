@@ -4,6 +4,7 @@ export interface Evento {
   id: number;
   tenantId: string;
   processoId?: string;
+  tipo?: string;
   titulo: string;
   descricao?: string;
   dataInicio: string;
@@ -14,6 +15,7 @@ export interface Evento {
 
 export interface EventoCreateRequest {
   processoId?: string;
+  tipo?: string;
   titulo: string;
   descricao?: string;
   dataInicio: string;
@@ -24,6 +26,7 @@ export interface EventoCreateRequest {
 
 export interface EventoUpdateRequest {
   processoId?: string | null;
+  tipo?: string | null;
   titulo?: string;
   descricao?: string | null;
   dataInicio?: string;

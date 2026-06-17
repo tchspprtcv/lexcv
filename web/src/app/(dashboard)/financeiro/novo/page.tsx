@@ -112,7 +112,7 @@ function HonorarioCreateContent() {
                 </option>
                 {(processos.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.numero ?? p.titulo ?? p.id}
+                    {p.numero || p.titulo || "Sem número"}
                   </option>
                 ))}
               </select>

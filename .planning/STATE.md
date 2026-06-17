@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Melhoria Módulo Agendamento
-status: Awaiting next milestone
-stopped_at: "Completed Phase 39, Plan 01 (tasks 1-2) — GitHub Actions CI/CD workflow deploy.yml and DEPLOYMENT.md secrets section; checkpoint:human-verify awaiting pipeline end-to-end validation"
+milestone: v1.10
+milestone_name: Finalização Módulo Agendamento
+status: planning
+stopped_at: "Started Milestone v1.10"
 last_updated: "2026-06-17T17:06:06.608Z"
 last_activity: 2026-06-17 — Milestone v1.9 completed and archived
 progress:
@@ -37,10 +37,10 @@ Known deferred items: 0 (all resolved)
 
 ## Current Position
 
-Phase: Milestone v1.9 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-17 — Milestone v1.9 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-17 — Milestone v1.10 started
 
 ## Accumulated Context
 

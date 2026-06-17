@@ -69,6 +69,7 @@ function EventoCreateContent() {
     try {
       const payload: EventoCreateRequest = {
         processoId: values.processoId,
+        tipo: values.tipo,
         titulo: values.titulo,
         descricao: values.descricao,
         dataInicio: new Date(values.dataInicio).toISOString().slice(0, 19),
@@ -115,7 +116,7 @@ function EventoCreateContent() {
                 </option>
                 {(processos.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.numero ?? p.titulo ?? p.id}
+                    {p.numero || p.titulo || "Sem número"}
                   </option>
                 ))}
               </select>
@@ -126,6 +127,25 @@ function EventoCreateContent() {
               ) : null}
               {form.formState.errors.processoId ? (
                 <p className="text-sm text-red-600">{form.formState.errors.processoId.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Categoria</Label>
+              <select
+                id="tipo"
+                className={selectClassName}
+                {...form.register("tipo")}
+              >
+                <option value="">Sem categoria</option>
+                <option value="AUDIENCIA">Audiência</option>
+                <option value="PRAZO">Prazo Fatal</option>
+                <option value="DILIGENCIA">Diligência</option>
+                <option value="REUNIAO">Reunião</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+              {form.formState.errors.tipo ? (
+                <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
               ) : null}
             </div>
 

@@ -11,6 +11,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useClientes } from "@/hooks/use-clientes";
+import { useEventos } from "@/hooks/use-eventos";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
@@ -60,6 +61,14 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
     processos.data?.filter((p) => (p.estado ?? "").toUpperCase() === "ATIVO").length ?? 0;
   const totalSuspensos =
     processos.data?.filter((p) => (p.estado ?? "").toUpperCase() === "SUSPENSO").length ?? 0;
+
+  const eventos = useEventos({ concluido: false });
+  const proximasAudiencias = (eventos.data ?? []).filter((e) => {
+    const isAudiencia = e.tipo?.toUpperCase() === "AUDIENCIA" || e.titulo.toLowerCase().includes("audiência") || e.titulo.toLowerCase().includes("audiencia");
+    if (!isAudiencia) return false;
+    const isNext7Days = new Date(e.dataInicio).getTime() < Date.now() + 7 * 24 * 60 * 60 * 1000;
+    return isNext7Days;
+  }).length;
 
   React.useEffect(() => {
     const t = window.setTimeout(() => {
@@ -155,7 +164,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
           <CardContent className="p-6 relative z-10">
             <div className="text-sm font-bold tracking-wide text-blue-400">Próximas Audiências</div>
             <p className="mt-3 text-[13px] leading-relaxed text-slate-300">
-              <strong className="text-white text-lg">8 processos</strong> requerem atenção imediata para audiências agendadas esta semana.
+              <strong className="text-white text-lg">{proximasAudiencias} audiências</strong> agendadas para os próximos 7 dias.
             </p>
             <Button asChild className="mt-6 w-full rounded-none bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-none">
               <Link href="/agenda">Ver Agenda Completa</Link>
@@ -331,7 +340,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                           href={`/processos/${encodeURIComponent(p.id)}`}
                           className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                         >
-                          {p.numero ?? p.id}
+                          {p.numero || p.titulo || "Sem número"}
                         </Link>
                         <div className="text-[11px] font-medium tracking-wider uppercase text-slate-500 dark:text-slate-400 mt-0.5">
                           Entrada: {new Date(p.created_at).toLocaleDateString("pt-CV")}

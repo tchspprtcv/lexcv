@@ -43,7 +43,8 @@ function toDateTimeLocalValue(value: string | undefined) {
   )}`;
 }
 
-export default function EventoEditPage({ params }: PageProps) {
+export default function EventoEditPage(props: PageProps) {
+  const params = React.use(props.params as unknown as Promise<{ id: string }>);
   const id = parseEventoId(params.id);
   const permissions = usePermissions();
   const canEditAgenda = permissions.can.edit("agenda");
@@ -98,6 +99,7 @@ function EventoEditContent({ id }: { id: number }) {
     if (!evento.data) return;
     form.reset({
       processoId: evento.data.processoId ?? "",
+      tipo: evento.data.tipo ?? "",
       titulo: evento.data.titulo,
       descricao: evento.data.descricao,
       dataInicio: toDateTimeLocalValue(evento.data.dataInicio),
@@ -112,6 +114,7 @@ function EventoEditContent({ id }: { id: number }) {
     try {
       const payload: EventoUpdateRequest = {
         processoId: values.processoId || undefined,
+        tipo: values.tipo || undefined,
         titulo: values.titulo,
         descricao: values.descricao,
         dataInicio: new Date(values.dataInicio).toISOString().slice(0, 19),
@@ -169,7 +172,7 @@ function EventoEditContent({ id }: { id: number }) {
                   </option>
                   {(processos.data ?? []).map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.numero ?? p.titulo ?? p.id}
+                      {p.numero || p.titulo || "Sem número"}
                     </option>
                   ))}
                 </select>
@@ -180,6 +183,25 @@ function EventoEditContent({ id }: { id: number }) {
                 ) : null}
                 {form.formState.errors.processoId ? (
                   <p className="text-sm text-red-600">{form.formState.errors.processoId.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tipo">Categoria</Label>
+                <select
+                  id="tipo"
+                  className={selectClassName}
+                  {...form.register("tipo")}
+                >
+                  <option value="">Sem categoria</option>
+                  <option value="AUDIENCIA">Audiência</option>
+                  <option value="PRAZO">Prazo Fatal</option>
+                  <option value="DILIGENCIA">Diligência</option>
+                  <option value="REUNIAO">Reunião</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+                {form.formState.errors.tipo ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
                 ) : null}
               </div>
 

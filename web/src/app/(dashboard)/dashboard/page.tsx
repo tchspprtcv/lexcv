@@ -335,6 +335,7 @@ function RecentProcessosCard({
   recentProcessos: Array<{
     id: string;
     numero?: string;
+    titulo?: string;
     cliente_id: string;
     estado?: string;
   }>;
@@ -381,9 +382,9 @@ function RecentProcessosCard({
                 <TableCell>
                   <Link
                     href={`/processos/${encodeURIComponent(p.id)}`}
-                    className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
                   >
-                    {p.numero ?? p.id}
+                    {p.numero || p.titulo || "Sem número"}
                   </Link>
                 </TableCell>
                 <TableCell className="text-slate-600 dark:text-slate-300 font-medium">

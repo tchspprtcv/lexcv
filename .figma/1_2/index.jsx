@@ -153,7 +153,7 @@ const Component = () => {
             <div className={styles.calendarControlsLege}>
               <div className={styles.backgroundBorder2}>
                 <div className={styles.background2} />
-                <p className={styles.text9}>Prazos Fatais</p>
+                <p className={styles.text9}>Prazos Criticos</p>
               </div>
               <div className={styles.backgroundBorder3}>
                 <div className={styles.background3} />

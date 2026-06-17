@@ -14,7 +14,8 @@ type PageProps = {
   params: { id: string };
 };
 
-export default function DocumentoDetailPage({ params }: PageProps) {
+export default function DocumentoDetailPage(props: PageProps) {
+  const params = React.use(props.params as unknown as Promise<{ id: string }>);
   const id = params.id;
   const permissions = usePermissions();
   const canViewDocumentos = permissions.can.view("documentos");

@@ -41,7 +41,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
   const [selectedConcluido, setSelectedConcluido] = React.useState<string>("todos");
 
   const processoLabelById = new Map(
-    (processos.data ?? []).map((p) => [p.id, p.numero ?? p.titulo ?? p.id] as const),
+    (processos.data ?? []).map((p) => [p.id, p.numero || p.titulo || "Sem número"] as const),
   );
 
   const initialMonth = React.useMemo(() => {
@@ -206,7 +206,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               <option value="">Todos os Processos</option>
               {(processos.data ?? []).map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.numero ?? p.titulo ?? p.id}
+                  {p.numero || p.titulo || "Sem número"}
                 </option>
               ))}
             </select>
@@ -220,7 +220,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               className="h-9 w-40 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
             >
               <option value="todos">Todas</option>
-              <option value="PRAZO">Prazos Fatais</option>
+              <option value="PRAZO">Prazos Criticos</option>
               <option value="AUDIENCIA">Audiências</option>
               <option value="DILIGENCIA">Diligências</option>
               <option value="REUNIAO">Reuniões</option>
@@ -239,7 +239,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               <option value="concluidos">Concluídos</option>
             </select>
           </div>
-          
+
           <Button
             type="button"
             variant="ghost"
@@ -255,7 +255,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <LegendChip label="Prazos Fatais" dotClassName="bg-red-500" />
+          <LegendChip label="Prazos Criticos" dotClassName="bg-red-500" />
           <LegendChip label="Audiências" dotClassName="bg-blue-500" />
           <LegendChip label="Diligências" dotClassName="bg-amber-500" />
           <LegendChip label="Reuniões" dotClassName="bg-emerald-500" />
@@ -304,7 +304,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                       <div className="mt-2 space-y-1.5">
                         {dayEvents.map((e) => {
                           const cat = getCategoria(e as any);
-                          const href = e.isPrazo 
+                          const href = e.isPrazo
                             ? `/processos/${encodeURIComponent(String(e.processoId))}`
                             : `/agenda/${encodeURIComponent(String(e.id))}`;
                           return (
@@ -429,9 +429,11 @@ function LegendChip({ label, dotClassName }: { label: string; dotClassName: stri
   );
 }
 
-function getCategoria(e: { titulo: string }) {
+function getCategoria(e: { titulo: string; tipo?: string }) {
   const t = e.titulo.toLowerCase();
-  if (t.includes("prazo")) {
+  const tipo = e.tipo?.toUpperCase();
+
+  if (tipo === "PRAZO" || (!tipo && t.includes("prazo"))) {
     return {
       id: "PRAZO",
       label: "PRAZO FATAL",
@@ -441,7 +443,7 @@ function getCategoria(e: { titulo: string }) {
       titleColor: "#ef4444",
     } as const;
   }
-  if (t.includes("audiência") || t.includes("audiencia")) {
+  if (tipo === "AUDIENCIA" || (!tipo && (t.includes("audiência") || t.includes("audiencia")))) {
     return {
       id: "AUDIENCIA",
       label: "AUDIÊNCIA",
@@ -451,7 +453,7 @@ function getCategoria(e: { titulo: string }) {
       titleColor: "#3b82f6",
     } as const;
   }
-  if (t.includes("diligência") || t.includes("diligencia")) {
+  if (tipo === "DILIGENCIA" || (!tipo && (t.includes("diligência") || t.includes("diligencia")))) {
     return {
       id: "DILIGENCIA",
       label: "DILIGÊNCIA",
@@ -459,6 +461,16 @@ function getCategoria(e: { titulo: string }) {
       pillClassName: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
       borderClassName: "border-l-4 border-l-amber-500",
       titleColor: "#f59e0b",
+    } as const;
+  }
+  if (tipo === "OUTRO" || (!tipo && t.includes("outro"))) {
+    return {
+      id: "OUTRO",
+      label: "OUTRO",
+      shortLabel: "Outro",
+      pillClassName: "bg-neutral-100 text-neutral-700 dark:bg-neutral-500/10 dark:text-neutral-400",
+      borderClassName: "border-l-4 border-l-neutral-500",
+      titleColor: "#737373",
     } as const;
   }
   return {

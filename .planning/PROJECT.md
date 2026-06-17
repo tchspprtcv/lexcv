@@ -30,7 +30,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-*(None yet — run /gsd-new-milestone to plan the next milestone)*
+## Current Milestone: v1.10 Finalização Módulo Agendamento
+
+**Goal:** Completar o módulo de agenda com notificações de prazos/eventos, recorrência e gestão visual avançada (drag & drop, vista diária/semanal).
+
+**Target features:**
+- Notificações de Alerta (Email/In-app para eventos próximos e Prazos Criticos)
+- Eventos Recorrentes (Opção de repetir eventos semanal/mensalmente)
+- Funcionalidades Avançadas no Calendário (Drag and drop para reagendar, visualização semana/dia com `react-big-calendar` ou `fullcalendar`)
 
 ### Out of Scope
 

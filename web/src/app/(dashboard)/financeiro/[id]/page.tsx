@@ -32,7 +32,8 @@ function formatDate(v: string | undefined) {
   return d.toLocaleDateString("pt-CV");
 }
 
-export default function HonorarioDetailPage({ params }: PageProps) {
+export default function HonorarioDetailPage(props: PageProps) {
+  const params = React.use(props.params as unknown as Promise<{ id: string }>);
   const permissions = usePermissions();
   const honorarioId = Number(params.id);
   const canViewFinanceiro = permissions.can.view("financeiro");
@@ -189,7 +190,7 @@ function HonorarioDetailContent({
                       href={`/processos/${encodeURIComponent(processo.data.id)}`}
                       className="font-medium hover:underline"
                     >
-                      {processo.data.numero ?? processo.data.titulo ?? processo.data.id}
+                      {processo.data.numero || processo.data.titulo || "Sem número"}
                     </Link>
                   ) : (
                     honorario.data.processo_id

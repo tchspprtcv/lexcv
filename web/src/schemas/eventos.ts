@@ -10,6 +10,7 @@ export const eventoPrioridadeSchema = z.enum(["BAIXA", "MEDIA", "ALTA"]);
 
 export const eventoFormSchema = z.object({
   processoId: optionalTrimmedString,
+  tipo: optionalTrimmedString,
   titulo: z.string().trim().min(1, "O título é obrigatório"),
   descricao: optionalTrimmedString,
   dataInicio: z
