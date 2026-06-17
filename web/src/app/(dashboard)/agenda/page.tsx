@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useEventos } from "@/hooks/use-eventos";
-import { useProcessos } from "@/hooks/use-processos";
+import { useProcessos, useAllPrazos } from "@/hooks/use-processos";
 import type { Evento } from "@/types/eventos";
 import { cn } from "@/lib/utils";
 
@@ -34,19 +34,20 @@ export default function AgendaPage() {
 function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
   const processos = useProcessos();
   const eventos = useEventos({});
+  const prazos = useAllPrazos();
+
+  const [selectedProcessoId, setSelectedProcessoId] = React.useState<string>("");
+  const [selectedCategoria, setSelectedCategoria] = React.useState<string>("todos");
+  const [selectedConcluido, setSelectedConcluido] = React.useState<string>("todos");
 
   const processoLabelById = new Map(
     (processos.data ?? []).map((p) => [p.id, p.numero ?? p.titulo ?? p.id] as const),
   );
 
   const initialMonth = React.useMemo(() => {
-    const d = (eventos.data ?? [])
-      .map((e) => new Date(e.dataInicio))
-      .filter((x) => !Number.isNaN(x.getTime()))
-      .sort((a, b) => a.getTime() - b.getTime())[0];
-    const base = d ?? new Date();
+    const base = new Date();
     return new Date(base.getFullYear(), base.getMonth(), 1);
-  }, [eventos.data]);
+  }, []);
 
   const [cursorMonthOverride, setCursorMonthOverride] = React.useState<Date | null>(null);
   const cursorMonth = cursorMonthOverride ?? initialMonth;
@@ -55,48 +56,86 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
   const days = React.useMemo(() => buildMonthGrid(cursorMonth), [cursorMonth]);
 
+  const allUnifiedEvents = React.useMemo(() => {
+    const evs = (eventos.data ?? []).map((e) => ({ ...e, isPrazo: false }));
+    const pzs = (prazos.data ?? []).map((p) => ({
+      id: p.id,
+      tenantId: p.tenantId,
+      processoId: p.processoId,
+      titulo: `[Prazo] ${p.descricao}`,
+      descricao: p.descricao,
+      dataInicio: `${p.dataLimite}T09:00:00`,
+      dataFim: `${p.dataLimite}T18:00:00`,
+      prioridade: p.prioridade as any,
+      concluido: p.concluido,
+      isPrazo: true,
+    }));
+    return [...evs, ...pzs];
+  }, [eventos.data, prazos.data]);
+
+  const filteredEvents = React.useMemo(() => {
+    return allUnifiedEvents.filter((e) => {
+      if (selectedProcessoId && e.processoId !== selectedProcessoId) {
+        return false;
+      }
+      if (selectedConcluido === "concluidos" && !e.concluido) {
+        return false;
+      }
+      if (selectedConcluido === "pendentes" && e.concluido) {
+        return false;
+      }
+      if (selectedCategoria !== "todos") {
+        const cat = getCategoria(e as any);
+        if (cat.id !== selectedCategoria) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [allUnifiedEvents, selectedProcessoId, selectedConcluido, selectedCategoria]);
+
   const eventosByDay = React.useMemo(() => {
-    const map = new Map<string, Evento[]>();
-    for (const e of eventos.data ?? []) {
+    const map = new Map<string, typeof filteredEvents>();
+    for (const e of filteredEvents) {
       const d = new Date(e.dataInicio);
       if (Number.isNaN(d.getTime())) continue;
       const key = dayKey(d);
       map.set(key, [...(map.get(key) ?? []), e]);
     }
     return map;
-  }, [eventos.data]);
+  }, [filteredEvents]);
 
   const upcoming = React.useMemo(() => {
     const now = new Date().getTime();
-    return (eventos.data ?? [])
+    return filteredEvents
       .filter((e) => !e.concluido)
       .map((e) => ({ e, t: new Date(e.dataInicio).getTime() }))
       .filter((x) => !Number.isNaN(x.t) && x.t >= now)
       .sort((a, b) => a.t - b.t)
       .slice(0, 4)
       .map((x) => x.e);
-  }, [eventos.data]);
+  }, [filteredEvents]);
 
   const weekStats = React.useMemo(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const active = (eventos.data ?? []).filter((e) => {
+    const active = filteredEvents.filter((e) => {
       if (e.concluido) return false;
       const t = new Date(e.dataInicio).getTime();
       return t >= start.getTime() && t < end.getTime();
     });
 
-    const prazosAtivos = active.filter((e) => getCategoria(e).id === "PRAZO").length;
-    const audiencias = active.filter((e) => getCategoria(e).id === "AUDIENCIA").length;
+    const prazosAtivos = active.filter((e) => getCategoria(e as any).id === "PRAZO").length;
+    const audiencias = active.filter((e) => getCategoria(e as any).id === "AUDIENCIA").length;
     const urgentes = active.filter((e) => e.prioridade === "ALTA").length;
 
     return { prazosAtivos, audiencias, urgentes };
-  }, [eventos.data]);
+  }, [filteredEvents]);
 
-  const isLoading = processos.isPending || eventos.isPending;
-  const isError = processos.isError || eventos.isError;
+  const isLoading = processos.isPending || eventos.isPending || prazos.isPending;
+  const isError = processos.isError || eventos.isError || prazos.isError;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -156,6 +195,65 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           </div>
         </div>
 
+        <div className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 p-4 rounded-none flex flex-wrap items-center gap-4 shadow-sm">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Processo</span>
+            <select
+              value={selectedProcessoId}
+              onChange={(e) => setSelectedProcessoId(e.target.value)}
+              className="h-9 w-48 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+            >
+              <option value="">Todos os Processos</option>
+              {(processos.data ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.numero ?? p.titulo ?? p.id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Categoria</span>
+            <select
+              value={selectedCategoria}
+              onChange={(e) => setSelectedCategoria(e.target.value)}
+              className="h-9 w-40 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+            >
+              <option value="todos">Todas</option>
+              <option value="PRAZO">Prazos Fatais</option>
+              <option value="AUDIENCIA">Audiências</option>
+              <option value="DILIGENCIA">Diligências</option>
+              <option value="REUNIAO">Reuniões</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Estado</span>
+            <select
+              value={selectedConcluido}
+              onChange={(e) => setSelectedConcluido(e.target.value)}
+              className="h-9 w-36 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+            >
+              <option value="todos">Todos</option>
+              <option value="pendentes">Pendentes</option>
+              <option value="concluidos">Concluídos</option>
+            </select>
+          </div>
+          
+          <Button
+            type="button"
+            variant="ghost"
+            className="self-end h-9 px-3 rounded-none font-bold text-slate-500 hover:text-slate-900 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => {
+              setSelectedProcessoId("");
+              setSelectedCategoria("todos");
+              setSelectedConcluido("todos");
+            }}
+          >
+            Limpar Filtros
+          </Button>
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <LegendChip label="Prazos Fatais" dotClassName="bg-red-500" />
           <LegendChip label="Audiências" dotClassName="bg-blue-500" />
@@ -172,20 +270,25 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
             </div>
 
             {isLoading ? (
-              <div className="p-6 text-sm text-slate-500">A carregar...</div>
+              <div className="flex flex-col items-center justify-center p-20 space-y-4">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" />
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">A carregar agenda...</p>
+              </div>
             ) : isError ? (
               <div className="p-6 text-sm text-red-600">
                 {eventos.error instanceof Error
                   ? eventos.error.message
                   : processos.error instanceof Error
                     ? processos.error.message
-                    : "Erro ao carregar"}
+                    : prazos.error instanceof Error
+                      ? prazos.error.message
+                      : "Erro ao carregar"}
               </div>
             ) : (
               <div className="grid grid-cols-7 bg-slate-200 dark:bg-slate-800 gap-[1px] border-b border-slate-200 dark:border-slate-800">
                 {days.map((day) => {
                   const key = dayKey(day.date);
-                  const events = (eventosByDay.get(key) ?? []).slice(0, 3);
+                  const dayEvents = (eventosByDay.get(key) ?? []).slice(0, 3);
                   return (
                     <div
                       key={key}
@@ -199,12 +302,15 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                         key === dayKey(new Date()) ? "bg-blue-600 text-white" : "text-slate-700 dark:text-slate-300"
                       )}>{day.date.getDate()}</div>
                       <div className="mt-2 space-y-1.5">
-                        {events.map((e) => {
-                          const cat = getCategoria(e);
+                        {dayEvents.map((e) => {
+                          const cat = getCategoria(e as any);
+                          const href = e.isPrazo 
+                            ? `/processos/${encodeURIComponent(String(e.processoId))}`
+                            : `/agenda/${encodeURIComponent(String(e.id))}`;
                           return (
                             <Link
                               key={e.id}
-                              href={`/agenda/${encodeURIComponent(String(e.id))}`}
+                              href={href}
                               className={cn(
                                 "block truncate rounded-sm px-1.5 py-1 text-[10px] font-bold tracking-wide uppercase border border-transparent hover:border-current transition-colors",
                                 cat.pillClassName,
@@ -323,7 +429,7 @@ function LegendChip({ label, dotClassName }: { label: string; dotClassName: stri
   );
 }
 
-function getCategoria(e: Evento) {
+function getCategoria(e: { titulo: string }) {
   const t = e.titulo.toLowerCase();
   if (t.includes("prazo")) {
     return {

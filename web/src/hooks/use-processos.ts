@@ -502,6 +502,17 @@ export function usePrazos(processoId: string) {
   });
 }
 
+export function useAllPrazos() {
+  const enabled = typeof window !== "undefined";
+
+  return useQuery({
+    queryKey: ["prazos", "list"],
+    queryFn: () => apiFetch<Prazo[]>("/prazos"),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
 export function useCreatePrazo(processoId: string) {
   const queryClient = useQueryClient();
 

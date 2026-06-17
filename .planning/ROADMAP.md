@@ -762,7 +762,7 @@ Plans:
 
 Plans:
 
-- [ ] 42-01: Filters panel, deadlines integration, unified event mapping, and calendar styling/loading improvements
+- [x] 42-01: Filters panel, deadlines integration, unified event mapping, and calendar styling/loading improvements
 
 ## Progress
 
@@ -812,4 +812,4 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 39. Pipeline de CI/CD | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 40. Mapeamento e Alinhamento Casing (Agenda) | v1.9 | 1/1 | Complete   | 2026-06-17 |
 | 41. Validação de Intervalo e Tratamento de Erros | v1.9 | 1/1 | Complete   | 2026-06-17 |
-| 42. Filtros, Categorias e Visão Unificada | v1.9 | 0/1 | Planned | — |
+| 42. Filtros, Categorias e Visão Unificada | v1.9 | 1/1 | Complete   | 2026-06-17 |

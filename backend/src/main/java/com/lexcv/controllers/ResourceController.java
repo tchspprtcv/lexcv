@@ -1141,6 +1141,29 @@ public class ResourceController {
         return ResponseEntity.ok(result);
     }
 
+    @PreAuthorize("hasAuthority('processos:view')")
+    @GetMapping("/prazos")
+    public ResponseEntity<?> listAllPrazos() {
+        UUID tenantId = getTenantId();
+        List<Prazo> prazos = prazoRepository.findByTenantId(tenantId);
+        List<Map<String, Object>> result = prazos.stream().map(p -> {
+            String risco = computeRisco(p.getDataLimite(), p.getPrioridade());
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", p.getId());
+            m.put("processoId", p.getProcessoId());
+            m.put("descricao", p.getDescricao());
+            m.put("dataLimite", p.getDataLimite());
+            m.put("prioridade", p.getPrioridade());
+            m.put("responsavelId", p.getResponsavelId());
+            m.put("concluido", p.getConcluido());
+            m.put("escalonado", p.getEscalonado());
+            m.put("risco", risco);
+            m.put("createdAt", p.getCreatedAt());
+            return m;
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
+
     @Transactional
     @PreAuthorize("hasAuthority('processos:edit')")
     @PostMapping("/processos/{id}/prazos")

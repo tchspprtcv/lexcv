@@ -173,6 +173,8 @@ export interface WorkflowResponse {
 
 export interface Prazo {
   id: string;
+  tenantId?: string;
+  processoId?: string;
   descricao: string;
   dataLimite: string;
   prioridade: PrazoPrioridade;
