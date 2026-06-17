@@ -55,7 +55,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./backend
-          file: ./backend/Dockerfile
           platforms: linux/amd64
           push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
@@ -68,7 +67,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./web
-          file: ./web/Dockerfile
           platforms: linux/amd64
           push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
