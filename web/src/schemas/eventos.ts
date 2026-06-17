@@ -24,6 +24,13 @@ export const eventoFormSchema = z.object({
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "dataFim inválida"),
   prioridade: eventoPrioridadeSchema,
   concluido: z.boolean(),
+}).refine((data) => {
+  const start = new Date(data.dataInicio).getTime();
+  const end = new Date(data.dataFim).getTime();
+  return end >= start;
+}, {
+  message: "A data de fim não pode ser anterior à data de início",
+  path: ["dataFim"],
 });
 
 export type EventoFormValues = z.infer<typeof eventoFormSchema>;

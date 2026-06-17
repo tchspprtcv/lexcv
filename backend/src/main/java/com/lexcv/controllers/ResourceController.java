@@ -1468,12 +1468,40 @@ public class ResourceController {
             eventos.removeIf(e -> !e.getConcluido().equals(concluido));
         }
 
-        if (dataInicio != null && dataFim != null) {
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        if (dataInicio != null) {
             try {
-                LocalDateTime start = LocalDateTime.parse(dataInicio, DateTimeFormatter.ISO_DATE_TIME);
-                LocalDateTime end = LocalDateTime.parse(dataFim, DateTimeFormatter.ISO_DATE_TIME);
-                eventos.removeIf(e -> e.getDataInicio().isBefore(start) || e.getDataInicio().isAfter(end));
-            } catch (Exception ignored) {}
+                start = LocalDateTime.parse(dataInicio, DateTimeFormatter.ISO_DATE_TIME);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Parâmetro 'dataInicio' com formato inválido. Deve ser ISO-8601 (ex: YYYY-MM-DDTHH:mm:ss)"));
+            }
+        }
+
+        if (dataFim != null) {
+            try {
+                end = LocalDateTime.parse(dataFim, DateTimeFormatter.ISO_DATE_TIME);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Parâmetro 'dataFim' com formato inválido. Deve ser ISO-8601 (ex: YYYY-MM-DDTHH:mm:ss)"));
+            }
+        }
+
+        if (start != null && end != null && end.isBefore(start)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "O parâmetro 'dataFim' não pode ser anterior a 'dataInicio'"));
+        }
+
+        if (start != null) {
+            LocalDateTime finalStart = start;
+            eventos.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isBefore(finalStart));
+        }
+
+        if (end != null) {
+            LocalDateTime finalEnd = end;
+            eventos.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isAfter(finalEnd));
         }
 
         return ResponseEntity.ok(eventos);
@@ -1482,6 +1510,10 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('agenda:edit')")
     @PostMapping("/eventos")
     public ResponseEntity<?> createEvento(@RequestBody Evento evento) {
+        if (evento.getDataInicio() != null && evento.getDataFim() != null && evento.getDataFim().isBefore(evento.getDataInicio())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
+        }
         evento.setTenantId(getTenantId());
         return ResponseEntity.status(HttpStatus.CREATED).body(eventoRepository.save(evento));
     }
@@ -1492,6 +1524,13 @@ public class ResourceController {
         Evento evento = eventoRepository.findById(id).orElse(null);
         if (evento == null || !evento.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Evento não encontrado"));
+        }
+
+        LocalDateTime start = payload.getDataInicio() != null ? payload.getDataInicio() : evento.getDataInicio();
+        LocalDateTime end = payload.getDataFim() != null ? payload.getDataFim() : evento.getDataFim();
+        if (start != null && end != null && end.isBefore(start)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
         }
 
         evento.setTitulo(payload.getTitulo());

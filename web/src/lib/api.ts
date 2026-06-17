@@ -24,8 +24,19 @@ export async function apiFetch<TResponse>(
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    const errorMessage = body || res.statusText || "Falha na comunicação com o servidor.";
+    const text = await res.text().catch(() => "");
+    let errorMessage = text || res.statusText || "Falha na comunicação com o servidor.";
+    
+    try {
+      if (text) {
+        const json = JSON.parse(text);
+        if (json && typeof json === "object") {
+          errorMessage = json.message || json.error || errorMessage;
+        }
+      }
+    } catch {
+      // Not a JSON object, use raw text
+    }
     
     // Ignorar toast automático para rotas de auth check (401/403) para evitar spam se a sessão expirar
     // O hook useMe já trata do redirect

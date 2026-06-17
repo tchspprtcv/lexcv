@@ -744,7 +744,7 @@ Plans:
 
 Plans:
 
-- [ ] 41-01: Date range checks, Spring Boot controller validations, robust query parsing, and error feedback toasts
+- [x] 41-01: Date range checks, Spring Boot controller validations, robust query parsing, and error feedback toasts
 
 #### Phase 42: Filtros, Categorias e Visão Unificada (Agenda)
 
@@ -811,5 +811,5 @@ Phases executam em ordem numérica: 7 → 8 → 9 → 10 → 11 → 12 → 13 �
 | 38. Reverse Proxy e HTTPS | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 39. Pipeline de CI/CD | v1.8 | 1/1 | Complete | 2026-06-16 |
 | 40. Mapeamento e Alinhamento Casing (Agenda) | v1.9 | 1/1 | Complete   | 2026-06-17 |
-| 41. Validação de Intervalo e Tratamento de Erros | v1.9 | 0/1 | Planned | — |
+| 41. Validação de Intervalo e Tratamento de Erros | v1.9 | 1/1 | Complete   | 2026-06-17 |
 | 42. Filtros, Categorias e Visão Unificada | v1.9 | 0/1 | Planned | — |
