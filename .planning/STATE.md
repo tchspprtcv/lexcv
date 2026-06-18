@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Agenda Avançada
-status: planning
-stopped_at: "Roadmap criado — próximo passo é /gsd:plan-phase 47"
-last_updated: "2026-06-18T20:11:33.452Z"
-last_activity: 2026-06-18 — Phase 47 complete (NotificationBell + GET /eventos/upcoming)
+status: executing
+stopped_at: "Phase 48 complete — ready for Phase 49"
+last_updated: "2026-06-18T21:00:00.000Z"
+last_activity: 2026-06-18 — Phase 48 complete (recurrence columns + instance expansion + delete instance + frontend form/calendar/delete dialog)
 progress:
   total_phases: 3
   completed_phases: 2
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 47 — Notificações In-App
+**Current focus:** Phase 49 — Drag & Drop no Calendário
 
 ## Current Position
 
-Phase: 48 de 49 (Recorrência de Eventos)
+Phase: 49 de 49 (Drag & Drop no Calendário)
 Plan: — (não iniciado)
 Status: Ready to plan
-Last activity: 2026-06-18 — Phase 47 complete (NotificationBell + GET /eventos/upcoming)
+Last activity: 2026-06-18 — Phase 48 complete (recorrência de eventos)
 
 Progress: [██████████] 100%
 
@@ -63,7 +63,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 48 requer alteração ao modelo `Evento` no backend (coluna `recurrenceRule`) — confirmar migração JPA (`ddl-auto=update`) antes de executar
+- Phase 49 é frontend-only; eventos recorrentes NÃO são arrastáveis (mostrar mensagem de bloqueio)
 
 ## Session Continuity
 
