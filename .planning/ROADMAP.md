@@ -69,7 +69,7 @@ Plans:
 
 - [x] **Phase 47: Notificações In-App** - Badge no header com contagem de eventos próximos e painel de notificações
 - [x] **Phase 48: Recorrência de Eventos** - Criar, listar, exibir e apagar eventos com regras de recorrência (completed 2026-06-18)
-- [ ] **Phase 49: Drag & Drop no Calendário** - Arrastar eventos para nova data com atualização imediata via API
+- [x] **Phase 49: Drag & Drop no Calendário** - Arrastar eventos para nova data com atualização imediata via API (completed 2026-06-18)
 
 ## Phase Details
 
@@ -110,7 +110,7 @@ Plans:
   3. Se o pedido API falhar, o evento reverte para a data original e é mostrada uma mensagem de erro ao utilizador
   4. Eventos recorrentes não são arrastáveis (ou mostram uma mensagem de bloqueio), pois mover uma instância individualmente conflitua com a lógica de série
 **Plans**: 1 plan
-- [ ] 49-01-PLAN.md — Drag & drop no calendário mensal: estado, override otimista, mutação PUT, pills arrastáveis + drop zones (agenda/page.tsx)
+- [x] 49-01-PLAN.md — Drag & drop no calendário mensal: estado, override otimista, mutação PUT, pills arrastáveis + drop zones (agenda/page.tsx)
 **UI hint**: yes
 
 ## Progress
@@ -125,4 +125,4 @@ Plans:
 | 46. CSV Export | v2.0 | 1/1 | Complete | 2026-06-18 |
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete   | 2026-06-18 |
-| 49. Drag & Drop no Calendário | v2.1 | 0/? | Not started | - |
+| 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete   | 2026-06-18 |

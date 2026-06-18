@@ -20,8 +20,8 @@
 
 ### Drag & Drop no Calendário
 
-- [ ] **AGE-07**: Utilizador pode arrastar um evento no calendário para outro dia do mesmo mês para mover a data
-- [ ] **AGE-08**: Ao largar o evento num novo dia, a data é atualizada via `PUT /eventos/{id}` e o calendário atualiza imediatamente
+- [x] **AGE-07**: Utilizador pode arrastar um evento no calendário para outro dia do mesmo mês para mover a data
+- [x] **AGE-08**: Ao largar o evento num novo dia, a data é atualizada via `PUT /eventos/{id}` e o calendário atualiza imediatamente
 
 ---
 
