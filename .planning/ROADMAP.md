@@ -12,7 +12,7 @@ Completa e corrige o módulo financeiro existente em quatro fases: primeiro alin
 
 - [x] **Phase 43: Data Layer + Backend Endpoints** - Migração camelCase e endpoints CRUD em falta
 - [x] **Phase 44: Status + KPIs** - Cálculo de estado do honorário e cards de resumo financeiros
-- [ ] **Phase 45: Filtros + Edit/Delete UI** - Filtros na lista e ações de edição/eliminação
+- [x] **Phase 45: Filtros + Edit/Delete UI** - Filtros na lista e ações de edição/eliminação
 - [ ] **Phase 46: CSV Export** - Exportação da lista de honorários para CSV
 
 ## Phase Details
@@ -76,5 +76,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 43. Data Layer + Backend Endpoints | 2/2 | Complete | 2026-06-18 |
 | 44. Status + KPIs | 2/2 | Complete | 2026-06-18 |
-| 45. Filtros + Edit/Delete UI | 0/TBD | Not started | - |
+| 45. Filtros + Edit/Delete UI | 2/2 | Complete | 2026-06-18 |
 | 46. CSV Export | 0/TBD | Not started | - |
