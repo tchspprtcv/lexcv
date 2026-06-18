@@ -37,7 +37,9 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1527,7 +1529,75 @@ public class ResourceController {
             eventos.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isAfter(finalEnd));
         }
 
-        return ResponseEntity.ok(eventos);
+        // Expand recurring instances
+        LocalDateTime effectiveStart = start != null ? start : LocalDateTime.now().minusYears(1);
+        LocalDateTime effectiveEnd = end != null ? end : LocalDateTime.now().plusYears(1);
+
+        List<Evento> expanded = new ArrayList<>();
+        for (Evento master : eventos) {
+            if (master.getRecurrenceRule() == null) {
+                expanded.add(master);
+                continue;
+            }
+            // Build exception set
+            Set<String> exceptions = new LinkedHashSet<>();
+            if (master.getRecurrenceExceptions() != null) {
+                for (String token : master.getRecurrenceExceptions().split(",")) {
+                    String t = token.trim();
+                    if (!t.isEmpty()) exceptions.add(t);
+                }
+            }
+            // Determine duration between dataInicio and dataFim
+            Duration eventDuration = (master.getDataInicio() != null && master.getDataFim() != null)
+                    ? Duration.between(master.getDataInicio(), master.getDataFim()) : null;
+
+            LocalDateTime cursor = master.getDataInicio();
+            if (cursor == null) continue;
+
+            java.time.LocalDate endDate = master.getRecurrenceEndDate();
+            if (endDate == null) endDate = effectiveEnd.toLocalDate();
+
+            while (!cursor.toLocalDate().isAfter(endDate)) {
+                // Check window
+                if (!cursor.isBefore(effectiveStart) && !cursor.isAfter(effectiveEnd)) {
+                    String dateStr = cursor.toLocalDate().toString();
+                    if (!exceptions.contains(dateStr)) {
+                        LocalDateTime instanceFim = eventDuration != null ? cursor.plus(eventDuration) : null;
+                        Evento instance = Evento.builder()
+                                .id(master.getId())
+                                .tenantId(master.getTenantId())
+                                .processoId(master.getProcessoId())
+                                .tipo(master.getTipo())
+                                .titulo(master.getTitulo())
+                                .descricao(master.getDescricao())
+                                .prioridade(master.getPrioridade())
+                                .concluido(master.getConcluido())
+                                .dataInicio(cursor)
+                                .dataFim(instanceFim)
+                                .recurrenceRule(master.getRecurrenceRule())
+                                .recurrenceEndDate(master.getRecurrenceEndDate())
+                                .recurrenceExceptions(master.getRecurrenceExceptions())
+                                .build();
+                        instance.setIsRecurrenceInstance(true);
+                        instance.setRecurrenceInstanceDate(dateStr);
+                        expanded.add(instance);
+                    }
+                }
+                // Advance cursor
+                switch (master.getRecurrenceRule()) {
+                    case "DAILY" -> cursor = cursor.plusDays(1);
+                    case "WEEKLY" -> cursor = cursor.plusWeeks(1);
+                    case "MONTHLY" -> cursor = cursor.plusMonths(1);
+                    default -> { break; }
+                }
+                // Safety: if rule unknown, avoid infinite loop
+                if (!master.getRecurrenceRule().equals("DAILY") &&
+                    !master.getRecurrenceRule().equals("WEEKLY") &&
+                    !master.getRecurrenceRule().equals("MONTHLY")) break;
+            }
+        }
+
+        return ResponseEntity.ok(expanded);
     }
 
     @PreAuthorize("hasAuthority('agenda:view')")
