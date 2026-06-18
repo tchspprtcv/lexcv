@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,12 +101,12 @@ function EventoEditContent({ id }: { id: number }) {
     form.reset({
       processoId: evento.data.processoId ?? "",
       tipo: evento.data.tipo ?? "",
-      titulo: evento.data.titulo,
-      descricao: evento.data.descricao,
+      titulo: evento.data.titulo ?? "",
+      descricao: evento.data.descricao ?? undefined,
       dataInicio: toDateTimeLocalValue(evento.data.dataInicio),
       dataFim: toDateTimeLocalValue(evento.data.dataFim),
-      prioridade: evento.data.prioridade,
-      concluido: evento.data.concluido,
+      prioridade: evento.data.prioridade ?? "MEDIA",
+      concluido: evento.data.concluido ?? false,
       recurrenceRule: (evento.data.recurrenceRule as EventoFormValues["recurrenceRule"]) ?? "NONE",
       recurrenceEndDate: evento.data.recurrenceEndDate,
     });
@@ -130,6 +130,17 @@ function EventoEditContent({ id }: { id: number }) {
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Erro ao atualizar evento");
     }
+  };
+
+  const onInvalid = (errors: FieldErrors<EventoFormValues>) => {
+    const messages = Object.values(errors)
+      .map((err) => err?.message)
+      .filter((m): m is string => typeof m === "string");
+    setServerError(
+      messages.length
+        ? `Não foi possível guardar: ${messages.join("; ")}`
+        : "Não foi possível guardar: há campos inválidos no formulário.",
+    );
   };
 
   return (
@@ -161,7 +172,7 @@ function EventoEditContent({ id }: { id: number }) {
             <CardTitle>Dados</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
               <div className="space-y-2">
                 <Label htmlFor="processoId">Processo (opcional)</Label>
                 <select
