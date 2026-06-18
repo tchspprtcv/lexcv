@@ -27,7 +27,10 @@ Completa e corrige o módulo financeiro existente em quatro fases: primeiro alin
   3. Utilizador pode consultar um honorário individual via `GET /honorarios/{id}` com tenant scoping correto
   4. Utilizador com `financeiro:edit` pode editar um honorário via `PUT /honorarios/{id}`
   5. Utilizador com `financeiro:manage` pode apagar um honorário (sem pagamentos) e um pagamento com reversão de saldo
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 43-01-PLAN.md — Frontend camelCase migration: types, schemas, hooks, page components
+- [ ] 43-02-PLAN.md — Backend missing endpoints: GET/PUT/DELETE /honorarios/{id}, DELETE /pagamentos/{id}
 **UI hint**: yes
 
 ### Phase 44: Status + KPIs
@@ -71,7 +74,7 @@ Completa e corrige o módulo financeiro existente em quatro fases: primeiro alin
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 43. Data Layer + Backend Endpoints | 0/TBD | Not started | - |
+| 43. Data Layer + Backend Endpoints | 0/2 | Not started | - |
 | 44. Status + KPIs | 0/TBD | Not started | - |
 | 45. Filtros + Edit/Delete UI | 0/TBD | Not started | - |
 | 46. CSV Export | 0/TBD | Not started | - |
