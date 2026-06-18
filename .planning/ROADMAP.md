@@ -10,7 +10,7 @@ Completa e corrige o módulo financeiro existente em quatro fases: primeiro alin
 
 ## Phases
 
-- [ ] **Phase 43: Data Layer + Backend Endpoints** - Migração camelCase e endpoints CRUD em falta
+- [x] **Phase 43: Data Layer + Backend Endpoints** - Migração camelCase e endpoints CRUD em falta
 - [ ] **Phase 44: Status + KPIs** - Cálculo de estado do honorário e cards de resumo financeiros
 - [ ] **Phase 45: Filtros + Edit/Delete UI** - Filtros na lista e ações de edição/eliminação
 - [ ] **Phase 46: CSV Export** - Exportação da lista de honorários para CSV
@@ -29,8 +29,8 @@ Completa e corrige o módulo financeiro existente em quatro fases: primeiro alin
   5. Utilizador com `financeiro:manage` pode apagar um honorário (sem pagamentos) e um pagamento com reversão de saldo
 **Plans**: 2 plans
 Plans:
-- [ ] 43-01-PLAN.md — Frontend camelCase migration: types, schemas, hooks, page components
-- [ ] 43-02-PLAN.md — Backend missing endpoints: GET/PUT/DELETE /honorarios/{id}, DELETE /pagamentos/{id}
+- [x] 43-01-PLAN.md — Frontend camelCase migration: types, schemas, hooks, page components
+- [x] 43-02-PLAN.md — Backend missing endpoints: GET/PUT/DELETE /honorarios/{id}, DELETE /pagamentos/{id}
 **UI hint**: yes
 
 ### Phase 44: Status + KPIs
@@ -74,7 +74,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 43. Data Layer + Backend Endpoints | 0/2 | Not started | - |
+| 43. Data Layer + Backend Endpoints | 2/2 | Complete | 2026-06-18 |
 | 44. Status + KPIs | 0/TBD | Not started | - |
 | 45. Filtros + Edit/Delete UI | 0/TBD | Not started | - |
 | 46. CSV Export | 0/TBD | Not started | - |

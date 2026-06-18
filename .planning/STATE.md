@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Módulo Financeiro
-status: planning
-stopped_at: "Roadmap created — ready for phase planning"
-last_updated: "2026-06-18T00:00:00.000Z"
-last_activity: 2026-06-18 — Roadmap v2.0 created (4 phases, 17 requirements)
+status: executing
+stopped_at: "Phase 43 complete — ready for Phase 44"
+last_updated: "2026-06-18T01:00:00.000Z"
+last_activity: 2026-06-18 — Phase 43 executed (2 plans, camelCase migration + 4 backend endpoints)
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 43 of 46 (Data Layer + Backend Endpoints)
+Phase: 44 of 46 (Status + KPIs)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-06-18 — Roadmap created, 4 phases defined
+Last activity: 2026-06-18 — Phase 43 complete (camelCase migration + 4 backend endpoints)
 
 Progress: [░░░░░░░░░░] 0%
 
