@@ -1662,13 +1662,19 @@ public class ResourceController {
                     .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
         }
 
-        evento.setTitulo(payload.getTitulo());
-        evento.setDescricao(payload.getDescricao());
-        evento.setTipo(payload.getTipo());
-        evento.setDataInicio(payload.getDataInicio());
-        evento.setDataFim(payload.getDataFim());
-        evento.setPrioridade(payload.getPrioridade());
-        evento.setConcluido(payload.getConcluido());
+        // Partial update: only overwrite fields explicitly provided in the payload.
+        // Drag & drop sends only dataInicio/dataFim and toggle-concluido sends only
+        // concluido, so a full replace would null out titulo/prioridade/recorrência.
+        if (payload.getTitulo() != null) evento.setTitulo(payload.getTitulo());
+        if (payload.getDescricao() != null) evento.setDescricao(payload.getDescricao());
+        if (payload.getTipo() != null) evento.setTipo(payload.getTipo());
+        if (payload.getDataInicio() != null) evento.setDataInicio(payload.getDataInicio());
+        if (payload.getDataFim() != null) evento.setDataFim(payload.getDataFim());
+        if (payload.getPrioridade() != null) evento.setPrioridade(payload.getPrioridade());
+        if (payload.getConcluido() != null) evento.setConcluido(payload.getConcluido());
+        if (payload.getRecurrenceRule() != null) evento.setRecurrenceRule(payload.getRecurrenceRule());
+        if (payload.getRecurrenceEndDate() != null) evento.setRecurrenceEndDate(payload.getRecurrenceEndDate());
+        if (payload.getRecurrenceExceptions() != null) evento.setRecurrenceExceptions(payload.getRecurrenceExceptions());
 
         return ResponseEntity.ok(eventoRepository.save(evento));
     }

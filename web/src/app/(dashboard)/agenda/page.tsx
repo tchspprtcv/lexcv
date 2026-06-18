@@ -495,8 +495,8 @@ function LegendChip({ label, dotClassName }: { label: string; dotClassName: stri
   );
 }
 
-function getCategoria(e: { titulo: string; tipo?: string }) {
-  const t = e.titulo.toLowerCase();
+function getCategoria(e: { titulo?: string | null; tipo?: string | null }) {
+  const t = (e.titulo ?? "").toLowerCase();
   const tipo = e.tipo?.toUpperCase();
 
   if (tipo === "PRAZO" || (!tipo && t.includes("prazo"))) {
