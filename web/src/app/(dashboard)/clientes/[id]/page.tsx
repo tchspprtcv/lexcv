@@ -22,6 +22,7 @@ import {
 import { usePermissions } from "@/hooks/use-permissions";
 import type { ClienteContacto } from "@/types/clientes-contactos";
 import type { ClienteNota } from "@/types/clientes-notas";
+import { toast } from "@/hooks/use-toast";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -235,8 +236,13 @@ function ClienteContactosCard({
     if (!canEditClientes) return;
     const valor = newValor.trim();
     if (!valor) return;
-    await create.mutateAsync({ tipo: newTipo, valor });
-    setNewValor("");
+    try {
+      await create.mutateAsync({ tipo: newTipo, valor });
+      toast.success("Contacto adicionado com sucesso.");
+      setNewValor("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao adicionar contacto.");
+    }
   };
 
   const onStartEdit = (c: ClienteContacto) => {
@@ -256,16 +262,26 @@ function ClienteContactosCard({
     if (!editingId) return;
     const valor = editValor.trim();
     if (!valor) return;
-    await update.mutateAsync({ contactoId: editingId, payload: { tipo: editTipo || undefined, valor } });
-    onCancelEdit();
+    try {
+      await update.mutateAsync({ contactoId: editingId, payload: { tipo: editTipo || undefined, valor } });
+      toast.success("Contacto atualizado com sucesso.");
+      onCancelEdit();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar contacto.");
+    }
   };
 
   const onDelete = async (id: string) => {
     if (!canEditClientes) return;
     const ok = window.confirm("Remover este contacto?");
     if (!ok) return;
-    await del.mutateAsync(id);
-    if (editingId === id) onCancelEdit();
+    try {
+      await del.mutateAsync(id);
+      toast.success("Contacto removido com sucesso.");
+      if (editingId === id) onCancelEdit();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover contacto.");
+    }
   };
 
   return (
@@ -410,9 +426,14 @@ function ClienteNotasCard({
     if (!canEditClientes) return;
     const conteudo = newConteudo.trim();
     if (!conteudo) return;
-    await create.mutateAsync({ titulo: newTitulo.trim() || undefined, conteudo });
-    setNewTitulo("");
-    setNewConteudo("");
+    try {
+      await create.mutateAsync({ titulo: newTitulo.trim() || undefined, conteudo });
+      toast.success("Nota adicionada com sucesso.");
+      setNewTitulo("");
+      setNewConteudo("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao adicionar nota.");
+    }
   };
 
   const onStartEdit = (n: ClienteNota) => {
@@ -432,16 +453,26 @@ function ClienteNotasCard({
     if (!editingId) return;
     const conteudo = editConteudo.trim();
     if (!conteudo) return;
-    await update.mutateAsync({ notaId: editingId, payload: { titulo: editTitulo.trim() || undefined, conteudo } });
-    onCancelEdit();
+    try {
+      await update.mutateAsync({ notaId: editingId, payload: { titulo: editTitulo.trim() || undefined, conteudo } });
+      toast.success("Nota atualizada com sucesso.");
+      onCancelEdit();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar nota.");
+    }
   };
 
   const onDelete = async (id: string) => {
     if (!canEditClientes) return;
     const ok = window.confirm("Remover esta nota?");
     if (!ok) return;
-    await del.mutateAsync(id);
-    if (editingId === id) onCancelEdit();
+    try {
+      await del.mutateAsync(id);
+      toast.success("Nota removida com sucesso.");
+      if (editingId === id) onCancelEdit();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover nota.");
+    }
   };
 
   return (
