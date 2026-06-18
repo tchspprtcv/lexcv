@@ -23,6 +23,69 @@ function calcHonorarioStatus(totalPago: number, valorTotal: number): HonorarioSt
   return "Pago";
 }
 
+function escapeField(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return '"' + value.replace(/"/g, '""') + '"';
+  }
+  return value;
+}
+
+interface HonorarioRow {
+  id: string | number;
+  processoId: string;
+  valorTotal: number;
+  totalPago: number;
+  dataAcordo?: string;
+}
+
+interface ProcessoRef {
+  id: string;
+  numero?: string;
+  titulo?: string;
+  cliente_id?: string;
+}
+
+function exportHonorariosCsv(
+  rows: HonorarioRow[],
+  processoById: Map<string, ProcessoRef>,
+  clienteNomeById: Map<string, string>,
+) {
+  const header = ["ID", "Processo", "Cliente", "Valor Total", "Total Pago", "Estado", "Data do Acordo"];
+  const lines: string[] = [header.map(escapeField).join(",")];
+
+  for (const h of rows) {
+    const proc = processoById.get(h.processoId);
+    const processoLabel = proc ? (proc.numero ?? proc.titulo ?? h.processoId) : h.processoId;
+    const clienteId = proc?.cliente_id ?? "";
+    const clienteLabel = clienteNomeById.get(clienteId) ?? "";
+    const estado = calcHonorarioStatus(h.totalPago, h.valorTotal);
+    const dataAcordo = h.dataAcordo ?? "";
+
+    lines.push(
+      [
+        escapeField(String(h.id)),
+        escapeField(processoLabel),
+        escapeField(clienteLabel),
+        escapeField(String(h.valorTotal)),
+        escapeField(String(h.totalPago)),
+        escapeField(estado),
+        escapeField(dataAcordo),
+      ].join(","),
+    );
+  }
+
+  const bom = "﻿";
+  const content = bom + lines.join("\n");
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const today = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `honorarios-${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 const statusBadgeClass: Record<HonorarioStatus, string> = {
   Pendente:
     "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
@@ -52,10 +115,16 @@ export default function FinanceiroPage() {
     );
   }
 
-  return <FinanceiroContent canCreateFinanceiro={canCreateFinanceiro} />;
+  return <FinanceiroContent canCreateFinanceiro={canCreateFinanceiro} canViewFinanceiro={canViewFinanceiro} />;
 }
 
-function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boolean }) {
+function FinanceiroContent({
+  canCreateFinanceiro,
+  canViewFinanceiro,
+}: {
+  canCreateFinanceiro: boolean;
+  canViewFinanceiro: boolean;
+}) {
   const honorarios = useHonorarios();
   const processos = useProcessos();
   const clientes = useClientes({});
@@ -96,11 +165,21 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Honorários e pagamentos.</p>
         </div>
 
-        {canCreateFinanceiro ? (
-          <Button asChild>
-            <Link href="/financeiro/novo">Novo honorário</Link>
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {canViewFinanceiro && filteredList.length > 0 ? (
+            <Button
+              variant="outline"
+              onClick={() => exportHonorariosCsv(filteredList, processoById, clienteNomeById)}
+            >
+              Exportar CSV
+            </Button>
+          ) : null}
+          {canCreateFinanceiro ? (
+            <Button asChild>
+              <Link href="/financeiro/novo">Novo honorário</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
