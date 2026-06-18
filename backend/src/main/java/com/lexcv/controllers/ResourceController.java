@@ -1685,6 +1685,35 @@ public class ResourceController {
         return ResponseEntity.ok(Map.of("message", "Evento removido com sucesso!"));
     }
 
+    @PreAuthorize("hasAuthority('agenda:edit')")
+    @DeleteMapping("/eventos/{id}/instances")
+    public ResponseEntity<?> deleteEventoInstance(
+            @PathVariable Integer id,
+            @RequestParam String date) {
+        Evento master = eventoRepository.findById(id).orElse(null);
+        if (master == null || !master.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Evento não encontrado"));
+        }
+        LocalDate parsedDate;
+        try {
+            parsedDate = LocalDate.parse(date);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Parâmetro 'date' inválido. Esperado YYYY-MM-DD"));
+        }
+        LinkedHashSet<String> exceptions = new LinkedHashSet<>();
+        if (master.getRecurrenceExceptions() != null) {
+            for (String token : master.getRecurrenceExceptions().split(",")) {
+                String t = token.trim();
+                if (!t.isEmpty()) exceptions.add(t);
+            }
+        }
+        exceptions.add(parsedDate.toString());
+        master.setRecurrenceExceptions(String.join(",", exceptions));
+        eventoRepository.save(master);
+        return ResponseEntity.ok(Map.of("message", "Instância removida com sucesso!"));
+    }
+
     // ==========================================
     // DOCUMENTOS
     // ==========================================
