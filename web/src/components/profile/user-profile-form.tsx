@@ -9,6 +9,7 @@ import { Camera, Loader2, Save } from "lucide-react";
 
 import { useMe } from "@/hooks/use-me";
 import { apiFetch } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,8 +61,11 @@ export function UserProfileForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      // Could add a toast success here
+      toast.success("Informações atualizadas com sucesso.");
     },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Erro ao atualizar informações");
+    }
   });
 
   const onSubmit = (values: ProfileFormValues) => {

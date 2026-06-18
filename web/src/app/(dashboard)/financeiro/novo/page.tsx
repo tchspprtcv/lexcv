@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCreateHonorario } from "@/hooks/use-financeiro";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { honorarioFormSchema, type HonorarioFormValues } from "@/schemas/financeiro";
@@ -68,9 +69,12 @@ function HonorarioCreateContent() {
         dataAcordo: values.dataAcordo,
       };
       const res = await create.mutateAsync(payload satisfies HonorarioCreateRequest);
+      toast.success("Honorário criado com sucesso.");
       router.push(`/financeiro/${encodeURIComponent(String(res.id))}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao criar honorário");
+      const msg = e instanceof Error ? e.message : "Erro ao criar honorário";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

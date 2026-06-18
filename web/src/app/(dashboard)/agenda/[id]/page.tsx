@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEvento, useToggleEventoConcluido, useDeleteEvento, useDeleteEventoInstance } from "@/hooks/use-eventos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -92,7 +93,12 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
 
   const onToggle = async () => {
     if (!evento.data) return;
-    await toggle.mutateAsync(!evento.data.concluido);
+    try {
+      await toggle.mutateAsync(!evento.data.concluido);
+      toast.success(evento.data.concluido ? "Evento reaberto com sucesso." : "Evento concluído com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar estado do evento.");
+    }
   };
 
   const isDeleting = del.isPending || delInstance.isPending;
@@ -101,9 +107,12 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
     setDeleteError(null);
     try {
       await del.mutateAsync();
+      toast.success("Evento apagado com sucesso.");
       router.push("/agenda");
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Erro ao apagar evento");
+      const msg = e instanceof Error ? e.message : "Erro ao apagar evento";
+      setDeleteError(msg);
+      toast.error(msg);
     }
   };
 
@@ -112,9 +121,12 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
     setDeleteError(null);
     try {
       await delInstance.mutateAsync({ date: evento.data.dataInicio.slice(0, 10) });
+      toast.success("Instância de evento apagada com sucesso.");
       router.push("/agenda");
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Erro ao apagar instância");
+      const msg = e instanceof Error ? e.message : "Erro ao apagar instância";
+      setDeleteError(msg);
+      toast.error(msg);
     }
   };
 

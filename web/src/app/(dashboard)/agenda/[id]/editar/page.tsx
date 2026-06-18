@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useEvento, useUpdateEvento } from "@/hooks/use-eventos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { eventoFormSchema, type EventoFormValues } from "@/schemas/eventos";
@@ -126,9 +127,12 @@ function EventoEditContent({ id }: { id: number }) {
         concluido: values.concluido,
       };
       await update.mutateAsync(payload satisfies EventoUpdateRequest);
+      toast.success("Evento atualizado com sucesso.");
       router.push(`/agenda/${encodeURIComponent(String(id))}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao atualizar evento");
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar evento";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

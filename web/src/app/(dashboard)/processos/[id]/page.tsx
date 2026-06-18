@@ -58,6 +58,7 @@ import {
   useUpdateProcessoFaseStatus,
   useWorkflow,
 } from "@/hooks/use-processos";
+import { toast } from "@/hooks/use-toast";
 import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-check";
 import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
 import {
@@ -246,8 +247,10 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     setFormalizarError(null);
     try {
       await formalizarProcesso.mutateAsync();
+      toast.success("Processo formalizado com sucesso.");
     } catch (e) {
       setFormalizarError(e instanceof Error ? e.message : "Erro ao formalizar o processo");
+      toast.error(e instanceof Error ? e.message : "Erro ao formalizar o processo");
     }
   };
 
@@ -266,12 +269,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const onSubmitTransicaoDirecta = async (acao: string) => {
     try {
       await transicao.mutateAsync({ acao });
+      toast.success("Transição executada com sucesso.");
     } catch (e) {
-      setTransicaoError(
-        e instanceof Error
-          ? e.message
-          : "Não foi possível executar a transição. Verifique os requisitos e tente novamente.",
-      );
+      const msg = e instanceof Error ? e.message : "Não foi possível executar a transição. Verifique os requisitos e tente novamente.";
+      setTransicaoError(msg);
+      toast.error(msg);
     }
   };
 
@@ -283,12 +285,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
         payload: { justificativa: values.justificativa },
       });
       setDialogOpen(false);
+      toast.success("Transição com justificativa executada com sucesso.");
     } catch (e) {
-      setTransicaoError(
-        e instanceof Error
-          ? e.message
-          : "Não foi possível executar a transição. Verifique os requisitos e tente novamente.",
-      );
+      const msg = e instanceof Error ? e.message : "Não foi possível executar a transição. Verifique os requisitos e tente novamente.";
+      setTransicaoError(msg);
+      toast.error(msg);
     }
   };
 
@@ -304,20 +305,21 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
       });
       prazoForm.reset({ descricao: "", dataLimite: "", prioridade: "MEDIA", responsavelId: undefined });
       setPrazoDialogOpen(false);
+      toast.success("Prazo guardado com sucesso.");
     } catch (e) {
-      setPrazoError(
-        e instanceof Error
-          ? e.message
-          : "Não foi possível guardar o prazo. Tente novamente.",
-      );
+      const msg = e instanceof Error ? e.message : "Não foi possível guardar o prazo. Tente novamente.";
+      setPrazoError(msg);
+      toast.error(msg);
     }
   };
 
   const onToggleConcluido = async (prazoId: string, concluido: boolean) => {
     try {
       await toggleConcluido.mutateAsync({ prazoId, concluido });
+      toast.success("Estado do prazo atualizado.");
     } catch {
       setPrazoError("Erro ao atualizar o prazo. Tente novamente.");
+      toast.error("Erro ao atualizar o prazo.");
     }
   };
 
@@ -327,8 +329,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     try {
       await addParte.mutateAsync(values satisfies ProcessoParteCreateRequest);
       parteForm.reset({ tipo: undefined, nome: "", nif: undefined });
+      toast.success("Parte adicionada ao processo.");
     } catch (e) {
-      setParteServerError(e instanceof Error ? e.message : "Erro ao adicionar parte");
+      const msg = e instanceof Error ? e.message : "Erro ao adicionar parte";
+      setParteServerError(msg);
+      toast.error(msg);
     }
   };
 
@@ -338,8 +343,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     try {
       await addFase.mutateAsync(values satisfies ProcessoFaseCreateRequest);
       faseForm.reset({ fase_id: "", status: "PENDENTE" });
+      toast.success("Fase adicionada ao processo.");
     } catch (e) {
-      setFaseServerError(e instanceof Error ? e.message : "Erro ao adicionar fase");
+      const msg = e instanceof Error ? e.message : "Erro ao adicionar fase";
+      setFaseServerError(msg);
+      toast.error(msg);
     }
   };
 
@@ -348,8 +356,10 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     const payload: ProcessoFaseUpdateRequest = { status };
     try {
       await updateFaseStatus.mutateAsync({ faseId, payload });
+      toast.success("Status da fase atualizado.");
     } catch {
       setFaseServerError("Erro ao atualizar status da fase");
+      toast.error("Erro ao atualizar status da fase");
     }
   };
 
@@ -364,8 +374,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
         data,
       } satisfies ProcessoMovimentacaoCreateRequest);
       movForm.reset({ titulo: "", descricao: undefined, data: undefined });
+      toast.success("Movimentação registada.");
     } catch (e) {
-      setMovServerError(e instanceof Error ? e.message : "Erro ao adicionar movimentação");
+      const msg = e instanceof Error ? e.message : "Erro ao adicionar movimentação";
+      setMovServerError(msg);
+      toast.error(msg);
     }
   };
 

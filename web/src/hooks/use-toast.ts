@@ -126,20 +126,42 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
-const listeners: Array<(state: State) => void> = []
+const globalSymbols = globalThis as any;
 
-let memoryState: State = { toasts: [] }
+if (!globalSymbols.__toastListeners) {
+  globalSymbols.__toastListeners = [];
+}
+if (!globalSymbols.__toastMemoryState) {
+  globalSymbols.__toastMemoryState = { toasts: [] };
+}
+
+const listeners: Array<(state: State) => void> = globalSymbols.__toastListeners;
+
+function getMemoryState(): State {
+  return globalSymbols.__toastMemoryState;
+}
+
+function setMemoryState(state: State) {
+  globalSymbols.__toastMemoryState = state;
+}
 
 function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
+  const currentState = getMemoryState();
+  const newState = reducer(currentState, action);
+  setMemoryState(newState);
+
+  console.log("[use-toast] dispatch called:", action.type, "payload:", (action as any).toast || (action as any).toastId, "active listeners:", listeners.length);
+
+  listeners.forEach((listener, i) => {
+    console.log("[use-toast] notifying listener", i);
+    listener(newState);
+  });
 }
 
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  console.log("[use-toast] toast() function invoked with:", props);
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -169,14 +191,16 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+  const [state, setState] = React.useState<State>(getMemoryState())
 
   React.useEffect(() => {
+    console.log("[use-toast] useToast hook mounted, adding listener. Current listeners count:", listeners.length);
     listeners.push(setState)
     return () => {
       const index = listeners.indexOf(setState)
       if (index > -1) {
         listeners.splice(index, 1)
+        console.log("[use-toast] useToast hook unmounted, removed listener. Current listeners count:", listeners.length);
       }
     }
   }, [])

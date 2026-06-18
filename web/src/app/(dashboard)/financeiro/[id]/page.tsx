@@ -40,6 +40,7 @@ import {
   useHonorarioPagamentos,
   useUpdateHonorario,
 } from "@/hooks/use-financeiro";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcesso } from "@/hooks/use-processos";
 import {
@@ -178,8 +179,11 @@ function HonorarioDetailContent({
       };
       await createPagamento.mutateAsync(payload satisfies PagamentoCreateRequest);
       form.reset({ valorPago: "", dataPagamento: undefined, metodo: undefined });
+      toast.success("Pagamento registado com sucesso.");
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao adicionar pagamento");
+      const msg = e instanceof Error ? e.message : "Erro ao adicionar pagamento";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 
@@ -192,10 +196,11 @@ function HonorarioDetailContent({
       };
       await updateHonorario.mutateAsync({ id: honorarioId, data: payload });
       setEditOpen(false);
+      toast.success("Honorário atualizado com sucesso.");
     } catch (e) {
-      editForm.setError("root", {
-        message: e instanceof Error ? e.message : "Erro ao guardar alterações",
-      });
+      const msg = e instanceof Error ? e.message : "Erro ao guardar alterações";
+      editForm.setError("root", { message: msg });
+      toast.error(msg);
     }
   };
 
@@ -203,10 +208,21 @@ function HonorarioDetailContent({
     setDeleteHonorarioError(null);
     try {
       await deleteHonorario.mutateAsync(honorarioId);
+      toast.success("Honorário apagado com sucesso.");
       router.push("/financeiro");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao apagar honorário";
       setDeleteHonorarioError(msg);
+      toast.error(msg);
+    }
+  };
+  
+  const handleDeletePagamento = async (pagamentoId: number, honorarioId: number) => {
+    try {
+      await deletePagamento.mutateAsync({ pagamentoId, honorarioId });
+      toast.success("Pagamento apagado com sucesso.");
+    } catch {
+      toast.error("Erro ao apagar pagamento.");
     }
   };
 
@@ -516,7 +532,7 @@ function HonorarioDetailContent({
                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                     <AlertDialogAction
                                       className="bg-red-600 hover:bg-red-700 text-white"
-                                      onClick={() => deletePagamento.mutate({ pagamentoId: p.id, honorarioId })}
+                                      onClick={() => handleDeletePagamento(p.id, honorarioId)}
                                     >
                                       Apagar
                                     </AlertDialogAction>

@@ -21,6 +21,7 @@ import {
   useRegistarDecisaoConflito,
   useRunConflictCheck,
 } from "@/hooks/use-processos";
+import { toast } from "@/hooks/use-toast";
 import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-check";
 import {
   conflictCheckDecisaoFormSchema,
@@ -114,8 +115,11 @@ function ProcessoWizardContent() {
       setProcessoId(res.id);
       setProcessoData(res);
       setStep(2);
+      toast.success("Processo iniciado com sucesso (Intake).");
     } catch (e) {
-      setStep1Error(e instanceof Error ? e.message : "Erro ao criar processo");
+      const msg = e instanceof Error ? e.message : "Erro ao criar processo";
+      setStep1Error(msg);
+      toast.error(msg);
     }
   };
 
@@ -125,8 +129,11 @@ function ProcessoWizardContent() {
     try {
       const result = await runCheck.mutateAsync();
       setConflictResult(result);
+      toast.success("Conflict check executado.");
     } catch (e) {
-      setStep2Error(e instanceof Error ? e.message : "Erro ao executar o conflict check. Verifique a ligação e tente novamente.");
+      const msg = e instanceof Error ? e.message : "Erro ao executar o conflict check. Verifique a ligação e tente novamente.";
+      setStep2Error(msg);
+      toast.error(msg);
     }
   };
 
@@ -146,8 +153,11 @@ function ProcessoWizardContent() {
         referenciaEvidencia: values.referenciaEvidencia,
         dataDecisao: saved.dataDecisao ?? new Date().toLocaleDateString("pt-CV"),
       });
+      toast.success("Decisão registada com sucesso.");
     } catch (e) {
-      setStep2Error(e instanceof Error ? e.message : "Não foi possível registar a decisão. Tente novamente ou contacte o suporte.");
+      const msg = e instanceof Error ? e.message : "Não foi possível registar a decisão. Tente novamente ou contacte o suporte.";
+      setStep2Error(msg);
+      toast.error(msg);
     }
   };
 
@@ -157,11 +167,13 @@ function ProcessoWizardContent() {
     setStep3Error(null);
     try {
       await formalizarProcesso.mutateAsync();
+      toast.success("Processo formalizado e aberto com sucesso.");
       router.push(`/processos/${encodeURIComponent(processoId)}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao formalizar o processo";
       setFormalizarError(msg);
       setStep3Error(msg);
+      toast.error(msg);
     }
   };
 

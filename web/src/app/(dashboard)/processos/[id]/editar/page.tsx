@@ -14,6 +14,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcesso, useUpdateProcesso } from "@/hooks/use-processos";
+import { toast } from "@/hooks/use-toast";
 import { processoFormSchema, type ProcessoFormValues } from "@/schemas/processos";
 import type { ProcessoUpdateRequest } from "@/types/processos";
 
@@ -93,9 +94,12 @@ function ProcessoEditContent({ id }: { id: string }) {
     setServerError(null);
     try {
       await update.mutateAsync(values satisfies ProcessoUpdateRequest);
+      toast.success("Processo atualizado com sucesso.");
       router.push(`/processos/${encodeURIComponent(id)}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao atualizar processo");
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar processo";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

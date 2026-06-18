@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2, ShieldCheck, KeyRound } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ export function UserPasswordForm() {
     },
     onSuccess: (data) => {
       setSuccessMsg(data.message || "Palavra-passe alterada com sucesso!");
+      toast.success(data.message || "Palavra-passe alterada com sucesso!");
       setErrorMsg(null);
       form.reset();
     },
@@ -60,6 +62,7 @@ export function UserPasswordForm() {
         msg = error.message.replace("API 400: ", "");
       }
       setErrorMsg(msg);
+      toast.error(msg);
       setSuccessMsg(null);
     },
   });

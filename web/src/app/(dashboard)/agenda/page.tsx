@@ -15,6 +15,7 @@ import { useEventos } from "@/hooks/use-eventos";
 import { useProcessos, useAllPrazos } from "@/hooks/use-processos";
 import type { Evento } from "@/types/eventos";
 import { apiFetch } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 export default function AgendaPage() {
@@ -66,9 +67,11 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
     onSuccess: () => {
       setOptimisticOverrides(new Map());
       queryClient.invalidateQueries({ queryKey: ["eventos", "list"] });
+      toast.success("Evento reagendado com sucesso.");
     },
-    onError: () => {
+    onError: (error: unknown) => {
       setOptimisticOverrides(new Map());
+      toast.error(error instanceof Error ? error.message : "Erro ao reagendar evento.");
     },
   });
 

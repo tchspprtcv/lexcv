@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente, useUpdateCliente } from "@/hooks/use-clientes";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteUpdateRequest } from "@/types/clientes";
@@ -102,9 +103,12 @@ function ClienteEditContent({ id }: { id: string }) {
       }
 
       await update.mutateAsync(payload);
+      toast.success("Cliente atualizado com sucesso.");
       router.push(`/clientes/${encodeURIComponent(id)}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao atualizar cliente");
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar cliente";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

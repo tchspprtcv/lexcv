@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import type { LoginRequest, LoginResponse } from "@/types/auth";
 
 const loginSchema = z.object({
@@ -39,6 +40,8 @@ function LoginForm() {
         body: JSON.stringify(values satisfies LoginRequest),
       });
       
+      toast.success("Autenticação efetuada com sucesso.");
+      
       const returnUrl = searchParams?.get("returnUrl");
       if (returnUrl && returnUrl.startsWith("/")) {
         router.replace(returnUrl);
@@ -46,7 +49,9 @@ function LoginForm() {
         router.replace("/dashboard");
       }
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao autenticar");
+      const msg = e instanceof Error ? e.message : "Erro ao autenticar";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

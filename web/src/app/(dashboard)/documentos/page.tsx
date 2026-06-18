@@ -11,6 +11,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDeleteDocumento, useDocumentos } from "@/hooks/use-documentos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { documentosFiltersFormSchema, type DocumentosFiltersFormValues } from "@/schemas/documentos";
 import type { DocumentosListFilters } from "@/types/documentos";
@@ -205,8 +206,11 @@ function DocumentoRow({
     if (!ok) return;
     try {
       await del.mutateAsync();
+      toast.success("Documento apagado com sucesso.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao apagar documento");
+      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
+      setError(msg);
+      toast.error(msg);
     }
   };
 

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateEvento } from "@/hooks/use-eventos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { eventoFormSchema, type EventoFormValues } from "@/schemas/eventos";
@@ -85,9 +86,12 @@ function EventoCreateContent() {
           : {}),
       };
       const res = await create.mutateAsync(payload satisfies EventoCreateRequest);
+      toast.success("Evento criado com sucesso.");
       router.push(`/agenda/${encodeURIComponent(String(res.id))}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao criar evento");
+      const msg = e instanceof Error ? e.message : "Erro ao criar evento";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

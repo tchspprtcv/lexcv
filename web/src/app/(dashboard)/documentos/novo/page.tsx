@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useUploadDocumento } from "@/hooks/use-documentos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { documentoUploadFormSchema, type DocumentoUploadFormValues } from "@/schemas/documentos";
 
@@ -46,9 +47,12 @@ export default function DocumentoUploadPage() {
         confidencialidade: values.confidencialidade,
         replace_id: values.replace_id,
       });
+      toast.success("Documento enviado com sucesso.");
       router.push(`/documentos/${encodeURIComponent(res.id)}`);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao fazer upload");
+      const msg = e instanceof Error ? e.message : "Erro ao fazer upload";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

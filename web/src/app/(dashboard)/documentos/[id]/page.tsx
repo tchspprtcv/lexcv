@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useDeleteDocumento, useDocumento, useDownloadDocumento } from "@/hooks/use-documentos";
+import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 
 type PageProps = {
@@ -52,8 +53,11 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast.success("Download iniciado.");
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao fazer download");
+      const msg = e instanceof Error ? e.message : "Erro ao fazer download";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 
@@ -64,9 +68,12 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
     if (!ok) return;
     try {
       await del.mutateAsync();
+      toast.success("Documento apagado com sucesso.");
       router.push("/documentos");
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Erro ao apagar documento");
+      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
+      setServerError(msg);
+      toast.error(msg);
     }
   };
 

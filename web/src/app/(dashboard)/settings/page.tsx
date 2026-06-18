@@ -24,6 +24,7 @@ import {
   useAdminUsers, 
   useAdminRbac
 } from "@/hooks/use-admin";
+import { toast } from "@/hooks/use-toast";
 import { UserProfileForm } from "@/components/profile/user-profile-form";
 import { UserPasswordForm } from "@/components/profile/user-password-form";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   const handleDeleteClick = async (id: string) => {
     if (id === currentUserId) {
       setMessage({ text: "Não é permitido apagar a sua própria conta.", type: "error" });
+      toast.error("Não é permitido apagar a sua própria conta.");
       return;
     }
 
@@ -194,12 +196,14 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
       try {
         await apiFetch(`/admin/users/${encodeURIComponent(id)}`, { method: "DELETE" });
         setMessage({ text: "Utilizador removido com sucesso!", type: "success" });
+        toast.success("Utilizador removido com sucesso!");
         setTimeout(() => {
           window.location.reload();
         }, 1000);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Erro ao apagar utilizador";
         setMessage({ text: msg, type: "error" });
+        toast.error(msg);
       }
     }
   };
@@ -210,11 +214,13 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 
     if (!editingUser.nome?.trim() || !editingUser.email?.trim()) {
       setMessage({ text: "Nome e email são obrigatórios.", type: "error" });
+      toast.error("Nome e email são obrigatórios.");
       return;
     }
 
     if (!editingUser.id && !userPassword) {
       setMessage({ text: "Password é obrigatória para novos utilizadores.", type: "error" });
+      toast.error("Password é obrigatória para novos utilizadores.");
       return;
     }
 
@@ -236,12 +242,14 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
           body: JSON.stringify(payload),
         });
         setMessage({ text: "Utilizador atualizado com sucesso!", type: "success" });
+        toast.success("Utilizador atualizado com sucesso!");
       } else {
         await apiFetch("/admin/users", {
           method: "POST",
           body: JSON.stringify(payload),
         });
         setMessage({ text: "Novo utilizador criado com sucesso!", type: "success" });
+        toast.success("Novo utilizador criado com sucesso!");
       }
 
       setIsFormOpen(false);
@@ -256,6 +264,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
           ? err.message.replace("API 400: ", "")
           : "Erro ao gravar dados.";
       setMessage({ text: msg || "Erro ao gravar dados.", type: "error" });
+      toast.error(msg || "Erro ao gravar dados.");
     }
   };
 
@@ -689,10 +698,12 @@ function RbacTab() {
         body: JSON.stringify({ rolePermissions: effectiveRolePermissions }),
       });
       setSuccess("Configurações do RBAC (Regras de Acesso) atualizadas com sucesso!");
+      toast.success("Configurações do RBAC atualizadas com sucesso!");
       refetch();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao guardar definições de RBAC.";
       setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
