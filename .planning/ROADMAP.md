@@ -67,7 +67,7 @@ Plans:
 
 **Milestone Goal:** Adicionar notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário para mover eventos.
 
-- [ ] **Phase 47: Notificações In-App** - Badge no header com contagem de eventos próximos e painel de notificações
+- [x] **Phase 47: Notificações In-App** - Badge no header com contagem de eventos próximos e painel de notificações
 - [ ] **Phase 48: Recorrência de Eventos** - Criar, listar, exibir e apagar eventos com regras de recorrência
 - [ ] **Phase 49: Drag & Drop no Calendário** - Arrastar eventos para nova data com atualização imediata via API
 
@@ -95,7 +95,9 @@ Plans:
   2. Ao submeter, o backend armazena a regra de recorrência e `GET /eventos` dentro de um intervalo de datas inclui as instâncias expandidas correspondentes
   3. O calendário apresenta as instâncias recorrentes nas suas datas corretas com um indicador visual (ícone ou badge) que as distingue dos eventos normais
   4. Ao tentar apagar um evento recorrente, surge um diálogo com duas opções: "Apagar esta instância" e "Apagar toda a série"; ambas as ações refletem-se imediatamente no calendário
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 48-01-PLAN.md — Backend: Evento recurrence columns, instance expansion, instance soft-delete endpoint
+- [ ] 48-02-PLAN.md — Frontend: types, hooks, Zod schema, Recorrência form, calendar indicator, delete dialog
 **UI hint**: yes
 
 ### Phase 49: Drag & Drop no Calendário
@@ -120,6 +122,6 @@ Plans:
 | 44. Status + KPIs | v2.0 | 2/2 | Complete | 2026-06-18 |
 | 45. Filtros + Edit/Delete UI | v2.0 | 2/2 | Complete | 2026-06-18 |
 | 46. CSV Export | v2.0 | 1/1 | Complete | 2026-06-18 |
-| 47. Notificações In-App | v2.1 | 0/? | Not started | - |
+| 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 0/? | Not started | - |
 | 49. Drag & Drop no Calendário | v2.1 | 0/? | Not started | - |
