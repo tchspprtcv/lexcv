@@ -96,7 +96,7 @@ Plans:
   3. O calendário apresenta as instâncias recorrentes nas suas datas corretas com um indicador visual (ícone ou badge) que as distingue dos eventos normais
   4. Ao tentar apagar um evento recorrente, surge um diálogo com duas opções: "Apagar esta instância" e "Apagar toda a série"; ambas as ações refletem-se imediatamente no calendário
 **Plans**: 2 plans
-- [ ] 48-01-PLAN.md — Backend: Evento recurrence columns, instance expansion, instance soft-delete endpoint
+- [x] 48-01-PLAN.md — Backend: Evento recurrence columns, instance expansion, instance soft-delete endpoint
 - [ ] 48-02-PLAN.md — Frontend: types, hooks, Zod schema, Recorrência form, calendar indicator, delete dialog
 **UI hint**: yes
 
@@ -123,5 +123,5 @@ Plans:
 | 45. Filtros + Edit/Delete UI | v2.0 | 2/2 | Complete | 2026-06-18 |
 | 46. CSV Export | v2.0 | 1/1 | Complete | 2026-06-18 |
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
-| 48. Recorrência de Eventos | v2.1 | 0/? | Not started | - |
+| 48. Recorrência de Eventos | v2.1 | 1/2 | In Progress|  |
 | 49. Drag & Drop no Calendário | v2.1 | 0/? | Not started | - |
