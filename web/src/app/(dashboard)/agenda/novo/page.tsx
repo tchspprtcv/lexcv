@@ -57,8 +57,12 @@ function EventoCreateContent() {
       dataFim: "",
       prioridade: "MEDIA",
       concluido: false,
+      recurrenceRule: "NONE",
+      recurrenceEndDate: undefined,
     },
   });
+
+  const recurrenceRule = form.watch("recurrenceRule");
 
   const onSubmit = async (values: EventoFormValues) => {
     setServerError(null);
@@ -76,6 +80,9 @@ function EventoCreateContent() {
         dataFim: new Date(values.dataFim).toISOString().slice(0, 19),
         prioridade: values.prioridade,
         concluido: values.concluido,
+        ...(values.recurrenceRule !== "NONE"
+          ? { recurrenceRule: values.recurrenceRule, recurrenceEndDate: values.recurrenceEndDate }
+          : {}),
       };
       const res = await create.mutateAsync(payload satisfies EventoCreateRequest);
       router.push(`/agenda/${encodeURIComponent(String(res.id))}`);
@@ -199,6 +206,33 @@ function EventoCreateContent() {
                 <p className="text-sm text-red-600">{form.formState.errors.descricao.message}</p>
               ) : null}
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recurrenceRule">Recorrência</Label>
+              <select
+                id="recurrenceRule"
+                className={selectClassName}
+                {...form.register("recurrenceRule")}
+              >
+                <option value="NONE">Nenhuma</option>
+                <option value="DAILY">Diária</option>
+                <option value="WEEKLY">Semanal</option>
+                <option value="MONTHLY">Mensal</option>
+              </select>
+              {form.formState.errors.recurrenceRule ? (
+                <p className="text-sm text-red-600">{form.formState.errors.recurrenceRule.message}</p>
+              ) : null}
+            </div>
+
+            {recurrenceRule !== "NONE" ? (
+              <div className="space-y-2">
+                <Label htmlFor="recurrenceEndDate">Fim da recorrência</Label>
+                <Input id="recurrenceEndDate" type="date" {...form.register("recurrenceEndDate")} />
+                {form.formState.errors.recurrenceEndDate ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.recurrenceEndDate.message}</p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="flex items-center gap-2">
               <input

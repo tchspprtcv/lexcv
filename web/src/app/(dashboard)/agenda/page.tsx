@@ -316,7 +316,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                                 cat.pillClassName,
                               )}
                             >
-                              <span className="opacity-80 mr-1">{cat.shortLabel}:</span>{e.titulo}
+                              {!e.isPrazo && (e as Evento).isRecurrenceInstance ? <span className="mr-1" title="Evento recorrente">&#x21BB;</span> : null}<span className="opacity-80 mr-1">{cat.shortLabel}:</span>{e.titulo}
                             </Link>
                           );
                         })}
