@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,18 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
   const isLoading = honorarios.isPending || processos.isPending || clientes.isPending;
   const isError = honorarios.isError || processos.isError || clientes.isError;
 
+  const [filtroProcesso, setFiltroProcesso] = React.useState("");
+  const [filtroStatus, setFiltroStatus] = React.useState<"" | "Pendente" | "Parcialmente Pago" | "Pago">("");
+  const [filtroDataDe, setFiltroDataDe] = React.useState("");
+  const [filtroDataAte, setFiltroDataAte] = React.useState("");
+
   const list = honorarios.data ?? [];
+
+  let filteredList = list;
+  if (filtroProcesso) filteredList = filteredList.filter((h) => h.processoId === filtroProcesso);
+  if (filtroStatus) filteredList = filteredList.filter((h) => calcHonorarioStatus(h.totalPago, h.valorTotal) === filtroStatus);
+  if (filtroDataDe) filteredList = filteredList.filter((h) => h.dataAcordo != null && h.dataAcordo >= filtroDataDe);
+  if (filtroDataAte) filteredList = filteredList.filter((h) => h.dataAcordo != null && h.dataAcordo <= filtroDataAte);
   const now = new Date();
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -111,6 +123,72 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
         ))}
       </div>
 
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Processo</label>
+          <select
+            value={filtroProcesso}
+            onChange={(e) => setFiltroProcesso(e.target.value)}
+            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+          >
+            <option value="">Todos</option>
+            {(processos.data ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.numero ?? p.titulo ?? p.id}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Estado</label>
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value as "" | "Pendente" | "Parcialmente Pago" | "Pago")}
+            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+          >
+            <option value="">Todos</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Parcialmente Pago">Parcialmente Pago</option>
+            <option value="Pago">Pago</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Data de</label>
+          <input
+            type="date"
+            value={filtroDataDe}
+            onChange={(e) => setFiltroDataDe(e.target.value)}
+            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Data até</label>
+          <input
+            type="date"
+            value={filtroDataAte}
+            onChange={(e) => setFiltroDataAte(e.target.value)}
+            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+          />
+        </div>
+
+        {(filtroProcesso || filtroStatus || filtroDataDe || filtroDataAte) ? (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setFiltroProcesso("");
+              setFiltroStatus("");
+              setFiltroDataDe("");
+              setFiltroDataAte("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        ) : null}
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Honorários</CardTitle>
@@ -132,6 +210,10 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
             <div className="text-sm text-neutral-500 dark:text-neutral-400">
               Nenhum honorário encontrado.
             </div>
+          ) : filteredList.length === 0 ? (
+            <div className="text-sm text-neutral-500 dark:text-neutral-400">
+              Nenhum honorário corresponde aos filtros aplicados.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -146,7 +228,7 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                   </tr>
                 </thead>
                 <tbody>
-                  {honorarios.data.map((h) => {
+                  {filteredList.map((h) => {
                     const processo = processoById.get(h.processoId);
                     const clienteId = processo?.cliente_id;
                     return (
