@@ -1818,6 +1818,93 @@ public class ResourceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    @PreAuthorize("hasAuthority('financeiro:view')")
+    @GetMapping("/honorarios/{id}")
+    public ResponseEntity<?> getHonorario(@PathVariable Integer id) {
+        Honorario hon = honorarioRepository.findById(id).orElse(null);
+        if (hon == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        return ResponseEntity.ok(hon);
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:edit')")
+    @PutMapping("/honorarios/{id}")
+    public ResponseEntity<?> updateHonorario(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+        Honorario hon = honorarioRepository.findById(id).orElse(null);
+        if (hon == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        if (body.containsKey("valorTotal")) {
+            hon.setValorTotal(new BigDecimal(body.get("valorTotal").toString()));
+        }
+        if (body.containsKey("descricao")) {
+            hon.setDescricao(body.get("descricao") == null ? null : body.get("descricao").toString());
+        }
+        if (body.containsKey("dataAcordo")) {
+            try {
+                hon.setDataAcordo(body.get("dataAcordo") == null ? null : java.time.LocalDate.parse(body.get("dataAcordo").toString()));
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Data de acordo inválida"));
+            }
+        }
+        return ResponseEntity.ok(honorarioRepository.save(hon));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:manage')")
+    @DeleteMapping("/honorarios/{id}")
+    public ResponseEntity<?> deleteHonorario(@PathVariable Integer id) {
+        Honorario hon = honorarioRepository.findById(id).orElse(null);
+        if (hon == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        List<Pagamento> pagamentos = pagamentoRepository.findByHonorarioId(id);
+        if (!pagamentos.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Não é possível eliminar um honorário com pagamentos registados"));
+        }
+        honorarioRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:manage')")
+    @DeleteMapping("/pagamentos/{id}")
+    public ResponseEntity<?> deletePagamento(@PathVariable Integer id) {
+        Pagamento pag = pagamentoRepository.findById(id).orElse(null);
+        if (pag == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Pagamento não encontrado"));
+        }
+        Honorario hon = honorarioRepository.findById(pag.getHonorarioId()).orElse(null);
+        if (hon == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo associado não encontrado"));
+        }
+        try {
+            UUID clienteId = processo.getClienteId();
+            ContaCorrente cc = contaCorrenteRepository.findByClienteId(clienteId).orElse(null);
+            if (cc != null) {
+                cc.setSaldo(cc.getSaldo().subtract(pag.getValorPago()));
+                contaCorrenteRepository.save(cc);
+            }
+        } catch (Exception ignored) {}
+        pagamentoRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ==========================================
     // DASHBOARD
     // ==========================================
