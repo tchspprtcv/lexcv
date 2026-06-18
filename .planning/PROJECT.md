@@ -82,11 +82,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.0 (2026-06-18) — Módulo Financeiro. Migração camelCase completa, 4 novos endpoints backend (GET/PUT/DELETE honorários, DELETE pagamentos), status badge por honorário, 4 KPI cards, filtros client-side (processo/status/datas), edit dialog, delete com confirmação, e exportação CSV. Tudo verificado 17/17 requirements.
+**Shipped:** v2.1 (2026-06-18) — Agenda Avançada. Notificações in-app, recorrência de eventos, drag & drop no calendário.
+
+**v2.0** (2026-06-18) — Módulo Financeiro. Migração camelCase completa, 4 novos endpoints backend (GET/PUT/DELETE honorários, DELETE pagamentos), status badge por honorário, 4 KPI cards, filtros client-side (processo/status/datas), edit dialog, delete com confirmação, e exportação CSV. Tudo verificado 17/17 requirements.
 
 **v1.9** (2026-06-17) — Melhoria Módulo Agendamento. Data layer agenda camelCase, validações robustas, visão unificada de prazos e eventos com filtros flexíveis. CI/CD no Hostinger VPS.
 
-**Current Milestone:** v2.0 complete (2026-06-18) — Módulo Financeiro entregue. Ver Roadmap para próximo milestone.
+**Current Milestone:** v2.1 complete (2026-06-18) — Agenda Avançada entregue. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY com expansão de instâncias, delete por instância ou série), drag & drop no calendário com atualização otimista.
 
 ## Evolution
 

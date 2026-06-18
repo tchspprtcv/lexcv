@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Agenda Avançada
-status: planning
-stopped_at: "Roadmap criado — próximo passo é /gsd:plan-phase 47"
-last_updated: "2026-06-18T20:28:28.509Z"
-last_activity: 2026-06-18 — Phase 48 complete (recorrência de eventos)
+status: complete
+stopped_at: "Milestone v2.1 complete — all 3 phases verified"
+last_updated: "2026-06-18T21:30:00.000Z"
+last_activity: 2026-06-18 — Phase 49 complete (drag & drop no calendário)
 progress:
   total_phases: 3
   completed_phases: 3

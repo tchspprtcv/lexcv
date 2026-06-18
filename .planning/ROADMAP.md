@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v2.0 Módulo Financeiro** — Phases 43–46 (complete 2026-06-18)
-- 🚧 **v2.1 Agenda Avançada** — Phases 47–49 (em progresso)
+- ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
 
 ## Phases
 
@@ -63,7 +63,7 @@ Plans:
 
 </details>
 
-### 🚧 v2.1 Agenda Avançada (Em Progresso)
+### ✅ v2.1 Agenda Avançada (SHIPPED 2026-06-18)
 
 **Milestone Goal:** Adicionar notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário para mover eventos.
 
