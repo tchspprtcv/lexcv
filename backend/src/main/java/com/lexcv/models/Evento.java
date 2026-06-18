@@ -2,6 +2,7 @@ package com.lexcv.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -41,6 +42,21 @@ public class Evento {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "recurrence_rule")
+    private String recurrenceRule;
+
+    @Column(name = "recurrence_end_date")
+    private LocalDate recurrenceEndDate;
+
+    @Column(name = "recurrence_exceptions")
+    private String recurrenceExceptions;
+
+    @Transient
+    private Boolean isRecurrenceInstance;
+
+    @Transient
+    private String recurrenceInstanceDate;
 
     @PrePersist
     protected void onCreate() {
