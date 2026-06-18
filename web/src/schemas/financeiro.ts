@@ -29,6 +29,14 @@ export const honorarioFormSchema = z.object({
 
 export type HonorarioFormValues = z.infer<typeof honorarioFormSchema>;
 
+export const honorarioUpdateSchema = z.object({
+  valorTotal: moneyString,
+  descricao: optionalTrimmedString,
+  dataAcordo: optionalDateString,
+});
+
+export type HonorarioUpdateFormValues = z.infer<typeof honorarioUpdateSchema>;
+
 export const pagamentoFormSchema = z.object({
   valorPago: moneyString,
   dataPagamento: optionalDateString,
