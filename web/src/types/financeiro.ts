@@ -2,6 +2,7 @@ export interface Honorario {
   id: number;
   processoId: string;
   valorTotal: number;
+  totalPago: number; // campo computado pelo backend (soma de pagamentos)
   descricao?: string;
   dataAcordo?: string;
 }
