@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Módulo Financeiro
 status: executing
-stopped_at: "Phase 43 complete — ready for Phase 44"
-last_updated: "2026-06-18T01:00:00.000Z"
-last_activity: 2026-06-18 — Phase 43 executed (2 plans, camelCase migration + 4 backend endpoints)
+stopped_at: "Phase 44 complete — ready for Phase 45"
+last_updated: "2026-06-18T02:00:00.000Z"
+last_activity: 2026-06-18 — Phase 44 executed (2 plans, totalPago formula + status badge + KPI cards)
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 25
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 44 of 46 (Status + KPIs)
+Phase: 45 of 46 (Filtros + Edit/Delete UI)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-06-18 — Phase 43 complete (camelCase migration + 4 backend endpoints)
+Last activity: 2026-06-18 — Phase 44 complete (totalPago @Formula + status badge + KPI cards)
 
 Progress: [░░░░░░░░░░] 0%
 
