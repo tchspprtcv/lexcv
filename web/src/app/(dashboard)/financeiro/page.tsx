@@ -14,6 +14,22 @@ function formatMoneyCVE(v: number) {
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
 
+type HonorarioStatus = "Pendente" | "Parcialmente Pago" | "Pago";
+
+function calcHonorarioStatus(totalPago: number, valorTotal: number): HonorarioStatus {
+  if (totalPago <= 0) return "Pendente";
+  if (totalPago < valorTotal) return "Parcialmente Pago";
+  return "Pago";
+}
+
+const statusBadgeClass: Record<HonorarioStatus, string> = {
+  Pendente:
+    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+  "Parcialmente Pago":
+    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  Pago: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+};
+
 function formatDate(v: string | undefined) {
   if (!v) return "—";
   const d = new Date(v);
@@ -49,6 +65,17 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
   const isLoading = honorarios.isPending || processos.isPending || clientes.isPending;
   const isError = honorarios.isError || processos.isError || clientes.isError;
 
+  const list = honorarios.data ?? [];
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const kpiFaturado = list.reduce((acc, h) => acc + h.valorTotal, 0);
+  const kpiRecebido = list.reduce((acc, h) => acc + h.totalPago, 0);
+  const kpiDivida = kpiFaturado - kpiRecebido;
+  const kpiMes = list
+    .filter((h) => h.dataAcordo?.startsWith(currentYearMonth))
+    .reduce((acc, h) => acc + h.totalPago, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -62,6 +89,26 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
             <Link href="/financeiro/novo">Novo honorário</Link>
           </Button>
         ) : null}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[
+          { label: "Total Faturado", value: kpiFaturado },
+          { label: "Total Recebido", value: kpiRecebido },
+          { label: "Em Dívida", value: kpiDivida },
+          { label: "Receita do Mês", value: kpiMes },
+        ].map(({ label, value }) => (
+          <Card key={label}>
+            <CardHeader className="pb-1 pt-4 px-4">
+              <CardTitle className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                {label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <p className="text-xl font-semibold">{formatMoneyCVE(value)}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
@@ -95,6 +142,7 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                     <th className="py-2 pr-4 font-medium">Cliente</th>
                     <th className="py-2 pr-4 font-medium">Total</th>
                     <th className="py-2 pr-4 font-medium">Data do acordo</th>
+                    <th className="py-2 pr-4 font-medium">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -140,6 +188,12 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                         </td>
                         <td className="py-2 pr-4">{formatMoneyCVE(h.valorTotal)}</td>
                         <td className="py-2 pr-4">{formatDate(h.dataAcordo)}</td>
+                        <td className="py-2 pr-4">
+                          {(() => {
+                            const status = calcHonorarioStatus(h.totalPago, h.valorTotal);
+                            return <span className={statusBadgeClass[status]}>{status}</span>;
+                          })()}
+                        </td>
                       </tr>
                     );
                   })}
