@@ -92,6 +92,7 @@ function EventoEditContent({ id }: { id: number }) {
       dataFim: "",
       prioridade: "MEDIA",
       concluido: false,
+      recurrenceRule: "NONE" as const,
     },
   });
 
@@ -106,6 +107,8 @@ function EventoEditContent({ id }: { id: number }) {
       dataFim: toDateTimeLocalValue(evento.data.dataFim),
       prioridade: evento.data.prioridade,
       concluido: evento.data.concluido,
+      recurrenceRule: (evento.data.recurrenceRule as EventoFormValues["recurrenceRule"]) ?? "NONE",
+      recurrenceEndDate: evento.data.recurrenceEndDate,
     });
   }, [evento.data, form]);
 

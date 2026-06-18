@@ -153,7 +153,7 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
           {canEditAgenda && evento.data ? (
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
               <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive" disabled={isDeleting}>
+                <Button type="button" variant="secondary" className="border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950" disabled={isDeleting}>
                   Apagar
                 </Button>
               </AlertDialogTrigger>

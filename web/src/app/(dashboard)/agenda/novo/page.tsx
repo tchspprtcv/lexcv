@@ -80,7 +80,7 @@ function EventoCreateContent() {
         dataFim: new Date(values.dataFim).toISOString().slice(0, 19),
         prioridade: values.prioridade,
         concluido: values.concluido,
-        ...(values.recurrenceRule !== "NONE"
+        ...(values.recurrenceRule && values.recurrenceRule !== "NONE"
           ? { recurrenceRule: values.recurrenceRule, recurrenceEndDate: values.recurrenceEndDate }
           : {}),
       };
@@ -224,7 +224,7 @@ function EventoCreateContent() {
               ) : null}
             </div>
 
-            {recurrenceRule !== "NONE" ? (
+            {recurrenceRule && recurrenceRule !== "NONE" ? (
               <div className="space-y-2">
                 <Label htmlFor="recurrenceEndDate">Fim da recorrência</Label>
                 <Input id="recurrenceEndDate" type="date" {...form.register("recurrenceEndDate")} />

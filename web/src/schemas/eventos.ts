@@ -25,7 +25,7 @@ export const eventoFormSchema = z.object({
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "dataFim inválida"),
   prioridade: eventoPrioridadeSchema,
   concluido: z.boolean(),
-  recurrenceRule: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"]).default("NONE"),
+  recurrenceRule: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY"]).optional(),
   recurrenceEndDate: optionalTrimmedString,
 }).refine((data) => {
   const start = new Date(data.dataInicio).getTime();
@@ -35,7 +35,7 @@ export const eventoFormSchema = z.object({
   message: "A data de fim não pode ser anterior à data de início",
   path: ["dataFim"],
 }).superRefine((data, ctx) => {
-  if (data.recurrenceRule !== "NONE" && !data.recurrenceEndDate) {
+  if (data.recurrenceRule && data.recurrenceRule !== "NONE" && !data.recurrenceEndDate) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "A data de fim da recorrência é obrigatória",
