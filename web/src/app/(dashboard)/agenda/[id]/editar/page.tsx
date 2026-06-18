@@ -108,7 +108,7 @@ function EventoEditContent({ id }: { id: number }) {
       prioridade: evento.data.prioridade ?? "MEDIA",
       concluido: evento.data.concluido ?? false,
       recurrenceRule: (evento.data.recurrenceRule as EventoFormValues["recurrenceRule"]) ?? "NONE",
-      recurrenceEndDate: evento.data.recurrenceEndDate,
+      recurrenceEndDate: evento.data.recurrenceEndDate ?? undefined,
     });
   }, [evento.data, form]);
 
