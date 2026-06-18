@@ -4,6 +4,8 @@ import Link from "next/link";
 import * as React from "react";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useEventos } from "@/hooks/use-eventos";
 import { useProcessos, useAllPrazos } from "@/hooks/use-processos";
 import type { Evento } from "@/types/eventos";
+import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function AgendaPage() {
@@ -49,6 +52,26 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
     return new Date(base.getFullYear(), base.getMonth(), 1);
   }, []);
 
+  const [dragState, setDragState] = React.useState<{ eventId: number; originalDataInicio: string; originalDataFim: string } | null>(null);
+  const [dragOverKey, setDragOverKey] = React.useState<string | null>(null);
+  const [optimisticOverrides, setOptimisticOverrides] = React.useState<Map<number, string>>(new Map());
+
+  const queryClient = useQueryClient();
+  const dragDropMutation = useMutation({
+    mutationFn: ({ id, dataInicio, dataFim }: { id: number; dataInicio: string; dataFim: string }) =>
+      apiFetch<Evento>(`/eventos/${encodeURIComponent(String(id))}`, {
+        method: "PUT",
+        body: JSON.stringify({ dataInicio, dataFim }),
+      }),
+    onSuccess: () => {
+      setOptimisticOverrides(new Map());
+      queryClient.invalidateQueries({ queryKey: ["eventos", "list"] });
+    },
+    onError: () => {
+      setOptimisticOverrides(new Map());
+    },
+  });
+
   const [cursorMonthOverride, setCursorMonthOverride] = React.useState<Date | null>(null);
   const cursorMonth = cursorMonthOverride ?? initialMonth;
 
@@ -57,7 +80,15 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
   const days = React.useMemo(() => buildMonthGrid(cursorMonth), [cursorMonth]);
 
   const allUnifiedEvents = React.useMemo(() => {
-    const evs = (eventos.data ?? []).map((e) => ({ ...e, isPrazo: false }));
+    const evs = (eventos.data ?? []).map((e) => {
+      if (optimisticOverrides.has(e.id)) {
+        const newInicio = optimisticOverrides.get(e.id)!;
+        const durMs = new Date(e.dataFim).getTime() - new Date(e.dataInicio).getTime();
+        const newFim = new Date(new Date(newInicio).getTime() + durMs).toISOString().slice(0, 19);
+        return { ...e, isPrazo: false, dataInicio: newInicio, dataFim: newFim };
+      }
+      return { ...e, isPrazo: false };
+    });
     const pzs = (prazos.data ?? []).map((p) => ({
       id: p.id,
       tenantId: p.tenantId,
@@ -71,7 +102,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       isPrazo: true,
     }));
     return [...evs, ...pzs];
-  }, [eventos.data, prazos.data]);
+  }, [eventos.data, prazos.data, optimisticOverrides]);
 
   const filteredEvents = React.useMemo(() => {
     return allUnifiedEvents.filter((e) => {
@@ -294,8 +325,29 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                       key={key}
                       className={cn(
                         "min-h-[120px] bg-white dark:bg-[#020617] p-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50",
+                        !day.isOutsideMonth && dragOverKey === key && "ring-2 ring-inset ring-blue-400 bg-blue-50 dark:bg-blue-900/20",
                         day.isOutsideMonth && "bg-slate-50/50 dark:bg-slate-900/20 opacity-50",
                       )}
+                      onDragOver={(ev) => {
+                        if (day.isOutsideMonth || !dragState) return;
+                        ev.preventDefault();
+                        setDragOverKey(key);
+                      }}
+                      onDragLeave={() => setDragOverKey((k) => (k === key ? null : k))}
+                      onDrop={(ev) => {
+                        ev.preventDefault();
+                        if (day.isOutsideMonth || !dragState) return;
+                        const originKey = dayKey(new Date(dragState.originalDataInicio));
+                        if (key === originKey) { setDragState(null); setDragOverKey(null); return; }
+                        const newInicio = moveDatePreservingTime(dragState.originalDataInicio, key);
+                        const durMs = new Date(dragState.originalDataFim).getTime() - new Date(dragState.originalDataInicio).getTime();
+                        const newFim = new Date(new Date(newInicio).getTime() + durMs).toISOString().slice(0, 19);
+                        setOptimisticOverrides((m) => new Map(m).set(dragState.eventId, newInicio));
+                        const id = dragState.eventId;
+                        setDragState(null);
+                        setDragOverKey(null);
+                        dragDropMutation.mutate({ id, dataInicio: newInicio, dataFim: newFim });
+                      }}
                     >
                       <div className={cn(
                         "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-sm",
@@ -307,14 +359,24 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                           const href = e.isPrazo
                             ? `/processos/${encodeURIComponent(String(e.processoId))}`
                             : `/agenda/${encodeURIComponent(String(e.id))}`;
+                          const canDrag = !e.isPrazo && !(e as Evento).isRecurrenceInstance;
                           return (
                             <Link
                               key={e.id}
                               href={href}
+                              draggable={canDrag}
                               className={cn(
                                 "block truncate rounded-sm px-1.5 py-1 text-[10px] font-bold tracking-wide uppercase border border-transparent hover:border-current transition-colors",
                                 cat.pillClassName,
+                                canDrag && "cursor-grab active:cursor-grabbing",
                               )}
+                              onDragStart={(ev) => {
+                                if (!canDrag) { ev.preventDefault(); return; }
+                                ev.dataTransfer.setData("text/plain", String(e.id));
+                                ev.dataTransfer.effectAllowed = "move";
+                                setDragState({ eventId: e.id as number, originalDataInicio: e.dataInicio, originalDataFim: e.dataFim });
+                              }}
+                              onDragEnd={() => { setDragState(null); setDragOverKey(null); }}
                             >
                               {!e.isPrazo && (e as Evento).isRecurrenceInstance ? <span className="mr-1" title="Evento recorrente">&#x21BB;</span> : null}<span className="opacity-80 mr-1">{cat.shortLabel}:</span>{e.titulo}
                             </Link>
@@ -392,6 +454,10 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       </div>
     </div>
   );
+}
+
+function moveDatePreservingTime(originalISO: string, newDateKey: string): string {
+  return newDateKey + originalISO.slice(10);
 }
 
 function dayKey(d: Date) {
