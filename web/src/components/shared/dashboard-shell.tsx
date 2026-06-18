@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import {
-  Bell,
   Calendar,
   FileText,
   Home,
@@ -164,9 +164,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
-            <Button type="button" variant="ghost" className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              <Bell className="h-[1.1rem] w-[1.1rem]" />
-            </Button>
+            <NotificationBell />
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
             <div className="flex items-center gap-3 pl-1">
               <div className="text-right leading-tight hidden sm:block">

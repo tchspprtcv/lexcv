@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 
-import type { Evento, EventoCreateRequest, EventoUpdateRequest } from "@/types/eventos";
+import type { Evento, EventoCreateRequest, EventoUpdateRequest, UpcomingEvento } from "@/types/eventos";
 
 export type EventosListFilters = {
   dataInicio?: string;
@@ -101,6 +101,7 @@ export function useToggleEventoConcluido(id: number) {
     onSuccess: async (updated) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["eventos", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["eventos", "upcoming"] }),
         queryClient.setQueryData(["eventos", "detail", id], updated),
       ]);
     },
@@ -119,8 +120,18 @@ export function useSetEventoConcluido() {
     onSuccess: async (updated) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["eventos", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["eventos", "upcoming"] }),
         queryClient.setQueryData(["eventos", "detail", updated.id], updated),
       ]);
     },
+  });
+}
+
+export function useUpcomingEventos(days = 7) {
+  return useQuery({
+    queryKey: ["eventos", "upcoming"],
+    queryFn: () => apiFetch<UpcomingEvento[]>(`/eventos/upcoming?days=${days}`),
+    enabled: typeof window !== "undefined",
+    staleTime: 60_000,
   });
 }
