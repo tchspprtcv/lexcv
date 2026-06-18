@@ -65,7 +65,8 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
   const eventos = useEventos({ concluido: false });
   const now7days = new Date().getTime() + 7 * 24 * 60 * 60 * 1000;
   const proximasAudiencias = (eventos.data ?? []).filter((e) => {
-    const isAudiencia = e.tipo?.toUpperCase() === "AUDIENCIA" || e.titulo.toLowerCase().includes("audiência") || e.titulo.toLowerCase().includes("audiencia");
+    const titulo = (e.titulo ?? "").toLowerCase();
+    const isAudiencia = e.tipo?.toUpperCase() === "AUDIENCIA" || titulo.includes("audiência") || titulo.includes("audiencia");
     if (!isAudiencia) return false;
     return new Date(e.dataInicio).getTime() < now7days;
   }).length;
