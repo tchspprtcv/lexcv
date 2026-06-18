@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEvento, useToggleEventoConcluido } from "@/hooks/use-eventos";
+import { useEvento, useToggleEventoConcluido, useDeleteEvento, useDeleteEventoInstance } from "@/hooks/use-eventos";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -59,10 +71,15 @@ export default function EventoDetailPage(props: PageProps) {
 }
 
 function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda: boolean }) {
+  const router = useRouter();
   const evento = useEvento(id);
   const processos = useProcessos();
 
   const toggle = useToggleEventoConcluido(id);
+  const del = useDeleteEvento(id);
+  const delInstance = useDeleteEventoInstance(id);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const processoLabelById = new Map(
     (processos.data ?? []).map((p) => [p.id, p.numero || p.titulo || "Sem número"] as const),
@@ -76,6 +93,29 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
   const onToggle = async () => {
     if (!evento.data) return;
     await toggle.mutateAsync(!evento.data.concluido);
+  };
+
+  const isDeleting = del.isPending || delInstance.isPending;
+
+  const handleDeleteSeries = async () => {
+    setDeleteError(null);
+    try {
+      await del.mutateAsync();
+      router.push("/agenda");
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Erro ao apagar evento");
+    }
+  };
+
+  const handleDeleteInstance = async () => {
+    if (!evento.data) return;
+    setDeleteError(null);
+    try {
+      await delInstance.mutateAsync({ date: evento.data.dataInicio.slice(0, 10) });
+      router.push("/agenda");
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Erro ao apagar instância");
+    }
   };
 
   return (
@@ -109,6 +149,58 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
             >
               {evento.data?.concluido ? "Reabrir" : "Concluir"}
             </Button>
+          ) : null}
+          {canEditAgenda && evento.data ? (
+            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" disabled={isDeleting}>
+                  Apagar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar evento</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {evento.data.recurrenceRule
+                      ? "Este evento faz parte de uma série recorrente. Deseja apagar apenas esta instância ou toda a série?"
+                      : "Tem a certeza que deseja apagar este evento? Esta ação não pode ser revertida."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {deleteError ? (
+                  <p className="text-sm text-red-600 px-1">{deleteError}</p>
+                ) : null}
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                  {evento.data.recurrenceRule ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isDeleting}
+                        onClick={handleDeleteInstance}
+                      >
+                        {delInstance.isPending ? "A apagar..." : "Apagar esta instância"}
+                      </Button>
+                      <AlertDialogAction
+                        disabled={isDeleting}
+                        onClick={(e) => { e.preventDefault(); void handleDeleteSeries(); }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {del.isPending ? "A apagar..." : "Apagar toda a série"}
+                      </AlertDialogAction>
+                    </>
+                  ) : (
+                    <AlertDialogAction
+                      disabled={isDeleting}
+                      onClick={(e) => { e.preventDefault(); void handleDeleteSeries(); }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {del.isPending ? "A apagar..." : "Apagar evento"}
+                    </AlertDialogAction>
+                  )}
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           ) : null}
         </div>
       </div>
