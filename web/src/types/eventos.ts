@@ -34,3 +34,11 @@ export interface EventoUpdateRequest {
   prioridade?: EventoPrioridade;
   concluido?: boolean;
 }
+
+export interface UpcomingEvento {
+  id: number;
+  titulo: string;
+  dataInicio: string;
+  processoId: string; // string vazia quando null no backend
+  tipo: string; // string vazia quando null no backend
+}
