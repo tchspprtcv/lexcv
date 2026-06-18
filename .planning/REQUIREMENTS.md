@@ -69,10 +69,20 @@
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FIN-01, FIN-02 | TBD | TBD |
-| FIN-03 – FIN-06 | TBD | TBD |
-| FIN-07, FIN-08 | TBD | TBD |
-| FIN-09, FIN-10 | TBD | TBD |
-| FIN-11 – FIN-13 | TBD | TBD |
-| FIN-14 – FIN-16 | TBD | TBD |
-| FIN-17 | TBD | TBD |
+| FIN-01 | Phase 43 | TBD |
+| FIN-02 | Phase 43 | TBD |
+| FIN-03 | Phase 43 | TBD |
+| FIN-04 | Phase 43 | TBD |
+| FIN-05 | Phase 43 | TBD |
+| FIN-06 | Phase 43 | TBD |
+| FIN-07 | Phase 44 | TBD |
+| FIN-08 | Phase 44 | TBD |
+| FIN-09 | Phase 44 | TBD |
+| FIN-10 | Phase 44 | TBD |
+| FIN-11 | Phase 45 | TBD |
+| FIN-12 | Phase 45 | TBD |
+| FIN-13 | Phase 45 | TBD |
+| FIN-14 | Phase 45 | TBD |
+| FIN-15 | Phase 45 | TBD |
+| FIN-16 | Phase 45 | TBD |
+| FIN-17 | Phase 46 | TBD |
