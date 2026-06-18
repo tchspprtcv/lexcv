@@ -1,33 +1,35 @@
 export interface Honorario {
   id: number;
-  tenant_id: string;
-  processo_id: string;
-  valor_total: number;
+  processoId: string;
+  valorTotal: number;
   descricao?: string;
-  data_acordo?: string;
-  created_at: string;
+  dataAcordo?: string;
 }
 
 export interface HonorarioCreateRequest {
-  processo_id: string;
-  valor_total: number;
+  processoId: string;
+  valorTotal: number;
   descricao?: string;
-  data_acordo?: string;
+  dataAcordo?: string;
+}
+
+export interface HonorarioUpdateRequest {
+  valorTotal: number;
+  descricao?: string;
+  dataAcordo?: string;
 }
 
 export interface Pagamento {
   id: number;
-  tenant_id: string;
-  honorario_id: number;
-  valor_pago: number;
-  data_pagamento: string;
+  honorarioId: number;
+  valorPago: number;
+  dataPagamento: string;
   metodo?: string;
 }
 
 export interface PagamentoCreateRequest {
-  honorario_id: number;
-  valor_pago: number;
-  data_pagamento?: string;
+  honorarioId: number;
+  valorPago: number;
+  dataPagamento?: string;
   metodo?: string;
 }
-

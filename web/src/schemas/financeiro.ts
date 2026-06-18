@@ -21,17 +21,17 @@ const optionalDateString = optionalTrimmedString.refine((v) => {
 }, "Data inválida");
 
 export const honorarioFormSchema = z.object({
-  processo_id: z.string().trim().min(1, "O processo é obrigatório"),
-  valor_total: moneyString,
+  processoId: z.string().trim().min(1, "O processo é obrigatório"),
+  valorTotal: moneyString,
   descricao: optionalTrimmedString,
-  data_acordo: optionalDateString,
+  dataAcordo: optionalDateString,
 });
 
 export type HonorarioFormValues = z.infer<typeof honorarioFormSchema>;
 
 export const pagamentoFormSchema = z.object({
-  valor_pago: moneyString,
-  data_pagamento: optionalDateString,
+  valorPago: moneyString,
+  dataPagamento: optionalDateString,
   metodo: optionalTrimmedString,
 });
 
