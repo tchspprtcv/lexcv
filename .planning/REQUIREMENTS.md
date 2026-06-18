@@ -15,8 +15,8 @@
 
 - [x] **AGE-03**: Utilizador pode criar um evento com regra de recorrência: diária, semanal ou mensal, com data de fim obrigatória
 - [x] **AGE-04**: O backend armazena a regra de recorrência e expande as instâncias ao listar eventos (`GET /eventos` inclui instâncias geradas dentro do intervalo pedido)
-- [ ] **AGE-05**: O calendário exibe as instâncias de eventos recorrentes nas datas corretas, distinguindo-as visualmente dos eventos normais (ícone ou badge)
-- [ ] **AGE-06**: Ao apagar um evento recorrente, o utilizador escolhe entre "Apagar esta instância" ou "Apagar toda a série"
+- [x] **AGE-05**: O calendário exibe as instâncias de eventos recorrentes nas datas corretas, distinguindo-as visualmente dos eventos normais (ícone ou badge)
+- [x] **AGE-06**: Ao apagar um evento recorrente, o utilizador escolhe entre "Apagar esta instância" ou "Apagar toda a série"
 
 ### Drag & Drop no Calendário
 
