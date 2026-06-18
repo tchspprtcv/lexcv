@@ -1,7 +1,9 @@
 package com.lexcv.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -28,4 +30,8 @@ public class Honorario {
 
     @Column(name = "data_acordo")
     private LocalDate dataAcordo;
+
+    @Formula("(SELECT COALESCE(SUM(p.valor_pago), 0) FROM t_pagamento p WHERE p.honorario_id = id)")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private BigDecimal totalPago;
 }
