@@ -30,14 +30,18 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-## Current Milestone: v1.10 Finalização Módulo Agendamento
+## Current Milestone: v2.0 Módulo Financeiro
 
-**Goal:** Completar o módulo de agenda com notificações de prazos/eventos, recorrência e gestão visual avançada (drag & drop, vista diária/semanal).
+**Goal:** Completar e corrigir o módulo financeiro com migração camelCase, CRUD completo, KPIs, filtros, status de pagamento e exportação CSV.
 
 **Target features:**
-- Notificações de Alerta (Email/In-app para eventos próximos e Prazos Criticos)
-- Eventos Recorrentes (Opção de repetir eventos semanal/mensalmente)
-- Funcionalidades Avançadas no Calendário (Drag and drop para reagendar, visualização semana/dia com `react-big-calendar` ou `fullcalendar`)
+- Migração camelCase — Alinhar tipos TS e hooks com serialização Jackson (padrão Spring Boot)
+- Bugs backend — Adicionar endpoints em falta: `GET /honorarios/{id}`, `PUT /honorarios/{id}`, `DELETE /honorarios/{id}`, `DELETE /pagamentos/{id}`
+- Edit/Delete — UI para editar honorários e apagar honorários/pagamentos com confirmação
+- Status do honorário — Campo calculado (Pendente / Parcialmente Pago / Pago) com badge UI
+- KPIs financeiros — Cards de resumo: total faturado, total recebido, em dívida, receita do mês
+- Filtros e pesquisa — Filtrar lista por processo, cliente, status, intervalo de datas
+- Relatórios / export — Exportar honorários para CSV
 
 ### Out of Scope
 
@@ -45,6 +49,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Regras de negócio avançadas (cálculo de honorários, prazos jurídicos, workflows) — responsabilidade do backend
 - Contabilidade completa/ERP — fora do MVP
 - Mobile app nativo — Web/PWA primeiro; desktop via Tauri numa fase posterior
+- Finalização Módulo Agendamento (v1.10) — notificações, recorrência e drag & drop adiados para milestone dedicado
 
 ## Context
 
@@ -101,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-17 after v1.9 milestone completion (Melhoria Módulo Agendamento)*
+*Last updated: 2026-06-18 — Milestone v2.0 started (Módulo Financeiro)*
