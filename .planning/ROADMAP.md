@@ -109,7 +109,8 @@ Plans:
   2. Ao largar o evento na nova data, o calendário move o evento imediatamente (atualização otimista) e envia `PUT /eventos/{id}` com a nova data
   3. Se o pedido API falhar, o evento reverte para a data original e é mostrada uma mensagem de erro ao utilizador
   4. Eventos recorrentes não são arrastáveis (ou mostram uma mensagem de bloqueio), pois mover uma instância individualmente conflitua com a lógica de série
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 49-01-PLAN.md — Drag & drop no calendário mensal: estado, override otimista, mutação PUT, pills arrastáveis + drop zones (agenda/page.tsx)
 **UI hint**: yes
 
 ## Progress
