@@ -84,9 +84,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v1.9 (2026-06-17) — Melhoria Módulo Agendamento. O LexCV agora possui o data layer de agenda completamente em camelCase, validações robustas de data de ponta a ponta e visão unificada de prazos e eventos no calendário com filtros flexíveis. Deploys contínuos e imagens docker de produção automáticos são gerenciados pelo pipeline CI/CD no Hostinger VPS.
+**Shipped:** v2.0 (2026-06-18) — Módulo Financeiro. Migração camelCase completa, 4 novos endpoints backend (GET/PUT/DELETE honorários, DELETE pagamentos), status badge por honorário, 4 KPI cards, filtros client-side (processo/status/datas), edit dialog, delete com confirmação, e exportação CSV. Tudo verificado 17/17 requirements.
 
-**Current Milestone:** Planning next milestone
+**v1.9** (2026-06-17) — Melhoria Módulo Agendamento. Data layer agenda camelCase, validações robustas, visão unificada de prazos e eventos com filtros flexíveis. CI/CD no Hostinger VPS.
+
+**Current Milestone:** v2.0 complete (2026-06-18) — Módulo Financeiro entregue. Ver Roadmap para próximo milestone.
 
 ## Evolution
 
