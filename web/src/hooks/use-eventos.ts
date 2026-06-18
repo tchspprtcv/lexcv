@@ -127,6 +127,41 @@ export function useSetEventoConcluido() {
   });
 }
 
+export function useDeleteEvento(id: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<void>(`/eventos/${encodeURIComponent(String(id))}`, {
+        method: "DELETE",
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["eventos", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["eventos", "upcoming"] }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteEventoInstance(id: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { date: string }) =>
+      apiFetch<void>(
+        `/eventos/${encodeURIComponent(String(id))}/instances?date=${encodeURIComponent(args.date)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["eventos", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["eventos", "upcoming"] }),
+      ]);
+    },
+  });
+}
+
 export function useUpcomingEventos(days = 7) {
   return useQuery({
     queryKey: ["eventos", "upcoming"],

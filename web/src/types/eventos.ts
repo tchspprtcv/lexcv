@@ -11,6 +11,11 @@ export interface Evento {
   dataFim: string;
   prioridade: EventoPrioridade;
   concluido: boolean;
+  recurrenceRule?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  recurrenceEndDate?: string;
+  recurrenceExceptions?: string;
+  isRecurrenceInstance?: boolean;
+  recurrenceInstanceDate?: string;
 }
 
 export interface EventoCreateRequest {
@@ -22,6 +27,8 @@ export interface EventoCreateRequest {
   dataFim: string;
   prioridade?: EventoPrioridade;
   concluido?: boolean;
+  recurrenceRule?: string;
+  recurrenceEndDate?: string;
 }
 
 export interface EventoUpdateRequest {
@@ -33,6 +40,8 @@ export interface EventoUpdateRequest {
   dataFim?: string;
   prioridade?: EventoPrioridade;
   concluido?: boolean;
+  recurrenceRule?: string;
+  recurrenceEndDate?: string;
 }
 
 export interface UpcomingEvento {
