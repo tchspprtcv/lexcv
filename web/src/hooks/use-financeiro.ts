@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import type {
   Honorario,
   HonorarioCreateRequest,
+  HonorarioUpdateRequest,
   Pagamento,
   PagamentoCreateRequest,
 } from "@/types/financeiro";
@@ -65,6 +66,51 @@ export function useCreateHonorario() {
   });
 }
 
+export function useUpdateHonorario() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: HonorarioUpdateRequest }) =>
+      apiFetch<Honorario>(`/honorarios/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data satisfies HonorarioUpdateRequest),
+      }),
+    onSuccess: async (_updated, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "detail", variables.id] }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteHonorario() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiFetch<void>(`/honorarios/${id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["honorarios", "list"] });
+    },
+  });
+}
+
+export function useDeletePagamento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ pagamentoId }: { pagamentoId: number; honorarioId: number }) =>
+      apiFetch<void>(`/pagamentos/${pagamentoId}`, { method: "DELETE" }),
+    onSuccess: async (_void, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos", variables.honorarioId] }),
+        queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
+      ]);
+    },
+  });
+}
+
 export function useCreatePagamento() {
   const queryClient = useQueryClient();
 
@@ -76,7 +122,7 @@ export function useCreatePagamento() {
       }),
     onSuccess: async (_created, variables) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos", variables.honorario_id] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos", variables.honorarioId] }),
         queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
       ]);
     },

@@ -87,7 +87,7 @@ function HonorarioDetailContent({
   canViewProcessos: boolean;
 }) {
   const honorario = useHonorario(honorarioId);
-  const processo = useProcesso(honorario.data?.processo_id ?? "");
+  const processo = useProcesso(honorario.data?.processoId ?? "");
   const cliente = useCliente(processo.data?.cliente_id ?? "");
 
   const pagamentos = useHonorarioPagamentos(honorarioId);
@@ -97,7 +97,7 @@ function HonorarioDetailContent({
 
   const form = useForm<PagamentoFormValues>({
     resolver: zodResolver(pagamentoFormSchema),
-    defaultValues: { valor_pago: "", data_pagamento: undefined, metodo: undefined },
+    defaultValues: { valorPago: "", dataPagamento: undefined, metodo: undefined },
   });
 
   const onSubmitPagamento = async (values: PagamentoFormValues) => {
@@ -108,13 +108,13 @@ function HonorarioDetailContent({
     }
     try {
       const payload: PagamentoCreateRequest = {
-        honorario_id: honorarioId,
-        valor_pago: Number(values.valor_pago),
-        data_pagamento: values.data_pagamento,
+        honorarioId: honorarioId,
+        valorPago: Number(values.valorPago),
+        dataPagamento: values.dataPagamento,
         metodo: values.metodo,
       };
       await createPagamento.mutateAsync(payload satisfies PagamentoCreateRequest);
-      form.reset({ valor_pago: "", data_pagamento: undefined, metodo: undefined });
+      form.reset({ valorPago: "", dataPagamento: undefined, metodo: undefined });
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Erro ao adicionar pagamento");
     }
@@ -124,8 +124,8 @@ function HonorarioDetailContent({
     honorario.isLoading || processo.isLoading || cliente.isLoading || pagamentos.isLoading;
   const isError = honorario.isError || processo.isError || cliente.isError || pagamentos.isError;
 
-  const totalPago = (pagamentos.data ?? []).reduce((acc, p) => acc + (p.valor_pago ?? 0), 0);
-  const restante = honorario.data ? Math.max(0, honorario.data.valor_total - totalPago) : 0;
+  const totalPago = (pagamentos.data ?? []).reduce((acc, p) => acc + (p.valorPago ?? 0), 0);
+  const restante = honorario.data ? Math.max(0, honorario.data.valorTotal - totalPago) : 0;
 
   const clienteId = processo.data?.cliente_id;
 
@@ -151,9 +151,9 @@ function HonorarioDetailContent({
               <Link href={`/clientes/${encodeURIComponent(clienteId)}`}>Conta-corrente do cliente</Link>
             </Button>
           ) : null}
-          {honorario.data?.processo_id && canViewProcessos ? (
+          {honorario.data?.processoId && canViewProcessos ? (
             <Button asChild>
-              <Link href={`/processos/${encodeURIComponent(honorario.data.processo_id)}`}>Ver processo</Link>
+              <Link href={`/processos/${encodeURIComponent(honorario.data.processoId)}`}>Ver processo</Link>
             </Button>
           ) : null}
         </div>
@@ -193,7 +193,7 @@ function HonorarioDetailContent({
                       {processo.data.numero || processo.data.titulo || "Sem número"}
                     </Link>
                   ) : (
-                    honorario.data.processo_id
+                    honorario.data.processoId
                   )}
                 </dd>
 
@@ -212,7 +212,7 @@ function HonorarioDetailContent({
                 </dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Total</dt>
-                <dd className="col-span-2 font-medium">{formatMoneyCVE(honorario.data.valor_total)}</dd>
+                <dd className="col-span-2 font-medium">{formatMoneyCVE(honorario.data.valorTotal)}</dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Pago</dt>
                 <dd className="col-span-2">{formatMoneyCVE(totalPago)}</dd>
@@ -221,10 +221,7 @@ function HonorarioDetailContent({
                 <dd className="col-span-2">{formatMoneyCVE(restante)}</dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Acordo</dt>
-                <dd className="col-span-2">{formatDate(honorario.data.data_acordo)}</dd>
-
-                <dt className="text-neutral-500 dark:text-neutral-400">Criado</dt>
-                <dd className="col-span-2">{new Date(honorario.data.created_at).toLocaleString("pt-CV")}</dd>
+                <dd className="col-span-2">{formatDate(honorario.data.dataAcordo)}</dd>
               </dl>
 
               {honorario.data.descricao ? (
@@ -241,26 +238,26 @@ function HonorarioDetailContent({
               {canEditFinanceiro ? (
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmitPagamento)}>
                   <div className="space-y-2">
-                    <Label htmlFor="valor_pago">Valor pago</Label>
+                    <Label htmlFor="valorPago">Valor pago</Label>
                     <Input
-                      id="valor_pago"
+                      id="valorPago"
                       type="number"
                       inputMode="decimal"
                       step="0.01"
                       min="0"
-                      {...form.register("valor_pago")}
+                      {...form.register("valorPago")}
                     />
-                    {form.formState.errors.valor_pago ? (
-                      <p className="text-sm text-red-600">{form.formState.errors.valor_pago.message}</p>
+                    {form.formState.errors.valorPago ? (
+                      <p className="text-sm text-red-600">{form.formState.errors.valorPago.message}</p>
                     ) : null}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="data_pagamento">Data (opcional)</Label>
-                      <Input id="data_pagamento" type="date" {...form.register("data_pagamento")} />
-                      {form.formState.errors.data_pagamento ? (
-                        <p className="text-sm text-red-600">{form.formState.errors.data_pagamento.message}</p>
+                      <Label htmlFor="dataPagamento">Data (opcional)</Label>
+                      <Input id="dataPagamento" type="date" {...form.register("dataPagamento")} />
+                      {form.formState.errors.dataPagamento ? (
+                        <p className="text-sm text-red-600">{form.formState.errors.dataPagamento.message}</p>
                       ) : null}
                     </div>
 
@@ -314,8 +311,8 @@ function HonorarioDetailContent({
                           key={p.id}
                           className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
                         >
-                          <td className="py-2 pr-4">{formatDate(p.data_pagamento)}</td>
-                          <td className="py-2 pr-4">{formatMoneyCVE(p.valor_pago)}</td>
+                          <td className="py-2 pr-4">{formatDate(p.dataPagamento)}</td>
+                          <td className="py-2 pr-4">{formatMoneyCVE(p.valorPago)}</td>
                           <td className="py-2 pr-4">{p.metodo ?? "—"}</td>
                           <td className="py-2 pr-4">#{p.id}</td>
                         </tr>

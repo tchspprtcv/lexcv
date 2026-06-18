@@ -47,10 +47,10 @@ function HonorarioCreateContent() {
   const form = useForm<HonorarioFormValues>({
     resolver: zodResolver(honorarioFormSchema),
     defaultValues: {
-      processo_id: "",
-      valor_total: "",
+      processoId: "",
+      valorTotal: "",
       descricao: undefined,
-      data_acordo: undefined,
+      dataAcordo: undefined,
     },
   });
 
@@ -62,10 +62,10 @@ function HonorarioCreateContent() {
     }
     try {
       const payload: HonorarioCreateRequest = {
-        processo_id: values.processo_id,
-        valor_total: Number(values.valor_total),
+        processoId: values.processoId,
+        valorTotal: Number(values.valorTotal),
         descricao: values.descricao,
-        data_acordo: values.data_acordo,
+        dataAcordo: values.dataAcordo,
       };
       const res = await create.mutateAsync(payload satisfies HonorarioCreateRequest);
       router.push(`/financeiro/${encodeURIComponent(String(res.id))}`);
@@ -96,12 +96,12 @@ function HonorarioCreateContent() {
         <CardContent>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
-              <Label htmlFor="processo_id">Processo</Label>
+              <Label htmlFor="processoId">Processo</Label>
               <select
-                id="processo_id"
+                id="processoId"
                 className={selectClassName}
                 disabled={processos.isPending || processos.isError}
-                {...form.register("processo_id")}
+                {...form.register("processoId")}
               >
                 <option value="">
                   {processos.isPending
@@ -123,32 +123,32 @@ function HonorarioCreateContent() {
                     : "Erro ao carregar processos"}
                 </p>
               ) : null}
-              {form.formState.errors.processo_id ? (
-                <p className="text-sm text-red-600">{form.formState.errors.processo_id.message}</p>
+              {form.formState.errors.processoId ? (
+                <p className="text-sm text-red-600">{form.formState.errors.processoId.message}</p>
               ) : null}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="valor_total">Valor total</Label>
+                <Label htmlFor="valorTotal">Valor total</Label>
                 <Input
-                  id="valor_total"
+                  id="valorTotal"
                   type="number"
                   inputMode="decimal"
                   step="0.01"
                   min="0"
-                  {...form.register("valor_total")}
+                  {...form.register("valorTotal")}
                 />
-                {form.formState.errors.valor_total ? (
-                  <p className="text-sm text-red-600">{form.formState.errors.valor_total.message}</p>
+                {form.formState.errors.valorTotal ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.valorTotal.message}</p>
                 ) : null}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="data_acordo">Data do acordo (opcional)</Label>
-                <Input id="data_acordo" type="date" {...form.register("data_acordo")} />
-                {form.formState.errors.data_acordo ? (
-                  <p className="text-sm text-red-600">{form.formState.errors.data_acordo.message}</p>
+                <Label htmlFor="dataAcordo">Data do acordo (opcional)</Label>
+                <Input id="dataAcordo" type="date" {...form.register("dataAcordo")} />
+                {form.formState.errors.dataAcordo ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.dataAcordo.message}</p>
                 ) : null}
               </div>
             </div>

@@ -95,12 +95,11 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                     <th className="py-2 pr-4 font-medium">Cliente</th>
                     <th className="py-2 pr-4 font-medium">Total</th>
                     <th className="py-2 pr-4 font-medium">Data do acordo</th>
-                    <th className="py-2 pr-4 font-medium">Criado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {honorarios.data.map((h) => {
-                    const processo = processoById.get(h.processo_id);
+                    const processo = processoById.get(h.processoId);
                     const clienteId = processo?.cliente_id;
                     return (
                       <tr
@@ -124,7 +123,7 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                               {processo.numero ?? processo.titulo ?? processo.id}
                             </Link>
                           ) : (
-                            h.processo_id
+                            h.processoId
                           )}
                         </td>
                         <td className="py-2 pr-4">
@@ -139,9 +138,8 @@ function FinanceiroContent({ canCreateFinanceiro }: { canCreateFinanceiro: boole
                             "—"
                           )}
                         </td>
-                        <td className="py-2 pr-4">{formatMoneyCVE(h.valor_total)}</td>
-                        <td className="py-2 pr-4">{formatDate(h.data_acordo)}</td>
-                        <td className="py-2 pr-4">{new Date(h.created_at).toLocaleString("pt-CV")}</td>
+                        <td className="py-2 pr-4">{formatMoneyCVE(h.valorTotal)}</td>
+                        <td className="py-2 pr-4">{formatDate(h.dataAcordo)}</td>
                       </tr>
                     );
                   })}
