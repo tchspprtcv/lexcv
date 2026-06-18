@@ -30,18 +30,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-## Current Milestone: v2.0 Módulo Financeiro
+## Current Milestone: v2.1 Agenda Avançada
 
-**Goal:** Completar e corrigir o módulo financeiro com migração camelCase, CRUD completo, KPIs, filtros, status de pagamento e exportação CSV.
+**Goal:** Adicionar funcionalidades avançadas ao módulo de agendamento: notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário para mover eventos.
 
 **Target features:**
-- Migração camelCase — Alinhar tipos TS e hooks com serialização Jackson (padrão Spring Boot)
-- Bugs backend — Adicionar endpoints em falta: `GET /honorarios/{id}`, `PUT /honorarios/{id}`, `DELETE /honorarios/{id}`, `DELETE /pagamentos/{id}`
-- Edit/Delete — UI para editar honorários e apagar honorários/pagamentos com confirmação
-- Status do honorário — Campo calculado (Pendente / Parcialmente Pago / Pago) com badge UI
-- KPIs financeiros — Cards de resumo: total faturado, total recebido, em dívida, receita do mês
-- Filtros e pesquisa — Filtrar lista por processo, cliente, status, intervalo de datas
-- Relatórios / export — Exportar honorários para CSV
+- Notificações in-app — Badge no header com contagem de eventos/prazos nos próximos 7 dias; painel de notificações com lista e links
+- Recorrência de eventos — Criar eventos com regra de recorrência (diária/semanal/mensal), expandidos no calendário; delete por instância ou série
+- Drag & Drop — Arrastar eventos no calendário para mover para outra data; atualização via API
 
 ### Out of Scope
 
@@ -49,7 +45,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Regras de negócio avançadas (cálculo de honorários, prazos jurídicos, workflows) — responsabilidade do backend
 - Contabilidade completa/ERP — fora do MVP
 - Mobile app nativo — Web/PWA primeiro; desktop via Tauri numa fase posterior
-- Finalização Módulo Agendamento (v1.10) — notificações, recorrência e drag & drop adiados para milestone dedicado
+- Notificações push / email — apenas in-app neste milestone
+- Recorrência infinita (sem data de fim) — requer paginação especial, adiado
+- Editar todas as instâncias futuras de uma série — apenas "esta instância" ou "toda a série"
 
 ## Context
 
@@ -108,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 — Milestone v2.0 started (Módulo Financeiro)*
+*Last updated: 2026-06-18 — Milestone v2.1 started (Agenda Avançada)*

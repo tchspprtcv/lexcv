@@ -1,67 +1,46 @@
-# Requirements — v2.0 Módulo Financeiro
+# Requirements — v2.1 Agenda Avançada
 
-> Milestone goal: Completar e corrigir o módulo financeiro com migração camelCase, CRUD completo, KPIs, filtros, status de pagamento e exportação CSV.
+> Milestone goal: Adicionar notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário.
 
 ---
 
-## v2.0 Requirements
+## v2.1 Requirements
 
-### Migração camelCase (Data Layer)
+### Notificações In-App
 
-- [ ] **FIN-01**: O frontend usa campos camelCase (`processoId`, `valorTotal`, `dataAcordo`, `honorarioId`, `valorPago`, `dataPagamento`) consistentes com a serialização Jackson/Spring Boot
-- [ ] **FIN-02**: Os tipos TypeScript `Honorario`, `Pagamento`, `HonorarioCreateRequest`, `PagamentoCreateRequest` usam camelCase sem campos snake_case
+- [ ] **AGE-01**: O header da aplicação exibe um badge com a contagem de eventos e prazos nos próximos 7 dias (apenas não concluídos)
+- [ ] **AGE-02**: Ao clicar no badge, abre um painel/dropdown que lista os eventos e prazos próximos com data, título e link para o detalhe do processo
 
-### Backend — Endpoints em falta
+### Recorrência de Eventos
 
-- [ ] **FIN-03**: Utilizador pode buscar um único honorário via `GET /honorarios/{id}` com tenant scoping correto
-- [ ] **FIN-04**: Utilizador com permissão `financeiro:edit` pode editar um honorário via `PUT /honorarios/{id}` (valorTotal, descricao, dataAcordo)
-- [ ] **FIN-05**: Utilizador com permissão `financeiro:manage` pode apagar um honorário via `DELETE /honorarios/{id}` (apenas se sem pagamentos)
-- [ ] **FIN-06**: Utilizador com permissão `financeiro:manage` pode apagar um pagamento via `DELETE /pagamentos/{id}` com reversão do saldo na conta corrente
+- [ ] **AGE-03**: Utilizador pode criar um evento com regra de recorrência: diária, semanal ou mensal, com data de fim obrigatória
+- [ ] **AGE-04**: O backend armazena a regra de recorrência e expande as instâncias ao listar eventos (`GET /eventos` inclui instâncias geradas dentro do intervalo pedido)
+- [ ] **AGE-05**: O calendário exibe as instâncias de eventos recorrentes nas datas corretas, distinguindo-as visualmente dos eventos normais (ícone ou badge)
+- [ ] **AGE-06**: Ao apagar um evento recorrente, o utilizador escolhe entre "Apagar esta instância" ou "Apagar toda a série"
 
-### Status do Honorário
+### Drag & Drop no Calendário
 
-- [ ] **FIN-07**: O sistema calcula automaticamente o estado de cada honorário: `Pendente` (0 pagamentos), `Parcialmente Pago` (pagamentos < valorTotal), `Pago` (pagamentos >= valorTotal)
-- [ ] **FIN-08**: A lista de honorários exibe um badge de status por honorário com cores distintas
-
-### KPIs Financeiros
-
-- [ ] **FIN-09**: A página financeiro exibe cards de resumo no topo: total faturado, total recebido, em dívida, receita do mês corrente
-- [ ] **FIN-10**: Os KPIs são calculados no frontend a partir dos dados já carregados (sem endpoint dedicado)
-
-### Filtros e Pesquisa
-
-- [ ] **FIN-11**: Utilizador pode filtrar a lista de honorários por processo (dropdown/autocomplete)
-- [ ] **FIN-12**: Utilizador pode filtrar a lista de honorários por status (Pendente / Parcialmente Pago / Pago)
-- [ ] **FIN-13**: Utilizador pode filtrar a lista de honorários por intervalo de datas (dataAcordo de/até)
-
-### Edit/Delete na UI
-
-- [ ] **FIN-14**: Utilizador com permissão `financeiro:edit` pode editar um honorário a partir da página de detalhe
-- [ ] **FIN-15**: Utilizador com permissão `financeiro:manage` pode apagar um honorário com diálogo de confirmação
-- [ ] **FIN-16**: Utilizador com permissão `financeiro:manage` pode apagar um pagamento com diálogo de confirmação
-
-### Relatórios / Export
-
-- [ ] **FIN-17**: Utilizador pode exportar a lista de honorários (com filtros aplicados) para CSV com campos: id, processo, cliente, valorTotal, totalPago, estado, dataAcordo
+- [ ] **AGE-07**: Utilizador pode arrastar um evento no calendário para outro dia do mesmo mês para mover a data
+- [ ] **AGE-08**: Ao largar o evento num novo dia, a data é atualizada via `PUT /eventos/{id}` e o calendário atualiza imediatamente
 
 ---
 
 ## Future Requirements (Deferred)
 
-- Notificações de pagamentos em atraso (email/in-app)
-- Dashboard financeiro com gráficos de receita mensal
-- Fatura / recibo PDF gerado pelo sistema
-- Integração contabilística / exportação para ERP
+- Notificações push / email — requer infraestrutura de backend adicional (SMTP, FCM)
+- Recorrência sem data de fim (infinita) — requer paginação especial de instâncias
+- Editar todas as instâncias futuras de uma série — padrão "edit from here" complexo
+- Drag & drop entre meses — requer vista multi-mês ou navegação inline
 
 ---
 
 ## Out of Scope
 
-- Contabilidade completa / módulo ERP
-- Cálculo automático de honorários (% do processo, tarifário)
-- Pagamentos parcelados automáticos / planos de pagamento
-- Integração com gateway de pagamento externo
-- Finalização Módulo Agendamento (v1.10) — notificações, recorrência, drag & drop — adiado para milestone dedicado
+- Email ou push notifications — apenas in-app neste milestone
+- Recorrência infinita — obrigatório ter data de fim
+- Editar instâncias futuras em bloco — apenas esta ou toda a série
+- Drag & drop de prazos — prazos são ligados a fases de processo (data gerida pelo processo)
+- Módulo financeiro avançado — entregue em v2.0
 
 ---
 
@@ -69,20 +48,11 @@
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FIN-01 | Phase 43 | TBD |
-| FIN-02 | Phase 43 | TBD |
-| FIN-03 | Phase 43 | TBD |
-| FIN-04 | Phase 43 | TBD |
-| FIN-05 | Phase 43 | TBD |
-| FIN-06 | Phase 43 | TBD |
-| FIN-07 | Phase 44 | TBD |
-| FIN-08 | Phase 44 | TBD |
-| FIN-09 | Phase 44 | TBD |
-| FIN-10 | Phase 44 | TBD |
-| FIN-11 | Phase 45 | TBD |
-| FIN-12 | Phase 45 | TBD |
-| FIN-13 | Phase 45 | TBD |
-| FIN-14 | Phase 45 | TBD |
-| FIN-15 | Phase 45 | TBD |
-| FIN-16 | Phase 45 | TBD |
-| FIN-17 | Phase 46 | TBD |
+| AGE-01 | Phase 47 | TBD |
+| AGE-02 | Phase 47 | TBD |
+| AGE-03 | Phase 48 | TBD |
+| AGE-04 | Phase 48 | TBD |
+| AGE-05 | Phase 48 | TBD |
+| AGE-06 | Phase 48 | TBD |
+| AGE-07 | Phase 49 | TBD |
+| AGE-08 | Phase 49 | TBD |

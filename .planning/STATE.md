@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Módulo Financeiro
-status: complete
-stopped_at: "All phases complete — milestone v2.0 delivered"
-last_updated: "2026-06-18T04:00:00.000Z"
-last_activity: 2026-06-18 — Phase 46 executed (1 plan, CSV export). All 4 phases verified.
+milestone: v2.1
+milestone_name: Agenda Avançada
+status: planning
+stopped_at: "Roadmap created — ready for /gsd:plan-phase 47"
+last_updated: "2026-06-18T06:00:00.000Z"
+last_activity: 2026-06-18 — Roadmap v2.1 criado (3 fases, 8 requirements, phases 47–49)
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 43 — Data Layer + Backend Endpoints
+**Current focus:** Phase 47 — Notificações In-App
 
 ## Current Position
 
-Phase: 46 of 46 (CSV Export) — COMPLETE
-Plan: 1 of 1
-Status: All phases verified
-Last activity: 2026-06-18 — Phase 46 complete (CSV export). Milestone v2.0 delivered.
+Phase: 47 de 49 (Notificações In-App)
+Plan: — (não iniciado)
+Status: Ready to plan
+Last activity: 2026-06-18 — Roadmap v2.1 criado. 3 fases: notificações in-app, recorrência de eventos, drag & drop.
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,8 +52,9 @@ Progress: [░░░░░░░░░░] 0%
 Decisions são registadas em PROJECT.md (Key Decisions).
 Recent decisions affecting current work:
 
-- (v1.9) camelCase migration pattern established for agenda module — apply same pattern to financeiro types/hooks
-- (v1.0) Frontend "burro": sem regras de negócio — status do honorário calculado no frontend a partir de dados da API
+- (v1.9) camelCase migration pattern estabelecido — continuar com o mesmo padrão no módulo agenda
+- (v2.0) Frontend "burro": status calculado no cliente a partir dos dados da API — aplicar à lógica de recorrência (expansão de instâncias no backend, não no frontend)
+- (v2.1) Recorrência infinita fora de scope — data de fim obrigatória; instâncias expandidas pelo backend via `GET /eventos?from=&to=`
 
 ### Pending Todos
 
@@ -61,10 +62,10 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- Phase 48 requer alteração ao modelo `Evento` no backend (coluna `recurrenceRule`) — confirmar migração JPA (`ddl-auto=update`) antes de executar
 
 ## Session Continuity
 
-Last session: 2026-06-18T00:00:00.000Z
-Stopped at: Roadmap created — next step is /gsd:plan-phase 43
+Last session: 2026-06-18T06:00:00.000Z
+Stopped at: Roadmap criado — próximo passo é /gsd:plan-phase 47
 Resume file: None
