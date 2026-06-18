@@ -66,7 +66,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       descricao: p.descricao,
       dataInicio: `${p.dataLimite}T09:00:00`,
       dataFim: `${p.dataLimite}T18:00:00`,
-      prioridade: p.prioridade as any,
+      prioridade: p.prioridade as Evento["prioridade"],
       concluido: p.concluido,
       isPrazo: true,
     }));
@@ -85,7 +85,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
         return false;
       }
       if (selectedCategoria !== "todos") {
-        const cat = getCategoria(e as any);
+        const cat = getCategoria(e);
         if (cat.id !== selectedCategoria) {
           return false;
         }
@@ -127,8 +127,8 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       return t >= start.getTime() && t < end.getTime();
     });
 
-    const prazosAtivos = active.filter((e) => getCategoria(e as any).id === "PRAZO").length;
-    const audiencias = active.filter((e) => getCategoria(e as any).id === "AUDIENCIA").length;
+    const prazosAtivos = active.filter((e) => getCategoria(e).id === "PRAZO").length;
+    const audiencias = active.filter((e) => getCategoria(e).id === "AUDIENCIA").length;
     const urgentes = active.filter((e) => e.prioridade === "ALTA").length;
 
     return { prazosAtivos, audiencias, urgentes };
@@ -303,7 +303,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                       )}>{day.date.getDate()}</div>
                       <div className="mt-2 space-y-1.5">
                         {dayEvents.map((e) => {
-                          const cat = getCategoria(e as any);
+                          const cat = getCategoria(e);
                           const href = e.isPrazo
                             ? `/processos/${encodeURIComponent(String(e.processoId))}`
                             : `/agenda/${encodeURIComponent(String(e.id))}`;

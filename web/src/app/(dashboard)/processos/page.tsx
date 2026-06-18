@@ -63,11 +63,11 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
     processos.data?.filter((p) => (p.estado ?? "").toUpperCase() === "SUSPENSO").length ?? 0;
 
   const eventos = useEventos({ concluido: false });
+  const now7days = new Date().getTime() + 7 * 24 * 60 * 60 * 1000;
   const proximasAudiencias = (eventos.data ?? []).filter((e) => {
     const isAudiencia = e.tipo?.toUpperCase() === "AUDIENCIA" || e.titulo.toLowerCase().includes("audiência") || e.titulo.toLowerCase().includes("audiencia");
     if (!isAudiencia) return false;
-    const isNext7Days = new Date(e.dataInicio).getTime() < Date.now() + 7 * 24 * 60 * 60 * 1000;
-    return isNext7Days;
+    return new Date(e.dataInicio).getTime() < now7days;
   }).length;
 
   React.useEffect(() => {
