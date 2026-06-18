@@ -2,20 +2,53 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente } from "@/hooks/use-clientes";
-import { useCreatePagamento, useHonorario, useHonorarioPagamentos } from "@/hooks/use-financeiro";
+import {
+  useCreatePagamento,
+  useDeleteHonorario,
+  useDeletePagamento,
+  useHonorario,
+  useHonorarioPagamentos,
+  useUpdateHonorario,
+} from "@/hooks/use-financeiro";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcesso } from "@/hooks/use-processos";
-import { pagamentoFormSchema, type PagamentoFormValues } from "@/schemas/financeiro";
-import type { PagamentoCreateRequest } from "@/types/financeiro";
+import {
+  honorarioUpdateSchema,
+  pagamentoFormSchema,
+  type HonorarioUpdateFormValues,
+  type PagamentoFormValues,
+} from "@/schemas/financeiro";
+import type { HonorarioUpdateRequest, PagamentoCreateRequest } from "@/types/financeiro";
 
 type PageProps = {
   params: { id: string };
@@ -38,6 +71,7 @@ export default function HonorarioDetailPage(props: PageProps) {
   const honorarioId = Number(params.id);
   const canViewFinanceiro = permissions.can.view("financeiro");
   const canEditFinanceiro = permissions.can.edit("financeiro");
+  const canManageFinanceiro = permissions.can.manage("financeiro");
   const canViewClientes = permissions.can.view("clientes");
   const canViewProcessos = permissions.can.view("processos");
 
@@ -67,6 +101,7 @@ export default function HonorarioDetailPage(props: PageProps) {
       honorarioId={honorarioId}
       rawId={params.id}
       canEditFinanceiro={canEditFinanceiro}
+      canManageFinanceiro={canManageFinanceiro}
       canViewClientes={canViewClientes}
       canViewProcessos={canViewProcessos}
     />
@@ -77,28 +112,56 @@ function HonorarioDetailContent({
   honorarioId,
   rawId,
   canEditFinanceiro,
+  canManageFinanceiro,
   canViewClientes,
   canViewProcessos,
 }: {
   honorarioId: number;
   rawId: string;
   canEditFinanceiro: boolean;
+  canManageFinanceiro: boolean;
   canViewClientes: boolean;
   canViewProcessos: boolean;
 }) {
+  const router = useRouter();
   const honorario = useHonorario(honorarioId);
   const processo = useProcesso(honorario.data?.processoId ?? "");
   const cliente = useCliente(processo.data?.cliente_id ?? "");
 
   const pagamentos = useHonorarioPagamentos(honorarioId);
   const createPagamento = useCreatePagamento();
+  const updateHonorario = useUpdateHonorario();
+  const deleteHonorario = useDeleteHonorario();
+  const deletePagamento = useDeletePagamento();
   const permissions = usePermissions();
+
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [deleteHonorarioError, setDeleteHonorarioError] = React.useState<string | null>(null);
 
   const form = useForm<PagamentoFormValues>({
     resolver: zodResolver(pagamentoFormSchema),
     defaultValues: { valorPago: "", dataPagamento: undefined, metodo: undefined },
   });
+
+  const editForm = useForm<HonorarioUpdateFormValues>({
+    resolver: zodResolver(honorarioUpdateSchema),
+    defaultValues: {
+      valorTotal: honorario.data ? String(honorario.data.valorTotal) : "",
+      descricao: honorario.data?.descricao ?? "",
+      dataAcordo: honorario.data?.dataAcordo ?? "",
+    },
+  });
+
+  React.useEffect(() => {
+    if (honorario.data) {
+      editForm.reset({
+        valorTotal: String(honorario.data.valorTotal),
+        descricao: honorario.data.descricao ?? "",
+        dataAcordo: honorario.data.dataAcordo ?? "",
+      });
+    }
+  }, [honorario.data, editForm]);
 
   const onSubmitPagamento = async (values: PagamentoFormValues) => {
     setServerError(null);
@@ -117,6 +180,33 @@ function HonorarioDetailContent({
       form.reset({ valorPago: "", dataPagamento: undefined, metodo: undefined });
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Erro ao adicionar pagamento");
+    }
+  };
+
+  const onSubmitEdit = async (values: HonorarioUpdateFormValues) => {
+    try {
+      const payload: HonorarioUpdateRequest = {
+        valorTotal: Number(values.valorTotal),
+        descricao: values.descricao,
+        dataAcordo: values.dataAcordo,
+      };
+      await updateHonorario.mutateAsync({ id: honorarioId, data: payload });
+      setEditOpen(false);
+    } catch (e) {
+      editForm.setError("root", {
+        message: e instanceof Error ? e.message : "Erro ao guardar alterações",
+      });
+    }
+  };
+
+  const onDeleteHonorario = async () => {
+    setDeleteHonorarioError(null);
+    try {
+      await deleteHonorario.mutateAsync(honorarioId);
+      router.push("/financeiro");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao apagar honorário";
+      setDeleteHonorarioError(msg);
     }
   };
 
@@ -155,6 +245,97 @@ function HonorarioDetailContent({
             <Button asChild>
               <Link href={`/processos/${encodeURIComponent(honorario.data.processoId)}`}>Ver processo</Link>
             </Button>
+          ) : null}
+
+          {canEditFinanceiro && honorario.data ? (
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Editar</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Editar honorário</DialogTitle>
+                </DialogHeader>
+                <form className="space-y-4" onSubmit={editForm.handleSubmit(onSubmitEdit)}>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-valorTotal">Valor total</Label>
+                    <Input
+                      id="edit-valorTotal"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      {...editForm.register("valorTotal")}
+                    />
+                    {editForm.formState.errors.valorTotal ? (
+                      <p className="text-sm text-red-600">{editForm.formState.errors.valorTotal.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-dataAcordo">Data do acordo (opcional)</Label>
+                    <Input id="edit-dataAcordo" type="date" {...editForm.register("dataAcordo")} />
+                    {editForm.formState.errors.dataAcordo ? (
+                      <p className="text-sm text-red-600">{editForm.formState.errors.dataAcordo.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-descricao">Descrição (opcional)</Label>
+                    <Input id="edit-descricao" {...editForm.register("descricao")} placeholder="Descrição do honorário" />
+                    {editForm.formState.errors.descricao ? (
+                      <p className="text-sm text-red-600">{editForm.formState.errors.descricao.message}</p>
+                    ) : null}
+                  </div>
+
+                  {editForm.formState.errors.root ? (
+                    <p className="text-sm text-red-600">{editForm.formState.errors.root.message}</p>
+                  ) : null}
+
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">Cancelar</Button>
+                    </DialogClose>
+                    <Button
+                      type="submit"
+                      disabled={editForm.formState.isSubmitting || updateHonorario.isPending}
+                    >
+                      {editForm.formState.isSubmitting || updateHonorario.isPending ? "A guardar..." : "Guardar"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          ) : null}
+
+          {canManageFinanceiro && honorario.data ? (
+            <>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="bg-red-600 hover:bg-red-700 text-white">Apagar</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar honorário?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação é irreversível. Se o honorário tiver pagamentos registados, a operação será rejeitada.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                      onClick={onDeleteHonorario}
+                    >
+                      {deleteHonorario.isPending ? "A apagar..." : "Apagar"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              {deleteHonorarioError ? (
+                <p className="w-full text-sm text-red-600 mt-1">{deleteHonorarioError}</p>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
@@ -303,6 +484,7 @@ function HonorarioDetailContent({
                         <th className="py-2 pr-4 font-medium">Valor</th>
                         <th className="py-2 pr-4 font-medium">Método</th>
                         <th className="py-2 pr-4 font-medium">ID</th>
+                        <th className="py-2 font-medium"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -315,6 +497,34 @@ function HonorarioDetailContent({
                           <td className="py-2 pr-4">{formatMoneyCVE(p.valorPago)}</td>
                           <td className="py-2 pr-4">{p.metodo ?? "—"}</td>
                           <td className="py-2 pr-4">#{p.id}</td>
+                          <td className="py-2 pl-4">
+                            {canManageFinanceiro ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    Apagar
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Apagar pagamento?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      O valor pago será revertido na conta-corrente do cliente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-600 hover:bg-red-700 text-white"
+                                      onClick={() => deletePagamento.mutate({ pagamentoId: p.id, honorarioId })}
+                                    >
+                                      Apagar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : null}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
