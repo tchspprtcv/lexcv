@@ -2,6 +2,12 @@
     handle /api/* {
         reverse_proxy backend:8080
     }
+    handle /minio-console* {
+        basicauth {
+            {$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}
+        }
+        reverse_proxy minio:9001
+    }
     handle {
         reverse_proxy frontend:3000
     }
