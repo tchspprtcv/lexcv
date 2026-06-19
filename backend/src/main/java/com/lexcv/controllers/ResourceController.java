@@ -1850,9 +1850,18 @@ public class ResourceController {
             }
         }
 
-        // Audit record — T-34-03: placed before delete so record is written before the entity is removed
         Authentication delAuth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal delPrincipal = (UserPrincipal) delAuth.getPrincipal();
+
+        try {
+            storageService.delete(doc.getCaminhoArquivo());
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
+
+        // Audit record — T-34-03: written after storage delete succeeds, before DB entity removal
+        // so that the FK (entidadeId → documento.id) is still valid at save time.
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(delPrincipal.getTenantId())
                 .processoId(doc.getProcessoId()) // nullable — documento may not be linked to a processo
@@ -1861,13 +1870,6 @@ public class ResourceController {
                 .entidadeId(id.toString())
                 .autorId(delPrincipal.getUserId())
                 .build());
-
-        try {
-            storageService.delete(doc.getCaminhoArquivo());
-        } catch (StorageUnavailableException e) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("message", "Storage service unavailable"));
-        }
 
         documentoRepository.delete(doc);
         return ResponseEntity.ok(Map.of("message", "Documento removido com sucesso!"));
