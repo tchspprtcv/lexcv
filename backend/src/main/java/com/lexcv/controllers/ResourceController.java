@@ -17,9 +17,6 @@ import com.lexcv.dtos.DashboardKpiResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,13 +27,9 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -1817,11 +1810,6 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Documento não encontrado"));
         }
 
-        File file = new File(doc.getCaminhoArquivo());
-        if (!file.exists()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Arquivo físico não encontrado"));
-        }
-
         // Audit record — T-34-03: placed before response so record is written even if downstream error occurs
         Authentication dlAuth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal dlPrincipal = (UserPrincipal) dlAuth.getPrincipal();
@@ -1834,11 +1822,13 @@ public class ResourceController {
                 .autorId(dlPrincipal.getUserId())
                 .build());
 
-        Resource resource = new FileSystemResource(file);
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(doc.getMimeType() != null ? doc.getMimeType() : "application/octet-stream"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + doc.getNome() + "\"")
-                .body(resource);
+        try {
+            String url = storageService.presignedDownloadUrl(doc.getCaminhoArquivo());
+            return ResponseEntity.ok(Map.of("url", url, "expiresIn", 3600));
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
     }
 
     @PreAuthorize("hasAuthority('documentos:edit')")
@@ -1869,8 +1859,11 @@ public class ResourceController {
                 .build());
 
         try {
-            Files.deleteIfExists(Paths.get(doc.getCaminhoArquivo()));
-        } catch (IOException ignored) {}
+            storageService.delete(doc.getCaminhoArquivo());
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
 
         documentoRepository.delete(doc);
         return ResponseEntity.ok(Map.of("message", "Documento removido com sucesso!"));
