@@ -76,7 +76,7 @@ Plans:
 
 **Milestone Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
 
-- [ ] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket
+- [x] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket (completed 2026-06-19)
 - [ ] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada
 - [ ] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy
 
@@ -134,7 +134,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 50-01-PLAN.md — Infrastructure: pom.xml BOM, MinioProperties, MinioConfig (S3Client + S3Presigner), StorageService, StorageUnavailableException, application.yml, .env.example
-- [ ] 50-02-PLAN.md — Endpoint migration: uploadDocumento, downloadDocumento, deleteDocumento refactored to use StorageService; binary stream replaced by presigned URL JSON response
+- [x] 50-02-PLAN.md — Endpoint migration: uploadDocumento, downloadDocumento, deleteDocumento refactored to use StorageService; binary stream replaced by presigned URL JSON response
 
 ### Phase 51: Frontend Upload Component
 **Goal**: O componente de upload de documentos oferece feedback visual durante a transferência, suporta drag-and-drop, mostra preview inline de imagens e PDFs, e inicia downloads via URL pré-assinada
@@ -172,6 +172,6 @@ Plans:
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
-| 50. Backend MinIO Integration | v2.2 | 1/2 | In Progress|  |
+| 50. Backend MinIO Integration | v2.2 | 2/2 | Complete   | 2026-06-19 |
 | 51. Frontend Upload Component | v2.2 | 0/TBD | Not started | - |
 | 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |
