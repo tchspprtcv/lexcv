@@ -28,6 +28,8 @@ export function FileDropZone({ onFileChange, accept, disabled, children }: FileD
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    // Only clear when leaving the drop zone entirely, not when crossing child elements
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setIsDragging(false);
   };
 
