@@ -133,7 +133,7 @@ Plans:
   4. Documentos de um tenant nunca são acessíveis através de prefixos de outro tenant — o isolamento é garantido pelo prefixo de path, não por bucket separado
 **Plans**: 2 plans
 Plans:
-- [ ] 50-01-PLAN.md — Infrastructure: pom.xml BOM, MinioProperties, MinioConfig (S3Client + S3Presigner), StorageService, StorageUnavailableException, application.yml, .env.example
+- [x] 50-01-PLAN.md — Infrastructure: pom.xml BOM, MinioProperties, MinioConfig (S3Client + S3Presigner), StorageService, StorageUnavailableException, application.yml, .env.example
 - [ ] 50-02-PLAN.md — Endpoint migration: uploadDocumento, downloadDocumento, deleteDocumento refactored to use StorageService; binary stream replaced by presigned URL JSON response
 
 ### Phase 51: Frontend Upload Component
@@ -172,6 +172,6 @@ Plans:
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
-| 50. Backend MinIO Integration | v2.2 | 0/2 | Not started | - |
+| 50. Backend MinIO Integration | v2.2 | 1/2 | In Progress|  |
 | 51. Frontend Upload Component | v2.2 | 0/TBD | Not started | - |
 | 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |

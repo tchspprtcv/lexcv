@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Document Storage MinIO
-status: planning
-stopped_at: "Defining requirements"
-last_updated: "2026-06-19T00:00:00.000Z"
-last_activity: 2026-06-19 — Milestone v2.2 started
+status: Defining requirements
+last_updated: "2026-06-19T15:35:00.000Z"
+last_activity: 2026-06-19 — Phase 50 Plan 01 complete (MinIO infrastructure layer)
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 57
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-19)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-19 — Milestone v2.2 started
+Phase: 50 — backend-minio-integration
+Plan: 01 complete (of 2 planned)
+Status: In progress — Plan 50-02 is next
+Last activity: 2026-06-19 — Phase 50 Plan 01 complete (MinIO infrastructure layer)
 
 ## Performance Metrics
 
@@ -42,7 +41,7 @@ Last activity: 2026-06-19 — Milestone v2.2 started
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 50 (MinIO) | 1 | ~15m | ~15m |
 
 ## Accumulated Context
 
@@ -51,6 +50,8 @@ Last activity: 2026-06-19 — Milestone v2.2 started
 Decisions são registadas em PROJECT.md (Key Decisions).
 Recent decisions affecting current work:
 
+- (50-01) Hardcoded Region.of(us-east-1) in MinioConfig — MinIO ignores region; satisfies SDK requirement without extra env var
+- (50-01) Filename sanitised with replaceAll([/\\], _) in StorageService.upload() to prevent path traversal
 - (v2.1) Recorrência infinita fora de scope — data de fim obrigatória
 - (v1.8) Caddy como reverse proxy com HTTPS automático — continuar o mesmo padrão para MinIO console
 - (v1.8) Docker Compose + GitHub Actions → GHCR → SSH VPS — padrão de deploy a estender para MinIO
