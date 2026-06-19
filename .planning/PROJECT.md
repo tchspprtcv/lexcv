@@ -30,14 +30,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-## Current Milestone: v2.1 Agenda Avançada
+## Current Milestone: v2.2 Document Storage MinIO
 
-**Goal:** Adicionar funcionalidades avançadas ao módulo de agendamento: notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário para mover eventos.
+**Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
 
 **Target features:**
-- Notificações in-app — Badge no header com contagem de eventos/prazos nos próximos 7 dias; painel de notificações com lista e links
-- Recorrência de eventos — Criar eventos com regra de recorrência (diária/semanal/mensal), expandidos no calendário; delete por instância ou série
-- Drag & Drop — Arrastar eventos no calendário para mover para outra data; atualização via API
+- MinIO como backend de armazenamento — substituir uploads/ no VPS por bucket MinIO; Spring Boot integrado via AWS S3 SDK (S3-compatible); tenant-scoped paths
+- Componente de upload atualizado — barra de progresso, drag-and-drop, preview inline (imagens/PDF), download via URL pré-assinada
+- Deploy MinIO no Hostinger — serviço MinIO no Docker Compose prod, volume persistente, variáveis de ambiente seguras, CI/CD atualizado, consola via Caddy
 
 ### Out of Scope
 
@@ -88,7 +88,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 **v1.9** (2026-06-17) — Melhoria Módulo Agendamento. Data layer agenda camelCase, validações robustas, visão unificada de prazos e eventos com filtros flexíveis. CI/CD no Hostinger VPS.
 
-**Current Milestone:** v2.1 complete (2026-06-18) — Agenda Avançada entregue. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY com expansão de instâncias, delete por instância ou série), drag & drop no calendário com atualização otimista.
+**Shipped:** v2.1 (2026-06-18) — Agenda Avançada. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY), drag & drop no calendário com atualização otimista.
+
+**Current Milestone:** v2.2 — Document Storage MinIO (iniciado 2026-06-19)
 
 ## Evolution
 
@@ -108,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 — Milestone v2.1 started (Agenda Avançada)*
+*Last updated: 2026-06-19 — Milestone v2.2 started (Document Storage MinIO)*

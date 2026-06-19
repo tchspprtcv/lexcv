@@ -4,6 +4,7 @@
 
 - ✅ **v2.0 Módulo Financeiro** — Phases 43–46 (complete 2026-06-18)
 - ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
+- 🔄 **v2.2 Document Storage MinIO** — Phases 50–52 (active)
 
 ## Phases
 
@@ -71,6 +72,14 @@ Plans:
 - [x] **Phase 48: Recorrência de Eventos** - Criar, listar, exibir e apagar eventos com regras de recorrência (completed 2026-06-18)
 - [x] **Phase 49: Drag & Drop no Calendário** - Arrastar eventos para nova data com atualização imediata via API (completed 2026-06-18)
 
+### v2.2 Document Storage MinIO
+
+**Milestone Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
+
+- [ ] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket
+- [ ] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada
+- [ ] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy
+
 ## Phase Details
 
 ### Phase 47: Notificações In-App
@@ -113,9 +122,43 @@ Plans:
 - [x] 49-01-PLAN.md — Drag & drop no calendário mensal: estado, override otimista, mutação PUT, pills arrastáveis + drop zones (agenda/page.tsx)
 **UI hint**: yes
 
+### Phase 50: Backend MinIO Integration
+**Goal**: O backend armazena, serve e elimina ficheiros de documentos no MinIO em vez do filesystem local, com isolamento por tenant e downloads seguros via URLs pré-assinadas
+**Depends on**: Phase 49 (milestone v2.1 completo)
+**Requirements**: MIN-01, MIN-02, MIN-03, MIN-04
+**Success Criteria** (what must be TRUE):
+  1. Um ficheiro carregado para um processo é armazenado no bucket MinIO sob o prefixo `{tenant_id}/{documento_id}/{filename}` e não cria nenhum ficheiro no filesystem do container
+  2. O utilizador clica em "Descarregar" e recebe uma URL pré-assinada temporária que permite download direto do objeto no MinIO sem autenticação adicional
+  3. Ao apagar um documento, o objeto correspondente desaparece do bucket MinIO (verificável via consola MinIO ou API S3)
+  4. Documentos de um tenant nunca são acessíveis através de prefixos de outro tenant — o isolamento é garantido pelo prefixo de path, não por bucket separado
+**Plans**: TBD
+
+### Phase 51: Frontend Upload Component
+**Goal**: O componente de upload de documentos oferece feedback visual durante a transferência, suporta drag-and-drop, mostra preview inline de imagens e PDFs, e inicia downloads via URL pré-assinada
+**Depends on**: Phase 50
+**Requirements**: MIN-05, MIN-06, MIN-07, MIN-08
+**Success Criteria** (what must be TRUE):
+  1. Ao selecionar ou largar um ficheiro, uma barra de progresso mostra a percentagem de upload em tempo real até 100%
+  2. Clicar em "Descarregar" num documento existente abre a URL pré-assinada retornada pelo backend diretamente no browser — nenhum ficheiro passa pelo servidor Next.js
+  3. O utilizador pode arrastar um ficheiro do sistema operativo para a zona de upload e o ficheiro é aceite da mesma forma que clicando para selecionar
+  4. Antes de confirmar o upload, imagens (PNG, JPG, GIF) e PDFs mostram uma pré-visualização inline na interface
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 52: Deploy MinIO no Hostinger
+**Goal**: O MinIO está a correr no Hostinger VPS como serviço Docker Compose com storage persistente, credenciais seguras via env vars, pipeline CI/CD atualizado e consola de administração acessível via Caddy
+**Depends on**: Phase 50
+**Requirements**: MIN-09, MIN-10, MIN-11, MIN-12
+**Success Criteria** (what must be TRUE):
+  1. O `docker-compose.prod.yml` inclui um serviço `minio` com volume nomeado persistente; após restart do compose, os objetos existentes no bucket continuam acessíveis
+  2. Nenhuma credencial MinIO (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, nome do bucket) está hardcoded em ficheiros versionados — todos os valores são injetados via variáveis de ambiente
+  3. Executar o workflow de deploy no GitHub Actions faz pull e restart do serviço MinIO juntamente com backend e frontend, sem passos manuais adicionais
+  4. A consola de administração MinIO está acessível via HTTPS num subpath ou subdomínio protegido pelo Caddy, com acesso restrito por credenciais
+**Plans**: TBD
+
 ## Progress
 
-**Execution Order:** 47 → 48 → 49
+**Execution Order:** 47 → 48 → 49 → 50 → 51 → 52
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -124,5 +167,8 @@ Plans:
 | 45. Filtros + Edit/Delete UI | v2.0 | 2/2 | Complete | 2026-06-18 |
 | 46. CSV Export | v2.0 | 1/1 | Complete | 2026-06-18 |
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
-| 48. Recorrência de Eventos | v2.1 | 2/2 | Complete   | 2026-06-18 |
-| 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete   | 2026-06-18 |
+| 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
+| 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
+| 50. Backend MinIO Integration | v2.2 | 0/TBD | Not started | - |
+| 51. Frontend Upload Component | v2.2 | 0/TBD | Not started | - |
+| 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |

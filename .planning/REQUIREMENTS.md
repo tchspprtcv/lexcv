@@ -1,46 +1,47 @@
-# Requirements — v2.1 Agenda Avançada
+# Requirements — v2.2 Document Storage MinIO
 
-> Milestone goal: Adicionar notificações in-app de eventos próximos, suporte a eventos recorrentes e drag & drop no calendário.
+> Milestone goal: Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
 
 ---
 
-## v2.1 Requirements
+## v2.2 Requirements
 
-### Notificações In-App
+### Backend — MinIO Integration
 
-- [ ] **AGE-01**: O header da aplicação exibe um badge com a contagem de eventos e prazos nos próximos 7 dias (apenas não concluídos)
-- [ ] **AGE-02**: Ao clicar no badge, abre um painel/dropdown que lista os eventos e prazos próximos com data, título e link para o detalhe do processo
+- [ ] **MIN-01**: O sistema armazena ficheiros de documentos num bucket MinIO via AWS S3 SDK (S3-compatible) em vez do filesystem local
+- [ ] **MIN-02**: O utilizador pode fazer download de um documento através de uma URL pré-assinada temporária gerada pelo backend
+- [ ] **MIN-03**: Ao apagar um documento, o objeto correspondente é removido do bucket MinIO
+- [ ] **MIN-04**: Os objetos são guardados com prefixo tenant-scoped (`{tenant_id}/{documento_id}/{filename}`) para isolamento de dados
 
-### Recorrência de Eventos
+### Frontend — Componente de Upload
 
-- [x] **AGE-03**: Utilizador pode criar um evento com regra de recorrência: diária, semanal ou mensal, com data de fim obrigatória
-- [x] **AGE-04**: O backend armazena a regra de recorrência e expande as instâncias ao listar eventos (`GET /eventos` inclui instâncias geradas dentro do intervalo pedido)
-- [x] **AGE-05**: O calendário exibe as instâncias de eventos recorrentes nas datas corretas, distinguindo-as visualmente dos eventos normais (ícone ou badge)
-- [x] **AGE-06**: Ao apagar um evento recorrente, o utilizador escolhe entre "Apagar esta instância" ou "Apagar toda a série"
+- [ ] **MIN-05**: O utilizador vê uma barra de progresso durante o upload de um ficheiro
+- [ ] **MIN-06**: O botão de download abre uma URL pré-assinada gerada pelo backend (sem proxy do ficheiro pelo Next.js)
+- [ ] **MIN-07**: O utilizador pode arrastar e largar um ficheiro na zona de upload além de clicar para selecionar
+- [ ] **MIN-08**: Imagens e PDFs mostram uma pré-visualização inline antes de confirmar o upload
 
-### Drag & Drop no Calendário
+### Deploy — MinIO no Hostinger
 
-- [x] **AGE-07**: Utilizador pode arrastar um evento no calendário para outro dia do mesmo mês para mover a data
-- [x] **AGE-08**: Ao largar o evento num novo dia, a data é atualizada via `PUT /eventos/{id}` e o calendário atualiza imediatamente
+- [ ] **MIN-09**: O Docker Compose de produção inclui um serviço MinIO com volume persistente no Hostinger VPS
+- [ ] **MIN-10**: As credenciais MinIO (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, nome do bucket) são configuradas via variáveis de ambiente sem valores hardcoded
+- [ ] **MIN-11**: O pipeline CI/CD (GitHub Actions) faz deploy e restart do serviço MinIO junto com os restantes serviços
+- [ ] **MIN-12**: A consola de administração MinIO está acessível via rota protegida pelo Caddy
 
 ---
 
 ## Future Requirements (Deferred)
 
-- Notificações push / email — requer infraestrutura de backend adicional (SMTP, FCM)
-- Recorrência sem data de fim (infinita) — requer paginação especial de instâncias
-- Editar todas as instâncias futuras de uma série — padrão "edit from here" complexo
-- Drag & drop entre meses — requer vista multi-mês ou navegação inline
+- Migração de ficheiros existentes do filesystem para MinIO — requer script de migração one-shot e janela de manutenção
+- Bucket lifecycle policies (expiração automática de ficheiros antigos) — gestão avançada de armazenamento
+- Versioning de documentos — múltiplas versões do mesmo ficheiro
 
 ---
 
 ## Out of Scope
 
-- Email ou push notifications — apenas in-app neste milestone
-- Recorrência infinita — obrigatório ter data de fim
-- Editar instâncias futuras em bloco — apenas esta ou toda a série
-- Drag & drop de prazos — prazos são ligados a fases de processo (data gerida pelo processo)
-- Módulo financeiro avançado — entregue em v2.0
+- Acesso direto do frontend ao MinIO (bypassing backend) — quebra o modelo de segurança tenant-scoped
+- CDN na frente do MinIO — fora do scope deste VPS
+- Multiple buckets por tenant — um bucket partilhado com prefixos é suficiente para isolamento
 
 ---
 
@@ -48,11 +49,15 @@
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| AGE-01 | Phase 47 | TBD |
-| AGE-02 | Phase 47 | TBD |
-| AGE-03 | Phase 48 | TBD |
-| AGE-04 | Phase 48 | TBD |
-| AGE-05 | Phase 48 | TBD |
-| AGE-06 | Phase 48 | TBD |
-| AGE-07 | Phase 49 | TBD |
-| AGE-08 | Phase 49 | TBD |
+| MIN-01 | Phase 50 | TBD |
+| MIN-02 | Phase 50 | TBD |
+| MIN-03 | Phase 50 | TBD |
+| MIN-04 | Phase 50 | TBD |
+| MIN-05 | Phase 51 | TBD |
+| MIN-06 | Phase 51 | TBD |
+| MIN-07 | Phase 51 | TBD |
+| MIN-08 | Phase 51 | TBD |
+| MIN-09 | Phase 52 | TBD |
+| MIN-10 | Phase 52 | TBD |
+| MIN-11 | Phase 52 | TBD |
+| MIN-12 | Phase 52 | TBD |
