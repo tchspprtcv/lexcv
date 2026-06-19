@@ -78,7 +78,7 @@ Plans:
 
 - [x] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket (completed 2026-06-19)
 - [x] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada (completed 2026-06-19)
-- [ ] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy
+- [x] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy (completed 2026-06-19)
 
 ## Phase Details
 
@@ -174,4 +174,4 @@ Plans:
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
 | 50. Backend MinIO Integration | v2.2 | 2/2 | Complete   | 2026-06-19 |
 | 51. Frontend Upload Component | v2.2 | 1/1 | Complete   | 2026-06-19 |
-| 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |
+| 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete   | 2026-06-19 |

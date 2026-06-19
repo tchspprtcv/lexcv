@@ -22,10 +22,10 @@
 
 ### Deploy — MinIO no Hostinger
 
-- [ ] **MIN-09**: O Docker Compose de produção inclui um serviço MinIO com volume persistente no Hostinger VPS
-- [ ] **MIN-10**: As credenciais MinIO (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, nome do bucket) são configuradas via variáveis de ambiente sem valores hardcoded
-- [ ] **MIN-11**: O pipeline CI/CD (GitHub Actions) faz deploy e restart do serviço MinIO junto com os restantes serviços
-- [ ] **MIN-12**: A consola de administração MinIO está acessível via rota protegida pelo Caddy
+- [x] **MIN-09**: O Docker Compose de produção inclui um serviço MinIO com volume persistente no Hostinger VPS
+- [x] **MIN-10**: As credenciais MinIO (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, nome do bucket) são configuradas via variáveis de ambiente sem valores hardcoded
+- [x] **MIN-11**: O pipeline CI/CD (GitHub Actions) faz deploy e restart do serviço MinIO junto com os restantes serviços
+- [x] **MIN-12**: A consola de administração MinIO está acessível via rota protegida pelo Caddy
 
 ---
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Document Storage MinIO
-status: Defining requirements
-last_updated: "2026-06-19T15:35:00.000Z"
-last_activity: 2026-06-19 — Phase 50 Plan 01 complete (MinIO infrastructure layer)
+status: executing
+last_updated: "2026-06-19T16:19:09.876Z"
+last_activity: 2026-06-19
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 57
+  completed_phases: 6
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-19)
 
 ## Current Position
 
-Phase: 50 — backend-minio-integration
-Plan: 01 complete (of 2 planned)
-Status: In progress — Plan 50-02 is next
-Last activity: 2026-06-19 — Phase 50 Plan 01 complete (MinIO infrastructure layer)
+Phase: 52 — deploy-minio-hostinger
+Plan: 01 complete (of 1 planned)
+Status: Complete
+Last activity: 2026-06-19 — Phase 52 Plan 01 complete (MinIO Docker Compose + CI/CD deploy)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Recent decisions affecting current work:
 - (v2.1) Recorrência infinita fora de scope — data de fim obrigatória
 - (v1.8) Caddy como reverse proxy com HTTPS automático — continuar o mesmo padrão para MinIO console
 - (v1.8) Docker Compose + GitHub Actions → GHCR → SSH VPS — padrão de deploy a estender para MinIO
+- (52-01) MinIO console exposed via /minio-console* on Caddy with basicauth bcrypt hash env var
 
 ### Pending Todos
 
