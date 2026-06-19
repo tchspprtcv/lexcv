@@ -2,6 +2,8 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.ClienteMergeRequest;
+import com.lexcv.exceptions.StorageUnavailableException;
+import com.lexcv.services.StorageService;
 import com.lexcv.dtos.ConflictCheckDecisaoRequest;
 import com.lexcv.dtos.ConflictCheckResponse;
 import com.lexcv.dtos.TimelineItemDto;
@@ -30,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,8 +69,7 @@ public class ResourceController {
     private final PrazoRepository prazoRepository;
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
-
-    private static final String UPLOAD_DIR = "uploads/";
+    private final StorageService storageService;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -1738,21 +1740,8 @@ public class ResourceController {
         }
 
         try {
-            File uploadFolder = new File(UPLOAD_DIR);
-            if (!uploadFolder.exists()) {
-                uploadFolder.mkdirs();
-            }
-
             String fileId = UUID.randomUUID().toString();
             String originalName = file.getOriginalFilename();
-            String extension = "";
-            if (originalName != null && originalName.contains(".")) {
-                extension = originalName.substring(originalName.lastIndexOf("."));
-            }
-
-            String savedName = fileId + extension;
-            Path path = Paths.get(UPLOAD_DIR + savedName);
-            Files.write(path, file.getBytes());
 
             Documento documento;
             if (replaceId != null) {
@@ -1760,27 +1749,33 @@ public class ResourceController {
                 if (documento == null || !documento.getTenantId().equals(getTenantId())) {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Documento a substituir não encontrado"));
                 }
-                try {
-                    Files.deleteIfExists(Paths.get(documento.getCaminhoArquivo()));
-                } catch (IOException ignored) {}
-                
+                storageService.delete(documento.getCaminhoArquivo());
+                InputStream inputStream = file.getInputStream();
+                String objectKey = storageService.upload(getTenantId(), documento.getId(),
+                        originalName, inputStream, file.getContentType(), file.getSize());
+
                 documento.setNome(originalName);
                 if (tipo != null) documento.setTipo(tipo);
                 if (confidencialidade != null) documento.setConfidencialidade(confidencialidade);
-                documento.setCaminhoArquivo(path.toString());
+                documento.setCaminhoArquivo(objectKey);
                 documento.setTamanho(file.getSize());
                 documento.setMimeType(file.getContentType());
                 documento.setVersao((documento.getVersao() != null ? documento.getVersao() : 1) + 1);
             } else {
+                UUID documentoId = UUID.fromString(fileId);
+                InputStream inputStream = file.getInputStream();
+                String objectKey = storageService.upload(getTenantId(), documentoId,
+                        originalName, inputStream, file.getContentType(), file.getSize());
+
                 documento = Documento.builder()
-                        .id(UUID.fromString(fileId))
+                        .id(documentoId)
                         .tenantId(getTenantId())
                         .processoId(processoId)
                         .clienteId(clienteId)
                         .nome(originalName)
                         .tipo(tipo != null ? tipo : "ANEXO")
                         .confidencialidade(confidencialidade != null ? confidencialidade : "PUBLICO")
-                        .caminhoArquivo(path.toString())
+                        .caminhoArquivo(objectKey)
                         .tamanho(file.getSize())
                         .mimeType(file.getContentType())
                         .versao(1)
@@ -1789,9 +1784,12 @@ public class ResourceController {
 
             Documento saved = documentoRepository.save(documento);
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Erro ao gravar o arquivo localmente."));
+                    .body(Map.of("message", "Erro ao ler ficheiro"));
         }
     }
 
