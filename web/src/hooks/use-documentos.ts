@@ -119,7 +119,7 @@ export function useUploadDocumentoComProgresso(options?: { onProgress?: (pct: nu
         };
 
         xhr.onload = () => {
-          if (xhr.status < 400) {
+          if (xhr.status >= 200 && xhr.status < 300) {
             try {
               resolve(JSON.parse(xhr.responseText) as DocumentoUploadResponse);
             } catch {
