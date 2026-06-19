@@ -84,41 +84,58 @@ export function useDeleteDocumento(id: string) {
   });
 }
 
-function parseContentDispositionFilename(headerValue: string | null): string | null {
-  if (!headerValue) return null;
-  const utf8Match = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(headerValue);
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1]);
-    } catch {
-      return utf8Match[1];
-    }
-  }
-  const match = /filename\s*=\s*"([^"]+)"/i.exec(headerValue) ?? /filename\s*=\s*([^;]+)/i.exec(headerValue);
-  return match?.[1]?.trim() ?? null;
-}
-
 export function useDownloadDocumento(id: string) {
   return useMutation({
-    mutationFn: async () => {
-      const res = await fetch(
-        `${API_BASE}/documentos/${encodeURIComponent(id)}/download`,
-        {
-          credentials: "include",
-        },
-      );
+    mutationFn: () =>
+      apiFetch<{ url: string; expiresIn: number }>(
+        `/documentos/${encodeURIComponent(id)}/download`,
+      ),
+  });
+}
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`API ${res.status}: ${body || res.statusText}`);
-      }
+export function useUploadDocumentoComProgresso(options?: { onProgress?: (pct: number) => void }) {
+  const queryClient = useQueryClient();
 
-      const blob = await res.blob();
-      const filename =
-        parseContentDispositionFilename(res.headers.get("content-disposition")) ?? `documento-${id}`;
-      const contentType = res.headers.get("content-type") ?? blob.type ?? "application/octet-stream";
+  return useMutation({
+    mutationFn: (payload: DocumentoUploadPayload) =>
+      new Promise<DocumentoUploadResponse>((resolve, reject) => {
+        const form = new FormData();
+        form.set("file", payload.file);
+        if (payload.nome?.trim()) form.set("nome", payload.nome.trim());
+        if (payload.tipo?.trim()) form.set("tipo", payload.tipo.trim());
+        if (payload.confidencialidade?.trim()) form.set("confidencialidade", payload.confidencialidade.trim());
+        if (payload.replace_id?.trim()) form.set("replace_id", payload.replace_id.trim());
+        if (payload.processo_id?.trim()) form.set("processo_id", payload.processo_id.trim());
+        if (payload.cliente_id?.trim()) form.set("cliente_id", payload.cliente_id.trim());
 
-      return { blob, filename, contentType };
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_BASE}/documentos/upload`);
+        xhr.withCredentials = true;
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            options?.onProgress?.(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status < 400) {
+            try {
+              resolve(JSON.parse(xhr.responseText) as DocumentoUploadResponse);
+            } catch {
+              reject(new Error("Resposta inválida do servidor"));
+            }
+          } else {
+            reject(new Error(`API ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Erro de rede ao enviar ficheiro"));
+
+        xhr.send(form);
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["documentos", "list"] });
     },
   });
 }
