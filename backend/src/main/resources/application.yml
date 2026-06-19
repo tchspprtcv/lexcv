@@ -38,6 +38,10 @@ app:
 
 minio:
   endpoint: ${MINIO_ENDPOINT}
+  # Public-facing URL embedded in presigned download links. Defaults to MINIO_ENDPOINT.
+  # Override when the backend reaches MinIO via an internal hostname that is not
+  # reachable from a browser (e.g. Docker service name vs. public domain).
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT}}
   access-key: ${MINIO_ACCESS_KEY}
   secret-key: ${MINIO_SECRET_KEY}
   bucket-name: ${MINIO_BUCKET_NAME}

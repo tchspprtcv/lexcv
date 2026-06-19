@@ -35,7 +35,7 @@ public class MinioConfig {
     @Bean
     public S3Presigner s3Presigner(MinioProperties props) {
         return S3Presigner.builder()
-                .endpointOverride(URI.create(props.getEndpoint()))
+                .endpointOverride(URI.create(props.getEffectivePublicEndpoint()))
                 .region(Region.of("us-east-1"))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(props.getAccessKey(), props.getSecretKey())))
