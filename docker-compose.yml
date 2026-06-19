@@ -16,6 +16,24 @@ services:
     networks:
       - lexcv_net
 
+  minio:
+    image: minio/minio:latest
+    container_name: lexcv_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - lexcv_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexcv_net
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -23,6 +41,8 @@ services:
     container_name: lexcv_backend
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     environment:
       SERVER_PORT: 8080
@@ -36,6 +56,11 @@ services:
       JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       SEED_ENABLED: ${SEED_ENABLED:-false}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-${MINIO_ENDPOINT}}
     volumes:
       - lexcv_uploads:/app/uploads
     networks:
@@ -75,6 +100,7 @@ volumes:
   lexcv_uploads:
   caddy_data:
   caddy_config:
+  lexcv_minio_data:
 
 networks:
   lexcv_net:
