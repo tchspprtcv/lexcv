@@ -8,17 +8,17 @@
 
 ### Backend — MinIO Integration
 
-- [ ] **MIN-01**: O sistema armazena ficheiros de documentos num bucket MinIO via AWS S3 SDK (S3-compatible) em vez do filesystem local
-- [ ] **MIN-02**: O utilizador pode fazer download de um documento através de uma URL pré-assinada temporária gerada pelo backend
-- [ ] **MIN-03**: Ao apagar um documento, o objeto correspondente é removido do bucket MinIO
-- [ ] **MIN-04**: Os objetos são guardados com prefixo tenant-scoped (`{tenant_id}/{documento_id}/{filename}`) para isolamento de dados
+- [x] **MIN-01**: O sistema armazena ficheiros de documentos num bucket MinIO via AWS S3 SDK (S3-compatible) em vez do filesystem local
+- [x] **MIN-02**: O utilizador pode fazer download de um documento através de uma URL pré-assinada temporária gerada pelo backend
+- [x] **MIN-03**: Ao apagar um documento, o objeto correspondente é removido do bucket MinIO
+- [x] **MIN-04**: Os objetos são guardados com prefixo tenant-scoped (`{tenant_id}/{documento_id}/{filename}`) para isolamento de dados
 
 ### Frontend — Componente de Upload
 
-- [ ] **MIN-05**: O utilizador vê uma barra de progresso durante o upload de um ficheiro
-- [ ] **MIN-06**: O botão de download abre uma URL pré-assinada gerada pelo backend (sem proxy do ficheiro pelo Next.js)
-- [ ] **MIN-07**: O utilizador pode arrastar e largar um ficheiro na zona de upload além de clicar para selecionar
-- [ ] **MIN-08**: Imagens e PDFs mostram uma pré-visualização inline antes de confirmar o upload
+- [x] **MIN-05**: O utilizador vê uma barra de progresso durante o upload de um ficheiro
+- [x] **MIN-06**: O botão de download abre uma URL pré-assinada gerada pelo backend (sem proxy do ficheiro pelo Next.js)
+- [x] **MIN-07**: O utilizador pode arrastar e largar um ficheiro na zona de upload além de clicar para selecionar
+- [x] **MIN-08**: Imagens e PDFs mostram uma pré-visualização inline antes de confirmar o upload
 
 ### Deploy — MinIO no Hostinger
 

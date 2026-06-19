@@ -77,7 +77,7 @@ Plans:
 **Milestone Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
 
 - [x] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket (completed 2026-06-19)
-- [ ] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada
+- [x] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada (completed 2026-06-19)
 - [ ] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy
 
 ## Phase Details
@@ -173,5 +173,5 @@ Plans:
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
 | 50. Backend MinIO Integration | v2.2 | 2/2 | Complete   | 2026-06-19 |
-| 51. Frontend Upload Component | v2.2 | 0/TBD | Not started | - |
+| 51. Frontend Upload Component | v2.2 | 1/1 | Complete   | 2026-06-19 |
 | 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |
