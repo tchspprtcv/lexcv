@@ -101,6 +101,7 @@ export default function DocumentoUploadPage() {
       toast.success("Documento enviado com sucesso.");
       router.push(`/documentos/${encodeURIComponent(res.id)}`);
     } catch (e) {
+      setProgresso(null);
       const msg = e instanceof Error ? e.message : "Erro ao fazer upload";
       setServerError(msg);
       toast.error(msg);
