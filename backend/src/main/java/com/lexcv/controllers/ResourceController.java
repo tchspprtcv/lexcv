@@ -1732,9 +1732,13 @@ public class ResourceController {
             return ResponseEntity.badRequest().body(Map.of("message", "Ficheiro em falta"));
         }
 
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Nome do ficheiro em falta"));
+        }
+
         try {
             String fileId = UUID.randomUUID().toString();
-            String originalName = file.getOriginalFilename();
 
             Documento documento;
             if (replaceId != null) {
