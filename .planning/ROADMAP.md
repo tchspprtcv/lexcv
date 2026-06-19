@@ -131,7 +131,10 @@ Plans:
   2. O utilizador clica em "Descarregar" e recebe uma URL pré-assinada temporária que permite download direto do objeto no MinIO sem autenticação adicional
   3. Ao apagar um documento, o objeto correspondente desaparece do bucket MinIO (verificável via consola MinIO ou API S3)
   4. Documentos de um tenant nunca são acessíveis através de prefixos de outro tenant — o isolamento é garantido pelo prefixo de path, não por bucket separado
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 50-01-PLAN.md — Infrastructure: pom.xml BOM, MinioProperties, MinioConfig (S3Client + S3Presigner), StorageService, StorageUnavailableException, application.yml, .env.example
+- [ ] 50-02-PLAN.md — Endpoint migration: uploadDocumento, downloadDocumento, deleteDocumento refactored to use StorageService; binary stream replaced by presigned URL JSON response
 
 ### Phase 51: Frontend Upload Component
 **Goal**: O componente de upload de documentos oferece feedback visual durante a transferência, suporta drag-and-drop, mostra preview inline de imagens e PDFs, e inicia downloads via URL pré-assinada
@@ -169,6 +172,6 @@ Plans:
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
-| 50. Backend MinIO Integration | v2.2 | 0/TBD | Not started | - |
+| 50. Backend MinIO Integration | v2.2 | 0/2 | Not started | - |
 | 51. Frontend Upload Component | v2.2 | 0/TBD | Not started | - |
 | 52. Deploy MinIO no Hostinger | v2.2 | 0/TBD | Not started | - |
