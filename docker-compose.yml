@@ -16,7 +16,7 @@ services:
     networks:
       - lexcv_net
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
@@ -86,7 +86,7 @@ services:
     networks:
       - lexcv_net
     ports:
-      - "3000:3000"
+      - "3003:3000"
 
   caddy:
     image: caddy:2-alpine
