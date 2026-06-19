@@ -45,14 +45,19 @@ export default function DocumentoUploadPage() {
     defaultValues: { nome: "", tipo: "", processo_id: "", cliente_id: "", confidencialidade: "PUBLICO", replace_id: "" },
   });
 
+  const previewUrlRef = React.useRef<string | undefined>(undefined);
+
   React.useEffect(() => {
     return () => {
-      if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     };
-  }, [preVisualizacao]);
+  }, []); // empty deps — runs cleanup only on unmount
 
   const handleFicheiroSelecionado = (file: File) => {
-    if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = undefined;
+    }
     form.setValue("file", createFileList(file));
 
     let tipo: "imagem" | "pdf" | "outro";
@@ -65,6 +70,7 @@ export default function DocumentoUploadPage() {
     }
 
     const url = tipo !== "outro" ? URL.createObjectURL(file) : undefined;
+    previewUrlRef.current = url;
     setPreVisualizacao({ tipo, url, nome: file.name, tamanho: file.size });
   };
 
@@ -88,7 +94,10 @@ export default function DocumentoUploadPage() {
         replace_id: values.replace_id,
       });
       setProgresso(null);
-      if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = undefined;
+      }
       toast.success("Documento enviado com sucesso.");
       router.push(`/documentos/${encodeURIComponent(res.id)}`);
     } catch (e) {
