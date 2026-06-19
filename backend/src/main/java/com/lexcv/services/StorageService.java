@@ -109,9 +109,13 @@ public class StorageService implements ApplicationRunner {
             log.info("MinIO bucket '{}' verified.", props.getBucketName());
         } catch (NoSuchBucketException e) {
             log.info("MinIO bucket '{}' not found — creating.", props.getBucketName());
-            s3Client.createBucket(CreateBucketRequest.builder()
-                    .bucket(props.getBucketName())
-                    .build());
+            try {
+                s3Client.createBucket(CreateBucketRequest.builder()
+                        .bucket(props.getBucketName())
+                        .build());
+            } catch (SdkException ce) {
+                log.warn("MinIO bucket creation failed: {}", ce.getMessage());
+            }
         } catch (SdkException e) {
             log.warn("MinIO unavailable at startup: {}", e.getMessage());
         }
