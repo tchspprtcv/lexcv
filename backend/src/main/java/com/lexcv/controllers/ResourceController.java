@@ -1746,10 +1746,13 @@ public class ResourceController {
                 if (documento == null || !documento.getTenantId().equals(getTenantId())) {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Documento a substituir não encontrado"));
                 }
-                storageService.delete(documento.getCaminhoArquivo());
+                // Upload the new object BEFORE deleting the old one.
+                // If the upload fails, the old object remains intact (WR-01).
+                String oldKey = documento.getCaminhoArquivo();
                 InputStream inputStream = file.getInputStream();
                 String objectKey = storageService.upload(getTenantId(), documento.getId(),
                         originalName, inputStream, file.getContentType(), file.getSize());
+                storageService.delete(oldKey);
 
                 documento.setNome(originalName);
                 if (tipo != null) documento.setTipo(tipo);
