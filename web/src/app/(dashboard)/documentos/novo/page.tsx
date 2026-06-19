@@ -11,22 +11,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
-import { useUploadDocumento } from "@/hooks/use-documentos";
+import { FileDropZone } from "@/components/shared/file-drop-zone";
+import { useUploadDocumentoComProgresso } from "@/hooks/use-documentos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { documentoUploadFormSchema, type DocumentoUploadFormValues } from "@/schemas/documentos";
 
+function createFileList(file: File): FileList {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
+}
+
+type PreVisualizacao = {
+  tipo: "imagem" | "pdf" | "outro";
+  url?: string;
+  nome: string;
+  tamanho: number;
+};
+
 export default function DocumentoUploadPage() {
   const router = useRouter();
-  const upload = useUploadDocumento();
   const permissions = usePermissions();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [progresso, setProgresso] = React.useState<number | null>(null);
+  const [preVisualizacao, setPreVisualizacao] = React.useState<PreVisualizacao | null>(null);
   const canCreateDocumentos = permissions.can.create("documentos");
+
+  const upload = useUploadDocumentoComProgresso({ onProgress: (pct) => setProgresso(pct) });
 
   const form = useForm<DocumentoUploadFormValues>({
     resolver: zodResolver(documentoUploadFormSchema),
     defaultValues: { nome: "", tipo: "", processo_id: "", cliente_id: "", confidencialidade: "PUBLICO", replace_id: "" },
   });
+
+  React.useEffect(() => {
+    return () => {
+      if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
+    };
+  }, [preVisualizacao]);
+
+  const handleFicheiroSelecionado = (file: File) => {
+    if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
+    form.setValue("file", createFileList(file));
+
+    let tipo: "imagem" | "pdf" | "outro";
+    if (file.type.startsWith("image/")) {
+      tipo = "imagem";
+    } else if (file.type === "application/pdf") {
+      tipo = "pdf";
+    } else {
+      tipo = "outro";
+    }
+
+    const url = tipo !== "outro" ? URL.createObjectURL(file) : undefined;
+    setPreVisualizacao({ tipo, url, nome: file.name, tamanho: file.size });
+  };
 
   const onSubmit = async (values: DocumentoUploadFormValues) => {
     setServerError(null);
@@ -47,6 +87,8 @@ export default function DocumentoUploadPage() {
         confidencialidade: values.confidencialidade,
         replace_id: values.replace_id,
       });
+      setProgresso(null);
+      if (preVisualizacao?.url) URL.revokeObjectURL(preVisualizacao.url);
       toast.success("Documento enviado com sucesso.");
       router.push(`/documentos/${encodeURIComponent(res.id)}`);
     } catch (e) {
@@ -87,8 +129,48 @@ export default function DocumentoUploadPage() {
         <CardContent>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
-              <Label htmlFor="file">Ficheiro</Label>
-              <Input id="file" type="file" {...form.register("file")} />
+              <Label>Ficheiro</Label>
+              <FileDropZone
+                onFileChange={handleFicheiroSelecionado}
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+                disabled={form.formState.isSubmitting || upload.isPending}
+              >
+                Arraste um ficheiro para aqui ou clique para selecionar
+              </FileDropZone>
+
+              {preVisualizacao?.tipo === "imagem" && preVisualizacao.url ? (
+                <img
+                  src={preVisualizacao.url}
+                  alt="Pré-visualização"
+                  className="mt-2 max-h-48 rounded border object-contain"
+                />
+              ) : preVisualizacao?.tipo === "pdf" && preVisualizacao.url ? (
+                <iframe
+                  src={preVisualizacao.url}
+                  title="Pré-visualização PDF"
+                  className="mt-2 h-72 w-full rounded border"
+                />
+              ) : preVisualizacao?.tipo === "outro" ? (
+                <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+                  {preVisualizacao.nome} ({(preVisualizacao.tamanho / 1024).toFixed(1)} KB)
+                </p>
+              ) : null}
+
+              {progresso !== null ? (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-neutral-500">
+                    <span>A enviar...</span>
+                    <span>{progresso}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
+                    <div
+                      className="h-2 rounded-full bg-blue-600 transition-all"
+                      style={{ width: `${progresso}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               {form.formState.errors.file ? (
                 <p className="text-sm text-red-600">{form.formState.errors.file.message}</p>
               ) : null}

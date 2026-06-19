@@ -45,14 +45,7 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
     setServerError(null);
     try {
       const res = await download.mutateAsync();
-      const url = URL.createObjectURL(res.blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = res.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      window.open(res.url, "_blank", "noopener,noreferrer");
       toast.success("Download iniciado.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao fazer download";
