@@ -9,6 +9,7 @@ import com.lexcv.dtos.UserResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.User;
+import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
     private final JwtTokenProvider tokenProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -158,11 +160,15 @@ public class AuthController {
                 .ativo(true)
                 .build();
         
-        // Lookup more details if needed
         userRepository.findById(principal.getUserId()).ifPresent(u -> {
             response.setNome(u.getNome());
             response.setTelefone(u.getTelefone());
             response.setAvatar_url(u.getAvatarUrl());
+        });
+
+        tenantRepository.findById(principal.getTenantId()).ifPresent(t -> {
+            response.setTenant_nome(t.getNome());
+            response.setTenant_logo_data_url(t.getLogoDataUrl());
         });
 
         return ResponseEntity.ok(response);

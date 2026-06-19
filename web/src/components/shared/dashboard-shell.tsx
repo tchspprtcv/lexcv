@@ -5,6 +5,7 @@ import { NotificationBell } from "@/components/shared/notification-bell";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import {
+  Building2,
   Calendar,
   FileText,
   Home,
@@ -158,8 +159,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           
           <div className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hidden md:flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-            Tribunal da Comarca da Praia
+            {me.data?.tenant_logo_data_url ? (
+              <img src={me.data.tenant_logo_data_url} alt="" className="h-5 w-5 object-contain rounded-sm" />
+            ) : (
+              <Building2 className="h-4 w-4 text-slate-400" />
+            )}
+            {me.data?.tenant_nome ?? "LexCV"}
           </div>
           
           <div className="ml-auto flex items-center gap-3">

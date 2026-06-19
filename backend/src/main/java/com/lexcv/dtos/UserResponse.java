@@ -21,4 +21,6 @@ public class UserResponse {
     private String avatar_url;
     private String telefone;
     private Boolean ativo;
+    private String tenant_nome;
+    private String tenant_logo_data_url;
 }

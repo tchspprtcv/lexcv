@@ -24,4 +24,6 @@ export interface MeResponse {
   telefone?: string;
   ativo?: boolean;
   permissions: string[];
+  tenant_nome?: string;
+  tenant_logo_data_url?: string;
 }
