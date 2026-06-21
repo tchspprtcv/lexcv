@@ -383,38 +383,89 @@ function ClientesPageContent({
           ) : !clientes.data?.length ? (
             <div className="p-6 text-sm text-slate-500">Nenhum cliente encontrado.</div>
           ) : (
-            <div className="overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
-                    <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Nome / Razão Social</TableHead>
-                    <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Tipo</TableHead>
-                    <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">NIF</TableHead>
-                    <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Contacto</TableHead>
-                    <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clientes.data.map((c) => (
-                    <ClienteRow key={c.id} cliente={c} canEditClientes={canEditClientes} />
-                  ))}
-                </TableBody>
-              </Table>
+            <>
+              {/* Mobile: cards empilhados */}
+              <div className="md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+                {clientes.data.map((c) => {
+                  const initials = c.nome.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();
+                  return (
+                    <div key={c.id} className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 flex-shrink-0 rounded-none bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold">
+                          {initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/clientes/${encodeURIComponent(c.id)}`} className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm">
+                            {c.nome}
+                          </Link>
+                          {c.nif && (
+                            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">NIF: {c.nif}</div>
+                          )}
+                        </div>
+                        {c.ativo !== undefined && (
+                          <Badge variant={c.ativo ? "green" : "gray"} className="rounded-none font-bold text-[10px] flex-shrink-0">
+                            {c.ativo ? "Ativo" : "Inativo"}
+                          </Badge>
+                        )}
+                      </div>
+                      {c.telefone && (
+                        <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 pl-[52px]">Tel: {c.telefone}</div>
+                      )}
+                      <div className="mt-3 pl-[52px] flex items-center gap-1">
+                        <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                          <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        {canEditClientes && (
+                          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                            <Link href={`/clientes/${encodeURIComponent(c.id)}/editar`}>
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                  A mostrar 1-{clientes.data.length} de {totalClientes.toLocaleString("pt-CV")} clientes
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">‹</button>
-                  <button className="h-9 w-9 rounded-none bg-blue-600 text-white font-bold">1</button>
-                  <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">2</button>
-                  <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">3</button>
-                  <div className="px-2 text-sm text-slate-500">…</div>
-                  <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">›</button>
+              {/* Desktop: tabela */}
+              <div className="hidden md:block">
+                <div className="overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
+                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Nome / Razão Social</TableHead>
+                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Tipo</TableHead>
+                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">NIF</TableHead>
+                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Contacto</TableHead>
+                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clientes.data.map((c) => (
+                        <ClienteRow key={c.id} cliente={c} canEditClientes={canEditClientes} />
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
+                    <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                      A mostrar 1-{clientes.data.length} de {totalClientes.toLocaleString("pt-CV")} clientes
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">‹</button>
+                      <button className="h-9 w-9 rounded-none bg-blue-600 text-white font-bold">1</button>
+                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">2</button>
+                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">3</button>
+                      <div className="px-2 text-sm text-slate-500">…</div>
+                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">›</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
