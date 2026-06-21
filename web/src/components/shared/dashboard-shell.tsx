@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { useMe } from "@/hooks/use-me";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BottomNav } from "@/components/shared/bottom-nav";
 
 type NavItem = {
   href: string;
@@ -298,7 +299,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-8">{children}</div>
+        <div className="flex-1 overflow-auto p-8 pb-24 md:pb-8">{children}</div>
+        <BottomNav permissions={me.data?.permissions} />
       </main>
     </div>
   );
