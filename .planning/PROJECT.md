@@ -27,19 +27,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Melhoria no modulo de gestao e acompanhamento de processos (intake, conflict check, workflow, timeline, auditoria, governanca documental, dashboards) — v1.7
 - ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8 (implantado via Hostinger VPS Connector)
 - ✓ Melhoria Módulo Agendamento — alinhamento camelCase, validações robustas e visão unificada no calendário com filtros por processo/categoria/status — v1.9
+- ✓ Responsividade App — shell mobile com drawer/hamburger/bottom-nav, mobile cards em todas as listas, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável — v2.3
 
 ### Active
 
-## Current Milestone: v2.3 Responsividade App
-
-**Goal:** Tornar o LexCV totalmente utilizável em dispositivos móveis e tablets, adaptando layout, navegação e todos os módulos ao tamanho de ecrã.
-
-**Target features:**
-- Layout responsivo — sidebar colapsável em mobile (drawer/overlay), top bar compacta, bottom navigation bar
-- Conteúdo adaptado — cards em mobile para listas simples, scroll horizontal em tabelas complexas
-- Formulários e modais — coluna única em mobile, bottom-sheet/full-screen para dialogs, touch targets 48px
-- Dashboard — KPI grid adaptável (4→2→1 colunas)
-- Agenda — vista diária por defeito em mobile, semanal/mensal em desktop
+(Empty — planning next milestone)
 
 ### Out of Scope
 
@@ -81,18 +73,22 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | docker-compose.prod.yml como override | Separação dev/prod sem duplicar o compose base | ✓ Good |
 | Validação de intervalo de datas (dataFim >= dataInicio) no cliente e servidor | Garantir integridade dos dados e evitar intervalos negativos | ✓ Good |
 | Redirecionamento de prazos no calendário para o detalhe do processo | Prazos não possuem visualização individual de detalhes; ligá-los ao processo associado | ✓ Good |
+| `md:` (768px) como breakpoint mobile/desktop, `max-sm:` para bottom-sheet | Consistência com shadcn/ui defaults e Tailwind breakpoints | ✓ Good |
+| sheet.tsx criado manualmente (sem CLI interativo) | CLI `npx shadcn` exige setup interativo; seguiu padrão de dialog.tsx com @radix-ui/react-dialog | ✓ Good |
+| Dual-view pattern CSS puro (`hidden md:block` / `md:hidden`) | Sem JS branching, sem rerenders — simples e performante | ✓ Good |
+| React fragments obrigatórios em siblings dentro de ternário JSX | Bug descoberto em Phase 54 — sibling divs sem wrapper causam erro de parse | ✓ Good |
 
 ## Current State
 
-**Shipped:** v2.1 (2026-06-18) — Agenda Avançada. Notificações in-app, recorrência de eventos, drag & drop no calendário.
+**Shipped:** v2.3 (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
 
-**v2.0** (2026-06-18) — Módulo Financeiro. Migração camelCase completa, 4 novos endpoints backend (GET/PUT/DELETE honorários, DELETE pagamentos), status badge por honorário, 4 KPI cards, filtros client-side (processo/status/datas), edit dialog, delete com confirmação, e exportação CSV. Tudo verificado 17/17 requirements.
+**v2.2** (2026-06-19) — Document Storage MinIO. Backend migrado de filesystem para MinIO (AWS S3 SDK), upload com barra de progresso e drag-and-drop, downloads via URL pré-assinada, serviço MinIO no Docker Compose prod com Caddy.
 
-**v1.9** (2026-06-17) — Melhoria Módulo Agendamento. Data layer agenda camelCase, validações robustas, visão unificada de prazos e eventos com filtros flexíveis. CI/CD no Hostinger VPS.
+**v2.1** (2026-06-18) — Agenda Avançada. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY), drag & drop no calendário com atualização otimista.
 
-**Shipped:** v2.1 (2026-06-18) — Agenda Avançada. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY), drag & drop no calendário com atualização otimista.
+**v2.0** (2026-06-18) — Módulo Financeiro. Migração camelCase completa, CRUD honorários/pagamentos, status badges, 4 KPI cards, filtros, CSV export.
 
-**Current Milestone:** v2.2 — Document Storage MinIO (iniciado 2026-06-19)
+**Current focus:** Planning next milestone
 
 ## Evolution
 
@@ -112,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — Milestone v2.3 started (Responsividade App)*
+*Last updated: 2026-06-21 — Milestone v2.3 complete (Responsividade App shipped)*

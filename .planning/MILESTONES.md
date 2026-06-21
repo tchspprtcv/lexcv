@@ -1,5 +1,19 @@
 # Milestones
 
+## v2.3 Responsividade App (Shipped: 2026-06-21)
+
+**Phases completed:** 4 phases (53–56), 8 plans
+
+**Key accomplishments:**
+
+- Shell responsivo: sidebar drawer overlay com Sheet + hamburger `md:hidden`, auto-close via `useEffect([pathname])`, BottomNav `fixed bottom-0 md:hidden` com filtragem por permissões
+- Dual-view lists: mobile cards (`md:hidden`) + desktop tables (`hidden md:block`) em Clientes, Agenda, Documentos e Financeiro — CSS puro, sem rerenders
+- Horizontal scroll em tabelas complexas: `overflow-x-auto` + `min-w-[400/480px]` em Partes e Fases do processo
+- Single-column forms: 24x `grid-cols-1 md:grid-cols-2` em 12 ficheiros; bottom-sheet dialogs `max-sm:fixed max-sm:bottom-0`; touch targets 48px (`max-sm:h-12` + `h-12 w-12` em mobile card buttons)
+- Adaptive dashboard KPI grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` + bloco "Hoje" `md:hidden` com eventos do dia na Agenda
+
+---
+
 ## v1.9 v1.9 (Shipped: 2026-06-17)
 
 **Phases completed:** 3 phases, 3 plans, 10 tasks

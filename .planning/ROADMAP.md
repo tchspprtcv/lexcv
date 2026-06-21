@@ -5,7 +5,7 @@
 - ✅ **v2.0 Módulo Financeiro** — Phases 43–46 (complete 2026-06-18)
 - ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
 - ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
-- 🔄 **v2.3 Responsividade App** — Phases 53–56 (active)
+- ✅ **v2.3 Responsividade App** — Phases 53–56 (complete 2026-06-21)
 
 ## Phases
 
@@ -81,14 +81,17 @@ Plans:
 - [x] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada (completed 2026-06-19)
 - [x] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy (completed 2026-06-19)
 
-### v2.3 Responsividade App
+<details>
+<summary>✅ v2.3 Responsividade App (Phases 53–56) — SHIPPED 2026-06-21</summary>
 
-**Milestone Goal:** Tornar o LexCV totalmente utilizável em dispositivos móveis e tablets, adaptando layout, navegação e todos os módulos ao tamanho de ecrã.
+- [x] **Phase 53: Shell Responsivo** — Hamburger drawer, top bar compacta e bottom navigation em mobile (completed 2026-06-21)
+- [x] **Phase 54: Listas e Tabelas** — Cards empilhados em listas simples e scroll horizontal em tabelas complexas (completed 2026-06-21)
+- [x] **Phase 55: Formulários e Modais** — Coluna única, bottom-sheet/full-screen e touch targets 48px em mobile (completed 2026-06-21)
+- [x] **Phase 56: Dashboard e Calendário** — KPI grid adaptável e vista diária por defeito no calendário em mobile (completed 2026-06-21)
 
-- [x] **Phase 53: Shell Responsivo** - Hamburger drawer, top bar compacta e bottom navigation em mobile (completed 2026-06-21)
-- [ ] **Phase 54: Listas e Tabelas** - Cards empilhados em listas simples e scroll horizontal em tabelas complexas
-- [ ] **Phase 55: Formulários e Modais** - Coluna única, bottom-sheet/full-screen e touch targets 48px em mobile
-- [x] **Phase 56: Dashboard e Calendário** - KPI grid adaptável e vista diária por defeito no calendário em mobile (completed 2026-06-21)
+See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
+
+</details>
 
 ## Phase Details
 
@@ -234,6 +237,6 @@ Plans:
 | 51. Frontend Upload Component | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 53. Shell Responsivo | v2.3 | 2/2 | Complete   | 2026-06-21 |
-| 54. Listas e Tabelas | v2.3 | 2/3 | In Progress|  |
-| 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
+| 54. Listas e Tabelas | v2.3 | 3/3 | Complete | 2026-06-21 |
+| 55. Formulários e Modais | v2.3 | 2/2 | Complete | 2026-06-21 |
 | 56. Dashboard e Calendário | v2.3 | 1/1 | Complete   | 2026-06-21 |
