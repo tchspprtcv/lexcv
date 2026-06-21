@@ -178,7 +178,10 @@ Plans:
   2. Ao navegar para qualquer página via link na sidebar em mobile, o drawer fecha automaticamente sem necessitar de clique adicional
   3. A top bar em mobile mostra apenas o ícone hamburger, o nome/logotipo da instituição e os ícones de notificações e perfil — sem outros elementos
   4. Uma bottom navigation bar fixa exibe os 5 módulos principais (Dashboard, Clientes, Processos, Agenda, Financeiro/Documentos) e é visível em todas as páginas em mobile
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 53-01-PLAN.md — shadcn Sheet install + DashboardShell responsiva (hamburger, drawer, top bar mobile)
+- [ ] 53-02-PLAN.md — BottomNav component + padding do conteúdo
 **UI hint**: yes
 
 ### Phase 54: Listas e Tabelas
