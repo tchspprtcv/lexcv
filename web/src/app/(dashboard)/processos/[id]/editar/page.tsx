@@ -158,7 +158,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                 ) : null}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="numero">Número</Label>
                   <Input id="numero" {...form.register("numero")} placeholder="Ex.: 123/2026" />
@@ -176,7 +176,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="tipo_processo">Tipo do processo</Label>
                   <Input id="tipo_processo" {...form.register("tipo_processo")} placeholder="Ex.: Ação cível" />
@@ -202,7 +202,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                 ) : null}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="data_inicio">Data de início</Label>
                   <Input id="data_inicio" type="date" {...form.register("data_inicio")} />
@@ -220,7 +220,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 pt-8">
                     <input

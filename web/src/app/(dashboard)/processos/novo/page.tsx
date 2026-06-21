@@ -275,7 +275,7 @@ function ProcessoWizardContent() {
           <CardContent>
             <form className="space-y-4" onSubmit={intakeForm.handleSubmit(onStep1Submit)}>
               {/* Row 1: Cliente + Tipo de Processo */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="cliente_id">Cliente</Label>
                   <select
@@ -324,7 +324,7 @@ function ProcessoWizardContent() {
               </div>
 
               {/* Row 2: Número + Área Jurídica */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="numero">Número</Label>
                   <Input
@@ -367,7 +367,7 @@ function ProcessoWizardContent() {
               </div>
 
               {/* Row 4: Data Início + Data Fim */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="data_inicio">Data de Início</Label>
                   <Input

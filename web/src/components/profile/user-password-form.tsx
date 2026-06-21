@@ -111,7 +111,7 @@ export function UserPasswordForm() {
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="newPassword">Nova Palavra-passe</Label>
               <Input

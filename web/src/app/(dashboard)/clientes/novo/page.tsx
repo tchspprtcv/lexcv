@@ -114,7 +114,7 @@ export default function ClienteCreatePage() {
                 ) : null}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="nif">NIF (Legado)</Label>
                   <Input id="nif" className="rounded-none" {...form.register("nif")} />
@@ -132,7 +132,7 @@ export default function ClienteCreatePage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" className="rounded-none" {...form.register("email")} />
@@ -149,7 +149,7 @@ export default function ClienteCreatePage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="localidade">Localidade</Label>
                   <Input id="localidade" className="rounded-none" {...form.register("localidade")} />
@@ -172,7 +172,7 @@ export default function ClienteCreatePage() {
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">Informações Adicionais</h3>
               
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                 {/* Coluna 1: Tipo de Documento e Número de Documento */}
                 <div className="space-y-4">
                   <div className="space-y-2">

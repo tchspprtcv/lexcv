@@ -342,7 +342,7 @@ function ClientesPageContent({
                     />
                   </div>
                 </div>
-                <div className="lg:col-span-3 grid gap-3 sm:grid-cols-2">
+                <div className="lg:col-span-3 grid gap-3 grid-cols-1 md:grid-cols-2">
                   <div>
                     <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">De</div>
                     <div className="mt-2">

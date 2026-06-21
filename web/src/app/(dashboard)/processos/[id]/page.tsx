@@ -1215,7 +1215,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                         ) : null}
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="parte_tipo">Tipo</Label>
                           <Input id="parte_tipo" {...parteForm.register("tipo")} placeholder="Ex.: Autor / Réu" />

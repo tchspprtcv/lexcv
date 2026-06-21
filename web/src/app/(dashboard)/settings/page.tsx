@@ -481,7 +481,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="userName">Nome Completo</Label>
                   <Input
@@ -589,7 +589,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                   Adicione permissões específicas de override a este utilizador individualmente, além das que ele já herda de seus perfis (Roles) do RBAC.
                 </p>
 
-                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 max-h-56 overflow-y-auto p-3 border border-slate-200 dark:border-slate-800 rounded-md bg-slate-50/30 dark:bg-slate-950/10">
+                <div className="grid gap-3 grid-cols-1 grid-cols-1 md:grid-cols-2 max-h-56 overflow-y-auto p-3 border border-slate-200 dark:border-slate-800 rounded-md bg-slate-50/30 dark:bg-slate-950/10">
                   {systemPermissions.map((perm) => {
                     const isChecked = selectedPermissions.includes(perm.key);
                     return (

@@ -132,7 +132,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
             <Card className="border-slate-200 dark:border-slate-800">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
