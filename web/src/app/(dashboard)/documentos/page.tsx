@@ -134,6 +134,7 @@ function DocumentosContent({
               Nenhum documento encontrado.
             </div>
           ) : (
+            <>
             <div className="hidden md:block">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -183,6 +184,7 @@ function DocumentosContent({
                 />
               ))}
             </div>
+            </>
           )}
         </CardContent>
       </Card>

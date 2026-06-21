@@ -295,6 +295,7 @@ function FinanceiroContent({
               Nenhum honorário corresponde aos filtros aplicados.
             </div>
           ) : (
+            <>
             <div className="hidden md:block">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -404,6 +405,7 @@ function FinanceiroContent({
                 );
               })}
             </div>
+            </>
           )}
         </CardContent>
       </Card>
