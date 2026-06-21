@@ -137,7 +137,7 @@ export function UserProfileForm() {
               <Input
                 id="nome"
                 {...form.register("nome")}
-                className="bg-slate-50 dark:bg-slate-950"
+                className="bg-slate-50 dark:bg-slate-950 max-sm:h-12 max-sm:text-base"
               />
               {form.formState.errors.nome && (
                 <p className="text-xs text-red-500">{form.formState.errors.nome.message}</p>
@@ -150,7 +150,7 @@ export function UserProfileForm() {
                 id="email"
                 type="email"
                 {...form.register("email")}
-                className="bg-slate-50 dark:bg-slate-950"
+                className="bg-slate-50 dark:bg-slate-950 max-sm:h-12 max-sm:text-base"
               />
               {form.formState.errors.email && (
                 <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>
@@ -163,7 +163,7 @@ export function UserProfileForm() {
                 id="telefone"
                 {...form.register("telefone")}
                 placeholder="+238 000 0000"
-                className="bg-slate-50 dark:bg-slate-950"
+                className="bg-slate-50 dark:bg-slate-950 max-sm:h-12 max-sm:text-base"
               />
             </div>
 
@@ -188,10 +188,10 @@ export function UserProfileForm() {
           >
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={!form.formState.isDirty || mutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm max-sm:min-h-[48px]"
           >
             {mutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

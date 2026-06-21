@@ -329,7 +329,7 @@ function ProcessoWizardContent() {
                   <Label htmlFor="numero">Número</Label>
                   <Input
                     id="numero"
-                    className="rounded-none focus-visible:ring-blue-500"
+                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     placeholder="Ex.: 123/2026"
                     {...intakeForm.register("numero")}
                   />
@@ -342,7 +342,7 @@ function ProcessoWizardContent() {
                   <Label htmlFor="area_juridica">Área Jurídica</Label>
                   <Input
                     id="area_juridica"
-                    className="rounded-none focus-visible:ring-blue-500"
+                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     placeholder="Ex.: Cível"
                     {...intakeForm.register("area_juridica")}
                   />
@@ -357,7 +357,7 @@ function ProcessoWizardContent() {
                 <Label htmlFor="tribunal">Tribunal</Label>
                 <Input
                   id="tribunal"
-                  className="rounded-none focus-visible:ring-blue-500"
+                  className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                   placeholder="Ex.: Tribunal da Comarca da Praia"
                   {...intakeForm.register("tribunal")}
                 />
@@ -373,7 +373,7 @@ function ProcessoWizardContent() {
                   <Input
                     id="data_inicio"
                     type="date"
-                    className="rounded-none focus-visible:ring-blue-500"
+                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     {...intakeForm.register("data_inicio")}
                   />
                   {intakeForm.formState.errors.data_inicio ? (
@@ -386,7 +386,7 @@ function ProcessoWizardContent() {
                   <Input
                     id="data_fim"
                     type="date"
-                    className="rounded-none focus-visible:ring-blue-500"
+                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     {...intakeForm.register("data_fim")}
                   />
                   {intakeForm.formState.errors.data_fim ? (
@@ -414,7 +414,7 @@ function ProcessoWizardContent() {
               <div className="flex gap-2">
                 <Button
                   type="submit"
-                  className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
+                  className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
                   disabled={intakeForm.formState.isSubmitting || createIntake.isPending || permissions.isLoading || !canCreateProcessos}
                 >
                   {intakeForm.formState.isSubmitting || createIntake.isPending ? "A guardar..." : "Continuar para Conflict Check"}
@@ -549,7 +549,7 @@ function ProcessoWizardContent() {
                       <Label htmlFor="referencia_evidencia">Referência a evidência</Label>
                       <Input
                         id="referencia_evidencia"
-                        className="rounded-none focus-visible:ring-blue-500"
+                        className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                         placeholder="Ref. opcional"
                         {...decisaoForm.register("referenciaEvidencia")}
                       />

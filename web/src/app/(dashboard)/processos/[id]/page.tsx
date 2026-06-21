@@ -670,7 +670,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
           {/* ── Justification Dialog (critical transitions) ── */}
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setTransicaoError(null); }}>
-            <DialogContent className="rounded-none shadow-2xl">
+            <DialogContent className="rounded-none shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
               <DialogHeader>
                 <DialogTitle className="font-bold">{activeTransicao?.label} Processo</DialogTitle>
                 <DialogDescription>
@@ -817,7 +817,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
           {/* ── Novo Prazo Dialog ── */}
           <Dialog open={prazoDialogOpen} onOpenChange={setPrazoDialogOpen}>
-            <DialogContent className="rounded-none shadow-2xl">
+            <DialogContent className="rounded-none shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
               <DialogHeader>
                 <DialogTitle className="font-bold">Novo Prazo</DialogTitle>
               </DialogHeader>

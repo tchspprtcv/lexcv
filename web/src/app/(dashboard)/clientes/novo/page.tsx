@@ -108,7 +108,7 @@ export default function ClienteCreatePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>
-                <Input id="nome" className="rounded-none" {...form.register("nome")} />
+                <Input id="nome" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
                 {form.formState.errors.nome ? (
                   <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
                 ) : null}
@@ -117,7 +117,7 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="nif">NIF (Legado)</Label>
-                  <Input id="nif" className="rounded-none" {...form.register("nif")} />
+                  <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
                   {form.formState.errors.nif ? (
                     <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
                   ) : null}
@@ -125,7 +125,7 @@ export default function ClienteCreatePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="tipo">Tipo</Label>
-                  <Input id="tipo" className="rounded-none" {...form.register("tipo")} placeholder="Ex.: Particular / Empresa" />
+                  <Input id="tipo" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("tipo")} placeholder="Ex.: Particular / Empresa" />
                   {form.formState.errors.tipo ? (
                     <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
                   ) : null}
@@ -135,14 +135,14 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" className="rounded-none" {...form.register("email")} />
+                  <Input id="email" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("email")} />
                   {form.formState.errors.email ? (
                     <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" className="rounded-none" {...form.register("telefone")} />
+                  <Input id="telefone" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
                   {form.formState.errors.telefone ? (
                     <p className="text-sm text-red-600">{form.formState.errors.telefone.message}</p>
                   ) : null}
@@ -152,14 +152,14 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="localidade">Localidade</Label>
-                  <Input id="localidade" className="rounded-none" {...form.register("localidade")} />
+                  <Input id="localidade" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
                   {form.formState.errors.localidade ? (
                     <p className="text-sm text-red-600">{form.formState.errors.localidade.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="morada">Morada</Label>
-                  <Input id="morada" className="rounded-none" {...form.register("morada")} />
+                  <Input id="morada" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
                   {form.formState.errors.morada ? (
                     <p className="text-sm text-red-600">{form.formState.errors.morada.message}</p>
                   ) : null}
@@ -196,7 +196,7 @@ export default function ClienteCreatePage() {
                     <Label htmlFor="documento_numero">Número do Documento</Label>
                     <Input
                       id="documento_numero"
-                      className="rounded-none"
+                      className="rounded-none max-sm:h-12 max-sm:text-base"
                       placeholder="Introduza o número do documento"
                       {...form.register("documento_numero")}
                     />
@@ -249,6 +249,7 @@ export default function ClienteCreatePage() {
             <div className="flex gap-2">
               <Button
                 type="submit"
+                className="max-sm:min-h-[48px]"
                 disabled={form.formState.isSubmitting || create.isPending || permissions.isLoading || !canCreateClientes}
               >
                 {form.formState.isSubmitting || create.isPending ? "A guardar..." : "Criar"}

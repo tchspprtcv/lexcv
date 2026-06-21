@@ -268,7 +268,7 @@ function HonorarioDetailContent({
               <DialogTrigger asChild>
                 <Button variant="outline">Editar</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
                 <DialogHeader>
                   <DialogTitle>Editar honorário</DialogTitle>
                 </DialogHeader>

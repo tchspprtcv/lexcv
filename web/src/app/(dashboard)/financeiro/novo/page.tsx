@@ -141,6 +141,7 @@ function HonorarioCreateContent() {
                   inputMode="decimal"
                   step="0.01"
                   min="0"
+                  className="max-sm:h-12 max-sm:text-base"
                   {...form.register("valorTotal")}
                 />
                 {form.formState.errors.valorTotal ? (
@@ -150,7 +151,7 @@ function HonorarioCreateContent() {
 
               <div className="space-y-2">
                 <Label htmlFor="dataAcordo">Data do acordo (opcional)</Label>
-                <Input id="dataAcordo" type="date" {...form.register("dataAcordo")} />
+                <Input id="dataAcordo" type="date" className="max-sm:h-12 max-sm:text-base" {...form.register("dataAcordo")} />
                 {form.formState.errors.dataAcordo ? (
                   <p className="text-sm text-red-600">{form.formState.errors.dataAcordo.message}</p>
                 ) : null}
@@ -159,7 +160,7 @@ function HonorarioCreateContent() {
 
             <div className="space-y-2">
               <Label htmlFor="descricao">Descrição (opcional)</Label>
-              <Input id="descricao" {...form.register("descricao")} placeholder="Ex.: Acordo extrajudicial" />
+              <Input id="descricao" className="max-sm:h-12 max-sm:text-base" {...form.register("descricao")} placeholder="Ex.: Acordo extrajudicial" />
               {form.formState.errors.descricao ? (
                 <p className="text-sm text-red-600">{form.formState.errors.descricao.message}</p>
               ) : null}
@@ -170,6 +171,7 @@ function HonorarioCreateContent() {
             <div className="flex gap-2">
               <Button
                 type="submit"
+                className="max-sm:min-h-[48px]"
                 disabled={form.formState.isSubmitting || create.isPending || permissions.isLoading || !canCreateFinanceiro}
               >
                 {form.formState.isSubmitting || create.isPending ? "A guardar..." : "Criar"}
