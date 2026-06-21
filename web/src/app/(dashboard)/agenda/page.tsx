@@ -325,7 +325,44 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           </div>
         )}
 
-        <Card className="border-slate-200 dark:border-slate-800 rounded-none overflow-hidden shadow-sm">
+        {/* Mobile: eventos de hoje */}
+        <div className="md:hidden space-y-4">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Hoje — {new Date().toLocaleDateString("pt-CV", { weekday: "long", day: "numeric", month: "long" })}
+          </h3>
+          {(() => {
+            const todayKey = dayKey(new Date());
+            const todayEvents = eventosByDay.get(todayKey) ?? [];
+            if (!todayEvents.length) {
+              return <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum evento hoje.</p>;
+            }
+            return todayEvents.map((e) => {
+              const cat = getCategoria(e);
+              const hora = new Date(e.dataInicio).toLocaleTimeString("pt-CV", { hour: "2-digit", minute: "2-digit" });
+              const processoLabel = e.processoId ? `Proc. nº ${processoLabelById.get(e.processoId) ?? e.processoId}` : null;
+              return (
+                <div key={e.id} className={cn("rounded-none border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm", cat.borderClassName)}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: cat.titleColor }}>
+                      {cat.label}
+                    </div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-sm">
+                      {hora}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-slate-900 dark:text-white">{e.titulo}</div>
+                  {processoLabel && (
+                    <div className="mt-1 text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase">
+                      {processoLabel}
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
+        </div>
+
+        <Card className="hidden md:block border-slate-200 dark:border-slate-800 rounded-none overflow-hidden shadow-sm">
           <CardContent className="p-0">
             <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-[10px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (

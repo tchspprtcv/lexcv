@@ -215,7 +215,7 @@ function DashboardKpis({
 
   if (!cards.length) return null;
 
-  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards}</div>;
+  return <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">{cards}</div>;
 }
 
 function ProcessosStatusCard() {
