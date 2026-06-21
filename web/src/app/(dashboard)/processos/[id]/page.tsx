@@ -1250,8 +1250,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   {!partes.data?.length ? (
                     <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem partes.</div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <table className="w-full min-w-[400px] text-sm">
                         <thead className="text-left text-neutral-500 dark:text-neutral-400">
                           <tr className="border-b border-neutral-200 dark:border-neutral-800">
                             <th className="py-2 pr-4 font-medium">Tipo</th>
@@ -1328,8 +1328,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   {!fases.data?.length ? (
                     <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem fases.</div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <table className="w-full min-w-[480px] text-sm">
                         <thead className="text-left text-neutral-500 dark:text-neutral-400">
                           <tr className="border-b border-neutral-200 dark:border-neutral-800">
                             <th className="py-2 pr-4 font-medium">Fase</th>
