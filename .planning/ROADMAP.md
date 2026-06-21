@@ -180,7 +180,7 @@ Plans:
   4. Uma bottom navigation bar fixa exibe os 5 módulos principais (Dashboard, Clientes, Processos, Agenda, Financeiro/Documentos) e é visível em todas as páginas em mobile
 **Plans**: 2 plans
 Plans:
-- [ ] 53-01-PLAN.md — shadcn Sheet install + DashboardShell responsiva (hamburger, drawer, top bar mobile)
+- [x] 53-01-PLAN.md — shadcn Sheet install + DashboardShell responsiva (hamburger, drawer, top bar mobile)
 - [ ] 53-02-PLAN.md — BottomNav component + padding do conteúdo
 **UI hint**: yes
 
@@ -233,7 +233,7 @@ Plans:
 | 50. Backend MinIO Integration | v2.2 | 2/2 | Complete | 2026-06-19 |
 | 51. Frontend Upload Component | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete | 2026-06-19 |
-| 53. Shell Responsivo | v2.3 | 0/TBD | Not started | - |
+| 53. Shell Responsivo | v2.3 | 1/2 | In Progress|  |
 | 54. Listas e Tabelas | v2.3 | 0/TBD | Not started | - |
 | 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
 | 56. Dashboard e Calendário | v2.3 | 0/TBD | Not started | - |
