@@ -234,6 +234,6 @@ Plans:
 | 51. Frontend Upload Component | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 53. Shell Responsivo | v2.3 | 2/2 | Complete   | 2026-06-21 |
-| 54. Listas e Tabelas | v2.3 | 0/TBD | Not started | - |
+| 54. Listas e Tabelas | v2.3 | 2/3 | In Progress|  |
 | 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
 | 56. Dashboard e Calendário | v2.3 | 0/TBD | Not started | - |

@@ -14,7 +14,7 @@
 
 ### Conteúdo — Tabelas e Listas
 
-- [ ] **TAB-01**: Listas simples (clientes, documentos, financeiro, agenda) mostram cards empilhados em mobile
+- [x] **TAB-01**: Listas simples (clientes, documentos, financeiro, agenda) mostram cards empilhados em mobile
 - [ ] **TAB-02**: Tabelas complexas (partes do processo, movimentações, fases) têm scroll horizontal em mobile
 
 ### Formulários e Modais
@@ -54,7 +54,7 @@
 | NAV-02 | Phase 53 | Complete |
 | NAV-03 | Phase 53 | Complete |
 | NAV-04 | Phase 53 | Complete |
-| TAB-01 | Phase 54 | Pending |
+| TAB-01 | Phase 54 | Complete |
 | TAB-02 | Phase 54 | Pending |
 | FORM-01 | Phase 55 | Pending |
 | FORM-02 | Phase 55 | Pending |
