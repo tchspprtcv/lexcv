@@ -85,7 +85,7 @@ Plans:
 
 **Milestone Goal:** Tornar o LexCV totalmente utilizável em dispositivos móveis e tablets, adaptando layout, navegação e todos os módulos ao tamanho de ecrã.
 
-- [ ] **Phase 53: Shell Responsivo** - Hamburger drawer, top bar compacta e bottom navigation em mobile
+- [x] **Phase 53: Shell Responsivo** - Hamburger drawer, top bar compacta e bottom navigation em mobile (completed 2026-06-21)
 - [ ] **Phase 54: Listas e Tabelas** - Cards empilhados em listas simples e scroll horizontal em tabelas complexas
 - [ ] **Phase 55: Formulários e Modais** - Coluna única, bottom-sheet/full-screen e touch targets 48px em mobile
 - [ ] **Phase 56: Dashboard e Calendário** - KPI grid adaptável e vista diária por defeito no calendário em mobile
@@ -181,7 +181,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 53-01-PLAN.md — shadcn Sheet install + DashboardShell responsiva (hamburger, drawer, top bar mobile)
-- [ ] 53-02-PLAN.md — BottomNav component + padding do conteúdo
+- [x] 53-02-PLAN.md — BottomNav component + padding do conteúdo
 **UI hint**: yes
 
 ### Phase 54: Listas e Tabelas
@@ -233,7 +233,7 @@ Plans:
 | 50. Backend MinIO Integration | v2.2 | 2/2 | Complete | 2026-06-19 |
 | 51. Frontend Upload Component | v2.2 | 1/1 | Complete | 2026-06-19 |
 | 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete | 2026-06-19 |
-| 53. Shell Responsivo | v2.3 | 1/2 | In Progress|  |
+| 53. Shell Responsivo | v2.3 | 2/2 | Complete   | 2026-06-21 |
 | 54. Listas e Tabelas | v2.3 | 0/TBD | Not started | - |
 | 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
 | 56. Dashboard e Calendário | v2.3 | 0/TBD | Not started | - |

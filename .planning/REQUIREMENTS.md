@@ -10,7 +10,7 @@
 - [x] **NAV-01**: Utilizador pode abrir/fechar sidebar via botão hambúrguer em mobile (drawer overlay)
 - [x] **NAV-02**: Sidebar fecha automaticamente ao navegar para outra página em mobile
 - [x] **NAV-03**: Top bar em mobile mostra apenas botão de menu, nome da instituição e ações essenciais (notificações, perfil)
-- [ ] **NAV-04**: Bottom navigation bar disponível em mobile com acesso rápido aos 5 módulos principais
+- [x] **NAV-04**: Bottom navigation bar disponível em mobile com acesso rápido aos 5 módulos principais
 
 ### Conteúdo — Tabelas e Listas
 
@@ -53,7 +53,7 @@
 | NAV-01 | Phase 53 | Complete |
 | NAV-02 | Phase 53 | Complete |
 | NAV-03 | Phase 53 | Complete |
-| NAV-04 | Phase 53 | Pending |
+| NAV-04 | Phase 53 | Complete |
 | TAB-01 | Phase 54 | Pending |
 | TAB-02 | Phase 54 | Pending |
 | FORM-01 | Phase 55 | Pending |
