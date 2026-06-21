@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -133,43 +134,140 @@ function DocumentosContent({
               Nenhum documento encontrado.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                  <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                    <th className="py-2 pr-4 font-medium">Nome</th>
-                    <th className="py-2 pr-4 font-medium">Tipo</th>
-                    <th className="py-2 pr-4 font-medium">Processo</th>
-                    <th className="py-2 pr-4 font-medium">Cliente</th>
-                    <th className="py-2 pr-4 font-medium">Confid.</th>
-                    <th className="py-2 pr-4 font-medium">Ver.</th>
-                    <th className="py-2 pr-4 font-medium">Tamanho</th>
-                    <th className="py-2 pr-4 font-medium">Criado</th>
-                    <th className="py-2 pr-4 font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.data.map((d) => (
-                    <DocumentoRow
-                      key={d.id}
-                      id={d.id}
-                      nome={d.nome}
-                      tipo={d.tipo}
-                      processoId={d.processo_id}
-                      clienteId={d.cliente_id}
-                      confidencialidade={d.confidencialidade}
-                      versao={d.versao}
-                      size={d.size}
-                      createdAt={d.created_at}
-                      canEditDocumentos={canEditDocumentos}
-                    />
-                  ))}
-                </tbody>
-              </table>
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                      <th className="py-2 pr-4 font-medium">Nome</th>
+                      <th className="py-2 pr-4 font-medium">Tipo</th>
+                      <th className="py-2 pr-4 font-medium">Processo</th>
+                      <th className="py-2 pr-4 font-medium">Cliente</th>
+                      <th className="py-2 pr-4 font-medium">Confid.</th>
+                      <th className="py-2 pr-4 font-medium">Ver.</th>
+                      <th className="py-2 pr-4 font-medium">Tamanho</th>
+                      <th className="py-2 pr-4 font-medium">Criado</th>
+                      <th className="py-2 pr-4 font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list.data.map((d) => (
+                      <DocumentoRow
+                        key={d.id}
+                        id={d.id}
+                        nome={d.nome}
+                        tipo={d.tipo}
+                        processoId={d.processo_id}
+                        clienteId={d.cliente_id}
+                        confidencialidade={d.confidencialidade}
+                        versao={d.versao}
+                        size={d.size}
+                        createdAt={d.created_at}
+                        canEditDocumentos={canEditDocumentos}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
+              {list.data.map((d) => (
+                <DocumentoMobileCard
+                  key={d.id}
+                  id={d.id}
+                  nome={d.nome}
+                  tipo={d.tipo}
+                  processoId={d.processo_id}
+                  createdAt={d.created_at}
+                  canEditDocumentos={canEditDocumentos}
+                />
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function DocumentoMobileCard({
+  id,
+  nome,
+  tipo,
+  processoId,
+  createdAt,
+  canEditDocumentos,
+}: {
+  id: string;
+  nome: string;
+  tipo?: string;
+  processoId?: string;
+  createdAt: string;
+  canEditDocumentos: boolean;
+}) {
+  const del = useDeleteDocumento(id);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const onDelete = async () => {
+    setError(null);
+    const ok = window.confirm("Apagar este documento?");
+    if (!ok) return;
+    try {
+      await del.mutateAsync();
+      toast.success("Documento apagado com sucesso.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/documentos/${encodeURIComponent(id)}`}
+          className="font-bold text-slate-900 dark:text-white text-sm leading-tight hover:underline"
+        >
+          {nome}
+        </Link>
+        {tipo && (
+          <Badge variant="blue" className="rounded-none font-bold text-[10px] flex-shrink-0">
+            {tipo}
+          </Badge>
+        )}
+      </div>
+      {processoId && (
+        <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+          Processo: <span className="font-medium text-neutral-700 dark:text-neutral-300">{processoId}</span>
+        </div>
+      )}
+      <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+        Enviado: {createdAt ? new Date(createdAt).toLocaleDateString("pt-CV") : "—"}
+      </div>
+      {error ? <div className="text-xs text-red-600">{error}</div> : null}
+      <div className="pt-1 flex gap-2 flex-wrap">
+        <a
+          href={`/api/v1/documentos/${id}/download`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline min-h-[44px] px-2"
+        >
+          Download
+        </a>
+        {canEditDocumentos && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onDelete}
+            disabled={del.isPending}
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 min-h-[44px]"
+          >
+            {del.isPending ? "A apagar..." : "Apagar"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

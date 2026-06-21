@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -294,72 +295,114 @@ function FinanceiroContent({
               Nenhum honorário corresponde aos filtros aplicados.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                  <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                    <th className="py-2 pr-4 font-medium">Honorário</th>
-                    <th className="py-2 pr-4 font-medium">Processo</th>
-                    <th className="py-2 pr-4 font-medium">Cliente</th>
-                    <th className="py-2 pr-4 font-medium">Total</th>
-                    <th className="py-2 pr-4 font-medium">Data do acordo</th>
-                    <th className="py-2 pr-4 font-medium">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredList.map((h) => {
-                    const processo = processoById.get(h.processoId);
-                    const clienteId = processo?.cliente_id;
-                    return (
-                      <tr
-                        key={h.id}
-                        className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+            <div className="hidden md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                      <th className="py-2 pr-4 font-medium">Honorário</th>
+                      <th className="py-2 pr-4 font-medium">Processo</th>
+                      <th className="py-2 pr-4 font-medium">Cliente</th>
+                      <th className="py-2 pr-4 font-medium">Total</th>
+                      <th className="py-2 pr-4 font-medium">Data do acordo</th>
+                      <th className="py-2 pr-4 font-medium">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredList.map((h) => {
+                      const processo = processoById.get(h.processoId);
+                      const clienteId = processo?.cliente_id;
+                      return (
+                        <tr
+                          key={h.id}
+                          className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                        >
+                          <td className="py-2 pr-4">
+                            <Link
+                              href={`/financeiro/${encodeURIComponent(String(h.id))}`}
+                              className="font-medium text-neutral-900 hover:underline dark:text-neutral-50"
+                            >
+                              #{h.id}
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-4">
+                            {processo ? (
+                              <Link
+                                href={`/processos/${encodeURIComponent(processo.id)}`}
+                                className="hover:underline"
+                              >
+                                {processo.numero ?? processo.titulo ?? processo.id}
+                              </Link>
+                            ) : (
+                              h.processoId
+                            )}
+                          </td>
+                          <td className="py-2 pr-4">
+                            {clienteId ? (
+                              <Link
+                                href={`/clientes/${encodeURIComponent(clienteId)}`}
+                                className="hover:underline"
+                              >
+                                {clienteNomeById.get(clienteId) ?? clienteId}
+                              </Link>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="py-2 pr-4">{formatMoneyCVE(h.valorTotal)}</td>
+                          <td className="py-2 pr-4">{formatDate(h.dataAcordo)}</td>
+                          <td className="py-2 pr-4">
+                            {(() => {
+                              const status = calcHonorarioStatus(h.totalPago, h.valorTotal);
+                              return <span className={statusBadgeClass[status]}>{status}</span>;
+                            })()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
+              {filteredList.map((h) => {
+                const processo = processoById.get(h.processoId);
+                const clienteId = processo?.cliente_id;
+                const clienteNome = clienteId ? (clienteNomeById.get(clienteId) ?? clienteId) : null;
+                const status = calcHonorarioStatus(h.totalPago, h.valorTotal);
+                return (
+                  <div key={h.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">
+                        {processo
+                          ? (processo.numero ?? processo.titulo ?? `Honorário #${String(h.id).slice(0, 6)}`)
+                          : `Honorário #${String(h.id).slice(0, 6)}`}
+                      </div>
+                      <Badge
+                        variant={status === "Pago" ? "green" : status === "Parcialmente Pago" ? "blue" : "amber"}
+                        className="rounded-none font-bold text-[10px] flex-shrink-0"
                       >
-                        <td className="py-2 pr-4">
-                          <Link
-                            href={`/financeiro/${encodeURIComponent(String(h.id))}`}
-                            className="font-medium text-neutral-900 hover:underline dark:text-neutral-50"
-                          >
-                            #{h.id}
-                          </Link>
-                        </td>
-                        <td className="py-2 pr-4">
-                          {processo ? (
-                            <Link
-                              href={`/processos/${encodeURIComponent(processo.id)}`}
-                              className="hover:underline"
-                            >
-                              {processo.numero ?? processo.titulo ?? processo.id}
-                            </Link>
-                          ) : (
-                            h.processoId
-                          )}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {clienteId ? (
-                            <Link
-                              href={`/clientes/${encodeURIComponent(clienteId)}`}
-                              className="hover:underline"
-                            >
-                              {clienteNomeById.get(clienteId) ?? clienteId}
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-2 pr-4">{formatMoneyCVE(h.valorTotal)}</td>
-                        <td className="py-2 pr-4">{formatDate(h.dataAcordo)}</td>
-                        <td className="py-2 pr-4">
-                          {(() => {
-                            const status = calcHonorarioStatus(h.totalPago, h.valorTotal);
-                            return <span className={statusBadgeClass[status]}>{status}</span>;
-                          })()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        {status}
+                      </Badge>
+                    </div>
+                    {clienteNome && (
+                      <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {clienteNome}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-slate-900 dark:text-white">
+                        {formatMoneyCVE(h.valorTotal)}
+                      </div>
+                      {h.dataAcordo && (
+                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                          {formatDate(h.dataAcordo)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
