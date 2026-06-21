@@ -15,13 +15,13 @@
 ### Conteúdo — Tabelas e Listas
 
 - [x] **TAB-01**: Listas simples (clientes, documentos, financeiro, agenda) mostram cards empilhados em mobile
-- [ ] **TAB-02**: Tabelas complexas (partes do processo, movimentações, fases) têm scroll horizontal em mobile
+- [x] **TAB-02**: Tabelas complexas (partes do processo, movimentações, fases) têm scroll horizontal em mobile
 
 ### Formulários e Modais
 
-- [ ] **FORM-01**: Formulários fluem em coluna única (100% largura) em mobile
-- [ ] **FORM-02**: Dialogs/modais abrem como bottom-sheet ou full-screen em mobile
-- [ ] **FORM-03**: Todos os inputs e botões têm altura mínima de 48px (touch target)
+- [x] **FORM-01**: Formulários fluem em coluna única (100% largura) em mobile
+- [x] **FORM-02**: Dialogs/modais abrem como bottom-sheet ou full-screen em mobile
+- [x] **FORM-03**: Todos os inputs e botões têm altura mínima de 48px (touch target)
 
 ### Dashboard
 
@@ -55,10 +55,10 @@
 | NAV-03 | Phase 53 | Complete |
 | NAV-04 | Phase 53 | Complete |
 | TAB-01 | Phase 54 | Complete |
-| TAB-02 | Phase 54 | Pending |
-| FORM-01 | Phase 55 | Pending |
-| FORM-02 | Phase 55 | Pending |
-| FORM-03 | Phase 55 | Pending |
+| TAB-02 | Phase 54 | Complete |
+| FORM-01 | Phase 55 | Complete |
+| FORM-02 | Phase 55 | Complete |
+| FORM-03 | Phase 55 | Complete |
 | DASH-01 | Phase 56 | Complete |
 | CAL-01 | Phase 56 | Complete |
 

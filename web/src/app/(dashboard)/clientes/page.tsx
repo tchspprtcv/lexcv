@@ -412,13 +412,13 @@ function ClientesPageContent({
                         <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 pl-[52px]">Tel: {c.telefone}</div>
                       )}
                       <div className="mt-3 pl-[52px] flex items-center gap-1">
-                        <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <Button asChild size="sm" variant="ghost" className="h-12 w-12 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                           <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
                         {canEditClientes && (
-                          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                          <Button asChild size="sm" variant="ghost" className="h-12 w-12 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                             <Link href={`/clientes/${encodeURIComponent(c.id)}/editar`}>
                               <Pencil className="h-4 w-4" />
                             </Link>
