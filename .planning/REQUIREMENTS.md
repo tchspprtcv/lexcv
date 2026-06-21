@@ -1,63 +1,72 @@
-# Requirements — v2.2 Document Storage MinIO
+# Requirements: LexCV
 
-> Milestone goal: Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
+**Defined:** 2026-06-21
+**Core Value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
 
----
+## v2.3 Requirements
 
-## v2.2 Requirements
+### Layout & Navegação
 
-### Backend — MinIO Integration
+- [ ] **NAV-01**: Utilizador pode abrir/fechar sidebar via botão hambúrguer em mobile (drawer overlay)
+- [ ] **NAV-02**: Sidebar fecha automaticamente ao navegar para outra página em mobile
+- [ ] **NAV-03**: Top bar em mobile mostra apenas botão de menu, nome da instituição e ações essenciais (notificações, perfil)
+- [ ] **NAV-04**: Bottom navigation bar disponível em mobile com acesso rápido aos 5 módulos principais
 
-- [x] **MIN-01**: O sistema armazena ficheiros de documentos num bucket MinIO via AWS S3 SDK (S3-compatible) em vez do filesystem local
-- [x] **MIN-02**: O utilizador pode fazer download de um documento através de uma URL pré-assinada temporária gerada pelo backend
-- [x] **MIN-03**: Ao apagar um documento, o objeto correspondente é removido do bucket MinIO
-- [x] **MIN-04**: Os objetos são guardados com prefixo tenant-scoped (`{tenant_id}/{documento_id}/{filename}`) para isolamento de dados
+### Conteúdo — Tabelas e Listas
 
-### Frontend — Componente de Upload
+- [ ] **TAB-01**: Listas simples (clientes, documentos, financeiro, agenda) mostram cards empilhados em mobile
+- [ ] **TAB-02**: Tabelas complexas (partes do processo, movimentações, fases) têm scroll horizontal em mobile
 
-- [x] **MIN-05**: O utilizador vê uma barra de progresso durante o upload de um ficheiro
-- [x] **MIN-06**: O botão de download abre uma URL pré-assinada gerada pelo backend (sem proxy do ficheiro pelo Next.js)
-- [x] **MIN-07**: O utilizador pode arrastar e largar um ficheiro na zona de upload além de clicar para selecionar
-- [x] **MIN-08**: Imagens e PDFs mostram uma pré-visualização inline antes de confirmar o upload
+### Formulários e Modais
 
-### Deploy — MinIO no Hostinger
+- [ ] **FORM-01**: Formulários fluem em coluna única (100% largura) em mobile
+- [ ] **FORM-02**: Dialogs/modais abrem como bottom-sheet ou full-screen em mobile
+- [ ] **FORM-03**: Todos os inputs e botões têm altura mínima de 48px (touch target)
 
-- [x] **MIN-09**: O Docker Compose de produção inclui um serviço MinIO com volume persistente no Hostinger VPS
-- [x] **MIN-10**: As credenciais MinIO (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, nome do bucket) são configuradas via variáveis de ambiente sem valores hardcoded
-- [x] **MIN-11**: O pipeline CI/CD (GitHub Actions) faz deploy e restart do serviço MinIO junto com os restantes serviços
-- [x] **MIN-12**: A consola de administração MinIO está acessível via rota protegida pelo Caddy
+### Dashboard
 
----
+- [ ] **DASH-01**: KPI cards do dashboard adaptam-se a grid 1 coluna em mobile, 2 em tablet, 4 em desktop
 
-## Future Requirements (Deferred)
+### Agenda / Calendário
 
-- Migração de ficheiros existentes do filesystem para MinIO — requer script de migração one-shot e janela de manutenção
-- Bucket lifecycle policies (expiração automática de ficheiros antigos) — gestão avançada de armazenamento
-- Versioning de documentos — múltiplas versões do mesmo ficheiro
+- [ ] **CAL-01**: Calendário mostra vista diária por defeito em mobile, com navegação entre dias; vistas semanal/mensal disponíveis em tablet/desktop
 
----
+## Futuras (v3+)
+
+### Notificações e Offline
+
+- **NOTIF-01**: Notificações push nativas em mobile (PWA)
+- **OFFLINE-01**: Modo offline com cache de dados recentes
 
 ## Out of Scope
 
-- Acesso direto do frontend ao MinIO (bypassing backend) — quebra o modelo de segurança tenant-scoped
-- CDN na frente do MinIO — fora do scope deste VPS
-- Multiple buckets por tenant — um bucket partilhado com prefixos é suficiente para isolamento
-
----
+| Feature | Reason |
+|---------|--------|
+| App nativa iOS/Android | Web/PWA primeiro; nativo numa fase muito posterior |
+| PWA (service worker, installable) | Requer trabalho adicional de infra; responsividade é prioridade |
+| Gestos swipe avançados | Complexidade elevada; não é bloqueante para usabilidade |
 
 ## Traceability
 
-| REQ-ID | Phase | Plan |
-|--------|-------|------|
-| MIN-01 | Phase 50 | TBD |
-| MIN-02 | Phase 50 | TBD |
-| MIN-03 | Phase 50 | TBD |
-| MIN-04 | Phase 50 | TBD |
-| MIN-05 | Phase 51 | TBD |
-| MIN-06 | Phase 51 | TBD |
-| MIN-07 | Phase 51 | TBD |
-| MIN-08 | Phase 51 | TBD |
-| MIN-09 | Phase 52 | TBD |
-| MIN-10 | Phase 52 | TBD |
-| MIN-11 | Phase 52 | TBD |
-| MIN-12 | Phase 52 | TBD |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| NAV-01 | — | Pending |
+| NAV-02 | — | Pending |
+| NAV-03 | — | Pending |
+| NAV-04 | — | Pending |
+| TAB-01 | — | Pending |
+| TAB-02 | — | Pending |
+| FORM-01 | — | Pending |
+| FORM-02 | — | Pending |
+| FORM-03 | — | Pending |
+| DASH-01 | — | Pending |
+| CAL-01 | — | Pending |
+
+**Coverage:**
+- v2.3 requirements: 11 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 11 ⚠️
+
+---
+*Requirements defined: 2026-06-21*
+*Last updated: 2026-06-21 — initial definition*

@@ -30,14 +30,16 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-## Current Milestone: v2.2 Document Storage MinIO
+## Current Milestone: v2.3 Responsividade App
 
-**Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
+**Goal:** Tornar o LexCV totalmente utilizável em dispositivos móveis e tablets, adaptando layout, navegação e todos os módulos ao tamanho de ecrã.
 
 **Target features:**
-- MinIO como backend de armazenamento — substituir uploads/ no VPS por bucket MinIO; Spring Boot integrado via AWS S3 SDK (S3-compatible); tenant-scoped paths
-- Componente de upload atualizado — barra de progresso, drag-and-drop, preview inline (imagens/PDF), download via URL pré-assinada
-- Deploy MinIO no Hostinger — serviço MinIO no Docker Compose prod, volume persistente, variáveis de ambiente seguras, CI/CD atualizado, consola via Caddy
+- Layout responsivo — sidebar colapsável em mobile (drawer/overlay), top bar compacta, bottom navigation bar
+- Conteúdo adaptado — cards em mobile para listas simples, scroll horizontal em tabelas complexas
+- Formulários e modais — coluna única em mobile, bottom-sheet/full-screen para dialogs, touch targets 48px
+- Dashboard — KPI grid adaptável (4→2→1 colunas)
+- Agenda — vista diária por defeito em mobile, semanal/mensal em desktop
 
 ### Out of Scope
 
@@ -110,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-19 — Milestone v2.2 started (Document Storage MinIO)*
+*Last updated: 2026-06-21 — Milestone v2.3 started (Responsividade App)*
