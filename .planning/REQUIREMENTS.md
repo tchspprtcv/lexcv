@@ -25,11 +25,11 @@
 
 ### Dashboard
 
-- [ ] **DASH-01**: KPI cards do dashboard adaptam-se a grid 1 coluna em mobile, 2 em tablet, 4 em desktop
+- [x] **DASH-01**: KPI cards do dashboard adaptam-se a grid 1 coluna em mobile, 2 em tablet, 4 em desktop
 
 ### Agenda / Calendário
 
-- [ ] **CAL-01**: Calendário mostra vista diária por defeito em mobile, com navegação entre dias; vistas semanal/mensal disponíveis em tablet/desktop
+- [x] **CAL-01**: Calendário mostra vista diária por defeito em mobile, com navegação entre dias; vistas semanal/mensal disponíveis em tablet/desktop
 
 ## Futuras (v3+)
 
@@ -59,8 +59,8 @@
 | FORM-01 | Phase 55 | Pending |
 | FORM-02 | Phase 55 | Pending |
 | FORM-03 | Phase 55 | Pending |
-| DASH-01 | Phase 56 | Pending |
-| CAL-01 | Phase 56 | Pending |
+| DASH-01 | Phase 56 | Complete |
+| CAL-01 | Phase 56 | Complete |
 
 **Coverage:**
 - v2.3 requirements: 11 total

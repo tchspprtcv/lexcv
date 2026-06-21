@@ -88,7 +88,7 @@ Plans:
 - [x] **Phase 53: Shell Responsivo** - Hamburger drawer, top bar compacta e bottom navigation em mobile (completed 2026-06-21)
 - [ ] **Phase 54: Listas e Tabelas** - Cards empilhados em listas simples e scroll horizontal em tabelas complexas
 - [ ] **Phase 55: Formulários e Modais** - Coluna única, bottom-sheet/full-screen e touch targets 48px em mobile
-- [ ] **Phase 56: Dashboard e Calendário** - KPI grid adaptável e vista diária por defeito no calendário em mobile
+- [x] **Phase 56: Dashboard e Calendário** - KPI grid adaptável e vista diária por defeito no calendário em mobile (completed 2026-06-21)
 
 ## Phase Details
 
@@ -236,4 +236,4 @@ Plans:
 | 53. Shell Responsivo | v2.3 | 2/2 | Complete   | 2026-06-21 |
 | 54. Listas e Tabelas | v2.3 | 2/3 | In Progress|  |
 | 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
-| 56. Dashboard e Calendário | v2.3 | 0/TBD | Not started | - |
+| 56. Dashboard e Calendário | v2.3 | 1/1 | Complete   | 2026-06-21 |
