@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-06-21T00:00:00.000Z"
 last_activity: 2026-06-21
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,10 +24,12 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 53 — Shell Responsivo (Not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-21 — Milestone v2.3 started
+Status: Roadmap defined; ready to plan Phase 53
+Last activity: 2026-06-21 — Roadmap v2.3 created (4 phases, 11 requirements)
+
+Progress: [░░░░░░░░░░] 0% (0/4 phases complete)
 
 ## Performance Metrics
 
@@ -46,16 +48,18 @@ Last activity: 2026-06-21 — Milestone v2.3 started
 
 ### Decisions
 
-Decisions são registadas em PROJECT.md (Key Decisions).
+Decisões são registadas em PROJECT.md (Key Decisions).
 Recent decisions affecting current work:
 
 - (v2.2) MinIO como object storage para documentos — substituiu filesystem local
 - (v2.2) Caddy handle_path para MinIO console — strips prefix corretamente
 - (v1.1) shadcn/ui + Tailwind como sistema de design — breakpoints md/lg a usar consistentemente
+- (v2.3) Sheet (shadcn) para drawer sidebar em mobile — já disponível em components/ui/
+- (v2.3) Fases 54 e 55 paralelas (dependem ambas de Phase 53) — granularidade standard, 4 fases derivadas de 11 requirements em 5 categorias
 
 ### Pending Todos
 
-None yet.
+- Plan Phase 53 (Shell Responsivo): dashboard-shell.tsx + sidebar + top bar + bottom nav
 
 ### Blockers/Concerns
 

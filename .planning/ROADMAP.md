@@ -4,7 +4,8 @@
 
 - ✅ **v2.0 Módulo Financeiro** — Phases 43–46 (complete 2026-06-18)
 - ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
-- 🔄 **v2.2 Document Storage MinIO** — Phases 50–52 (active)
+- ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
+- 🔄 **v2.3 Responsividade App** — Phases 53–56 (active)
 
 ## Phases
 
@@ -72,13 +73,22 @@ Plans:
 - [x] **Phase 48: Recorrência de Eventos** - Criar, listar, exibir e apagar eventos com regras de recorrência (completed 2026-06-18)
 - [x] **Phase 49: Drag & Drop no Calendário** - Arrastar eventos para nova data com atualização imediata via API (completed 2026-06-18)
 
-### v2.2 Document Storage MinIO
+### ✅ v2.2 Document Storage MinIO (SHIPPED 2026-06-19)
 
 **Milestone Goal:** Migrar o armazenamento de documentos do filesystem local para MinIO (object storage S3-compatible), atualizar o componente de upload no frontend e configurar o deploy no Hostinger VPS.
 
 - [x] **Phase 50: Backend MinIO Integration** - Spring Boot integrado ao MinIO via AWS S3 SDK; upload, download pré-assinado e delete no bucket (completed 2026-06-19)
 - [x] **Phase 51: Frontend Upload Component** - Barra de progresso, drag-and-drop, preview inline e download via URL pré-assinada (completed 2026-06-19)
 - [x] **Phase 52: Deploy MinIO no Hostinger** - Serviço MinIO no Docker Compose prod, credenciais via env vars, CI/CD atualizado e consola via Caddy (completed 2026-06-19)
+
+### v2.3 Responsividade App
+
+**Milestone Goal:** Tornar o LexCV totalmente utilizável em dispositivos móveis e tablets, adaptando layout, navegação e todos os módulos ao tamanho de ecrã.
+
+- [ ] **Phase 53: Shell Responsivo** - Hamburger drawer, top bar compacta e bottom navigation em mobile
+- [ ] **Phase 54: Listas e Tabelas** - Cards empilhados em listas simples e scroll horizontal em tabelas complexas
+- [ ] **Phase 55: Formulários e Modais** - Coluna única, bottom-sheet/full-screen e touch targets 48px em mobile
+- [ ] **Phase 56: Dashboard e Calendário** - KPI grid adaptável e vista diária por defeito no calendário em mobile
 
 ## Phase Details
 
@@ -159,9 +169,54 @@ Plans:
   4. A consola de administração MinIO está acessível via HTTPS num subpath ou subdomínio protegido pelo Caddy, com acesso restrito por credenciais
 **Plans**: TBD
 
+### Phase 53: Shell Responsivo
+**Goal**: O layout principal da aplicação adapta-se a ecrãs mobile — a sidebar fixa de 270px dá lugar a um drawer overlay controlado por hamburger, a top bar simplifica-se, e uma bottom navigation bar oferece acesso direto aos módulos
+**Depends on**: Phase 52 (milestone v2.2 completo)
+**Requirements**: NAV-01, NAV-02, NAV-03, NAV-04
+**Success Criteria** (what must be TRUE):
+  1. Em mobile (< 768px), a sidebar não está visível por defeito; o utilizador toca no ícone hamburger na top bar e a sidebar abre como drawer overlay sobre o conteúdo sem deslocar o layout
+  2. Ao navegar para qualquer página via link na sidebar em mobile, o drawer fecha automaticamente sem necessitar de clique adicional
+  3. A top bar em mobile mostra apenas o ícone hamburger, o nome/logotipo da instituição e os ícones de notificações e perfil — sem outros elementos
+  4. Uma bottom navigation bar fixa exibe os 5 módulos principais (Dashboard, Clientes, Processos, Agenda, Financeiro/Documentos) e é visível em todas as páginas em mobile
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 54: Listas e Tabelas
+**Goal**: As listagens de dados adaptam o seu formato ao tamanho do ecrã — listas simples mostram cards empilhados em mobile e tabelas complexas têm scroll horizontal
+**Depends on**: Phase 53
+**Requirements**: TAB-01, TAB-02
+**Success Criteria** (what must be TRUE):
+  1. Em mobile, as páginas Clientes, Documentos, Financeiro e Agenda substituem a tabela por cards empilhados verticalmente com os campos essenciais visíveis e acções acessíveis por toque
+  2. Em desktop, as mesmas páginas continuam a mostrar a tabela completa sem alteração ao comportamento existente
+  3. Em mobile, as tabelas de Partes do Processo, Movimentações e Fases têm scroll horizontal nativo, com todas as colunas acessíveis por deslize — sem conteúdo cortado nem overflow no layout
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 55: Formulários e Modais
+**Goal**: Todos os formulários e diálogos da aplicação são utilizáveis com os dedos em mobile — coluna única, touch targets adequados e modais que não sobrepõem o teclado virtual
+**Depends on**: Phase 53
+**Requirements**: FORM-01, FORM-02, FORM-03
+**Success Criteria** (what must be TRUE):
+  1. Em mobile, todos os formulários (criação/edição de clientes, processos, eventos, honorários, documentos) fluem em coluna única a 100% da largura — nenhum campo fica lado a lado em ecrãs < 768px
+  2. Em mobile, os diálogos/modais abrem como bottom-sheet (deslizando de baixo para cima) ou ocupam o ecrã inteiro, em vez do estilo centered dialog de desktop
+  3. Todos os inputs de texto, selects, botões de ação e ícones interativos têm altura mínima de 48px, verificável inspecionando o CSS aplicado ou tocando sem errar o alvo
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 56: Dashboard e Calendário
+**Goal**: O dashboard e o calendário de agenda apresentam o conteúdo num formato optimizado para mobile, com o grid de KPIs adaptável e a vista diária como ponto de entrada em ecrãs pequenos
+**Depends on**: Phase 54
+**Requirements**: DASH-01, CAL-01
+**Success Criteria** (what must be TRUE):
+  1. Em mobile (< 640px), os KPI cards do dashboard exibem-se em 1 coluna; em tablet (640px–1024px), em 2 colunas; em desktop (> 1024px), em 4 colunas — sem overflow nem cards cortados em nenhum breakpoint
+  2. Em mobile, o calendário da Agenda abre por defeito na vista diária, mostrando os eventos do dia corrente num layout vertical legível com toque
+  3. Em tablet e desktop, o calendário mantém o comportamento actual (vista mensal/semanal por defeito) sem regressão
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
-**Execution Order:** 47 → 48 → 49 → 50 → 51 → 52
+**Execution Order:** 47 → 48 → 49 → 50 → 51 → 52 → 53 → 54 → 55 → 56
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -172,6 +227,10 @@ Plans:
 | 47. Notificações In-App | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 48. Recorrência de Eventos | v2.1 | 2/2 | Complete | 2026-06-18 |
 | 49. Drag & Drop no Calendário | v2.1 | 1/1 | Complete | 2026-06-18 |
-| 50. Backend MinIO Integration | v2.2 | 2/2 | Complete   | 2026-06-19 |
-| 51. Frontend Upload Component | v2.2 | 1/1 | Complete   | 2026-06-19 |
-| 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete   | 2026-06-19 |
+| 50. Backend MinIO Integration | v2.2 | 2/2 | Complete | 2026-06-19 |
+| 51. Frontend Upload Component | v2.2 | 1/1 | Complete | 2026-06-19 |
+| 52. Deploy MinIO no Hostinger | v2.2 | 1/1 | Complete | 2026-06-19 |
+| 53. Shell Responsivo | v2.3 | 0/TBD | Not started | - |
+| 54. Listas e Tabelas | v2.3 | 0/TBD | Not started | - |
+| 55. Formulários e Modais | v2.3 | 0/TBD | Not started | - |
+| 56. Dashboard e Calendário | v2.3 | 0/TBD | Not started | - |
