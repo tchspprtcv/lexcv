@@ -252,6 +252,12 @@ Plans:
   3. O formulário inclui uma checkbox ou toggle "Cliente Avençado"; quando ativado, a ficha e a listagem exibem um badge identificador
   4. Todos os novos campos passam pela validação Zod antes de submeter — campos obrigatórios por tipo estão assinalados e bloqueiam a submissão se vazios
 **UI hint**: yes
+**Plans**: 4 plans
+Plans:
+- [ ] 58-01-PLAN.md — Install Radix primitives, scaffold RadioGroup + Switch components, extend types and Zod schema
+- [ ] 58-02-PLAN.md — Add numero_cliente + Avençado badges to listing and detail pages; fix SINGULAR/COLETIVA enum
+- [ ] 58-03-PLAN.md — Refactor novo/page.tsx with RadioGroup, conditional fields, confirmation Dialog, Switch
+- [ ] 58-04-PLAN.md — Refactor editar/page.tsx with same form behavior plus form.reset mapping and header badge
 
 ### Phase 59: Procuração + Intake
 **Goal**: A ficha de cliente tem uma secção de procuração com upload obrigatório e uma secção de intake onde o utilizador regista a descrição do caso, advogados, administrativos, documentos, deslocações e honorários propostos
