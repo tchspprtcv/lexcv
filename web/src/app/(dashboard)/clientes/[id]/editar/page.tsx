@@ -4,12 +4,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente, useUpdateCliente } from "@/hooks/use-clientes";
 import { toast } from "@/hooks/use-toast";
@@ -58,6 +62,7 @@ function ClienteEditContent({ id }: { id: string }) {
       nome: "",
       nif: "",
       tipo: undefined,
+      avencado: false,
       email: "",
       telefone: "",
       localidade: "",
@@ -66,15 +71,45 @@ function ClienteEditContent({ id }: { id: string }) {
       documento_numero: "",
       ramo_atividade: "",
       detalhes_adicionais: "",
+      dados_tipo: {},
     },
   });
+
+  const [pendingTipo, setPendingTipo] = React.useState<"PARTICULAR" | "EMPRESA" | null>(null);
+  const watchedTipo = form.watch("tipo");
+
+  function onTipoChange(newTipo: "PARTICULAR" | "EMPRESA") {
+    const current = form.getValues("tipo");
+    if (current && current !== newTipo) {
+      setPendingTipo(newTipo);
+    } else {
+      form.setValue("tipo", newTipo, { shouldValidate: true });
+    }
+  }
+
+  function confirmTipoChange() {
+    if (!pendingTipo) return;
+    if (pendingTipo === "PARTICULAR") {
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.nome_comercial", "");
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.sede", "");
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.representante_legal", "");
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.cargo", "");
+    } else {
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.idade", undefined);
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.sexo", "");
+      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.nacionalidade", "");
+    }
+    form.setValue("tipo", pendingTipo, { shouldValidate: true });
+    setPendingTipo(null);
+  }
 
   React.useEffect(() => {
     if (!cliente.data) return;
     form.reset({
       nome: cliente.data.nome ?? "",
       nif: cliente.data.nif ?? "",
-      tipo: cliente.data.tipo ?? undefined,
+      tipo: (cliente.data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined,
+      avencado: cliente.data.avencado ?? false,
       email: cliente.data.email ?? "",
       telefone: cliente.data.telefone ?? "",
       localidade: cliente.data.localidade ?? "",
@@ -83,6 +118,7 @@ function ClienteEditContent({ id }: { id: string }) {
       documento_numero: cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "",
       ramo_atividade: cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "",
       detalhes_adicionais: cliente.data.detalhes_adicionais ?? cliente.data.detalhesAdicionais ?? "",
+      dados_tipo: cliente.data.dados_tipo ?? {},
     });
   }, [cliente.data, form]);
 
@@ -91,6 +127,9 @@ function ClienteEditContent({ id }: { id: string }) {
     try {
       const payload: ClienteUpdateRequest = {
         ...values,
+        tipo: values.tipo,
+        avencado: values.avencado,
+        dados_tipo: values.dados_tipo,
         documentoTipo: values.documento_tipo || undefined,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,
@@ -117,6 +156,11 @@ function ClienteEditContent({ id }: { id: string }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Editar cliente</h1>
+          {cliente.data?.numero_cliente && (
+            <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px] w-fit">
+              {cliente.data.numero_cliente}
+            </Badge>
+          )}
           <div className="text-sm text-neutral-500 dark:text-neutral-400">
             <Link href={`/clientes/${encodeURIComponent(id)}`} className="hover:underline">
               Voltar ao detalhe
@@ -160,14 +204,83 @@ function ClienteEditContent({ id }: { id: string }) {
                     ) : null}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo</Label>
-                    <Input id="tipo" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("tipo")} placeholder="Ex.: Particular / Empresa" />
-                    {form.formState.errors.tipo ? (
-                      <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
-                    ) : null}
-                  </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo de Cliente</Label>
+                  <Controller
+                    control={form.control}
+                    name="tipo"
+                    render={({ field }) => (
+                      <RadioGroup
+                        value={field.value ?? ""}
+                        onValueChange={(val) => onTipoChange(val as "PARTICULAR" | "EMPRESA")}
+                        className="flex gap-6"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="PARTICULAR" id="tipo-particular" />
+                          <Label htmlFor="tipo-particular" className="cursor-pointer font-normal">Particular</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="EMPRESA" id="tipo-empresa" />
+                          <Label htmlFor="tipo-empresa" className="cursor-pointer font-normal">Empresa</Label>
+                        </div>
+                      </RadioGroup>
+                    )}
+                  />
+                  {form.formState.errors.tipo ? (
+                    <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
+                  ) : null}
+                </div>
+
+                {watchedTipo === "PARTICULAR" && (
+                  <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Dados Pessoais</h4>
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.idade">Idade</Label>
+                        <Input id="dados_tipo.idade" type="number" className="rounded-none" {...form.register("dados_tipo.idade", { valueAsNumber: true })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.sexo">Sexo</Label>
+                        <Input id="dados_tipo.sexo" className="rounded-none" {...form.register("dados_tipo.sexo")} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.nacionalidade">Nacionalidade</Label>
+                        <Input id="dados_tipo.nacionalidade" className="rounded-none" {...form.register("dados_tipo.nacionalidade")} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {watchedTipo === "EMPRESA" && (
+                  <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Dados da Empresa</h4>
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.nome_comercial">Nome Comercial <span className="text-red-500">*</span></Label>
+                        <Input id="dados_tipo.nome_comercial" className="rounded-none" {...form.register("dados_tipo.nome_comercial")} />
+                        {(form.formState.errors.dados_tipo as Record<string, { message?: string }>)?.nome_comercial && (
+                          <p className="text-sm text-red-600">{(form.formState.errors.dados_tipo as Record<string, { message?: string }>).nome_comercial?.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.sede">Sede</Label>
+                        <Input id="dados_tipo.sede" className="rounded-none" {...form.register("dados_tipo.sede")} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.representante_legal">Representante Legal <span className="text-red-500">*</span></Label>
+                        <Input id="dados_tipo.representante_legal" className="rounded-none" {...form.register("dados_tipo.representante_legal")} />
+                        {(form.formState.errors.dados_tipo as Record<string, { message?: string }>)?.representante_legal && (
+                          <p className="text-sm text-red-600">{(form.formState.errors.dados_tipo as Record<string, { message?: string }>).representante_legal?.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dados_tipo.cargo">Cargo do Representante</Label>
+                        <Input id="dados_tipo.cargo" className="rounded-none" {...form.register("dados_tipo.cargo")} />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                   <div className="space-y-2">
@@ -281,6 +394,21 @@ function ClienteEditContent({ id }: { id: string }) {
                 </div>
               </div>
 
+              <div className="flex items-center gap-3">
+                <Controller
+                  control={form.control}
+                  name="avencado"
+                  render={({ field }) => (
+                    <Switch
+                      id="avencado"
+                      checked={field.value ?? false}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label htmlFor="avencado" className="cursor-pointer">Avençado</Label>
+              </div>
+
               {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
 
               <div className="flex gap-2">
@@ -299,6 +427,21 @@ function ClienteEditContent({ id }: { id: string }) {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!pendingTipo} onOpenChange={(open) => { if (!open) setPendingTipo(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mudar tipo de cliente</DialogTitle>
+            <DialogDescription>
+              Mudar o tipo irá limpar os dados de {pendingTipo === "PARTICULAR" ? "Empresa" : "Particular"}. Continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingTipo(null)}>Cancelar</Button>
+            <Button onClick={confirmTipoChange}>Continuar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
