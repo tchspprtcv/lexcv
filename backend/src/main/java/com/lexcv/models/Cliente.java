@@ -3,6 +3,7 @@ package com.lexcv.models;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -62,6 +63,28 @@ public class Cliente {
     @Column(name = "dados_tipo", columnDefinition = "TEXT")
     @Convert(converter = DadosTipoConverter.class)
     private DadosTipo dadosTipo;
+
+    @Column(name = "procuracao_key")
+    private String procuracaoKey;
+
+    @Column(name = "descricao_caso", columnDefinition = "TEXT")
+    private String descricaoCaso;
+
+    @Column(name = "documentos_entregues", columnDefinition = "TEXT")
+    @Convert(converter = DocumentosEntreguesConverter.class)
+    private List<DocumentoEntregue> documentosEntregues;
+
+    @Column(name = "documentos_a_tratar", columnDefinition = "TEXT")
+    @Convert(converter = DocumentosATratarConverter.class)
+    private List<DocumentoATratar> documentosATratar;
+
+    @Column(name = "deslocacoes", columnDefinition = "TEXT")
+    @Convert(converter = DeslocacoesConverter.class)
+    private List<Deslocacao> deslocacoes;
+
+    @Column(name = "honorarios_propostos", columnDefinition = "TEXT")
+    @Convert(converter = HonorariosPropostosConverter.class)
+    private HonorariosPropostos honorariosPropostos;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
