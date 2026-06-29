@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: Responsividade App
-status: complete
-last_updated: "2026-06-21T00:00:00.000Z"
-last_activity: 2026-06-21 — Milestone v2.3 complete (11/11 requirements, 4 phases, 8 plans shipped)
+milestone: v2.4
+milestone_name: Ficha de Cliente
+status: planning
+last_updated: "2026-06-29T00:00:00.000Z"
+last_activity: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: — (Milestone v2.3 complete)
+Phase: Not started (defining requirements)
 Plan: —
-Status: All 4 phases shipped, archived. Ready for next milestone.
-Last activity: 2026-06-21 — Milestone v2.3 shipped (Responsividade App, 11/11 requirements)
+Status: Defining requirements
+Last activity: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)
 
 Progress: [██████████] 100%
 

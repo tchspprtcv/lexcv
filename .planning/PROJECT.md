@@ -31,7 +31,32 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Empty — planning next milestone)
+- Numeração sequencial de clientes (`numero_cliente`, ex: CLI-0001), por tenant — v2.4
+- Tipo de cliente Particular vs. Empresa com formulário dinâmico — v2.4
+- Campos demográficos para Particular (idade, sexo, nacionalidade, BI/Pass) — v2.4
+- Dados de entidade coletiva para Empresa (nome comercial, NIF, sede, representante legal, cargo) — v2.4
+- Procuração obrigatória para todos os clientes (upload de documento) — v2.4
+- Flag "Cliente Avençado" visível na ficha e listagens — v2.4
+- Campos de intake: descrição do caso, advogados atribuídos (nome, cédula, contacto), administrativos atribuídos — v2.4
+- Documentos entregues vs. a tratar (por cliente) — v2.4
+- Deslocações a realizar (por cliente) — v2.4
+- Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
+- Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
+
+## Current Milestone: v2.4 Ficha de Cliente
+
+**Goal:** Adaptar o módulo de clientes para espelhar a ficha real do escritório, com tipo de cliente (Particular/Empresa), numeração sequencial automática e ficha imprimível.
+
+**Target features:**
+- Numeração sequencial de clientes gerada automaticamente no backend, por tenant
+- Formulário dinâmico por tipo de cliente (Particular vs. Empresa/Coletivo)
+- Campos demográficos (Particular) e dados de entidade coletiva (Empresa)
+- Procuração obrigatória para todos os clientes
+- Flag "Cliente Avençado"
+- Campos de intake: descrição do caso, advogados e administrativos atribuídos
+- Documentos entregues vs. a tratar, deslocações a realizar
+- Honorários propostos no intake
+- Vista de Ficha Cliente imprimível
 
 ### Out of Scope
 
@@ -108,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — Milestone v2.3 complete (Responsividade App shipped)*
+*Last updated: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)*
