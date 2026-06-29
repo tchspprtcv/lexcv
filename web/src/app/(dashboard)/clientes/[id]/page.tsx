@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -103,7 +104,19 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               <CardContent>
                 <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
                   <dt className="text-neutral-500 dark:text-neutral-400">Nome</dt>
-                  <dd className="col-span-2 font-medium">{cliente.data.nome}</dd>
+                  <dd className="col-span-2 font-medium flex items-center gap-2 flex-wrap">
+                    {cliente.data.nome}
+                    {cliente.data.numero_cliente ? (
+                      <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
+                        {cliente.data.numero_cliente}
+                      </Badge>
+                    ) : null}
+                    {cliente.data.avencado ? (
+                      <Badge variant="green" className="rounded-none font-bold text-[10px]">
+                        Avençado
+                      </Badge>
+                    ) : null}
+                  </dd>
 
                   <dt className="text-neutral-500 dark:text-neutral-400">NIF</dt>
                   <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
