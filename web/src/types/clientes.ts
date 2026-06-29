@@ -1,7 +1,23 @@
+export interface DadosTipoParticular {
+  idade?: number;
+  sexo?: string;
+  nacionalidade?: string;
+}
+
+export interface DadosTipoEmpresa {
+  nome_comercial?: string;
+  sede?: string;
+  representante_legal?: string;
+  cargo?: string;
+}
+
 export interface Cliente {
   id: string;
   tenant_id: string;
-  tipo?: string;
+  tipo?: "PARTICULAR" | "EMPRESA";
+  numero_cliente?: string;
+  avencado?: boolean;
+  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome: string;
   nif?: string;
   email?: string;
@@ -21,7 +37,9 @@ export interface Cliente {
 }
 
 export interface ClienteCreateRequest {
-  tipo?: string;
+  tipo?: "PARTICULAR" | "EMPRESA";
+  avencado?: boolean;
+  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome: string;
   nif?: string;
   email?: string;
@@ -40,7 +58,9 @@ export interface ClienteCreateRequest {
 }
 
 export interface ClienteUpdateRequest {
-  tipo?: string;
+  tipo?: "PARTICULAR" | "EMPRESA";
+  avencado?: boolean;
+  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome?: string;
   nif?: string;
   email?: string;

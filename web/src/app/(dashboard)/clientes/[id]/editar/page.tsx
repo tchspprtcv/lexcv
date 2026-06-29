@@ -57,7 +57,7 @@ function ClienteEditContent({ id }: { id: string }) {
     defaultValues: {
       nome: "",
       nif: "",
-      tipo: "",
+      tipo: undefined,
       email: "",
       telefone: "",
       localidade: "",
@@ -74,7 +74,7 @@ function ClienteEditContent({ id }: { id: string }) {
     form.reset({
       nome: cliente.data.nome ?? "",
       nif: cliente.data.nif ?? "",
-      tipo: cliente.data.tipo ?? "",
+      tipo: cliente.data.tipo ?? undefined,
       email: cliente.data.email ?? "",
       telefone: cliente.data.telefone ?? "",
       localidade: cliente.data.localidade ?? "",

@@ -160,7 +160,9 @@ function ClientesPageContent({
       try {
         await createCliente.mutateAsync({
           nome,
-          tipo: idxTipo >= 0 ? (r[idxTipo] ?? "").trim() || undefined : undefined,
+          tipo: idxTipo >= 0
+            ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
+            : undefined,
           nif: idxNif >= 0 ? (r[idxNif] ?? "").trim() || undefined : undefined,
           telefone: idxTelefone >= 0 ? (r[idxTelefone] ?? "").trim() || undefined : undefined,
           email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,

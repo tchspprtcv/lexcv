@@ -35,7 +35,7 @@ export default function ClienteCreatePage() {
     defaultValues: {
       nome: "",
       nif: "",
-      tipo: "",
+      tipo: undefined,
       email: "",
       telefone: "",
       localidade: "",

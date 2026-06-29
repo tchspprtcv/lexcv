@@ -15,7 +15,21 @@ const optionalEmail = z
 
 export const clienteFormSchema = z
   .object({
-    tipo: optionalTrimmedString,
+    tipo: z.enum(["PARTICULAR", "EMPRESA"]).optional(),
+    avencado: z.boolean().optional(),
+    dados_tipo: z
+      .object({
+        // Particular
+        idade: z.number().int().positive().optional(),
+        sexo: optionalTrimmedString,
+        nacionalidade: optionalTrimmedString,
+        // Empresa
+        nome_comercial: optionalTrimmedString,
+        sede: optionalTrimmedString,
+        representante_legal: optionalTrimmedString,
+        cargo: optionalTrimmedString,
+      })
+      .optional(),
     nome: z.string().trim().min(1, "O nome é obrigatório"),
     nif: optionalTrimmedString,
     email: optionalEmail,
@@ -48,6 +62,22 @@ export const clienteFormSchema = z
           code: z.ZodIssueCode.custom,
           message: "NIF de Cabo Verde deve ter exatamente 9 dígitos",
           path: ["documento_numero"],
+        });
+      }
+    }
+    if (data.tipo === "EMPRESA") {
+      if (!data.dados_tipo?.nome_comercial?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Nome comercial é obrigatório para Empresa",
+          path: ["dados_tipo", "nome_comercial"],
+        });
+      }
+      if (!data.dados_tipo?.representante_legal?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Representante legal é obrigatório para Empresa",
+          path: ["dados_tipo", "representante_legal"],
         });
       }
     }
