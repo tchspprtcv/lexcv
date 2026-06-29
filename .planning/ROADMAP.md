@@ -275,6 +275,10 @@ Plans:
   3. Ao clicar em "Imprimir", o browser abre o diálogo de impressão com CSS de impressão aplicado: sem sidebar, sem header de navegação, sem botões de ação, apenas o conteúdo da ficha
   4. Em impressão, a ficha ocupa corretamente páginas A4 — sem conteúdo cortado entre páginas e com margens adequadas
 **UI hint**: yes
+**Plans**: 2 plans
+Plans:
+- [ ] 60-01-PLAN.md — Estender tipos + criar página ficha imprimível (nova rota, layout 8 secções, CSS A4, guard de permissão)
+- [ ] 60-02-PLAN.md — Adicionar pontos de acesso à ficha (botão na página de detalhe + ícone Printer na listagem)
 
 ## Progress
 
