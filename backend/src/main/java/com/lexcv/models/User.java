@@ -40,6 +40,9 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "numero_cedula")
+    private String numeroCedula;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
