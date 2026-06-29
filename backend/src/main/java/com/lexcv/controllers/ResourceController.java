@@ -223,6 +223,13 @@ public class ResourceController {
         if (cliente.getDocumentoTipo() == DocumentoTipo.NIF) {
             cliente.setNif(cliente.getDocumentoNumero());
         }
+        synchronized (ClienteRepository.class) {
+            java.util.Optional<Integer> result = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId());
+            int maxSeq = result.orElse(0);
+            int nextSeq = maxSeq + 1;
+            cliente.setNumeroSequencial(nextSeq);
+            cliente.setNumeroCliente(String.format("CLI-%04d", nextSeq));
+        }
         Cliente saved = clienteRepository.save(cliente);
 
         // Auto initialize Cuenta Corriente
@@ -264,6 +271,8 @@ public class ResourceController {
         cliente.setDocumentoNumero(payload.getDocumentoNumero());
         cliente.setRamoAtividade(payload.getRamoAtividade());
         cliente.setDetalhesAdicionais(payload.getDetalhesAdicionais());
+        cliente.setAvencado(payload.getAvencado());
+        cliente.setDadosTipo(payload.getDadosTipo());
 
         if (payload.getDocumentoTipo() == DocumentoTipo.NIF) {
             cliente.setNif(payload.getDocumentoNumero());
