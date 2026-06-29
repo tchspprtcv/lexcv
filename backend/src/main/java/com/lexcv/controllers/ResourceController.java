@@ -379,6 +379,130 @@ public class ResourceController {
         return ResponseEntity.noContent().build();
     }
 
+    // ==========================================
+    // ADVOGADOS DO CLIENTE
+    // ==========================================
+    @PreAuthorize("hasAuthority('clientes:view')")
+    @GetMapping("/clientes/{id}/advogados")
+    public ResponseEntity<?> listClienteAdvogados(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        List<ClienteAdvogado> links = clienteAdvogadoRepository.findByClienteIdAndTenantId(id, getTenantId());
+        List<User> users = links.stream()
+                .map(link -> userRepository.findById(link.getUserId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @PostMapping("/clientes/{id}/advogados/{userId}")
+    public ResponseEntity<?> addClienteAdvogado(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || !user.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+        }
+
+        if (user.getRoles().stream().noneMatch(r -> "ADVOGADO".equals(r.getNome()))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ADVOGADO"));
+        }
+
+        if (clienteAdvogadoRepository.findByClienteIdAndUserIdAndTenantId(id, userId, getTenantId()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Advogado já associado ao cliente"));
+        }
+
+        ClienteAdvogado link = ClienteAdvogado.builder()
+                .clienteId(id)
+                .userId(userId)
+                .tenantId(getTenantId())
+                .build();
+        clienteAdvogadoRepository.save(link);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
+    @DeleteMapping("/clientes/{id}/advogados/{userId}")
+    public ResponseEntity<?> removeClienteAdvogado(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        clienteAdvogadoRepository.deleteByClienteIdAndUserIdAndTenantId(id, userId, getTenantId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==========================================
+    // ADMINISTRATIVOS DO CLIENTE
+    // ==========================================
+    @PreAuthorize("hasAuthority('clientes:view')")
+    @GetMapping("/clientes/{id}/administrativos")
+    public ResponseEntity<?> listClienteAdministrativos(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        List<ClienteAdministrativo> links = clienteAdministrativoRepository.findByClienteIdAndTenantId(id, getTenantId());
+        List<User> users = links.stream()
+                .map(link -> userRepository.findById(link.getUserId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @PostMapping("/clientes/{id}/administrativos/{userId}")
+    public ResponseEntity<?> addClienteAdministrativo(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || !user.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+        }
+
+        if (user.getRoles().stream().noneMatch(r -> "ASSISTENTE".equals(r.getNome()) || "TECNICO".equals(r.getNome()))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ASSISTENTE ou TECNICO"));
+        }
+
+        if (clienteAdministrativoRepository.findByClienteIdAndUserIdAndTenantId(id, userId, getTenantId()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Administrativo já associado ao cliente"));
+        }
+
+        ClienteAdministrativo link = ClienteAdministrativo.builder()
+                .clienteId(id)
+                .userId(userId)
+                .tenantId(getTenantId())
+                .build();
+        clienteAdministrativoRepository.save(link);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
+    @DeleteMapping("/clientes/{id}/administrativos/{userId}")
+    public ResponseEntity<?> removeClienteAdministrativo(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        clienteAdministrativoRepository.deleteByClienteIdAndUserIdAndTenantId(id, userId, getTenantId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PreAuthorize("hasAuthority('clientes:edit')")
     @DeleteMapping("/clientes/{id}")
     public ResponseEntity<?> deleteCliente(@PathVariable UUID id) {
