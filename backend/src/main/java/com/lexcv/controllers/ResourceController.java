@@ -63,6 +63,8 @@ public class ResourceController {
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
     private final StorageService storageService;
+    private final ClienteAdvogadoRepository clienteAdvogadoRepository;
+    private final ClienteAdministrativoRepository clienteAdministrativoRepository;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -274,6 +276,12 @@ public class ResourceController {
         cliente.setAvencado(payload.getAvencado());
         cliente.setDadosTipo(payload.getDadosTipo());
 
+        if (payload.getDescricaoCaso() != null) cliente.setDescricaoCaso(payload.getDescricaoCaso());
+        if (payload.getDocumentosEntregues() != null) cliente.setDocumentosEntregues(payload.getDocumentosEntregues());
+        if (payload.getDocumentosATratar() != null) cliente.setDocumentosATratar(payload.getDocumentosATratar());
+        if (payload.getDeslocacoes() != null) cliente.setDeslocacoes(payload.getDeslocacoes());
+        if (payload.getHonorariosPropostos() != null) cliente.setHonorariosPropostos(payload.getHonorariosPropostos());
+
         if (payload.getDocumentoTipo() == DocumentoTipo.NIF) {
             cliente.setNif(payload.getDocumentoNumero());
         } else {
@@ -282,6 +290,217 @@ public class ResourceController {
 
         Cliente saved = clienteRepository.save(cliente);
         return ResponseEntity.ok(saved);
+    }
+
+    // ==========================================
+    // PROCURAÇÃO
+    // ==========================================
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @PostMapping(value = "/clientes/{id}/procuracao", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadProcuracao(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Ficheiro em falta"));
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Nome do ficheiro em falta"));
+        }
+
+        try {
+            String oldKey = cliente.getProcuracaoKey();
+            UUID syntheticId = UUID.randomUUID();
+            InputStream inputStream = file.getInputStream();
+            String newKey = storageService.upload(getTenantId(), syntheticId,
+                    originalName, inputStream, file.getContentType(), file.getSize());
+
+            // Upload new object before deleting old one — old remains intact if upload fails.
+            if (oldKey != null) {
+                storageService.delete(oldKey);
+            }
+
+            cliente.setProcuracaoKey(newKey);
+            clienteRepository.save(cliente);
+            return ResponseEntity.ok(Map.of("procuracaoKey", newKey));
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Erro ao ler ficheiro"));
+        }
+    }
+
+    @PreAuthorize("hasAuthority('clientes:view')")
+    @GetMapping("/clientes/{id}/procuracao/download")
+    public ResponseEntity<?> downloadProcuracao(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+        if (cliente.getProcuracaoKey() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Procuração não encontrada"));
+        }
+
+        try {
+            String url = storageService.presignedDownloadUrl(cliente.getProcuracaoKey());
+            return ResponseEntity.ok(Map.of("url", url, "expiresIn", 3600));
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @DeleteMapping("/clientes/{id}/procuracao")
+    public ResponseEntity<?> deleteProcuracao(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+        if (cliente.getProcuracaoKey() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Procuração não encontrada"));
+        }
+
+        try {
+            storageService.delete(cliente.getProcuracaoKey());
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
+
+        cliente.setProcuracaoKey(null);
+        clienteRepository.save(cliente);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==========================================
+    // ADVOGADOS DO CLIENTE
+    // ==========================================
+    @PreAuthorize("hasAuthority('clientes:view')")
+    @GetMapping("/clientes/{id}/advogados")
+    public ResponseEntity<?> listClienteAdvogados(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        List<ClienteAdvogado> links = clienteAdvogadoRepository.findByClienteIdAndTenantId(id, getTenantId());
+        List<User> users = links.stream()
+                .map(link -> userRepository.findById(link.getUserId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @PostMapping("/clientes/{id}/advogados/{userId}")
+    public ResponseEntity<?> addClienteAdvogado(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || !user.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+        }
+
+        if (user.getRoles().stream().noneMatch(r -> "ADVOGADO".equals(r.getNome()))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ADVOGADO"));
+        }
+
+        if (clienteAdvogadoRepository.findByClienteIdAndUserIdAndTenantId(id, userId, getTenantId()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Advogado já associado ao cliente"));
+        }
+
+        ClienteAdvogado link = ClienteAdvogado.builder()
+                .clienteId(id)
+                .userId(userId)
+                .tenantId(getTenantId())
+                .build();
+        clienteAdvogadoRepository.save(link);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
+    @DeleteMapping("/clientes/{id}/advogados/{userId}")
+    public ResponseEntity<?> removeClienteAdvogado(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        clienteAdvogadoRepository.deleteByClienteIdAndUserIdAndTenantId(id, userId, getTenantId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==========================================
+    // ADMINISTRATIVOS DO CLIENTE
+    // ==========================================
+    @PreAuthorize("hasAuthority('clientes:view')")
+    @GetMapping("/clientes/{id}/administrativos")
+    public ResponseEntity<?> listClienteAdministrativos(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        List<ClienteAdministrativo> links = clienteAdministrativoRepository.findByClienteIdAndTenantId(id, getTenantId());
+        List<User> users = links.stream()
+                .map(link -> userRepository.findById(link.getUserId()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @PostMapping("/clientes/{id}/administrativos/{userId}")
+    public ResponseEntity<?> addClienteAdministrativo(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || !user.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+        }
+
+        if (user.getRoles().stream().noneMatch(r -> "ASSISTENTE".equals(r.getNome()) || "TECNICO".equals(r.getNome()))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ASSISTENTE ou TECNICO"));
+        }
+
+        if (clienteAdministrativoRepository.findByClienteIdAndUserIdAndTenantId(id, userId, getTenantId()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "Administrativo já associado ao cliente"));
+        }
+
+        ClienteAdministrativo link = ClienteAdministrativo.builder()
+                .clienteId(id)
+                .userId(userId)
+                .tenantId(getTenantId())
+                .build();
+        clienteAdministrativoRepository.save(link);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("userId", userId));
+    }
+
+    @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
+    @DeleteMapping("/clientes/{id}/administrativos/{userId}")
+    public ResponseEntity<?> removeClienteAdministrativo(@PathVariable UUID id, @PathVariable UUID userId) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+
+        clienteAdministrativoRepository.deleteByClienteIdAndUserIdAndTenantId(id, userId, getTenantId());
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('clientes:edit')")
