@@ -6,6 +6,7 @@
 - ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
 - ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
 - ✅ **v2.3 Responsividade App** — Phases 53–56 (complete 2026-06-21)
+- 🔄 **v2.4 Ficha de Cliente** — Phases 57–60 (active)
 
 ## Phases
 
@@ -92,6 +93,13 @@ Plans:
 See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
 
 </details>
+
+### v2.4 Ficha de Cliente (active)
+
+- [ ] **Phase 57: Backend Schema + API** — Extensão da entidade Cliente com novos campos, geração de numero_cliente, endpoints atualizados
+- [ ] **Phase 58: Formulário Dinâmico** — Formulário frontend com seletor de tipo, campos demográficos/empresa, flag avençado e exibição do número
+- [ ] **Phase 59: Procuração + Intake** — Upload obrigatório de procuração e secção de intake (advogados, administrativos, docs, deslocações, honorários propostos)
+- [ ] **Phase 60: Ficha Imprimível** — Vista dedicada que reproduz a ficha real do escritório com botão de impressão
 
 ## Phase Details
 
@@ -220,9 +228,53 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 57: Backend Schema + API
+**Goal**: A entidade Cliente no backend suporta todos os novos campos da ficha de escritório — numero_cliente gerado automaticamente por tenant, tipo de cliente, dados demográficos do particular e dados da entidade coletiva — e os endpoints CRUD refletem esse schema
+**Depends on**: Phase 56 (milestone v2.3 completo)
+**Requirements**: PERF-01, PERF-03, PERF-04, PART-01, PART-02, EMP-01
+**Success Criteria** (what must be TRUE):
+  1. Ao criar um cliente via `POST /api/v1/clientes`, o backend gera automaticamente um `numero_cliente` no formato CLI-XXXX, único por tenant, sem input do utilizador
+  2. O endpoint aceita e persiste `tipo_cliente` (enum PARTICULAR / EMPRESA), `avencado` (boolean), e os campos demográficos (`idade`, `sexo`, `nacionalidade`, `biPassaporte`) para clientes do tipo PARTICULAR
+  3. O endpoint aceita e persiste os campos de entidade coletiva (`nomeComercial`, `nif`, `sede`, `representanteLegal`, `cargoRepresentante`) para clientes do tipo EMPRESA
+  4. `GET /api/v1/clientes` e `GET /api/v1/clientes/{id}` retornam todos os novos campos, com tenant scoping correto em todas as operações
+
+### Phase 58: Formulário Dinâmico
+**Goal**: O formulário de criação e edição de cliente adapta os seus campos ao tipo de cliente selecionado, exibe o numero_cliente gerado e permite marcar o cliente como avençado
+**Depends on**: Phase 57
+**Requirements**: PERF-02, PERF-03, PERF-04, EMP-02
+**Success Criteria** (what must be TRUE):
+  1. O formulário tem um seletor de tipo (Particular / Empresa); ao mudar o tipo, os campos específicos trocam dinamicamente — campos demográficos visíveis para Particular, campos de entidade coletiva visíveis para Empresa, nunca os dois em simultâneo
+  2. Após criar um cliente, o seu numero_cliente (ex: CLI-0001) é visível na listagem de clientes e no cabeçalho da ficha individual, em destaque
+  3. O formulário inclui uma checkbox ou toggle "Cliente Avençado"; quando ativado, a ficha e a listagem exibem um badge identificador
+  4. Todos os novos campos passam pela validação Zod antes de submeter — campos obrigatórios por tipo estão assinalados e bloqueiam a submissão se vazios
+**UI hint**: yes
+
+### Phase 59: Procuração + Intake
+**Goal**: A ficha de cliente tem uma secção de procuração com upload obrigatório e uma secção de intake onde o utilizador regista a descrição do caso, advogados, administrativos, documentos, deslocações e honorários propostos
+**Depends on**: Phase 58
+**Requirements**: PROC-01, PROC-02, INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07
+**Success Criteria** (what must be TRUE):
+  1. Não é possível guardar um cliente sem um documento de procuração associado — o formulário bloqueia a submissão e indica claramente o campo em falta
+  2. Na ficha do cliente existe um botão para visualizar a procuração existente (abre URL pré-assinada MinIO) e outro para substituir o ficheiro por uma nova versão
+  3. A secção de intake permite registar: descrição do caso (textarea), lista de advogados com nome + cédula + contacto (linhas adicionáveis), lista de administrativos (linhas adicionáveis), lista de documentos entregues, lista de documentos a tratar, lista de deslocações a realizar, e honorários propostos (valor total, valor por extenso, previsão)
+  4. Cada lista do intake (advogados, docs, deslocações) tem botões para adicionar e remover entradas individualmente sem perder as restantes
+  5. Todas as secções de intake são persistidas via API e carregadas ao abrir a ficha do cliente
+**UI hint**: yes
+
+### Phase 60: Ficha Imprimível
+**Goal**: O utilizador acede a uma vista dedicada da ficha de cliente que reproduz o formato real do formulário do escritório e pode enviá-la para impressão com um único clique
+**Depends on**: Phase 59
+**Requirements**: FICH-01, FICH-02
+**Success Criteria** (what must be TRUE):
+  1. Existe um botão "Ficha do Cliente" ou "Imprimir Ficha" na ficha do cliente que abre uma rota dedicada (ex: `/clientes/{id}/ficha`) com o layout do formulário real do escritório
+  2. A vista de ficha apresenta todos os campos preenchidos — numero_cliente, tipo, dados demográficos/empresa, procuração, intake completo — organizados no mesmo layout visual do formulário em papel
+  3. Ao clicar em "Imprimir", o browser abre o diálogo de impressão com CSS de impressão aplicado: sem sidebar, sem header de navegação, sem botões de ação, apenas o conteúdo da ficha
+  4. Em impressão, a ficha ocupa corretamente páginas A4 — sem conteúdo cortado entre páginas e com margens adequadas
+**UI hint**: yes
+
 ## Progress
 
-**Execution Order:** 47 → 48 → 49 → 50 → 51 → 52 → 53 → 54 → 55 → 56
+**Execution Order:** 47 → 48 → 49 → 50 → 51 → 52 → 53 → 54 → 55 → 56 → 57 → 58 → 59 → 60
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -240,3 +292,7 @@ Plans:
 | 54. Listas e Tabelas | v2.3 | 3/3 | Complete | 2026-06-21 |
 | 55. Formulários e Modais | v2.3 | 2/2 | Complete | 2026-06-21 |
 | 56. Dashboard e Calendário | v2.3 | 1/1 | Complete   | 2026-06-21 |
+| 57. Backend Schema + API | v2.4 | 0/? | Not started | - |
+| 58. Formulário Dinâmico | v2.4 | 0/? | Not started | - |
+| 59. Procuração + Intake | v2.4 | 0/? | Not started | - |
+| 60. Ficha Imprimível | v2.4 | 0/? | Not started | - |

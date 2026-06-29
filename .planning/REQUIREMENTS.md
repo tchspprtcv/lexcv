@@ -65,31 +65,31 @@ Milestone: Ficha de Cliente — adaptar o módulo de clientes para espelhar a fi
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERF-01 | TBD | Pending |
-| PERF-02 | TBD | Pending |
-| PERF-03 | TBD | Pending |
-| PERF-04 | TBD | Pending |
-| PART-01 | TBD | Pending |
-| PART-02 | TBD | Pending |
-| EMP-01 | TBD | Pending |
-| EMP-02 | TBD | Pending |
-| PROC-01 | TBD | Pending |
-| PROC-02 | TBD | Pending |
-| INT-01 | TBD | Pending |
-| INT-02 | TBD | Pending |
-| INT-03 | TBD | Pending |
-| INT-04 | TBD | Pending |
-| INT-05 | TBD | Pending |
-| INT-06 | TBD | Pending |
-| INT-07 | TBD | Pending |
-| FICH-01 | TBD | Pending |
-| FICH-02 | TBD | Pending |
+| PERF-01 | Phase 57 | Pending |
+| PERF-02 | Phase 58 | Pending |
+| PERF-03 | Phase 57 | Pending |
+| PERF-04 | Phase 57 | Pending |
+| PART-01 | Phase 57 | Pending |
+| PART-02 | Phase 57 | Pending |
+| EMP-01 | Phase 57 | Pending |
+| EMP-02 | Phase 58 | Pending |
+| PROC-01 | Phase 59 | Pending |
+| PROC-02 | Phase 59 | Pending |
+| INT-01 | Phase 59 | Pending |
+| INT-02 | Phase 59 | Pending |
+| INT-03 | Phase 59 | Pending |
+| INT-04 | Phase 59 | Pending |
+| INT-05 | Phase 59 | Pending |
+| INT-06 | Phase 59 | Pending |
+| INT-07 | Phase 59 | Pending |
+| FICH-01 | Phase 60 | Pending |
+| FICH-02 | Phase 60 | Pending |
 
 **Coverage:**
 - v2.4 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️ (roadmap pending)
+- Mapped to phases: 19
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-29*
-*Last updated: 2026-06-29 after initial definition*
+*Last updated: 2026-06-29 — phases 57–60 assigned (roadmap v2.4)*
