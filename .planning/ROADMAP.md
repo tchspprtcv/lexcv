@@ -237,6 +237,10 @@ Plans:
   2. O endpoint aceita e persiste `tipo_cliente` (enum PARTICULAR / EMPRESA), `avencado` (boolean), e os campos demográficos (`idade`, `sexo`, `nacionalidade`, `biPassaporte`) para clientes do tipo PARTICULAR
   3. O endpoint aceita e persiste os campos de entidade coletiva (`nomeComercial`, `nif`, `sede`, `representanteLegal`, `cargoRepresentante`) para clientes do tipo EMPRESA
   4. `GET /api/v1/clientes` e `GET /api/v1/clientes/{id}` retornam todos os novos campos, com tenant scoping correto em todas as operações
+**Plans**: 2 plans
+Plans:
+- [ ] 57-01-PLAN.md — Entity + Repository: TipoCliente enum, DadosTipo POJO, DadosTipoConverter, Cliente new fields, ClienteRepository MAX+1 query
+- [ ] 57-02-PLAN.md — Controller: numero_cliente generation in createCliente, new field assignment in updateCliente
 
 ### Phase 58: Formulário Dinâmico
 **Goal**: O formulário de criação e edição de cliente adapta os seus campos ao tipo de cliente selecionado, exibe o numero_cliente gerado e permite marcar o cliente como avençado
