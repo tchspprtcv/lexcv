@@ -50,6 +50,19 @@ public class Cliente {
     @Column(name = "detalhes_adicionais", length = 255)
     private String detalhesAdicionais;
 
+    @Column(name = "numero_sequencial")
+    private Integer numeroSequencial;
+
+    @Column(name = "numero_cliente", length = 20)
+    private String numeroCliente;
+
+    @Column(name = "avencado")
+    private Boolean avencado;
+
+    @Column(name = "dados_tipo", columnDefinition = "TEXT")
+    @Convert(converter = DadosTipoConverter.class)
+    private DadosTipo dadosTipo;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
