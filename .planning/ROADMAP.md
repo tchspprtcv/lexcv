@@ -86,7 +86,8 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 
 **Milestone Goal:** Gerir o ciclo completo de pareceres jurídicos (solicitação → elaboração com versionamento → aprovação opcional → entrega), com auditoria automática e pesquisa avançada, reutilizando `Cliente`, `User`+role `ADVOGADO`, `AuditLog` e `StorageService` já existentes.
 
-- [x] **Phase 61: Data Layer + Backend CRUD** - Entidades ParecerSolicitacao/ParecerVersao, scope RBAC `pareceres:*`, e CRUD completo de solicitações via API (completed 2026-06-30)
+- [x] **Phase 61: Data Layer + Backend CRUD** - Entidades ParecerSolicitacao/ParecerVersao, scope RBAC `pareceres:*`, e CRUD completo de solicitações via API
+ (completed 2026-06-30)
 - [x] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data (completed 2026-06-30)
 - [ ] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download
 - [ ] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados
@@ -129,7 +130,8 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   1. Utilizador com papel de supervisor/ADMIN pode marcar uma versão específica como aprovada internamente (passo opcional)
   2. Utilizador pode marcar a versão final como entregue, o que altera o status da solicitação para CONCLUIDO
   3. Parecer entregue fica visível/descarregável para consulta pela equipa (e, conforme RBAC, pelo cliente)
-**Plans**: TBD
+**Plans**: 1 plan
+  - [ ] 63-01-PLAN.md — Campos aprovado/versaoFinalId nas entidades + endpoints /aprovar e /entregar no ParecerController
 **UI hint**: yes
 
 ### Phase 64: Auditoria e Pesquisa Avançada
@@ -167,7 +169,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 60. Ficha Imprimível | v2.4 | 2/2 | Complete | 2026-06-30 |
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
-| 63. Aprovação e Entrega | v2.5 | 0/TBD | Not started | - |
+| 63. Aprovação e Entrega | v2.5 | 0/1 | Not started | - |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
 
 **Next:** Run `/gsd:plan-phase 61` to begin Phase 61 planning.
