@@ -98,7 +98,7 @@ See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
 
 - [ ] **Phase 57: Backend Schema + API** — Extensão da entidade Cliente com novos campos, geração de numero_cliente, endpoints atualizados
 - [x] **Phase 58: Formulário Dinâmico** — Formulário frontend com seletor de tipo, campos demográficos/empresa, flag avençado e exibição do número (completed 2026-06-30)
-- [ ] **Phase 59: Procuração + Intake** — Upload obrigatório de procuração e secção de intake (advogados, administrativos, docs, deslocações, honorários propostos)
+- [x] **Phase 59: Procuração + Intake** — Upload obrigatório de procuração e secção de intake (advogados, administrativos, docs, deslocações, honorários propostos) (completed 2026-06-30)
 - [ ] **Phase 60: Ficha Imprimível** — Vista dedicada que reproduz a ficha real do escritório com botão de impressão
 
 ## Phase Details
@@ -258,12 +258,19 @@ Plans:
 **Depends on**: Phase 58
 **Requirements**: PROC-01, PROC-02, INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07
 **Success Criteria** (what must be TRUE):
-  1. Não é possível guardar um cliente sem um documento de procuração associado — o formulário bloqueia a submissão e indica claramente o campo em falta
+  1. Não é possível guardar um cliente sem um documento de procuração associado — o formulário bloqueia a submissão e indica claramente o campo em falta — **Note**: locked decision D-01 (59-CONTEXT.md) overrides this to non-blocking-with-warning; implementation follows D-01 (visual "Procuração em falta" badge, save not blocked). See 59-VERIFICATION.md for full reconciliation.
   2. Na ficha do cliente existe um botão para visualizar a procuração existente (abre URL pré-assinada MinIO) e outro para substituir o ficheiro por uma nova versão
   3. A secção de intake permite registar: descrição do caso (textarea), lista de advogados com nome + cédula + contacto (linhas adicionáveis), lista de administrativos (linhas adicionáveis), lista de documentos entregues, lista de documentos a tratar, lista de deslocações a realizar, e honorários propostos (valor total, valor por extenso, previsão)
   4. Cada lista do intake (advogados, docs, deslocações) tem botões para adicionar e remover entradas individualmente sem perder as restantes
   5. Todas as secções de intake são persistidas via API e carregadas ao abrir a ficha do cliente
 **UI hint**: yes
+**Plans**: 6 plans
+- [x] 59-01-PLAN.md — Backend JSON column models + Cliente entity extension
+- [x] 59-02-PLAN.md — User numeroCedula + junction entity models + repositories
+- [x] 59-03-PLAN.md — REST endpoints (procuração + advogados/administrativos)
+- [x] 59-04-PLAN.md — Frontend types, hooks, schema
+- [x] 59-05-PLAN.md — Detail page: procuração + advogados/administrativos cards
+- [x] 59-06-PLAN.md — Edit page: intake fields
 
 ### Phase 60: Ficha Imprimível
 **Goal**: O utilizador acede a uma vista dedicada da ficha de cliente que reproduz o formato real do formulário do escritório e pode enviá-la para impressão com um único clique
@@ -302,5 +309,5 @@ Plans:
 | 56. Dashboard e Calendário | v2.3 | 1/1 | Complete   | 2026-06-21 |
 | 57. Backend Schema + API | v2.4 | 0/? | Not started | - |
 | 58. Formulário Dinâmico | v2.4 | 0/? | Not started | - |
-| 59. Procuração + Intake | v2.4 | 0/? | Not started | - |
+| 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
 | 60. Ficha Imprimível | v2.4 | 0/? | Not started | - |
