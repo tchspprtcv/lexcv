@@ -167,8 +167,12 @@ public class ParecerController {
 
         solicitacao.setPrazo(payload.getPrazo());
         solicitacao.setPrioridade(payload.getPrioridade());
-        solicitacao.setClienteId(payload.getClienteId());
-        solicitacao.setProcessoId(payload.getProcessoId());
+        if (payload.getClienteId() != null) {
+            solicitacao.setClienteId(payload.getClienteId());
+        }
+        if (payload.getProcessoId() != null) {
+            solicitacao.setProcessoId(payload.getProcessoId());
+        }
         // status and advogadoId are intentionally excluded: status is a state-machine field
         // and advogadoId is changed only via /atribuir
 
