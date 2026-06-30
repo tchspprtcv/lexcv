@@ -267,7 +267,7 @@ public class ParecerController {
         return ResponseEntity.ok(versao);
     }
 
-    @PreAuthorize("hasAuthority('pareceres:manage')")
+    @PreAuthorize("hasAuthority('pareceres:edit')")
     @PutMapping("/{id}/entregar")
     public ResponseEntity<?> entregarSolicitacao(@PathVariable UUID id, @RequestParam UUID versaoFinalId) {
         UUID tenantId = getTenantId();
