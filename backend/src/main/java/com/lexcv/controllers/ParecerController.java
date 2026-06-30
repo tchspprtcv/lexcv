@@ -241,14 +241,14 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
         }
 
-        ParecerVersao versao = parecerVersaoRepository.findById(versaoId).orElse(null);
-        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
-        }
-
         if ("CONCLUIDO".equals(solicitacao.getStatus())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Não é possível aprovar uma versão de um parecer concluído"));
+        }
+
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
         }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -276,14 +276,14 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
         }
 
-        ParecerVersao versao = parecerVersaoRepository.findById(versaoFinalId).orElse(null);
-        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
-        }
-
         if ("CONCLUIDO".equals(solicitacao.getStatus())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Parecer já foi entregue"));
+        }
+
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoFinalId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
         }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
