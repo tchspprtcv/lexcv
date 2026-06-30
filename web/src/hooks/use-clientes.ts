@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 
 import type {
   Cliente,
+  ClienteAdvogadoUser,
   ClienteContaCorrenteResponse,
   ClienteCreateRequest,
   ClientesListFilters,
@@ -136,6 +137,128 @@ export function useMergeClientes() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["clientes"] });
+    },
+  });
+}
+
+export function useUploadProcuracao(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (formData: FormData) =>
+      apiFetch<Cliente>(`/clientes/${encodeURIComponent(clienteId)}/procuracao`, {
+        method: "POST",
+        body: formData,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", "detail", clienteId] });
+    },
+  });
+}
+
+export function useDownloadProcuracao() {
+  return useMutation({
+    mutationFn: (clienteId: string) =>
+      apiFetch<{ url: string; expiresIn: number }>(
+        `/clientes/${encodeURIComponent(clienteId)}/procuracao/download`,
+      ),
+  });
+}
+
+export function useDeleteProcuracao(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<void>(`/clientes/${encodeURIComponent(clienteId)}/procuracao`, {
+        method: "DELETE",
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", "detail", clienteId] });
+    },
+  });
+}
+
+export function useClienteAdvogados(clienteId: string) {
+  const enabled = typeof window !== "undefined" && Boolean(clienteId);
+
+  return useQuery({
+    queryKey: ["clientes", clienteId, "advogados"],
+    queryFn: () =>
+      apiFetch<ClienteAdvogadoUser[]>(`/clientes/${encodeURIComponent(clienteId)}/advogados`),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useAddAdvogado(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<void>(
+        `/clientes/${encodeURIComponent(clienteId)}/advogados/${encodeURIComponent(userId)}`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", clienteId, "advogados"] });
+    },
+  });
+}
+
+export function useRemoveAdvogado(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<void>(
+        `/clientes/${encodeURIComponent(clienteId)}/advogados/${encodeURIComponent(userId)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", clienteId, "advogados"] });
+    },
+  });
+}
+
+export function useClienteAdministrativos(clienteId: string) {
+  const enabled = typeof window !== "undefined" && Boolean(clienteId);
+
+  return useQuery({
+    queryKey: ["clientes", clienteId, "administrativos"],
+    queryFn: () =>
+      apiFetch<ClienteAdvogadoUser[]>(`/clientes/${encodeURIComponent(clienteId)}/administrativos`),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useAddAdministrativo(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<void>(
+        `/clientes/${encodeURIComponent(clienteId)}/administrativos/${encodeURIComponent(userId)}`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", clienteId, "administrativos"] });
+    },
+  });
+}
+
+export function useRemoveAdministrativo(clienteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiFetch<void>(
+        `/clientes/${encodeURIComponent(clienteId)}/administrativos/${encodeURIComponent(userId)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["clientes", clienteId, "administrativos"] });
     },
   });
 }
