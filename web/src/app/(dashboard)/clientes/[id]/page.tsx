@@ -6,8 +6,29 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
-import { useCliente, useClienteContaCorrente } from "@/hooks/use-clientes";
+import { FileDropZone } from "@/components/shared/file-drop-zone";
+import {
+  useAddAdministrativo,
+  useAddAdvogado,
+  useCliente,
+  useClienteAdministrativos,
+  useClienteAdvogados,
+  useClienteContaCorrente,
+  useDeleteProcuracao,
+  useDownloadProcuracao,
+  useRemoveAdministrativo,
+  useRemoveAdvogado,
+  useUploadProcuracao,
+} from "@/hooks/use-clientes";
 import {
   useClienteContactos,
   useCreateClienteContacto,
@@ -20,9 +41,11 @@ import {
   useDeleteClienteNota,
   useUpdateClienteNota,
 } from "@/hooks/use-cliente-notas";
+import { useAdminUsers } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { ClienteContacto } from "@/types/clientes-contactos";
 import type { ClienteNota } from "@/types/clientes-notas";
+import type { ClienteAdvogadoUser } from "@/types/clientes";
 import { toast } from "@/hooks/use-toast";
 
 type PageProps = {
@@ -211,6 +234,30 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               isError={notas.isError}
             />
           </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ProcuracaoCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              procuracaoKey={cliente.data.procuracao_key}
+            />
+            <ResponsaveisCard
+              title="Advogados"
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              useList={useClienteAdvogados}
+              useAdd={useAddAdvogado}
+              useRemove={useRemoveAdvogado}
+            />
+            <ResponsaveisCard
+              title="Administrativos"
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              useList={useClienteAdministrativos}
+              useAdd={useAddAdministrativo}
+              useRemove={useRemoveAdministrativo}
+            />
+          </div>
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -218,6 +265,240 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         </div>
       )}
     </div>
+  );
+}
+
+function ProcuracaoCard({
+  clienteId,
+  canEditClientes,
+  procuracaoKey,
+}: {
+  clienteId: string;
+  canEditClientes: boolean;
+  procuracaoKey?: string;
+}) {
+  const upload = useUploadProcuracao(clienteId);
+  const download = useDownloadProcuracao();
+  const del = useDeleteProcuracao(clienteId);
+  const hasProcuracao = Boolean(procuracaoKey);
+
+  const onFileChange = async (file: File) => {
+    if (!canEditClientes) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await upload.mutateAsync(formData);
+      toast.success(hasProcuracao ? "Procuração substituída com sucesso." : "Procuração carregada com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao carregar procuração.");
+    }
+  };
+
+  const onView = async () => {
+    try {
+      const res = await download.mutateAsync(clienteId);
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar link de download.");
+    }
+  };
+
+  const onRemove = async () => {
+    if (!canEditClientes) return;
+    const ok = window.confirm("Remover a procuração deste cliente?");
+    if (!ok) return;
+    try {
+      await del.mutateAsync();
+      toast.success("Procuração removida com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover procuração.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Procuração</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hasProcuracao ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
+              <Badge variant="green" className="rounded-none">Carregada</Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={onView} disabled={download.isPending}>
+                {download.isPending ? "A preparar..." : "Ver / Download"}
+              </Button>
+              {canEditClientes ? (
+                <Button type="button" variant="outline" onClick={onRemove} disabled={del.isPending}>
+                  Remover
+                </Button>
+              ) : null}
+            </div>
+            {canEditClientes ? (
+              <div className="pt-2">
+                <Label className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
+                  Substituir ficheiro
+                </Label>
+                <FileDropZone
+                  onFileChange={onFileChange}
+                  accept="application/pdf,image/*,.doc,.docx"
+                  disabled={upload.isPending}
+                >
+                  Arraste a nova procuração para aqui ou clique para selecionar
+                </FileDropZone>
+              </div>
+            ) : null}
+          </div>
+        ) : canEditClientes ? (
+          <FileDropZone
+            onFileChange={onFileChange}
+            accept="application/pdf,image/*,.doc,.docx"
+            disabled={upload.isPending}
+          >
+            Arraste a procuração para aqui ou clique para selecionar
+          </FileDropZone>
+        ) : (
+          <div className="text-sm text-neutral-500 dark:text-neutral-400">
+            Sem procuração carregada.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResponsaveisCard({
+  title,
+  clienteId,
+  canEditClientes,
+  useList,
+  useAdd,
+  useRemove,
+}: {
+  title: string;
+  clienteId: string;
+  canEditClientes: boolean;
+  useList: (clienteId: string) => { data?: ClienteAdvogadoUser[]; isLoading: boolean; isError: boolean };
+  useAdd: (clienteId: string) => { mutateAsync: (userId: string) => Promise<unknown>; isPending: boolean };
+  useRemove: (clienteId: string) => { mutateAsync: (userId: string) => Promise<unknown>; isPending: boolean };
+}) {
+  const list = useList(clienteId);
+  const add = useAdd(clienteId);
+  const remove = useRemove(clienteId);
+  const adminUsers = useAdminUsers();
+
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [selectedUserId, setSelectedUserId] = React.useState("");
+
+  const existingIds = new Set((list.data ?? []).map((u) => u.id));
+  const candidateUsers = (adminUsers.data ?? []).filter(
+    (u) => !existingIds.has((u as { id: string }).id),
+  ) as Array<{ id: string; nome?: string; email?: string }>;
+
+  const onAdd = async () => {
+    if (!canEditClientes || !selectedUserId) return;
+    try {
+      await add.mutateAsync(selectedUserId);
+      toast.success("Adicionado com sucesso.");
+      setModalOpen(false);
+      setSelectedUserId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao adicionar.");
+    }
+  };
+
+  const onRemove = async (userId: string) => {
+    if (!canEditClientes) return;
+    const ok = window.confirm("Remover este utilizador?");
+    if (!ok) return;
+    try {
+      await remove.mutateAsync(userId);
+      toast.success("Removido com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {canEditClientes ? (
+          <Button type="button" variant="secondary" onClick={() => setModalOpen(true)}>
+            Adicionar
+          </Button>
+        ) : null}
+
+        {list.isLoading ? (
+          <div className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</div>
+        ) : list.isError ? (
+          <div className="text-sm text-red-600">Erro ao carregar.</div>
+        ) : !list.data?.length ? (
+          <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem registos.</div>
+        ) : (
+          <div className="space-y-2">
+            {list.data.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 dark:border-neutral-800 p-2"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{u.nome}</div>
+                  {u.email ? (
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{u.email}</div>
+                  ) : null}
+                </div>
+                {canEditClientes ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onRemove(u.id)}
+                    disabled={remove.isPending}
+                  >
+                    Remover
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar a {title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Utilizador</Label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+            >
+              <option value="">Selecionar utilizador...</option>
+              {candidateUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome ?? u.email ?? u.id}
+                </option>
+              ))}
+            </select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={onAdd} disabled={!selectedUserId || add.isPending}>
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }
 
