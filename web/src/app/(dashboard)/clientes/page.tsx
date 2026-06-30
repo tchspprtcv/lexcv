@@ -65,8 +65,8 @@ function ClientesPageContent({
   const createCliente = useCreateCliente();
 
   const totalClientes = allClientes.data?.length ?? 0;
-  const totalSingulares = (allClientes.data ?? []).filter((c) => (c.tipo ?? "").toUpperCase() === "SINGULAR").length;
-  const totalColetivas = (allClientes.data ?? []).filter((c) => (c.tipo ?? "").toUpperCase() === "COLETIVA").length;
+  const totalParticulares = (allClientes.data ?? []).filter((c) => (c.tipo ?? "").toUpperCase() === "PARTICULAR").length;
+  const totalEmpresas = (allClientes.data ?? []).filter((c) => (c.tipo ?? "").toUpperCase() === "EMPRESA").length;
   const processosAtivos = processos.data?.filter((p) => (p.estado ?? "").toUpperCase() !== "ENCERRADO").length ?? 0;
 
   const importInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -241,14 +241,14 @@ function ClientesPageContent({
         </Card>
         <Card>
           <CardContent className="p-5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pessoas Singulares</div>
-            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{totalSingulares.toLocaleString("pt-CV")}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Particulares</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{totalParticulares.toLocaleString("pt-CV")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Entidades Coletivas</div>
-            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{totalColetivas.toLocaleString("pt-CV")}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Empresas</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{totalEmpresas.toLocaleString("pt-CV")}</div>
           </CardContent>
         </Card>
         <Card>
@@ -314,8 +314,8 @@ function ClientesPageContent({
                       className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
                       <option value="">Todos</option>
-                      <option value="SINGULAR">Singular</option>
-                      <option value="COLETIVA">Coletiva</option>
+                      <option value="PARTICULAR">Particular</option>
+                      <option value="EMPRESA">Empresa</option>
                     </select>
                   </div>
                 </div>
@@ -409,6 +409,16 @@ function ClientesPageContent({
                             {c.ativo ? "Ativo" : "Inativo"}
                           </Badge>
                         )}
+                        {c.numero_cliente && (
+                          <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px] flex-shrink-0">
+                            {c.numero_cliente}
+                          </Badge>
+                        )}
+                        {c.avencado && (
+                          <Badge variant="green" className="rounded-none font-bold text-[10px] flex-shrink-0">
+                            Avençado
+                          </Badge>
+                        )}
                       </div>
                       {c.telefone && (
                         <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 pl-[52px]">Tel: {c.telefone}</div>
@@ -495,7 +505,7 @@ function ClienteRow({
   const idShort = cliente.id.split("-")[0]?.toUpperCase() ?? "—";
   const tipo = (cliente.tipo ?? "").toUpperCase();
 
-  const badgeVariant = tipo === "SINGULAR" ? "blue" : tipo === "COLETIVA" ? "purple" : "gray";
+  const badgeVariant = tipo === "PARTICULAR" ? "blue" : tipo === "EMPRESA" ? "purple" : "gray";
 
   const onDelete = () => {
     if (del.isPending) return;
@@ -516,6 +526,20 @@ function ClienteRow({
               {cliente.nome}
             </Link>
             <div className="text-[11px] font-medium tracking-wider uppercase text-slate-500 dark:text-slate-400 mt-0.5">ID: #{idShort}</div>
+            {(cliente.numero_cliente || cliente.avencado) && (
+              <div className="flex items-center gap-1 mt-1">
+                {cliente.numero_cliente && (
+                  <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
+                    {cliente.numero_cliente}
+                  </Badge>
+                )}
+                {cliente.avencado && (
+                  <Badge variant="green" className="rounded-none font-bold text-[10px]">
+                    Avençado
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </TableCell>
