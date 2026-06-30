@@ -1,6 +1,7 @@
 package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
+import com.lexcv.exceptions.StorageUnavailableException;
 import com.lexcv.models.ParecerSolicitacao;
 import com.lexcv.models.ParecerVersao;
 import com.lexcv.models.User;
@@ -12,12 +13,15 @@ import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -249,5 +253,90 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
         }
         return ResponseEntity.ok(versao);
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:edit')")
+    @PostMapping(value = "/{solicitacaoId}/versoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createVersao(
+            @PathVariable UUID solicitacaoId,
+            @RequestParam(value = "conteudo", required = false) String conteudo,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(solicitacaoId).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        boolean isAdmin = principal.getRoles().contains("ADMIN");
+        boolean isResponsavel = solicitacao.getAdvogadoId() != null
+                && solicitacao.getAdvogadoId().equals(principal.getUserId());
+        if (!isAdmin && !isResponsavel) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Apenas o advogado responsável ou ADMIN pode criar uma versão"));
+        }
+
+        if ((conteudo == null || conteudo.isBlank()) && (file == null || file.isEmpty())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "É necessário fornecer conteúdo ou anexo"));
+        }
+
+        UUID versaoId = UUID.randomUUID();
+        String caminhoAnexo = null;
+        if (file != null && !file.isEmpty()) {
+            try {
+                caminhoAnexo = storageService.upload(tenantId, versaoId, file.getOriginalFilename(),
+                        file.getInputStream(), file.getContentType(), file.getSize());
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Erro ao ler ficheiro"));
+            } catch (StorageUnavailableException e) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(Map.of("message", "Storage service unavailable"));
+            }
+        }
+
+        int next;
+        synchronized (ParecerVersaoRepository.class) {
+            next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
+        }
+
+        ParecerVersao versao = ParecerVersao.builder()
+                .id(versaoId)
+                .tenantId(tenantId)
+                .solicitacaoId(solicitacaoId)
+                .conteudo(conteudo)
+                .caminhoAnexo(caminhoAnexo)
+                .numeroVersao(next)
+                .criadoPorId(principal.getUserId())
+                .build();
+
+        ParecerVersao saved = parecerVersaoRepository.save(versao);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:view')")
+    @GetMapping("/{solicitacaoId}/versoes/{versaoId}/anexo")
+    public ResponseEntity<?> downloadAnexo(@PathVariable UUID solicitacaoId, @PathVariable UUID versaoId) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(solicitacaoId).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(solicitacaoId) || versao.getCaminhoAnexo() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Anexo não encontrado"));
+        }
+
+        try {
+            String url = storageService.presignedDownloadUrl(versao.getCaminhoAnexo());
+            return ResponseEntity.ok(Map.of("url", url, "expiresIn", 3600));
+        } catch (StorageUnavailableException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Storage service unavailable"));
+        }
     }
 }
