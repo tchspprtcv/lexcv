@@ -6,7 +6,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "t_parecer_versao")
+@Table(name = "t_parecer_versao",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"solicitacao_id", "numero_versao"}))
 @Getter
 @Setter
 @NoArgsConstructor
