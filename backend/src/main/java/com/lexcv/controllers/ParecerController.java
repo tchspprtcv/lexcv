@@ -12,6 +12,7 @@ import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.StorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/pareceres/solicitacoes")
 @RequiredArgsConstructor
+@Slf4j
 public class ParecerController {
 
     private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
@@ -298,22 +300,33 @@ public class ParecerController {
             }
         }
 
-        int next;
+        ParecerVersao saved;
         synchronized (ParecerVersaoRepository.class) {
-            next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
+            int next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
+
+            ParecerVersao versao = ParecerVersao.builder()
+                    .id(versaoId)
+                    .tenantId(tenantId)
+                    .solicitacaoId(solicitacaoId)
+                    .conteudo(conteudo)
+                    .caminhoAnexo(caminhoAnexo)
+                    .numeroVersao(next)
+                    .criadoPorId(principal.getUserId())
+                    .build();
+
+            try {
+                saved = parecerVersaoRepository.save(versao);
+            } catch (RuntimeException e) {
+                if (caminhoAnexo != null) {
+                    try {
+                        storageService.delete(caminhoAnexo);
+                    } catch (RuntimeException cleanupEx) {
+                        log.warn("Failed to clean up orphaned upload {} after save failure", caminhoAnexo, cleanupEx);
+                    }
+                }
+                throw e;
+            }
         }
-
-        ParecerVersao versao = ParecerVersao.builder()
-                .id(versaoId)
-                .tenantId(tenantId)
-                .solicitacaoId(solicitacaoId)
-                .conteudo(conteudo)
-                .caminhoAnexo(caminhoAnexo)
-                .numeroVersao(next)
-                .criadoPorId(principal.getUserId())
-                .build();
-
-        ParecerVersao saved = parecerVersaoRepository.save(versao);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
