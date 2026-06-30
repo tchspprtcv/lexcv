@@ -1,3 +1,32 @@
+export interface DocumentoEntregue {
+  descricao: string;
+  data?: string;
+}
+
+export interface DocumentoATratar {
+  descricao: string;
+}
+
+export interface Deslocacao {
+  descricao: string;
+  local?: string;
+  data?: string;
+}
+
+export interface HonorariosPropostos {
+  total?: number;
+  totalPorExtenso?: string;
+  previsao?: string;
+}
+
+export interface ClienteAdvogadoUser {
+  id: string;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  numeroCedula?: string;
+}
+
 export interface Cliente {
   id: string;
   tenant_id: string;
@@ -18,6 +47,15 @@ export interface Cliente {
   ramoAtividade?: string;
   detalhesAdicionais?: string;
   created_at: string;
+  avencado?: boolean;
+  numero_cliente?: string;
+  dados_tipo?: Record<string, unknown>;
+  procuracao_key?: string;
+  descricao_caso?: string;
+  documentos_entregues?: DocumentoEntregue[];
+  documentos_a_tratar?: DocumentoATratar[];
+  deslocacoes?: Deslocacao[];
+  honorarios_propostos?: HonorariosPropostos;
 }
 
 export interface ClienteCreateRequest {
@@ -56,6 +94,11 @@ export interface ClienteUpdateRequest {
   documentoNumero?: string;
   ramoAtividade?: string;
   detalhesAdicionais?: string;
+  descricao_caso?: string;
+  documentos_entregues?: DocumentoEntregue[];
+  documentos_a_tratar?: DocumentoATratar[];
+  deslocacoes?: Deslocacao[];
+  honorarios_propostos?: HonorariosPropostos;
 }
 
 export interface ClienteContaCorrenteResponse {
