@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Eye, Filter, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Filter, Pencil, Plus, Printer, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -565,6 +565,15 @@ function ClienteRow({
           <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
               <Eye className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+            <Link
+              href={`/clientes/${encodeURIComponent(cliente.id)}/ficha`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Printer className="h-4 w-4" />
             </Link>
           </Button>
           {canEditClientes ? (
