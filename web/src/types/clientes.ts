@@ -116,6 +116,10 @@ export interface ClienteUpdateRequest {
   documentos_a_tratar?: DocumentoATratar[];
   deslocacoes?: Deslocacao[];
   honorarios_propostos?: HonorariosPropostos;
+  descricaoCaso?: string;
+  documentosEntregues?: DocumentoEntregue[];
+  documentosATratar?: DocumentoATratar[];
+  honorariosPropostos?: HonorariosPropostos;
 }
 
 export interface ClienteContaCorrenteResponse {
