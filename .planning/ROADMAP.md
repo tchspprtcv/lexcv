@@ -6,7 +6,7 @@
 - ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
 - ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
 - ✅ **v2.3 Responsividade App** — Phases 53–56 (complete 2026-06-21)
-- 🔄 **v2.4 Ficha de Cliente** — Phases 57–60 (active)
+- ✅ **v2.4 Ficha de Cliente** — Phases 57–60 (complete 2026-06-30)
 
 ## Phases
 
