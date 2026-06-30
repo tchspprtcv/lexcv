@@ -104,7 +104,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   4. Solicitação expõe um status (PENDENTE, EM_ELABORACAO, EM_REVISAO, CONCLUIDO) que reflete o seu progresso
   5. Utilizador pode listar e filtrar solicitações por cliente, advogado e status, e ver o detalhe de uma solicitação específica
 **Plans**: 2 plans
-  - [ ] 61-01-PLAN.md — Entidade ParecerSolicitacao, repositório e seeding RBAC pareceres:*
+  - [x] 61-01-PLAN.md — Entidade ParecerSolicitacao, repositório e seeding RBAC pareceres:*
   - [ ] 61-02-PLAN.md — ParecerController CRUD + atribuição de advogado com validação de papel ADVOGADO
 
 ### Phase 62: Elaboração e Versionamento
@@ -163,7 +163,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 58. Formulário Dinâmico | v2.4 | 4/4 | Complete | 2026-06-30 |
 | 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
 | 60. Ficha Imprimível | v2.4 | 2/2 | Complete | 2026-06-30 |
-| 61. Data Layer + Backend CRUD | v2.5 | 0/TBD | Not started | - |
+| 61. Data Layer + Backend CRUD | v2.5 | 1/2 | In Progress|  |
 | 62. Elaboração e Versionamento | v2.5 | 0/TBD | Not started | - |
 | 63. Aprovação e Entrega | v2.5 | 0/TBD | Not started | - |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
