@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ficha de Cliente
-status: planning
-last_updated: "2026-06-29T00:00:00.000Z"
-last_activity: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)
+status: in_progress
+last_updated: "2026-06-30T00:00:00.000Z"
+last_activity: 2026-06-30 — Phase 58 (Formulário Dinâmico) completed and verified (4/4 must-haves)
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 4
+  completed_phases: 2
+  total_plans: 6
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Planning next milestone (v2.4+)
+**Current focus:** Milestone v2.4 (Ficha de Cliente) — Phase 58 complete, Phase 59 (Procuração + Intake) planned and ready for execution.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)
+Phase: 58 — Formulário Dinâmico (complete)
+Plan: 58-04 (last completed)
+Status: Phase verified — ready to proceed to Phase 59
+Last activity: 2026-06-30 — Phase 58 completed: dynamic tipo selector (Particular/Empresa), numero_cliente + Avençado badges in listing/detail, conditional Zod validation. 4/4 success criteria verified against codebase.
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
+| 58 | 4 | ~70 min | ~17 min |
 
 ## Accumulated Context
 

@@ -97,7 +97,7 @@ See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
 ### v2.4 Ficha de Cliente (active)
 
 - [ ] **Phase 57: Backend Schema + API** — Extensão da entidade Cliente com novos campos, geração de numero_cliente, endpoints atualizados
-- [ ] **Phase 58: Formulário Dinâmico** — Formulário frontend com seletor de tipo, campos demográficos/empresa, flag avençado e exibição do número
+- [x] **Phase 58: Formulário Dinâmico** — Formulário frontend com seletor de tipo, campos demográficos/empresa, flag avençado e exibição do número (completed 2026-06-30)
 - [ ] **Phase 59: Procuração + Intake** — Upload obrigatório de procuração e secção de intake (advogados, administrativos, docs, deslocações, honorários propostos)
 - [ ] **Phase 60: Ficha Imprimível** — Vista dedicada que reproduz a ficha real do escritório com botão de impressão
 
@@ -252,12 +252,6 @@ Plans:
   3. O formulário inclui uma checkbox ou toggle "Cliente Avençado"; quando ativado, a ficha e a listagem exibem um badge identificador
   4. Todos os novos campos passam pela validação Zod antes de submeter — campos obrigatórios por tipo estão assinalados e bloqueiam a submissão se vazios
 **UI hint**: yes
-**Plans**: 4 plans
-Plans:
-- [ ] 58-01-PLAN.md — Install Radix primitives, scaffold RadioGroup + Switch components, extend types and Zod schema
-- [ ] 58-02-PLAN.md — Add numero_cliente + Avençado badges to listing and detail pages; fix SINGULAR/COLETIVA enum
-- [ ] 58-03-PLAN.md — Refactor novo/page.tsx with RadioGroup, conditional fields, confirmation Dialog, Switch
-- [ ] 58-04-PLAN.md — Refactor editar/page.tsx with same form behavior plus form.reset mapping and header badge
 
 ### Phase 59: Procuração + Intake
 **Goal**: A ficha de cliente tem uma secção de procuração com upload obrigatório e uma secção de intake onde o utilizador regista a descrição do caso, advogados, administrativos, documentos, deslocações e honorários propostos
