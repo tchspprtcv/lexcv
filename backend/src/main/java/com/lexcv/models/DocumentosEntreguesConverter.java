@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+@Slf4j
 @Converter
 public class DocumentosEntreguesConverter implements AttributeConverter<List<DocumentoEntregue>, String> {
 
@@ -20,6 +22,7 @@ public class DocumentosEntreguesConverter implements AttributeConverter<List<Doc
         try {
             return MAPPER.writeValueAsString(attribute);
         } catch (Exception e) {
+            log.error("Failed to serialize DocumentosEntregues for persistence", e);
             return null;
         }
     }
@@ -32,6 +35,7 @@ public class DocumentosEntreguesConverter implements AttributeConverter<List<Doc
         try {
             return MAPPER.readValue(dbData, new TypeReference<List<DocumentoEntregue>>() {});
         } catch (Exception e) {
+            log.error("Failed to deserialize DocumentosEntregues from database value: {}", dbData, e);
             return null;
         }
     }

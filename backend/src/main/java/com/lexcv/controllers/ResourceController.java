@@ -284,7 +284,7 @@ public class ResourceController {
 
         if (payload.getDocumentoTipo() == DocumentoTipo.NIF) {
             cliente.setNif(payload.getDocumentoNumero());
-        } else {
+        } else if (payload.getNif() != null) {
             cliente.setNif(payload.getNif());
         }
 

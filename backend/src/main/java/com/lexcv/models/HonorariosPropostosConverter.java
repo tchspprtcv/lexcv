@@ -3,7 +3,9 @@ package com.lexcv.models;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Converter
 public class HonorariosPropostosConverter implements AttributeConverter<HonorariosPropostos, String> {
 
@@ -17,6 +19,7 @@ public class HonorariosPropostosConverter implements AttributeConverter<Honorari
         try {
             return MAPPER.writeValueAsString(attribute);
         } catch (Exception e) {
+            log.error("Failed to serialize HonorariosPropostos for persistence", e);
             return null;
         }
     }
@@ -29,6 +32,7 @@ public class HonorariosPropostosConverter implements AttributeConverter<Honorari
         try {
             return MAPPER.readValue(dbData, HonorariosPropostos.class);
         } catch (Exception e) {
+            log.error("Failed to deserialize HonorariosPropostos from database value: {}", dbData, e);
             return null;
         }
     }
