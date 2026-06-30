@@ -99,7 +99,7 @@ See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
 - [ ] **Phase 57: Backend Schema + API** — Extensão da entidade Cliente com novos campos, geração de numero_cliente, endpoints atualizados
 - [x] **Phase 58: Formulário Dinâmico** — Formulário frontend com seletor de tipo, campos demográficos/empresa, flag avençado e exibição do número (completed 2026-06-30)
 - [x] **Phase 59: Procuração + Intake** — Upload obrigatório de procuração e secção de intake (advogados, administrativos, docs, deslocações, honorários propostos) (completed 2026-06-30)
-- [ ] **Phase 60: Ficha Imprimível** — Vista dedicada que reproduz a ficha real do escritório com botão de impressão
+- [x] **Phase 60: Ficha Imprimível** — Vista dedicada que reproduz a ficha real do escritório com botão de impressão (completed 2026-06-30)
 
 ## Phase Details
 
@@ -284,8 +284,8 @@ Plans:
 **UI hint**: yes
 **Plans**: 2 plans
 Plans:
-- [ ] 60-01-PLAN.md — Estender tipos + criar página ficha imprimível (nova rota, layout 8 secções, CSS A4, guard de permissão)
-- [ ] 60-02-PLAN.md — Adicionar pontos de acesso à ficha (botão na página de detalhe + ícone Printer na listagem)
+- [x] 60-01-PLAN.md — Estender tipos + criar página ficha imprimível (nova rota, layout 8 secções, CSS A4, guard de permissão)
+- [x] 60-02-PLAN.md — Adicionar pontos de acesso à ficha (botão na página de detalhe + ícone Printer na listagem)
 
 ## Progress
 
@@ -310,4 +310,4 @@ Plans:
 | 57. Backend Schema + API | v2.4 | 0/? | Not started | - |
 | 58. Formulário Dinâmico | v2.4 | 0/? | Not started | - |
 | 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
-| 60. Ficha Imprimível | v2.4 | 0/? | Not started | - |
+| 60. Ficha Imprimível | v2.4 | 2/2 | Complete   | 2026-06-30 |
