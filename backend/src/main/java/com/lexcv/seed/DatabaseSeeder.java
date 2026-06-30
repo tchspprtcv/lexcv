@@ -298,7 +298,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 "agenda:view", "agenda:edit",
                 "documentos:view", "documentos:edit",
                 "financeiro:view", "financeiro:edit",
-                "rbac:manage", "users:manage"
+                "rbac:manage", "users:manage",
+                "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage"
         );
 
         Map<String, Permission> permissionMap = new HashMap<>();
@@ -315,7 +316,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 permissionMap.get("clientes:edit"),
                 permissionMap.get("processos:view"),
                 permissionMap.get("agenda:view"),
-                permissionMap.get("documentos:view")
+                permissionMap.get("documentos:view"),
+                permissionMap.get("pareceres:view")
         ));
 
         upsertRolePermissions("TECNICO", Arrays.asList(
@@ -324,7 +326,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                 permissionMap.get("agenda:view"),
                 permissionMap.get("agenda:edit"),
                 permissionMap.get("documentos:view"),
-                permissionMap.get("financeiro:view")
+                permissionMap.get("financeiro:view"),
+                permissionMap.get("pareceres:view")
         ));
 
         upsertRolePermissions("ADVOGADO", Arrays.asList(
@@ -338,7 +341,10 @@ public class DatabaseSeeder implements CommandLineRunner {
                 permissionMap.get("agenda:edit"),
                 permissionMap.get("documentos:view"),
                 permissionMap.get("documentos:edit"),
-                permissionMap.get("financeiro:view")
+                permissionMap.get("financeiro:view"),
+                permissionMap.get("pareceres:view"),
+                permissionMap.get("pareceres:create"),
+                permissionMap.get("pareceres:edit")
         ));
     }
 
