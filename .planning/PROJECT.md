@@ -40,9 +40,20 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
 - ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
 
+## Current Milestone: v2.5 Módulo de Parecer Jurídico
+
+**Goal:** Gerir o ciclo completo de pareceres jurídicos (solicitação → elaboração com versionamento → aprovação opcional → entrega), com auditoria automática e pesquisa avançada, reutilizando as entidades e padrões já existentes no LexCV (Cliente, User+role ADVOGADO, AuditLog, StorageService).
+
+**Target features:**
+- Solicitação de parecer com atribuição de advogado responsável e vínculo opcional a Processo
+- Elaboração com versionamento (conteúdo + anexo opcional), histórico de autor/data
+- Aprovação interna opcional e entrega final do parecer
+- Auditoria automática (reutilizando `t_audit_log`) e pesquisa avançada (texto + filtros)
+- Novo scope RBAC `pareceres:view/create/edit/manage`
+
 ### Active
 
-(Nenhum requisito activo — milestone v2.4 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
+- PARC-01..10, PARV-01..04, PARA-01, PARS-01..02 — ver `.planning/REQUIREMENTS.md` (milestone v2.5)
 
 ### Out of Scope
 
