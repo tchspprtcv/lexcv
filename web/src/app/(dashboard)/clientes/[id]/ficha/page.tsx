@@ -154,6 +154,7 @@ function Ficha({
 }) {
   const isEmpresa = cliente.tipo === "EMPRESA";
   const dadosParticular = isDadosTipoParticular(cliente.dados_tipo) ? cliente.dados_tipo : undefined;
+  const dadosEmpresa = !isDadosTipoParticular(cliente.dados_tipo) ? cliente.dados_tipo : undefined;
 
   const idade = cliente.idade ?? dadosParticular?.idade;
   const sexo = cliente.sexo ?? dadosParticular?.sexo;
@@ -191,7 +192,13 @@ function Ficha({
       <Field label="BI/Pass. Nº" value={fmt(cliente.documento_numero ?? cliente.documentoNumero)} />
       <Field label="Tipo Doc." value={fmt(cliente.documento_tipo ?? cliente.documentoTipo)} />
       {isEmpresa ? (
-        <Field label="NIF" value={fmt(cliente.nif)} />
+        <>
+          <Field label="NIF" value={fmt(cliente.nif)} />
+          <Field label="Nome Comercial" value={fmt(dadosEmpresa?.nome_comercial)} />
+          <Field label="Sede" value={fmt(dadosEmpresa?.sede)} />
+          <Field label="Representante Legal" value={fmt(dadosEmpresa?.representante_legal)} />
+          <Field label="Cargo" value={fmt(dadosEmpresa?.cargo)} />
+        </>
       ) : (
         <>
           <Field label="Idade" value={fmt(idade)} />
