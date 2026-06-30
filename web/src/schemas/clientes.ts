@@ -32,6 +32,14 @@ export const clienteFormSchema = z
       .max(255, "Os detalhes adicionais não podem exceder 255 caracteres")
       .optional()
       .or(z.literal("")),
+    descricao_caso: z.string().trim().optional(),
+    honorarios_propostos: z
+      .object({
+        total: z.number().optional(),
+        totalPorExtenso: z.string().trim().optional(),
+        previsao: z.string().trim().optional(),
+      })
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.documento_tipo && !data.documento_numero) {
