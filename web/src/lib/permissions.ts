@@ -1,5 +1,18 @@
 export type PermissionAction = "view" | "create" | "edit" | "manage";
 
+// Canonical scope registry, mirrored from backend DatabaseSeeder.seedRbac().
+// Additive only — resolveScopedPermissions/hasScopedPermission remain scope-agnostic
+// (typed as `scope: string`) so existing ad-hoc call sites keep working unchanged.
+export const KNOWN_SCOPES = [
+  "clientes",
+  "processos",
+  "agenda",
+  "documentos",
+  "financeiro",
+  "pareceres",
+] as const;
+export type PermissionScope = (typeof KNOWN_SCOPES)[number];
+
 const ACTION_FALLBACKS: Record<PermissionAction, PermissionAction[]> = {
   view: ["view", "edit", "manage", "create"],
   create: ["create", "edit", "manage"],
