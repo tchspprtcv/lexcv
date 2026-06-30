@@ -103,7 +103,9 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   3. Utilizador pode atribuir/reatribuir um advogado responsável (User com role ADVOGADO) à solicitação
   4. Solicitação expõe um status (PENDENTE, EM_ELABORACAO, EM_REVISAO, CONCLUIDO) que reflete o seu progresso
   5. Utilizador pode listar e filtrar solicitações por cliente, advogado e status, e ver o detalhe de uma solicitação específica
-**Plans**: TBD
+**Plans**: 2 plans
+  - [ ] 61-01-PLAN.md — Entidade ParecerSolicitacao, repositório e seeding RBAC pareceres:*
+  - [ ] 61-02-PLAN.md — ParecerController CRUD + atribuição de advogado com validação de papel ADVOGADO
 
 ### Phase 62: Elaboração e Versionamento
 **Goal**: O advogado responsável consegue elaborar o parecer em versões sucessivas, cada uma com conteúdo, anexo opcional e histórico rastreável
