@@ -3,7 +3,9 @@ package com.lexcv.controllers;
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.ParecerSolicitacao;
 import com.lexcv.models.User;
+import com.lexcv.repositories.ClienteRepository;
 import com.lexcv.repositories.ParecerSolicitacaoRepository;
+import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,8 @@ public class ParecerController {
 
     private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
     private final UserRepository userRepository;
+    private final ClienteRepository clienteRepository;
+    private final ProcessoRepository processoRepository;
 
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -48,11 +52,28 @@ public class ParecerController {
         return user;
     }
 
+    /**
+     * Validates that clienteId references a Cliente belonging to this tenant.
+     */
+    private boolean clienteBelongsToTenant(UUID clienteId, UUID tenantId) {
+        return clienteRepository.findById(clienteId)
+                .map(c -> tenantId.equals(c.getTenantId()))
+                .orElse(false);
+    }
+
+    /**
+     * Validates that processoId references a Processo belonging to this tenant.
+     */
+    private boolean processoBelongsToTenant(UUID processoId, UUID tenantId) {
+        return processoRepository.findById(processoId)
+                .map(p -> tenantId.equals(p.getTenantId()))
+                .orElse(false);
+    }
+
     @PreAuthorize("hasAuthority('pareceres:create')")
     @PostMapping("")
     public ResponseEntity<?> createSolicitacao(@RequestBody ParecerSolicitacao body) {
         UUID tenantId = getTenantId();
-        body.setTenantId(tenantId);
 
         if (body.getClienteId() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -62,6 +83,29 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "descricao é obrigatória"));
         }
+        if (!clienteBelongsToTenant(body.getClienteId(), tenantId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "clienteId inválido ou não pertence a este tenant"));
+        }
+        if (body.getProcessoId() != null && !processoBelongsToTenant(body.getProcessoId(), tenantId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "processoId inválido ou não pertence a este tenant"));
+        }
+
+        // Construct the persisted entity from an explicit allowlist of creatable
+        // fields only — id/createdAt are server-generated, status defaults to
+        // PENDENTE (or EM_ELABORACAO when an advogado is assigned at creation
+        // time) and is never taken directly from the request body.
+        ParecerSolicitacao solicitacao = new ParecerSolicitacao();
+        solicitacao.setTenantId(tenantId);
+        solicitacao.setClienteId(body.getClienteId());
+        solicitacao.setProcessoId(body.getProcessoId());
+        solicitacao.setDescricao(body.getDescricao());
+        solicitacao.setPrazo(body.getPrazo());
+        if (body.getPrioridade() != null) {
+            solicitacao.setPrioridade(body.getPrioridade());
+        }
+        solicitacao.setStatus("PENDENTE");
 
         if (body.getAdvogadoId() != null) {
             User advogado = validateAdvogado(body.getAdvogadoId(), tenantId);
@@ -69,10 +113,11 @@ public class ParecerController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "advogadoId não pertence a este tenant ou não tem papel ADVOGADO"));
             }
-            body.setStatus("EM_ELABORACAO");
+            solicitacao.setAdvogadoId(body.getAdvogadoId());
+            solicitacao.setStatus("EM_ELABORACAO");
         }
 
-        ParecerSolicitacao saved = parecerSolicitacaoRepository.save(body);
+        ParecerSolicitacao saved = parecerSolicitacaoRepository.save(solicitacao);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -87,7 +132,7 @@ public class ParecerController {
         List<ParecerSolicitacao> result = parecerSolicitacaoRepository.findByTenantId(tenantId).stream()
                 .filter(p -> clienteId == null || clienteId.equals(p.getClienteId()))
                 .filter(p -> advogadoId == null || advogadoId.equals(p.getAdvogadoId()))
-                .filter(p -> status == null || status.isBlank() || status.equalsIgnoreCase(p.getStatus()))
+                .filter(p -> status == null || status.isBlank() || status.equals(p.getStatus()))
                 .toList();
         return ResponseEntity.ok(result);
     }
@@ -105,9 +150,19 @@ public class ParecerController {
     @PreAuthorize("hasAuthority('pareceres:edit')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateSolicitacao(@PathVariable UUID id, @RequestBody ParecerSolicitacao payload) {
+        UUID tenantId = getTenantId();
         ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
-        if (solicitacao == null || !solicitacao.getTenantId().equals(getTenantId())) {
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+
+        if (payload.getClienteId() != null && !clienteBelongsToTenant(payload.getClienteId(), tenantId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "clienteId inválido ou não pertence a este tenant"));
+        }
+        if (payload.getProcessoId() != null && !processoBelongsToTenant(payload.getProcessoId(), tenantId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "processoId inválido ou não pertence a este tenant"));
         }
 
         solicitacao.setPrazo(payload.getPrazo());
@@ -136,7 +191,7 @@ public class ParecerController {
             advogadoId = UUID.fromString(advogadoIdRaw);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "advogadoId é obrigatório"));
+                    .body(Map.of("message", "advogadoId inválido"));
         }
 
         ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
