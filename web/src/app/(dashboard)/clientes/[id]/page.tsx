@@ -318,7 +318,12 @@ function ProcuracaoCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Procuração</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Procuração
+          {!hasProcuracao ? (
+            <Badge variant="amber" className="rounded-none font-normal">Procuração em falta</Badge>
+          ) : null}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {hasProcuracao ? (
@@ -448,9 +453,11 @@ function ResponsaveisCard({
               >
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{u.nome}</div>
-                  {u.email ? (
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{u.email}</div>
-                  ) : null}
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate space-x-2">
+                    {u.numeroCedula ? <span>Cédula: {u.numeroCedula}</span> : null}
+                    {u.telefone ? <span>Tel: {u.telefone}</span> : null}
+                    {u.email ? <span>{u.email}</span> : null}
+                  </div>
                 </div>
                 {canEditClientes ? (
                   <Button
