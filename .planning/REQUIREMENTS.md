@@ -50,4 +50,24 @@ Adaptado de `Especificacao_Tecnica_Modulo_Parecer_Juridico.docx`, reutilizando e
 
 ## Traceability
 
-(Preenchido pelo roadmapper após criação do roadmap)
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PARC-01 | Phase 61 | Pending |
+| PARC-02 | Phase 61 | Pending |
+| PARC-03 | Phase 61 | Pending |
+| PARC-04 | Phase 61 | Pending |
+| PARC-05 | Phase 61 | Pending |
+| PARC-06 | Phase 61 | Pending |
+| PARC-10 | Phase 61 | Pending |
+| PARV-01 | Phase 62 | Pending |
+| PARV-02 | Phase 62 | Pending |
+| PARV-03 | Phase 62 | Pending |
+| PARV-04 | Phase 62 | Pending |
+| PARC-07 | Phase 63 | Pending |
+| PARC-08 | Phase 63 | Pending |
+| PARC-09 | Phase 63 | Pending |
+| PARA-01 | Phase 64 | Pending |
+| PARS-01 | Phase 64 | Pending |
+| PARS-02 | Phase 64 | Pending |
+
+**Coverage:** 17/17 v2.5 requirements mapped ✓

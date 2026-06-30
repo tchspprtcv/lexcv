@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-06-30T18:37:16.885Z"
 last_activity: 2026-06-30
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-21)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.4 (Ficha de Cliente) complete — ready for milestone audit/completion
+**Current focus:** Milestone v2.5 (Módulo de Parecer Jurídico) roadmap approved — ready to plan Phase 61
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-30 — Milestone v2.5 started
+Phase: 61 - Data Layer + Backend CRUD
+Plan: — (not yet planned)
+Status: Roadmap complete, ready for /gsd:plan-phase 61
+Last activity: 2026-06-30 — Milestone v2.5 roadmap created (Phases 61–64)
 
 ## Performance Metrics
 
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - (v2.4/60) Ficha imprimível de alta fidelidade ao formulário físico — rota dedicada /clientes/[id]/ficha, @media print scoped via dangerouslySetInnerHTML de CSS estático, window.print() sem dependência de PDF externa
 - (v2.4/60) Acesso à ficha via botão na ficha de detalhe + ícone na listagem desktop (kebab menu original substituído por botão directo Printer, consistente com padrão Eye/Pencil/Trash2 existente)
 - (v2.4/audit) Milestone audit found snake_case/camelCase JSON contract mismatch breaking 9/19 requirements at the display layer (data persisted correctly, never rendered) + a password-hash leak on 2 new endpoints. Fixed via scoped @JsonProperty annotations (not a global naming-strategy change, to limit blast radius) — see v2.4-MILESTONE-AUDIT.md remediation section, commit ac5ae75.
+- (v2.5 roadmap) Reutilizar Cliente, User+role ADVOGADO, AuditLog e StorageService existentes — apenas ParecerSolicitacao (t_parecer_solicitacao) e ParecerVersao (t_parecer_versao) são entidades novas, ambas tenant-scoped
+- (v2.5 roadmap) 4 fases derivadas de 17 requisitos: (61) data layer + CRUD + RBAC, (62) elaboração/versionamento, (63) aprovação/entrega, (64) auditoria + pesquisa avançada — cada fase entrega um incremento verificável de ponta a ponta
+- (v2.5 roadmap) Decisão de implementação (ControllerC dedicado `ParecerController` vs. extensão do `ResourceController` ~2300 linhas) deixada para o plano da Phase 61 — não é uma decisão de roadmap
 
 ### Pending Todos
 
@@ -73,7 +76,8 @@ Recent decisions affecting current work:
 - Phase 60 follow-up (non-blocking, UX gap noted in 60-SECURITY.md): mobile card view in clientes listing has no ficha/Printer entry point (desktop-only for now)
 - **Recommended before production**: live smoke test of the 5 flows broken by the audit (create Particular/Empresa client, upload procuração, fill intake fields, print ficha) against a running backend+DB+MinIO stack — the fix was statically verified (field-by-field JSON key trace + clean builds) but not live-tested in this session.
 - Pre-existing app-wide tenantId/createdAt-style snake_case/camelCase mismatches outside v2.4's scope were identified but intentionally not touched (out of milestone scope, broader blast radius) — candidate for a future cleanup phase.
-- Milestone v2.4 ready for /gsd:audit-milestone and /gsd:complete-milestone
+- Milestone v2.4 ready for /gsd:audit-milestone and /gsd:complete-milestone (if not already run)
+- Milestone v2.5: run /gsd:plan-phase 61 to begin planning Data Layer + Backend CRUD
 
 ### Blockers/Concerns
 
@@ -90,4 +94,4 @@ Items acknowledged and deferred at milestone v2.4 close on 2026-06-30:
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd:plan-phase 61` to plan Phase 61 (Data Layer + Backend CRUD) of milestone v2.5

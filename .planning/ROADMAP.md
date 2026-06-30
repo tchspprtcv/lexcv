@@ -7,6 +7,7 @@
 - ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
 - ✅ **v2.3 Responsividade App** — Phases 53–56 (complete 2026-06-21)
 - ✅ **v2.4 Ficha de Cliente** — Phases 57–60 (complete 2026-06-30)
+- 🚧 **v2.5 Módulo de Parecer Jurídico** — Phases 61–64 (in progress)
 
 ## Phases
 
@@ -81,6 +82,63 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 
 </details>
 
+### 🚧 v2.5 Módulo de Parecer Jurídico (IN PROGRESS)
+
+**Milestone Goal:** Gerir o ciclo completo de pareceres jurídicos (solicitação → elaboração com versionamento → aprovação opcional → entrega), com auditoria automática e pesquisa avançada, reutilizando `Cliente`, `User`+role `ADVOGADO`, `AuditLog` e `StorageService` já existentes.
+
+- [ ] **Phase 61: Data Layer + Backend CRUD** - Entidades ParecerSolicitacao/ParecerVersao, scope RBAC `pareceres:*`, e CRUD completo de solicitações via API
+- [ ] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data
+- [ ] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download
+- [ ] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados
+
+## Phase Details
+
+### Phase 61: Data Layer + Backend CRUD
+**Goal**: Existe uma base de dados e API funcionais para criar, atribuir e listar solicitações de parecer, com RBAC dedicado
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: PARC-01, PARC-02, PARC-03, PARC-04, PARC-05, PARC-06, PARC-10
+**Success Criteria** (what must be TRUE):
+  1. Utilizador com permissão `pareceres:create` pode criar uma solicitação de parecer com cliente, descrição, data, prazo desejado e urgência
+  2. Solicitação pode ser opcionalmente associada a um Processo existente
+  3. Utilizador pode atribuir/reatribuir um advogado responsável (User com role ADVOGADO) à solicitação
+  4. Solicitação expõe um status (PENDENTE, EM_ELABORACAO, EM_REVISAO, CONCLUIDO) que reflete o seu progresso
+  5. Utilizador pode listar e filtrar solicitações por cliente, advogado e status, e ver o detalhe de uma solicitação específica
+**Plans**: TBD
+
+### Phase 62: Elaboração e Versionamento
+**Goal**: O advogado responsável consegue elaborar o parecer em versões sucessivas, cada uma com conteúdo, anexo opcional e histórico rastreável
+**Depends on**: Phase 61
+**Requirements**: PARV-01, PARV-02, PARV-03, PARV-04
+**Success Criteria** (what must be TRUE):
+  1. Advogado responsável pode criar uma nova versão do parecer com conteúdo textual e anexo opcional
+  2. Cada versão regista automaticamente número sequencial, autor e data de criação
+  3. Utilizador pode consultar a lista de versões anteriores de uma solicitação e abrir cada uma para comparação
+  4. Upload/download de anexos de versão usa o mesmo StorageService/padrão de Documentos já existente no LexCV
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 63: Aprovação e Entrega
+**Goal**: O parecer pode ser revisto internamente antes de ser entregue, e uma vez entregue fica disponível para consulta pela equipa/cliente
+**Depends on**: Phase 62
+**Requirements**: PARC-07, PARC-08, PARC-09
+**Success Criteria** (what must be TRUE):
+  1. Utilizador com papel de supervisor/ADMIN pode marcar uma versão específica como aprovada internamente (passo opcional)
+  2. Utilizador pode marcar a versão final como entregue, o que altera o status da solicitação para CONCLUIDO
+  3. Parecer entregue fica visível/descarregável para consulta pela equipa (e, conforme RBAC, pelo cliente)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 64: Auditoria e Pesquisa Avançada
+**Goal**: Todas as ações relevantes sobre pareceres ficam auditadas automaticamente e qualquer parecer pode ser encontrado por texto livre combinado com filtros
+**Depends on**: Phase 63
+**Requirements**: PARA-01, PARS-01, PARS-02
+**Success Criteria** (what must be TRUE):
+  1. Criar, atribuir, editar versão, aprovar e entregar um parecer geram automaticamente um registo em AuditLog (`entidadeTipo`: `parecer_solicitacao`/`parecer_versao`), visível no histórico/timeline já existente
+  2. Utilizador pode pesquisar pareceres por texto livre no conteúdo das versões
+  3. Pesquisa por texto livre pode ser combinada com filtros de cliente, advogado, status e data simultaneamente
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -103,5 +161,9 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 58. Formulário Dinâmico | v2.4 | 4/4 | Complete | 2026-06-30 |
 | 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
 | 60. Ficha Imprimível | v2.4 | 2/2 | Complete | 2026-06-30 |
+| 61. Data Layer + Backend CRUD | v2.5 | 0/TBD | Not started | - |
+| 62. Elaboração e Versionamento | v2.5 | 0/TBD | Not started | - |
+| 63. Aprovação e Entrega | v2.5 | 0/TBD | Not started | - |
+| 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
 
-**Next milestone:** not yet planned — run `/gsd:new-milestone` to define v2.5.
+**Next:** Run `/gsd:plan-phase 61` to begin Phase 61 planning.
