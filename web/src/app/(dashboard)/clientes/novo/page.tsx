@@ -94,11 +94,27 @@ export default function ClienteCreatePage() {
       return;
     }
     try {
+      const dados_tipo =
+        values.tipo === "PARTICULAR"
+          ? {
+              idade: values.dados_tipo?.idade,
+              sexo: values.dados_tipo?.sexo,
+              nacionalidade: values.dados_tipo?.nacionalidade,
+            }
+          : values.tipo === "EMPRESA"
+            ? {
+                nome_comercial: values.dados_tipo?.nome_comercial,
+                sede: values.dados_tipo?.sede,
+                representante_legal: values.dados_tipo?.representante_legal,
+                cargo: values.dados_tipo?.cargo,
+              }
+            : undefined;
+
       const payload: ClienteCreateRequest = {
         ...values,
         tipo: values.tipo,
         avencado: values.avencado,
-        dados_tipo: values.dados_tipo,
+        dados_tipo,
         documentoTipo: values.documento_tipo || undefined,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,

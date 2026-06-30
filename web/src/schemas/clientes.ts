@@ -15,7 +15,9 @@ const optionalEmail = z
 
 export const clienteFormSchema = z
   .object({
-    tipo: z.enum(["PARTICULAR", "EMPRESA"]).optional(),
+    tipo: z.enum(["PARTICULAR", "EMPRESA"], {
+      error: "Selecione o tipo de cliente",
+    }),
     avencado: z.boolean().optional(),
     dados_tipo: z
       .object({
