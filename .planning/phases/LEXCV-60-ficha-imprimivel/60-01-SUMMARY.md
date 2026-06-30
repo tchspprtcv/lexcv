@@ -104,3 +104,12 @@ None - no external service configuration required.
 ---
 *Phase: LEXCV-60-ficha-imprimivel*
 *Completed: 2026-06-30*
+
+## Self-Check: PASSED
+
+- FOUND: web/src/types/clientes.ts
+- FOUND: web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx
+- FOUND: .planning/phases/LEXCV-60-ficha-imprimivel/60-01-SUMMARY.md
+- FOUND commit: ae2c8ac
+- FOUND commit: 294ec21
+- FOUND commit: 0bd8ece
