@@ -87,7 +87,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 **Milestone Goal:** Gerir o ciclo completo de pareceres jurídicos (solicitação → elaboração com versionamento → aprovação opcional → entrega), com auditoria automática e pesquisa avançada, reutilizando `Cliente`, `User`+role `ADVOGADO`, `AuditLog` e `StorageService` já existentes.
 
 - [x] **Phase 61: Data Layer + Backend CRUD** - Entidades ParecerSolicitacao/ParecerVersao, scope RBAC `pareceres:*`, e CRUD completo de solicitações via API (completed 2026-06-30)
-- [ ] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data
+- [x] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data (completed 2026-06-30)
 - [ ] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download
 - [ ] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados
 
@@ -118,7 +118,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   4. Upload/download de anexos de versão usa o mesmo StorageService/padrão de Documentos já existente no LexCV
 **Plans**: 2 plans
   - [x] 62-01-PLAN.md — Entidade ParecerVersao + repositório (numeração sequencial por solicitação)
-  - [ ] 62-02-PLAN.md — Endpoints /versoes no ParecerController (criar com multipart, listar, detalhe, download de anexo via StorageService)
+  - [x] 62-02-PLAN.md — Endpoints /versoes no ParecerController (criar com multipart, listar, detalhe, download de anexo via StorageService)
 **UI hint**: yes
 
 ### Phase 63: Aprovação e Entrega
@@ -166,7 +166,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
 | 60. Ficha Imprimível | v2.4 | 2/2 | Complete | 2026-06-30 |
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
-| 62. Elaboração e Versionamento | v2.5 | 1/2 | In Progress|  |
+| 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 63. Aprovação e Entrega | v2.5 | 0/TBD | Not started | - |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
 
