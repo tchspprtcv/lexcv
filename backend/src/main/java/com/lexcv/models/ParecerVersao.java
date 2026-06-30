@@ -39,6 +39,16 @@ public class ParecerVersao {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean aprovado = false;
+
+    @Column(name = "aprovado_por_id")
+    private UUID aprovadoPorId;
+
+    @Column(name = "aprovado_em")
+    private LocalDateTime aprovadoEm;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

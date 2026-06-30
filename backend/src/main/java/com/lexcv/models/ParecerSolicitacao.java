@@ -33,6 +33,9 @@ public class ParecerSolicitacao {
     @Column(name = "advogado_id")
     private UUID advogadoId;
 
+    @Column(name = "versao_final_id")
+    private UUID versaoFinalId;
+
     // ALTA | MEDIA | BAIXA
     @Column(nullable = false)
     @Builder.Default

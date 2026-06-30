@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -227,6 +228,76 @@ public class ParecerController {
 
         solicitacao.setAdvogadoId(advogadoId);
         solicitacao.setStatus("EM_ELABORACAO");
+
+        return ResponseEntity.ok(parecerSolicitacaoRepository.save(solicitacao));
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:manage')")
+    @PutMapping("/{id}/versoes/{versaoId}/aprovar")
+    public ResponseEntity<?> aprovarVersao(@PathVariable UUID id, @PathVariable UUID versaoId) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
+        }
+
+        if ("CONCLUIDO".equals(solicitacao.getStatus())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Não é possível aprovar uma versão de um parecer concluído"));
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+
+        versao.setAprovado(true);
+        versao.setAprovadoPorId(principal.getUserId());
+        versao.setAprovadoEm(LocalDateTime.now());
+        parecerVersaoRepository.save(versao);
+
+        if ("PENDENTE".equals(solicitacao.getStatus()) || "EM_ELABORACAO".equals(solicitacao.getStatus())) {
+            solicitacao.setStatus("EM_REVISAO");
+            parecerSolicitacaoRepository.save(solicitacao);
+        }
+
+        return ResponseEntity.ok(versao);
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:manage')")
+    @PutMapping("/{id}/entregar")
+    public ResponseEntity<?> entregarSolicitacao(@PathVariable UUID id, @RequestParam UUID versaoFinalId) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoFinalId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
+        }
+
+        if ("CONCLUIDO".equals(solicitacao.getStatus())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Parecer já foi entregue"));
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        boolean isAdmin = principal.getRoles().contains("ADMIN");
+        boolean isResponsavel = solicitacao.getAdvogadoId() != null
+                && solicitacao.getAdvogadoId().equals(principal.getUserId());
+        if (!isAdmin && !isResponsavel) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Apenas o advogado responsável ou ADMIN pode entregar o parecer"));
+        }
+
+        solicitacao.setVersaoFinalId(versaoFinalId);
+        solicitacao.setStatus("CONCLUIDO");
 
         return ResponseEntity.ok(parecerSolicitacaoRepository.save(solicitacao));
     }
