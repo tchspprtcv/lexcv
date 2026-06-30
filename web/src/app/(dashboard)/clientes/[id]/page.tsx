@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
+import { Printer } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,16 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         <div className="flex gap-2">
           <Button asChild variant="outline">
             <Link href="/clientes">Voltar</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link
+              href={`/clientes/${encodeURIComponent(id)}/ficha`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir Ficha
+            </Link>
           </Button>
           {canEditClientes ? (
             <Button asChild>
