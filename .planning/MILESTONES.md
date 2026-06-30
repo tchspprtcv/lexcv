@@ -1,5 +1,24 @@
 # Milestones
 
+## v2.4 Ficha de Cliente (Shipped: 2026-06-30)
+
+**Phases completed:** 4 phases (57–60), 14 plans, ~30 tasks
+
+**Key accomplishments:**
+
+- Numeração sequencial automática de clientes (CLI-0001) por tenant, com formulário dinâmico que adapta os campos a Particular ou Empresa
+- Procuração obrigatória com aviso visual não-bloqueante ("Procuração em falta"), upload/substituição via MinIO
+- Intake completo do caso na ficha do cliente: advogados e administrativos ligados a Users do sistema, documentos entregues/a tratar, deslocações, e honorários propostos
+- Ficha imprimível de alta fidelidade ao formulário físico do escritório, com CSS de impressão A4 e botão de impressão directa
+- Auditoria de integração entre fases (pós-execução) detectou um mismatch sistémico snake_case/camelCase entre backend e frontend que invalidava 9 dos 19 requisitos (dados gravados correctamente mas nunca visíveis no ecrã) e uma fuga de password hash em 2 endpoints novos — ambos corrigidos antes do fecho do milestone
+
+**Known gaps at close:**
+
+- Correcção da auditoria foi verificada estaticamente (mapeamento campo-a-campo + builds limpos), não testada ao vivo contra backend+DB+MinIO — recomenda-se smoke test antes de produção
+- Itens não-bloqueantes adiados: allowlist de tipo de ficheiro na procuração, formatação de moeda na ficha impressa, ficha sem ponto de acesso em mobile (ver STATE.md Pending Todos)
+
+---
+
 ## v2.3 Responsividade App (Shipped: 2026-06-21)
 
 **Phases completed:** 4 phases (53–56), 8 plans

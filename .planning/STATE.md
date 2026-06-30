@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: Ficha de Cliente
-status: milestone_complete
-last_updated: "2026-06-30T14:30:00.000Z"
-last_activity: 2026-06-30 -- Phase 60 complete (verified, security-audited); all 4 phases of milestone v2.4 done
+status: Awaiting next milestone
+last_updated: "2026-06-30T18:05:46.995Z"
+last_activity: 2026-06-30 — Milestone v2.4 completed and archived
 progress:
-  total_phases: 15
-  completed_phases: 15
-  total_plans: 33
+  total_phases: 14
+  completed_phases: 14
+  total_plans: 31
   completed_plans: 31
   percent: 100
 ---
@@ -24,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: 60 (ficha-imprimivel) — COMPLETE
-Plan: 2 of 2
-Status: Phase 60 complete — goal verified (8/8 must-haves), security audited (7/7 threats closed), code reviewed (0 critical)
-Last activity: 2026-06-30 -- Phase 60 closed out (verification + security audit + code review); milestone v2.4 fully delivered
-
-Progress: [██████████] 100%
+Phase: Milestone v2.4 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-30 — Milestone v2.4 completed and archived
 
 ## Performance Metrics
 
@@ -80,3 +78,16 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 None.
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone v2.4 close on 2026-06-30:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 50 (50-VERIFICATION.md) — pre-existing from v2.2, not part of v2.4 | human_needed |
+| verification_gap | Phase 51 (51-VERIFICATION.md) — pre-existing from v2.2, not part of v2.4 | human_needed |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

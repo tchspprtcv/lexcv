@@ -28,35 +28,21 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Deployment para VPS — Dockerfiles multi-stage, Docker Compose 4 serviços, Caddy HTTPS automático, CI/CD GitHub Actions → GHCR → SSH VPS — v1.8 (implantado via Hostinger VPS Connector)
 - ✓ Melhoria Módulo Agendamento — alinhamento camelCase, validações robustas e visão unificada no calendário com filtros por processo/categoria/status — v1.9
 - ✓ Responsividade App — shell mobile com drawer/hamburger/bottom-nav, mobile cards em todas as listas, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável — v2.3
+- ✓ Numeração sequencial de clientes (`numero_cliente`, ex: CLI-0001), por tenant — v2.4
+- ✓ Tipo de cliente Particular vs. Empresa com formulário dinâmico — v2.4
+- ✓ Campos demográficos para Particular (idade, sexo, nacionalidade, BI/Pass) — v2.4
+- ✓ Dados de entidade coletiva para Empresa (nome comercial, NIF, sede, representante legal, cargo) — v2.4
+- ✓ Procuração obrigatória para todos os clientes (upload de documento, aviso não-bloqueante) — v2.4
+- ✓ Flag "Cliente Avençado" visível na ficha e listagens — v2.4
+- ✓ Campos de intake: descrição do caso, advogados atribuídos (nome, cédula, contacto), administrativos atribuídos — v2.4
+- ✓ Documentos entregues vs. a tratar (por cliente) — v2.4
+- ✓ Deslocações a realizar (por cliente) — v2.4
+- ✓ Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
+- ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
 
 ### Active
 
-- Numeração sequencial de clientes (`numero_cliente`, ex: CLI-0001), por tenant — v2.4
-- Tipo de cliente Particular vs. Empresa com formulário dinâmico — v2.4
-- Campos demográficos para Particular (idade, sexo, nacionalidade, BI/Pass) — v2.4
-- Dados de entidade coletiva para Empresa (nome comercial, NIF, sede, representante legal, cargo) — v2.4
-- Procuração obrigatória para todos os clientes (upload de documento) — v2.4
-- Flag "Cliente Avençado" visível na ficha e listagens — v2.4
-- Campos de intake: descrição do caso, advogados atribuídos (nome, cédula, contacto), administrativos atribuídos — v2.4
-- Documentos entregues vs. a tratar (por cliente) — v2.4
-- Deslocações a realizar (por cliente) — v2.4
-- Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
-- Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
-
-## Current Milestone: v2.4 Ficha de Cliente
-
-**Goal:** Adaptar o módulo de clientes para espelhar a ficha real do escritório, com tipo de cliente (Particular/Empresa), numeração sequencial automática e ficha imprimível.
-
-**Target features:**
-- Numeração sequencial de clientes gerada automaticamente no backend, por tenant
-- Formulário dinâmico por tipo de cliente (Particular vs. Empresa/Coletivo)
-- Campos demográficos (Particular) e dados de entidade coletiva (Empresa)
-- Procuração obrigatória para todos os clientes
-- Flag "Cliente Avençado"
-- Campos de intake: descrição do caso, advogados e administrativos atribuídos
-- Documentos entregues vs. a tratar, deslocações a realizar
-- Honorários propostos no intake
-- Vista de Ficha Cliente imprimível
+(Nenhum requisito activo — milestone v2.4 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
 
 ### Out of Scope
 
@@ -102,10 +88,20 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | sheet.tsx criado manualmente (sem CLI interativo) | CLI `npx shadcn` exige setup interativo; seguiu padrão de dialog.tsx com @radix-ui/react-dialog | ✓ Good |
 | Dual-view pattern CSS puro (`hidden md:block` / `md:hidden`) | Sem JS branching, sem rerenders — simples e performante | ✓ Good |
 | React fragments obrigatórios em siblings dentro de ternário JSX | Bug descoberto em Phase 54 — sibling divs sem wrapper causam erro de parse | ✓ Good |
+| `numero_cliente` formato CLI-0001, gerado por MAX(numero_sequencial)+1 por tenant, sincronizado em bloco synchronized no controller | Evitar UUID exposto ao utilizador; numeração legível e sequencial sem precisar de uma sequence dedicada na BD | ✓ Good |
+| `dados_tipo` como coluna JSON única em `t_cliente` (POJO + AttributeConverter), em vez de colunas separadas por campo | Evita migração de schema a cada novo campo de tipo; mesmo padrão reutilizado em Phase 59 para listas de intake | ✓ Good |
+| Procuração não bloqueia submit — aviso visual em vez de validação bloqueante | Realidade do escritório: clientes às vezes só assinam procuração depois da primeira reunião | ✓ Good |
+| Advogados/administrativos ligados a Users do sistema (não texto livre) via tabelas de junção tenant-scoped | Permite reutilizar RBAC existente e evita dados duplicados/inconsistentes | ✓ Good |
+| `@JsonProperty` cirúrgico por campo em vez de `spring.jackson.property-naming-strategy` global | Auditoria de milestone encontrou backend a emitir camelCase e frontend a ler snake_case nos campos novos do v2.4 — corrigir globalmente teria alto raio de impacto sobre fluxos já em produção (alguns campos pré-existentes como `tenantId`/`createdAt` já têm a mesma inconsistência fora do âmbito desta milestone) | ✓ Good (mitigação cirúrgica; mismatch pré-existente fora do v2.4 fica como dívida técnica para limpeza futura) |
 
 ## Current State
 
-**Shipped:** v2.3 (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
+**Shipped:** v2.4 (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo (advogados/administrativos ligados a Users, documentos, deslocações, honorários propostos), e ficha imprimível de alta fidelidade ao formulário físico do escritório. Auditoria pós-execução encontrou e corrigiu um mismatch snake_case/camelCase que invalidava 9/19 requisitos e uma fuga de password hash — ver `.planning/milestones/v2.4-MILESTONE-AUDIT.md`.
+
+**v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
+
+<details>
+<summary>Histórico anterior (v1.0–v2.2)</summary>
 
 **v2.2** (2026-06-19) — Document Storage MinIO. Backend migrado de filesystem para MinIO (AWS S3 SDK), upload com barra de progresso e drag-and-drop, downloads via URL pré-assinada, serviço MinIO no Docker Compose prod com Caddy.
 
@@ -113,7 +109,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 **v2.0** (2026-06-18) — Módulo Financeiro. Migração camelCase completa, CRUD honorários/pagamentos, status badges, 4 KPI cards, filtros, CSV export.
 
-**Current focus:** Planning next milestone
+Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
+
+</details>
+
+**Current focus:** Planning next milestone (v2.5+). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
 
 ## Evolution
 
@@ -133,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-29 — Milestone v2.4 started (Ficha de Cliente)*
+*Last updated: 2026-06-30 — after v2.4 milestone (Ficha de Cliente) shipped*
