@@ -69,6 +69,9 @@ export interface Cliente {
   documentos_a_tratar?: DocumentoATratar[];
   deslocacoes?: Deslocacao[];
   honorarios_propostos?: HonorariosPropostos;
+  idade?: number;
+  sexo?: string;
+  nacionalidade?: string;
 }
 
 export interface ClienteCreateRequest {
