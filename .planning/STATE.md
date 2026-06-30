@@ -64,6 +64,7 @@ Recent decisions affecting current work:
 - (v2.4/59) Listas de intake (docs entregues/a tratar, deslocações, honorários propostos) como colunas JSON em t_cliente, mesmo padrão de dados_tipo da Phase 57
 - (v2.4/60) Ficha imprimível de alta fidelidade ao formulário físico — rota dedicada /clientes/[id]/ficha, @media print scoped via dangerouslySetInnerHTML de CSS estático, window.print() sem dependência de PDF externa
 - (v2.4/60) Acesso à ficha via botão na ficha de detalhe + ícone na listagem desktop (kebab menu original substituído por botão directo Printer, consistente com padrão Eye/Pencil/Trash2 existente)
+- (v2.4/audit) Milestone audit found snake_case/camelCase JSON contract mismatch breaking 9/19 requirements at the display layer (data persisted correctly, never rendered) + a password-hash leak on 2 new endpoints. Fixed via scoped @JsonProperty annotations (not a global naming-strategy change, to limit blast radius) — see v2.4-MILESTONE-AUDIT.md remediation section, commit ac5ae75.
 
 ### Pending Todos
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - Phase 59 follow-up (non-blocking, code review warnings): N+1 query in listClienteAdvogados/Administrativos; duplicate snake_case/camelCase fields in web/src/types/clientes.ts from merge artifacts; untyped date strings in intake list items — see 59-REVIEW.md
 - Phase 60 follow-up (non-blocking, code review warnings): "Honorários — Totalidade" not formatted via formatMoneyCVE on ficha print page; isDadosTipoParticular type guard uses key-presence heuristic instead of isEmpresa discriminator; inconsistent blank-placeholder idiom — see 60-REVIEW.md
 - Phase 60 follow-up (non-blocking, UX gap noted in 60-SECURITY.md): mobile card view in clientes listing has no ficha/Printer entry point (desktop-only for now)
+- **Recommended before production**: live smoke test of the 5 flows broken by the audit (create Particular/Empresa client, upload procuração, fill intake fields, print ficha) against a running backend+DB+MinIO stack — the fix was statically verified (field-by-field JSON key trace + clean builds) but not live-tested in this session.
+- Pre-existing app-wide tenantId/createdAt-style snake_case/camelCase mismatches outside v2.4's scope were identified but intentionally not touched (out of milestone scope, broader blast radius) — candidate for a future cleanup phase.
 - Milestone v2.4 ready for /gsd:audit-milestone and /gsd:complete-milestone
 
 ### Blockers/Concerns
