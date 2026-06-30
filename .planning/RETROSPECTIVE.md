@@ -52,10 +52,60 @@ Living retrospective — one section per shipped milestone.
 
 ---
 
+## Milestone: v2.4 — Ficha de Cliente
+
+**Shipped:** 2026-06-30
+**Phases:** 4 (57–60) | **Plans:** 14 | **Commits:** ~85
+
+### What Was Built
+
+- Numeração sequencial automática de clientes (CLI-0001), MAX+1 por tenant, gerada no backend (synchronized block) — não editável pelo utilizador
+- `TipoCliente` enum (PARTICULAR/EMPRESA) + `DadosTipo` POJO + `DadosTipoConverter` (JSON column, mesmo padrão reutilizado para 4 listas de intake em Phase 59)
+- Formulário dinâmico: RadioGroup de tipo no topo, secções condicionais (Particular vs Empresa) mutuamente exclusivas, Dialog de confirmação ao trocar tipo, Switch "Avençado"
+- Procuração obrigatória com aviso não-bloqueante ("Procuração em falta"), upload/substituição via MinIO presigned URLs
+- Advogados/administrativos ligados a `User` do sistema via tabelas de junção tenant-scoped, com validação de papel server-side
+- Ficha imprimível de alta fidelidade (`/clientes/[id]/ficha`), 8 secções, `@media print` + `@page A4`, `window.print()` sem dependência externa
+
+### What Worked
+
+- **Reutilização do padrão JSON-column+POJO+Converter** (Phase 57 `dados_tipo` → Phase 59 4x listas de intake) — consistente, sem migração de schema a cada novo campo.
+- **Modelo de confirmação `pendingTipo` + Dialog** para trocar tipo sem perder dados acidentalmente — replicado identicamente entre `novo/page.tsx` e `editar/page.tsx`.
+- **Gates por fase (verify + security + code-review) todos passaram individualmente** — cada fase, isolada, estava genuinamente correcta.
+- **A auditoria de milestone (passo final, antes de completar) apanhou um bug que nenhum gate de fase apanhou**: um mismatch sistémico snake_case/camelCase entre backend e frontend que invalidava 9/19 requisitos a nível de display (dados gravados correctamente, nunca visíveis). Sem este passo, o milestone teria sido marcado como "completo" com a maioria das suas entregas-bandeira invisíveis para o utilizador.
+
+### What Was Inefficient
+
+- **Múltiplos agentes em background atingiram o limite de sessão a meio de waves paralelas** (58-03, 58-04, 59-04, e o orquestrador do security audit da Phase 60) — exigiu intervenção manual repetida: merge de worktrees, reescrita retroactiva de SUMMARY.md, e relançamento de sub-agentes. Consumiu tempo de coordenação significativo.
+- **Um agente de segurança suspeitou (correctamente, por cautela) de mensagens "coordinator" relayadas** e recusou-se a agir sem verificação independente — correcto do ponto de vista de segurança, mas exigiu duas rondas extra de mensagens para desbloquear.
+- **Verificação de fase confirmou presença de código e sucesso de build, mas nunca traçou as chaves JSON reais ponta-a-ponta** — `pnpm build`/`tsc --noEmit` a passar não prova que os dados fluem correctamente entre backend e frontend quando a tipagem estrutural do TypeScript não consegue detectar um nome de chave incorrecto em runtime.
+- **Sem ambiente live (backend+DB+MinIO) disponível na sessão** para testar a correcção do mismatch — a correcção foi apenas verificada estaticamente (mapeamento campo-a-campo + builds limpos), não com um pedido HTTP real.
+
+### Patterns Established
+
+- `@JsonProperty` cirúrgico por campo é preferível a uma `property-naming-strategy` global do Jackson quando só um subconjunto de campos (os novos de uma milestone) está desalinhado — limita o raio de impacto a campos sob controlo, evita regressões em fluxos pré-existentes que já dependem (correcta ou incorrectamente) do comportamento por defeito.
+- Padrão JSON-column (`@Convert` + `AttributeConverter` com Jackson `ObjectMapper`) para listas/objectos estruturados num único campo TEXT — replicável sempre que um novo conjunto de dados não justifica tabelas dedicadas.
+- `pendingTipo`/Dialog de confirmação para trocas destrutivas em formulários React Hook Form — intercepta o `onChange` antes de `setValue`, só aplica após confirmação explícita.
+
+### Key Lessons
+
+1. **Verificação de fase isolada não substitui auditoria de integração entre fases.** Cada fase pode passar todos os seus próprios gates (verify, security, review) e ainda assim o sistema, como um todo, estar quebrado nas costuras entre fases. O passo `/gsd:audit-milestone` antes de `/gsd:complete-milestone` não é burocracia — é o único ponto do workflow que efectivamente testa fluxos ponta-a-ponta cruzando fases.
+2. **"Build verde" e "tipos TypeScript correctos" não são prova de que os dados fluem.** Um campo `numero_cliente?: string` no tipo TypeScript compila e tipa correctamente mesmo que a resposta HTTP real nunca contenha essa chave — é preciso traçar o nome de campo real, não confiar na presença estrutural do campo no tipo.
+3. **Quando vários sub-agentes em background atingem o limite de sessão em simultâneo durante waves paralelas, a recuperação manual (merge de worktrees, verificação cruzada com grep, reescrita de SUMMARY.md) é viável mas cara em tempo de coordenação** — considerar gates de "wave size" mais pequenos ou checkpoints intermédios em milestones com muitas waves paralelas.
+4. **Um sub-agente de segurança a recusar agir sobre afirmações não verificadas de um "coordinator" é o comportamento correcto**, mesmo quando o coordinator é legítimo — o custo de uma ronda extra de verificação é baixo comparado ao risco de um agente de segurança agir sobre uma instrução injectada.
+
+### Cost Observations
+
+- Model: claude-sonnet-4-6 throughout (autonomous + interactive workflow)
+- Sessões: múltiplas, com pelo menos 4 agentes em background a atingir o limite de sessão a meio de tarefa
+- Notable: a auditoria de milestone (passo final) encontrou mais problemas reais (2 blockers genuínos) do que todos os 4 code-reviews por fase combinados (que encontraram apenas 5 críticos, todos menores em comparação) — sinal forte de que o investimento no passo de auditoria de integração vale o custo
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
 |-----------|--------|-------|------|-------|--------------|
 | v2.3 Responsividade | 4 | 8 | 1 | 51 | 11/11 |
+| v2.4 Ficha de Cliente | 4 | 14 | 1 | 79+ | 19/19 (post-audit-remediation) |
 
 *Table grows with each milestone*
