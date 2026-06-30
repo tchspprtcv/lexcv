@@ -2,11 +2,14 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.ParecerSolicitacao;
+import com.lexcv.models.ParecerVersao;
 import com.lexcv.models.User;
 import com.lexcv.repositories.ClienteRepository;
 import com.lexcv.repositories.ParecerSolicitacaoRepository;
+import com.lexcv.repositories.ParecerVersaoRepository;
 import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +31,8 @@ public class ParecerController {
     private final UserRepository userRepository;
     private final ClienteRepository clienteRepository;
     private final ProcessoRepository processoRepository;
+    private final ParecerVersaoRepository parecerVersaoRepository;
+    private final StorageService storageService;
 
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -218,5 +223,31 @@ public class ParecerController {
         solicitacao.setStatus("EM_ELABORACAO");
 
         return ResponseEntity.ok(parecerSolicitacaoRepository.save(solicitacao));
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:view')")
+    @GetMapping("/{solicitacaoId}/versoes")
+    public ResponseEntity<?> listVersoes(@PathVariable UUID solicitacaoId) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(solicitacaoId).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+        return ResponseEntity.ok(parecerVersaoRepository.findBySolicitacaoId(solicitacaoId));
+    }
+
+    @PreAuthorize("hasAuthority('pareceres:view')")
+    @GetMapping("/{solicitacaoId}/versoes/{versaoId}")
+    public ResponseEntity<?> getVersao(@PathVariable UUID solicitacaoId, @PathVariable UUID versaoId) {
+        UUID tenantId = getTenantId();
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(solicitacaoId).orElse(null);
+        if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
+        }
+        ParecerVersao versao = parecerVersaoRepository.findById(versaoId).orElse(null);
+        if (versao == null || !versao.getSolicitacaoId().equals(solicitacaoId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
+        }
+        return ResponseEntity.ok(versao);
     }
 }
