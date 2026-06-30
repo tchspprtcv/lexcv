@@ -117,7 +117,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   3. Utilizador pode consultar a lista de versões anteriores de uma solicitação e abrir cada uma para comparação
   4. Upload/download de anexos de versão usa o mesmo StorageService/padrão de Documentos já existente no LexCV
 **Plans**: 2 plans
-  - [ ] 62-01-PLAN.md — Entidade ParecerVersao + repositório (numeração sequencial por solicitação)
+  - [x] 62-01-PLAN.md — Entidade ParecerVersao + repositório (numeração sequencial por solicitação)
   - [ ] 62-02-PLAN.md — Endpoints /versoes no ParecerController (criar com multipart, listar, detalhe, download de anexo via StorageService)
 **UI hint**: yes
 
@@ -166,7 +166,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 59. Procuração + Intake | v2.4 | 6/6 | Complete | 2026-06-30 |
 | 60. Ficha Imprimível | v2.4 | 2/2 | Complete | 2026-06-30 |
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
-| 62. Elaboração e Versionamento | v2.5 | 0/2 | Planned | - |
+| 62. Elaboração e Versionamento | v2.5 | 1/2 | In Progress|  |
 | 63. Aprovação e Entrega | v2.5 | 0/TBD | Not started | - |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
 
