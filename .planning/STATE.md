@@ -75,7 +75,9 @@ Recent decisions affecting current work:
 - Pre-existing app-wide tenantId/createdAt-style snake_case/camelCase mismatches outside v2.4's scope were identified but intentionally not touched (out of milestone scope, broader blast radius) — candidate for a future cleanup phase.
 - Phase 65 follow-up (non-blocking, UI review 18/24 — see 65-UI-REVIEW.md): status badges render raw enum values instead of Portuguese labels in both pareceres/page.tsx and pareceres/[id]/page.tsx; cliente name not resolved on detail page (raw UUID shown, list page already has the resolution pattern); AnexoLink download failure silently swallowed (no download.isError handling) — regression introduced when WR-04 removed the redundant toast without adding proper error UI
 - Phase 65 human_verification pending (see 65-VERIFICATION.md): responsive dual-view rendering, anexo presigned-URL download flow, cross-role nav/access-denied behavior, cross-tenant IDOR 404 handling — deferred by user decision, needs live browser/backend test before shipping v2.6
-- Milestone v2.6: run `/gsd:plan-phase 66` to begin planning Phase 66 (Criação de Solicitação)
+- Phase 66 follow-up (non-blocking, UI review 19/24 — see 66-UI-REVIEW.md): processoId select has no loading/error state (unlike clienteId); focus ring uses blue-500 vs spec's declared blue-600/700 (pre-existing mismatch from processos/novo/page.tsx); CardTitle never gets text-lg font-bold override so "Dados da Solicitação" doesn't match declared 18px/700 typography
+- Phase 66 human_verification pending (see 66-VERIFICATION.md): end-to-end create flow (submit → toast → redirect → list update), access-denied path for non-privileged users, WR-01/WR-02 live behavior (cliente-switch resets processoId, backend 400s mismatched cliente/processo)
+- Milestone v2.6: run `/gsd:plan-phase 67` to begin planning Phase 67 (Elaboração e Versionamento)
 
 ### Blockers/Concerns
 
