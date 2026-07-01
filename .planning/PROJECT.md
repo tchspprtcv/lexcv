@@ -128,7 +128,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Planning next milestone (v2.6+). Strong candidate: UI frontend para o Módulo de Parecer Jurídico (v2.5 entregou apenas backend). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
+**Current focus:** Executing milestone v2.6 (Módulo de Parecer Jurídico — UI). Phase 65 (Fundação — Listagem e Detalhe) complete 2026-07-01: `/pareceres` list + detail pages, pure camelCase types verified 1:1 against backend entities (no v2.4-style casing bridge), RBAC-gated nav. Next: Phase 66 (Criação de Solicitação). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
 
 ## Evolution
 
