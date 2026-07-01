@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_BASE } from "@/lib/api";
 
 import type { ParecerPrioridade, ParecerSolicitacao, ParecerVersao } from "@/types/pareceres";
 
@@ -79,6 +79,63 @@ export function useCreateParecer() {
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] });
+    },
+  });
+}
+
+export type ParecerVersaoCreatePayload = {
+  conteudo: string;
+  file: File;
+};
+
+export function useCreateParecerVersao(
+  solicitacaoId: string,
+  options?: { onProgress?: (pct: number) => void },
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ParecerVersaoCreatePayload) =>
+      new Promise<ParecerVersao>((resolve, reject) => {
+        const form = new FormData();
+        form.set("conteudo", payload.conteudo);
+        form.set("file", payload.file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open(
+          "POST",
+          `${API_BASE}/pareceres/solicitacoes/${encodeURIComponent(solicitacaoId)}/versoes`,
+        );
+        xhr.withCredentials = true;
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            options?.onProgress?.(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText) as ParecerVersao);
+            } catch {
+              reject(new Error("Resposta inválida do servidor"));
+            }
+          } else {
+            reject(new Error(`API ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Erro de rede ao enviar ficheiro"));
+
+        xhr.send(form);
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "versoes", solicitacaoId] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "detail", solicitacaoId] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] }),
+      ]);
     },
   });
 }

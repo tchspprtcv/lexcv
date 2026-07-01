@@ -37,3 +37,27 @@ export const parecerCreateFormSchema = z.object({
 });
 
 export type ParecerCreateFormValues = z.infer<typeof parecerCreateFormSchema>;
+
+const fileListSchema = z.custom<FileList>((value) => value instanceof FileList, {
+  message: "É necessário anexar um ficheiro para submeter esta versão.",
+});
+
+export const parecerVersaoCreateFormSchema = z.object({
+  conteudo: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      if (val.length === 0 || val.length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "O resumo deve ter pelo menos 10 caracteres.",
+        });
+      }
+    }),
+  file: fileListSchema.refine(
+    (files) => files.length === 1,
+    "É necessário anexar um ficheiro para submeter esta versão.",
+  ),
+});
+
+export type ParecerVersaoCreateFormValues = z.infer<typeof parecerVersaoCreateFormSchema>;
