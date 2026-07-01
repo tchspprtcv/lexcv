@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: Modulo de Parecer Juridico
-status: executing
-last_updated: "2026-07-01T00:09:44.266Z"
-last_activity: 2026-07-01 -- Phase 64 execution started
+milestone: v2.6
+milestone_name: Módulo de Parecer Jurídico — UI
+status: planning
+last_updated: "2026-07-01T09:08:16.079Z"
+last_activity: 2026-07-01
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 5
-  percent: 71
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-21)
 
 ## Current Position
 
-Phase: 64 (Auditoria e Pesquisa Avançada) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 64
-Last activity: 2026-07-01 -- Phase 64 execution started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-01 — Milestone v2.6 started
 
 ## Performance Metrics
 

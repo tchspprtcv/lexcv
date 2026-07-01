@@ -41,9 +41,21 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
 - ✓ Módulo de Parecer Jurídico — backend API (solicitação, versionamento imutável, aprovação/entrega, auditoria automática, pesquisa avançada), scope RBAC `pareceres:view/create/edit/manage` — v2.5 (backend-only; UI frontend adiada para v2.6)
 
+## Current Milestone: v2.6 Módulo de Parecer Jurídico — UI
+
+**Goal:** Entregar a interface frontend para o módulo de Parecer Jurídico, tornando utilizável através da aplicação LexCV o ciclo completo (solicitação → elaboração/versionamento → aprovação opcional → entrega → pesquisa/auditoria) já implementado como API no v2.5.
+
+**Target features:**
+- Rotas `/pareceres` no frontend (listagem, detalhe, criação de solicitação)
+- Hooks TanStack Query (`use-pareceres*.ts`) para os 12 endpoints `/api/v1/pareceres/*`
+- Formulários de solicitação, versionamento (conteúdo/anexo) e aprovação/entrega
+- Vista dedicada "parecer entregue" (surfacing de `versaoFinalId`, resolvendo gap PARC-09 do audit v2.5)
+- Pesquisa avançada (texto livre + filtros combinados) na UI, espelhando `pesquisar()` do backend
+- RBAC no UI espelhando `pareceres:view/create/edit/manage`
+
 ### Active
 
-(Nenhum requisito activo — milestone v2.5 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
+(Requisitos detalhados em `.planning/REQUIREMENTS.md`, definidos no início desta milestone.)
 
 ### Out of Scope
 
@@ -136,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-30 — after v2.5 milestone (Módulo de Parecer Jurídico, backend-only) shipped*
+*Last updated: 2026-07-01 — milestone v2.6 (Módulo de Parecer Jurídico — UI) started*
