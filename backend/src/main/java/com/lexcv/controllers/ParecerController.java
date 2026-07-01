@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -87,6 +88,7 @@ public class ParecerController {
 
     @PreAuthorize("hasAuthority('pareceres:create')")
     @PostMapping("")
+    @Transactional
     public ResponseEntity<?> createSolicitacao(@RequestBody ParecerSolicitacao body) {
         UUID tenantId = getTenantId();
 
@@ -225,6 +227,7 @@ public class ParecerController {
 
     @PreAuthorize("hasAuthority('pareceres:edit')")
     @PutMapping("/{id}/atribuir")
+    @Transactional
     public ResponseEntity<?> atribuirAdvogado(@PathVariable UUID id, @RequestBody Map<String, String> body) {
         UUID tenantId = getTenantId();
 
@@ -280,6 +283,7 @@ public class ParecerController {
 
     @PreAuthorize("hasAuthority('pareceres:manage')")
     @PutMapping("/{id}/versoes/{versaoId}/aprovar")
+    @Transactional
     public ResponseEntity<?> aprovarVersao(@PathVariable UUID id, @PathVariable UUID versaoId) {
         UUID tenantId = getTenantId();
         ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
@@ -325,6 +329,7 @@ public class ParecerController {
 
     @PreAuthorize("hasAuthority('pareceres:edit')")
     @PutMapping("/{id}/entregar")
+    @Transactional
     public ResponseEntity<?> entregarSolicitacao(@PathVariable UUID id, @RequestParam UUID versaoFinalId) {
         UUID tenantId = getTenantId();
         ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
@@ -398,6 +403,7 @@ public class ParecerController {
 
     @PreAuthorize("hasAuthority('pareceres:edit')")
     @PostMapping(value = "/{solicitacaoId}/versoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
     public ResponseEntity<?> createVersao(
             @PathVariable UUID solicitacaoId,
             @RequestParam(value = "conteudo", required = false) String conteudo,
