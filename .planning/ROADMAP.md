@@ -143,7 +143,11 @@ Plans:
   2. Após a entrega, a solicitação passa a expor uma vista dedicada "Parecer Entregue" (versão final via `versaoFinalId`, data/autor de entrega, anexo) — fechando o gap PARC-09 identificado na auditoria do v2.5
   3. Uma solicitação já entregue (`CONCLUIDO`) é tratada como só-leitura na UI (sem botões de nova versão/edição visíveis), independentemente de o backend garantir ou não essa restrição em todos os endpoints
   4. Botões de ação (criar solicitação, criar versão, entregar) só aparecem/ficam ativos conforme `hasScopedPermission(perms, "pareceres", action)` combinado com verificação de instância onde aplicável (ADMIN ou advogado responsável para versionar/entregar) — espelhando exatamente os `@PreAuthorize` do `ParecerController`
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 68-01-PLAN.md — Entrega irreversível (AlertDialog + selector de versão), bloco "Parecer Entregue", auditoria RBAC/só-leitura, e correções module-wide de CardTitle + timeline-dot
+
 **UI hint**: yes
 **Note (2026-07-01):** NOTF-07 removida do âmbito pela mesma razão indicada na Phase 66.
 
@@ -187,7 +191,7 @@ Plans:
 | 65. Fundação — Listagem e Detalhe | v2.6 | 2/2 | Complete    | 2026-07-01 |
 | 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/TBD | Not started | - |
+| 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/1 | Not started | - |
 | 69. Pesquisa Avançada | v2.6 | 0/TBD | Not started | - |
 
 **Next:** Run `/gsd:plan-phase 65` to begin Phase 65 planning.
