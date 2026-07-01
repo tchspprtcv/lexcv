@@ -72,7 +72,9 @@ Recent decisions affecting current work:
 - Phase 60 follow-up (non-blocking, code review warnings): "Honorários — Totalidade" not formatted via formatMoneyCVE on ficha print page; isDadosTipoParticular type guard uses key-presence heuristic instead of isEmpresa discriminator; inconsistent blank-placeholder idiom — see 60-REVIEW.md
 - Phase 60 follow-up (non-blocking, UX gap noted in 60-SECURITY.md): mobile card view in clientes listing has no ficha/Printer entry point (desktop-only for now)
 - Pre-existing app-wide tenantId/createdAt-style snake_case/camelCase mismatches outside v2.4's scope were identified but intentionally not touched (out of milestone scope, broader blast radius) — candidate for a future cleanup phase.
-- Run `/gsd:plan-phase 65` to begin planning Phase 65 of milestone v2.6
+- Phase 65 follow-up (non-blocking, UI review 18/24 — see 65-UI-REVIEW.md): status badges render raw enum values instead of Portuguese labels in both pareceres/page.tsx and pareceres/[id]/page.tsx; cliente name not resolved on detail page (raw UUID shown, list page already has the resolution pattern); AnexoLink download failure silently swallowed (no download.isError handling) — regression introduced when WR-04 removed the redundant toast without adding proper error UI
+- Phase 65 human_verification pending (see 65-VERIFICATION.md): responsive dual-view rendering, anexo presigned-URL download flow, cross-role nav/access-denied behavior, cross-tenant IDOR 404 handling — deferred by user decision, needs live browser/backend test before shipping v2.6
+- Milestone v2.6: run `/gsd:plan-phase 66` to begin planning Phase 66 (Criação de Solicitação)
 
 ### Blockers/Concerns
 
