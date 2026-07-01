@@ -1,8 +1,8 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 
-import type { ParecerSolicitacao, ParecerVersao } from "@/types/pareceres";
+import type { ParecerPrioridade, ParecerSolicitacao, ParecerVersao } from "@/types/pareceres";
 
 export type ParecerSolicitacoesListFilters = {
   clienteId?: string;
@@ -56,6 +56,30 @@ export function useParecerVersoes(solicitacaoId: string) {
       apiFetch<ParecerVersao[]>(`/pareceres/solicitacoes/${encodeURIComponent(solicitacaoId)}/versoes`),
     enabled,
     staleTime: 15_000,
+  });
+}
+
+export type ParecerCreateRequest = {
+  clienteId: string;
+  processoId?: string;
+  descricao: string;
+  prazo?: string;
+  prioridade?: ParecerPrioridade;
+  advogadoId?: string;
+};
+
+export function useCreateParecer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ParecerCreateRequest) =>
+      apiFetch<ParecerSolicitacao>("/pareceres/solicitacoes", {
+        method: "POST",
+        body: JSON.stringify(payload satisfies ParecerCreateRequest),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] });
+    },
   });
 }
 
