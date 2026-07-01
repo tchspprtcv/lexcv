@@ -14,7 +14,6 @@ import {
   useParecer,
   useParecerVersoes,
 } from "@/hooks/use-pareceres";
-import { toast } from "@/hooks/use-toast";
 import type { ParecerStatus } from "@/types/pareceres";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -73,9 +72,8 @@ function AnexoLink({ solicitacaoId, versaoId, caminhoAnexo }: { solicitacaoId: s
     try {
       const r = await download.mutateAsync();
       window.open(r.url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao fazer download";
-      toast.error(msg);
+    } catch {
+      // apiFetch already surfaces a toast for this failure; nothing else to do here.
     }
   };
 
