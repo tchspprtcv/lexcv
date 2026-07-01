@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Filter } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
-import { usePareceres, type ParecerSolicitacoesListFilters } from "@/hooks/use-pareceres";
-import type { ParecerStatus } from "@/types/pareceres";
+import {
+  usePareceres,
+  usePesquisarPareceres,
+  type ParecerPesquisaFilters,
+  type ParecerSolicitacoesListFilters,
+} from "@/hooks/use-pareceres";
+import type { ParecerSolicitacao, ParecerStatus } from "@/types/pareceres";
 
 function formatDate(v: string | undefined) {
   if (!v) return "—";
@@ -59,6 +64,16 @@ function ParecerPageContent() {
   const [draftClienteId, setDraftClienteId] = React.useState("");
   const [filters, setFilters] = React.useState<ParecerSolicitacoesListFilters>({});
 
+  const [pesquisaOpen, setPesquisaOpen] = React.useState(false);
+  const [pesquisaTexto, setPesquisaTexto] = React.useState("");
+  const [pesquisaClienteId, setPesquisaClienteId] = React.useState("");
+  const [pesquisaAdvogadoId, setPesquisaAdvogadoId] = React.useState("");
+  const [pesquisaStatus, setPesquisaStatus] = React.useState("");
+  const [pesquisaDataInicio, setPesquisaDataInicio] = React.useState("");
+  const [pesquisaDataFim, setPesquisaDataFim] = React.useState("");
+  const [pesquisaFilters, setPesquisaFilters] = React.useState<ParecerPesquisaFilters>({});
+  const [pesquisaSubmitted, setPesquisaSubmitted] = React.useState(false);
+
   const clientes = useClientes({});
   const adminUsers = useAdminUsers();
   const advogados = React.useMemo(
@@ -71,9 +86,12 @@ function ParecerPageContent() {
   );
 
   const pareceres = usePareceres(filters);
+  const pesquisa = usePesquisarPareceres(pesquisaFilters);
 
-  const isLoading = pareceres.isLoading;
-  const isError = pareceres.isError;
+  const searchActive = pesquisaSubmitted;
+  const rows: ParecerSolicitacao[] = searchActive ? (pesquisa.data ?? []) : (pareceres.data ?? []);
+  const resultsLoading = searchActive ? pesquisa.isLoading : pareceres.isLoading;
+  const resultsError = searchActive ? pesquisa.isError : pareceres.isError;
 
   const onApply = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +107,30 @@ function ParecerPageContent() {
     setDraftAdvogadoId("");
     setDraftClienteId("");
     setFilters({});
+  };
+
+  const onPesquisar = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPesquisaFilters({
+      texto: pesquisaTexto.trim(),
+      clienteId: pesquisaClienteId.trim(),
+      advogadoId: pesquisaAdvogadoId.trim(),
+      status: pesquisaStatus.trim(),
+      dataInicio: pesquisaDataInicio.trim(),
+      dataFim: pesquisaDataFim.trim(),
+    });
+    setPesquisaSubmitted(true);
+  };
+
+  const onLimparPesquisa = () => {
+    setPesquisaTexto("");
+    setPesquisaClienteId("");
+    setPesquisaAdvogadoId("");
+    setPesquisaStatus("");
+    setPesquisaDataInicio("");
+    setPesquisaDataFim("");
+    setPesquisaFilters({});
+    setPesquisaSubmitted(false);
   };
 
   return (
@@ -116,6 +158,15 @@ function ParecerPageContent() {
               >
                 <Filter className="h-4 w-4" />
                 Filtros
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-none font-medium border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
+                onClick={() => setPesquisaOpen((v) => !v)}
+              >
+                <Search className="h-4 w-4" />
+                {pesquisaOpen ? "Ocultar Filtros" : "Pesquisa Avançada"}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -188,25 +239,167 @@ function ParecerPageContent() {
             ) : null}
           </form>
         </CardContent>
+      </Card>
+
+      {pesquisaOpen ? (
+        <Card className="border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+          <CardContent className="p-4">
+            <form className="space-y-4" onSubmit={onPesquisar}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                    Pesquisar
+                  </label>
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={pesquisaTexto}
+                      onChange={(e) => setPesquisaTexto(e.target.value)}
+                      placeholder="Pesquisar por conteúdo do parecer..."
+                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                    Cliente
+                  </label>
+                  <div className="mt-2">
+                    <select
+                      value={pesquisaClienteId}
+                      onChange={(e) => setPesquisaClienteId(e.target.value)}
+                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <option value="">Todos</option>
+                      {(clientes.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                    Advogado
+                  </label>
+                  <div className="mt-2">
+                    <select
+                      value={pesquisaAdvogadoId}
+                      onChange={(e) => setPesquisaAdvogadoId(e.target.value)}
+                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <option value="">Todos</option>
+                      {advogados.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                    Estado
+                  </label>
+                  <div className="mt-2">
+                    <select
+                      value={pesquisaStatus}
+                      onChange={(e) => setPesquisaStatus(e.target.value)}
+                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <option value="">Todos</option>
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="EM_ELABORACAO">Em elaboração</option>
+                      <option value="EM_REVISAO">Em revisão</option>
+                      <option value="CONCLUIDO">Concluído</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                    Período
+                  </label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Início</label>
+                      <input
+                        type="date"
+                        value={pesquisaDataInicio}
+                        onChange={(e) => setPesquisaDataInicio(e.target.value)}
+                        className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Fim</label>
+                      <input
+                        type="date"
+                        value={pesquisaDataFim}
+                        onChange={(e) => setPesquisaDataFim(e.target.value)}
+                        className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="submit"
+                  disabled={pesquisa.isFetching}
+                  className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {pesquisa.isFetching ? "A pesquisar..." : "Pesquisar"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  onClick={onLimparPesquisa}
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card className="border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
         <CardContent className="p-0 bg-white dark:bg-[#020617] border-t border-slate-200 dark:border-slate-800">
-          {isLoading ? (
+          {resultsLoading ? (
             <div className="p-6 text-sm text-slate-500">A carregar...</div>
-          ) : isError ? (
+          ) : resultsError ? (
             <div className="p-6 text-sm text-red-600">
-              Não foi possível carregar as solicitações. Verifique a ligação e tente novamente.
+              {searchActive
+                ? "Não foi possível concluir a pesquisa. Verifique a ligação e tente novamente."
+                : "Não foi possível carregar as solicitações. Verifique a ligação e tente novamente."}
             </div>
-          ) : !pareceres.data?.length ? (
+          ) : !rows.length ? (
             <div className="p-6 text-sm text-slate-500">
-              <p className="font-medium text-slate-700 dark:text-slate-300">
-                Nenhuma solicitação de parecer encontrada
-              </p>
-              <p className="mt-1">Ajuste os filtros ou aguarde a criação de novas solicitações.</p>
+              {searchActive ? (
+                <>
+                  <p className="font-medium text-slate-700 dark:text-slate-300">
+                    Nenhum resultado encontrado
+                  </p>
+                  <p className="mt-1">
+                    Não foram encontrados pareceres para os critérios indicados. Tente ajustar o texto ou os
+                    filtros de pesquisa.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium text-slate-700 dark:text-slate-300">
+                    Nenhuma solicitação de parecer encontrada
+                  </p>
+                  <p className="mt-1">Ajuste os filtros ou aguarde a criação de novas solicitações.</p>
+                </>
+              )}
             </div>
           ) : (
             <>
               {/* Mobile: cards empilhados */}
               <div className="md:hidden divide-y divide-slate-200 dark:divide-slate-800">
-                {pareceres.data.map((s) => (
+                {rows.map((s) => (
                   <Link
                     key={s.id}
                     href={`/pareceres/${encodeURIComponent(s.id)}`}
@@ -246,7 +439,7 @@ function ParecerPageContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pareceres.data.map((s) => (
+                    {rows.map((s) => (
                       <TableRow key={s.id} className="border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                         <TableCell>
                           <Badge variant={statusVariant(s.status)} className="rounded-none font-bold tracking-wide">
