@@ -44,7 +44,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito activo — milestone v2.6 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
+- **CLI-05**: NIF obrigatório para Particular e Empresa (validação de 9 dígitos) — v2.7
+- **CLI-06**: Simplificação de dados de identificação (remoção do card JSON `dados_tipo`) — v2.7
+- **CLI-07**: Uso do campo `nome` da tabela cliente para nome (Particular) e nome comercial (Empresa) — v2.7
+- **CLI-08**: Uso do campo `morada` da tabela cliente para morada (Particular) e sede (Empresa) — v2.7
+- **CLI-09**: Campo `documento_tipo` para Empresa deve ser `REG_COMERCIAL` e os números guardados em `documento_numero` — v2.7
+- **CLI-10**: Formulários de criação e edição adaptados para campos planos com labels dinâmicas — v2.7
+- **CLI-11**: Detalhe do cliente e ficha impressa adaptados para estrutura simplificada — v2.7
 
 ### Out of Scope
 
@@ -104,28 +110,25 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.6 (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5: `/pareceres` lista (dual-view, badges, filtros), detalhe com timeline imutável de versões, criação de solicitação (cliente/processo/advogado), elaboração de versões (resumo + anexo obrigatório, reuso do upload de Documentos), entrega irreversível com confirmação e vista dedicada "Parecer Entregue" (fecha o gap PARC-09 do audit v2.5), pesquisa avançada (texto livre + filtros), e RBAC espelhado em toda a UI incluindo verificação de instância (advogado responsável/ADMIN) onde o backend a exige. Auditoria de milestone classificou como `tech_debt` (não bloqueante): encontrou e corrigiu um bug de routing pré-existente desde a v2.5 que tornava a pesquisa avançada inacessível (`ParecerPesquisaController`, commit 657bcbc); restantes itens são scores de UI review e verificações manuais de browser pendentes (nenhuma esperada a falhar dada a profundidade da verificação estática). Ver `.planning/milestones/v2.6-MILESTONE-AUDIT.md`.
+**Shipped:** v2.6 (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5: `/pareceres` lista (dual-view, badges, filtros), detalhe com timeline imutável de versões, criação de solicitação (cliente/processo/advogado), elaboração de versões (resumo + anexo obrigatório, reuso do upload de Documentos), entrega irreversível com confirmação e vista dedicada "Parecer Entregue", pesquisa avançada (texto livre + filtros), e RBAC espelhado em toda a UI. Ver `.planning/milestones/v2.6-MILESTONE-AUDIT.md`.
 
-**v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração (versionamento imutável, anexos via StorageService) → Aprovação interna opcional (ADMIN) → Entrega (advogado responsável ou ADMIN, irreversível), com auditoria automática via `AuditLog` existente em todas as transições e pesquisa avançada (texto livre + filtros combinados). Scope RBAC dedicado `pareceres:view/create/edit/manage`.
+**v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração → Aprovação interna opcional → Entrega.
 
-**v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo (advogados/administrativos ligados a Users, documentos, deslocações, honorários propostos), e ficha imprimível de alta fidelidade ao formulário físico do escritório. Auditoria pós-execução encontrou e corrigiu um mismatch snake_case/camelCase que invalidava 9/19 requisitos e uma fuga de password hash — ver `.planning/milestones/v2.4-MILESTONE-AUDIT.md`.
+**v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo.
 
 <details>
 <summary>Histórico anterior (v1.0–v2.3)</summary>
 
-**v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
-
-**v2.2** (2026-06-19) — Document Storage MinIO. Backend migrado de filesystem para MinIO (AWS S3 SDK), upload com barra de progresso e drag-and-drop, downloads via URL pré-assinada, serviço MinIO no Docker Compose prod com Caddy.
-
-**v2.1** (2026-06-18) — Agenda Avançada. Notificações in-app (badge + popover), recorrência de eventos (DAILY/WEEKLY/MONTHLY), drag & drop no calendário com atualização otimista.
-
-**v2.0** (2026-06-18) — Módulo Financeiro. Migração camelCase completa, CRUD honorários/pagamentos, status badges, 4 KPI cards, filtros, CSV export.
+**v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet.
+**v2.2** (2026-06-19) — Document Storage MinIO.
+**v2.1** (2026-06-18) — Agenda Avançada.
+**v2.0** (2026-06-18) — Módulo Financeiro.
 
 Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Planning next milestone (v2.7+). Deferred candidates already tracked: PARC-17 (Aprovação interna ADMIN na UI de pareceres), PARV-07/08 (diff entre versões, editor rich text), and a future notification-system milestone to unblock NOTF-05/06/07. Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
+**Current focus:** Planning next milestone (v2.7).
 
 ## Evolution
 
@@ -145,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 — after v2.6 milestone (Módulo de Parecer Jurídico — UI) shipped*
+*Last updated: 2026-07-02 — after v2.6 milestone (Módulo de Parecer Jurídico — UI) shipped*

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.6
-milestone_name: Módulo de Parecer Jurídico — UI
-status: Awaiting next milestone
-last_updated: "2026-07-01T20:17:32.542Z"
-last_activity: 2026-07-01 — Milestone v2.6 completed and archived
+milestone: v2.7
+milestone_name: Melhoria Gestão de Clientes
+status: planning
+last_updated: "2026-07-01T23:46:54.406Z"
+last_activity: 2026-07-01
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: Milestone v2.6 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-01 — Milestone v2.6 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-01 — Milestone v2.7 started
 
 ## Performance Metrics
 

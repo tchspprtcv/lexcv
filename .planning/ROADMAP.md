@@ -9,6 +9,8 @@
 - ✅ **v2.4 Ficha de Cliente** — Phases 57–60 (complete 2026-06-30)
 - ✅ **v2.5 Módulo de Parecer Jurídico** — Phases 61–64 (complete 2026-06-30)
 - ✅ **v2.6 Módulo de Parecer Jurídico — UI** — Phases 65–69 (complete 2026-07-01)
+- ⬜ **v2.7 Melhoria Gestão de Clientes** — Phases 70–73 (active)
+
 
 ## Phases
 
@@ -106,6 +108,16 @@ Interface frontend completa para o Módulo de Parecer Jurídico, sobre a API já
 See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milestones/v2.6-MILESTONE-AUDIT.md](milestones/v2.6-MILESTONE-AUDIT.md)
 
 </details>
+
+### v2.7 Melhoria Gestão de Clientes
+
+**Milestone Goal:** Simplificar e aplanar o modelo de identificação e contactos de clientes particulares e empresas (remoção de `dados_tipo` JSON em prol de colunas diretas da tabela).
+
+- [ ] **Phase 70: Backend refactoring & Seeder Alignment** - Adicionar REG_COMERCIAL a DocumentoTipo, remover dadosTipo e conversor de Cliente, e corrigir o DatabaseSeeder (CLI-06, CLI-09)
+- [ ] **Phase 71: Frontend Types, Schema & API Integration** - Aplanar tipos TypeScript, remover dados_tipo e tornar NIF obrigatório com validação de 9 dígitos no Zod schema (CLI-05, CLI-06)
+- [ ] **Phase 72: Form Refactoring (Create & Edit)** - Simplificar os formulários de criação e edição com campos planos e labels dinâmicas para Morada/Sede (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
+- [ ] **Phase 73: Detail Page & Printable Ficha Update** - Adaptar a página de detalhe e a ficha impressa para a estrutura simplificada (CLI-11)
+
 **UI hint**: yes
 
 ## Progress
@@ -139,6 +151,11 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 69. Pesquisa Avançada | v2.6 | 1/1 | Complete    | 2026-07-01 |
+| 70. Backend refactoring & Seeder Alignment | v2.7 | 0/1 | Pending | — |
+| 71. Frontend Types, Schema & API Integration | v2.7 | 0/1 | Pending | — |
+| 72. Form Refactoring (Create & Edit) | v2.7 | 0/2 | Pending | — |
+| 73. Detail Page & Printable Ficha Update | v2.7 | 0/1 | Pending | — |
 
-**Next:** Milestone v2.6 complete. Run `/gsd:new-milestone` to start the next milestone.
+**Next:** Milestone v2.7 active. Run `/gsd-discuss-phase 70` to plan the first phase.
+
 </content>
