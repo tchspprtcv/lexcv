@@ -15,8 +15,11 @@ public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolic
     // starts with s.tenant_id = :tenantId for tenant isolation. ILIKE requires nativeQuery = true
     // (Postgres-specific, not portable JPQL). The correlated MAX(numero_versao) subquery restricts
     // the text match to each solicitacao's most recent version only, avoiding duplicate rows.
+    // CR-01: LEFT JOIN (not INNER JOIN) — a solicitacao with zero versions (e.g. newly created,
+    // PENDENTE) must still match when texto is null; it naturally won't match when texto is
+    // provided since there's no conteudo to search against.
     @Query(value = "SELECT s.* FROM t_parecer_solicitacao s " +
-            "JOIN t_parecer_versao v ON v.solicitacao_id = s.id " +
+            "LEFT JOIN t_parecer_versao v ON v.solicitacao_id = s.id " +
             "AND v.numero_versao = (SELECT MAX(v2.numero_versao) FROM t_parecer_versao v2 WHERE v2.solicitacao_id = s.id) " +
             "WHERE s.tenant_id = :tenantId " +
             "AND (:clienteId IS NULL OR s.cliente_id = :clienteId) " +
