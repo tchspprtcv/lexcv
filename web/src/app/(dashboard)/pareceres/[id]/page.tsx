@@ -5,6 +5,17 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { Paperclip } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +29,11 @@ import { toast } from "@/hooks/use-toast";
 import {
   useCreateParecerVersao,
   useDownloadParecerAnexo,
+  useEntregarParecer,
   useParecer,
   useParecerVersoes,
 } from "@/hooks/use-pareceres";
+import type { ParecerVersao } from "@/types/pareceres";
 import {
   parecerVersaoCreateFormSchema,
   type ParecerVersaoCreateFormValues,
@@ -139,6 +152,8 @@ function ParecerDetailContent({
   const isConcluido = parecer.data?.status === "CONCLUIDO";
   const showNovaVersaoForm =
     !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
+  const showEntregarTrigger =
+    !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
 
   return (
     <div className="space-y-6">
@@ -158,7 +173,7 @@ function ParecerDetailContent({
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="font-bold">Dados</CardTitle>
+              <CardTitle className="text-lg font-bold">Dados</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
@@ -191,7 +206,7 @@ function ParecerDetailContent({
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-bold">Versões</CardTitle>
+              <CardTitle className="text-lg font-bold">Versões</CardTitle>
             </CardHeader>
             <CardContent>
               {versoes.isLoading ? (
@@ -218,7 +233,7 @@ function ParecerDetailContent({
                     return (
                       <div key={versao.id} className="relative flex gap-3 py-4">
                         <div className="relative flex flex-col items-center">
-                          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-blue-600" />
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400 dark:bg-slate-500" />
                           {!isLast ? (
                             <div className="absolute top-3 bottom-0 left-[5px] w-0.5 bg-slate-200 dark:bg-slate-700" />
                           ) : null}
@@ -263,18 +278,18 @@ function ParecerDetailContent({
               </CardContent>
             </Card>
           ) : isConcluido ? (
-            <Card>
-              <CardContent className="py-6">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                  Parecer já entregue
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Não é possível submeter novas versões após a entrega final.
-                </p>
-              </CardContent>
-            </Card>
+            <ParecerEntregueBlock
+              id={id}
+              versaoFinalId={parecer.data.versaoFinalId}
+              versoes={versoes.data}
+              resolveUserNome={resolveUserNome}
+            />
           ) : showNovaVersaoForm ? (
             <NovaVersaoForm solicitacaoId={id} />
+          ) : null}
+
+          {showEntregarTrigger ? (
+            <EntregarParecerDialog solicitacaoId={id} versoes={versoes.data} />
           ) : null}
         </div>
       ) : null}
@@ -387,6 +402,142 @@ function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
               : "Submeter Versão"}
           </Button>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EntregarParecerDialog({
+  solicitacaoId,
+  versoes,
+}: {
+  solicitacaoId: string;
+  versoes: ParecerVersao[] | undefined;
+}) {
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [selectedVersaoIdState, setSelectedVersaoId] = React.useState<string | null>(null);
+  const [entregaError, setEntregaError] = React.useState<string | null>(null);
+
+  const defaultVersaoId = versoes && versoes.length > 0 ? versoes[versoes.length - 1].id : null;
+  const selectedVersaoId = selectedVersaoIdState ?? defaultVersaoId;
+
+  const entregar = useEntregarParecer(solicitacaoId);
+
+  const handleEntregar = async () => {
+    if (!selectedVersaoId) return;
+    setEntregaError(null);
+    try {
+      await entregar.mutateAsync({ versaoFinalId: selectedVersaoId });
+      toast.success("Parecer entregue com sucesso.");
+      setConfirmOpen(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Não foi possível entregar o parecer. Verifique a ligação e tente novamente.";
+      setEntregaError(msg);
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        >
+          Entregar Parecer
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Entregar Parecer</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta ação é irreversível. Depois de entregue, o parecer não pode receber novas
+            versões nem ser reaberto.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-2">
+          <Label htmlFor="versaoFinalId">Selecione a versão a entregar como final:</Label>
+          <select
+            id="versaoFinalId"
+            className="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm dark:border-neutral-800"
+            value={selectedVersaoId ?? ""}
+            onChange={(e) => setSelectedVersaoId(e.target.value)}
+            disabled={entregar.isPending}
+          >
+            {(versoes ?? []).map((versao) => (
+              <option key={versao.id} value={versao.id}>
+                Versão {versao.numeroVersao} — {formatDateTime(versao.createdAt)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {entregaError ? <p className="text-sm text-red-600 px-1">{entregaError}</p> : null}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={entregar.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={entregar.isPending || !selectedVersaoId}
+            onClick={(e) => {
+              e.preventDefault();
+              void handleEntregar();
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {entregar.isPending ? "A entregar..." : "Confirmar Entrega"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function ParecerEntregueBlock({
+  id,
+  versaoFinalId,
+  versoes,
+  resolveUserNome,
+}: {
+  id: string;
+  versaoFinalId: string | undefined;
+  versoes: ParecerVersao[] | undefined;
+  resolveUserNome: (userId: string) => string;
+}) {
+  const versaoFinal = versoes?.find((v) => v.id === versaoFinalId);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-bold">Parecer Entregue</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {!versaoFinal ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">A carregar versão final...</p>
+        ) : (
+          <div className="space-y-3">
+            <Badge variant="green" className="rounded-none font-bold tracking-wide">
+              CONCLUIDO
+            </Badge>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
+              Versão {versaoFinal.numeroVersao}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Elaborado por {versaoFinal.criadoPorId ? resolveUserNome(versaoFinal.criadoPorId) : "—"} em{" "}
+              {formatDateTime(versaoFinal.createdAt)}
+            </p>
+            <div>
+              <AnexoLink
+                solicitacaoId={id}
+                versaoId={versaoFinal.id}
+                caminhoAnexo={versaoFinal.caminhoAnexo}
+              />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
