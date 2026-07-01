@@ -182,22 +182,6 @@ public class ParecerController {
     }
 
     @PreAuthorize("hasAuthority('pareceres:view')")
-    @GetMapping("/api/v1/pareceres/pesquisa")
-    public ResponseEntity<?> pesquisarSolicitacoes(
-            @RequestParam(required = false) String texto,
-            @RequestParam(required = false) UUID clienteId,
-            @RequestParam(required = false) UUID advogadoId,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) LocalDateTime dataInicio,
-            @RequestParam(required = false) LocalDateTime dataFim
-    ) {
-        UUID tenantId = getTenantId();
-        List<ParecerSolicitacao> result = parecerSolicitacaoRepository.pesquisar(
-                tenantId, texto, clienteId, advogadoId, status, dataInicio, dataFim);
-        return ResponseEntity.ok(result);
-    }
-
-    @PreAuthorize("hasAuthority('pareceres:view')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getSolicitacao(@PathVariable UUID id) {
         ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(id).orElse(null);
