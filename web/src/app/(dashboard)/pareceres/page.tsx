@@ -51,6 +51,8 @@ export default function ParecerPage() {
 }
 
 function ParecerPageContent() {
+  const permissions = usePermissions();
+  const canCreatePareceres = permissions.can.create("pareceres");
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [draftStatus, setDraftStatus] = React.useState("");
   const [draftAdvogadoId, setDraftAdvogadoId] = React.useState("");
@@ -95,6 +97,11 @@ function ParecerPageContent() {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
           Pareceres Jurídicos
         </h1>
+        {canCreatePareceres ? (
+          <Button asChild className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white">
+            <Link href="/pareceres/nova">Nova Solicitação</Link>
+          </Button>
+        ) : null}
       </div>
 
       <Card className="border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
