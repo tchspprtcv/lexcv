@@ -105,7 +105,11 @@ See archive: [milestones/v2.5-ROADMAP.md](milestones/v2.5-ROADMAP.md) · [v2.5-M
   2. Utilizador consegue abrir o detalhe de uma solicitação (`/pareceres/[id]`) e ver todos os campos vindos do backend correctamente (nenhum campo em branco por mismatch de casing)
   3. Utilizador vê, no detalhe, uma timeline imutável das versões existentes (autor, data, conteúdo/anexo) mesmo que ainda não exista nenhuma versão
   4. Item de navegação "Pareceres" aparece na sidebar apenas para utilizadores com `pareceres:view`, seguindo o padrão RBAC de nav já usado noutros módulos
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 65-01-PLAN.md — Data foundation: types (pure camelCase), Zod schema stubs, TanStack Query hooks, sidebar nav item (wave 1)
+- [ ] 65-02-PLAN.md — Read-only UI: /pareceres list (dual-view, badges, filters) + /pareceres/[id] detail with version timeline (wave 2)
 
 #### Phase 66: Criação de Solicitação
 **Goal**: Utilizador consegue iniciar o ciclo de vida de um parecer diretamente na aplicação, atribuindo um advogado responsável que é avisado imediatamente.
@@ -179,7 +183,7 @@ See archive: [milestones/v2.5-ROADMAP.md](milestones/v2.5-ROADMAP.md) · [v2.5-M
 | 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 63. Aprovação e Entrega | v2.5 | 1/1 | Complete   | 2026-06-30 |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 2/2 | Complete   | 2026-07-01 |
-| 65. Fundação — Listagem e Detalhe | v2.6 | 0/TBD | Not started | - |
+| 65. Fundação — Listagem e Detalhe | v2.6 | 0/2 | Not started | - |
 | 66. Criação de Solicitação | v2.6 | 0/TBD | Not started | - |
 | 67. Elaboração e Versionamento | v2.6 | 0/TBD | Not started | - |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/TBD | Not started | - |
