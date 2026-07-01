@@ -143,6 +143,24 @@ export function useCreateParecerVersao(
   });
 }
 
+export function useEntregarParecer(solicitacaoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { versaoFinalId: string }) =>
+      apiFetch<ParecerSolicitacao>(
+        `/pareceres/solicitacoes/${encodeURIComponent(solicitacaoId)}/entregar?versaoFinalId=${encodeURIComponent(payload.versaoFinalId)}`,
+        { method: "PUT" },
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "detail", solicitacaoId] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] }),
+      ]);
+    },
+  });
+}
+
 export function useDownloadParecerAnexo(solicitacaoId: string, versaoId: string) {
   return useMutation({
     mutationFn: () =>
