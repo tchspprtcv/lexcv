@@ -112,8 +112,21 @@ Items deferred at milestone v2.5 close (2026-06-30), scoped for v2.6/v2.7:
 | feature | PARV-07 Diff/comparação entre versões | deferred_to_v2.7 |
 | feature | PARV-08 Editor de texto formatado (rich text) | deferred_to_v2.7 |
 
+Items acknowledged and deferred at milestone v2.6 close on 2026-07-01 (see .planning/v2.6-MILESTONE-AUDIT.md for full detail):
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 65 (65-VERIFICATION.md) — static verification passed 4/4, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 66 (66-VERIFICATION.md) — static verification passed 6/6, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 67 (67-VERIFICATION.md) — static verification passed 8/8, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 68 (68-VERIFICATION.md) — static verification passed 6/6, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 69 (69-VERIFICATION.md) — static verification passed 5/5, live browser/backend test not performed in this environment | human_needed |
+| feature | NOTF-05/06/07 in-app notifications for parecer assignment/versioning/entrega | deferred — requires a future milestone to build a generic notification backend (none exists) |
+| feature | PARC-17 Aprovação interna (ADMIN) na UI de pareceres | deferred_to_v2.7 (carried over from v2.5 close, still not built — out of v2.6 scope by explicit user decision) |
+| ux | Phase 69 UI review (15/24, lowest this milestone): Aplicar on the simple filter bar silently discards an active search with no warning | non-blocking, candidate for quick follow-up |
+
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 69` to plan Phase 69 (Pesquisa Avançada) of milestone v2.6 — final phase
+- Milestone v2.6 complete — run `/gsd:new-milestone` to start the next milestone
 
 </content>
