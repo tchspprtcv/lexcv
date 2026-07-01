@@ -159,7 +159,10 @@ Plans:
   1. Utilizador consegue pesquisar pareceres por texto livre combinado com filtros de cliente, advogado, status e data, numa página/vista dedicada
   2. Os resultados da pesquisa refletem exatamente o comportamento do endpoint `pesquisar()` do backend (mesma lógica de combinação texto+filtros), sem duplicar regras de negócio no frontend
   3. A pesquisa usa um namespace de cache próprio (TanStack Query), sem conflito com a lista simples de `/pareceres`
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 69-01-PLAN.md — Painel de pesquisa avançada aditivo em /pareceres (hook usePesquisarPareceres com namespace próprio + toggle/painel distinto do filtro Phase 65)
 **UI hint**: yes
 
 ## Progress
@@ -192,7 +195,7 @@ Plans:
 | 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 69. Pesquisa Avançada | v2.6 | 0/TBD | Not started | - |
+| 69. Pesquisa Avançada | v2.6 | 0/1 | Planned | - |
 
 **Next:** Run `/gsd:plan-phase 65` to begin Phase 65 planning.
 </content>
