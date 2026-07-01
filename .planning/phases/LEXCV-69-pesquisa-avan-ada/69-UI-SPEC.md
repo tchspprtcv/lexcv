@@ -1,7 +1,7 @@
 ---
 phase: 69
 slug: pesquisa-avan-ada
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-01
@@ -117,6 +117,7 @@ Since this phase's primary UI-SPEC novelty is an interaction pattern rather than
 - **Submission model:** explicit "Pesquisar" submit button — **not** debounced live-search-on-keystroke — per CONTEXT.md's discretion resolution favoring the codebase's established draft-state + committed-filters convention (Phase 65/66 precedent). The texto/cliente/advogado/status/dataInicio/dataFim fields are all draft state until "Pesquisar" is clicked.
 - **Result rendering:** when advanced search is active and has been submitted at least once, results from `usePesquisarPareceres` replace the simple list's rendering in the same table/card dual-view component — reusing Phase 65's row/card JSX, status badges, and cliente-name resolution verbatim (no duplicated rendering logic, no new visual variant for "search result row" vs "list row").
 - **Clearing/reverting:** "Limpar Filtros" resets the advanced fields and returns the page to the simple list view (Phase 65's `useParecerSolicitacoes` rendering), not to a blank/empty search-results state.
+- **Focal point:** the "Pesquisar" submit button is the primary visual anchor on this page once the advanced panel is expanded — it is the only accent-colored (`blue-600`) element in the panel, matching the Color section's accent-reservation rule.
 
 ---
 
@@ -133,12 +134,12 @@ Not applicable — no shadcn CLI/registry is in use (`components.json` absent). 
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (focal point sentence added post-flag)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (2026-07-01)
 </content>
