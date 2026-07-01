@@ -49,14 +49,15 @@ Exceptions: none. Root page wrapper uses `space-y-6` (24px) matching `processos/
 
 Matches the existing convention observed directly in `processos/page.tsx` (`text-3xl font-bold ... tracking-tight` for H1) — Tailwind's default type scale, no custom tokens declared for this app.
 
+Verified against actual rendered components: `web/src/components/ui/card.tsx` `CardTitle` renders `font-semibold` (600) by default. To satisfy the 2-weight-max contract, this phase treats all heading-level text (page H1 and CardTitle/section titles) as the **bold (700)** tier — where a CardTitle is used as a page-level heading in Pareceres screens, an explicit `font-bold` override class is applied so the rendered weight matches H1 exactly. Only two distinct numeric weights exist in this contract: 400 and 700.
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 14px (text-sm) | 400 (regular) | 1.5 |
-| Label | 12px (text-xs) | 500 (medium) | 1.4 |
+| Body / Label | 14px (text-sm) / 12px (text-xs) | 400 (regular) | 1.5 (body) / 1.4 (label) |
 | Heading (page H1) | 30px (text-3xl) | 700 (bold) | 1.2 |
-| Section title (CardTitle) | 18px (text-lg) | 600 (semibold) | 1.3 |
+| Section title (CardTitle) | 18px (text-lg) | 700 (bold, explicit `font-bold` override) | 1.3 |
 
-Weights used: 400 (body/table cells), 700 (page H1) — CardTitle at 600 is an existing sub-heading convention (`CardTitle` component default), counted as the "2 weights max" contract's semibold tier alongside bold. Do not introduce a third distinct weight.
+Weights used: 400 (body/table cells/labels) and 700 (page H1 and CardTitle/section titles). Do not introduce a third distinct weight anywhere in this phase.
 
 ---
 
@@ -72,6 +73,11 @@ Matches the neutral/slate palette + existing badge color variants already define
 | Destructive | `red-100`/`red-700` (badge "red" variant) | Reserved for: **error toast text, `AlertCircle` error banners, and any future destructive-action confirmation (not used in this read-only phase, but declared for consistency with Phase 68)** |
 
 Accent reserved for: status badge color-coding (one hex family per status value, see mapping below) and link/interactive-row hover highlight — never applied to static body text or decorative elements.
+
+### Focal points
+
+- **List page:** the status badge column is the primary visual anchor — colored badges (`PENDENTE`/`EM_ELABORACAO`/`EM_REVISAO`/`CONCLUIDO`) draw the eye first against the otherwise neutral table, letting users scan progress state at a glance before reading row details.
+- **Detail page:** the version timeline (list of versões with their status/date/anexo) is the primary focus after the page header — it is the reason a user opens the detail view, and should sit as the dominant content block below the header/metadata card.
 
 ### Status badge color mapping (Claude's Discretion resolved)
 
@@ -126,3 +132,5 @@ Not applicable — no shadcn CLI/registry is in use in this project (`components
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+</content>
+</invoke>
