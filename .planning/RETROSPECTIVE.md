@@ -101,11 +101,54 @@ Living retrospective — one section per shipped milestone.
 
 ---
 
+## Milestone: v2.6 — Módulo de Parecer Jurídico — UI
+
+**Shipped:** 2026-07-01
+**Phases:** 5 | **Plans:** 6 | **Tasks:** 15
+
+### What Was Built
+
+Frontend UI for the Módulo de Parecer Jurídico, closing the "backend-only, zero product usability" gap left by v2.5: `/pareceres` list (dual-view, badges, filters), detail page with immutable version timeline, create-solicitação form (cliente/processo/advogado), version-elaboration form (resumo + required attachment, reusing the Documentos upload component), irreversible entrega action with confirmation dialog and a dedicated "Parecer Entregue" summary view (closing the v2.5 audit's PARC-09 gap), and an advanced-search panel exposing the backend's previously-unused `pesquisar()` endpoint. RBAC mirrored end-to-end, including the non-uniform instance-level check (`isAdmin || isResponsavel`) the backend requires for versioning/entrega that a plain scope check can't express.
+
+### What Worked
+
+- **Milestone-level research (4 parallel researchers + synthesis) before any phase planning** correctly predicted zero new dependencies were needed and flagged the exact defect classes (camelCase/snake_case repeat, RBAC scope-tier asymmetry) that later phases had to actively guard against — the research paid for itself multiple times over.
+- **Direct (non-worktree) execution for plan executors.** A `isolation="worktree"` executor spawn early in the milestone pointed at a stale checkout missing recent planning commits and failed outright; switching every subsequent executor to run directly on the main working tree worked reliably across all 5 phases with no repeat failures.
+- **The scope-correction pattern.** Mid-milestone, exploring the actual codebase for Phase 66 revealed that 3 requirements (NOTF-05/06/07) assumed a generic notification backend that doesn't exist — the existing `NotificationBell` only surfaces Agenda events. Rather than silently building unplanned backend work or silently dropping the requirements, this was surfaced to the user immediately with a concrete question, confirmed, and REQUIREMENTS.md/ROADMAP.md were corrected same-session. This is the second milestone in a row (after v2.4/v2.5) where a mid-execution discovery reshaped scope — worth treating as a standing expectation, not a rare exception.
+- **Code-review + fix + re-review loop, every phase, no exceptions.** All 5 phases had real findings (16 total warnings) and all were fixed and re-verified same-session before moving on — including one case (Phase 68) where the fixer's own fix didn't actually type-check and was caught by an independent `tsc --noEmit` run before being trusted.
+
+### What Was Inefficient
+
+- **The single biggest miss of this milestone was NOT caught by any phase-level review — only by the final milestone integration audit.** The backend's `pesquisar()` endpoint had a routing bug (Spring concatenates class-level + method-level `@RequestMapping` regardless of leading `/`, so the actual bound route never matched the documented path) that existed since v2.5 Phase 64 and made the entire Phase 69 feature 404 at runtime. Every phase-level code review, plan-checker pass, and static verification for Phase 69 passed cleanly because none of them actually traced the fully-resolved Spring route — they checked the annotation text matched, not what Spring does with two mappings. This is the same class of lesson v2.4 taught about camelCase/snake_case: **a static code read is not the same as verifying the resolved runtime contract**, and for Spring specifically, resolved-route verification needs to be an explicit, named check, not implied by "the annotation looks right."
+- **Some commit hygiene slipped** — PATTERNS.md files for 3 phases were generated but not committed in their phase's normal commit batch, discovered only when checking `git status` mid-milestone. Low-severity but avoidable with a stricter "commit everything the phase produced, verify via git status" habit before moving to the next phase.
+- **UI review scores trended down then up then down again** (18→19→17→20→15 across phases 65-68... 69) rather than monotonically improving, even with an explicit recurring-defect (CardTitle) finally closed in Phase 68. Phase 69's lowest score (15/24) came from a genuine new interaction gap introduced by fixing a different bug (Aplicar silently discarding an active search) — a reminder that fixing one UX issue can create an adjacent one, and UI review should be re-run after every fix round, not just after the initial implementation.
+
+### Patterns Established
+
+- Milestone-wide UI-SPEC consistency: each phase's UI-SPEC explicitly reused the prior phase's spacing/typography/color decisions verbatim rather than re-deriving them, and later phases were given the accumulated list of prior UI-review findings to avoid repeating them — this is what let Phase 68 finally close a defect that had recurred 3 times.
+- Scope-descope-and-confirm: when planning reveals a requirement rests on a false premise (infra that doesn't exist, a field the API doesn't expose), stop, verify against the actual source, present the finding with a recommended resolution, and update REQUIREMENTS.md/ROADMAP.md same-session rather than silently building around it or silently dropping it.
+- Backend bug fixes discovered during frontend milestones are in-scope when they're pure bug fixes to already-existing endpoints (not new capability) — done twice this milestone (Phase 66's cliente/processo cross-validation gap, and the final pesquisar() routing fix) without expanding the "no new backend work" constraint's intent.
+
+### Key Lessons
+
+- **Trace the fully-resolved runtime route, not just the annotation, when a controller has both class-level and method-level `@RequestMapping`/`@GetMapping` with absolute-looking paths** — Spring always concatenates, a leading `/` on the method path does not reset to the class root. Add this as an explicit check item for future Spring-backend phase/plan verification, not something assumed correct from a visual read.
+- Milestone integration audits catch classes of bugs that no amount of per-phase static review will catch, because they're the only step that actually asks "does this chain of calls work end-to-end against the real other side," rather than "does this file's code look internally consistent."
+- When a code-review fix resolves one interaction bug, immediately consider what NEW interaction gap it might introduce (e.g., "resetting state X on event Y" can silently discard user work with no feedback) — a fix's own UX consequences deserve the same scrutiny as the original bug.
+
+### Cost Observations
+
+- Model mix: opus for all planners (5 phases), sonnet for everything else (research, UI-SPEC, checkers, pattern-mapping, execution, review, fix, verification, audit) — consistent with the project's model-profile defaults.
+- Sessions: 2 — the milestone was interrupted mid-Phase-68-verification by a Claude usage-window reset and resumed via a scheduled task with a detailed handoff prompt; resumed cleanly with zero rework needed.
+- Notable: the milestone-level integration audit (final step) found more genuine, previously-undetected defects (1 hard runtime blocker) than any single phase's code review — a strong signal that the audit step's cost is worth it even when every individual phase reports clean.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
 |-----------|--------|-------|------|-------|--------------|
 | v2.3 Responsividade | 4 | 8 | 1 | 51 | 11/11 |
 | v2.4 Ficha de Cliente | 4 | 14 | 1 | 79+ | 19/19 (post-audit-remediation) |
+| v2.6 Módulo de Parecer Jurídico — UI | 5 | 6 | 1 | 7 (frontend+1 backend fix) | 9/9 (post-audit-remediation) |
 
 *Table grows with each milestone*
