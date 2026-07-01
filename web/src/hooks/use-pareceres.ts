@@ -36,6 +36,47 @@ export function usePareceres(filters: ParecerSolicitacoesListFilters = {}) {
   });
 }
 
+export type ParecerPesquisaFilters = {
+  texto?: string;
+  clienteId?: string;
+  advogadoId?: string;
+  status?: string;
+  dataInicio?: string;
+  dataFim?: string;
+};
+
+function buildParecerPesquisaSearch(filters: ParecerPesquisaFilters) {
+  const sp = new URLSearchParams();
+  if (filters.texto?.trim()) sp.set("texto", filters.texto.trim());
+  if (filters.clienteId?.trim()) sp.set("clienteId", filters.clienteId.trim());
+  if (filters.advogadoId?.trim()) sp.set("advogadoId", filters.advogadoId.trim());
+  if (filters.status?.trim()) sp.set("status", filters.status.trim());
+  if (filters.dataInicio?.trim()) sp.set("dataInicio", `${filters.dataInicio.trim()}T00:00:00`);
+  if (filters.dataFim?.trim()) sp.set("dataFim", `${filters.dataFim.trim()}T23:59:59`);
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function usePesquisarPareceres(filters: ParecerPesquisaFilters = {}) {
+  const enabled = typeof window !== "undefined";
+  const texto = filters.texto?.trim() ?? "";
+  const clienteId = filters.clienteId?.trim() ?? "";
+  const advogadoId = filters.advogadoId?.trim() ?? "";
+  const status = filters.status?.trim() ?? "";
+  const dataInicio = filters.dataInicio?.trim() ?? "";
+  const dataFim = filters.dataFim?.trim() ?? "";
+
+  return useQuery({
+    queryKey: ["pareceres", "pesquisa", texto, clienteId, advogadoId, status, dataInicio, dataFim],
+    queryFn: () =>
+      apiFetch<ParecerSolicitacao[]>(
+        `/pareceres/pesquisa${buildParecerPesquisaSearch({ texto, clienteId, advogadoId, status, dataInicio, dataFim })}`,
+      ),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useParecer(id: string) {
   const enabled = typeof window !== "undefined" && Boolean(id);
 
