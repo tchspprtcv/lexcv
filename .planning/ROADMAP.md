@@ -112,39 +112,39 @@ Plans:
 - [x] 65-02-PLAN.md — Read-only UI: /pareceres list (dual-view, badges, filters) + /pareceres/[id] detail with version timeline (wave 2)
 
 #### Phase 66: Criação de Solicitação
-**Goal**: Utilizador consegue iniciar o ciclo de vida de um parecer diretamente na aplicação, atribuindo um advogado responsável que é avisado imediatamente.
+**Goal**: Utilizador consegue iniciar o ciclo de vida de um parecer diretamente na aplicação, atribuindo um advogado responsável.
 **Depends on**: Phase 65
-**Requirements**: PARC-13, NOTF-05
+**Requirements**: PARC-13
 **Success Criteria** (what must be TRUE):
   1. Utilizador com permissão `pareceres:create` consegue criar uma solicitação via formulário, vinculando um cliente (obrigatório) e opcionalmente um processo
   2. Utilizador consegue atribuir um advogado responsável através de um seletor de utilizadores (user-picker), reutilizando o padrão de vínculo a Users já usado na Ficha Cliente
   3. Após submissão, a nova solicitação aparece imediatamente na lista de `/pareceres` (invalidação de cache correta)
-  4. O advogado atribuído recebe uma notificação in-app (badge/popover do sistema de notificações da v2.1) informando que lhe foi atribuído um parecer
 **Plans**: TBD
+**Note (2026-07-01):** NOTF-05 (notificação in-app de atribuição) removida do âmbito — não existe sistema de notificações genérico no backend (o `NotificationBell` da v2.1 é específico da Agenda); ver v2 Requirements/Notificações em REQUIREMENTS.md.
 
 #### Phase 67: Elaboração e Versionamento
-**Goal**: O advogado responsável consegue efetivamente elaborar o parecer através da aplicação, submetendo versões sucessivas e imutáveis com anexo, e quem acompanha o processo é mantido informado.
+**Goal**: O advogado responsável consegue efetivamente elaborar o parecer através da aplicação, submetendo versões sucessivas e imutáveis com anexo.
 **Depends on**: Phase 66
-**Requirements**: PARV-05, PARV-06, NOTF-06
+**Requirements**: PARV-05, PARV-06
 **Success Criteria** (what must be TRUE):
   1. Advogado responsável consegue submeter uma nova versão através de um formulário com campo de resumo (`conteúdo`) e upload de anexo — e o formulário bloqueia a submissão se nenhum anexo for fornecido (anexo obrigatório na UI, mais restritivo que o backend)
   2. O upload de anexo reutiliza o componente já existente do módulo Documentos (barra de progresso, drag-and-drop, armazenamento MinIO), sem duplicar lógica
   3. Após submissão, a nova versão aparece imediatamente na timeline do detalhe da solicitação, em ordem sequencial, sem opção de editar/eliminar versões anteriores (imutabilidade visível na UI)
-  4. Utilizadores que acompanham a solicitação (atribuído ou autor) recebem notificação in-app quando uma nova versão é criada
 **Plans**: TBD
+**Note (2026-07-01):** NOTF-06 removida do âmbito pela mesma razão indicada na Phase 66.
 
 #### Phase 68: Entrega, Vista de Entregue e RBAC
 **Goal**: Utilizador autorizado consegue concluir o ciclo do parecer marcando uma versão como entrega final — com clareza total sobre a irreversibilidade — e qualquer pessoa autorizada consegue depois consultar o parecer entregue como um documento final e íntegro, com todas as ações da interface a respeitar exatamente as mesmas regras RBAC do backend.
 **Depends on**: Phase 67
-**Requirements**: PARC-14, PARC-15, PARC-16, NOTF-07
+**Requirements**: PARC-14, PARC-15, PARC-16
 **Success Criteria** (what must be TRUE):
   1. Advogado responsável ou ADMIN consegue marcar uma versão como entrega final através de um diálogo de confirmação que enfatiza explicitamente que a ação é irreversível
   2. Após a entrega, a solicitação passa a expor uma vista dedicada "Parecer Entregue" (versão final via `versaoFinalId`, data/autor de entrega, anexo) — fechando o gap PARC-09 identificado na auditoria do v2.5
   3. Uma solicitação já entregue (`CONCLUIDO`) é tratada como só-leitura na UI (sem botões de nova versão/edição visíveis), independentemente de o backend garantir ou não essa restrição em todos os endpoints
   4. Botões de ação (criar solicitação, criar versão, entregar) só aparecem/ficam ativos conforme `hasScopedPermission(perms, "pareceres", action)` combinado com verificação de instância onde aplicável (ADMIN ou advogado responsável para versionar/entregar) — espelhando exatamente os `@PreAuthorize` do `ParecerController`
-  5. Utilizadores relevantes recebem notificação in-app quando um parecer é entregue
 **Plans**: TBD
 **UI hint**: yes
+**Note (2026-07-01):** NOTF-07 removida do âmbito pela mesma razão indicada na Phase 66.
 
 #### Phase 69: Pesquisa Avançada
 **Goal**: Utilizador consegue localizar pareceres relevantes combinando texto livre e filtros estruturados, aproveitando a capacidade de pesquisa já construída (e não usada) no backend.

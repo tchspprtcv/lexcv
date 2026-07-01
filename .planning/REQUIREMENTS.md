@@ -27,12 +27,6 @@
 
 - [ ] **PARS-03**: Utilizador pode pesquisar pareceres na UI combinando texto livre com filtros (cliente, advogado, status, data), espelhando o endpoint `pesquisar()` já construído no backend (v2.5/Phase 64)
 
-### Notificações
-
-- [ ] **NOTF-05**: Utilizador recebe notificação in-app (reaproveitando o sistema de notificações da v2.1) quando lhe é atribuído um parecer
-- [ ] **NOTF-06**: Utilizador recebe notificação in-app quando uma nova versão é criada num parecer que acompanha (atribuído ou autor de solicitação)
-- [ ] **NOTF-07**: Utilizador recebe notificação in-app quando um parecer é entregue
-
 ### RBAC
 
 - [ ] **PARC-16**: Ações da UI (criar solicitação, criar versão, entregar) são visíveis/ativas apenas conforme `hasScopedPermission(perms, "pareceres", action)` em `web/src/lib/permissions.ts`, espelhando os `@PreAuthorize` do backend — incluindo o caso não-uniforme de `entregar`/nova versão exigirem também verificação de instância (ADMIN ou advogado responsável), que `hasScopedPermission` sozinho não expressa
@@ -42,6 +36,13 @@
 ### Aprovação Interna
 
 - **PARC-17**: Ação de aprovação interna (ADMIN) na UI — backend já suporta (`pareceres:manage`), mas fora de âmbito nesta milestone (confirmado explicitamente); v2.6 cobre apenas criação de versão + entrega direta + vista de entregue
+
+### Notificações (removido do v1 durante planeamento da Phase 66 — 2026-07-01)
+
+- **NOTF-05**: Utilizador recebe notificação in-app quando lhe é atribuído um parecer
+- **NOTF-06**: Utilizador recebe notificação in-app quando uma nova versão é criada num parecer que acompanha
+- **NOTF-07**: Utilizador recebe notificação in-app quando um parecer é entregue
+- **Motivo da remoção:** assumiam poder reaproveitar o "sistema de notificações in-app da v2.1", mas esse sistema (`NotificationBell`) apenas mostra próximos eventos da Agenda (`useUpcomingEventos`) — não existe nenhuma entidade/tabela de notificações genérica no backend (confirmado: zero resultados para "Notif" em `backend/src/main/java`). Implementar como especificado exigiria nova tabela + endpoints de backend, contrariando a decisão de âmbito desta milestone ("não há novo trabalho de backend em âmbito" — ver contexto no topo deste ficheiro). Requer uma milestone futura dedicada a um sistema de notificações genérico.
 
 ### Diferenciadores
 
@@ -72,22 +73,19 @@
 | PARC-11 | Phase 65 | Complete |
 | PARC-12 | Phase 65 | Complete |
 | PARC-13 | Phase 66 | Pending |
-| NOTF-05 | Phase 66 | Pending |
 | PARV-05 | Phase 67 | Pending |
 | PARV-06 | Phase 67 | Pending |
-| NOTF-06 | Phase 67 | Pending |
 | PARC-14 | Phase 68 | Pending |
 | PARC-15 | Phase 68 | Pending |
 | PARC-16 | Phase 68 | Pending |
-| NOTF-07 | Phase 68 | Pending |
 | PARS-03 | Phase 69 | Pending |
 
 **Coverage:**
-- v1 requirements: 12 total
-- Mapped to phases: 12
+- v1 requirements: 9 total (NOTF-05/06/07 removed 2026-07-01 — see v2 Requirements/Notificações)
+- Mapped to phases: 9
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-01*
-*Last updated: 2026-07-01 after roadmap creation (5 phases, 65–69)*
+*Last updated: 2026-07-01 — NOTF-05/06/07 moved to v2 during Phase 66 planning (no generic notification backend exists; would have required out-of-scope backend work)*
 </content>
