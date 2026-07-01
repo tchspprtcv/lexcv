@@ -2,9 +2,11 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.exceptions.StorageUnavailableException;
+import com.lexcv.models.AuditLog;
 import com.lexcv.models.ParecerSolicitacao;
 import com.lexcv.models.ParecerVersao;
 import com.lexcv.models.User;
+import com.lexcv.repositories.AuditLogRepository;
 import com.lexcv.repositories.ClienteRepository;
 import com.lexcv.repositories.ParecerSolicitacaoRepository;
 import com.lexcv.repositories.ParecerVersaoRepository;
@@ -40,6 +42,7 @@ public class ParecerController {
     private final ProcessoRepository processoRepository;
     private final ParecerVersaoRepository parecerVersaoRepository;
     private final StorageService storageService;
+    private final AuditLogRepository auditLogRepository;
 
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -130,6 +133,19 @@ public class ParecerController {
         }
 
         ParecerSolicitacao saved = parecerSolicitacaoRepository.save(solicitacao);
+
+        // Audit record — PARA-01: autor_id from SecurityContext
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(null)
+                .acao("parecer_criar")
+                .entidadeTipo("parecer_solicitacao")
+                .entidadeId(saved.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -229,7 +245,21 @@ public class ParecerController {
         solicitacao.setAdvogadoId(advogadoId);
         solicitacao.setStatus("EM_ELABORACAO");
 
-        return ResponseEntity.ok(parecerSolicitacaoRepository.save(solicitacao));
+        ParecerSolicitacao saved = parecerSolicitacaoRepository.save(solicitacao);
+
+        // Audit record — PARA-01: autor_id from SecurityContext
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(null)
+                .acao("parecer_atribuir")
+                .entidadeTipo("parecer_solicitacao")
+                .entidadeId(saved.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
+
+        return ResponseEntity.ok(saved);
     }
 
     @PreAuthorize("hasAuthority('pareceres:manage')")
@@ -263,6 +293,16 @@ public class ParecerController {
             solicitacao.setStatus("EM_REVISAO");
             parecerSolicitacaoRepository.save(solicitacao);
         }
+
+        // Audit record — PARA-01: autor_id from SecurityContext
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(null)
+                .acao("parecer_aprovar")
+                .entidadeTipo("parecer_versao")
+                .entidadeId(versao.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
 
         return ResponseEntity.ok(versao);
     }
@@ -299,7 +339,19 @@ public class ParecerController {
         solicitacao.setVersaoFinalId(versaoFinalId);
         solicitacao.setStatus("CONCLUIDO");
 
-        return ResponseEntity.ok(parecerSolicitacaoRepository.save(solicitacao));
+        ParecerSolicitacao saved = parecerSolicitacaoRepository.save(solicitacao);
+
+        // Audit record — PARA-01: autor_id from SecurityContext
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(null)
+                .acao("parecer_entregar")
+                .entidadeTipo("parecer_solicitacao")
+                .entidadeId(saved.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
+
+        return ResponseEntity.ok(saved);
     }
 
     @PreAuthorize("hasAuthority('pareceres:view')")
@@ -398,6 +450,17 @@ public class ParecerController {
                 throw e;
             }
         }
+
+        // Audit record — PARA-01: autor_id from SecurityContext
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(null)
+                .acao("parecer_versao_criar")
+                .entidadeTipo("parecer_versao")
+                .entidadeId(saved.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
