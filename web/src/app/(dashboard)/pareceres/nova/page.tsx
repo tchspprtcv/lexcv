@@ -118,7 +118,7 @@ function ParecerCreateFormContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Solicitação</CardTitle>
+          <CardTitle className="text-lg font-bold">Dados da Solicitação</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
