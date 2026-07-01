@@ -462,10 +462,7 @@ function EntregarParecerDialog({
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent
-        onEscapeKeyDown={(e) => {
-          if (entregar.isPending) e.preventDefault();
-        }}
-        onPointerDownOutside={(e) => {
+        onEscapeKeyDown={(e: KeyboardEvent) => {
           if (entregar.isPending) e.preventDefault();
         }}
       >
