@@ -186,7 +186,7 @@ Plans:
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 2/2 | Complete   | 2026-07-01 |
 | 65. Fundação — Listagem e Detalhe | v2.6 | 2/2 | Complete    | 2026-07-01 |
 | 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 67. Elaboração e Versionamento | v2.6 | 0/TBD | Not started | - |
+| 67. Elaboração e Versionamento | v2.6 | 0/1 | Not started | - |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/TBD | Not started | - |
 | 69. Pesquisa Avançada | v2.6 | 0/TBD | Not started | - |
 
