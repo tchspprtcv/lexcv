@@ -119,7 +119,8 @@ Plans:
   1. Utilizador com permissão `pareceres:create` consegue criar uma solicitação via formulário, vinculando um cliente (obrigatório) e opcionalmente um processo
   2. Utilizador consegue atribuir um advogado responsável através de um seletor de utilizadores (user-picker), reutilizando o padrão de vínculo a Users já usado na Ficha Cliente
   3. Após submissão, a nova solicitação aparece imediatamente na lista de `/pareceres` (invalidação de cache correta)
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 66-01-PLAN.md — Formulário de criação de solicitação (schema + useCreateParecer + página /pareceres/nova + CTA na lista)
 **Note (2026-07-01):** NOTF-05 (notificação in-app de atribuição) removida do âmbito — não existe sistema de notificações genérico no backend (o `NotificationBell` da v2.1 é específico da Agenda); ver v2 Requirements/Notificações em REQUIREMENTS.md.
 
 #### Phase 67: Elaboração e Versionamento
