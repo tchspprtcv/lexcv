@@ -20,8 +20,8 @@
 
 ### Entrega e Vista de Entregue
 
-- [ ] **PARC-14**: Utilizador autorizado (advogado responsável ou ADMIN) pode marcar a entrega de uma versão como final, com diálogo de confirmação que enfatiza a irreversibilidade da ação
-- [ ] **PARC-15**: Utilizador pode consultar uma vista dedicada "Parecer Entregue" (versão final referenciada por `versaoFinalId`, data/autor de entrega, anexo) — resolve o gap PARC-09 identificado no audit da v2.5, onde `versaoFinalId` existia apenas como campo bruto sem vista consumidora
+- [x] **PARC-14**: Utilizador autorizado (advogado responsável ou ADMIN) pode marcar a entrega de uma versão como final, com diálogo de confirmação que enfatiza a irreversibilidade da ação
+- [x] **PARC-15**: Utilizador pode consultar uma vista dedicada "Parecer Entregue" (versão final referenciada por `versaoFinalId`, data/autor de entrega, anexo) — resolve o gap PARC-09 identificado no audit da v2.5, onde `versaoFinalId` existia apenas como campo bruto sem vista consumidora
 
 ### Pesquisa Avançada
 
@@ -29,7 +29,7 @@
 
 ### RBAC
 
-- [ ] **PARC-16**: Ações da UI (criar solicitação, criar versão, entregar) são visíveis/ativas apenas conforme `hasScopedPermission(perms, "pareceres", action)` em `web/src/lib/permissions.ts`, espelhando os `@PreAuthorize` do backend — incluindo o caso não-uniforme de `entregar`/nova versão exigirem também verificação de instância (ADMIN ou advogado responsável), que `hasScopedPermission` sozinho não expressa
+- [x] **PARC-16**: Ações da UI (criar solicitação, criar versão, entregar) são visíveis/ativas apenas conforme `hasScopedPermission(perms, "pareceres", action)` em `web/src/lib/permissions.ts`, espelhando os `@PreAuthorize` do backend — incluindo o caso não-uniforme de `entregar`/nova versão exigirem também verificação de instância (ADMIN ou advogado responsável), que `hasScopedPermission` sozinho não expressa
 
 ## v2 Requirements (deferred to v2.7+)
 
@@ -75,9 +75,9 @@
 | PARC-13 | Phase 66 | Complete |
 | PARV-05 | Phase 67 | Complete |
 | PARV-06 | Phase 67 | Complete |
-| PARC-14 | Phase 68 | Pending |
-| PARC-15 | Phase 68 | Pending |
-| PARC-16 | Phase 68 | Pending |
+| PARC-14 | Phase 68 | Complete |
+| PARC-15 | Phase 68 | Complete |
+| PARC-16 | Phase 68 | Complete |
 | PARS-03 | Phase 69 | Pending |
 
 **Coverage:**

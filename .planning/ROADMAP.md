@@ -146,7 +146,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 68-01-PLAN.md — Entrega irreversível (AlertDialog + selector de versão), bloco "Parecer Entregue", auditoria RBAC/só-leitura, e correções module-wide de CardTitle + timeline-dot
+- [x] 68-01-PLAN.md — Entrega irreversível (AlertDialog + selector de versão), bloco "Parecer Entregue", auditoria RBAC/só-leitura, e correções module-wide de CardTitle + timeline-dot
 
 **UI hint**: yes
 **Note (2026-07-01):** NOTF-07 removida do âmbito pela mesma razão indicada na Phase 66.
@@ -191,7 +191,7 @@ Plans:
 | 65. Fundação — Listagem e Detalhe | v2.6 | 2/2 | Complete    | 2026-07-01 |
 | 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/1 | Not started | - |
+| 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 69. Pesquisa Avançada | v2.6 | 0/TBD | Not started | - |
 
 **Next:** Run `/gsd:plan-phase 65` to begin Phase 65 planning.
