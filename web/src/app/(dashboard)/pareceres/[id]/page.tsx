@@ -153,7 +153,11 @@ function ParecerDetailContent({
   const showNovaVersaoForm =
     !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
   const showEntregarTrigger =
-    !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
+    !permissions.isLoading &&
+    !versoes.isLoading &&
+    canEditPareceres &&
+    isResponsavelOuAdmin &&
+    !isConcluido;
 
   return (
     <div className="space-y-6">
@@ -282,6 +286,7 @@ function ParecerDetailContent({
               id={id}
               versaoFinalId={parecer.data.versaoFinalId}
               versoes={versoes.data}
+              isLoading={versoes.isLoading}
               resolveUserNome={resolveUserNome}
             />
           ) : showNovaVersaoForm ? (
@@ -441,7 +446,13 @@ function EntregarParecerDialog({
   };
 
   return (
-    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(next) => {
+        if (entregar.isPending) return;
+        setConfirmOpen(next);
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button
           type="button"
@@ -450,7 +461,14 @@ function EntregarParecerDialog({
           Entregar Parecer
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onEscapeKeyDown={(e) => {
+          if (entregar.isPending) e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          if (entregar.isPending) e.preventDefault();
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>Entregar Parecer</AlertDialogTitle>
           <AlertDialogDescription>
@@ -500,11 +518,13 @@ function ParecerEntregueBlock({
   id,
   versaoFinalId,
   versoes,
+  isLoading,
   resolveUserNome,
 }: {
   id: string;
   versaoFinalId: string | undefined;
   versoes: ParecerVersao[] | undefined;
+  isLoading: boolean;
   resolveUserNome: (userId: string) => string;
 }) {
   const versaoFinal = versoes?.find((v) => v.id === versaoFinalId);
@@ -515,8 +535,10 @@ function ParecerEntregueBlock({
         <CardTitle className="text-lg font-bold">Parecer Entregue</CardTitle>
       </CardHeader>
       <CardContent>
-        {!versaoFinal ? (
+        {isLoading ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">A carregar versão final...</p>
+        ) : !versaoFinal ? (
+          <p className="text-sm text-red-600">Não foi possível localizar a versão final entregue.</p>
         ) : (
           <div className="space-y-3">
             <Badge variant="green" className="rounded-none font-bold tracking-wide">
