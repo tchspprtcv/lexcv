@@ -107,6 +107,7 @@ export function useCreateParecerVersao(
           `${API_BASE}/pareceres/solicitacoes/${encodeURIComponent(solicitacaoId)}/versoes`,
         );
         xhr.withCredentials = true;
+        xhr.timeout = 60_000;
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
@@ -127,6 +128,8 @@ export function useCreateParecerVersao(
         };
 
         xhr.onerror = () => reject(new Error("Erro de rede ao enviar ficheiro"));
+        xhr.ontimeout = () =>
+          reject(new Error("Tempo limite excedido ao enviar o ficheiro. Tente novamente."));
 
         xhr.send(form);
       }),
