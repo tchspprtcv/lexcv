@@ -51,7 +51,7 @@ export function FileDropZone({ onFileChange, accept, disabled, children }: FileD
       className={[
         "border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer",
         isDragging
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+          ? "border-neutral-400 bg-neutral-100 dark:bg-neutral-800"
           : "border-neutral-300 dark:border-neutral-700",
         disabled ? "opacity-50 cursor-not-allowed" : "",
       ]
@@ -73,7 +73,7 @@ export function FileDropZone({ onFileChange, accept, disabled, children }: FileD
         type="button"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:cursor-not-allowed"
+        className="text-sm text-neutral-700 dark:text-neutral-300 hover:underline disabled:cursor-not-allowed"
       >
         Clique para selecionar
       </button>
