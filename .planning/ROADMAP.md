@@ -144,7 +144,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   2. Utilizador pode pesquisar pareceres por texto livre no conteúdo das versões
   3. Pesquisa por texto livre pode ser combinada com filtros de cliente, advogado, status e data simultaneamente
 **Plans**: 2 plans
-  - [ ] 64-01-PLAN.md — Auditoria automática nos 5 endpoints de transição do ParecerController (AuditLog.save)
+  - [x] 64-01-PLAN.md — Auditoria automática nos 5 endpoints de transição do ParecerController (AuditLog.save)
   - [ ] 64-02-PLAN.md — Endpoint GET /pareceres/pesquisa + método de repositório (ILIKE texto livre + filtros combinados)
 **UI hint**: yes
 
@@ -173,6 +173,6 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 63. Aprovação e Entrega | v2.5 | 1/1 | Complete   | 2026-06-30 |
-| 64. Auditoria e Pesquisa Avançada | v2.5 | 0/2 | Not started | - |
+| 64. Auditoria e Pesquisa Avançada | v2.5 | 1/2 | In Progress|  |
 
 **Next:** Run `/gsd:plan-phase 61` to begin Phase 61 planning.
