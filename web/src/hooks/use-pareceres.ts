@@ -119,7 +119,10 @@ export function useCreateParecer() {
         body: JSON.stringify(payload satisfies ParecerCreateRequest),
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "pesquisa"] }),
+      ]);
     },
   });
 }
@@ -179,6 +182,7 @@ export function useCreateParecerVersao(
         queryClient.invalidateQueries({ queryKey: ["pareceres", "versoes", solicitacaoId] }),
         queryClient.invalidateQueries({ queryKey: ["pareceres", "detail", solicitacaoId] }),
         queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "pesquisa"] }),
       ]);
     },
   });
@@ -197,6 +201,7 @@ export function useEntregarParecer(solicitacaoId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["pareceres", "detail", solicitacaoId] }),
         queryClient.invalidateQueries({ queryKey: ["pareceres", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["pareceres", "pesquisa"] }),
       ]);
     },
   });
