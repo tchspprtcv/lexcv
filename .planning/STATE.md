@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Módulo de Parecer Jurídico — UI
-status: milestone_complete
-last_updated: 2026-07-01T20:04:33.218Z
-last_activity: 2026-07-01 — Roadmap v2.6 criado (5 fases, 65–69, 12/12 requirements mapeados)
+status: Awaiting next milestone
+last_updated: "2026-07-01T20:17:32.542Z"
+last_activity: 2026-07-01 — Milestone v2.6 completed and archived
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
+  completed_phases: 5
+  total_plans: 6
   completed_plans: 6
-  percent: 0
-stopped_at: Milestone complete (Phase 69 was final phase)
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-01)
 
 ## Current Position
 
-Phase: 69 of 69 (pesquisa avançada)
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-01
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Milestone v2.6 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-01 — Milestone v2.6 completed and archived
 
 ## Performance Metrics
 
@@ -127,6 +124,4 @@ Items acknowledged and deferred at milestone v2.6 close on 2026-07-01 (see .plan
 
 ## Operator Next Steps
 
-- Milestone v2.6 complete — run `/gsd:new-milestone` to start the next milestone
-
-</content>
+- Start the next milestone with /gsd-new-milestone

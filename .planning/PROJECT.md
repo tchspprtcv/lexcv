@@ -39,23 +39,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Deslocações a realizar (por cliente) — v2.4
 - ✓ Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
 - ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
-- ✓ Módulo de Parecer Jurídico — backend API (solicitação, versionamento imutável, aprovação/entrega, auditoria automática, pesquisa avançada), scope RBAC `pareceres:view/create/edit/manage` — v2.5 (backend-only; UI frontend adiada para v2.6)
-
-## Current Milestone: v2.6 Módulo de Parecer Jurídico — UI
-
-**Goal:** Entregar a interface frontend para o módulo de Parecer Jurídico, tornando utilizável através da aplicação LexCV o ciclo completo (solicitação → elaboração/versionamento → aprovação opcional → entrega → pesquisa/auditoria) já implementado como API no v2.5.
-
-**Target features:**
-- Rotas `/pareceres` no frontend (listagem, detalhe, criação de solicitação)
-- Hooks TanStack Query (`use-pareceres*.ts`) para os 12 endpoints `/api/v1/pareceres/*`
-- Formulários de solicitação, versionamento (conteúdo/anexo) e aprovação/entrega
-- Vista dedicada "parecer entregue" (surfacing de `versaoFinalId`, resolvendo gap PARC-09 do audit v2.5)
-- Pesquisa avançada (texto livre + filtros combinados) na UI, espelhando `pesquisar()` do backend
-- RBAC no UI espelhando `pareceres:view/create/edit/manage`
+- ✓ Módulo de Parecer Jurídico — backend API (solicitação, versionamento imutável, aprovação/entrega, auditoria automática, pesquisa avançada), scope RBAC `pareceres:view/create/edit/manage` — v2.5 (backend-only)
+- ✓ Módulo de Parecer Jurídico — UI frontend completa: rotas `/pareceres` (lista dual-view, detalhe+timeline, criação, versionamento com anexo obrigatório, entrega irreversível, vista "Parecer Entregue", pesquisa avançada), hooks TanStack Query, RBAC espelhado (incluindo verificação de instância advogado-responsável/ADMIN) — v2.6
 
 ### Active
 
-(Requisitos detalhados em `.planning/REQUIREMENTS.md`, definidos no início desta milestone.)
+(Nenhum requisito activo — milestone v2.6 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
 
 ### Out of Scope
 
@@ -106,10 +95,18 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | Procuração não bloqueia submit — aviso visual em vez de validação bloqueante | Realidade do escritório: clientes às vezes só assinam procuração depois da primeira reunião | ✓ Good |
 | Advogados/administrativos ligados a Users do sistema (não texto livre) via tabelas de junção tenant-scoped | Permite reutilizar RBAC existente e evita dados duplicados/inconsistentes | ✓ Good |
 | `@JsonProperty` cirúrgico por campo em vez de `spring.jackson.property-naming-strategy` global | Auditoria de milestone encontrou backend a emitir camelCase e frontend a ler snake_case nos campos novos do v2.4 — corrigir globalmente teria alto raio de impacto sobre fluxos já em produção (alguns campos pré-existentes como `tenantId`/`createdAt` já têm a mesma inconsistência fora do âmbito desta milestone) | ✓ Good (mitigação cirúrgica; mismatch pré-existente fora do v2.4 fica como dívida técnica para limpeza futura) |
+| Nenhuma nova dependência frontend para o módulo de pareceres — reuso total de padrões existentes (Documentos upload, Processos timeline, Clientes user-picker) | Pesquisa de milestone confirmou que toda a UI necessária já tinha um padrão análogo no código; evita fragmentação de bibliotecas | ✓ Good |
+| Anexo de versão obrigatório na UI (mais restritivo que o backend, que trata como opcional) | Decisão explícita do utilizador — resumo (`conteúdo`) sem documento anexo não tem valor prático no fluxo real do escritório | ✓ Good |
+| Aprovação interna (ADMIN) explicitamente fora do âmbito da v2.6 | Backend já suporta (`pareceres:manage`), mas utilizador confirmou que v2.6 deve cobrir apenas criação de versão + entrega direta + vista de entregue; aprovação fica para v2.7 | ✓ Good (PARC-17 deferred) |
+| NOTF-05/06/07 (notificações in-app de atribuição/versão/entrega) removidas do âmbito v1 da v2.6 | Descoberto durante planeamento da Phase 66 que o `NotificationBell` existente (v2.1) só mostra eventos da Agenda — não existe entidade/tabela de notificações genérica no backend; implementar como especificado exigiria trabalho de backend fora do âmbito desta milestone | ✓ Good (evitou expansão de âmbito não autorizada; requer milestone futura dedicada) |
+| Execução direta no working tree (sem `isolation="worktree"`) para os executores de plano | Um agente executor spawnado com isolamento de worktree apontou para um checkout desatualizado sem os commits de planeamento recentes, bloqueando a execução; a execução direta funcionou de forma fiável em todas as 5 fases | ✓ Good |
+| `pesquisar()` extraído para `ParecerPesquisaController` dedicado (`@RequestMapping("/api/v1/pareceres/pesquisa")`) | Auditoria de integração da milestone encontrou que o método vivia dentro de `ParecerController` (mapeado a `/api/v1/pareceres/solicitacoes`), e o Spring concatena mapeamentos de classe+método independentemente de barra inicial — a rota real nunca correspondeu à documentada, tornando toda a Pesquisa Avançada (Phase 69) inacessível em runtime apesar de passar toda a revisão estática. Bug pré-existente desde a v2.5 (Phase 64), só detectado nesta auditoria de milestone | ✓ Good (corrigido na mesma sessão, commit 657bcbc) |
 
 ## Current State
 
-**Shipped:** v2.5 (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração (versionamento imutável, anexos via StorageService) → Aprovação interna opcional (ADMIN) → Entrega (advogado responsável ou ADMIN, irreversível), com auditoria automática via `AuditLog` existente em todas as transições e pesquisa avançada (texto livre + filtros combinados). Scope RBAC dedicado `pareceres:view/create/edit/manage`. Auditoria pós-execução classificou como `tech_debt` (não bloqueante): milestone foi deliberadamente scoped como backend-only em todas as 4 fases — nenhuma UI frontend foi construída, pelo que o módulo ainda não é utilizável através da aplicação LexCV, apenas via API direta. Ver `.planning/v2.5-MILESTONE-AUDIT.md` para detalhes e recomendação de milestone v2.6 dedicada à UI.
+**Shipped:** v2.6 (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5: `/pareceres` lista (dual-view, badges, filtros), detalhe com timeline imutável de versões, criação de solicitação (cliente/processo/advogado), elaboração de versões (resumo + anexo obrigatório, reuso do upload de Documentos), entrega irreversível com confirmação e vista dedicada "Parecer Entregue" (fecha o gap PARC-09 do audit v2.5), pesquisa avançada (texto livre + filtros), e RBAC espelhado em toda a UI incluindo verificação de instância (advogado responsável/ADMIN) onde o backend a exige. Auditoria de milestone classificou como `tech_debt` (não bloqueante): encontrou e corrigiu um bug de routing pré-existente desde a v2.5 que tornava a pesquisa avançada inacessível (`ParecerPesquisaController`, commit 657bcbc); restantes itens são scores de UI review e verificações manuais de browser pendentes (nenhuma esperada a falhar dada a profundidade da verificação estática). Ver `.planning/milestones/v2.6-MILESTONE-AUDIT.md`.
+
+**v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração (versionamento imutável, anexos via StorageService) → Aprovação interna opcional (ADMIN) → Entrega (advogado responsável ou ADMIN, irreversível), com auditoria automática via `AuditLog` existente em todas as transições e pesquisa avançada (texto livre + filtros combinados). Scope RBAC dedicado `pareceres:view/create/edit/manage`.
 
 **v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo (advogados/administrativos ligados a Users, documentos, deslocações, honorários propostos), e ficha imprimível de alta fidelidade ao formulário físico do escritório. Auditoria pós-execução encontrou e corrigiu um mismatch snake_case/camelCase que invalidava 9/19 requisitos e uma fuga de password hash — ver `.planning/milestones/v2.4-MILESTONE-AUDIT.md`.
 
@@ -128,7 +125,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Executing milestone v2.6 (Módulo de Parecer Jurídico — UI). Phase 65 (Fundação — Listagem e Detalhe) complete 2026-07-01: `/pareceres` list + detail pages, pure camelCase types verified 1:1 against backend entities (no v2.4-style casing bridge), RBAC-gated nav. Next: Phase 66 (Criação de Solicitação). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
+**Current focus:** Planning next milestone (v2.7+). Deferred candidates already tracked: PARC-17 (Aprovação interna ADMIN na UI de pareceres), PARV-07/08 (diff entre versões, editor rich text), and a future notification-system milestone to unblock NOTF-05/06/07. Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
 
 ## Evolution
 
@@ -148,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-01 — milestone v2.6 (Módulo de Parecer Jurídico — UI) started*
+*Last updated: 2026-07-01 — after v2.6 milestone (Módulo de Parecer Jurídico — UI) shipped*

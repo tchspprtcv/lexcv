@@ -1,5 +1,17 @@
 # Milestones
 
+## v2.6 Módulo de Parecer Jurídico — UI (Shipped: 2026-07-01)
+
+**Phases completed:** 5 phases, 6 plans, 15 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 3 - blocking issue] `zodResolver` type mismatch with `z.default()` on `prioridade`
+- "Nova Versão" form on the parecer detail page lets the advogado responsável or ADMIN submit successive immutable versions (resumo + required anexo) via a new `useCreateParecerVersao` XHR-multipart hook with progress bar, reusing the Documentos upload pattern.
+- Wires the irreversible "Entregar Parecer" action (AlertDialog + version selector + useEntregarParecer PUT), adds a "Parecer Entregue" read-only summary card for CONCLUIDO solicitações, and closes the 3-phase-recurring CardTitle typography gap across the whole /pareceres module.
+
+---
+
 ## v2.5 Módulo de Parecer Jurídico (Shipped: 2026-06-30)
 
 **Phases completed:** 4 phases (61–64), 7 plans
