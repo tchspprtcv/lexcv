@@ -95,6 +95,7 @@ function ParecerPageContent() {
 
   const onApply = (e: React.FormEvent) => {
     e.preventDefault();
+    setPesquisaSubmitted(false);
     setFilters({
       status: draftStatus.trim(),
       advogadoId: draftAdvogadoId.trim(),
@@ -111,14 +112,20 @@ function ParecerPageContent() {
 
   const onPesquisar = (e: React.FormEvent) => {
     e.preventDefault();
-    setPesquisaFilters({
-      texto: pesquisaTexto.trim(),
-      clienteId: pesquisaClienteId.trim(),
-      advogadoId: pesquisaAdvogadoId.trim(),
-      status: pesquisaStatus.trim(),
-      dataInicio: pesquisaDataInicio.trim(),
-      dataFim: pesquisaDataFim.trim(),
-    });
+    const next: ParecerPesquisaFilters = {};
+    const texto = pesquisaTexto.trim();
+    const clienteId = pesquisaClienteId.trim();
+    const advogadoId = pesquisaAdvogadoId.trim();
+    const status = pesquisaStatus.trim();
+    const dataInicio = pesquisaDataInicio.trim();
+    const dataFim = pesquisaDataFim.trim();
+    if (texto) next.texto = texto;
+    if (clienteId) next.clienteId = clienteId;
+    if (advogadoId) next.advogadoId = advogadoId;
+    if (status) next.status = status;
+    if (dataInicio) next.dataInicio = dataInicio;
+    if (dataFim) next.dataFim = dataFim;
+    setPesquisaFilters(next);
     setPesquisaSubmitted(true);
   };
 
