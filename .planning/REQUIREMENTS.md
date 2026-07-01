@@ -9,7 +9,7 @@
 
 ### Lista e Detalhe
 
-- [ ] **PARC-11**: Utilizador pode ver lista de solicitações de parecer (`/pareceres`) com tabela/cards (dual-view), status badges e filtros (status, advogado, cliente/processo)
+- [ ] **PARC-11**: Utilizador pode ver lista de solicitações de parecer (`/pareceres`) com tabela/cards (dual-view), status badges e filtros (status, advogado, cliente) — nota (Phase 65 plan-check): `GET /pareceres/solicitacoes` não expõe `processoId` como query param (confirmado em `ParecerController.java`), pelo que o filtro por processo fica fora deste requisito; lista/detalhe continuam a mostrar o vínculo a processo quando existir
 - [ ] **PARC-12**: Utilizador pode ver detalhe de uma solicitação, incluindo timeline/histórico imutável de versões (autor, data, conteúdo/anexo)
 - [ ] **PARC-13**: Utilizador pode criar uma solicitação de parecer via formulário (vínculo a cliente, vínculo opcional a processo, atribuição de advogado responsável via user-picker)
 
