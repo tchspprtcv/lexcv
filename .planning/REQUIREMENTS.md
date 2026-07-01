@@ -67,28 +67,27 @@
 
 ## Traceability
 
-(Preenchido durante a criação do roadmap.)
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PARC-11 | TBD | Pending |
-| PARC-12 | TBD | Pending |
-| PARC-13 | TBD | Pending |
-| PARV-05 | TBD | Pending |
-| PARV-06 | TBD | Pending |
-| PARC-14 | TBD | Pending |
-| PARC-15 | TBD | Pending |
-| PARS-03 | TBD | Pending |
-| NOTF-05 | TBD | Pending |
-| NOTF-06 | TBD | Pending |
-| NOTF-07 | TBD | Pending |
-| PARC-16 | TBD | Pending |
+| PARC-11 | Phase 65 | Pending |
+| PARC-12 | Phase 65 | Pending |
+| PARC-13 | Phase 66 | Pending |
+| NOTF-05 | Phase 66 | Pending |
+| PARV-05 | Phase 67 | Pending |
+| PARV-06 | Phase 67 | Pending |
+| NOTF-06 | Phase 67 | Pending |
+| PARC-14 | Phase 68 | Pending |
+| PARC-15 | Phase 68 | Pending |
+| PARC-16 | Phase 68 | Pending |
+| NOTF-07 | Phase 68 | Pending |
+| PARS-03 | Phase 69 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
-- Mapped to phases: 0 (aguarda roadmap)
-- Unmapped: 12 ⚠️ (esperado antes da criação do roadmap)
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-01*
-*Last updated: 2026-07-01 after milestone v2.6 kickoff*
+*Last updated: 2026-07-01 after roadmap creation (5 phases, 65–69)*
+</content>

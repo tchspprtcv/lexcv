@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Módulo de Parecer Jurídico — UI
 status: planning
-last_updated: "2026-07-01T09:08:16.079Z"
+last_updated: "2026-07-01T09:30:00.000Z"
 last_activity: 2026-07-01
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,19 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-21)
+See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 64 — Auditoria e Pesquisa Avançada
+**Current focus:** Phase 65 — Fundação — Listagem e Detalhe
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-01 — Milestone v2.6 started
+Phase: 65 of 69 (Fundação — Listagem e Detalhe)
+Plan: TBD
+Status: Ready to plan
+Last activity: 2026-07-01 — Roadmap v2.6 criado (5 fases, 65–69, 12/12 requirements mapeados)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -52,20 +54,13 @@ Last activity: 2026-07-01 — Milestone v2.6 started
 Decisões são registadas em PROJECT.md (Key Decisions).
 Recent decisions affecting current work:
 
-- (v2.2) MinIO como object storage para documentos — substituiu filesystem local
-- (v2.2) Caddy handle_path para MinIO console — strips prefix corretamente
-- (v1.1) shadcn/ui + Tailwind como sistema de design — breakpoints md/lg a usar consistentemente
-- (v2.3) Sheet (shadcn) para drawer sidebar em mobile — já disponível em components/ui/
-- (v2.3) Fases 54 e 55 paralelas (dependem ambas de Phase 53) — granularidade standard, 4 fases derivadas de 11 requirements em 5 categorias
-- (v2.4/59) Procuração não bloqueia submit — D-01: aviso visual ("Procuração em falta") em vez de validação bloqueante
-- (v2.4/59) Advogados/administrativos ligados a Users do sistema via tabelas de junção tenant-scoped (t_cliente_advogado, t_cliente_administrativo) com validação de papel server-side
-- (v2.4/59) Listas de intake (docs entregues/a tratar, deslocações, honorários propostos) como colunas JSON em t_cliente, mesmo padrão de dados_tipo da Phase 57
-- (v2.4/60) Ficha imprimível de alta fidelidade ao formulário físico — rota dedicada /clientes/[id]/ficha, @media print scoped via dangerouslySetInnerHTML de CSS estático, window.print() sem dependência de PDF externa
-- (v2.4/60) Acesso à ficha via botão na ficha de detalhe + ícone na listagem desktop (kebab menu original substituído por botão directo Printer, consistente com padrão Eye/Pencil/Trash2 existente)
-- (v2.4/audit) Milestone audit found snake_case/camelCase JSON contract mismatch breaking 9/19 requirements at the display layer (data persisted correctly, never rendered) + a password-hash leak on 2 new endpoints. Fixed via scoped @JsonProperty annotations (not a global naming-strategy change, to limit blast radius) — see v2.4-MILESTONE-AUDIT.md remediation section, commit ac5ae75.
-- (v2.5 roadmap) Reutilizar Cliente, User+role ADVOGADO, AuditLog e StorageService existentes — apenas ParecerSolicitacao (t_parecer_solicitacao) e ParecerVersao (t_parecer_versao) são entidades novas, ambas tenant-scoped
-- (v2.5 roadmap) 4 fases derivadas de 17 requisitos: (61) data layer + CRUD + RBAC, (62) elaboração/versionamento, (63) aprovação/entrega, (64) auditoria + pesquisa avançada — cada fase entrega um incremento verificável de ponta a ponta
-- (v2.5 roadmap) Decisão de implementação (ControllerC dedicado `ParecerController` vs. extensão do `ResourceController` ~2300 linhas) deixada para o plano da Phase 61 — não é uma decisão de roadmap
+- (v2.5 audit) Milestone v2.5 foi deliberadamente backend-only nas 4 fases — módulo de pareceres inutilizável via app até v2.6 entregar a UI. Ver `.planning/v2.5-MILESTONE-AUDIT.md`.
+- (v2.6 research) Nenhuma nova dependência necessária — stack existente (TanStack Query, react-hook-form+zod, upload de Documentos) cobre 100% do milestone.
+- (v2.6 research) Risco principal: repetir o defeito de casing camelCase/snake_case do v2.4 — entidades Parecer não têm `@JsonProperty`, logo JSON é 100% camelCase; deve ser confirmado por trace de resposta real antes de escrever tipos (Phase 65).
+- (v2.6 research) RBAC de `aprovar` requer `pareceres:manage`; `entregar`/`criarVersao` requerem `pareceres:edit` + verificação de instância (ADMIN ou advogado responsável) que `hasScopedPermission` sozinho não expressa — tratado explicitamente na Phase 68.
+- (v2.6 roadmap) PARV-05 torna o anexo de versão **obrigatório na UI** — mais restritivo que o backend, que trata como opcional. Decisão desta milestone, não do backend.
+- (v2.6 roadmap) Aprovação interna (ADMIN, `pareceres:manage`) fica fora de âmbito nesta milestone (confirmado explicitamente pelo utilizador) — v2.6 cobre criação de versão + entrega direta + vista de entregue. Deferred para v2.7 (PARC-17).
+- (v2.6 roadmap) 5 fases derivadas de 12 requisitos, ordem estrita de dependência: (65) fundação read-only, (66) criação de solicitação, (67) versionamento, (68) entrega+vista-entregue+RBAC (fase de maior risco), (69) pesquisa avançada. NOTF-05/06/07 distribuídas pelas fases correspondentes ao evento que as dispara, em vez de uma fase de notificações isolada.
 
 ### Pending Todos
 
@@ -74,10 +69,8 @@ Recent decisions affecting current work:
 - Phase 59 follow-up (non-blocking, code review warnings): N+1 query in listClienteAdvogados/Administrativos; duplicate snake_case/camelCase fields in web/src/types/clientes.ts from merge artifacts; untyped date strings in intake list items — see 59-REVIEW.md
 - Phase 60 follow-up (non-blocking, code review warnings): "Honorários — Totalidade" not formatted via formatMoneyCVE on ficha print page; isDadosTipoParticular type guard uses key-presence heuristic instead of isEmpresa discriminator; inconsistent blank-placeholder idiom — see 60-REVIEW.md
 - Phase 60 follow-up (non-blocking, UX gap noted in 60-SECURITY.md): mobile card view in clientes listing has no ficha/Printer entry point (desktop-only for now)
-- **Recommended before production**: live smoke test of the 5 flows broken by the audit (create Particular/Empresa client, upload procuração, fill intake fields, print ficha) against a running backend+DB+MinIO stack — the fix was statically verified (field-by-field JSON key trace + clean builds) but not live-tested in this session.
 - Pre-existing app-wide tenantId/createdAt-style snake_case/camelCase mismatches outside v2.4's scope were identified but intentionally not touched (out of milestone scope, broader blast radius) — candidate for a future cleanup phase.
-- Milestone v2.4 ready for /gsd:audit-milestone and /gsd:complete-milestone (if not already run)
-- Milestone v2.5: run /gsd:plan-phase 61 to begin planning Data Layer + Backend CRUD
+- Run `/gsd:plan-phase 65` to begin planning Phase 65 of milestone v2.6
 
 ### Blockers/Concerns
 
@@ -92,6 +85,16 @@ Items acknowledged and deferred at milestone v2.4 close on 2026-06-30:
 | verification_gap | Phase 50 (50-VERIFICATION.md) — pre-existing from v2.2, not part of v2.4 | human_needed |
 | verification_gap | Phase 51 (51-VERIFICATION.md) — pre-existing from v2.2, not part of v2.4 | human_needed |
 
+Items deferred at milestone v2.5 close (2026-06-30), scoped for v2.6/v2.7:
+
+| Category | Item | Status |
+|----------|------|--------|
+| scope | UI frontend do módulo de pareceres — v2.5 foi backend-only | addressed_by_v2.6 |
+| feature | PARC-17 Aprovação interna (ADMIN) na UI | deferred_to_v2.7 |
+| feature | PARV-07 Diff/comparação entre versões | deferred_to_v2.7 |
+| feature | PARV-08 Editor de texto formatado (rich text) | deferred_to_v2.7 |
+
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 61` to plan Phase 61 (Data Layer + Backend CRUD) of milestone v2.5
+- Run `/gsd:plan-phase 65` to plan Phase 65 (Fundação — Listagem e Detalhe) of milestone v2.6
+</content>
