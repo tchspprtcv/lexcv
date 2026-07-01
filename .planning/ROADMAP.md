@@ -91,7 +91,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 - [x] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data (completed 2026-06-30)
 - [x] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download
  (completed 2026-06-30)
-- [ ] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados
+- [x] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados (completed 2026-07-01)
 
 ## Phase Details
 
@@ -145,7 +145,7 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   3. Pesquisa por texto livre pode ser combinada com filtros de cliente, advogado, status e data simultaneamente
 **Plans**: 2 plans
   - [x] 64-01-PLAN.md — Auditoria automática nos 5 endpoints de transição do ParecerController (AuditLog.save)
-  - [ ] 64-02-PLAN.md — Endpoint GET /pareceres/pesquisa + método de repositório (ILIKE texto livre + filtros combinados)
+  - [x] 64-02-PLAN.md — Endpoint GET /pareceres/pesquisa + método de repositório (ILIKE texto livre + filtros combinados)
 **UI hint**: yes
 
 ## Progress
@@ -173,6 +173,6 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 63. Aprovação e Entrega | v2.5 | 1/1 | Complete   | 2026-06-30 |
-| 64. Auditoria e Pesquisa Avançada | v2.5 | 1/2 | In Progress|  |
+| 64. Auditoria e Pesquisa Avançada | v2.5 | 2/2 | Complete   | 2026-07-01 |
 
 **Next:** Run `/gsd:plan-phase 61` to begin Phase 61 planning.
