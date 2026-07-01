@@ -104,6 +104,9 @@ function ParecerDetailContent({ id }: { id: string }) {
     [adminUsers.data],
   );
 
+  const resolveUserNome = (userId: string) =>
+    adminUsers.isLoading ? "—" : userNomeById.get(userId) ?? userId;
+
   const isLoading = parecer.isLoading;
   const isError = parecer.isError;
 
@@ -134,9 +137,7 @@ function ParecerDetailContent({ id }: { id: string }) {
 
                 <dt className="text-slate-500 dark:text-slate-400">Advogado</dt>
                 <dd className="col-span-2">
-                  {parecer.data.advogadoId
-                    ? userNomeById.get(parecer.data.advogadoId) ?? parecer.data.advogadoId
-                    : "—"}
+                  {parecer.data.advogadoId ? resolveUserNome(parecer.data.advogadoId) : "—"}
                 </dd>
 
                 <dt className="text-slate-500 dark:text-slate-400">Estado</dt>
@@ -183,9 +184,7 @@ function ParecerDetailContent({ id }: { id: string }) {
                 <div className="relative">
                   {versoes.data.map((versao, index) => {
                     const isLast = index === versoes.data.length - 1;
-                    const autorNome = versao.criadoPorId
-                      ? userNomeById.get(versao.criadoPorId) ?? versao.criadoPorId
-                      : "—";
+                    const autorNome = versao.criadoPorId ? resolveUserNome(versao.criadoPorId) : "—";
                     return (
                       <div key={versao.id} className="relative flex gap-3 py-4">
                         <div className="relative flex flex-col items-center">
