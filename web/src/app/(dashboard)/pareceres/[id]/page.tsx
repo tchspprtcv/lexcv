@@ -1,22 +1,39 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
+import { useForm } from "react-hook-form";
 import { Paperclip } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
+import { toast } from "@/hooks/use-toast";
 import {
+  useCreateParecerVersao,
   useDownloadParecerAnexo,
   useParecer,
   useParecerVersoes,
 } from "@/hooks/use-pareceres";
+import {
+  parecerVersaoCreateFormSchema,
+  type ParecerVersaoCreateFormValues,
+} from "@/schemas/pareceres";
 import type { ParecerStatus } from "@/types/pareceres";
 
 type PageProps = { params: Promise<{ id: string }> };
+
+function createFileList(file: File): FileList {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
+}
 
 function formatDateTime(v: string | undefined) {
   if (!v) return "—";
@@ -58,7 +75,7 @@ export default function ParecerDetailPage({ params }: PageProps) {
     );
   }
 
-  return <ParecerDetailContent id={id} />;
+  return <ParecerDetailContent id={id} permissions={permissions} />;
 }
 
 function AnexoLink({ solicitacaoId, versaoId, caminhoAnexo }: { solicitacaoId: string; versaoId: string; caminhoAnexo?: string }) {
@@ -92,7 +109,13 @@ function AnexoLink({ solicitacaoId, versaoId, caminhoAnexo }: { solicitacaoId: s
   );
 }
 
-function ParecerDetailContent({ id }: { id: string }) {
+function ParecerDetailContent({
+  id,
+  permissions,
+}: {
+  id: string;
+  permissions: ReturnType<typeof usePermissions>;
+}) {
   const parecer = useParecer(id);
   const versoes = useParecerVersoes(id);
   const adminUsers = useAdminUsers();
@@ -107,6 +130,14 @@ function ParecerDetailContent({ id }: { id: string }) {
 
   const isLoading = parecer.isLoading;
   const isError = parecer.isError;
+
+  const me = permissions.data;
+  const canEditPareceres = permissions.can.edit("pareceres");
+  const isResponsavelOuAdmin =
+    Boolean(me?.roles.includes("ADMIN")) ||
+    Boolean(parecer.data?.advogadoId && parecer.data.advogadoId === me?.id);
+  const isConcluido = parecer.data?.status === "CONCLUIDO";
+  const showNovaVersaoForm = canEditPareceres && isResponsavelOuAdmin && !isConcluido;
 
   return (
     <div className="space-y-6">
@@ -223,8 +254,128 @@ function ParecerDetailContent({ id }: { id: string }) {
               )}
             </CardContent>
           </Card>
+
+          {isConcluido ? (
+            <Card>
+              <CardContent className="py-6">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  Parecer já entregue
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Não é possível submeter novas versões após a entrega final.
+                </p>
+              </CardContent>
+            </Card>
+          ) : showNovaVersaoForm ? (
+            <NovaVersaoForm solicitacaoId={id} />
+          ) : null}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [progresso, setProgresso] = React.useState<number | null>(null);
+
+  const versaoUpload = useCreateParecerVersao(solicitacaoId, {
+    onProgress: (pct) => setProgresso(pct),
+  });
+
+  const form = useForm<ParecerVersaoCreateFormValues>({
+    resolver: zodResolver(parecerVersaoCreateFormSchema),
+  });
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    setServerError(null);
+    const file = values.file.item(0);
+    if (!file) return;
+
+    try {
+      await versaoUpload.mutateAsync({ conteudo: values.conteudo, file });
+      setProgresso(null);
+      form.reset({ conteudo: "", file: undefined as unknown as FileList });
+      toast.success("Nova versão submetida com sucesso.");
+    } catch (e) {
+      setProgresso(null);
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Não foi possível submeter a versão. Verifique a ligação e tente novamente.";
+      setServerError(msg);
+      toast.error(msg);
+    }
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-bold">Nova Versão</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-4" onSubmit={onSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="conteudo">Resumo da versão</Label>
+            <Textarea
+              id="conteudo"
+              placeholder="Descreva resumidamente o conteúdo desta versão (o parecer completo é submetido como anexo)."
+              disabled={form.formState.isSubmitting || versaoUpload.isPending}
+              {...form.register("conteudo")}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Este campo é um resumo — o documento completo deve ser enviado como anexo.
+            </p>
+            {form.formState.errors.conteudo ? (
+              <p className="text-sm text-red-600">{form.formState.errors.conteudo.message}</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Anexo (obrigatório)</Label>
+            <FileDropZone
+              onFileChange={(file) =>
+                form.setValue("file", createFileList(file), { shouldValidate: true })
+              }
+              accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+              disabled={form.formState.isSubmitting || versaoUpload.isPending}
+            >
+              Arraste um ficheiro para aqui ou clique para selecionar
+            </FileDropZone>
+
+            {progresso === null ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Formatos aceites: PDF, Word, imagens.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-neutral-500">
+                  <span>A enviar...</span>
+                  <span>{progresso}%</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
+                  <div
+                    className="h-2 rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${progresso}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {form.formState.errors.file ? (
+              <p className="text-sm text-red-600">{form.formState.errors.file.message}</p>
+            ) : null}
+          </div>
+
+          {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
+
+          <Button type="submit" disabled={form.formState.isSubmitting || versaoUpload.isPending}>
+            {form.formState.isSubmitting || versaoUpload.isPending
+              ? "A submeter..."
+              : "Submeter Versão"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
