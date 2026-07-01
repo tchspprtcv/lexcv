@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   Scale,
+  ScrollText,
   Search,
   Settings,
   Users,
@@ -44,6 +45,7 @@ const NAV: NavItem[] = [
   { href: "/agenda", label: "Agenda", icon: Calendar, requiredPermission: "agenda:view" },
   { href: "/documentos", label: "Documentos", icon: FileText, requiredPermission: "documentos:view" },
   { href: "/financeiro", label: "Financeiro", icon: Wallet, requiredPermission: "financeiro:view" },
+  { href: "/pareceres", label: "Pareceres", icon: ScrollText, requiredPermission: "pareceres:view" },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
