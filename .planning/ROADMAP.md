@@ -124,7 +124,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: O backend armazena a identificação do cliente exclusivamente em colunas planas (sem `dados_tipo` JSON), suporta `REG_COMERCIAL` como tipo de documento para Empresa, e o DatabaseSeeder gera dados de seed consistentes com o novo modelo
 **Depends on**: Nothing (first phase of milestone)
 **Requirements**: CLI-06, CLI-09
-**Plans**: 0/1 — not started
+**Plans**: 1 plan
+- [ ] 70-01-PLAN.md — Remove dados_tipo JSON model, add REG_COMERCIAL enum, align DatabaseSeeder (CLI-06, CLI-09)
 
 ### Phase 71: Frontend Types, Schema & API Integration
 **Goal**: Os tipos TypeScript do cliente refletem o modelo aplanado do backend (sem `dados_tipo`), e o Zod schema exige NIF obrigatório com validação de 9 dígitos numéricos
