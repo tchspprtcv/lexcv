@@ -11,7 +11,7 @@
 
 - [x] **PARC-11**: Utilizador pode ver lista de solicitações de parecer (`/pareceres`) com tabela/cards (dual-view), status badges e filtros (status, advogado, cliente) — nota (Phase 65 plan-check): `GET /pareceres/solicitacoes` não expõe `processoId` como query param (confirmado em `ParecerController.java`), pelo que o filtro por processo fica fora deste requisito; lista/detalhe continuam a mostrar o vínculo a processo quando existir
 - [x] **PARC-12**: Utilizador pode ver detalhe de uma solicitação, incluindo timeline/histórico imutável de versões (autor, data, conteúdo/anexo)
-- [ ] **PARC-13**: Utilizador pode criar uma solicitação de parecer via formulário (vínculo a cliente, vínculo opcional a processo, atribuição de advogado responsável via user-picker)
+- [x] **PARC-13**: Utilizador pode criar uma solicitação de parecer via formulário (vínculo a cliente, vínculo opcional a processo, atribuição de advogado responsável via user-picker)
 
 ### Elaboração e Versionamento
 
@@ -72,7 +72,7 @@
 |-------------|-------|--------|
 | PARC-11 | Phase 65 | Complete |
 | PARC-12 | Phase 65 | Complete |
-| PARC-13 | Phase 66 | Pending |
+| PARC-13 | Phase 66 | Complete |
 | PARV-05 | Phase 67 | Pending |
 | PARV-06 | Phase 67 | Pending |
 | PARC-14 | Phase 68 | Pending |

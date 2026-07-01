@@ -120,7 +120,7 @@ Plans:
   2. Utilizador consegue atribuir um advogado responsável através de um seletor de utilizadores (user-picker), reutilizando o padrão de vínculo a Users já usado na Ficha Cliente
   3. Após submissão, a nova solicitação aparece imediatamente na lista de `/pareceres` (invalidação de cache correta)
 **Plans**: 1 plan
-- [ ] 66-01-PLAN.md — Formulário de criação de solicitação (schema + useCreateParecer + página /pareceres/nova + CTA na lista)
+- [x] 66-01-PLAN.md — Formulário de criação de solicitação (schema + useCreateParecer + página /pareceres/nova + CTA na lista)
 **Note (2026-07-01):** NOTF-05 (notificação in-app de atribuição) removida do âmbito — não existe sistema de notificações genérico no backend (o `NotificationBell` da v2.1 é específico da Agenda); ver v2 Requirements/Notificações em REQUIREMENTS.md.
 
 #### Phase 67: Elaboração e Versionamento
@@ -185,7 +185,7 @@ Plans:
 | 63. Aprovação e Entrega | v2.5 | 1/1 | Complete   | 2026-06-30 |
 | 64. Auditoria e Pesquisa Avançada | v2.5 | 2/2 | Complete   | 2026-07-01 |
 | 65. Fundação — Listagem e Detalhe | v2.6 | 2/2 | Complete    | 2026-07-01 |
-| 66. Criação de Solicitação | v2.6 | 0/TBD | Not started | - |
+| 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 67. Elaboração e Versionamento | v2.6 | 0/TBD | Not started | - |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 0/TBD | Not started | - |
 | 69. Pesquisa Avançada | v2.6 | 0/TBD | Not started | - |
