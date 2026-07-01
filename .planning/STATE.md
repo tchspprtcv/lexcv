@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Módulo de Parecer Jurídico — UI
-status: ready_to_plan
-last_updated: 2026-07-01T15:47:35.390Z
+status: milestone_complete
+last_updated: 2026-07-01T20:04:33.218Z
 last_activity: 2026-07-01 — Roadmap v2.6 criado (5 fases, 65–69, 12/12 requirements mapeados)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
-stopped_at: Phase 68 complete (1/1) — ready to discuss Phase 69
+stopped_at: Milestone complete (Phase 69 was final phase)
 ---
 
 # Project State
@@ -21,13 +21,13 @@ stopped_at: Phase 68 complete (1/1) — ready to discuss Phase 69
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 69 — pesquisa avançada
+**Current focus:** Milestone complete
 
 ## Current Position
 
 Phase: 69 of 69 (pesquisa avançada)
 Plan: Not started
-Status: Ready to plan
+Status: Milestone complete
 Last activity: 2026-07-01
 
 Progress: [░░░░░░░░░░] 0%
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: —
 - Total execution time: —
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 | 66 | 1 | - | - |
 | 67 | 1 | - | - |
 | 68 | 1 | - | - |
+| 69 | 1 | - | - |
 
 ## Accumulated Context
 
@@ -84,7 +85,9 @@ Recent decisions affecting current work:
 - Phase 67 follow-up (non-blocking, UI review 17/24 — see 67-UI-REVIEW.md): accent color (`bg-blue-600`) leaks onto timeline dot marker and FileDropZone trigger text, violating the spec's accent-reservation rule; "Dados"/"Versões" CardTitles left at unstyled `h3` default while "Nova Versão" got the mandated `text-lg font-bold` fix — **this is the 3rd recurrence of the same CardTitle-missing-override defect class flagged in Phases 65 and 66; worth a dedicated cross-cutting fix across all `/pareceres` pages rather than continuing to patch per-phase**; no guard against a stale Nova Versão form if solicitação transitions to CONCLUIDO mid-session
 - Phase 68 human_verification pending (see 68-VERIFICATION.md): irreversibility UX clarity, live status transition without reload, cross-role read-only enforcement post-entrega, visual typography/color correctness
 - Phase 68 follow-up (non-blocking, UI review 20/24 — see 68-UI-REVIEW.md): recurring CardTitle typography defect (flagged in Phases 65/66/67) is now FULLY CLOSED across all /pareceres pages — 5/5 instances confirmed with text-lg font-bold, both accent-color leaks fixed (timeline dot + FileDropZone trigger text); remaining minor items: version-select in EntregarParecerDialog uses rounded-md instead of module's rounded-none convention; no stale-state guard if solicitação changes state while entrega dialog is open (same class as Phase 67's CONCLUIDO-mid-session gap, now on the higher-stakes irreversible action)
-- Milestone v2.6: run `/gsd:plan-phase 69` to begin planning Phase 69 (Pesquisa Avançada) — the final phase of this milestone
+- Phase 69 follow-up (non-blocking, code review): 3 warnings found and fixed (WR-01 Aplicar didn't reset search mode, WR-02 inconsistent filters object shape, WR-03 pesquisa cache namespace not invalidated by mutations) — all fixed same-session, see 69-REVIEW.md/69-REVIEW-FIX.md
+- Phase 69 human_verification pending (see 69-VERIFICATION.md): toggle interplay between simple filters and advanced search, live search rendering, empty-state with real data
+- Milestone v2.6: all 5 phases (65-69) complete — run `/gsd:audit-milestone` next
 
 ### Blockers/Concerns
 

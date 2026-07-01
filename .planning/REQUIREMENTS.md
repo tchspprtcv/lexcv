@@ -25,7 +25,7 @@
 
 ### Pesquisa Avançada
 
-- [ ] **PARS-03**: Utilizador pode pesquisar pareceres na UI combinando texto livre com filtros (cliente, advogado, status, data), espelhando o endpoint `pesquisar()` já construído no backend (v2.5/Phase 64)
+- [x] **PARS-03**: Utilizador pode pesquisar pareceres na UI combinando texto livre com filtros (cliente, advogado, status, data), espelhando o endpoint `pesquisar()` já construído no backend (v2.5/Phase 64)
 
 ### RBAC
 
@@ -78,7 +78,7 @@
 | PARC-14 | Phase 68 | Complete |
 | PARC-15 | Phase 68 | Complete |
 | PARC-16 | Phase 68 | Complete |
-| PARS-03 | Phase 69 | Pending |
+| PARS-03 | Phase 69 | Complete |
 
 **Coverage:**
 - v1 requirements: 9 total (NOTF-05/06/07 removed 2026-07-01 — see v2 Requirements/Notificações)

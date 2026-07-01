@@ -162,7 +162,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 69-01-PLAN.md — Painel de pesquisa avançada aditivo em /pareceres (hook usePesquisarPareceres com namespace próprio + toggle/painel distinto do filtro Phase 65)
+- [x] 69-01-PLAN.md — Painel de pesquisa avançada aditivo em /pareceres (hook usePesquisarPareceres com namespace próprio + toggle/painel distinto do filtro Phase 65)
 **UI hint**: yes
 
 ## Progress
@@ -195,7 +195,7 @@ Plans:
 | 66. Criação de Solicitação | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 69. Pesquisa Avançada | v2.6 | 0/1 | Planned | - |
+| 69. Pesquisa Avançada | v2.6 | 1/1 | Complete    | 2026-07-01 |
 
 **Next:** Run `/gsd:plan-phase 65` to begin Phase 65 planning.
 </content>
