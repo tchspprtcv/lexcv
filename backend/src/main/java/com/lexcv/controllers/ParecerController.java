@@ -86,6 +86,16 @@ public class ParecerController {
                 .orElse(false);
     }
 
+    /**
+     * Validates that processoId references a Processo belonging to the given clienteId.
+     * Assumes the processo has already been confirmed to belong to the current tenant.
+     */
+    private boolean processoBelongsToCliente(UUID processoId, UUID clienteId) {
+        return processoRepository.findById(processoId)
+                .map(p -> clienteId.equals(p.getClienteId()))
+                .orElse(false);
+    }
+
     @PreAuthorize("hasAuthority('pareceres:create')")
     @PostMapping("")
     @Transactional
@@ -107,6 +117,10 @@ public class ParecerController {
         if (body.getProcessoId() != null && !processoBelongsToTenant(body.getProcessoId(), tenantId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "processoId inválido ou não pertence a este tenant"));
+        }
+        if (body.getProcessoId() != null && !processoBelongsToCliente(body.getProcessoId(), body.getClienteId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "processoId não pertence ao cliente indicado"));
         }
 
         // Construct the persisted entity from an explicit allowlist of creatable
@@ -209,6 +223,15 @@ public class ParecerController {
         if (payload.getProcessoId() != null && !processoBelongsToTenant(payload.getProcessoId(), tenantId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "processoId inválido ou não pertence a este tenant"));
+        }
+        if (payload.getProcessoId() != null) {
+            UUID effectiveClienteId = payload.getClienteId() != null
+                    ? payload.getClienteId()
+                    : solicitacao.getClienteId();
+            if (!processoBelongsToCliente(payload.getProcessoId(), effectiveClienteId)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "processoId não pertence ao cliente indicado"));
+            }
         }
 
         solicitacao.setPrazo(payload.getPrazo());
