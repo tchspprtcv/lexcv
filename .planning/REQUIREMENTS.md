@@ -15,8 +15,8 @@
 
 ### Elaboração e Versionamento
 
-- [ ] **PARV-05**: Advogado responsável pode criar uma nova versão via formulário com resumo (campo `conteúdo` tratado como resumo textual, não o parecer completo) e **anexo obrigatório** (decisão desta milestone — mais restritivo que o backend, que trata o anexo como opcional)
-- [ ] **PARV-06**: Upload de anexo de versão reutiliza o componente de upload já existente no módulo Documentos (progress bar, drag-and-drop, MinIO-backed)
+- [x] **PARV-05**: Advogado responsável pode criar uma nova versão via formulário com resumo (campo `conteúdo` tratado como resumo textual, não o parecer completo) e **anexo obrigatório** (decisão desta milestone — mais restritivo que o backend, que trata o anexo como opcional)
+- [x] **PARV-06**: Upload de anexo de versão reutiliza o componente de upload já existente no módulo Documentos (progress bar, drag-and-drop, MinIO-backed)
 
 ### Entrega e Vista de Entregue
 
@@ -73,8 +73,8 @@
 | PARC-11 | Phase 65 | Complete |
 | PARC-12 | Phase 65 | Complete |
 | PARC-13 | Phase 66 | Complete |
-| PARV-05 | Phase 67 | Pending |
-| PARV-06 | Phase 67 | Pending |
+| PARV-05 | Phase 67 | Complete |
+| PARV-06 | Phase 67 | Complete |
 | PARC-14 | Phase 68 | Pending |
 | PARC-15 | Phase 68 | Pending |
 | PARC-16 | Phase 68 | Pending |

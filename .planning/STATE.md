@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.6
 milestone_name: Módulo de Parecer Jurídico — UI
 status: ready_to_plan
-last_updated: 2026-07-01T14:40:57.652Z
+last_updated: 2026-07-01T15:12:20.379Z
 last_activity: 2026-07-01 — Roadmap v2.6 criado (5 fases, 65–69, 12/12 requirements mapeados)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
-stopped_at: Phase 66 complete (1/1) — ready to discuss Phase 67
+stopped_at: Phase 67 complete (1/1) — ready to discuss Phase 68
 ---
 
 # Project State
@@ -21,11 +21,11 @@ stopped_at: Phase 66 complete (1/1) — ready to discuss Phase 67
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 67 — elaboração e versionamento
+**Current focus:** Phase 68 — entrega, vista de entregue e rbac
 
 ## Current Position
 
-Phase: 67 of 69 (elaboração e versionamento)
+Phase: 68 of 69 (entrega, vista de entregue e rbac)
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-07-01
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: —
 - Total execution time: —
 
@@ -49,6 +49,7 @@ Progress: [░░░░░░░░░░] 0%
 | 60 | 2 | ~25 min | ~12 min |
 | 65 | 2 | - | - |
 | 66 | 1 | - | - |
+| 67 | 1 | - | - |
 
 ## Accumulated Context
 
@@ -77,7 +78,9 @@ Recent decisions affecting current work:
 - Phase 65 human_verification pending (see 65-VERIFICATION.md): responsive dual-view rendering, anexo presigned-URL download flow, cross-role nav/access-denied behavior, cross-tenant IDOR 404 handling — deferred by user decision, needs live browser/backend test before shipping v2.6
 - Phase 66 follow-up (non-blocking, UI review 19/24 — see 66-UI-REVIEW.md): processoId select has no loading/error state (unlike clienteId); focus ring uses blue-500 vs spec's declared blue-600/700 (pre-existing mismatch from processos/novo/page.tsx); CardTitle never gets text-lg font-bold override so "Dados da Solicitação" doesn't match declared 18px/700 typography
 - Phase 66 human_verification pending (see 66-VERIFICATION.md): end-to-end create flow (submit → toast → redirect → list update), access-denied path for non-privileged users, WR-01/WR-02 live behavior (cliente-switch resets processoId, backend 400s mismatched cliente/processo)
-- Milestone v2.6: run `/gsd:plan-phase 67` to begin planning Phase 67 (Elaboração e Versionamento)
+- Phase 67 follow-up (non-blocking): `useUploadDocumentoComProgresso` in `use-documentos.ts` has the same missing `xhr.timeout` gap that was fixed in the new parecer-versão upload hook (WR-03) — left untouched to avoid unrelated drift, candidate for a small follow-up fix
+- Phase 67 human_verification pending (see 67-VERIFICATION.md): form-submit blocking without anexo, real upload progress bar, toast display, live timeline append without reload, RBAC card visibility for a real unauthorized session, CONCLUIDO read-only banner with real data
+- Milestone v2.6: run `/gsd:plan-phase 68` to begin planning Phase 68 (Entrega, Vista de Entregue e RBAC)
 
 ### Blockers/Concerns
 
@@ -103,6 +106,6 @@ Items deferred at milestone v2.5 close (2026-06-30), scoped for v2.6/v2.7:
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 67` to plan Phase 67 (Elaboração e Versionamento) of milestone v2.6
+- Run `/gsd:plan-phase 68` to plan Phase 68 (Entrega, Vista de Entregue e RBAC) of milestone v2.6
 
 </content>
