@@ -69,6 +69,12 @@ function ParecerCreateFormContent() {
   const clienteIdValue = form.watch("clienteId");
   const processos = useProcessos(clienteIdValue ? { cliente_id: clienteIdValue } : {});
   const adminUsers = useAdminUsers();
+
+  React.useEffect(() => {
+    form.setValue("processoId", undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteIdValue]);
+
   const advogados = React.useMemo(
     () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
     [adminUsers.data],
