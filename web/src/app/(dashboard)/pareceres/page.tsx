@@ -70,8 +70,8 @@ function ParecerPageContent() {
 
   const pareceres = usePareceres(filters);
 
-  const isLoading = pareceres.isLoading || clientes.isLoading;
-  const isError = pareceres.isError || clientes.isError;
+  const isLoading = pareceres.isLoading;
+  const isError = pareceres.isError;
 
   const onApply = (e: React.FormEvent) => {
     e.preventDefault();
