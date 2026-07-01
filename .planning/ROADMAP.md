@@ -89,7 +89,8 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 - [x] **Phase 61: Data Layer + Backend CRUD** - Entidades ParecerSolicitacao/ParecerVersao, scope RBAC `pareceres:*`, e CRUD completo de solicitações via API
  (completed 2026-06-30)
 - [x] **Phase 62: Elaboração e Versionamento** - UI de criação/edição de versões com conteúdo, anexo e histórico de autor/data (completed 2026-06-30)
-- [x] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download (completed 2026-06-30)
+- [x] **Phase 63: Aprovação e Entrega** - Fluxo de aprovação interna opcional e entrega final, com disponibilização para consulta/download
+ (completed 2026-06-30)
 - [ ] **Phase 64: Auditoria e Pesquisa Avançada** - Integração com AuditLog em todos os pontos de escrita e pesquisa textual + filtros combinados
 
 ## Phase Details
@@ -142,7 +143,9 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
   1. Criar, atribuir, editar versão, aprovar e entregar um parecer geram automaticamente um registo em AuditLog (`entidadeTipo`: `parecer_solicitacao`/`parecer_versao`), visível no histórico/timeline já existente
   2. Utilizador pode pesquisar pareceres por texto livre no conteúdo das versões
   3. Pesquisa por texto livre pode ser combinada com filtros de cliente, advogado, status e data simultaneamente
-**Plans**: TBD
+**Plans**: 2 plans
+  - [ ] 64-01-PLAN.md — Auditoria automática nos 5 endpoints de transição do ParecerController (AuditLog.save)
+  - [ ] 64-02-PLAN.md — Endpoint GET /pareceres/pesquisa + método de repositório (ILIKE texto livre + filtros combinados)
 **UI hint**: yes
 
 ## Progress
@@ -170,6 +173,6 @@ See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milest
 | 61. Data Layer + Backend CRUD | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 62. Elaboração e Versionamento | v2.5 | 2/2 | Complete   | 2026-06-30 |
 | 63. Aprovação e Entrega | v2.5 | 1/1 | Complete   | 2026-06-30 |
-| 64. Auditoria e Pesquisa Avançada | v2.5 | 0/TBD | Not started | - |
+| 64. Auditoria e Pesquisa Avançada | v2.5 | 0/2 | Not started | - |
 
 **Next:** Run `/gsd:plan-phase 61` to begin Phase 61 planning.
