@@ -278,6 +278,7 @@ function ParecerDetailContent({
 function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [progresso, setProgresso] = React.useState<number | null>(null);
+  const [fileInputKey, setFileInputKey] = React.useState(0);
 
   const versaoUpload = useCreateParecerVersao(solicitacaoId, {
     onProgress: (pct) => setProgresso(pct),
@@ -296,6 +297,9 @@ function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
       await versaoUpload.mutateAsync({ conteudo: values.conteudo, file });
       setProgresso(null);
       form.reset({ conteudo: "", file: undefined as unknown as FileList });
+      // Force-remount FileDropZone so its uncontrolled native <input type="file">
+      // is guaranteed to reset visually alongside the RHF state (WR-01).
+      setFileInputKey((k) => k + 1);
       toast.success("Nova versão submetida com sucesso.");
     } catch (e) {
       setProgresso(null);
@@ -334,6 +338,7 @@ function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
           <div className="space-y-2">
             <Label>Anexo (obrigatório)</Label>
             <FileDropZone
+              key={fileInputKey}
               onFileChange={(file) =>
                 form.setValue("file", createFileList(file), { shouldValidate: true })
               }
