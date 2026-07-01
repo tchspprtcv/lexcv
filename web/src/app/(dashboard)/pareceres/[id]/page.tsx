@@ -137,7 +137,8 @@ function ParecerDetailContent({
     Boolean(me?.roles.includes("ADMIN")) ||
     Boolean(parecer.data?.advogadoId && parecer.data.advogadoId === me?.id);
   const isConcluido = parecer.data?.status === "CONCLUIDO";
-  const showNovaVersaoForm = canEditPareceres && isResponsavelOuAdmin && !isConcluido;
+  const showNovaVersaoForm =
+    !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
 
   return (
     <div className="space-y-6">
@@ -255,7 +256,13 @@ function ParecerDetailContent({
             </CardContent>
           </Card>
 
-          {isConcluido ? (
+          {permissions.isLoading ? (
+            <Card>
+              <CardContent className="py-6">
+                <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12" />
+              </CardContent>
+            </Card>
+          ) : isConcluido ? (
             <Card>
               <CardContent className="py-6">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">
