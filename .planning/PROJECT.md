@@ -39,21 +39,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Deslocações a realizar (por cliente) — v2.4
 - ✓ Honorários propostos no intake (totalidade, por extenso, previsão) — v2.4
 - ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
-
-## Current Milestone: v2.5 Módulo de Parecer Jurídico
-
-**Goal:** Gerir o ciclo completo de pareceres jurídicos (solicitação → elaboração com versionamento → aprovação opcional → entrega), com auditoria automática e pesquisa avançada, reutilizando as entidades e padrões já existentes no LexCV (Cliente, User+role ADVOGADO, AuditLog, StorageService).
-
-**Target features:**
-- Solicitação de parecer com atribuição de advogado responsável e vínculo opcional a Processo
-- Elaboração com versionamento (conteúdo + anexo opcional), histórico de autor/data
-- Aprovação interna opcional e entrega final do parecer
-- Auditoria automática (reutilizando `t_audit_log`) e pesquisa avançada (texto + filtros)
-- Novo scope RBAC `pareceres:view/create/edit/manage`
+- ✓ Módulo de Parecer Jurídico — backend API (solicitação, versionamento imutável, aprovação/entrega, auditoria automática, pesquisa avançada), scope RBAC `pareceres:view/create/edit/manage` — v2.5 (backend-only; UI frontend adiada para v2.6)
 
 ### Active
 
-- PARC-01..10, PARV-01..04, PARA-01, PARS-01..02 — ver `.planning/REQUIREMENTS.md` (milestone v2.5)
+(Nenhum requisito activo — milestone v2.5 enviada. Próxima milestone a definir via `/gsd-new-milestone`.)
 
 ### Out of Scope
 
@@ -107,12 +97,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.4 (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo (advogados/administrativos ligados a Users, documentos, deslocações, honorários propostos), e ficha imprimível de alta fidelidade ao formulário físico do escritório. Auditoria pós-execução encontrou e corrigiu um mismatch snake_case/camelCase que invalidava 9/19 requisitos e uma fuga de password hash — ver `.planning/milestones/v2.4-MILESTONE-AUDIT.md`.
+**Shipped:** v2.5 (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração (versionamento imutável, anexos via StorageService) → Aprovação interna opcional (ADMIN) → Entrega (advogado responsável ou ADMIN, irreversível), com auditoria automática via `AuditLog` existente em todas as transições e pesquisa avançada (texto livre + filtros combinados). Scope RBAC dedicado `pareceres:view/create/edit/manage`. Auditoria pós-execução classificou como `tech_debt` (não bloqueante): milestone foi deliberadamente scoped como backend-only em todas as 4 fases — nenhuma UI frontend foi construída, pelo que o módulo ainda não é utilizável através da aplicação LexCV, apenas via API direta. Ver `.planning/v2.5-MILESTONE-AUDIT.md` para detalhes e recomendação de milestone v2.6 dedicada à UI.
 
-**v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
+**v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo (advogados/administrativos ligados a Users, documentos, deslocações, honorários propostos), e ficha imprimível de alta fidelidade ao formulário físico do escritório. Auditoria pós-execução encontrou e corrigiu um mismatch snake_case/camelCase que invalidava 9/19 requisitos e uma fuga de password hash — ver `.planning/milestones/v2.4-MILESTONE-AUDIT.md`.
 
 <details>
-<summary>Histórico anterior (v1.0–v2.2)</summary>
+<summary>Histórico anterior (v1.0–v2.3)</summary>
+
+**v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet: shell com drawer/hamburger/bottom-nav, mobile card lists em 4 módulos, scroll horizontal em tabelas complexas, formulários coluna única, bottom-sheet dialogs, 48px touch targets, KPI grid adaptável (1→2→4 colunas), bloco "Hoje" em Agenda mobile.
 
 **v2.2** (2026-06-19) — Document Storage MinIO. Backend migrado de filesystem para MinIO (AWS S3 SDK), upload com barra de progresso e drag-and-drop, downloads via URL pré-assinada, serviço MinIO no Docker Compose prod com Caddy.
 
@@ -124,7 +116,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Planning next milestone (v2.5+). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
+**Current focus:** Planning next milestone (v2.6+). Strong candidate: UI frontend para o Módulo de Parecer Jurídico (v2.5 entregou apenas backend). Candidate area for a future cleanup phase: pre-existing app-wide snake_case/camelCase field-naming inconsistencies outside v2.4's scope (e.g. `tenantId`/`createdAt`), identified during the v2.4 audit but intentionally not touched.
 
 ## Evolution
 
@@ -144,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-30 — after v2.4 milestone (Ficha de Cliente) shipped*
+*Last updated: 2026-06-30 — after v2.5 milestone (Módulo de Parecer Jurídico, backend-only) shipped*

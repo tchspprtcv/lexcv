@@ -1,5 +1,26 @@
 # Milestones
 
+## v2.5 Módulo de Parecer Jurídico (Shipped: 2026-06-30)
+
+**Phases completed:** 4 phases (61–64), 7 plans
+
+**Key accomplishments:**
+
+- API completa do ciclo de vida do parecer jurídico: Solicitação → Elaboração (versionamento imutável com anexo opcional via StorageService) → Aprovação interna opcional (ADMIN) → Entrega (advogado responsável ou ADMIN, irreversível)
+- Scope RBAC dedicado `pareceres:view/create/edit/manage`, seedado por role e espelhado no frontend `permissions.ts`
+- Auditoria automática reutilizando `AuditLog` existente em todos os 5 pontos de transição de estado
+- Pesquisa avançada combinando texto livre (ILIKE sobre conteúdo da versão mais recente) com filtros de cliente/advogado/status/data
+- 5 rondas de code review com correções aplicadas e re-verificadas: 2 IDOR cross-tenant críticos, 1 race condition, 1 mismatch de permissão que tornava inalcançável um ramo de autorização, 1 bug de JOIN que excluía resultados válidos da pesquisa
+
+**Known gaps at close:**
+
+- **Backend-only** — nenhuma UI frontend foi construída para o módulo de pareceres. Decisão explícita e repetida em todas as 4 fases, mas significa que o módulo ainda não é utilizável através da aplicação LexCV, apenas via chamada API direta. Auditoria da milestone classificou como `tech_debt` (não bloqueante). Recomendação: milestone v2.6 dedicada à UI.
+- `versaoFinalId` (campo de vínculo à versão entregue) só é visível no JSON genérico das respostas GET existentes, sem vista dedicada "parecer entregue"
+- Comparação visual (diff) entre versões não implementada — apenas listagem/detalhe sequencial
+- Sem índice full-text dedicado (tsvector/trigram) — `ILIKE` nativo suficiente para o volume atual
+
+Ver `.planning/v2.5-MILESTONE-AUDIT.md` e `.planning/milestones/v2.5-ROADMAP.md` para detalhes completos.
+
 ## v2.4 Ficha de Cliente (Shipped: 2026-06-30)
 
 **Phases completed:** 4 phases (57–60), 14 plans, ~30 tasks
