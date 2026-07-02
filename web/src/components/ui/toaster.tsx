@@ -13,7 +13,6 @@ import { CheckCircle2, AlertCircle } from "lucide-react"
 
 export function Toaster() {
   const { toasts } = useToast()
-  console.log("[Toaster] component rendering. Current toasts in state:", toasts);
 
   return (
     <ToastProvider duration={4000}>

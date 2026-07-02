@@ -150,10 +150,7 @@ function dispatch(action: Action) {
   const newState = reducer(currentState, action);
   setMemoryState(newState);
 
-  console.log("[use-toast] dispatch called:", action.type, "payload:", (action as any).toast || (action as any).toastId, "active listeners:", listeners.length);
-
-  listeners.forEach((listener, i) => {
-    console.log("[use-toast] notifying listener", i);
+  listeners.forEach((listener) => {
     listener(newState);
   });
 }
@@ -161,7 +158,6 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
-  console.log("[use-toast] toast() function invoked with:", props);
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -194,13 +190,11 @@ function useToast() {
   const [state, setState] = React.useState<State>(getMemoryState())
 
   React.useEffect(() => {
-    console.log("[use-toast] useToast hook mounted, adding listener. Current listeners count:", listeners.length);
     listeners.push(setState)
     return () => {
       const index = listeners.indexOf(setState)
       if (index > -1) {
         listeners.splice(index, 1)
-        console.log("[use-toast] useToast hook unmounted, removed listener. Current listeners count:", listeners.length);
       }
     }
   }, [])
