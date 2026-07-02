@@ -167,7 +167,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   <dt className="text-neutral-500 dark:text-neutral-400">Localidade</dt>
                   <dd className="col-span-2">{cliente.data.localidade ?? "—"}</dd>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Morada</dt>
+                  <dt className="text-neutral-500 dark:text-neutral-400">{cliente.data.tipo === "EMPRESA" ? "Sede" : "Morada"}</dt>
                   <dd className="col-span-2">{cliente.data.morada ?? "—"}</dd>
 
                   <dt className="text-neutral-500 dark:text-neutral-400">Ativo</dt>
