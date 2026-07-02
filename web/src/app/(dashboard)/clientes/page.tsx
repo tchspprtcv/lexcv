@@ -16,6 +16,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { parseCsv, toCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
+import { nifPattern } from "@/schemas/clientes";
 import type { ClientesListFilters, Cliente } from "@/types/clientes";
 
 export default function ClientesPage() {
@@ -149,13 +150,20 @@ function ClientesPageContent({
 
     let created = 0;
     let failed = 0;
+    const failureReasons: string[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i] ?? [];
       const nome = (r[idxNome] ?? "").trim();
       const nif = idxNif >= 0 ? (r[idxNif] ?? "").trim() : "";
-      if (!nome || !nif) {
+      if (!nome) {
         failed++;
+        failureReasons.push(`linha ${i + 1}: nome em falta`);
+        continue;
+      }
+      if (!nifPattern.test(nif)) {
+        failed++;
+        failureReasons.push(`linha ${i + 1}: NIF inválido`);
         continue;
       }
       try {
@@ -169,9 +177,16 @@ function ClientesPageContent({
           email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,
         });
         created++;
-      } catch {
+      } catch (err) {
         failed++;
+        const reason = err instanceof Error ? err.message : "erro desconhecido";
+        failureReasons.push(`linha ${i + 1}: ${reason}`);
+        console.warn(`Import CSV: falha ao criar cliente na linha ${i + 1}`, err);
       }
+    }
+
+    if (failureReasons.length) {
+      console.warn("Import CSV: linhas com falha", failureReasons);
     }
 
     if (created && !failed) {

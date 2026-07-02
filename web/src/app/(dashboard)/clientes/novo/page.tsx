@@ -243,6 +243,7 @@ export default function ClienteCreatePage() {
                       <option value="NIF">NIF</option>
                       <option value="CNI">CNI</option>
                       <option value="PASSAPORTE">Passaporte</option>
+                      <option value="REG_COMERCIAL">Registo Comercial</option>
                     </select>
                     {form.formState.errors.documento_tipo ? (
                       <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
