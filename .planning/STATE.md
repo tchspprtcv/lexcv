@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Melhoria Gestão de Clientes
 status: in_progress
-last_updated: "2026-07-02T01:15:00.000Z"
-last_activity: 2026-07-02 — Phase 72 (Form Refactoring Create & Edit) complete
+last_updated: "2026-07-02T11:11:03.199Z"
+last_activity: 2026-07-02 — Phase 73.1 (Fechar gap CLI-05) complete
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
@@ -20,20 +20,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.7 in progress — Phase 72 complete, Phase 73 next
+**Current focus:** Milestone v2.7 — Phase 73.1 (gap closure CLI-05) complete; this was the last phase blocking milestone completion
 
 ## Current Position
 
-Phase: LEXCV-72-form-refactoring-create-edit (complete)
-Plan: 72-01 (complete)
-Status: Phase 72 complete, ready for /gsd:discuss-phase 73
-Last activity: 2026-07-02 — Phase 72 (Form Refactoring Create & Edit) complete
+Phase: LEXCV-73.1-fechar-gap-cli-05-remover-sync-legado-de-nif-nos-formul-rios (complete)
+Plan: 73.1-01 (complete)
+Status: Phase 73.1 complete, ready for /gsd:audit-milestone or /gsd:complete-milestone
+Last activity: 2026-07-02 — Phase 73.1 (Fechar gap CLI-05) complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 8
 - Average duration: —
 - Total execution time: —
 
@@ -51,8 +51,13 @@ Last activity: 2026-07-02 — Phase 72 (Form Refactoring Create & Edit) complete
 | 69 | 1 | - | - |
 | 70 | 1 | 12 min | 12 min |
 | 72 | 1 | 12 min | 12 min |
+| Phase 73.1 P01 | 3 min | 3 tasks | 4 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 73.1 inserted after Phase 73: Milestone audit v2.7 found CLI-05 gap: NIF overwrite bug + missing server-side validation (URGENT) — closed by 73.1-01-PLAN.md (this plan)
 
 ### Decisions
 
@@ -68,6 +73,8 @@ Recent decisions affecting current work:
 - (v2.6 roadmap) 5 fases derivadas de 12 requisitos, ordem estrita de dependência: (65) fundação read-only, (66) criação de solicitação, (67) versionamento, (68) entrega+vista-entregue+RBAC (fase de maior risco), (69) pesquisa avançada. NOTF-05/06/07 distribuídas pelas fases correspondentes ao evento que as dispara, em vez de uma fase de notificações isolada.
 - (v2.7 Phase 70) Orphaned `dados_tipo` DB column left unmapped/undropped after removing the field from `Cliente` — `ddl-auto=update` never drops columns in dev, and adding a destructive migration was explicitly out of scope; the column stays dormant until a future cleanup phase decides to drop it.
 - (v2.7 Phase 72) `form.watch("tipo")` read directly in component body (no local useState mirror) to derive live nomeLabel/moradaLabel in both cliente forms — matches the existing pattern where `tipo` lives exclusively in react-hook-form state via Controller + form.setValue.
+- (v2.7 Phase 73.1) CLI-05 gap closure — no custom `@ExceptionHandler`/`@ControllerAdvice` added for `@Valid` failures; Spring Boot's default `MethodArgumentNotValidException` handling (confirmed no global handler exists) already returns structured HTTP 400, which is sufficient and stays within audit scope.
+- (v2.7 Phase 73.1) No DB-level `NOT NULL` constraint added to `Cliente.nif` — Bean Validation (`@NotBlank`/`@Pattern`) is the enforcement layer; a migration against existing rows was explicitly out of scope per 73.1-CONTEXT.md.
 
 ### Pending Todos
 
@@ -128,4 +135,5 @@ Items acknowledged and deferred at milestone v2.6 close on 2026-07-01 (see .plan
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Phase 73.1 (CLI-05 gap closure) complete — this was the last outstanding phase for milestone v2.7. Run /gsd:audit-milestone to confirm, then /gsd:complete-milestone.
+- Start the next milestone with /gsd-new-milestone once v2.7 is closed
