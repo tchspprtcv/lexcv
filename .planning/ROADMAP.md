@@ -146,7 +146,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: A página de detalhe do cliente e a ficha imprimível apresentam apenas a estrutura de dados simplificada, sem referências ao antigo `dados_tipo`
 **Depends on**: Phase 72
 **Requirements**: CLI-11
-**Plans**: 0/1 — not started
+**Plans**: 1 plan
+- [ ] 73-01-PLAN.md — Dynamic Morada/Sede labels on detail page + printable ficha; remove discontinued blank Empresa fields (CLI-11)
 
 ## Progress
 
