@@ -117,7 +117,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .email("info@atlanticosa.cv")
                 .telefone("+238 231 5678")
                 .morada("Avenida Marginal, Mindelo")
-                .documentoTipo(DocumentoTipo.NIF)
+                .documentoTipo(DocumentoTipo.REG_COMERCIAL)
                 .documentoNumero("512345678")
                 .ramoAtividade("Comércio")
                 .detalhesAdicionais("Empresa líder no setor marítimo")
