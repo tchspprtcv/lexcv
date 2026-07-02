@@ -139,7 +139,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: Os formulários de criação e edição de cliente usam campos planos (sem seletor de card JSON) com labels dinâmicas ("Morada" para Particular, "Sede" para Empresa) e validação de NIF/REG_COMERCIAL
 **Depends on**: Phase 71
 **Requirements**: CLI-05, CLI-07, CLI-08, CLI-09, CLI-10
-**Plans**: 0/2 — not started
+**Plans**: 1 plan
+- [ ] 72-01-PLAN.md — Rótulos dinâmicos nome/morada por tipo + rename NIF (Legado)→NIF + confirmar REG_COMERCIAL, em novo e editar (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
 
 ### Phase 73: Detail Page & Printable Ficha Update
 **Goal**: A página de detalhe do cliente e a ficha imprimível apresentam apenas a estrutura de dados simplificada, sem referências ao antigo `dados_tipo`
@@ -180,7 +181,7 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 | 69. Pesquisa Avançada | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 70. Backend refactoring & Seeder Alignment | v2.7 | 1/1 | Complete | 2026-07-01 |
 | 71. Frontend Types, Schema & API Integration | v2.7 | 0/1 | Pending | — |
-| 72. Form Refactoring (Create & Edit) | v2.7 | 0/2 | Pending | — |
+| 72. Form Refactoring (Create & Edit) | v2.7 | 0/1 | Pending | — |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 0/1 | Pending | — |
 
 **Next:** Milestone v2.7 active — Phase 70 complete. Run `/gsd-discuss-phase 71` to plan the next phase.
