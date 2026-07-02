@@ -131,7 +131,9 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: Os tipos TypeScript do cliente refletem o modelo aplanado do backend (sem `dados_tipo`), e o Zod schema exige NIF obrigatório com validação de 9 dígitos numéricos
 **Depends on**: Phase 70
 **Requirements**: CLI-05, CLI-06
-**Plans**: 0/1 — not started
+**Plans**: 2 plans
+- [ ] 71-01-PLAN.md — Aplanar tipos DTO + união DocumentoTipo + NIF obrigatório 9 dígitos no Zod schema (CLI-05, CLI-06)
+- [ ] 71-02-PLAN.md — Correções compile-safe às páginas consumidoras para o frontend continuar a compilar após o aplanamento (CLI-06)
 
 ### Phase 72: Form Refactoring (Create & Edit)
 **Goal**: Os formulários de criação e edição de cliente usam campos planos (sem seletor de card JSON) com labels dinâmicas ("Morada" para Particular, "Sede" para Empresa) e validação de NIF/REG_COMERCIAL
