@@ -225,6 +225,10 @@ public class AdminController {
                 new RbacResponse.PermissionDefDto("documentos:edit", "Gerir Documentos", "Carregar e apagar documentos", "Documentos"),
                 new RbacResponse.PermissionDefDto("financeiro:view", "Visualizar Financeiro", "Ver honorários, pagamentos e conta corrente", "Financeiro"),
                 new RbacResponse.PermissionDefDto("financeiro:edit", "Gerir Financeiro", "Lançar honorários, pagamentos e gerir conta corrente", "Financeiro"),
+                new RbacResponse.PermissionDefDto("pareceres:view", "Visualizar Pareceres", "Ver lista, detalhe e pesquisa de pareceres jurídicos", "Pareceres"),
+                new RbacResponse.PermissionDefDto("pareceres:create", "Criar Solicitações", "Criar novas solicitações de parecer jurídico", "Pareceres"),
+                new RbacResponse.PermissionDefDto("pareceres:edit", "Elaborar e Entregar Pareceres", "Criar versões, elaborar conteúdo e entregar pareceres", "Pareceres"),
+                new RbacResponse.PermissionDefDto("pareceres:manage", "Aprovar Pareceres", "Aprovação interna de pareceres jurídicos", "Pareceres"),
                 new RbacResponse.PermissionDefDto("rbac:manage", "Gerir Permissões (RBAC)", "Alterar regras de acesso globais por função", "Administração"),
                 new RbacResponse.PermissionDefDto("users:manage", "Gerir Utilizadores", "Criar, ativar/desativar, e configurar utilizadores", "Administração")
         );

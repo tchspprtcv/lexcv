@@ -38,7 +38,8 @@ public class UserPrincipal implements UserDetails {
                     "agenda:view", "agenda:edit",
                     "documentos:view", "documentos:edit",
                     "financeiro:view", "financeiro:edit",
-                    "rbac:manage", "users:manage"
+                    "rbac:manage", "users:manage",
+                    "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage"
             ));
         }
 
