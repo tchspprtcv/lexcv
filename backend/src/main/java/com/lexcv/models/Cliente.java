@@ -62,11 +62,6 @@ public class Cliente {
     @Column(name = "avencado")
     private Boolean avencado;
 
-    @Column(name = "dados_tipo", columnDefinition = "TEXT")
-    @Convert(converter = DadosTipoConverter.class)
-    @JsonProperty("dados_tipo")
-    private DadosTipo dadosTipo;
-
     @Column(name = "procuracao_key")
     @JsonProperty("procuracao_key")
     private String procuracaoKey;

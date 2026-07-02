@@ -274,7 +274,6 @@ public class ResourceController {
         cliente.setRamoAtividade(payload.getRamoAtividade());
         cliente.setDetalhesAdicionais(payload.getDetalhesAdicionais());
         cliente.setAvencado(payload.getAvencado());
-        cliente.setDadosTipo(payload.getDadosTipo());
 
         if (payload.getDescricaoCaso() != null) cliente.setDescricaoCaso(payload.getDescricaoCaso());
         if (payload.getDocumentosEntregues() != null) cliente.setDocumentosEntregues(payload.getDocumentosEntregues());
