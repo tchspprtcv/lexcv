@@ -49,8 +49,9 @@ public class StorageService implements ApplicationRunner {
                 .build();
 
         try {
-            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, size));
-        } catch (SdkException e) {
+            byte[] contentBytes = inputStream.readAllBytes();
+            s3Client.putObject(request, RequestBody.fromBytes(contentBytes));
+        } catch (SdkException | java.io.IOException e) {
             throw new StorageUnavailableException("Storage service unavailable", e);
         }
 
