@@ -35,8 +35,8 @@ Requirements for Milestone v2.7 to improve and simplify client management.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-05 | Phase 72 | Pending |
-| CLI-06 | Phase 70 | Complete |
+| CLI-05 | Phase 71 (schema layer) + Phase 72 (form UI layer) | Phase 71 complete, Phase 72 pending |
+| CLI-06 | Phase 70 (backend) + Phase 71 (frontend types) | Complete |
 | CLI-07 | Phase 72 | Pending |
 | CLI-08 | Phase 72 | Pending |
 | CLI-09 | Phase 70 | Complete |
