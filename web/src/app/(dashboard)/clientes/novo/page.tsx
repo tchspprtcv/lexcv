@@ -56,11 +56,8 @@ export default function ClienteCreatePage() {
       documento_numero: "",
       ramo_atividade: "",
       detalhes_adicionais: "",
-      dados_tipo: {},
     },
   });
-
-  const watchedTipo = form.watch("tipo");
 
   function onTipoChange(newTipo: "PARTICULAR" | "EMPRESA") {
     const currentTipo = form.getValues("tipo");
@@ -73,16 +70,6 @@ export default function ClienteCreatePage() {
 
   function confirmTipoChange() {
     if (!pendingTipo) return;
-    if (pendingTipo === "PARTICULAR") {
-      form.setValue("dados_tipo.nome_comercial", "");
-      form.setValue("dados_tipo.sede", "");
-      form.setValue("dados_tipo.representante_legal", "");
-      form.setValue("dados_tipo.cargo", "");
-    } else {
-      form.setValue("dados_tipo.idade", undefined);
-      form.setValue("dados_tipo.sexo", "");
-      form.setValue("dados_tipo.nacionalidade", "");
-    }
     form.setValue("tipo", pendingTipo, { shouldValidate: true });
     setPendingTipo(null);
   }
@@ -94,27 +81,10 @@ export default function ClienteCreatePage() {
       return;
     }
     try {
-      const dados_tipo =
-        values.tipo === "PARTICULAR"
-          ? {
-              idade: values.dados_tipo?.idade,
-              sexo: values.dados_tipo?.sexo,
-              nacionalidade: values.dados_tipo?.nacionalidade,
-            }
-          : values.tipo === "EMPRESA"
-            ? {
-                nome_comercial: values.dados_tipo?.nome_comercial,
-                sede: values.dados_tipo?.sede,
-                representante_legal: values.dados_tipo?.representante_legal,
-                cargo: values.dados_tipo?.cargo,
-              }
-            : undefined;
-
       const payload: ClienteCreateRequest = {
         ...values,
         tipo: values.tipo,
         avencado: values.avencado,
-        dados_tipo,
         documentoTipo: values.documento_tipo || undefined,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,
@@ -122,7 +92,7 @@ export default function ClienteCreatePage() {
       };
 
       // Sincronizar NIF se tipo for NIF
-      if (values.documento_tipo === "NIF") {
+      if (values.documento_tipo === "NIF" && values.documento_numero) {
         payload.nif = values.documento_numero;
       }
 
@@ -144,10 +114,6 @@ export default function ClienteCreatePage() {
       />
     );
   }
-
-  const dadosTipoErrors = form.formState.errors.dados_tipo as
-    | Record<string, { message?: string }>
-    | undefined;
 
   return (
     <div className="space-y-6">
@@ -194,104 +160,6 @@ export default function ClienteCreatePage() {
                 <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
               ) : null}
             </div>
-
-            {watchedTipo === "PARTICULAR" && (
-              <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
-                <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  Dados Pessoais
-                </h4>
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.idade">Idade</Label>
-                    <Input
-                      id="dados_tipo.idade"
-                      type="number"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.idade", { valueAsNumber: true })}
-                    />
-                    {dadosTipoErrors?.idade ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.idade.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.sexo">Sexo</Label>
-                    <Input
-                      id="dados_tipo.sexo"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.sexo")}
-                    />
-                    {dadosTipoErrors?.sexo ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.sexo.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.nacionalidade">Nacionalidade</Label>
-                    <Input
-                      id="dados_tipo.nacionalidade"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.nacionalidade")}
-                    />
-                    {dadosTipoErrors?.nacionalidade ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.nacionalidade.message}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {watchedTipo === "EMPRESA" && (
-              <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
-                <h4 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  Dados da Empresa
-                </h4>
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.nome_comercial">Nome Comercial *</Label>
-                    <Input
-                      id="dados_tipo.nome_comercial"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.nome_comercial")}
-                    />
-                    {dadosTipoErrors?.nome_comercial ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.nome_comercial.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.sede">Sede</Label>
-                    <Input
-                      id="dados_tipo.sede"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.sede")}
-                    />
-                    {dadosTipoErrors?.sede ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.sede.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.representante_legal">Representante Legal *</Label>
-                    <Input
-                      id="dados_tipo.representante_legal"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.representante_legal")}
-                    />
-                    {dadosTipoErrors?.representante_legal ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.representante_legal.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dados_tipo.cargo">Cargo</Label>
-                    <Input
-                      id="dados_tipo.cargo"
-                      className="rounded-none"
-                      {...form.register("dados_tipo.cargo")}
-                    />
-                    {dadosTipoErrors?.cargo ? (
-                      <p className="text-sm text-red-600">{dadosTipoErrors.cargo.message}</p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="space-y-4">
               <div className="space-y-2">
