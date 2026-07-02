@@ -217,13 +217,10 @@ public class ResourceController {
 
     @PreAuthorize("hasAuthority('clientes:edit')")
     @PostMapping("/clientes")
-    public ResponseEntity<?> createCliente(@RequestBody Cliente cliente) {
+    public ResponseEntity<?> createCliente(@Valid @RequestBody Cliente cliente) {
         cliente.setTenantId(getTenantId());
         if (cliente.getAtivo() == null) {
             cliente.setAtivo(true);
-        }
-        if (cliente.getDocumentoTipo() == DocumentoTipo.NIF) {
-            cliente.setNif(cliente.getDocumentoNumero());
         }
         synchronized (ClienteRepository.class) {
             java.util.Optional<Integer> result = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId());
@@ -256,7 +253,7 @@ public class ResourceController {
 
     @PreAuthorize("hasAuthority('clientes:edit')")
     @PutMapping("/clientes/{id}")
-    public ResponseEntity<?> updateCliente(@PathVariable UUID id, @RequestBody Cliente payload) {
+    public ResponseEntity<?> updateCliente(@PathVariable UUID id, @Valid @RequestBody Cliente payload) {
         Cliente cliente = clienteRepository.findById(id).orElse(null);
         if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
@@ -281,11 +278,7 @@ public class ResourceController {
         if (payload.getDeslocacoes() != null) cliente.setDeslocacoes(payload.getDeslocacoes());
         if (payload.getHonorariosPropostos() != null) cliente.setHonorariosPropostos(payload.getHonorariosPropostos());
 
-        if (payload.getDocumentoTipo() == DocumentoTipo.NIF) {
-            cliente.setNif(payload.getDocumentoNumero());
-        } else if (payload.getNif() != null) {
-            cliente.setNif(payload.getNif());
-        }
+        cliente.setNif(payload.getNif());
 
         Cliente saved = clienteRepository.save(cliente);
         return ResponseEntity.ok(saved);

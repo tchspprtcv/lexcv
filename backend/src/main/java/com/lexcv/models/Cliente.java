@@ -2,6 +2,8 @@ package com.lexcv.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +34,8 @@ public class Cliente {
     @Column(nullable = false)
     private String nome;
 
+    @NotBlank(message = "NIF é obrigatório")
+    @Pattern(regexp = "^\\d{9}$", message = "NIF deve conter exatamente 9 dígitos numéricos")
     private String nif;
     private String email;
     private String telefone;
