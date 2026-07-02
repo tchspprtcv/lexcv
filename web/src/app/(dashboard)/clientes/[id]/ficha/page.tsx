@@ -185,10 +185,6 @@ function Ficha({
       {isEmpresa ? (
         <>
           <Field label="NIF" value={fmt(cliente.nif)} />
-          <Field label="Nome Comercial" value={fmt(undefined)} />
-          <Field label="Sede" value={fmt(undefined)} />
-          <Field label="Representante Legal" value={fmt(undefined)} />
-          <Field label="Cargo" value={fmt(undefined)} />
         </>
       ) : (
         <>
@@ -199,7 +195,7 @@ function Ficha({
       )}
 
       <SectionTitle>Contactos</SectionTitle>
-      <Field label="Morada" value={fmt(cliente.morada)} />
+      <Field label={isEmpresa ? "Sede" : "Morada"} value={fmt(cliente.morada)} />
       <Field label="Localidade" value={fmt(cliente.localidade)} />
       <Field label="Telefone" value={fmt(cliente.telefone)} />
       <Field label="Email" value={fmt(cliente.email)} />
