@@ -196,11 +196,6 @@ function ClienteEditContent({ id }: { id: string }) {
         deslocacoes: deslocacoes,
       };
 
-      // Sincronizar NIF se tipo for NIF
-      if (values.documento_tipo === "NIF" && values.documento_numero) {
-        payload.nif = values.documento_numero;
-      }
-
       await update.mutateAsync(payload);
       toast.success("Cliente atualizado com sucesso.");
       router.push(`/clientes/${encodeURIComponent(id)}`);

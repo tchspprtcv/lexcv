@@ -100,11 +100,6 @@ export default function ClienteCreatePage() {
         detalhesAdicionais: values.detalhes_adicionais || undefined,
       };
 
-      // Sincronizar NIF se tipo for NIF
-      if (values.documento_tipo === "NIF" && values.documento_numero) {
-        payload.nif = values.documento_numero;
-      }
-
       const res = await create.mutateAsync(payload);
       toast.success("Cliente criado com sucesso.");
       router.push(`/clientes/${encodeURIComponent(res.id)}`);
