@@ -78,6 +78,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
+- Phase 73.1 follow-up (non-blocking, code review WR-01): no automated tests cover the 4 NIF validation scenarios specified in 73.1-01-PLAN.md's behavior block (missing/malformed NIF → 400, valid NIF → persisted as-is, never re-derived from documento_numero) — see 73.1-REVIEW.md
 - Plan Phase 53 (Shell Responsivo): dashboard-shell.tsx + sidebar + top bar + bottom nav
 - Phase 59 follow-up (non-blocking): add content-type allowlist to POST /clientes/{id}/procuracao (59-SECURITY.md WR-02 — currently accepts arbitrary file types)
 - Phase 59 follow-up (non-blocking, code review warnings): N+1 query in listClienteAdvogados/Administrativos; duplicate snake_case/camelCase fields in web/src/types/clientes.ts from merge artifacts; untyped date strings in intake list items — see 59-REVIEW.md
