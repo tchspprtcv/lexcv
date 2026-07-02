@@ -278,6 +278,9 @@ public class ResourceController {
         if (payload.getDeslocacoes() != null) cliente.setDeslocacoes(payload.getDeslocacoes());
         if (payload.getHonorariosPropostos() != null) cliente.setHonorariosPropostos(payload.getHonorariosPropostos());
 
+        // nif is always required in the payload -- @Valid rejects null/blank before this line
+        // executes, so this is intentionally unconditional (do not make it conditional like the
+        // fields above; that would silently reopen the BLOCKER 1/2 stale-NIF defect class).
         cliente.setNif(payload.getNif());
 
         Cliente saved = clienteRepository.save(cliente);
