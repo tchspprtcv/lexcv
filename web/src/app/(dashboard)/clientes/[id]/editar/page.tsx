@@ -211,6 +211,10 @@ function ClienteEditContent({ id }: { id: string }) {
     }
   };
 
+  const tipoValue = form.watch("tipo");
+  const nomeLabel = tipoValue === "EMPRESA" ? "Nome Comercial" : "Nome";
+  const moradaLabel = tipoValue === "EMPRESA" ? "Sede" : "Morada";
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -248,7 +252,7 @@ function ClienteEditContent({ id }: { id: string }) {
             <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">Nome</Label>
+                  <Label htmlFor="nome">{nomeLabel}</Label>
                   <Input id="nome" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
                   {form.formState.errors.nome ? (
                     <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
@@ -257,7 +261,7 @@ function ClienteEditContent({ id }: { id: string }) {
 
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="nif">NIF (Legado)</Label>
+                    <Label htmlFor="nif">NIF</Label>
                     <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
                     {form.formState.errors.nif ? (
                       <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
@@ -319,7 +323,7 @@ function ClienteEditContent({ id }: { id: string }) {
                     ) : null}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="morada">Morada</Label>
+                    <Label htmlFor="morada">{moradaLabel}</Label>
                     <Input id="morada" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
                     {form.formState.errors.morada ? (
                       <p className="text-sm text-red-600">{form.formState.errors.morada.message}</p>
