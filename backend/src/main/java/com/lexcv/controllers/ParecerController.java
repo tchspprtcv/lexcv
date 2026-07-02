@@ -437,46 +437,46 @@ public class ParecerController {
                     .body(Map.of("message", "É necessário fornecer conteúdo ou anexo"));
         }
 
-        UUID versaoId = UUID.randomUUID();
-        String caminhoAnexo = null;
-        if (file != null && !file.isEmpty()) {
-            try {
-                caminhoAnexo = storageService.upload(tenantId, versaoId, file.getOriginalFilename(),
-                        file.getInputStream(), file.getContentType(), file.getSize());
-            } catch (IOException e) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("message", "Erro ao ler ficheiro"));
-            } catch (StorageUnavailableException e) {
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                        .body(Map.of("message", "Storage service unavailable"));
-            }
-        }
-
+        // Insert the row first so Hibernate assigns the id (GenerationType.UUID) — do not
+        // pre-generate the id in application code and set it on a new entity before persist():
+        // Spring Data's isNew() check then sees a non-null id and routes save() through
+        // merge() instead of persist(), which fails at runtime (either an
+        // ObjectOptimisticLockingFailureException trying to UPDATE a row that doesn't exist yet,
+        // or "detached entity passed to persist" once isNew() is corrected without also removing
+        // the pre-assignment). The file upload needs the row's real id as the storage-key prefix,
+        // so it happens after this first save(), inside the same @Transactional method — if the
+        // upload fails, the method returns via setRollbackOnly() below and the insert rolls back.
         ParecerVersao saved;
         synchronized (ParecerVersaoRepository.class) {
             int next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
 
             ParecerVersao versao = ParecerVersao.builder()
-                    .id(versaoId)
                     .tenantId(tenantId)
                     .solicitacaoId(solicitacaoId)
                     .conteudo(conteudo)
-                    .caminhoAnexo(caminhoAnexo)
                     .numeroVersao(next)
                     .criadoPorId(principal.getUserId())
                     .build();
 
+            saved = parecerVersaoRepository.save(versao);
+        }
+
+        if (file != null && !file.isEmpty()) {
             try {
-                saved = parecerVersaoRepository.save(versao);
-            } catch (RuntimeException e) {
-                if (caminhoAnexo != null) {
-                    try {
-                        storageService.delete(caminhoAnexo);
-                    } catch (RuntimeException cleanupEx) {
-                        log.warn("Failed to clean up orphaned upload {} after save failure", caminhoAnexo, cleanupEx);
-                    }
-                }
-                throw e;
+                String caminhoAnexo = storageService.upload(tenantId, saved.getId(), file.getOriginalFilename(),
+                        file.getInputStream(), file.getContentType(), file.getSize());
+                saved.setCaminhoAnexo(caminhoAnexo);
+                saved = parecerVersaoRepository.save(saved);
+            } catch (IOException e) {
+                org.springframework.transaction.interceptor.TransactionAspectSupport
+                        .currentTransactionStatus().setRollbackOnly();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Erro ao ler ficheiro"));
+            } catch (StorageUnavailableException e) {
+                org.springframework.transaction.interceptor.TransactionAspectSupport
+                        .currentTransactionStatus().setRollbackOnly();
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(Map.of("message", "Storage service unavailable"));
             }
         }
 

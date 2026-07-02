@@ -2,6 +2,7 @@ package com.lexcv.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ParecerVersao {
+public class ParecerVersao implements Persistable<UUID> {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -52,5 +53,18 @@ public class ParecerVersao {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    // ParecerController.createVersao() assigns `id` via UUID.randomUUID() before save() (needed
+    // up front as the MinIO object-key prefix for the attachment). With @GeneratedValue(UUID)
+    // and no version field, Spring Data's default isNew() check falls back to "id == null", so a
+    // pre-assigned non-null id makes save() route through merge() instead of persist() — Hibernate
+    // then tries to UPDATE a row that doesn't exist yet and throws
+    // ObjectOptimisticLockingFailureException. createdAt is only populated by @PrePersist, so it's
+    // null for a genuinely new, unsaved instance and always non-null for anything loaded via
+    // findById() — a reliable signal independent of the manually-assigned id.
+    @Override
+    public boolean isNew() {
+        return this.createdAt == null;
     }
 }
