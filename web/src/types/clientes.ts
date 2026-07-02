@@ -1,15 +1,4 @@
-export interface DadosTipoParticular {
-  idade?: number;
-  sexo?: string;
-  nacionalidade?: string;
-}
-
-export interface DadosTipoEmpresa {
-  nome_comercial?: string;
-  sede?: string;
-  representante_legal?: string;
-  cargo?: string;
-}
+export type DocumentoTipo = "NIF" | "CNI" | "PASSAPORTE" | "REG_COMERCIAL";
 
 export interface DocumentoEntregue {
   descricao: string;
@@ -46,19 +35,18 @@ export interface Cliente {
   tipo?: "PARTICULAR" | "EMPRESA";
   numero_cliente?: string;
   avencado?: boolean;
-  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome: string;
-  nif?: string;
+  nif: string;
   email?: string;
   telefone?: string;
   morada?: string;
   localidade?: string;
   ativo?: boolean;
-  documento_tipo?: string;
+  documento_tipo?: DocumentoTipo;
   documento_numero?: string;
   ramo_atividade?: string;
   detalhes_adicionais?: string;
-  documentoTipo?: string;
+  documentoTipo?: DocumentoTipo;
   documentoNumero?: string;
   ramoAtividade?: string;
   detalhesAdicionais?: string;
@@ -77,19 +65,18 @@ export interface Cliente {
 export interface ClienteCreateRequest {
   tipo?: "PARTICULAR" | "EMPRESA";
   avencado?: boolean;
-  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome: string;
-  nif?: string;
+  nif: string;
   email?: string;
   telefone?: string;
   morada?: string;
   localidade?: string;
   ativo?: boolean;
-  documento_tipo?: string;
+  documento_tipo?: DocumentoTipo;
   documento_numero?: string;
   ramo_atividade?: string;
   detalhes_adicionais?: string;
-  documentoTipo?: string;
+  documentoTipo?: DocumentoTipo;
   documentoNumero?: string;
   ramoAtividade?: string;
   detalhesAdicionais?: string;
@@ -98,7 +85,6 @@ export interface ClienteCreateRequest {
 export interface ClienteUpdateRequest {
   tipo?: "PARTICULAR" | "EMPRESA";
   avencado?: boolean;
-  dados_tipo?: DadosTipoParticular | DadosTipoEmpresa;
   nome?: string;
   nif?: string;
   email?: string;
@@ -106,11 +92,11 @@ export interface ClienteUpdateRequest {
   morada?: string;
   localidade?: string;
   ativo?: boolean;
-  documento_tipo?: string;
+  documento_tipo?: DocumentoTipo;
   documento_numero?: string;
   ramo_atividade?: string;
   detalhes_adicionais?: string;
-  documentoTipo?: string;
+  documentoTipo?: DocumentoTipo;
   documentoNumero?: string;
   ramoAtividade?: string;
   detalhesAdicionais?: string;
