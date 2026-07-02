@@ -114,8 +114,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Milestone Goal:** Simplificar e aplanar o modelo de identificação e contactos de clientes particulares e empresas (remoção de `dados_tipo` JSON em prol de colunas diretas da tabela).
 
 - [x] **Phase 70: Backend refactoring & Seeder Alignment** - Adicionar REG_COMERCIAL a DocumentoTipo, remover dadosTipo e conversor de Cliente, e corrigir o DatabaseSeeder (CLI-06, CLI-09)
-- [ ] **Phase 71: Frontend Types, Schema & API Integration** - Aplanar tipos TypeScript, remover dados_tipo e tornar NIF obrigatório com validação de 9 dígitos no Zod schema (CLI-05, CLI-06)
-- [ ] **Phase 72: Form Refactoring (Create & Edit)** - Simplificar os formulários de criação e edição com campos planos e labels dinâmicas para Morada/Sede (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
+- [x] **Phase 71: Frontend Types, Schema & API Integration** - Aplanar tipos TypeScript, remover dados_tipo e tornar NIF obrigatório com validação de 9 dígitos no Zod schema (CLI-05, CLI-06)
+- [x] **Phase 72: Form Refactoring (Create & Edit)** - Simplificar os formulários de criação e edição com campos planos e labels dinâmicas para Morada/Sede (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
 - [ ] **Phase 73: Detail Page & Printable Ficha Update** - Adaptar a página de detalhe e a ficha impressa para a estrutura simplificada (CLI-11)
 
 **UI hint**: yes
@@ -131,16 +131,16 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: Os tipos TypeScript do cliente refletem o modelo aplanado do backend (sem `dados_tipo`), e o Zod schema exige NIF obrigatório com validação de 9 dígitos numéricos
 **Depends on**: Phase 70
 **Requirements**: CLI-05, CLI-06
-**Plans**: 2 plans
-- [ ] 71-01-PLAN.md — Aplanar tipos DTO + união DocumentoTipo + NIF obrigatório 9 dígitos no Zod schema (CLI-05, CLI-06)
-- [ ] 71-02-PLAN.md — Correções compile-safe às páginas consumidoras para o frontend continuar a compilar após o aplanamento (CLI-06)
+**Plans**: 2/2 — complete
+- [x] 71-01-PLAN.md — Aplanar tipos DTO + união DocumentoTipo + NIF obrigatório 9 dígitos no Zod schema (CLI-05, CLI-06)
+- [x] 71-02-PLAN.md — Correções compile-safe às páginas consumidoras para o frontend continuar a compilar após o aplanamento (CLI-06)
 
 ### Phase 72: Form Refactoring (Create & Edit)
 **Goal**: Os formulários de criação e edição de cliente usam campos planos (sem seletor de card JSON) com labels dinâmicas ("Morada" para Particular, "Sede" para Empresa) e validação de NIF/REG_COMERCIAL
 **Depends on**: Phase 71
 **Requirements**: CLI-05, CLI-07, CLI-08, CLI-09, CLI-10
-**Plans**: 1 plan
-- [ ] 72-01-PLAN.md — Rótulos dinâmicos nome/morada por tipo + rename NIF (Legado)→NIF + confirmar REG_COMERCIAL, em novo e editar (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
+**Plans**: 1/1 — complete
+- [x] 72-01-PLAN.md — Rótulos dinâmicos nome/morada por tipo + rename NIF (Legado)→NIF + confirmar REG_COMERCIAL, em novo e editar (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
 
 ### Phase 73: Detail Page & Printable Ficha Update
 **Goal**: A página de detalhe do cliente e a ficha imprimível apresentam apenas a estrutura de dados simplificada, sem referências ao antigo `dados_tipo`
@@ -180,10 +180,10 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 69. Pesquisa Avançada | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 70. Backend refactoring & Seeder Alignment | v2.7 | 1/1 | Complete | 2026-07-01 |
-| 71. Frontend Types, Schema & API Integration | v2.7 | 0/1 | Pending | — |
-| 72. Form Refactoring (Create & Edit) | v2.7 | 0/1 | Pending | — |
+| 71. Frontend Types, Schema & API Integration | v2.7 | 2/2 | Complete | 2026-07-01 |
+| 72. Form Refactoring (Create & Edit) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 0/1 | Pending | — |
 
-**Next:** Milestone v2.7 active — Phase 70 complete. Run `/gsd-discuss-phase 71` to plan the next phase.
+**Next:** Milestone v2.7 active — Phase 72 complete. Run `/gsd-discuss-phase 73` to plan the next phase.
 
 </content>

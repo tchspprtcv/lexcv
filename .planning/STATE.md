@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Melhoria Gestão de Clientes
-status: In progress
-last_updated: "2026-07-01T00:12:00.000Z"
-last_activity: 2026-07-01 — Phase 70 (Backend refactoring & Seeder Alignment) complete
+status: in_progress
+last_updated: "2026-07-02T01:15:00.000Z"
+last_activity: 2026-07-02 — Phase 72 (Form Refactoring Create & Edit) complete
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 2
-  percent: 25
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-01)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.7 in progress — Phase 70 complete, Phase 71 next
+**Current focus:** Milestone v2.7 in progress — Phase 72 complete, Phase 73 next
 
 ## Current Position
 
-Phase: 70-backend-refactoring-seeder-alignment (complete)
-Plan: 70-01 (complete)
-Status: Phase 70 complete, ready for /gsd:plan-phase 71
-Last activity: 2026-07-01 — Phase 70 (Backend refactoring & Seeder Alignment) complete
+Phase: LEXCV-72-form-refactoring-create-edit (complete)
+Plan: 72-01 (complete)
+Status: Phase 72 complete, ready for /gsd:discuss-phase 73
+Last activity: 2026-07-02 — Phase 72 (Form Refactoring Create & Edit) complete
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Last activity: 2026-07-01 — Phase 70 (Backend refactoring & Seeder Alignment) 
 | 68 | 1 | - | - |
 | 69 | 1 | - | - |
 | 70 | 1 | 12 min | 12 min |
+| 72 | 1 | 12 min | 12 min |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Recent decisions affecting current work:
 - (v2.6 roadmap) Aprovação interna (ADMIN, `pareceres:manage`) fica fora de âmbito nesta milestone (confirmado explicitamente pelo utilizador) — v2.6 cobre criação de versão + entrega direta + vista de entregue. Deferred para v2.7 (PARC-17).
 - (v2.6 roadmap) 5 fases derivadas de 12 requisitos, ordem estrita de dependência: (65) fundação read-only, (66) criação de solicitação, (67) versionamento, (68) entrega+vista-entregue+RBAC (fase de maior risco), (69) pesquisa avançada. NOTF-05/06/07 distribuídas pelas fases correspondentes ao evento que as dispara, em vez de uma fase de notificações isolada.
 - (v2.7 Phase 70) Orphaned `dados_tipo` DB column left unmapped/undropped after removing the field from `Cliente` — `ddl-auto=update` never drops columns in dev, and adding a destructive migration was explicitly out of scope; the column stays dormant until a future cleanup phase decides to drop it.
+- (v2.7 Phase 72) `form.watch("tipo")` read directly in component body (no local useState mirror) to derive live nomeLabel/moradaLabel in both cliente forms — matches the existing pattern where `tipo` lives exclusively in react-hook-form state via Controller + form.setValue.
 
 ### Pending Todos
 

@@ -9,12 +9,12 @@ Requirements for Milestone v2.7 to improve and simplify client management.
 
 ### Simplificação e Identificação Plana
 
-- [ ] **CLI-05**: Utilizador deve fornecer um NIF válido (exatamente 9 dígitos numéricos, obrigatório) para criar ou editar qualquer cliente (Particular ou Empresa)
+- [x] **CLI-05**: Utilizador deve fornecer um NIF válido (exatamente 9 dígitos numéricos, obrigatório) para criar ou editar qualquer cliente (Particular ou Empresa)
 - [x] **CLI-06**: Dados de identificação do cliente são aplanados na BD e o armazenamento em card JSON (`dados_tipo`) é totalmente removido
-- [ ] **CLI-07**: O campo `nome` da tabela `t_cliente` é aproveitado para registar tanto o nome (Particular) como o nome comercial (Empresa)
-- [ ] **CLI-08**: O campo `morada` da tabela `t_cliente` é aproveitado para registar a morada (Particular) ou a sede (Empresa)
+- [x] **CLI-07**: O campo `nome` da tabela `t_cliente` é aproveitado para registar tanto o nome (Particular) como o nome comercial (Empresa)
+- [x] **CLI-08**: O campo `morada` da tabela `t_cliente` é aproveitado para registar a morada (Particular) ou a sede (Empresa)
 - [x] **CLI-09**: O tipo de identificação para Empresa deve ser `REG_COMERCIAL` no campo `documento_tipo` e o número correspondente registado em `documento_numero`
-- [ ] **CLI-10**: Os formulários de criação e edição são adaptados para campos planos com labels dinâmicas (ex.: "Morada" vs. "Sede")
+- [x] **CLI-10**: Os formulários de criação e edição são adaptados para campos planos com labels dinâmicas (ex.: "Morada" vs. "Sede")
 - [ ] **CLI-11**: O detalhe do cliente e a ficha impressa são atualizados para apresentar apenas a nova estrutura de dados simplificada
 
 ## v2 Requirements (Deferred)
@@ -37,10 +37,10 @@ Requirements for Milestone v2.7 to improve and simplify client management.
 |-------------|-------|--------|
 | CLI-05 | Phase 71 (schema layer) + Phase 72 (form UI layer) | Phase 71 complete, Phase 72 pending |
 | CLI-06 | Phase 70 (backend) + Phase 71 (frontend types) | Complete |
-| CLI-07 | Phase 72 | Pending |
-| CLI-08 | Phase 72 | Pending |
+| CLI-07 | Phase 72 | Complete |
+| CLI-08 | Phase 72 | Complete |
 | CLI-09 | Phase 70 | Complete |
-| CLI-10 | Phase 72 | Pending |
+| CLI-10 | Phase 72 | Complete |
 | CLI-11 | Phase 73 | Pending |
 
 **Coverage:**
