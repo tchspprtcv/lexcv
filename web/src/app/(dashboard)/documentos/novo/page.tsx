@@ -58,7 +58,7 @@ export default function DocumentoUploadPage() {
       URL.revokeObjectURL(previewUrlRef.current);
       previewUrlRef.current = undefined;
     }
-    form.setValue("file", createFileList(file));
+    form.setValue("file", createFileList(file), { shouldValidate: true });
 
     let tipo: "imagem" | "pdf" | "outro";
     if (file.type.startsWith("image/")) {
@@ -72,6 +72,15 @@ export default function DocumentoUploadPage() {
     const url = tipo !== "outro" ? URL.createObjectURL(file) : undefined;
     previewUrlRef.current = url;
     setPreVisualizacao({ tipo, url, nome: file.name, tamanho: file.size });
+  };
+
+  const handleFicheiroLimpo = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = undefined;
+    }
+    setPreVisualizacao(null);
+    form.setValue("file", undefined as unknown as FileList, { shouldValidate: true });
   };
 
   const onSubmit = async (values: DocumentoUploadFormValues) => {
@@ -142,6 +151,7 @@ export default function DocumentoUploadPage() {
               <Label>Ficheiro</Label>
               <FileDropZone
                 onFileChange={handleFicheiroSelecionado}
+                onClear={handleFicheiroLimpo}
                 accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
                 disabled={form.formState.isSubmitting || upload.isPending}
               >

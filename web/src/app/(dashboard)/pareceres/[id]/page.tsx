@@ -369,6 +369,9 @@ function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
               onFileChange={(file) =>
                 form.setValue("file", createFileList(file), { shouldValidate: true })
               }
+              onClear={() =>
+                form.setValue("file", undefined as unknown as FileList, { shouldValidate: true })
+              }
               accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
               disabled={form.formState.isSubmitting || versaoUpload.isPending}
             >
