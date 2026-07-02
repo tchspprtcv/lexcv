@@ -15,7 +15,7 @@ Requirements for Milestone v2.7 to improve and simplify client management.
 - [x] **CLI-08**: O campo `morada` da tabela `t_cliente` é aproveitado para registar a morada (Particular) ou a sede (Empresa)
 - [x] **CLI-09**: O tipo de identificação para Empresa deve ser `REG_COMERCIAL` no campo `documento_tipo` e o número correspondente registado em `documento_numero`
 - [x] **CLI-10**: Os formulários de criação e edição são adaptados para campos planos com labels dinâmicas (ex.: "Morada" vs. "Sede")
-- [ ] **CLI-11**: O detalhe do cliente e a ficha impressa são atualizados para apresentar apenas a nova estrutura de dados simplificada
+- [x] **CLI-11**: O detalhe do cliente e a ficha impressa são atualizados para apresentar apenas a nova estrutura de dados simplificada
 
 ## v2 Requirements (Deferred)
 
@@ -41,7 +41,7 @@ Requirements for Milestone v2.7 to improve and simplify client management.
 | CLI-08 | Phase 72 | Complete |
 | CLI-09 | Phase 70 | Complete |
 | CLI-10 | Phase 72 | Complete |
-| CLI-11 | Phase 73 | Pending |
+| CLI-11 | Phase 73 | Complete |
 
 **Coverage:**
 - v1 requirements: 7 total

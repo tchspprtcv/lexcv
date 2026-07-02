@@ -116,7 +116,7 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 - [x] **Phase 70: Backend refactoring & Seeder Alignment** - Adicionar REG_COMERCIAL a DocumentoTipo, remover dadosTipo e conversor de Cliente, e corrigir o DatabaseSeeder (CLI-06, CLI-09)
 - [x] **Phase 71: Frontend Types, Schema & API Integration** - Aplanar tipos TypeScript, remover dados_tipo e tornar NIF obrigatório com validação de 9 dígitos no Zod schema (CLI-05, CLI-06)
 - [x] **Phase 72: Form Refactoring (Create & Edit)** - Simplificar os formulários de criação e edição com campos planos e labels dinâmicas para Morada/Sede (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
-- [ ] **Phase 73: Detail Page & Printable Ficha Update** - Adaptar a página de detalhe e a ficha impressa para a estrutura simplificada (CLI-11)
+- [x] **Phase 73: Detail Page & Printable Ficha Update** - Adaptar a página de detalhe e a ficha impressa para a estrutura simplificada (CLI-11)
 
 **UI hint**: yes
 
@@ -146,8 +146,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: A página de detalhe do cliente e a ficha imprimível apresentam apenas a estrutura de dados simplificada, sem referências ao antigo `dados_tipo`
 **Depends on**: Phase 72
 **Requirements**: CLI-11
-**Plans**: 1 plan
-- [ ] 73-01-PLAN.md — Dynamic Morada/Sede labels on detail page + printable ficha; remove discontinued blank Empresa fields (CLI-11)
+**Plans**: 1/1 — complete
+- [x] 73-01-PLAN.md — Dynamic Morada/Sede labels on detail page + printable ficha; remove discontinued blank Empresa fields (CLI-11)
 
 ## Progress
 
@@ -183,7 +183,7 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 | 70. Backend refactoring & Seeder Alignment | v2.7 | 1/1 | Complete | 2026-07-01 |
 | 71. Frontend Types, Schema & API Integration | v2.7 | 2/2 | Complete | 2026-07-01 |
 | 72. Form Refactoring (Create & Edit) | v2.7 | 1/1 | Complete | 2026-07-02 |
-| 73. Detail Page & Printable Ficha Update | v2.7 | 0/1 | Pending | — |
+| 73. Detail Page & Printable Ficha Update | v2.7 | 1/1 | Complete | 2026-07-02 |
 
 **Next:** Milestone v2.7 active — Phase 72 complete. Run `/gsd-discuss-phase 73` to plan the next phase.
 
