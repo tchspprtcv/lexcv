@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Filter, Search } from "lucide-react";
+import { Filter, MoreVertical, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -443,6 +443,7 @@ function ParecerPageContent() {
                       <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">PRIORIDADE</TableHead>
                       <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">PRAZO</TableHead>
                       <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">CRIADO</TableHead>
+                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">AÇÕES</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -464,6 +465,13 @@ function ParecerPageContent() {
                         <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{s.prioridade ?? "—"}</TableCell>
                         <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.prazo)}</TableCell>
                         <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            <Link href={`/pareceres/${encodeURIComponent(s.id)}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
