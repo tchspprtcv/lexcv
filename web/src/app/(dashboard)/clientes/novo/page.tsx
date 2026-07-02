@@ -25,7 +25,13 @@ import { useCreateCliente } from "@/hooks/use-clientes";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
-import type { ClienteCreateRequest } from "@/types/clientes";
+import type { ClienteCreateRequest, DocumentoTipo } from "@/types/clientes";
+
+const DOCUMENTO_TIPOS: readonly DocumentoTipo[] = ["NIF", "CNI", "PASSAPORTE", "REG_COMERCIAL"];
+
+function toDocumentoTipo(value: string | undefined): DocumentoTipo | undefined {
+  return DOCUMENTO_TIPOS.includes(value as DocumentoTipo) ? (value as DocumentoTipo) : undefined;
+}
 
 const selectClassName =
   "flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
@@ -81,11 +87,14 @@ export default function ClienteCreatePage() {
       return;
     }
     try {
+      const documentoTipo = toDocumentoTipo(values.documento_tipo);
+
       const payload: ClienteCreateRequest = {
         ...values,
         tipo: values.tipo,
         avencado: values.avencado,
-        documentoTipo: values.documento_tipo || undefined,
+        documento_tipo: documentoTipo,
+        documentoTipo: documentoTipo,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,
         detalhesAdicionais: values.detalhes_adicionais || undefined,

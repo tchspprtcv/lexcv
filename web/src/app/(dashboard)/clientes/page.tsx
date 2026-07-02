@@ -153,7 +153,8 @@ function ClientesPageContent({
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i] ?? [];
       const nome = (r[idxNome] ?? "").trim();
-      if (!nome) {
+      const nif = idxNif >= 0 ? (r[idxNif] ?? "").trim() : "";
+      if (!nome || !nif) {
         failed++;
         continue;
       }
@@ -163,7 +164,7 @@ function ClientesPageContent({
           tipo: idxTipo >= 0
             ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
             : undefined,
-          nif: idxNif >= 0 ? (r[idxNif] ?? "").trim() || undefined : undefined,
+          nif,
           telefone: idxTelefone >= 0 ? (r[idxTelefone] ?? "").trim() || undefined : undefined,
           email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,
         });

@@ -24,7 +24,14 @@ import type {
   Deslocacao,
   DocumentoATratar,
   DocumentoEntregue,
+  DocumentoTipo,
 } from "@/types/clientes";
+
+const DOCUMENTO_TIPOS: readonly DocumentoTipo[] = ["NIF", "CNI", "PASSAPORTE", "REG_COMERCIAL"];
+
+function toDocumentoTipo(value: string | undefined): DocumentoTipo | undefined {
+  return DOCUMENTO_TIPOS.includes(value as DocumentoTipo) ? (value as DocumentoTipo) : undefined;
+}
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -171,11 +178,14 @@ function ClienteEditContent({ id }: { id: string }) {
   const onSubmit = async (values: ClienteFormValues) => {
     setServerError(null);
     try {
+      const documentoTipo = toDocumentoTipo(values.documento_tipo);
+
       const payload: ClienteUpdateRequest = {
         ...values,
         tipo: values.tipo,
         avencado: values.avencado,
-        documentoTipo: values.documento_tipo || undefined,
+        documento_tipo: documentoTipo,
+        documentoTipo: documentoTipo,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,
         detalhesAdicionais: values.detalhes_adicionais || undefined,

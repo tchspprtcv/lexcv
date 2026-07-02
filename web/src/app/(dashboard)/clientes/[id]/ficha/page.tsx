@@ -13,7 +13,7 @@ import {
 } from "@/hooks/use-clientes";
 import { useMe } from "@/hooks/use-me";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { Cliente, DadosTipoEmpresa, DadosTipoParticular } from "@/types/clientes";
+import type { Cliente } from "@/types/clientes";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -39,13 +39,6 @@ const BLANK = "___________";
 function fmt(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return BLANK;
   return String(value);
-}
-
-function isDadosTipoParticular(
-  dados: DadosTipoParticular | DadosTipoEmpresa | undefined,
-): dados is DadosTipoParticular {
-  if (!dados) return false;
-  return "idade" in dados || "sexo" in dados || "nacionalidade" in dados;
 }
 
 export default function FichaPage({ params }: PageProps) {
@@ -153,12 +146,10 @@ function Ficha({
   administrativosNomes: string;
 }) {
   const isEmpresa = cliente.tipo === "EMPRESA";
-  const dadosParticular = isDadosTipoParticular(cliente.dados_tipo) ? cliente.dados_tipo : undefined;
-  const dadosEmpresa = !isDadosTipoParticular(cliente.dados_tipo) ? cliente.dados_tipo : undefined;
 
-  const idade = cliente.idade ?? dadosParticular?.idade;
-  const sexo = cliente.sexo ?? dadosParticular?.sexo;
-  const nacionalidade = cliente.nacionalidade ?? dadosParticular?.nacionalidade;
+  const idade = cliente.idade;
+  const sexo = cliente.sexo;
+  const nacionalidade = cliente.nacionalidade;
 
   const documentosEntregues =
     cliente.documentos_entregues && cliente.documentos_entregues.length > 0
@@ -194,10 +185,10 @@ function Ficha({
       {isEmpresa ? (
         <>
           <Field label="NIF" value={fmt(cliente.nif)} />
-          <Field label="Nome Comercial" value={fmt(dadosEmpresa?.nome_comercial)} />
-          <Field label="Sede" value={fmt(dadosEmpresa?.sede)} />
-          <Field label="Representante Legal" value={fmt(dadosEmpresa?.representante_legal)} />
-          <Field label="Cargo" value={fmt(dadosEmpresa?.cargo)} />
+          <Field label="Nome Comercial" value={fmt(undefined)} />
+          <Field label="Sede" value={fmt(undefined)} />
+          <Field label="Representante Legal" value={fmt(undefined)} />
+          <Field label="Cargo" value={fmt(undefined)} />
         </>
       ) : (
         <>
