@@ -1,5 +1,25 @@
 # Milestones
 
+## v2.7 Melhoria Gestão de Clientes (Shipped: 2026-07-02)
+
+**Phases completed:** 5 phases (70–73.1, includes 1 gap-closure insertion), 6 plans
+
+**Key accomplishments:**
+
+- Backend `Cliente` entity aplanado — remoção completa do card JSON `dados_tipo` (POJO + AttributeConverter), tipo de documento `REG_COMERCIAL` adicionado para Empresa, DatabaseSeeder alinhado
+- Tipos TypeScript e Zod schema aplanados no frontend, com NIF obrigatório (regex de 9 dígitos) aplicado a Particular e Empresa
+- Formulários de criação e edição de cliente com labels dinâmicas ("Nome"/"Nome Comercial", "Morada"/"Sede") consoante o tipo, campo NIF promovido de "(Legado)" a identificação primária
+- Página de detalhe e ficha imprimível atualizadas para a estrutura simplificada — remoção dos campos de Empresa descontinuados (Nome Comercial, Representante Legal, Cargo) da ficha, sem placeholders em branco
+- Auditoria de milestone encontrou um gap de integração no CLI-05 (NIF podia ser sobrescrito silenciosamente por lógica legada, sem validação server-side) — fechado por uma fase de gap-closure inserida (73.1), cujo próprio code review apanhou e corrigiu uma regressão adicional (validação JPA-lifecycle bloqueando `save()` não relacionados para clientes legados com NIF inválido) antes do deploy
+- Re-auditoria confirmou 7/7 requisitos satisfeitos, zero blockers remanescentes
+
+**Known gaps at close:**
+
+- REG_COMERCIAL e outros valores de `DocumentoTipo` mostrados como string bruta do enum em vez de label traduzida na página de detalhe/ficha — cosmético, não bloqueante
+- Nenhum teste automatizado cobre os 4 cenários de validação de NIF introduzidos na Phase 73.1
+
+Ver `.planning/milestones/v2.7-MILESTONE-AUDIT.md` e `.planning/milestones/v2.7-ROADMAP.md` para detalhes completos.
+
 ## v2.6 Módulo de Parecer Jurídico — UI (Shipped: 2026-07-01)
 
 **Phases completed:** 5 phases, 6 plans, 15 tasks

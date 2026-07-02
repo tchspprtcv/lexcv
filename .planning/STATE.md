@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.7
 milestone_name: Melhoria Gestão de Clientes
-status: in_progress
-last_updated: "2026-07-02T11:11:03.199Z"
-last_activity: 2026-07-02 — Phase 73.1 (Fechar gap CLI-05) complete
+status: complete
+last_updated: "2026-07-02T11:35:00.000Z"
+last_activity: 2026-07-02 — Milestone v2.7 shipped (audit passed 7/7 after gap closure)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 5
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-01)
+See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.7 — Phase 73.1 (gap closure CLI-05) complete; this was the last phase blocking milestone completion
+**Current focus:** Milestone v2.7 shipped — planning next milestone (v2.8)
 
 ## Current Position
 
-Phase: LEXCV-73.1-fechar-gap-cli-05-remover-sync-legado-de-nif-nos-formul-rios (complete)
-Plan: 73.1-01 (complete)
-Status: Phase 73.1 complete, ready for /gsd:audit-milestone or /gsd:complete-milestone
-Last activity: 2026-07-02 — Phase 73.1 (Fechar gap CLI-05) complete
+Phase: — (milestone v2.7 complete)
+Plan: —
+Status: Milestone v2.7 archived. Ready for /gsd:new-milestone
+Last activity: 2026-07-02 — Milestone v2.7 shipped (audit passed 7/7 after gap closure)
 
 ## Performance Metrics
 
@@ -134,7 +134,15 @@ Items acknowledged and deferred at milestone v2.6 close on 2026-07-01 (see .plan
 | feature | PARC-17 Aprovação interna (ADMIN) na UI de pareceres | deferred_to_v2.7 (carried over from v2.5 close, still not built — out of v2.6 scope by explicit user decision) |
 | ux | Phase 69 UI review (15/24, lowest this milestone): Aplicar on the simple filter bar silently discards an active search with no warning | non-blocking, candidate for quick follow-up |
 
+Items acknowledged and deferred at milestone v2.7 close on 2026-07-02 (see .planning/milestones/v2.7-MILESTONE-AUDIT.md for full detail):
+
+| Category | Item | Status |
+|----------|------|--------|
+| feature | PARC-17 Aprovação interna (ADMIN) na UI de pareceres | still not built — carried over again, candidate for a future milestone |
+| ux | REG_COMERCIAL and other DocumentoTipo values render as raw enum strings instead of translated Portuguese labels on client detail page and printed ficha | non-blocking cosmetic gap, candidate for a small follow-up |
+| test_debt | No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1 (missing/malformed → 400, valid → persisted as-is, never re-derived from documento_numero) | non-blocking, tracked in Pending Todos |
+| tooling | gsd-sdk roadmap-update tooling truncated ROADMAP.md to a single phase stub during Phase 73.1 planning (recovered from git history) | reported for awareness; no code-level follow-up needed in this project, but future milestones should sanity-check `roadmap.analyze` phase_count after any SDK roadmap write |
+
 ## Operator Next Steps
 
-- Phase 73.1 (CLI-05 gap closure) complete — this was the last outstanding phase for milestone v2.7. Run /gsd:audit-milestone to confirm, then /gsd:complete-milestone.
-- Start the next milestone with /gsd-new-milestone once v2.7 is closed
+- Milestone v2.7 shipped and archived (audit passed 7/7 after gap closure). Start the next milestone with /gsd:new-milestone.

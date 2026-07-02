@@ -41,16 +41,17 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Vista de Ficha Cliente imprimível (reproduz formulário real do escritório) — v2.4
 - ✓ Módulo de Parecer Jurídico — backend API (solicitação, versionamento imutável, aprovação/entrega, auditoria automática, pesquisa avançada), scope RBAC `pareceres:view/create/edit/manage` — v2.5 (backend-only)
 - ✓ Módulo de Parecer Jurídico — UI frontend completa: rotas `/pareceres` (lista dual-view, detalhe+timeline, criação, versionamento com anexo obrigatório, entrega irreversível, vista "Parecer Entregue", pesquisa avançada), hooks TanStack Query, RBAC espelhado (incluindo verificação de instância advogado-responsável/ADMIN) — v2.6
+- ✓ NIF obrigatório para Particular e Empresa (validação de 9 dígitos, enforced client-side e server-side) — v2.7
+- ✓ Simplificação de dados de identificação (remoção total do card JSON `dados_tipo`, backend e frontend) — v2.7
+- ✓ Uso do campo `nome` da tabela cliente para nome (Particular) e nome comercial (Empresa), com labels dinâmicas — v2.7
+- ✓ Uso do campo `morada` da tabela cliente para morada (Particular) e sede (Empresa), com labels dinâmicas — v2.7
+- ✓ Campo `documento_tipo` para Empresa com valor `REG_COMERCIAL`, número guardado em `documento_numero` — v2.7
+- ✓ Formulários de criação e edição de cliente adaptados para campos planos com labels dinâmicas — v2.7
+- ✓ Detalhe do cliente e ficha impressa adaptados para a estrutura de dados simplificada — v2.7
 
 ### Active
 
-- **CLI-05**: NIF obrigatório para Particular e Empresa (validação de 9 dígitos) — v2.7
-- **CLI-06**: Simplificação de dados de identificação (remoção do card JSON `dados_tipo`) — v2.7
-- **CLI-07**: Uso do campo `nome` da tabela cliente para nome (Particular) e nome comercial (Empresa) — v2.7
-- **CLI-08**: Uso do campo `morada` da tabela cliente para morada (Particular) e sede (Empresa) — v2.7
-- **CLI-09**: Campo `documento_tipo` para Empresa deve ser `REG_COMERCIAL` e os números guardados em `documento_numero` — v2.7
-- **CLI-10**: Formulários de criação e edição adaptados para campos planos com labels dinâmicas — v2.7
-- **CLI-11**: Detalhe do cliente e ficha impressa adaptados para estrutura simplificada — v2.7
+(Nenhum requisito ativo — a planear próxima milestone)
 
 ### Out of Scope
 
@@ -107,10 +108,15 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | NOTF-05/06/07 (notificações in-app de atribuição/versão/entrega) removidas do âmbito v1 da v2.6 | Descoberto durante planeamento da Phase 66 que o `NotificationBell` existente (v2.1) só mostra eventos da Agenda — não existe entidade/tabela de notificações genérica no backend; implementar como especificado exigiria trabalho de backend fora do âmbito desta milestone | ✓ Good (evitou expansão de âmbito não autorizada; requer milestone futura dedicada) |
 | Execução direta no working tree (sem `isolation="worktree"`) para os executores de plano | Um agente executor spawnado com isolamento de worktree apontou para um checkout desatualizado sem os commits de planeamento recentes, bloqueando a execução; a execução direta funcionou de forma fiável em todas as 5 fases | ✓ Good |
 | `pesquisar()` extraído para `ParecerPesquisaController` dedicado (`@RequestMapping("/api/v1/pareceres/pesquisa")`) | Auditoria de integração da milestone encontrou que o método vivia dentro de `ParecerController` (mapeado a `/api/v1/pareceres/solicitacoes`), e o Spring concatena mapeamentos de classe+método independentemente de barra inicial — a rota real nunca correspondeu à documentada, tornando toda a Pesquisa Avançada (Phase 69) inacessível em runtime apesar de passar toda a revisão estática. Bug pré-existente desde a v2.5 (Phase 64), só detectado nesta auditoria de milestone | ✓ Good (corrigido na mesma sessão, commit 657bcbc) |
+| `dados_tipo` (coluna JSON única, decisão da v2.4) removida por completo — identificação de cliente aplanada em colunas diretas (`nif`, `documento_tipo`, `documento_numero`) | Reversão deliberada da decisão de v2.4: o padrão JSON-por-tipo mostrou-se mais difícil de validar/manter do que colunas planas para este caso específico (identificação, campo de baixa cardinalidade) — os outros usos de `@Convert`/JSON (documentos, deslocações, honorários) permanecem inalterados | ✓ Good |
+| Campo `nif` dedicado passa a única fonte de verdade, substituindo a lógica legada de sincronização a partir de `documento_tipo`/`documento_numero` (frontend E backend) | Auditoria de milestone (v2.7) encontrou um bug de sobrescrita silenciosa: o campo NIF validado podia ser substituído por um valor não validado do campo legado. Fase de fecho de gap (73.1) removeu a lógica em ambas as camadas | ✓ Good |
+| `jakarta.persistence.validation.mode: none` no `application.yml`, mantendo `@Valid` ao nível do controller | Adicionar Bean Validation (`@NotBlank`/`@Pattern`) a `Cliente.nif` ativou also a validação JPA-lifecycle (`@PrePersist`/`@PreUpdate`) em todos os `save()`, incluindo operações não relacionadas (upload de procuração, merge de clientes) que não tocam `nif` — quebraria clientes legados com NIF inválido. Code review da Phase 73.1 apanhou isto antes do deploy | ✓ Good |
 
 ## Current State
 
-**Shipped:** v2.6 (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5: `/pareceres` lista (dual-view, badges, filtros), detalhe com timeline imutável de versões, criação de solicitação (cliente/processo/advogado), elaboração de versões (resumo + anexo obrigatório, reuso do upload de Documentos), entrega irreversível com confirmação e vista dedicada "Parecer Entregue", pesquisa avançada (texto livre + filtros), e RBAC espelhado em toda a UI. Ver `.planning/milestones/v2.6-MILESTONE-AUDIT.md`.
+**Shipped:** v2.7 (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes: remoção completa do card JSON `dados_tipo` (backend e frontend), tipo de documento `REG_COMERCIAL` para Empresa, NIF obrigatório (9 dígitos, validado client-side e server-side), formulários de criação/edição com labels dinâmicas ("Nome"/"Nome Comercial", "Morada"/"Sede"), e página de detalhe + ficha imprimível atualizadas. Auditoria de milestone encontrou e fechou um gap no NIF obrigatório (fase 73.1 inserida) — ver `.planning/milestones/v2.7-MILESTONE-AUDIT.md`.
+
+**v2.6** (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5.
 
 **v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração → Aprovação interna opcional → Entrega.
 
@@ -128,7 +134,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Planning next milestone (v2.7).
+**Current focus:** Planning next milestone (v2.8).
 
 ## Evolution
 
@@ -148,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 — after v2.6 milestone (Módulo de Parecer Jurídico — UI) shipped*
+*Last updated: 2026-07-02 — after v2.7 milestone (Melhoria Gestão de Clientes) shipped*

@@ -143,6 +143,48 @@ Frontend UI for the Módulo de Parecer Jurídico, closing the "backend-only, zer
 
 ---
 
+## Milestone: v2.7 — Melhoria Gestão de Clientes
+
+**Shipped:** 2026-07-02
+**Phases:** 5 (70–73.1, includes 1 gap-closure insertion) | **Plans:** 6
+
+### What Was Built
+
+Simplification and flattening of the client identification data model: removed the `dados_tipo` JSON card entirely (backend entity + converter, frontend types + schema), added `REG_COMERCIAL` as a `DocumentoTipo` for Empresa clients, made NIF mandatory with 9-digit validation across both layers, gave the create/edit forms dynamic labels ("Nome"/"Nome Comercial", "Morada"/"Sede" based on client type), and updated the detail page + printable ficha to drop the discontinued Empresa-only fields (Nome Comercial, Representante Legal, Cargo) instead of showing them permanently blank.
+
+### What Worked
+
+- **Backend-first phase ordering (70 → 71 → 72 → 73) with an explicit build-breakage guard.** Flattening the frontend types (Phase 71) deliberately left 3 consumer pages non-compiling for one plan, with the very next plan (71-02) dedicated entirely to restoring `tsc --noEmit`/`pnpm build` to green before moving on — this made an otherwise risky multi-file migration verifiable at every step instead of accumulating breakage across phases.
+- **Pattern-mapper before every planner spawn**, even for small phases. For Phase 72, the pattern-mapper's line-level read of the actual current forms revealed that 2 of the 3 "fixes" the roadmap phase description implied (REG_COMERCIAL selectable, NIF field position) were already done by a Phase 71 review fix — the plan correctly scoped down to just the 2 remaining changes instead of redundantly re-touching already-correct code.
+- **The revision loop caught a real, empirically-verified bug in a plan's own verify command** (Phase 71): an over-escaped grep regex across XML/shell/BRE layers that would report failure even against a correct implementation. The plan-checker didn't just flag it abstractly — it ran the broken command against real and simulated-fixed source to prove the failure mode, then the fix was verified the same way on re-check.
+- **Milestone audit → gap closure → re-audit closed a loop cleanly.** The first audit found CLI-05 unsatisfied via a cross-phase integration defect invisible to any single phase's static verification (a pre-milestone legacy code path interacting badly with a new Phase 71 field). A decimal gap-closure phase (73.1) was inserted, planned, executed, and code-reviewed — and the review itself caught a second, more subtle regression (JPA-lifecycle Bean Validation firing on unrelated `save()` calls) before it ever reached the audit. The re-audit confirmed both issues closed with zero new gaps.
+
+### What Was Inefficient
+
+- **A gsd-sdk roadmap-update tool call silently truncated ROADMAP.md to just the newly-inserted phase's stub** during Phase 73.1's planning step, dropping all milestone history, prior phase details, and the progress table. This went undetected for 4 commits (through the entire gap-closure execution) because nothing in the normal flow re-reads and validates ROADMAP.md's overall shape after a write — it was only caught when `roadmap.analyze` returned `phase_count: 0` at milestone-completion time. Recovered from git history (`git show <last-good-commit>:.planning/ROADMAP.md`), but this is a tooling reliability gap, not a process one: **any GSD workflow step that writes ROADMAP.md via the SDK should be followed by an immediate `roadmap.analyze` sanity check** (phase_count matches expectation) rather than trusting the write silently succeeded.
+- **The executor for Phase 73's plan hung after committing both task edits** (a Windows stdio subprocess hang — the process stayed alive with near-zero CPU and never returned its final report). Recovered by independently verifying the commits matched the plan, re-running both automated verify gates plus a full build, then writing SUMMARY.md directly and killing the stuck task — no rework needed, but this is the second milestone in a row (after v2.6) where a Windows-specific subprocess hang required manual intervention; worth a standing runbook entry rather than re-deriving the recovery steps each time.
+- **The frontend's pre-existing "NIF sync" logic (predating this milestone) was not audited for interaction with the new mandatory `nif` field during Phase 72's planning**, even though Phase 72 explicitly touched the same forms. It took a full milestone-level integration audit (not phase-level review, not phase-level verification) to surface it — a pattern now repeated across v2.6 (routing bug) and v2.7 (field overwrite bug): **legacy code paths that predate the current milestone and sit adjacent to new work are a recurring blind spot for phase-scoped checks**, and should get explicit attention during planning when a phase's `<context>` shows existing code being modified alongside new code, not just when new code is added.
+
+### Patterns Established
+
+- **Build-breakage guard as an explicit planner instruction**, not an assumption: when a plan is known to leave the codebase non-compiling until a dependent plan runs, say so explicitly in the planning prompt and require the dependent plan to end with a whole-app `tsc --noEmit`/`build` gate as its own must-have — this was decisive in Phase 71 landing cleanly across 2 plans with zero real-world broken-build window.
+- **Gap-closure phases get the full phase lifecycle, not an abbreviated one.** Phase 73.1 went through context → pattern-mapping → planning → plan-check → revision → re-check → execution → phase-verification → code-review → fix → re-verification, exactly like a normal phase, despite being "just a bug fix." The code-review step alone caught a regression the original fix would have shipped without.
+- **Re-audit after gap closure, not just re-verify the closed phase.** Phase-level VERIFICATION.md passing for 73.1 was necessary but not sufficient — only re-running the milestone-level integration checker confirmed the fix didn't introduce a new cross-cutting problem (the JPA validation-mode scoping question required tracing Spring MVC vs. Hibernate lifecycle validation as two independent systems, which is inherently a cross-file/cross-layer concern no phase-scoped check would naturally cover).
+
+### Key Lessons
+
+- **A phase-level `passed` VERIFICATION.md does not guarantee a requirement is satisfied end-to-end** when that requirement's implementation spans multiple phases and interacts with pre-existing code. Milestone-level integration checking is not a formality — in both v2.6 and v2.7 it found the single most severe defect of the entire milestone, undetected by every phase-level gate.
+- When a fix changes validation behavior on a shared entity/model (adding a Bean Validation constraint, tightening a schema), explicitly ask "what else reads or writes this entity, and does it still hold the invariants this fix assumes?" — the JPA-lifecycle validation regression in Phase 73.1 was exactly this class of miss, caught only because code review traced actual call sites rather than trusting the fix's stated scope.
+- Any tool that writes a large, structurally important file (ROADMAP.md) should have its output spot-checked immediately after the call, not assumed correct — a silent truncation can persist through several subsequent commits before anything downstream notices.
+
+### Cost Observations
+
+- Model mix: opus for all planners (4 phase plans + 1 gap-closure plan + 1 revision), sonnet for everything else (pattern-mapping, plan-checking, execution, verification, code-review, code-fix, integration-audit).
+- Sessions: 2 — interrupted once by a Claude session usage-limit reset mid-Phase-73 pattern-mapping, resumed cleanly via scheduled wakeup with zero rework needed (both already-committed code edits were verified intact and the SUMMARY was completed directly after confirming the stuck executor's work was correct).
+- Notable: this milestone needed a decimal gap-closure phase (73.1) — the second consecutive milestone (after v2.6) where the milestone-level audit, not any phase-level gate, found the most consequential defect. This is now a clear enough pattern to treat milestone audits as load-bearing rather than a final formality.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -150,5 +192,6 @@ Frontend UI for the Módulo de Parecer Jurídico, closing the "backend-only, zer
 | v2.3 Responsividade | 4 | 8 | 1 | 51 | 11/11 |
 | v2.4 Ficha de Cliente | 4 | 14 | 1 | 79+ | 19/19 (post-audit-remediation) |
 | v2.6 Módulo de Parecer Jurídico — UI | 5 | 6 | 1 | 7 (frontend+1 backend fix) | 9/9 (post-audit-remediation) |
+| v2.7 Melhoria Gestão de Clientes | 5 (incl. 1 gap-closure) | 6 | 1 | 15 (backend+frontend) | 7/7 (post-audit-remediation) |
 
 *Table grows with each milestone*
