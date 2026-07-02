@@ -57,7 +57,7 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
-const addToRemoveQueue = (toastId: string) => {
+function addToRemoveQueue(toastId: string, dispatch: (action: Action) => void) {
   if (toastTimeouts.has(toastId)) {
     return
   }
@@ -73,7 +73,7 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
-export const reducer = (state: State, action: Action): State => {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case actionTypes.ADD_TOAST:
       return {
@@ -90,16 +90,8 @@ export const reducer = (state: State, action: Action): State => {
       }
 
     case actionTypes.DISMISS_TOAST: {
+      // Side effect handled by caller (needs a dispatch reference) — see dismissToast().
       const { toastId } = action
-
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
       return {
         ...state,
         toasts: state.toasts.map((t) =>
@@ -126,33 +118,52 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
-const globalSymbols = globalThis as any;
+/**
+ * Bridge to the currently-mounted <Toaster />'s dispatch function.
+ *
+ * Previous implementation stored listeners/state in a module-level array
+ * anchored on `globalThis` so that plain `toast()` calls (from files that
+ * don't render <Toaster />) could reach whichever component instance was
+ * actually mounted. In practice that pattern relied on the *same* module
+ * instance being imported everywhere, which Next.js Fast Refresh / Turbopack
+ * does not guarantee when only some importing files are hot-reloaded — a
+ * `toast()` call could resolve against a stale module graph that no longer
+ * matched the live <Toaster />, silently dropping the dispatch.
+ *
+ * This bridge avoids that failure mode entirely: <Toaster /> re-registers
+ * itself on every render (not just on mount), so the bridge always points at
+ * whichever provider instance React actually has on screen, self-healing
+ * across hot reloads instead of depending on a single frozen closure.
+ */
+let bridgeDispatch: ((action: Action) => void) | null = null
 
-if (!globalSymbols.__toastListeners) {
-  globalSymbols.__toastListeners = [];
+function registerToastBridge(dispatch: (action: Action) => void) {
+  bridgeDispatch = dispatch
+  return () => {
+    if (bridgeDispatch === dispatch) {
+      bridgeDispatch = null
+    }
+  }
 }
-if (!globalSymbols.__toastMemoryState) {
-  globalSymbols.__toastMemoryState = { toasts: [] };
+
+function dispatchToast(action: Action) {
+  if (!bridgeDispatch) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[toast] dispatched before <Toaster /> mounted — toast will be dropped:",
+        action,
+      )
+    }
+    return
+  }
+  bridgeDispatch(action)
 }
 
-const listeners: Array<(state: State) => void> = globalSymbols.__toastListeners;
-
-function getMemoryState(): State {
-  return globalSymbols.__toastMemoryState;
-}
-
-function setMemoryState(state: State) {
-  globalSymbols.__toastMemoryState = state;
-}
-
-function dispatch(action: Action) {
-  const currentState = getMemoryState();
-  const newState = reducer(currentState, action);
-  setMemoryState(newState);
-
-  listeners.forEach((listener) => {
-    listener(newState);
-  });
+function dismissToast(toastId?: string) {
+  if (toastId) {
+    addToRemoveQueue(toastId, dispatchToast)
+  }
+  dispatchToast({ type: actionTypes.DISMISS_TOAST, toastId })
 }
 
 type Toast = Omit<ToasterToast, "id">
@@ -161,13 +172,13 @@ function toast({ ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
-    dispatch({
+    dispatchToast({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
     })
-  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+  const dismiss = () => dismissToast(id)
 
-  dispatch({
+  dispatchToast({
     type: actionTypes.ADD_TOAST,
     toast: {
       ...props,
@@ -186,31 +197,30 @@ function toast({ ...props }: Toast) {
   }
 }
 
+/**
+ * Owns the canonical toast state and registers itself as the live dispatch
+ * target on every render. Must be mounted once, near the root (see
+ * app/layout.tsx's <Toaster />) — that's the only place this hook is used.
+ */
 function useToast() {
-  const [state, setState] = React.useState<State>(getMemoryState())
+  const [state, setState] = React.useState<State>({ toasts: [] })
 
   React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [])
+    return registerToastBridge((action) => setState((prev) => reducer(prev, action)))
+  })
 
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: dismissToast,
   }
 }
 
-// Criar utilitário de chamadas simplificadas como solicitado (Sucesso e Erro)
-toast.success = (message: React.ReactNode, options?: Partial<Toast>) => 
+// Utilitários de chamada simplificados (Sucesso e Erro)
+toast.success = (message: React.ReactNode, options?: Partial<Toast>) =>
   toast({ title: "Sucesso", description: message, variant: "default", ...options });
 
-toast.error = (message: React.ReactNode, options?: Partial<Toast>) => 
+toast.error = (message: React.ReactNode, options?: Partial<Toast>) =>
   toast({ title: "Erro", description: message, variant: "destructive", ...options });
 
 export { useToast, toast }
