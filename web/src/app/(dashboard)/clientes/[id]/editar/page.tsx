@@ -76,7 +76,6 @@ function ClienteEditContent({ id }: { id: string }) {
       documento_numero: "",
       ramo_atividade: "",
       detalhes_adicionais: "",
-      dados_tipo: {},
       descricao_caso: "",
       honorarios_propostos: {
         total: undefined,
@@ -87,7 +86,6 @@ function ClienteEditContent({ id }: { id: string }) {
   });
 
   const [pendingTipo, setPendingTipo] = React.useState<"PARTICULAR" | "EMPRESA" | null>(null);
-  const watchedTipo = form.watch("tipo");
 
   function onTipoChange(newTipo: "PARTICULAR" | "EMPRESA") {
     const current = form.getValues("tipo");
@@ -100,16 +98,6 @@ function ClienteEditContent({ id }: { id: string }) {
 
   function confirmTipoChange() {
     if (!pendingTipo) return;
-    if (pendingTipo === "PARTICULAR") {
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.nome_comercial", "");
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.sede", "");
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.representante_legal", "");
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.cargo", "");
-    } else {
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.idade", undefined);
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.sexo", "");
-      (form.setValue as (name: string, value: unknown) => void)("dados_tipo.nacionalidade", "");
-    }
     form.setValue("tipo", pendingTipo, { shouldValidate: true });
     setPendingTipo(null);
   }
@@ -147,7 +135,6 @@ function ClienteEditContent({ id }: { id: string }) {
       documento_numero: cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "",
       ramo_atividade: cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "",
       detalhes_adicionais: cliente.data.detalhes_adicionais ?? cliente.data.detalhesAdicionais ?? "",
-      dados_tipo: cliente.data.dados_tipo ?? {},
       descricao_caso: cliente.data.descricao_caso ?? "",
       honorarios_propostos: {
         total: cliente.data.honorarios_propostos?.total ?? undefined,
@@ -184,27 +171,10 @@ function ClienteEditContent({ id }: { id: string }) {
   const onSubmit = async (values: ClienteFormValues) => {
     setServerError(null);
     try {
-      const dados_tipo =
-        values.tipo === "PARTICULAR"
-          ? {
-              idade: values.dados_tipo?.idade,
-              sexo: values.dados_tipo?.sexo,
-              nacionalidade: values.dados_tipo?.nacionalidade,
-            }
-          : values.tipo === "EMPRESA"
-            ? {
-                nome_comercial: values.dados_tipo?.nome_comercial,
-                sede: values.dados_tipo?.sede,
-                representante_legal: values.dados_tipo?.representante_legal,
-                cargo: values.dados_tipo?.cargo,
-              }
-            : undefined;
-
       const payload: ClienteUpdateRequest = {
         ...values,
         tipo: values.tipo,
         avencado: values.avencado,
-        dados_tipo,
         documentoTipo: values.documento_tipo || undefined,
         documentoNumero: values.documento_numero || undefined,
         ramoAtividade: values.ramo_atividade || undefined,
@@ -312,55 +282,6 @@ function ClienteEditContent({ id }: { id: string }) {
                     <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
                   ) : null}
                 </div>
-
-                {watchedTipo === "PARTICULAR" && (
-                  <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Dados Pessoais</h4>
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.idade">Idade</Label>
-                        <Input id="dados_tipo.idade" type="number" className="rounded-none" {...form.register("dados_tipo.idade", { valueAsNumber: true })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.sexo">Sexo</Label>
-                        <Input id="dados_tipo.sexo" className="rounded-none" {...form.register("dados_tipo.sexo")} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.nacionalidade">Nacionalidade</Label>
-                        <Input id="dados_tipo.nacionalidade" className="rounded-none" {...form.register("dados_tipo.nacionalidade")} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {watchedTipo === "EMPRESA" && (
-                  <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Dados da Empresa</h4>
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.nome_comercial">Nome Comercial <span className="text-red-500">*</span></Label>
-                        <Input id="dados_tipo.nome_comercial" className="rounded-none" {...form.register("dados_tipo.nome_comercial")} />
-                        {(form.formState.errors.dados_tipo as Record<string, { message?: string }>)?.nome_comercial && (
-                          <p className="text-sm text-red-600">{(form.formState.errors.dados_tipo as Record<string, { message?: string }>).nome_comercial?.message}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.sede">Sede</Label>
-                        <Input id="dados_tipo.sede" className="rounded-none" {...form.register("dados_tipo.sede")} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.representante_legal">Representante Legal <span className="text-red-500">*</span></Label>
-                        <Input id="dados_tipo.representante_legal" className="rounded-none" {...form.register("dados_tipo.representante_legal")} />
-                        {(form.formState.errors.dados_tipo as Record<string, { message?: string }>)?.representante_legal && (
-                          <p className="text-sm text-red-600">{(form.formState.errors.dados_tipo as Record<string, { message?: string }>).representante_legal?.message}</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dados_tipo.cargo">Cargo do Representante</Label>
-                        <Input id="dados_tipo.cargo" className="rounded-none" {...form.register("dados_tipo.cargo")} />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                   <div className="space-y-2">
