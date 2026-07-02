@@ -113,7 +113,7 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 
 **Milestone Goal:** Simplificar e aplanar o modelo de identificação e contactos de clientes particulares e empresas (remoção de `dados_tipo` JSON em prol de colunas diretas da tabela).
 
-- [ ] **Phase 70: Backend refactoring & Seeder Alignment** - Adicionar REG_COMERCIAL a DocumentoTipo, remover dadosTipo e conversor de Cliente, e corrigir o DatabaseSeeder (CLI-06, CLI-09)
+- [x] **Phase 70: Backend refactoring & Seeder Alignment** - Adicionar REG_COMERCIAL a DocumentoTipo, remover dadosTipo e conversor de Cliente, e corrigir o DatabaseSeeder (CLI-06, CLI-09)
 - [ ] **Phase 71: Frontend Types, Schema & API Integration** - Aplanar tipos TypeScript, remover dados_tipo e tornar NIF obrigatório com validação de 9 dígitos no Zod schema (CLI-05, CLI-06)
 - [ ] **Phase 72: Form Refactoring (Create & Edit)** - Simplificar os formulários de criação e edição com campos planos e labels dinâmicas para Morada/Sede (CLI-05, CLI-07, CLI-08, CLI-09, CLI-10)
 - [ ] **Phase 73: Detail Page & Printable Ficha Update** - Adaptar a página de detalhe e a ficha impressa para a estrutura simplificada (CLI-11)
@@ -124,8 +124,8 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 **Goal**: O backend armazena a identificação do cliente exclusivamente em colunas planas (sem `dados_tipo` JSON), suporta `REG_COMERCIAL` como tipo de documento para Empresa, e o DatabaseSeeder gera dados de seed consistentes com o novo modelo
 **Depends on**: Nothing (first phase of milestone)
 **Requirements**: CLI-06, CLI-09
-**Plans**: 1 plan
-- [ ] 70-01-PLAN.md — Remove dados_tipo JSON model, add REG_COMERCIAL enum, align DatabaseSeeder (CLI-06, CLI-09)
+**Plans**: 1/1 — complete
+- [x] 70-01-PLAN.md — Remove dados_tipo JSON model, add REG_COMERCIAL enum, align DatabaseSeeder (CLI-06, CLI-09)
 
 ### Phase 71: Frontend Types, Schema & API Integration
 **Goal**: Os tipos TypeScript do cliente refletem o modelo aplanado do backend (sem `dados_tipo`), e o Zod schema exige NIF obrigatório com validação de 9 dígitos numéricos
@@ -176,11 +176,11 @@ See archive: [milestones/v2.6-ROADMAP.md](milestones/v2.6-ROADMAP.md) · [milest
 | 67. Elaboração e Versionamento | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 68. Entrega, Vista de Entregue e RBAC | v2.6 | 1/1 | Complete    | 2026-07-01 |
 | 69. Pesquisa Avançada | v2.6 | 1/1 | Complete    | 2026-07-01 |
-| 70. Backend refactoring & Seeder Alignment | v2.7 | 0/1 | Pending | — |
+| 70. Backend refactoring & Seeder Alignment | v2.7 | 1/1 | Complete | 2026-07-01 |
 | 71. Frontend Types, Schema & API Integration | v2.7 | 0/1 | Pending | — |
 | 72. Form Refactoring (Create & Edit) | v2.7 | 0/2 | Pending | — |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 0/1 | Pending | — |
 
-**Next:** Milestone v2.7 active. Run `/gsd-discuss-phase 70` to plan the first phase.
+**Next:** Milestone v2.7 active — Phase 70 complete. Run `/gsd-discuss-phase 71` to plan the next phase.
 
 </content>
