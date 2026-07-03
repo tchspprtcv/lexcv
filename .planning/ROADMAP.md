@@ -139,10 +139,11 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   3. Ao criar/editar cliente Particular, o dropdown de tipo de documento mostra apenas CNI/BI/Passaporte
   4. Ao criar/editar cliente Empresa, o dropdown de tipo de documento mostra apenas Registo Comercial
   5. Submeter uma combinação inválida (ex.: Empresa com tipo de documento de Particular) é rejeitada pelo backend com erro claro
-**Plans**: 3 plans
+**Plans**: 4 plans (1 gap-closure)
 - [x] 74-01-PLAN.md — Backend enum (BI/-NIF), tipo×documento_tipo validation, defensive NIF cleanup SQL
 - [x] 74-02-PLAN.md — Frontend DocumentoTipo type + shared cliente-documento-tipo options module
 - [x] 74-03-PLAN.md — Filtered dropdown + Zod validation in both cliente form pages
+- [ ] 74-04-PLAN.md — Gap closure: parameterize clienteFormSchema so legacy documento_tipo can be saved on edit (CR-01)
 
 #### Phase 75: Componente Único View/Edit
 **Goal**: A ficha de cliente é uma única página que alterna entre modo leitura e edição, sem rota dedicada de edição
