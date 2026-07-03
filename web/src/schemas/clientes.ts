@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { getDocumentoTipoOptions } from "@/lib/cliente-documento-tipo";
+
 export const nifPattern = /^\d{9}$/;
 
 const optionalTrimmedString = z
@@ -54,15 +56,15 @@ export const clienteFormSchema = z
         path: ["documento_numero"],
       });
     }
-    if (data.documento_tipo === "NIF" && data.documento_numero) {
-      const isDigitsOnly = /^\d+$/.test(data.documento_numero);
-      if (data.documento_numero.length !== 9 || !isDigitsOnly) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "NIF de Cabo Verde deve ter exatamente 9 dígitos",
-          path: ["documento_numero"],
-        });
-      }
+    if (
+      data.documento_tipo &&
+      !getDocumentoTipoOptions(data.tipo).some((option) => option.value === data.documento_tipo)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Tipo de documento inválido para o tipo de cliente selecionado",
+        path: ["documento_tipo"],
+      });
     }
   });
 
