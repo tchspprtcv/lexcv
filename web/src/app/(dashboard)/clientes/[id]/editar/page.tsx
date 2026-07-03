@@ -19,7 +19,7 @@ import { useCliente, useUpdateCliente } from "@/hooks/use-clientes";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
-import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
+import { buildClienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type {
   ClienteUpdateRequest,
   Deslocacao,
@@ -62,6 +62,13 @@ function ClienteEditContent({ id }: { id: string }) {
   const canEditClientes = permissions.can.edit("clientes");
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [legacyDocumentoTipo, setLegacyDocumentoTipo] = React.useState<string | null>(null);
+
+  // Rebuilt whenever the loaded legacy documento_tipo changes so the resolver exempts exactly
+  // that one value from the per-tipo membership check (see buildClienteFormSchema docblock).
+  const clienteFormSchema = React.useMemo(
+    () => buildClienteFormSchema(legacyDocumentoTipo ?? undefined),
+    [legacyDocumentoTipo],
+  );
 
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
