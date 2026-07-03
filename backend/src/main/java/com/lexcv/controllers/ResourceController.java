@@ -270,7 +270,7 @@ public class ResourceController {
         }
 
         cliente.setNome(payload.getNome());
-        cliente.setTipo(payload.getTipo());
+        if (payload.getTipo() != null) cliente.setTipo(payload.getTipo());
         cliente.setEmail(payload.getEmail());
         cliente.setTelefone(payload.getTelefone());
         cliente.setMorada(payload.getMorada());
@@ -298,23 +298,24 @@ public class ResourceController {
     }
 
     /**
-     * Validates that documentoTipo (when present) is an allowed value for the cliente's tipo.
-     * PARTICULAR allows CNI/BI/PASSAPORTE; EMPRESA allows only REG_COMERCIAL. documentoTipo is
-     * optional; a null value only passes if documentoNumero is also absent, since a document
-     * number with no associated type is an orphaned/ambiguous state. Any other tipo with a
-     * non-null documentoTipo is rejected, since there is no known-valid set for it.
+     * Validates that tipo is a recognized cliente type and that documentoTipo (when present) is
+     * an allowed value for that tipo. tipo must be PARTICULAR or EMPRESA regardless of whether
+     * documentoTipo is present -- a missing/unrecognized tipo is always rejected. PARTICULAR
+     * allows CNI/BI/PASSAPORTE; EMPRESA allows only REG_COMERCIAL. documentoTipo is optional; a
+     * null value only passes if documentoNumero is also absent, since a document number with no
+     * associated type is an orphaned/ambiguous state.
      */
     private boolean isDocumentoTipoValidoParaTipo(String tipo, DocumentoTipo documentoTipo, String documentoNumero) {
+        if (!TipoCliente.PARTICULAR.name().equals(tipo) && !TipoCliente.EMPRESA.name().equals(tipo)) {
+            return false;
+        }
         if (documentoTipo == null) {
             return documentoNumero == null || documentoNumero.isBlank();
         }
-        if ("PARTICULAR".equals(tipo)) {
+        if (TipoCliente.PARTICULAR.name().equals(tipo)) {
             return Set.of(DocumentoTipo.CNI, DocumentoTipo.BI, DocumentoTipo.PASSAPORTE).contains(documentoTipo);
         }
-        if ("EMPRESA".equals(tipo)) {
-            return documentoTipo == DocumentoTipo.REG_COMERCIAL;
-        }
-        return false;
+        return documentoTipo == DocumentoTipo.REG_COMERCIAL;
     }
 
     // ==========================================
