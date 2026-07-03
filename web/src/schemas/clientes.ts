@@ -17,62 +17,78 @@ const optionalEmail = z
   .refine((v) => !v || z.string().email().safeParse(v).success, "Email inválido")
   .optional();
 
-export const clienteFormSchema = z
-  .object({
-    tipo: z.enum(["PARTICULAR", "EMPRESA"], {
-      error: "Selecione o tipo de cliente",
-    }),
-    avencado: z.boolean().optional(),
-    nome: z.string().trim().min(1, "O nome é obrigatório"),
-    nif: z.string().trim().regex(nifPattern, "NIF deve conter exatamente 9 dígitos numéricos"),
-    email: optionalEmail,
-    telefone: optionalTrimmedString,
-    morada: optionalTrimmedString,
-    localidade: optionalTrimmedString,
-    ativo: z.boolean().optional(),
-    documento_tipo: optionalTrimmedString,
-    documento_numero: optionalTrimmedString,
-    ramo_atividade: optionalTrimmedString,
-    detalhes_adicionais: z
-      .string()
-      .trim()
-      .max(255, "Os detalhes adicionais não podem exceder 255 caracteres")
-      .optional()
-      .or(z.literal("")),
-    descricao_caso: z.string().trim().optional(),
-    honorarios_propostos: z
-      .object({
-        total: z.number().optional(),
-        totalPorExtenso: z.string().trim().optional(),
-        previsao: z.string().trim().optional(),
-      })
-      .optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.documento_tipo && !data.documento_numero) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Número de documento é obrigatório se o tipo estiver selecionado",
-        path: ["documento_numero"],
-      });
-    }
-    if (data.documento_numero && !data.documento_tipo) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Selecione o tipo de documento correspondente ao número introduzido",
-        path: ["documento_tipo"],
-      });
-    }
-    if (
-      data.documento_tipo &&
-      !getDocumentoTipoOptions(data.tipo).some((option) => option.value === data.documento_tipo)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Tipo de documento inválido para o tipo de cliente selecionado",
-        path: ["documento_tipo"],
-      });
-    }
-  });
+/**
+ * Constrói o schema de validação do formulário de cliente.
+ *
+ * `allowedLegacyDocumentoTipo`, quando fornecido, exime EXATAMENTE esse valor
+ * da verificação de pertença ao conjunto de opções do `tipo` selecionado.
+ * Usado pela página de edição para permitir que um `documento_tipo` legado
+ * (carregado do servidor, inválido para o `tipo` atual) seja guardado sem
+ * alterações — ver banner em editar/page.tsx. A página de criação (novo)
+ * usa `clienteFormSchema` (sem argumento), preservando o comportamento
+ * estrito original: nenhuma isenção para registos novos.
+ */
+export function buildClienteFormSchema(allowedLegacyDocumentoTipo?: string) {
+  return z
+    .object({
+      tipo: z.enum(["PARTICULAR", "EMPRESA"], {
+        error: "Selecione o tipo de cliente",
+      }),
+      avencado: z.boolean().optional(),
+      nome: z.string().trim().min(1, "O nome é obrigatório"),
+      nif: z.string().trim().regex(nifPattern, "NIF deve conter exatamente 9 dígitos numéricos"),
+      email: optionalEmail,
+      telefone: optionalTrimmedString,
+      morada: optionalTrimmedString,
+      localidade: optionalTrimmedString,
+      ativo: z.boolean().optional(),
+      documento_tipo: optionalTrimmedString,
+      documento_numero: optionalTrimmedString,
+      ramo_atividade: optionalTrimmedString,
+      detalhes_adicionais: z
+        .string()
+        .trim()
+        .max(255, "Os detalhes adicionais não podem exceder 255 caracteres")
+        .optional()
+        .or(z.literal("")),
+      descricao_caso: z.string().trim().optional(),
+      honorarios_propostos: z
+        .object({
+          total: z.number().optional(),
+          totalPorExtenso: z.string().trim().optional(),
+          previsao: z.string().trim().optional(),
+        })
+        .optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.documento_tipo && !data.documento_numero) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Número de documento é obrigatório se o tipo estiver selecionado",
+          path: ["documento_numero"],
+        });
+      }
+      if (data.documento_numero && !data.documento_tipo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Selecione o tipo de documento correspondente ao número introduzido",
+          path: ["documento_tipo"],
+        });
+      }
+      if (
+        data.documento_tipo &&
+        data.documento_tipo !== allowedLegacyDocumentoTipo &&
+        !getDocumentoTipoOptions(data.tipo).some((option) => option.value === data.documento_tipo)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Tipo de documento inválido para o tipo de cliente selecionado",
+          path: ["documento_tipo"],
+        });
+      }
+    });
+}
+
+export const clienteFormSchema = buildClienteFormSchema();
 
 export type ClienteFormValues = z.infer<typeof clienteFormSchema>;
