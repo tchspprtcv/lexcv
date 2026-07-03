@@ -61,6 +61,7 @@ function ClienteEditContent({ id }: { id: string }) {
   const permissions = usePermissions();
   const canEditClientes = permissions.can.edit("clientes");
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [legacyDocumentoTipo, setLegacyDocumentoTipo] = React.useState<string | null>(null);
 
   const form = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
@@ -103,6 +104,7 @@ function ClienteEditContent({ id }: { id: string }) {
     if (toDocumentoTipo(currentDocumentoTipo, pendingTipo) === undefined) {
       form.setValue("documento_tipo", "");
       form.setValue("documento_numero", "");
+      setLegacyDocumentoTipo(null);
     }
     form.setValue("tipo", pendingTipo, { shouldValidate: true });
     setPendingTipo(null);
@@ -128,16 +130,29 @@ function ClienteEditContent({ id }: { id: string }) {
 
   React.useEffect(() => {
     if (!cliente.data) return;
+    const loadedTipo = (cliente.data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
+    const loadedDocumentoTipo = cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "";
+
+    // Detect a pre-existing documento_tipo that isn't valid for the loaded tipo (e.g. legacy
+    // data not covered by the 74-cleanup-nif-documento-tipo.sql migration). If we silently fed
+    // this into the native <select>, the browser would fall back to the first <option>
+    // ("Nenhum", value "") since there's no matching option, and an unrelated save would then
+    // clear the field as a side effect. Instead, flag it and keep the raw value selected below.
+    const isValidCombo =
+      !loadedDocumentoTipo ||
+      getDocumentoTipoOptions(loadedTipo).some((opt) => opt.value === loadedDocumentoTipo);
+    setLegacyDocumentoTipo(isValidCombo ? null : loadedDocumentoTipo);
+
     form.reset({
       nome: cliente.data.nome ?? "",
       nif: cliente.data.nif ?? "",
-      tipo: (cliente.data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined,
+      tipo: loadedTipo,
       avencado: cliente.data.avencado ?? false,
       email: cliente.data.email ?? "",
       telefone: cliente.data.telefone ?? "",
       localidade: cliente.data.localidade ?? "",
       morada: cliente.data.morada ?? "",
-      documento_tipo: cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "",
+      documento_tipo: loadedDocumentoTipo,
       documento_numero: cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "",
       ramo_atividade: cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "",
       detalhes_adicionais: cliente.data.detalhes_adicionais ?? cliente.data.detalhesAdicionais ?? "",
@@ -177,7 +192,14 @@ function ClienteEditContent({ id }: { id: string }) {
   const onSubmit = async (values: ClienteFormValues) => {
     setServerError(null);
     try {
-      const documentoTipo = toDocumentoTipo(values.documento_tipo, values.tipo);
+      // Preserve a legacy documento_tipo/tipo combo verbatim when the user hasn't touched the
+      // field (see legacyDocumentoTipo banner above) -- toDocumentoTipo() would otherwise return
+      // undefined for it since it isn't in the valid option set for the current tipo, silently
+      // clearing a value the user never intended to change.
+      const documentoTipo =
+        legacyDocumentoTipo && values.documento_tipo === legacyDocumentoTipo
+          ? (values.documento_tipo as ClienteUpdateRequest["documento_tipo"])
+          : toDocumentoTipo(values.documento_tipo, values.tipo);
 
       const payload: ClienteUpdateRequest = {
         ...values,
@@ -347,7 +369,19 @@ function ClienteEditContent({ id }: { id: string }) {
                             {opt.label}
                           </option>
                         ))}
+                        {legacyDocumentoTipo ? (
+                          <option value={legacyDocumentoTipo}>
+                            {legacyDocumentoTipo} (inválido para o tipo atual)
+                          </option>
+                        ) : null}
                       </select>
+                      {legacyDocumentoTipo ? (
+                        <p className="text-sm text-amber-600">
+                          Este cliente tem um tipo de documento (&quot;{legacyDocumentoTipo}&quot;) que já não é
+                          válido para o tipo de cliente selecionado. Selecione um tipo de documento válido para
+                          corrigir, ou guarde sem alterar este campo para manter o valor legado.
+                        </p>
+                      ) : null}
                       {form.formState.errors.documento_tipo ? (
                         <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
                       ) : null}
