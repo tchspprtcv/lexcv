@@ -35,7 +35,7 @@ const OPTIONS_BY_TIPO: Record<ClienteTipo, DocumentoTipoOption[]> = {
 export function getDocumentoTipoOptions(
   tipo: ClienteTipo | undefined,
 ): DocumentoTipoOption[] {
-  return OPTIONS_BY_TIPO[tipo ?? "PARTICULAR"];
+  return [...OPTIONS_BY_TIPO[tipo ?? "PARTICULAR"]];
 }
 
 /**
