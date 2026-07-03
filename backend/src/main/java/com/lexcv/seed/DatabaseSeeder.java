@@ -101,7 +101,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .email("joao.andrade@email.com")
                 .telefone("+238 991 1234")
                 .morada("Achada Santo António, Praia")
-                .documentoTipo(DocumentoTipo.NIF)
+                .documentoTipo(DocumentoTipo.BI)
                 .documentoNumero("123456789")
                 .ramoAtividade("Serviços")
                 .detalhesAdicionais("Cliente habitual de consultoria")
