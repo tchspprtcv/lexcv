@@ -56,6 +56,13 @@ export const clienteFormSchema = z
         path: ["documento_numero"],
       });
     }
+    if (data.documento_numero && !data.documento_tipo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecione o tipo de documento correspondente ao número introduzido",
+        path: ["documento_tipo"],
+      });
+    }
     if (
       data.documento_tipo &&
       !getDocumentoTipoOptions(data.tipo).some((option) => option.value === data.documento_tipo)

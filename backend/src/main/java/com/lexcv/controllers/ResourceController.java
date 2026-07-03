@@ -218,7 +218,7 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('clientes:edit')")
     @PostMapping("/clientes")
     public ResponseEntity<?> createCliente(@Valid @RequestBody Cliente cliente) {
-        if (!isDocumentoTipoValidoParaTipo(cliente.getTipo(), cliente.getDocumentoTipo())) {
+        if (!isDocumentoTipoValidoParaTipo(cliente.getTipo(), cliente.getDocumentoTipo(), cliente.getDocumentoNumero())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
@@ -264,7 +264,7 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
         }
 
-        if (!isDocumentoTipoValidoParaTipo(payload.getTipo(), payload.getDocumentoTipo())) {
+        if (!isDocumentoTipoValidoParaTipo(payload.getTipo(), payload.getDocumentoTipo(), payload.getDocumentoNumero())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
@@ -300,12 +300,13 @@ public class ResourceController {
     /**
      * Validates that documentoTipo (when present) is an allowed value for the cliente's tipo.
      * PARTICULAR allows CNI/BI/PASSAPORTE; EMPRESA allows only REG_COMERCIAL. documentoTipo is
-     * optional, so a null value always passes. Any other tipo with a non-null documentoTipo is
-     * rejected, since there is no known-valid set for it.
+     * optional; a null value only passes if documentoNumero is also absent, since a document
+     * number with no associated type is an orphaned/ambiguous state. Any other tipo with a
+     * non-null documentoTipo is rejected, since there is no known-valid set for it.
      */
-    private boolean isDocumentoTipoValidoParaTipo(String tipo, DocumentoTipo documentoTipo) {
+    private boolean isDocumentoTipoValidoParaTipo(String tipo, DocumentoTipo documentoTipo, String documentoNumero) {
         if (documentoTipo == null) {
-            return true;
+            return documentoNumero == null || documentoNumero.isBlank();
         }
         if ("PARTICULAR".equals(tipo)) {
             return Set.of(DocumentoTipo.CNI, DocumentoTipo.BI, DocumentoTipo.PASSAPORTE).contains(documentoTipo);
