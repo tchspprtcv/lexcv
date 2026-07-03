@@ -1,0 +1,27 @@
+-- Phase 74: Defensive cleanup for legacy NIF documento_tipo rows
+--
+-- IMPORTANT: This is a ONE-OFF DEFENSIVE cleanup script. It MUST be run manually
+-- (e.g. via psql or DBeaver) against the database BEFORE deploying the code change
+-- that removes the `NIF` constant from `DocumentoTipo.java`.
+--
+-- Why: The `Cliente.documentoTipo` field is mapped with `@Enumerated(EnumType.STRING)`.
+-- Once `NIF` is removed from the Java enum, Hibernate will throw an exception when it
+-- tries to deserialize any existing row whose `documento_tipo` column still holds the
+-- string 'NIF' — because that value no longer has a matching Java enum constant. Any
+-- read of such a row (e.g. GET /clientes) would crash at runtime.
+--
+-- This is NOT the "migração de funcionalidade" (feature/data migration) that was
+-- explicitly rejected during milestone planning ("corte limpo, sem migração de dados").
+-- It does not attempt to reinterpret or backfill legacy NIF values into the new enum
+-- shape — it only nulls out the crash-inducing legacy value so the application keeps
+-- working. The clean-cut decision for the enum value set itself stands unchanged.
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase —
+-- only Hibernate `ddl-auto=update` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (dev/staging/prod)
+-- before that environment picks up the deploy that removes NIF from the enum.
+--
+-- Both documento_tipo and documento_numero are nulled together: without its type, the
+-- accompanying number column is semantically meaningless.
+
+UPDATE t_cliente SET documento_tipo = NULL, documento_numero = NULL WHERE documento_tipo = 'NIF';
