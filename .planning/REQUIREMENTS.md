@@ -62,32 +62,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-12 | TBD | Pending |
-| CLI-13 | TBD | Pending |
-| CLI-14 | TBD | Pending |
-| CLI-15 | TBD | Pending |
-| CLI-16 | TBD | Pending |
-| CLI-17 | TBD | Pending |
-| CLI-18 | TBD | Pending |
-| CLI-19 | TBD | Pending |
-| CLI-20 | TBD | Pending |
-| CLI-21 | TBD | Pending |
-| CLI-22 | TBD | Pending |
-| CLI-23 | TBD | Pending |
-| CLI-24 | TBD | Pending |
-| CLI-25 | TBD | Pending |
-| CLI-26 | TBD | Pending |
-| CLI-27 | TBD | Pending |
-| CLI-28 | TBD | Pending |
-| CLI-29 | TBD | Pending |
-| CLI-30 | TBD | Pending |
-| CLI-31 | TBD | Pending |
+| CLI-12 | Phase 75 | Pending |
+| CLI-13 | Phase 75 | Pending |
+| CLI-14 | Phase 75 | Pending |
+| CLI-15 | Phase 76 | Pending |
+| CLI-16 | Phase 77 | Pending |
+| CLI-17 | Phase 77 | Pending |
+| CLI-18 | Phase 76 | Pending |
+| CLI-19 | Phase 76 | Pending |
+| CLI-20 | Phase 74 | Pending |
+| CLI-21 | Phase 74 | Pending |
+| CLI-22 | Phase 74 | Pending |
+| CLI-23 | Phase 74 | Pending |
+| CLI-24 | Phase 74 | Pending |
+| CLI-25 | Phase 79 | Pending |
+| CLI-26 | Phase 79 | Pending |
+| CLI-27 | Phase 79 | Pending |
+| CLI-28 | Phase 79 | Pending |
+| CLI-29 | Phase 79 | Pending |
+| CLI-30 | Phase 78 | Pending |
+| CLI-31 | Phase 78 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️ (pending roadmap creation)
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-03*
-*Last updated: 2026-07-03 after initial definition*
+*Last updated: 2026-07-03 after roadmap creation (Phases 74–79)*

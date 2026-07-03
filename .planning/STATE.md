@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-07-03T16:01:02.055Z"
 last_activity: 2026-07-03
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.7 shipped — planning next milestone (v2.8)
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — roadmap created, ready to plan Phase 74
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-03 — Milestone v2.8 started
+Phase: 74 of 79 (Enum `documento_tipo` (BI/NIF/Restrição por Tipo))
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-07-03 — Milestone v2.8 roadmap created (Phases 74–79, 20/20 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -57,6 +59,7 @@ Last activity: 2026-07-03 — Milestone v2.8 started
 
 ### Roadmap Evolution
 
+- v2.8 roadmap created 2026-07-03: 6 phases (74–79) derived from 20 requirements (CLI-12 to CLI-31). Order: (74) `documento_tipo` enum foundation (BI added, NIF removed, restricted by tipo cliente) precedes the Dados-card identification UI since the frontend dropdown depends on final enum values; (75) unified view/edit component + `/editar` route removal is foundational since all subsequent tabs are built inside it; (76) tab shell + Dados (with identification) + Contactos e Notas tabs; (77) Processos + Pareceres tabs (low-risk UI wiring against existing hooks, grouped together); (78) Documentos a Tratar + Deslocações tabs (UI-only extraction, grouped together); (79) Documentos Entregues upload last, as the only phase with net-new backend work (list-by-client endpoint), reusing existing Documento upload infrastructure. 100% requirement coverage, no orphans.
 - Phase 73.1 inserted after Phase 73: Milestone audit v2.7 found CLI-05 gap: NIF overwrite bug + missing server-side validation (URGENT) — closed by 73.1-01-PLAN.md (this plan)
 
 ### Decisions
@@ -75,6 +78,8 @@ Recent decisions affecting current work:
 - (v2.7 Phase 72) `form.watch("tipo")` read directly in component body (no local useState mirror) to derive live nomeLabel/moradaLabel in both cliente forms — matches the existing pattern where `tipo` lives exclusively in react-hook-form state via Controller + form.setValue.
 - (v2.7 Phase 73.1) CLI-05 gap closure — no custom `@ExceptionHandler`/`@ControllerAdvice` added for `@Valid` failures; Spring Boot's default `MethodArgumentNotValidException` handling (confirmed no global handler exists) already returns structured HTTP 400, which is sufficient and stays within audit scope.
 - (v2.7 Phase 73.1) No DB-level `NOT NULL` constraint added to `Cliente.nif` — Bean Validation (`@NotBlank`/`@Pattern`) is the enforcement layer; a migration against existing rows was explicitly out of scope per 73.1-CONTEXT.md.
+- (v2.8 roadmap) `documento_tipo` enum work (Phase 74) placed before the unified view/edit component (Phase 75) and tab restructuring, since the Dados-card identification UI (CLI-19) and its dropdown depend on the final enum values (BI added, NIF removed) — avoids building UI against a value set that changes mid-milestone.
+- (v2.8 roadmap) "Documentos Entregues" upload (Phase 79) reuses the existing generic `Documento` entity/upload endpoint (`POST /documentos/upload` with optional `clienteId`) — only the list-by-client GET endpoint is net-new backend work; sequenced last as the phase with the most novel scope.
 
 ### Pending Todos
 
@@ -97,7 +102,7 @@ Recent decisions affecting current work:
 - Phase 69 follow-up (non-blocking, code review): 3 warnings found and fixed (WR-01 Aplicar didn't reset search mode, WR-02 inconsistent filters object shape, WR-03 pesquisa cache namespace not invalidated by mutations) — all fixed same-session, see 69-REVIEW.md/69-REVIEW-FIX.md
 - Phase 69 human_verification pending (see 69-VERIFICATION.md): toggle interplay between simple filters and advanced search, live search rendering, empty-state with real data
 - Phase 69 follow-up (non-blocking, UI review 15/24 — see 69-UI-REVIEW.md, lowest score this milestone): submitting the simple "Aplicar" filter bar silently discards an active search with no warning while the advanced panel stays open/populated (a UX side-effect of the WR-01 code-review fix that resolved a different bug — the panel should either close/clear when Aplicar is used, or the user should get a clear signal that search was replaced); zero-result empty-state heading uses font-medium/14px instead of spec's text-base font-bold (16px/700); no single focal point when both "Nova Solicitação" and "Pesquisar" CTAs are visible with two open filter cards
-- Milestone v2.6: all 5 phases (65-69) complete — run `/gsd:audit-milestone` next
+- REG_COMERCIAL and other DocumentoTipo values render as raw enum strings instead of translated Portuguese labels on client detail page and printed ficha (carried from v2.7 close) — candidate to fix opportunistically during Phase 74/76 since both touch `documento_tipo` display
 
 ### Blockers/Concerns
 
@@ -145,4 +150,4 @@ Items acknowledged and deferred at milestone v2.7 close on 2026-07-02 (see .plan
 
 ## Operator Next Steps
 
-- Milestone v2.7 shipped and archived (audit passed 7/7 after gap closure). Start the next milestone with /gsd:new-milestone.
+- Milestone v2.8 roadmap created (Phases 74–79, 20/20 requirements mapped). Review `.planning/ROADMAP.md` and run `/gsd:plan-phase 74` to start planning the `documento_tipo` enum foundation phase.

@@ -10,6 +10,7 @@
 - ✅ **v2.5 Módulo de Parecer Jurídico** — Phases 61–64 (complete 2026-06-30)
 - ✅ **v2.6 Módulo de Parecer Jurídico — UI** — Phases 65–69 (complete 2026-07-01)
 - ✅ **v2.7 Melhoria Gestão de Clientes** — Phases 70–73.1 (complete 2026-07-02)
+- 🚧 **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (in progress)
 
 
 ## Phases
@@ -124,6 +125,77 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 
 </details>
 
+### 🚧 v2.8 Refatoração Ficha de Cliente (In Progress)
+
+**Milestone Goal:** Transformar a ficha de cliente no formulário central de pesquisa de informação relacionada ao cliente — unificando visualização/edição num único componente e adicionando separadores (tabs) que cobrem processos, pareceres e documentos, seguindo a disposição visual de processos.
+
+#### Phase 74: Enum `documento_tipo` (BI/NIF/Restrição por Tipo)
+**Goal**: O tipo de documento de identificação do cliente reflete corretamente as opções válidas por tipo de cliente, em backend e frontend
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: CLI-20, CLI-21, CLI-22, CLI-23, CLI-24
+**Success Criteria** (what must be TRUE):
+  1. Utilizador vê `BI` como opção de tipo de documento para cliente Particular
+  2. Utilizador já não vê `NIF` como opção de tipo de documento (removido do enum)
+  3. Ao criar/editar cliente Particular, o dropdown de tipo de documento mostra apenas CNI/BI/Passaporte
+  4. Ao criar/editar cliente Empresa, o dropdown de tipo de documento mostra apenas Registo Comercial
+  5. Submeter uma combinação inválida (ex.: Empresa com tipo de documento de Particular) é rejeitada pelo backend com erro claro
+**Plans**: TBD
+
+#### Phase 75: Componente Único View/Edit
+**Goal**: A ficha de cliente é uma única página que alterna entre modo leitura e edição, sem rota dedicada de edição
+**Depends on**: Phase 74
+**Requirements**: CLI-12, CLI-13, CLI-14
+**Success Criteria** (what must be TRUE):
+  1. Utilizador visualiza os dados do cliente em `/clientes/[id]` em modo leitura por defeito
+  2. Utilizador clica "Editar" e os mesmos campos tornam-se editáveis na mesma página (sem navegação)
+  3. Em modo leitura, controlos de edição (inputs/selects/guardar/cancelar/adicionar/remover) estão inativos ou ocultos
+  4. Aceder a `/clientes/[id]/editar` deixa de existir como rota separada
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 76: Separadores — Dados, Contactos e Notas
+**Goal**: A ficha de cliente organiza a informação em separadores, com identificação incluída no card "Dados" principal
+**Depends on**: Phase 75
+**Requirements**: CLI-15, CLI-18, CLI-19
+**Success Criteria** (what must be TRUE):
+  1. Utilizador vê 7 separadores na ficha do cliente: Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
+  2. Separador "Dados" apresenta NIF, tipo de documento e número de documento como parte do card principal, respeitando toggle view/edit
+  3. Separador "Contactos e Notas" apresenta os mesmos cards de Contactos e Notas anteriormente na página principal, agora isolados no seu separador
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 77: Separadores — Processos e Pareceres
+**Goal**: O utilizador consulta os processos e pareceres do cliente diretamente a partir da ficha do cliente
+**Depends on**: Phase 76
+**Requirements**: CLI-16, CLI-17
+**Success Criteria** (what must be TRUE):
+  1. Separador "Processos" lista os processos associados ao cliente (via `useProcessos({cliente_id})`)
+  2. Separador "Pareceres" lista os pareceres associados ao cliente (via `usePareceres({clienteId})`)
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 78: Separadores — Documentos a Tratar e Deslocações
+**Goal**: As listas de documentos a tratar e deslocações do cliente ficam isoladas nos seus próprios separadores, mantendo o comportamento atual
+**Depends on**: Phase 76
+**Requirements**: CLI-30, CLI-31
+**Success Criteria** (what must be TRUE):
+  1. Separador "Documentos a Tratar" mantém a lista de texto (descrição+data) atual, agora isolada no seu separador
+  2. Separador "Deslocações" mantém a lista de texto (descrição/local/data) atual, agora isolada no seu separador
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 79: Documentos Entregues — Upload Real
+**Goal**: O separador "Documentos Entregues" passa a gerir ficheiros carregados de facto, reutilizando o sistema genérico de Documentos
+**Depends on**: Phase 76
+**Requirements**: CLI-25, CLI-26, CLI-27, CLI-28, CLI-29
+**Success Criteria** (what must be TRUE):
+  1. Utilizador carrega um ficheiro no separador "Documentos Entregues" via o sistema genérico `Documento`/`/documentos/upload` associado ao `clienteId`
+  2. Separador lista os documentos já carregados para o cliente (via novo endpoint de listagem por cliente)
+  3. Ao carregar um documento, o campo "tipo" é um combobox que permite escolher um tipo existente ou escrever um novo
+  4. Registos antigos de "documentos entregues" (texto sem ficheiro) deixam de ser editáveis na nova UI, sem processo de migração
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -160,5 +232,11 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 72. Form Refactoring (Create & Edit) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73.1. Fechar gap CLI-05 (gap closure) | v2.7 | 1/1 | Complete | 2026-07-02 |
+| 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 0/? | Not started | - |
+| 75. Componente Único View/Edit | v2.8 | 0/? | Not started | - |
+| 76. Separadores — Dados, Contactos e Notas | v2.8 | 0/? | Not started | - |
+| 77. Separadores — Processos e Pareceres | v2.8 | 0/? | Not started | - |
+| 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/? | Not started | - |
+| 79. Documentos Entregues — Upload Real | v2.8 | 0/? | Not started | - |
 
-**Next:** Milestone v2.7 shipped 2026-07-02. Run `/gsd:complete-milestone v2.7` to archive.
+**Next:** Milestone v2.8 roadmap created. Run `/gsd:plan-phase 74` to start planning.
