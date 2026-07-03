@@ -174,128 +174,134 @@ function ParecerDetailContent({
           Não foi possível carregar as solicitações. Verifique a ligação e tente novamente.
         </div>
       ) : parecer.data ? (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Dados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
-                <dt className="text-slate-500 dark:text-slate-400">Cliente</dt>
-                <dd className="col-span-2 font-medium">{parecer.data.clienteId}</dd>
-
-                <dt className="text-slate-500 dark:text-slate-400">Advogado</dt>
-                <dd className="col-span-2">
-                  {parecer.data.advogadoId ? resolveUserNome(parecer.data.advogadoId) : "—"}
-                </dd>
-
-                <dt className="text-slate-500 dark:text-slate-400">Estado</dt>
-                <dd className="col-span-2">
-                  <Badge variant={statusVariant(parecer.data.status)} className="rounded-none font-bold tracking-wide">
-                    {parecer.data.status}
-                  </Badge>
-                </dd>
-
-                <dt className="text-slate-500 dark:text-slate-400">Prioridade</dt>
-                <dd className="col-span-2">{parecer.data.prioridade ?? "—"}</dd>
-
-                <dt className="text-slate-500 dark:text-slate-400">Prazo</dt>
-                <dd className="col-span-2">{formatDate(parecer.data.prazo)}</dd>
-
-                <dt className="text-slate-500 dark:text-slate-400">Criado</dt>
-                <dd className="col-span-2">{formatDateTime(parecer.data.createdAt)}</dd>
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Versões</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {versoes.isLoading ? (
-                <div className="space-y-4">
-                  <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12 mb-4" />
-                  <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12 mb-4" />
-                </div>
-              ) : versoes.isError ? (
-                <p className="text-red-600 text-sm py-4">
-                  Não foi possível carregar as solicitações. Verifique a ligação e tente novamente.
-                </p>
-              ) : !versoes.data?.length ? (
-                <div className="py-12 text-center">
-                  <p className="text-sm font-medium text-slate-500">Nenhuma versão ainda</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Aguarda elaboração pelo advogado atribuído.
-                  </p>
-                </div>
-              ) : (
-                <div className="relative">
-                  {versoes.data.map((versao, index) => {
-                    const isLast = index === versoes.data.length - 1;
-                    const autorNome = versao.criadoPorId ? resolveUserNome(versao.criadoPorId) : "—";
-                    return (
-                      <div key={versao.id} className="relative flex gap-3 py-4">
-                        <div className="relative flex flex-col items-center">
-                          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400 dark:bg-slate-500" />
-                          {!isLast ? (
-                            <div className="absolute top-3 bottom-0 left-[5px] w-0.5 bg-slate-200 dark:bg-slate-700" />
-                          ) : null}
-                        </div>
-                        <div className="min-w-0 flex-1 pb-4">
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">
-                              Versão {versao.numeroVersao}
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {formatDateTime(versao.createdAt)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
-                            {autorNome}
-                          </p>
-                          {versao.conteudo ? (
-                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
-                              {versao.conteudo}
-                            </p>
-                          ) : null}
-                          <div className="mt-2">
-                            <AnexoLink
-                              solicitacaoId={id}
-                              versaoId={versao.id}
-                              caminhoAnexo={versao.caminhoAnexo}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {permissions.isLoading ? (
+        <div className="grid grid-cols-12 gap-6">
+          {/* ── Left column: Dados + Nova Versão / Entregue + Entregar ── */}
+          <div className="col-span-12 lg:col-span-8 space-y-4">
             <Card>
-              <CardContent className="py-6">
-                <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12" />
+              <CardHeader>
+                <CardTitle className="text-lg font-bold">Dados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                  <dt className="text-slate-500 dark:text-slate-400">Cliente</dt>
+                  <dd className="col-span-2 font-medium">{parecer.data.clienteId}</dd>
+
+                  <dt className="text-slate-500 dark:text-slate-400">Advogado</dt>
+                  <dd className="col-span-2">
+                    {parecer.data.advogadoId ? resolveUserNome(parecer.data.advogadoId) : "—"}
+                  </dd>
+
+                  <dt className="text-slate-500 dark:text-slate-400">Estado</dt>
+                  <dd className="col-span-2">
+                    <Badge variant={statusVariant(parecer.data.status)} className="rounded-none font-bold tracking-wide">
+                      {parecer.data.status}
+                    </Badge>
+                  </dd>
+
+                  <dt className="text-slate-500 dark:text-slate-400">Prioridade</dt>
+                  <dd className="col-span-2">{parecer.data.prioridade ?? "—"}</dd>
+
+                  <dt className="text-slate-500 dark:text-slate-400">Prazo</dt>
+                  <dd className="col-span-2">{formatDate(parecer.data.prazo)}</dd>
+
+                  <dt className="text-slate-500 dark:text-slate-400">Criado</dt>
+                  <dd className="col-span-2">{formatDateTime(parecer.data.createdAt)}</dd>
+                </dl>
               </CardContent>
             </Card>
-          ) : isConcluido ? (
-            <ParecerEntregueBlock
-              id={id}
-              versaoFinalId={parecer.data.versaoFinalId}
-              versoes={versoes.data}
-              isLoading={versoes.isLoading}
-              resolveUserNome={resolveUserNome}
-            />
-          ) : showNovaVersaoForm ? (
-            <NovaVersaoForm solicitacaoId={id} />
-          ) : null}
 
-          {showEntregarTrigger ? (
-            <EntregarParecerDialog solicitacaoId={id} versoes={versoes.data} />
-          ) : null}
+            {permissions.isLoading ? (
+              <Card>
+                <CardContent className="py-6">
+                  <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12" />
+                </CardContent>
+              </Card>
+            ) : isConcluido ? (
+              <ParecerEntregueBlock
+                id={id}
+                versaoFinalId={parecer.data.versaoFinalId}
+                versoes={versoes.data}
+                isLoading={versoes.isLoading}
+                resolveUserNome={resolveUserNome}
+              />
+            ) : showNovaVersaoForm ? (
+              <NovaVersaoForm solicitacaoId={id} />
+            ) : null}
+
+            {showEntregarTrigger ? (
+              <EntregarParecerDialog solicitacaoId={id} versoes={versoes.data} />
+            ) : null}
+          </div>
+
+          {/* ── Right column: Histórico de Versões (descending) ── */}
+          <div className="col-span-12 lg:col-span-4">
+            <Card className="sticky top-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold">Histórico de Versões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {versoes.isLoading ? (
+                  <div className="space-y-4">
+                    <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12 mb-4" />
+                    <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12 mb-4" />
+                  </div>
+                ) : versoes.isError ? (
+                  <p className="text-red-600 text-sm py-4">
+                    Não foi possível carregar as versões. Verifique a ligação e tente novamente.
+                  </p>
+                ) : !versoes.data?.length ? (
+                  <div className="py-12 text-center">
+                    <p className="text-sm font-medium text-slate-500">Nenhuma versão ainda</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Aguarda elaboração pelo advogado atribuído.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {[...versoes.data].sort((a, b) => b.numeroVersao - a.numeroVersao).map((versao, index, sorted) => {
+                      const isLast = index === sorted.length - 1;
+                      const autorNome = versao.criadoPorId ? resolveUserNome(versao.criadoPorId) : "—";
+                      return (
+                        <div key={versao.id} className="relative flex gap-3 py-4">
+                          <div className="relative flex flex-col items-center">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400 dark:bg-slate-500" />
+                            {!isLast ? (
+                              <div className="absolute top-3 bottom-0 left-[5px] w-0.5 bg-slate-200 dark:bg-slate-700" />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1 pb-4">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                Versão {versao.numeroVersao}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {formatDateTime(versao.createdAt)}
+                              </p>
+                            </div>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
+                              {autorNome}
+                            </p>
+                            {versao.conteudo ? (
+                              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
+                                {versao.conteudo}
+                              </p>
+                            ) : null}
+                            <div className="mt-2">
+                              <AnexoLink
+                                solicitacaoId={id}
+                                versaoId={versao.id}
+                                caminhoAnexo={versao.caminhoAnexo}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       ) : null}
     </div>
