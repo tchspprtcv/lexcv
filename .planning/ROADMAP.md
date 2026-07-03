@@ -139,7 +139,10 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   3. Ao criar/editar cliente Particular, o dropdown de tipo de documento mostra apenas CNI/BI/Passaporte
   4. Ao criar/editar cliente Empresa, o dropdown de tipo de documento mostra apenas Registo Comercial
   5. Submeter uma combinação inválida (ex.: Empresa com tipo de documento de Particular) é rejeitada pelo backend com erro claro
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 74-01-PLAN.md — Backend enum (BI/-NIF), tipo×documento_tipo validation, defensive NIF cleanup SQL
+- [ ] 74-02-PLAN.md — Frontend DocumentoTipo type + shared cliente-documento-tipo options module
+- [ ] 74-03-PLAN.md — Filtered dropdown + Zod validation in both cliente form pages
 
 #### Phase 75: Componente Único View/Edit
 **Goal**: A ficha de cliente é uma única página que alterna entre modo leitura e edição, sem rota dedicada de edição
@@ -232,11 +235,11 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 72. Form Refactoring (Create & Edit) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73.1. Fechar gap CLI-05 (gap closure) | v2.7 | 1/1 | Complete | 2026-07-02 |
-| 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 0/? | Not started | - |
+| 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 0/3 | Planned | - |
 | 75. Componente Único View/Edit | v2.8 | 0/? | Not started | - |
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 0/? | Not started | - |
 | 77. Separadores — Processos e Pareceres | v2.8 | 0/? | Not started | - |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/? | Not started | - |
 | 79. Documentos Entregues — Upload Real | v2.8 | 0/? | Not started | - |
 
-**Next:** Milestone v2.8 roadmap created. Run `/gsd:plan-phase 74` to start planning.
+**Next:** Phase 74 planned (3 plans, 2 waves). Run `/gsd:execute-phase 74`.
