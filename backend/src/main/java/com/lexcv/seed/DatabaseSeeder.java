@@ -95,7 +95,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         // 5. Clientes
         Cliente cliente1 = Cliente.builder()
                 .tenantId(tenantId)
-                .tipo("SINGULAR")
+                .tipo("PARTICULAR")
                 .nome("João Andrade (PostgreSQL Real)")
                 .nif("123456789")
                 .email("joao.andrade@email.com")
@@ -111,7 +111,7 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         Cliente cliente2 = Cliente.builder()
                 .tenantId(tenantId)
-                .tipo("COLETIVA")
+                .tipo("EMPRESA")
                 .nome("Empresa Atlântico, SA")
                 .nif("512345678")
                 .email("info@atlanticosa.cv")
