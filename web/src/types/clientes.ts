@@ -1,4 +1,4 @@
-export type DocumentoTipo = "NIF" | "CNI" | "PASSAPORTE" | "REG_COMERCIAL";
+export type DocumentoTipo = "BI" | "CNI" | "PASSAPORTE" | "REG_COMERCIAL";
 
 export interface DocumentoEntregue {
   descricao: string;
