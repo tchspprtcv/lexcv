@@ -18,20 +18,14 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente, useUpdateCliente } from "@/hooks/use-clientes";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
 import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type {
   ClienteUpdateRequest,
   Deslocacao,
   DocumentoATratar,
   DocumentoEntregue,
-  DocumentoTipo,
 } from "@/types/clientes";
-
-const DOCUMENTO_TIPOS: readonly DocumentoTipo[] = ["NIF", "CNI", "PASSAPORTE", "REG_COMERCIAL"];
-
-function toDocumentoTipo(value: string | undefined): DocumentoTipo | undefined {
-  return DOCUMENTO_TIPOS.includes(value as DocumentoTipo) ? (value as DocumentoTipo) : undefined;
-}
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -105,6 +99,11 @@ function ClienteEditContent({ id }: { id: string }) {
 
   function confirmTipoChange() {
     if (!pendingTipo) return;
+    const currentDocumentoTipo = form.getValues("documento_tipo");
+    if (toDocumentoTipo(currentDocumentoTipo, pendingTipo) === undefined) {
+      form.setValue("documento_tipo", "");
+      form.setValue("documento_numero", "");
+    }
     form.setValue("tipo", pendingTipo, { shouldValidate: true });
     setPendingTipo(null);
   }
@@ -178,7 +177,7 @@ function ClienteEditContent({ id }: { id: string }) {
   const onSubmit = async (values: ClienteFormValues) => {
     setServerError(null);
     try {
-      const documentoTipo = toDocumentoTipo(values.documento_tipo);
+      const documentoTipo = toDocumentoTipo(values.documento_tipo, values.tipo);
 
       const payload: ClienteUpdateRequest = {
         ...values,
@@ -343,10 +342,11 @@ function ClienteEditContent({ id }: { id: string }) {
                         {...form.register("documento_tipo")}
                       >
                         <option value="">Nenhum</option>
-                        <option value="NIF">NIF</option>
-                        <option value="CNI">CNI</option>
-                        <option value="PASSAPORTE">Passaporte</option>
-                        <option value="REG_COMERCIAL">Registo Comercial</option>
+                        {getDocumentoTipoOptions(form.watch("tipo")).map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                       {form.formState.errors.documento_tipo ? (
                         <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>

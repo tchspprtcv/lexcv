@@ -24,14 +24,9 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCreateCliente } from "@/hooks/use-clientes";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
 import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
-import type { ClienteCreateRequest, DocumentoTipo } from "@/types/clientes";
-
-const DOCUMENTO_TIPOS: readonly DocumentoTipo[] = ["NIF", "CNI", "PASSAPORTE", "REG_COMERCIAL"];
-
-function toDocumentoTipo(value: string | undefined): DocumentoTipo | undefined {
-  return DOCUMENTO_TIPOS.includes(value as DocumentoTipo) ? (value as DocumentoTipo) : undefined;
-}
+import type { ClienteCreateRequest } from "@/types/clientes";
 
 const selectClassName =
   "flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
@@ -76,6 +71,11 @@ export default function ClienteCreatePage() {
 
   function confirmTipoChange() {
     if (!pendingTipo) return;
+    const currentDocumentoTipo = form.getValues("documento_tipo");
+    if (toDocumentoTipo(currentDocumentoTipo, pendingTipo) === undefined) {
+      form.setValue("documento_tipo", "");
+      form.setValue("documento_numero", "");
+    }
     form.setValue("tipo", pendingTipo, { shouldValidate: true });
     setPendingTipo(null);
   }
@@ -87,7 +87,7 @@ export default function ClienteCreatePage() {
       return;
     }
     try {
-      const documentoTipo = toDocumentoTipo(values.documento_tipo);
+      const documentoTipo = toDocumentoTipo(values.documento_tipo, values.tipo);
 
       const payload: ClienteCreateRequest = {
         ...values,
@@ -239,10 +239,11 @@ export default function ClienteCreatePage() {
                       {...form.register("documento_tipo")}
                     >
                       <option value="">Nenhum</option>
-                      <option value="NIF">NIF</option>
-                      <option value="CNI">CNI</option>
-                      <option value="PASSAPORTE">Passaporte</option>
-                      <option value="REG_COMERCIAL">Registo Comercial</option>
+                      {getDocumentoTipoOptions(form.watch("tipo")).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
                     {form.formState.errors.documento_tipo ? (
                       <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
