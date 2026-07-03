@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Refatoração Ficha de Cliente
 status: executing
-last_updated: "2026-07-03T16:48:27.644Z"
-last_activity: 2026-07-03 -- Phase 74 planning complete
+last_updated: "2026-07-03T16:49:41.536Z"
+last_activity: 2026-07-03 -- Phase 74 execution started
 progress:
   total_phases: 6
   completed_phases: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — roadmap created, ready to plan Phase 74
+**Current focus:** Phase 74 — Enum documento_tipo (BI/NIF/Restrição por Tipo)
 
 ## Current Position
 
-Phase: 74 of 79 (Enum `documento_tipo` (BI/NIF/Restrição por Tipo))
-Plan: — (not yet planned)
-Status: Ready to execute
-Last activity: 2026-07-03 -- Phase 74 planning complete
+Phase: 74 (Enum documento_tipo (BI/NIF/Restrição por Tipo)) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 74
+Last activity: 2026-07-03 -- Phase 74 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
