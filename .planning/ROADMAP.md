@@ -143,7 +143,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 - [x] 74-01-PLAN.md — Backend enum (BI/-NIF), tipo×documento_tipo validation, defensive NIF cleanup SQL
 - [x] 74-02-PLAN.md — Frontend DocumentoTipo type + shared cliente-documento-tipo options module
 - [x] 74-03-PLAN.md — Filtered dropdown + Zod validation in both cliente form pages
-- [ ] 74-04-PLAN.md — Gap closure: parameterize clienteFormSchema so legacy documento_tipo can be saved on edit (CR-01)
+- [x] 74-04-PLAN.md — Gap closure: parameterize clienteFormSchema so legacy documento_tipo can be saved on edit (CR-01)
 
 #### Phase 75: Componente Único View/Edit
 **Goal**: A ficha de cliente é uma única página que alterna entre modo leitura e edição, sem rota dedicada de edição
@@ -236,7 +236,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 72. Form Refactoring (Create & Edit) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73. Detail Page & Printable Ficha Update | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73.1. Fechar gap CLI-05 (gap closure) | v2.7 | 1/1 | Complete | 2026-07-02 |
-| 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 3/3 | Complete   | 2026-07-03 |
+| 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 4/4 | Complete   | 2026-07-03 |
 | 75. Componente Único View/Edit | v2.8 | 0/? | Not started | - |
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 0/? | Not started | - |
 | 77. Separadores — Processos e Pareceres | v2.8 | 0/? | Not started | - |
