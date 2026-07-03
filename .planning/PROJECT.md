@@ -51,7 +51,22 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — a planear próxima milestone)
+- [ ] Unificar `/clientes/[id]` e `/clientes/[id]/editar` num único componente com toggle Editar (view/edit inline, sem página `/editar` dedicada)
+- [ ] Reestruturar ficha de cliente em 7 tabs (estilo botões toggle de processos): Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
+- [ ] Mover identificação (NIF + tipo de documento + número) para dentro do card "Dados" principal
+- [ ] `documento_tipo`: adicionar `BI`, remover `NIF`, filtrar opções por tipo de cliente (Particular: CNI/BI/Passaporte; Empresa: só REG_COMERCIAL), validado em frontend e backend
+- [ ] "Documentos Entregues" passa a upload real (reutilizando sistema genérico `Documento`/`clienteId`), com combobox de tipo (escolher existente ou escrever novo)
+
+## Current Milestone: v2.8 Refatoração Ficha de Cliente
+
+**Goal:** Transformar a ficha de cliente no formulário central de pesquisa de informação relacionada ao cliente — unificando visualização/edição num único componente e adicionando separadores (tabs) que cobrem processos, pareceres e documentos, seguindo a disposição visual de processos.
+
+**Target features:**
+- Unificação view/edit num único componente com toggle "Editar" (diverge deliberadamente do padrão de processos, que usa páginas separadas — decisão explícita do utilizador)
+- 7 tabs: Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
+- Identificação (NIF + documento_tipo + documento_numero) movida para o card "Dados" principal
+- `documento_tipo`: adicionar `BI`, remover `NIF` (corte limpo), filtrar por tipo de cliente, validado em ambas as camadas
+- "Documentos Entregues" migrado de lista de texto para upload real via sistema genérico de `Documento`, com combobox de tipo livre
 
 ### Out of Scope
 
@@ -134,7 +149,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Planning next milestone (v2.8).
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — defining requirements and roadmap.
 
 ## Evolution
 
@@ -154,4 +169,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 — after v2.7 milestone (Melhoria Gestão de Clientes) shipped*
+*Last updated: 2026-07-03 — milestone v2.8 (Refatoração Ficha de Cliente) started*

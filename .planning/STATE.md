@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.7
-milestone_name: Melhoria Gestão de Clientes
-status: complete
-last_updated: "2026-07-02T11:35:00.000Z"
-last_activity: 2026-07-02 — Milestone v2.7 shipped (audit passed 7/7 after gap closure)
+milestone: v2.8
+milestone_name: Refatoração Ficha de Cliente
+status: planning
+last_updated: "2026-07-03T16:01:02.055Z"
+last_activity: 2026-07-03
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-02)
 
 ## Current Position
 
-Phase: — (milestone v2.7 complete)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone v2.7 archived. Ready for /gsd:new-milestone
-Last activity: 2026-07-02 — Milestone v2.7 shipped (audit passed 7/7 after gap closure)
+Status: Defining requirements
+Last activity: 2026-07-03 — Milestone v2.8 started
 
 ## Performance Metrics
 
