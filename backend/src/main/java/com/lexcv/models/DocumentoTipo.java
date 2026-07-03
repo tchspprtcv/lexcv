@@ -1,7 +1,7 @@
 package com.lexcv.models;
 
 public enum DocumentoTipo {
-    NIF,
+    BI,
     CNI,
     PASSAPORTE,
     REG_COMERCIAL
