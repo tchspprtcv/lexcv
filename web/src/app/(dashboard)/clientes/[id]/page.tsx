@@ -1235,6 +1235,16 @@ function ClienteContactosCard({
   const [editTipo, setEditTipo] = React.useState("");
   const [editValor, setEditValor] = React.useState("");
 
+  // Reset any in-progress row edit when the parent exits edit mode (Save or Cancel), so stale
+  // editingId/editTipo/editValor never resurface if the parent re-enters edit mode later.
+  React.useEffect(() => {
+    if (!editable) {
+      setEditingId(null);
+      setEditTipo("");
+      setEditValor("");
+    }
+  }, [editable]);
+
   const onCreate = async () => {
     if (!canEditClientes || !editable) return;
     const valor = newValor.trim();
@@ -1426,6 +1436,16 @@ function ClienteNotasCard({
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitulo, setEditTitulo] = React.useState("");
   const [editConteudo, setEditConteudo] = React.useState("");
+
+  // Reset any in-progress row edit when the parent exits edit mode (Save or Cancel), so stale
+  // editingId/editTitulo/editConteudo never resurface if the parent re-enters edit mode later.
+  React.useEffect(() => {
+    if (!editable) {
+      setEditingId(null);
+      setEditTitulo("");
+      setEditConteudo("");
+    }
+  }, [editable]);
 
   const onCreate = async () => {
     if (!canEditClientes || !editable) return;
