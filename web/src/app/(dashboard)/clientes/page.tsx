@@ -71,6 +71,7 @@ function ClientesPageContent({
   const processosAtivos = processos.data?.filter((p) => (p.estado ?? "").toUpperCase() !== "ENCERRADO").length ?? 0;
 
   const importInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
 
   React.useEffect(() => {
     const t = window.setTimeout(() => {
@@ -125,76 +126,81 @@ function ClientesPageContent({
   };
 
   const onImportCsv = () => {
-    if (!canCreateClientes) return;
+    if (!canCreateClientes || isImporting) return;
     importInputRef.current?.click();
   };
 
   const onImportFile = async (file: File) => {
-    if (!canCreateClientes) return;
+    if (!canCreateClientes || isImporting) return;
+    setIsImporting(true);
 
-    const text = await file.text();
-    const { headers, rows } = parseCsv(text);
-    const h = headers.map((x) => x.trim().toLowerCase());
+    try {
+      const text = await file.text();
+      const { headers, rows } = parseCsv(text);
+      const h = headers.map((x) => x.trim().toLowerCase());
 
-    const idx = (name: string) => h.findIndex((x) => x === name);
-    const idxNome = idx("nome");
-    if (idxNome === -1) {
-      toast.error("CSV inválido: falta coluna 'nome'.");
-      return;
-    }
-
-    const idxTipo = idx("tipo");
-    const idxNif = idx("nif");
-    const idxTelefone = idx("telefone");
-    const idxEmail = idx("email");
-
-    let created = 0;
-    let failed = 0;
-    const failureReasons: string[] = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i] ?? [];
-      const nome = (r[idxNome] ?? "").trim();
-      const nif = idxNif >= 0 ? (r[idxNif] ?? "").trim() : "";
-      if (!nome) {
-        failed++;
-        failureReasons.push(`linha ${i + 1}: nome em falta`);
-        continue;
+      const idx = (name: string) => h.findIndex((x) => x === name);
+      const idxNome = idx("nome");
+      if (idxNome === -1) {
+        toast.error("CSV inválido: falta coluna 'nome'.");
+        return;
       }
-      if (!nifPattern.test(nif)) {
-        failed++;
-        failureReasons.push(`linha ${i + 1}: NIF inválido`);
-        continue;
-      }
-      try {
-        await createCliente.mutateAsync({
-          nome,
-          tipo: idxTipo >= 0
-            ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
-            : undefined,
-          nif,
-          telefone: idxTelefone >= 0 ? (r[idxTelefone] ?? "").trim() || undefined : undefined,
-          email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,
-        });
-        created++;
-      } catch (err) {
-        failed++;
-        const reason = err instanceof Error ? err.message : "erro desconhecido";
-        failureReasons.push(`linha ${i + 1}: ${reason}`);
-        console.warn(`Import CSV: falha ao criar cliente na linha ${i + 1}`, err);
-      }
-    }
 
-    if (failureReasons.length) {
-      console.warn("Import CSV: linhas com falha", failureReasons);
-    }
+      const idxTipo = idx("tipo");
+      const idxNif = idx("nif");
+      const idxTelefone = idx("telefone");
+      const idxEmail = idx("email");
 
-    if (created && !failed) {
-      toast.success(`Import concluído: ${created} cliente(s) criado(s).`);
-    } else if (created && failed) {
-      toast.error(`Import parcial: ${created} criado(s), ${failed} falhou/invalid.`);
-    } else {
-      toast.error("Import falhou: nenhuma linha válida.");
+      let created = 0;
+      let failed = 0;
+      const failureReasons: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i] ?? [];
+        const nome = (r[idxNome] ?? "").trim();
+        const nif = idxNif >= 0 ? (r[idxNif] ?? "").trim() : "";
+        if (!nome) {
+          failed++;
+          failureReasons.push(`linha ${i + 1}: nome em falta`);
+          continue;
+        }
+        if (!nifPattern.test(nif)) {
+          failed++;
+          failureReasons.push(`linha ${i + 1}: NIF inválido`);
+          continue;
+        }
+        try {
+          await createCliente.mutateAsync({
+            nome,
+            tipo: idxTipo >= 0
+              ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
+              : undefined,
+            nif,
+            telefone: idxTelefone >= 0 ? (r[idxTelefone] ?? "").trim() || undefined : undefined,
+            email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,
+          });
+          created++;
+        } catch (err) {
+          failed++;
+          const reason = err instanceof Error ? err.message : "erro desconhecido";
+          failureReasons.push(`linha ${i + 1}: ${reason}`);
+          console.warn(`Import CSV: falha ao criar cliente na linha ${i + 1}`, err);
+        }
+      }
+
+      if (failureReasons.length) {
+        console.warn("Import CSV: linhas com falha", failureReasons);
+      }
+
+      if (created && !failed) {
+        toast.success(`Import concluído: ${created} cliente(s) criado(s).`);
+      } else if (created && failed) {
+        toast.error(`Import parcial: ${created} criado(s), ${failed} falhou/invalid.`);
+      } else {
+        toast.error("Import falhou: nenhuma linha válida.");
+      }
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -214,6 +220,7 @@ function ClientesPageContent({
             type="file"
             accept=".csv,text/csv"
             className="hidden"
+            disabled={isImporting}
             onChange={async (e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
@@ -230,8 +237,14 @@ function ClientesPageContent({
             </Button>
           ) : null}
           {canCreateClientes ? (
-            <Button type="button" variant="secondary" className="rounded-none" onClick={onImportCsv}>
-              Importar CSV
+            <Button
+              type="button"
+              variant="secondary"
+              className="rounded-none"
+              onClick={onImportCsv}
+              disabled={isImporting}
+            >
+              {isImporting ? "A importar..." : "Importar CSV"}
             </Button>
           ) : null}
           {canCreateClientes ? (
