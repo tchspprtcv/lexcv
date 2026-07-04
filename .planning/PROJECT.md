@@ -48,13 +48,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Campo `documento_tipo` para Empresa com valor `REG_COMERCIAL`, número guardado em `documento_numero` — v2.7
 - ✓ Formulários de criação e edição de cliente adaptados para campos planos com labels dinâmicas — v2.7
 - ✓ Detalhe do cliente e ficha impressa adaptados para a estrutura de dados simplificada — v2.7
+- ✓ Enum `documento_tipo` com `BI` (removido `NIF`), opções filtradas por tipo de cliente (Particular: CNI/BI/Passaporte; Empresa: só REG_COMERCIAL), validado em frontend e backend, com preservação de valores legados não conformes em edições que não os alteram — v2.8 (Phase 74)
 
 ### Active
 
 - [ ] Unificar `/clientes/[id]` e `/clientes/[id]/editar` num único componente com toggle Editar (view/edit inline, sem página `/editar` dedicada)
 - [ ] Reestruturar ficha de cliente em 7 tabs (estilo botões toggle de processos): Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
 - [ ] Mover identificação (NIF + tipo de documento + número) para dentro do card "Dados" principal
-- [ ] `documento_tipo`: adicionar `BI`, remover `NIF`, filtrar opções por tipo de cliente (Particular: CNI/BI/Passaporte; Empresa: só REG_COMERCIAL), validado em frontend e backend
 - [ ] "Documentos Entregues" passa a upload real (reutilizando sistema genérico `Documento`/`clienteId`), com combobox de tipo (escolher existente ou escrever novo)
 
 ## Current Milestone: v2.8 Refatoração Ficha de Cliente
@@ -126,6 +126,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | `dados_tipo` (coluna JSON única, decisão da v2.4) removida por completo — identificação de cliente aplanada em colunas diretas (`nif`, `documento_tipo`, `documento_numero`) | Reversão deliberada da decisão de v2.4: o padrão JSON-por-tipo mostrou-se mais difícil de validar/manter do que colunas planas para este caso específico (identificação, campo de baixa cardinalidade) — os outros usos de `@Convert`/JSON (documentos, deslocações, honorários) permanecem inalterados | ✓ Good |
 | Campo `nif` dedicado passa a única fonte de verdade, substituindo a lógica legada de sincronização a partir de `documento_tipo`/`documento_numero` (frontend E backend) | Auditoria de milestone (v2.7) encontrou um bug de sobrescrita silenciosa: o campo NIF validado podia ser substituído por um valor não validado do campo legado. Fase de fecho de gap (73.1) removeu a lógica em ambas as camadas | ✓ Good |
 | `jakarta.persistence.validation.mode: none` no `application.yml`, mantendo `@Valid` ao nível do controller | Adicionar Bean Validation (`@NotBlank`/`@Pattern`) a `Cliente.nif` ativou also a validação JPA-lifecycle (`@PrePersist`/`@PreUpdate`) em todos os `save()`, incluindo operações não relacionadas (upload de procuração, merge de clientes) que não tocam `nif` — quebraria clientes legados com NIF inválido. Code review da Phase 73.1 apanhou isto antes do deploy | ✓ Good |
+| `updateCliente` só valida `documento_tipo`/`documento_numero` contra a restrição por tipo quando o valor recebido difere do valor já guardado (`documentoTipoUnchanged` via `Objects.equals`) | Auditoria de fase (Phase 74) encontrou que resubmeter um valor legado inalterado (ex.: Empresa com CNI, permitido antes da v2.8) era rejeitado pelo backend mesmo depois do frontend passar a preservá-lo corretamente — violava a decisão explícita de não forçar migração retroativa de dados. `createCliente` mantém-se totalmente estrito (sem entidade existente para comparar) | ✓ Good |
 
 ## Current State
 
@@ -149,7 +150,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — defining requirements and roadmap.
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phase 74 (enum `documento_tipo`) complete, 5 phases remaining (75–79).
 
 ## Evolution
 
@@ -169,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 — milestone v2.8 (Refatoração Ficha de Cliente) started*
+*Last updated: 2026-07-04 — after Phase 74 (Enum documento_tipo BI/NIF/Restrição por Tipo) completed in milestone v2.8*
