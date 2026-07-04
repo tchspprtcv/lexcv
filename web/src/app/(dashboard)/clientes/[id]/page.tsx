@@ -898,6 +898,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <ClienteContactosCard
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               data={contactos.data}
               isLoading={contactos.isLoading}
               isError={contactos.isError}
@@ -905,6 +906,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <ClienteNotasCard
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               data={notas.data}
               isLoading={notas.isLoading}
               isError={notas.isError}
@@ -915,12 +917,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <ProcuracaoCard
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               procuracaoKey={cliente.data.procuracao_key}
             />
             <ResponsaveisCard
               title="Advogados"
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               useList={useClienteAdvogados}
               useAdd={useAddAdvogado}
               useRemove={useRemoveAdvogado}
@@ -929,6 +933,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               title="Administrativos"
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               useList={useClienteAdministrativos}
               useAdd={useAddAdministrativo}
               useRemove={useRemoveAdministrativo}
@@ -962,10 +967,12 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
 function ProcuracaoCard({
   clienteId,
   canEditClientes,
+  editable,
   procuracaoKey,
 }: {
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   procuracaoKey?: string;
 }) {
   const upload = useUploadProcuracao(clienteId);
@@ -974,7 +981,7 @@ function ProcuracaoCard({
   const hasProcuracao = Boolean(procuracaoKey);
 
   const onFileChange = async (file: File) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const formData = new FormData();
     formData.append("file", file);
     try {
@@ -995,7 +1002,7 @@ function ProcuracaoCard({
   };
 
   const onRemove = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover a procuração deste cliente?");
     if (!ok) return;
     try {
@@ -1026,13 +1033,13 @@ function ProcuracaoCard({
               <Button type="button" variant="secondary" onClick={onView} disabled={download.isPending}>
                 {download.isPending ? "A preparar..." : "Ver / Download"}
               </Button>
-              {canEditClientes ? (
+              {canEditClientes && editable ? (
                 <Button type="button" variant="outline" onClick={onRemove} disabled={del.isPending}>
                   Remover
                 </Button>
               ) : null}
             </div>
-            {canEditClientes ? (
+            {canEditClientes && editable ? (
               <div className="pt-2">
                 <Label className="mb-2 block text-xs text-neutral-500 dark:text-neutral-400">
                   Substituir ficheiro
@@ -1047,7 +1054,7 @@ function ProcuracaoCard({
               </div>
             ) : null}
           </div>
-        ) : canEditClientes ? (
+        ) : canEditClientes && editable ? (
           <FileDropZone
             onFileChange={onFileChange}
             accept="application/pdf,image/*,.doc,.docx"
@@ -1069,6 +1076,7 @@ function ResponsaveisCard({
   title,
   clienteId,
   canEditClientes,
+  editable,
   useList,
   useAdd,
   useRemove,
@@ -1076,6 +1084,7 @@ function ResponsaveisCard({
   title: string;
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   useList: (clienteId: string) => { data?: ClienteAdvogadoUser[]; isLoading: boolean; isError: boolean };
   useAdd: (clienteId: string) => { mutateAsync: (userId: string) => Promise<unknown>; isPending: boolean };
   useRemove: (clienteId: string) => { mutateAsync: (userId: string) => Promise<unknown>; isPending: boolean };
@@ -1094,7 +1103,7 @@ function ResponsaveisCard({
   ) as Array<{ id: string; nome?: string; email?: string }>;
 
   const onAdd = async () => {
-    if (!canEditClientes || !selectedUserId) return;
+    if (!canEditClientes || !editable || !selectedUserId) return;
     try {
       await add.mutateAsync(selectedUserId);
       toast.success("Adicionado com sucesso.");
@@ -1106,7 +1115,7 @@ function ResponsaveisCard({
   };
 
   const onRemove = async (userId: string) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover este utilizador?");
     if (!ok) return;
     try {
@@ -1123,7 +1132,7 @@ function ResponsaveisCard({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {canEditClientes ? (
+        {canEditClientes && editable ? (
           <Button type="button" variant="secondary" onClick={() => setModalOpen(true)}>
             Adicionar
           </Button>
@@ -1150,7 +1159,7 @@ function ResponsaveisCard({
                     {u.email ? <span>{u.email}</span> : null}
                   </div>
                 </div>
-                {canEditClientes ? (
+                {canEditClientes && editable ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1203,12 +1212,14 @@ function ResponsaveisCard({
 function ClienteContactosCard({
   clienteId,
   canEditClientes,
+  editable,
   data,
   isLoading,
   isError,
 }: {
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   data: ClienteContacto[] | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -1225,7 +1236,7 @@ function ClienteContactosCard({
   const [editValor, setEditValor] = React.useState("");
 
   const onCreate = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const valor = newValor.trim();
     if (!valor) return;
     try {
@@ -1250,7 +1261,7 @@ function ClienteContactosCard({
   };
 
   const onSaveEdit = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     if (!editingId) return;
     const valor = editValor.trim();
     if (!valor) return;
@@ -1264,7 +1275,7 @@ function ClienteContactosCard({
   };
 
   const onDelete = async (id: string) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover este contacto?");
     if (!ok) return;
     try {
@@ -1282,7 +1293,7 @@ function ClienteContactosCard({
         <CardTitle>Contactos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canEditClientes ? (
+        {canEditClientes && editable ? (
           <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
             <select
               value={newTipo}
@@ -1352,7 +1363,7 @@ function ClienteContactosCard({
                     </div>
                   </div>
 
-                  {canEditClientes ? (
+                  {canEditClientes && editable ? (
                     <div className="flex items-center gap-2">
                       {isEditing ? (
                         <>
@@ -1393,12 +1404,14 @@ function ClienteContactosCard({
 function ClienteNotasCard({
   clienteId,
   canEditClientes,
+  editable,
   data,
   isLoading,
   isError,
 }: {
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   data: ClienteNota[] | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -1415,7 +1428,7 @@ function ClienteNotasCard({
   const [editConteudo, setEditConteudo] = React.useState("");
 
   const onCreate = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const conteudo = newConteudo.trim();
     if (!conteudo) return;
     try {
@@ -1441,7 +1454,7 @@ function ClienteNotasCard({
   };
 
   const onSaveEdit = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     if (!editingId) return;
     const conteudo = editConteudo.trim();
     if (!conteudo) return;
@@ -1455,7 +1468,7 @@ function ClienteNotasCard({
   };
 
   const onDelete = async (id: string) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover esta nota?");
     if (!ok) return;
     try {
@@ -1473,7 +1486,7 @@ function ClienteNotasCard({
         <CardTitle>Notas</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canEditClientes ? (
+        {canEditClientes && editable ? (
           <div className="space-y-2">
             <input
               value={newTitulo}
@@ -1529,7 +1542,7 @@ function ClienteNotasCard({
                       </div>
                     </div>
 
-                    {canEditClientes ? (
+                    {canEditClientes && editable ? (
                       <div className="flex items-center gap-2">
                         {isEditing ? (
                           <>
