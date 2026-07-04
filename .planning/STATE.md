@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Refatoração Ficha de Cliente
 status: executing
-last_updated: "2026-07-04T08:52:23.317Z"
-last_activity: 2026-07-04 -- Phase 75 planning complete
+last_updated: "2026-07-04T08:52:39.467Z"
+last_activity: 2026-07-04 -- Phase 75 execution started
 progress:
   total_phases: 6
   completed_phases: 1
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 75 — componente único view/edit
+**Current focus:** Phase 75 — Componente Único View/Edit
 
 ## Current Position
 
-Phase: 75
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-04 -- Phase 75 planning complete
+Phase: 75 (Componente Único View/Edit) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 75
+Last activity: 2026-07-04 -- Phase 75 execution started
 
 Progress: [░░░░░░░░░░] 0%
 

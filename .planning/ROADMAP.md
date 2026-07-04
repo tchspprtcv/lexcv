@@ -156,9 +156,9 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   3. Em modo leitura, controlos de edição (inputs/selects/guardar/cancelar/adicionar/remover) estão inativos ou ocultos
   4. Aceder a `/clientes/[id]/editar` deixa de existir como rota separada
 **Plans**: 3 plans (2 waves)
-- [ ] 75-01-PLAN.md — Merge edit-mode logic + isEditing toggle into [id]/page.tsx; delete /editar route (Wave 1)
+- [x] 75-01-PLAN.md — Merge edit-mode logic + isEditing toggle into [id]/page.tsx; delete /editar route (Wave 1)
 - [ ] 75-02-PLAN.md — Add editable prop to the 4 inline sub-cards, AND-gate CRUD affordances (Wave 2)
-- [ ] 75-03-PLAN.md — Repoint the 2 Editar pencil links in clientes list page to /clientes/[id] (Wave 1)
+- [x] 75-03-PLAN.md — Repoint the 2 Editar pencil links in clientes list page to /clientes/[id] (Wave 1)
 **UI hint**: yes
 
 #### Phase 76: Separadores — Dados, Contactos e Notas
@@ -241,7 +241,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 73. Detail Page & Printable Ficha Update | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 73.1. Fechar gap CLI-05 (gap closure) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 5/5 | Complete    | 2026-07-04 |
-| 75. Componente Único View/Edit | v2.8 | 0/3 | Planned | - |
+| 75. Componente Único View/Edit | v2.8 | 2/3 | In Progress|  |
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 0/? | Not started | - |
 | 77. Separadores — Processos e Pareceres | v2.8 | 0/? | Not started | - |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/? | Not started | - |
