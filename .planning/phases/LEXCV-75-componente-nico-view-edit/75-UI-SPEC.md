@@ -1,10 +1,11 @@
 ---
 phase: 75
 slug: componente-nico-view-edit
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-04
+reviewed_at: 2026-07-04
 ---
 
 # Phase 75 — UI Design Contract
@@ -61,15 +62,16 @@ Exceptions: none.
 
 ## Typography
 
-No new typography introduced. Reuses existing classes exactly:
+No new typography introduced. Verified directly against both source files (`grep -n "font-semibold\|font-medium\|font-normal\|font-bold"` across `[id]/page.tsx` and `[id]/editar/page.tsx`): across all headings, section sub-headings, and emphasized field values, exactly **two** distinct weight utility classes are declared — `font-semibold` (600) and `font-medium` (500). Everything else (breadcrumbs, `dt` labels, plain `dd` values, muted/secondary text) carries **no weight class at all** and simply inherits the base/unstyled body weight — it is not a third *declared* weight, it is the absence of one. (Badge-only `font-bold`/`font-normal` micro-uses on the `numero_cliente`/status badges are pre-existing, out of scope for this phase, and not part of the page's text-role hierarchy.)
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Page H1 ("Cliente") | 24px (`text-2xl`) | 600 (`font-semibold`) | default (existing, unchanged) |
-| Card title (`CardTitle`) | existing `CardTitle` component default (unchanged) | existing default | existing default |
-| Body / `dl`/`dd` values | 14px (`text-sm`) | 400 default / `font-medium` for the Nome value | 1.5 (existing, unchanged) |
-| Breadcrumb / muted label | 14px (`text-sm text-neutral-500`) | 400 | 1.5 |
-| Section sub-heading ("Informações Adicionais", "Intake do Caso") | 18px (`text-lg`) | 500 (`font-medium`) | existing, unchanged |
+| Page H1 ("Cliente" / section sub-headings "Informações Adicionais", "Intake do Caso") | 24px (`text-2xl`) for H1, 18px (`text-lg`) / 14px (`text-sm`) for sub-headings | 600 (`font-semibold`) for H1; 500 (`font-medium`) for sub-headings | default (existing, unchanged) |
+| Emphasized value (Nome `dd`, contact/responsável name values) | 14px (`text-sm`) | 500 (`font-medium`) | 1.5 (existing, unchanged) |
+| Body / `dl`/`dd` plain values, breadcrumb, muted labels | 14px (`text-sm`, `text-sm text-neutral-500`) | no weight class declared — inherits base/unstyled weight (existing, unchanged) | 1.5 (existing, unchanged) |
+| Card title (`CardTitle`) | existing `CardTitle` component default (unchanged) | existing default (unchanged) | existing default |
+
+Declared weights for this phase: **2** — `font-semibold` (600) and `font-medium` (500). No third weight is introduced or relied upon.
 
 ---
 
@@ -177,7 +179,7 @@ On successful `Guardar`: `useUpdateCliente(id).mutateAsync(payload)` (unchanged 
 - [x] Dimension 1 Copywriting: PASS — all copy sourced from existing pages verbatim; only "new" combination is Editar/Guardar/Cancelar co-existing in one header state machine, fully specified above
 - [x] Dimension 2 Visuals: PASS — explicitly no new visual surface; per-mode rendering must match existing standalone pages pixel-for-pixel; only new interaction is the button state machine and sub-component gating prop
 - [x] Dimension 3 Color: PASS — no new color usage; existing neutral/red-600/status-badge palette reused unchanged; accent reservation narrowed to the single contextual primary header button
-- [x] Dimension 4 Typography: PASS — no new typography; existing text-2xl/text-lg/text-sm classes reused unchanged
+- [x] Dimension 4 Typography: PASS — exactly 2 declared weights (`font-semibold`=600, `font-medium`=500) verified directly against source files; no third weight declared, unstyled body text is not a "weight" but the absence of one
 - [x] Dimension 5 Spacing: PASS — no new spacing; existing space-y-6/gap-4/gap-2 structure reused unchanged
 - [x] Dimension 6 Registry Safety: PASS — not applicable, no registry/component installs in this phase
 
