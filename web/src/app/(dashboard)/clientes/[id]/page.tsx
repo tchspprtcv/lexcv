@@ -1097,6 +1097,12 @@ function ResponsaveisCard({
   const [modalOpen, setModalOpen] = React.useState(false);
   const [selectedUserId, setSelectedUserId] = React.useState("");
 
+  // Close the add-modal if it was open when the parent exits edit mode, so an action that is no
+  // longer permitted doesn't remain visibly open with no explanation.
+  React.useEffect(() => {
+    if (!editable) setModalOpen(false);
+  }, [editable]);
+
   const existingIds = new Set((list.data ?? []).map((u) => u.id));
   const candidateUsers = (adminUsers.data ?? []).filter(
     (u) => !existingIds.has((u as { id: string }).id),
