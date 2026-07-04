@@ -23,11 +23,11 @@ Requirements for milestone v2.8 (Refatoração Ficha de Cliente). Each maps to r
 ### Identificação no Card "Dados"
 
 - [ ] **CLI-19**: Card "Dados" principal inclui identificação (NIF, tipo de documento, número de documento) como elemento do card
-- [ ] **CLI-20**: Enum `documento_tipo` passa a incluir `BI`
-- [ ] **CLI-21**: Valor `NIF` é removido do enum `documento_tipo` (corte limpo)
-- [ ] **CLI-22**: Para Particular, tipo de documento oferece apenas CNI/BI/Passaporte
-- [ ] **CLI-23**: Para Empresa, tipo de documento oferece apenas Registo Comercial
-- [ ] **CLI-24**: Restrição por tipo de cliente validada em frontend (dropdown filtrado) e backend (rejeita combinações inválidas)
+- [x] **CLI-20**: Enum `documento_tipo` passa a incluir `BI`
+- [x] **CLI-21**: Valor `NIF` é removido do enum `documento_tipo` (corte limpo)
+- [x] **CLI-22**: Para Particular, tipo de documento oferece apenas CNI/BI/Passaporte
+- [x] **CLI-23**: Para Empresa, tipo de documento oferece apenas Registo Comercial
+- [x] **CLI-24**: Restrição por tipo de cliente validada em frontend (dropdown filtrado) e backend (rejeita combinações inválidas)
 
 ### Documentos Entregues (upload real)
 
@@ -70,11 +70,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-17 | Phase 77 | Pending |
 | CLI-18 | Phase 76 | Pending |
 | CLI-19 | Phase 76 | Pending |
-| CLI-20 | Phase 74 | Pending |
-| CLI-21 | Phase 74 | Pending |
-| CLI-22 | Phase 74 | Pending |
-| CLI-23 | Phase 74 | Pending |
-| CLI-24 | Phase 74 | Pending |
+| CLI-20 | Phase 74 | Complete |
+| CLI-21 | Phase 74 | Complete |
+| CLI-22 | Phase 74 | Complete |
+| CLI-23 | Phase 74 | Complete |
+| CLI-24 | Phase 74 | Complete |
 | CLI-25 | Phase 79 | Pending |
 | CLI-26 | Phase 79 | Pending |
 | CLI-27 | Phase 79 | Pending |
