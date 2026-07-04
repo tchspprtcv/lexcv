@@ -1,10 +1,11 @@
 ---
 phase: 76
 slug: separadores-dados-contactos-e-notas
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-04
+reviewed_at: 2026-07-04
 ---
 
 # Phase 76 — UI Design Contract
