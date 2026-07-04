@@ -9,9 +9,9 @@ Requirements for milestone v2.8 (Refatoração Ficha de Cliente). Each maps to r
 
 ### Unificação Ficha/Formulário
 
-- [ ] **CLI-12**: Utilizador visualiza e edita os dados do cliente numa única página, alternando entre modo leitura e edição via botão "Editar"
-- [ ] **CLI-13**: Em modo visualização, controlos de edição (inputs/selects/botões guardar-cancelar-adicionar-remover) ficam inativos/ocultos; em modo edição tornam-se ativos
-- [ ] **CLI-14**: Rota `/clientes/[id]/editar` é removida em favor do componente único em `/clientes/[id]`
+- [x] **CLI-12**: Utilizador visualiza e edita os dados do cliente numa única página, alternando entre modo leitura e edição via botão "Editar"
+- [x] **CLI-13**: Em modo visualização, controlos de edição (inputs/selects/botões guardar-cancelar-adicionar-remover) ficam inativos/ocultos; em modo edição tornam-se ativos
+- [x] **CLI-14**: Rota `/clientes/[id]/editar` é removida em favor do componente único em `/clientes/[id]`
 
 ### Navegação por Separadores
 
@@ -62,9 +62,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-12 | Phase 75 | Pending |
-| CLI-13 | Phase 75 | Pending |
-| CLI-14 | Phase 75 | Pending |
+| CLI-12 | Phase 75 | Complete |
+| CLI-13 | Phase 75 | Complete |
+| CLI-14 | Phase 75 | Complete |
 | CLI-15 | Phase 76 | Pending |
 | CLI-16 | Phase 77 | Pending |
 | CLI-17 | Phase 77 | Pending |
