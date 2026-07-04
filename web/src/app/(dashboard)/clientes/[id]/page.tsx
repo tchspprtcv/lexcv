@@ -898,6 +898,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <ClienteContactosCard
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               data={contactos.data}
               isLoading={contactos.isLoading}
               isError={contactos.isError}
@@ -905,6 +906,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <ClienteNotasCard
               clienteId={id}
               canEditClientes={canEditClientes}
+              editable={isEditing}
               data={notas.data}
               isLoading={notas.isLoading}
               isError={notas.isError}
@@ -1203,12 +1205,14 @@ function ResponsaveisCard({
 function ClienteContactosCard({
   clienteId,
   canEditClientes,
+  editable,
   data,
   isLoading,
   isError,
 }: {
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   data: ClienteContacto[] | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -1225,7 +1229,7 @@ function ClienteContactosCard({
   const [editValor, setEditValor] = React.useState("");
 
   const onCreate = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const valor = newValor.trim();
     if (!valor) return;
     try {
@@ -1250,7 +1254,7 @@ function ClienteContactosCard({
   };
 
   const onSaveEdit = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     if (!editingId) return;
     const valor = editValor.trim();
     if (!valor) return;
@@ -1264,7 +1268,7 @@ function ClienteContactosCard({
   };
 
   const onDelete = async (id: string) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover este contacto?");
     if (!ok) return;
     try {
@@ -1282,7 +1286,7 @@ function ClienteContactosCard({
         <CardTitle>Contactos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canEditClientes ? (
+        {canEditClientes && editable ? (
           <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
             <select
               value={newTipo}
@@ -1352,7 +1356,7 @@ function ClienteContactosCard({
                     </div>
                   </div>
 
-                  {canEditClientes ? (
+                  {canEditClientes && editable ? (
                     <div className="flex items-center gap-2">
                       {isEditing ? (
                         <>
@@ -1393,12 +1397,14 @@ function ClienteContactosCard({
 function ClienteNotasCard({
   clienteId,
   canEditClientes,
+  editable,
   data,
   isLoading,
   isError,
 }: {
   clienteId: string;
   canEditClientes: boolean;
+  editable: boolean;
   data: ClienteNota[] | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -1415,7 +1421,7 @@ function ClienteNotasCard({
   const [editConteudo, setEditConteudo] = React.useState("");
 
   const onCreate = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const conteudo = newConteudo.trim();
     if (!conteudo) return;
     try {
@@ -1441,7 +1447,7 @@ function ClienteNotasCard({
   };
 
   const onSaveEdit = async () => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     if (!editingId) return;
     const conteudo = editConteudo.trim();
     if (!conteudo) return;
@@ -1455,7 +1461,7 @@ function ClienteNotasCard({
   };
 
   const onDelete = async (id: string) => {
-    if (!canEditClientes) return;
+    if (!canEditClientes || !editable) return;
     const ok = window.confirm("Remover esta nota?");
     if (!ok) return;
     try {
@@ -1473,7 +1479,7 @@ function ClienteNotasCard({
         <CardTitle>Notas</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {canEditClientes ? (
+        {canEditClientes && editable ? (
           <div className="space-y-2">
             <input
               value={newTitulo}
@@ -1529,7 +1535,7 @@ function ClienteNotasCard({
                       </div>
                     </div>
 
-                    {canEditClientes ? (
+                    {canEditClientes && editable ? (
                       <div className="flex items-center gap-2">
                         {isEditing ? (
                           <>
