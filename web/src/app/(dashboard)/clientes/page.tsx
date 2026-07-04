@@ -447,7 +447,7 @@ function ClientesPageContent({
                         </Button>
                         {canEditClientes && (
                           <Button asChild size="sm" variant="ghost" className="h-12 w-12 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                            <Link href={`/clientes/${encodeURIComponent(c.id)}/editar`}>
+                            <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
                               <Pencil className="h-4 w-4" />
                             </Link>
                           </Button>
@@ -594,7 +594,7 @@ function ClienteRow({
           </Button>
           {canEditClientes ? (
             <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              <Link href={`/clientes/${encodeURIComponent(cliente.id)}/editar`}>
+              <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
                 <Pencil className="h-4 w-4" />
               </Link>
             </Button>
