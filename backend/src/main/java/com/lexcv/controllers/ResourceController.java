@@ -264,7 +264,14 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
         }
 
-        if (!isDocumentoTipoValidoParaTipo(payload.getTipo(), payload.getDocumentoTipo(), payload.getDocumentoNumero())) {
+        // Only NEW/changed submissions are validated; a documentoTipo/documentoNumero resent
+        // identical to the stored value is a pre-existing combination tolerated per
+        // 74-CONTEXT.md line 26 ("pre-existing invalid combinations are tolerated até serem
+        // editados; só submissões novas são validadas").
+        boolean documentoTipoUnchanged = java.util.Objects.equals(cliente.getDocumentoTipo(), payload.getDocumentoTipo())
+                && java.util.Objects.equals(cliente.getDocumentoNumero(), payload.getDocumentoNumero());
+
+        if (!documentoTipoUnchanged && !isDocumentoTipoValidoParaTipo(payload.getTipo(), payload.getDocumentoTipo(), payload.getDocumentoNumero())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
