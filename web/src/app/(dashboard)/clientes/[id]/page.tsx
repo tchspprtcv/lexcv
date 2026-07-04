@@ -281,6 +281,12 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
 
       await update.mutateAsync(payload);
       toast.success("Cliente atualizado com sucesso.");
+      setNewDocEntre({ descricao: "", data: "" });
+      setNewDocATratar({ descricao: "" });
+      setNewDeslocacao({ descricao: "", local: "", data: "" });
+      setAddDocEntreModal(false);
+      setAddDocATratarModal(false);
+      setAddDeslocacaoModal(false);
       setIsEditing(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao atualizar cliente";
@@ -296,6 +302,13 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
       setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
       setDeslocacoes(cliente.data.deslocacoes ?? []);
     }
+    setNewDocEntre({ descricao: "", data: "" });
+    setNewDocATratar({ descricao: "" });
+    setNewDeslocacao({ descricao: "", local: "", data: "" });
+    setAddDocEntreModal(false);
+    setAddDocATratarModal(false);
+    setAddDeslocacaoModal(false);
+    setPendingTipo(null);
     setServerError(null);
     setIsEditing(false);
   };
