@@ -1,8 +1,10 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import * as React from "react";
 import { Printer } from "lucide-react";
+import { Controller, useForm } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,11 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import {
@@ -28,6 +35,7 @@ import {
   useDownloadProcuracao,
   useRemoveAdministrativo,
   useRemoveAdvogado,
+  useUpdateCliente,
   useUploadProcuracao,
 } from "@/hooks/use-clientes";
 import {
@@ -44,9 +52,18 @@ import {
 } from "@/hooks/use-cliente-notas";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
+import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
+import { buildClienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteContacto } from "@/types/clientes-contactos";
 import type { ClienteNota } from "@/types/clientes-notas";
-import type { ClienteAdvogadoUser } from "@/types/clientes";
+import type {
+  Cliente,
+  ClienteAdvogadoUser,
+  ClienteUpdateRequest,
+  Deslocacao,
+  DocumentoATratar,
+  DocumentoEntregue,
+} from "@/types/clientes";
 import { toast } from "@/hooks/use-toast";
 
 type PageProps = {
@@ -56,6 +73,12 @@ type PageProps = {
 function formatMoneyCVE(v: number) {
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
+
+const selectClassName =
+  "flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
+
+const textareaClassName =
+  "flex min-h-24 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
 
 export default function ClienteDetailPage({ params }: PageProps) {
   const { id } = React.use(params);
@@ -82,6 +105,206 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const notas = useClienteNotas(id);
   const isLoading = cliente.isLoading || conta.isLoading;
   const isError = cliente.isError || conta.isError;
+
+  const update = useUpdateCliente(id);
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [legacyDocumentoTipo, setLegacyDocumentoTipo] = React.useState<string | null>(null);
+
+  // Rebuilt whenever the loaded legacy documento_tipo changes so the resolver exempts exactly
+  // that one value from the per-tipo membership check (see buildClienteFormSchema docblock).
+  const clienteFormSchema = React.useMemo(
+    () => buildClienteFormSchema(legacyDocumentoTipo ?? undefined),
+    [legacyDocumentoTipo],
+  );
+
+  const form = useForm<ClienteFormValues>({
+    resolver: zodResolver(clienteFormSchema),
+    defaultValues: {
+      nome: "",
+      nif: "",
+      tipo: undefined,
+      avencado: false,
+      email: "",
+      telefone: "",
+      localidade: "",
+      morada: "",
+      documento_tipo: "",
+      documento_numero: "",
+      ramo_atividade: "",
+      detalhes_adicionais: "",
+      descricao_caso: "",
+      honorarios_propostos: {
+        total: undefined,
+        totalPorExtenso: "",
+        previsao: "",
+      },
+    },
+  });
+
+  const [pendingTipo, setPendingTipo] = React.useState<"PARTICULAR" | "EMPRESA" | null>(null);
+
+  function onTipoChange(newTipo: "PARTICULAR" | "EMPRESA") {
+    const current = form.getValues("tipo");
+    if (current && current !== newTipo) {
+      setPendingTipo(newTipo);
+    } else {
+      form.setValue("tipo", newTipo, { shouldValidate: true });
+    }
+  }
+
+  function confirmTipoChange() {
+    if (!pendingTipo) return;
+    const currentDocumentoTipo = form.getValues("documento_tipo");
+    if (toDocumentoTipo(currentDocumentoTipo, pendingTipo) === undefined) {
+      form.setValue("documento_tipo", "");
+      form.setValue("documento_numero", "");
+      setLegacyDocumentoTipo(null);
+    }
+    form.setValue("tipo", pendingTipo, { shouldValidate: true });
+    setPendingTipo(null);
+  }
+
+  // Intake list state — managed outside react-hook-form, synced into the PUT payload on submit.
+  const [documentosEntregues, setDocumentosEntregues] = React.useState<DocumentoEntregue[]>([]);
+  const [documentosATratar, setDocumentosATratar] = React.useState<DocumentoATratar[]>([]);
+  const [deslocacoes, setDeslocacoes] = React.useState<Deslocacao[]>([]);
+
+  const [addDocEntreModal, setAddDocEntreModal] = React.useState(false);
+  const [newDocEntre, setNewDocEntre] = React.useState<{ descricao: string; data: string }>({ descricao: "", data: "" });
+
+  const [addDocATratarModal, setAddDocATratarModal] = React.useState(false);
+  const [newDocATratar, setNewDocATratar] = React.useState<{ descricao: string }>({ descricao: "" });
+
+  const [addDeslocacaoModal, setAddDeslocacaoModal] = React.useState(false);
+  const [newDeslocacao, setNewDeslocacao] = React.useState<{ descricao: string; local: string; data: string }>({
+    descricao: "",
+    local: "",
+    data: "",
+  });
+
+  const buildDefaultValues = React.useCallback((data: Cliente) => {
+    const loadedTipo = (data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
+    const loadedDocumentoTipo = data.documento_tipo ?? data.documentoTipo ?? "";
+    return {
+      nome: data.nome ?? "",
+      nif: data.nif ?? "",
+      tipo: loadedTipo,
+      avencado: data.avencado ?? false,
+      email: data.email ?? "",
+      telefone: data.telefone ?? "",
+      localidade: data.localidade ?? "",
+      morada: data.morada ?? "",
+      documento_tipo: loadedDocumentoTipo,
+      documento_numero: data.documento_numero ?? data.documentoNumero ?? "",
+      ramo_atividade: data.ramo_atividade ?? data.ramoAtividade ?? "",
+      detalhes_adicionais: data.detalhes_adicionais ?? data.detalhesAdicionais ?? "",
+      descricao_caso: data.descricao_caso ?? "",
+      honorarios_propostos: {
+        total: data.honorarios_propostos?.total ?? undefined,
+        totalPorExtenso: data.honorarios_propostos?.totalPorExtenso ?? "",
+        previsao: data.honorarios_propostos?.previsao ?? "",
+      },
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!cliente.data) return;
+    const loadedTipo = (cliente.data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
+    const loadedDocumentoTipo = cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "";
+
+    // Detect a pre-existing documento_tipo that isn't valid for the loaded tipo (e.g. legacy
+    // data not covered by the 74-cleanup-nif-documento-tipo.sql migration). If we silently fed
+    // this into the native <select>, the browser would fall back to the first <option>
+    // ("Nenhum", value "") since there's no matching option, and an unrelated save would then
+    // clear the field as a side effect. Instead, flag it and keep the raw value selected below.
+    const isValidCombo =
+      !loadedDocumentoTipo ||
+      getDocumentoTipoOptions(loadedTipo).some((opt) => opt.value === loadedDocumentoTipo);
+    setLegacyDocumentoTipo(isValidCombo ? null : loadedDocumentoTipo);
+
+    form.reset(buildDefaultValues(cliente.data));
+    setDocumentosEntregues(cliente.data.documentos_entregues ?? []);
+    setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
+    setDeslocacoes(cliente.data.deslocacoes ?? []);
+  }, [cliente.data, form, buildDefaultValues]);
+
+  function confirmAddDocEntre() {
+    if (!newDocEntre.descricao.trim()) return;
+    setDocumentosEntregues((prev) => [...prev, { ...newDocEntre }]);
+    setNewDocEntre({ descricao: "", data: "" });
+    setAddDocEntreModal(false);
+  }
+
+  function confirmAddDocATratar() {
+    if (!newDocATratar.descricao.trim()) return;
+    setDocumentosATratar((prev) => [...prev, { ...newDocATratar }]);
+    setNewDocATratar({ descricao: "" });
+    setAddDocATratarModal(false);
+  }
+
+  function confirmAddDeslocacao() {
+    if (!newDeslocacao.descricao.trim()) return;
+    setDeslocacoes((prev) => [...prev, { ...newDeslocacao }]);
+    setNewDeslocacao({ descricao: "", local: "", data: "" });
+    setAddDeslocacaoModal(false);
+  }
+
+  const onSubmit = async (values: ClienteFormValues) => {
+    setServerError(null);
+    try {
+      // Preserve a legacy documento_tipo/tipo combo verbatim when the user hasn't touched the
+      // field (see legacyDocumentoTipo banner above) -- toDocumentoTipo() would otherwise return
+      // undefined for it since it isn't in the valid option set for the current tipo, silently
+      // clearing a value the user never intended to change.
+      const documentoTipo =
+        legacyDocumentoTipo && values.documento_tipo === legacyDocumentoTipo
+          ? (values.documento_tipo as ClienteUpdateRequest["documento_tipo"])
+          : toDocumentoTipo(values.documento_tipo, values.tipo);
+
+      const payload: ClienteUpdateRequest = {
+        ...values,
+        tipo: values.tipo,
+        avencado: values.avencado,
+        documento_tipo: documentoTipo,
+        documentoTipo: documentoTipo,
+        documentoNumero: values.documento_numero || undefined,
+        ramoAtividade: values.ramo_atividade || undefined,
+        detalhesAdicionais: values.detalhes_adicionais || undefined,
+        descricaoCaso: values.descricao_caso || undefined,
+        honorariosPropostos: values.honorarios_propostos,
+        documentosEntregues: documentosEntregues,
+        documentosATratar: documentosATratar,
+        deslocacoes: deslocacoes,
+      };
+
+      await update.mutateAsync(payload);
+      toast.success("Cliente atualizado com sucesso.");
+      setIsEditing(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar cliente";
+      setServerError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const onCancel = () => {
+    if (cliente.data) {
+      form.reset(buildDefaultValues(cliente.data));
+      setDocumentosEntregues(cliente.data.documentos_entregues ?? []);
+      setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
+      setDeslocacoes(cliente.data.deslocacoes ?? []);
+    }
+    setServerError(null);
+    setIsEditing(false);
+  };
+
+  const tipoValue = form.watch("tipo");
+  const nomeLabel = tipoValue === "EMPRESA" ? "Nome Comercial" : "Nome";
+  const moradaLabel = tipoValue === "EMPRESA" ? "Sede" : "Morada";
+
+  const isSaving = form.formState.isSubmitting || update.isPending;
 
   return (
     <div className="space-y-6">
@@ -110,9 +333,18 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               Imprimir Ficha
             </Link>
           </Button>
-          {canEditClientes ? (
-            <Button asChild>
-              <Link href={`/clientes/${encodeURIComponent(id)}/editar`}>Editar</Link>
+          {isEditing ? (
+            <>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={isSaving}>
+                {isSaving ? "A guardar..." : "Guardar"}
+              </Button>
+            </>
+          ) : canEditClientes ? (
+            <Button type="button" onClick={() => setIsEditing(true)}>
+              Editar
             </Button>
           ) : null}
         </div>
@@ -136,46 +368,144 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 <CardTitle>Dados</CardTitle>
               </CardHeader>
               <CardContent>
-                <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
-                  <dt className="text-neutral-500 dark:text-neutral-400">Nome</dt>
-                  <dd className="col-span-2 font-medium flex items-center gap-2 flex-wrap">
-                    {cliente.data.nome}
-                    {cliente.data.numero_cliente ? (
-                      <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
-                        {cliente.data.numero_cliente}
-                      </Badge>
-                    ) : null}
-                    {cliente.data.avencado ? (
-                      <Badge variant="green" className="rounded-none font-bold text-[10px]">
-                        Avençado
-                      </Badge>
-                    ) : null}
-                  </dd>
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nome">{nomeLabel}</Label>
+                      <Input id="nome" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
+                      {form.formState.errors.nome ? (
+                        <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
+                      ) : null}
+                    </div>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">NIF</dt>
-                  <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="nif">NIF</Label>
+                        <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
+                        {form.formState.errors.nif ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
+                        ) : null}
+                      </div>
+                    </div>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Tipo</dt>
-                  <dd className="col-span-2">{cliente.data.tipo ?? "—"}</dd>
+                    <div className="space-y-2">
+                      <Label>Tipo de Cliente</Label>
+                      <Controller
+                        control={form.control}
+                        name="tipo"
+                        render={({ field }) => (
+                          <RadioGroup
+                            value={field.value ?? ""}
+                            onValueChange={(val) => onTipoChange(val as "PARTICULAR" | "EMPRESA")}
+                            className="flex gap-6"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="PARTICULAR" id="tipo-particular" />
+                              <Label htmlFor="tipo-particular" className="cursor-pointer font-normal">Particular</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="EMPRESA" id="tipo-empresa" />
+                              <Label htmlFor="tipo-empresa" className="cursor-pointer font-normal">Empresa</Label>
+                            </div>
+                          </RadioGroup>
+                        )}
+                      />
+                      {form.formState.errors.tipo ? (
+                        <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
+                      ) : null}
+                    </div>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Email</dt>
-                  <dd className="col-span-2">{cliente.data.email ?? "—"}</dd>
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("email")} />
+                        {form.formState.errors.email ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="telefone">Telefone</Label>
+                        <Input id="telefone" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
+                        {form.formState.errors.telefone ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.telefone.message}</p>
+                        ) : null}
+                      </div>
+                    </div>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Telefone</dt>
-                  <dd className="col-span-2">{cliente.data.telefone ?? "—"}</dd>
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="localidade">Localidade</Label>
+                        <Input id="localidade" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
+                        {form.formState.errors.localidade ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.localidade.message}</p>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="morada">{moradaLabel}</Label>
+                        <Input id="morada" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
+                        {form.formState.errors.morada ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.morada.message}</p>
+                        ) : null}
+                      </div>
+                    </div>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Localidade</dt>
-                  <dd className="col-span-2">{cliente.data.localidade ?? "—"}</dd>
+                    <div className="flex items-center gap-3">
+                      <Controller
+                        control={form.control}
+                        name="avencado"
+                        render={({ field }) => (
+                          <Switch
+                            id="avencado"
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                          />
+                        )}
+                      />
+                      <Label htmlFor="avencado" className="cursor-pointer">Avençado</Label>
+                    </div>
+                  </div>
+                ) : (
+                  <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                    <dt className="text-neutral-500 dark:text-neutral-400">Nome</dt>
+                    <dd className="col-span-2 font-medium flex items-center gap-2 flex-wrap">
+                      {cliente.data.nome}
+                      {cliente.data.numero_cliente ? (
+                        <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
+                          {cliente.data.numero_cliente}
+                        </Badge>
+                      ) : null}
+                      {cliente.data.avencado ? (
+                        <Badge variant="green" className="rounded-none font-bold text-[10px]">
+                          Avençado
+                        </Badge>
+                      ) : null}
+                    </dd>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">{cliente.data.tipo === "EMPRESA" ? "Sede" : "Morada"}</dt>
-                  <dd className="col-span-2">{cliente.data.morada ?? "—"}</dd>
+                    <dt className="text-neutral-500 dark:text-neutral-400">NIF</dt>
+                    <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Ativo</dt>
-                  <dd className="col-span-2">{cliente.data.ativo === false ? "Não" : "Sim"}</dd>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Tipo</dt>
+                    <dd className="col-span-2">{cliente.data.tipo ?? "—"}</dd>
 
-                  <dt className="text-neutral-500 dark:text-neutral-400">Criado</dt>
-                  <dd className="col-span-2">{new Date(cliente.data.created_at).toLocaleString("pt-CV")}</dd>
-                </dl>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Email</dt>
+                    <dd className="col-span-2">{cliente.data.email ?? "—"}</dd>
+
+                    <dt className="text-neutral-500 dark:text-neutral-400">Telefone</dt>
+                    <dd className="col-span-2">{cliente.data.telefone ?? "—"}</dd>
+
+                    <dt className="text-neutral-500 dark:text-neutral-400">Localidade</dt>
+                    <dd className="col-span-2">{cliente.data.localidade ?? "—"}</dd>
+
+                    <dt className="text-neutral-500 dark:text-neutral-400">{cliente.data.tipo === "EMPRESA" ? "Sede" : "Morada"}</dt>
+                    <dd className="col-span-2">{cliente.data.morada ?? "—"}</dd>
+
+                    <dt className="text-neutral-500 dark:text-neutral-400">Ativo</dt>
+                    <dd className="col-span-2">{cliente.data.ativo === false ? "Não" : "Sim"}</dd>
+
+                    <dt className="text-neutral-500 dark:text-neutral-400">Criado</dt>
+                    <dd className="col-span-2">{new Date(cliente.data.created_at).toLocaleString("pt-CV")}</dd>
+                  </dl>
+                )}
               </CardContent>
             </Card>
 
@@ -205,29 +535,364 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   <CardTitle>Informações Adicionais</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
-                    <dt className="text-neutral-500 dark:text-neutral-400">Tipo de Documento</dt>
-                    <dd className="col-span-2">{cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "—"}</dd>
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+                        {/* Coluna 1: Tipo de Documento e Número de Documento */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="documento_tipo">Tipo de Documento</Label>
+                            <select
+                              id="documento_tipo"
+                              className={selectClassName}
+                              {...form.register("documento_tipo")}
+                            >
+                              <option value="">Nenhum</option>
+                              {getDocumentoTipoOptions(form.watch("tipo")).map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                              {legacyDocumentoTipo ? (
+                                <option value={legacyDocumentoTipo}>
+                                  {legacyDocumentoTipo} (inválido para o tipo atual)
+                                </option>
+                              ) : null}
+                            </select>
+                            {legacyDocumentoTipo ? (
+                              <p className="text-sm text-amber-600">
+                                Este cliente tem um tipo de documento (&quot;{legacyDocumentoTipo}&quot;) que já não é
+                                válido para o tipo de cliente selecionado. Selecione um tipo de documento válido para
+                                corrigir, ou guarde sem alterar este campo para manter o valor legado.
+                              </p>
+                            ) : null}
+                            {form.formState.errors.documento_tipo ? (
+                              <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
+                            ) : null}
+                          </div>
 
-                    <dt className="text-neutral-500 dark:text-neutral-400">Número do Documento</dt>
-                    <dd className="col-span-2">{cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "—"}</dd>
+                          <div className="space-y-2">
+                            <Label htmlFor="documento_numero">Número do Documento</Label>
+                            <Input
+                              id="documento_numero"
+                              className="rounded-none max-sm:h-12 max-sm:text-base"
+                              placeholder="Introduza o número do documento"
+                              {...form.register("documento_numero")}
+                            />
+                            {form.formState.errors.documento_numero ? (
+                              <p className="text-sm text-red-600">{form.formState.errors.documento_numero.message}</p>
+                            ) : null}
+                          </div>
+                        </div>
 
-                    <dt className="text-neutral-500 dark:text-neutral-400">Ramo de Atividade</dt>
-                    <dd className="col-span-2">{cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "—"}</dd>
+                        {/* Coluna 2: Ramo de Atividade e Detalhes Adicionais */}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="ramo_atividade">Ramo de Atividade</Label>
+                            <select
+                              id="ramo_atividade"
+                              className={selectClassName}
+                              {...form.register("ramo_atividade")}
+                            >
+                              <option value="">Selecione o ramo de atividade</option>
+                              <option value="Banca">Banca</option>
+                              <option value="Telecom">Telecom</option>
+                              <option value="Construção">Construção</option>
+                              <option value="Serviços">Serviços</option>
+                              <option value="Comércio">Comércio</option>
+                              <option value="Outros">Outros</option>
+                            </select>
+                            {form.formState.errors.ramo_atividade ? (
+                              <p className="text-sm text-red-600">{form.formState.errors.ramo_atividade.message}</p>
+                            ) : null}
+                          </div>
 
-                    <dt className="text-neutral-500 dark:text-neutral-400">Detalhes Adicionais</dt>
-                    <dd className="col-span-2">
-                      {cliente.data.detalhes_adicionais || cliente.data.detalhesAdicionais ? (
-                        <span className="whitespace-pre-wrap">{cliente.data.detalhes_adicionais ?? cliente.data.detalhesAdicionais}</span>
-                      ) : (
-                        <span className="italic text-neutral-400 dark:text-neutral-500">Sem observações</span>
-                      )}
-                    </dd>
-                  </dl>
+                          <div className="space-y-2">
+                            <Label htmlFor="detalhes_adicionais">Detalhes Adicionais</Label>
+                            <textarea
+                              id="detalhes_adicionais"
+                              className={textareaClassName}
+                              placeholder="Observações e detalhes adicionais sobre o cliente"
+                              {...form.register("detalhes_adicionais")}
+                            />
+                            {form.formState.errors.detalhes_adicionais ? (
+                              <p className="text-sm text-red-600">{form.formState.errors.detalhes_adicionais.message}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                      <dt className="text-neutral-500 dark:text-neutral-400">Tipo de Documento</dt>
+                      <dd className="col-span-2">{cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "—"}</dd>
+
+                      <dt className="text-neutral-500 dark:text-neutral-400">Número do Documento</dt>
+                      <dd className="col-span-2">{cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "—"}</dd>
+
+                      <dt className="text-neutral-500 dark:text-neutral-400">Ramo de Atividade</dt>
+                      <dd className="col-span-2">{cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "—"}</dd>
+
+                      <dt className="text-neutral-500 dark:text-neutral-400">Detalhes Adicionais</dt>
+                      <dd className="col-span-2">
+                        {cliente.data.detalhes_adicionais || cliente.data.detalhesAdicionais ? (
+                          <span className="whitespace-pre-wrap">{cliente.data.detalhes_adicionais ?? cliente.data.detalhesAdicionais}</span>
+                        ) : (
+                          <span className="italic text-neutral-400 dark:text-neutral-500">Sem observações</span>
+                        )}
+                      </dd>
+                    </dl>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
+
+          {isEditing ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Intake do Caso</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="descricao_caso">Descrição do Caso</Label>
+                  <textarea
+                    id="descricao_caso"
+                    className={textareaClassName}
+                    placeholder="Descreva o caso do cliente"
+                    {...form.register("descricao_caso")}
+                  />
+                  {form.formState.errors.descricao_caso ? (
+                    <p className="text-sm text-red-600">{form.formState.errors.descricao_caso.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-4 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/20">
+                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Honorários Propostos</h4>
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="honorarios_propostos.total">Total</Label>
+                      <Input
+                        id="honorarios_propostos.total"
+                        type="number"
+                        step="0.01"
+                        className="rounded-none"
+                        {...form.register("honorarios_propostos.total", { valueAsNumber: true })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="honorarios_propostos.totalPorExtenso">Valor por Extenso</Label>
+                      <Input
+                        id="honorarios_propostos.totalPorExtenso"
+                        className="rounded-none"
+                        {...form.register("honorarios_propostos.totalPorExtenso")}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="honorarios_propostos.previsao">Previsão</Label>
+                      <Input
+                        id="honorarios_propostos.previsao"
+                        className="rounded-none"
+                        placeholder="Ex.: 6 meses"
+                        {...form.register("honorarios_propostos.previsao")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documentos Entregues */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos Entregues</h4>
+                    <Dialog open={addDocEntreModal} onOpenChange={setAddDocEntreModal}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Documento Entregue</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-doc-entre-descricao">Descrição</Label>
+                            <Input
+                              id="new-doc-entre-descricao"
+                              className="rounded-none"
+                              value={newDocEntre.descricao}
+                              onChange={(e) => setNewDocEntre((prev) => ({ ...prev, descricao: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new-doc-entre-data">Data</Label>
+                            <Input
+                              id="new-doc-entre-data"
+                              type="date"
+                              className="rounded-none"
+                              value={newDocEntre.data}
+                              onChange={(e) => setNewDocEntre((prev) => ({ ...prev, data: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setAddDocEntreModal(false)}>Cancelar</Button>
+                          <Button type="button" onClick={confirmAddDocEntre}>Confirmar</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {documentosEntregues.length === 0 ? (
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento entregue registado.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {documentosEntregues.map((doc, index) => (
+                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+                          <span>
+                            {doc.descricao}
+                            {doc.data ? ` — ${doc.data}` : ""}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-neutral-500 hover:text-red-600"
+                            onClick={() => setDocumentosEntregues((prev) => prev.filter((_, i) => i !== index))}
+                            aria-label="Remover"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Documentos a Tratar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos a Tratar</h4>
+                    <Dialog open={addDocATratarModal} onOpenChange={setAddDocATratarModal}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Documento a Tratar</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-doc-tratar-descricao">Descrição</Label>
+                            <Input
+                              id="new-doc-tratar-descricao"
+                              className="rounded-none"
+                              value={newDocATratar.descricao}
+                              onChange={(e) => setNewDocATratar({ descricao: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setAddDocATratarModal(false)}>Cancelar</Button>
+                          <Button type="button" onClick={confirmAddDocATratar}>Confirmar</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {documentosATratar.length === 0 ? (
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento a tratar registado.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {documentosATratar.map((doc, index) => (
+                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+                          <span>{doc.descricao}</span>
+                          <button
+                            type="button"
+                            className="text-neutral-500 hover:text-red-600"
+                            onClick={() => setDocumentosATratar((prev) => prev.filter((_, i) => i !== index))}
+                            aria-label="Remover"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Deslocações */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Deslocações</h4>
+                    <Dialog open={addDeslocacaoModal} onOpenChange={setAddDeslocacaoModal}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Deslocação</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-deslocacao-descricao">Descrição</Label>
+                            <Input
+                              id="new-deslocacao-descricao"
+                              className="rounded-none"
+                              value={newDeslocacao.descricao}
+                              onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, descricao: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new-deslocacao-local">Local</Label>
+                            <Input
+                              id="new-deslocacao-local"
+                              className="rounded-none"
+                              value={newDeslocacao.local}
+                              onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, local: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new-deslocacao-data">Data</Label>
+                            <Input
+                              id="new-deslocacao-data"
+                              type="date"
+                              className="rounded-none"
+                              value={newDeslocacao.data}
+                              onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, data: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setAddDeslocacaoModal(false)}>Cancelar</Button>
+                          <Button type="button" onClick={confirmAddDeslocacao}>Confirmar</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  {deslocacoes.length === 0 ? (
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma deslocação registada.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {deslocacoes.map((d, index) => (
+                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+                          <span>
+                            {d.descricao}
+                            {d.local ? ` (${d.local})` : ""}
+                            {d.data ? ` — ${d.data}` : ""}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-neutral-500 hover:text-red-600"
+                            onClick={() => setDeslocacoes((prev) => prev.filter((_, i) => i !== index))}
+                            aria-label="Remover"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <ClienteContactosCard
@@ -275,6 +940,21 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           Cliente não encontrado.
         </div>
       )}
+
+      <Dialog open={!!pendingTipo} onOpenChange={(open) => { if (!open) setPendingTipo(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mudar tipo de cliente</DialogTitle>
+            <DialogDescription>
+              Mudar o tipo irá limpar os dados de {pendingTipo === "PARTICULAR" ? "Empresa" : "Particular"}. Continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingTipo(null)}>Cancelar</Button>
+            <Button onClick={confirmTipoChange}>Continuar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
