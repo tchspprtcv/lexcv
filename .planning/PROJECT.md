@@ -49,10 +49,10 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Formulários de criação e edição de cliente adaptados para campos planos com labels dinâmicas — v2.7
 - ✓ Detalhe do cliente e ficha impressa adaptados para a estrutura de dados simplificada — v2.7
 - ✓ Enum `documento_tipo` com `BI` (removido `NIF`), opções filtradas por tipo de cliente (Particular: CNI/BI/Passaporte; Empresa: só REG_COMERCIAL), validado em frontend e backend, com preservação de valores legados não conformes em edições que não os alteram — v2.8 (Phase 74)
+- ✓ `/clientes/[id]` e `/clientes/[id]/editar` unificados num único componente com toggle Editar/Guardar/Cancelar; rota `/editar` removida por completo; sub-componentes (Contactos, Notas, Advogados/Administrativos, Procuração) gated por `canEditClientes && editable` — v2.8 (Phase 75, verificação visual/UAT ao vivo pendente — ver 75-HUMAN-UAT.md)
 
 ### Active
 
-- [ ] Unificar `/clientes/[id]` e `/clientes/[id]/editar` num único componente com toggle Editar (view/edit inline, sem página `/editar` dedicada)
 - [ ] Reestruturar ficha de cliente em 7 tabs (estilo botões toggle de processos): Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
 - [ ] Mover identificação (NIF + tipo de documento + número) para dentro do card "Dados" principal
 - [ ] "Documentos Entregues" passa a upload real (reutilizando sistema genérico `Documento`/`clienteId`), com combobox de tipo (escolher existente ou escrever novo)
@@ -150,7 +150,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phase 74 (enum `documento_tipo`) complete, 5 phases remaining (75–79).
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phases 74–75 complete, 4 phases remaining (76–79).
 
 ## Evolution
 
@@ -170,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-04 — after Phase 74 (Enum documento_tipo BI/NIF/Restrição por Tipo) completed in milestone v2.8*
+*Last updated: 2026-07-04 — after Phase 75 (Componente Único View/Edit) completed in milestone v2.8*
