@@ -1,152 +1,104 @@
 ---
 phase: LEXCV-77-separadores-—-processos-e-pareceres
-reviewed: 2026-07-05T11:33:09Z
+reviewed: 2026-07-05T12:05:00Z
 depth: standard
-files_reviewed: 1
+files_reviewed: 2
 files_reviewed_list:
   - web/src/app/(dashboard)/clientes/[id]/page.tsx
+  - web/src/hooks/use-admin.ts
 findings:
   critical: 0
-  warning: 3
+  warning: 0
   info: 2
-  total: 5
-status: issues_found
+  total: 2
+status: clean
 ---
 
-# Phase LEXCV-77: Code Review Report
+# Phase LEXCV-77: Code Review Report (Re-review)
 
-**Reviewed:** 2026-07-05T11:33:09Z
+**Reviewed:** 2026-07-05T12:05:00Z
 **Depth:** standard
-**Files Reviewed:** 1
-**Status:** issues_found
+**Files Reviewed:** 2
+**Status:** clean
 
 ## Summary
 
-Reviewed `web/src/app/(dashboard)/clientes/[id]/page.tsx`, focusing on the two components added in this
-phase: `ClienteProcessosTab` (commit `bce42f2`) and `ClienteParecerTab` (commit `d78dc77`). Both are
-mounted only when their tab is the active branch of the `tab === "..."` ternary chain, which is a real
-unmount/remount (not `display:none`), so React Query's per-hook `useQuery` correctly performs a lazy
-fetch on first activation and no `enabled` flag is needed for that purpose.
+Re-reviewed `web/src/app/(dashboard)/clientes/[id]/page.tsx` and `web/src/hooks/use-admin.ts` after the
+`77-REVIEW-FIX.md` iteration-1 pass that addressed WR-01, WR-02, and WR-03 from the prior round
+(`13ea850`, `9b7659a`, `d28b218`). All three fixes were verified against the actual diffs and current
+file contents (not just the fix report's claims). All three are complete, correct, and introduce no new
+regressions. Findings from this round are informational only (carried over, unchanged, from the prior
+round's IN-01/IN-02 — still not addressed, but out of scope for a warning-only fix pass and not blocking).
 
-**Threat-model check (cliente/tenant scoping) — verified safe.** I traced both new hooks
-(`useProcessos({ cliente_id })` in `web/src/hooks/use-processos.ts` and `usePareceres({ clienteId })` in
-`web/src/hooks/use-pareceres.ts`) through to the backend endpoints they call
-(`GET /api/v1/processos` and `GET /api/v1/pareceres/solicitacoes` in `ResourceController.java` /
-`ParecerController.java`). Both endpoints resolve `tenantId` from the security context first and filter
-the tenant's own data set before applying the client-supplied `cliente_id`/`clienteId` as an additional
-filter — a client cannot use this parameter to read another tenant's or another cliente's records by
-tampering with the query string; a mismatched/foreign id simply yields zero rows within the caller's own
-tenant. `id` (the route param, and therefore the value passed to both new tabs) always comes from the
-already-tenant-scoped `useCliente(id)` load on the same page, so the two lists shown are always scoped to
-the currently open cliente. No cross-cliente leakage path was found.
+**WR-01 (admin-only `useAdminUsers()` 403 for non-admin) — confirmed fixed, and confirmed non-breaking
+for the other 5 call sites.** `useAdminUsers(options?: { enabled?: boolean })` now computes
+`enabled = typeof window !== "undefined" && (options?.enabled ?? true)`. This is backward compatible by
+construction: `options?.enabled ?? true` evaluates to `true` whenever `options` is `undefined` or
+`options.enabled` is `undefined`, which is exactly the call shape used at all 5 pre-existing call sites
+(`settings/page.tsx:149`, `pareceres/page.tsx:78`, `pareceres/nova/page.tsx:71`, `pareceres/[id]/page.tsx:134`,
+`processos/[id]/page.tsx:156` — all call `useAdminUsers()` with zero arguments). I traced each of these 5
+sites and confirmed none passes an options object, so their `enabled` value is bit-for-bit identical
+before and after this change. Only the new 6th call site in `ClienteParecerTab`
+(`web/src/app/(dashboard)/clientes/[id]/page.tsx:1217`) passes `{ enabled: isAdmin }`, where
+`isAdmin = Boolean(permissions.data?.roles?.includes("ADMIN"))` — `permissions.data` is `usePermissions()`'s
+spread of `useMe()`'s query result, and `MeResponse.roles: Role[]` (`web/src/types/auth.ts:22`) is the
+correct field, matching the pattern already used in `settings/page.tsx:44` (`me?.roles?.includes("ADMIN")`).
+Backend confirms `/api/v1/admin/users` is gated `@PreAuthorize("hasRole('ADMIN')")` at the `AdminController`
+class level, so this is the correct role to gate on. The user-visible outcome for non-admin roles is
+unchanged (advogado name column already fell back to "—" before the fix, via
+`advogadoNomeById.get(...) ?? "—"`); the fix only eliminates the wasted failing request. No regression.
 
-**Tab-switch / isEditing interaction — no re-fetch loop or state leakage found.** The two new tab
-components are independent, fully unmounted when not selected, and hold no state that needs resetting on
-tab exit (unlike `ClienteContactosCard`/`ClienteNotasCard`/`ResponsaveisCard`, which do need — and have —
-`useEffect` resets keyed on `editable`). `staleTime: 30_000` on both queries means rapid tab flapping
-within 30s won't refetch, and there is no unbounded loop risk since neither query key depends on
-component-local mutable state.
+**WR-02 (missing client-side permission gating on the new tabs) — confirmed fixed, defense-in-depth
+applied correctly.** `canViewProcessos` / `canViewPareceres` are derived once in `ClienteDetailContent` via
+`permissions.can.view("processos")` / `permissions.can.view("pareceres")` and used consistently in two
+places: (1) to conditionally render the tab buttons (`web/src/app/(dashboard)/clientes/[id]/page.tsx:439-456`),
+and (2) to gate the tab body, rendering `AccessDeniedState` instead of mounting the fetching component
+when the permission is absent (`:1066-1077`). This mirrors the existing `canViewClientes` pattern at the
+top-level page component and correctly matches the backend's `hasAuthority('processos:view')` /
+`hasAuthority('pareceres:view')` enforcement described in CLAUDE.md's "both layers must agree" rule.
 
-The issues below are UX/permission-consistency gaps: the two new tabs are visible and their sub-fetches
-fire for any user who can view the cliente record, regardless of whether that user actually holds
-`processos:view` / `pareceres:view`, and one of the two components (`ClienteParecerTab`) issues an
-additional request to an admin-only endpoint that will 403 for the vast majority of real users
-(ADVOGADO/TECNICO/ASSISTENTE roles).
+**WR-03 (raw error strings) — confirmed fixed.** Both `ClienteProcessosTab` (`:1131-1134`) and
+`ClienteParecerTab` (`:1232-1234`) now unconditionally render the friendly Portuguese fallback string and
+no longer branch on `error instanceof Error ? error.message : ...`, so a raw `API 403: ...` /
+`API 500: ...` string from `apiFetch` can no longer leak into these two cards.
 
-## Warnings
-
-### WR-01: `ClienteParecerTab` unconditionally calls the admin-only `useAdminUsers()` hook
-
-**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1202`
-**Issue:** `ClienteParecerTab` calls `useAdminUsers()` (which hits `GET /api/v1/admin/users`, gated
-`@PreAuthorize("hasRole('ADMIN')")` at the class level in `AdminController`) purely to resolve
-`advogadoId → nome` for display. For any non-ADMIN user viewing the Pareceres tab — i.e. the normal case
-for ADVOGADO/TECNICO/ASSISTENTE roles who have `pareceres:view` but not `ROLE_ADMIN` — this request will
-fail with 403 on every mount of the tab. It fails silently (401/403 are exempted from the toast in
-`apiFetch`), so there's no user-visible crash, but every advogado name column will always render "—" for
-those roles, which defeats the purpose of the column for most users, and it's a wasted failing request on
-every tab activation. (Note: this exact pattern already exists for `ResponsaveisCard` since phase 59, so
-it is not unique to this phase, but this phase adds a second, avoidable instance of it.)
-**Fix:** Expose a non-admin-gated endpoint (e.g. a lightweight `/api/v1/users?role=ADVOGADO` behind a
-scope every authenticated tenant member holds, or embed `responsavel_nome`-style server-side enrichment
-like `listProcessos` already does for `responsavel_id`) instead of relying on the admin users list from
-the client. At minimum, gate the `useAdminUsers()` call behind a permission check (e.g. only fetch if the
-current user has `hasRole('ADMIN')` via `usePermissions()`), and fall back to displaying the raw
-`advogadoId` (or omitting the column data) for everyone else so the request isn't fired needlessly.
-
-### WR-02: New Processos/Pareceres tabs are not gated by `processos:view` / `pareceres:view` on the frontend
-
-**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:436-449, 1059-1062`
-**Issue:** The "Processos" and "Pareceres" tab buttons, and the `ClienteProcessosTab` /
-`ClienteParecerTab` components they mount, are rendered unconditionally for any user who can reach this
-page (i.e. anyone with `clientes:view`). The backend does correctly enforce
-`hasAuthority('processos:view')` / `hasAuthority('pareceres:view')` on the underlying list endpoints, so
-this is not a data-exposure bug, but a user without those scopes will click into a tab that always fails,
-see a raw `API 403: ...` error string (see WR-03), and have no indication up front that the tab is
-unavailable to them. Every other cross-cutting permission check on this page (`canEditClientes`,
-`AccessDeniedState` at the top level) follows the "gate both layers" convention from `CLAUDE.md`; these
-two new tabs don't.
-**Fix:** Gate tab visibility/enablement using `usePermissions()` the same way `canViewClientes` /
-`canEditClientes` are derived at the top of the file, e.g.:
-```tsx
-const canViewProcessos = permissions.can.view("processos");
-const canViewPareceres = permissions.can.view("pareceres");
-...
-{canViewProcessos ? (
-  <Button ... onClick={() => setTab("processos")}>Processos</Button>
-) : null}
-```
-and render an `AccessDeniedState`-style message (or hide the tab entirely) instead of mounting the
-fetching component when the permission is absent.
-
-### WR-03: Raw backend error text surfaced verbatim in the new tabs' error states
-
-**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1116-1121, 1217-1222`
-**Issue:** Both new tabs render `processos.error.message` / `pareceres.error.message` directly when
-`isError` is true. `apiFetch` throws `Error("API ${res.status}: ${errorMessage}")`
-(`web/src/lib/api.ts:47`), so on a 403 (see WR-02) or any other backend failure the user sees a raw
-string like `API 403: Access is denied` rendered inline in the card body — not localized, not
-user-friendly, and inconsistent with the rest of the page (e.g. the top-level `AccessDeniedState`
-component, or the plain "Erro ao carregar." messages used by `ResponsaveisCard`/`ClienteContactosCard`
-elsewhere in this same file).
-**Fix:** Normalize the error message the same way the rest of the file does for other cards, e.g.:
-```tsx
-) : processos.isError ? (
-  <div className="p-6 text-sm text-red-600">
-    Não foi possível carregar os processos deste cliente.
-  </div>
-```
-and drop the `instanceof Error ? error.message : ...` branch that leaks the raw `"API <status>: ..."`
-string, or route 403s specifically to a shared "sem permissão" message.
+**No new issues introduced by the fix commits.** I checked for common regression patterns specific to
+this kind of change (optional-param signature changes breaking other callers, permission-check timing
+issues, duplicate/shadowed `usePermissions()` calls) — none found. `ClienteDetailContent` and
+`ClienteParecerTab` each call `usePermissions()` independently; this is safe since both ultimately read the
+same deduplicated `["auth", "me"]` React Query cache entry, not distinct fetches. The
+`isAdmin`/`enabled` flag being momentarily `false` while `useMe()` is still loading (before the
+first successful `/auth/me` response) only delays the `/admin/users` fetch until permissions resolve; it
+does not cause a stuck-disabled state, since React Query re-evaluates `enabled` on every render and will
+fire the query as soon as `isAdmin` flips true.
 
 ## Info
 
-### IN-01: Redundant/inconsistent type assertion on `estadoVariant`
+### IN-01: Redundant/inconsistent type assertion on `estadoVariant` (carried over, unfixed)
 
-**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1160`
-**Issue:** `estadoVariant` is already inferred as a literal union from the nested ternary at
-lines 1137-1146, so the `as "green" | "amber" | "gray" | "purple" | "secondary"` cast at the usage site is
-unnecessary. It's also inconsistent with `parecerStatusVariant` (used identically a few dozen lines
-later, in `ClienteParecerTab`), which needs no cast at its call site. An unnecessary `as` cast is a code
-smell because it can silently mask a real type mismatch if the ternary is later edited to return an
-invalid variant string.
-**Fix:** Give `estadoVariant` an explicit return type via a small helper (mirroring
-`parecerStatusVariant`'s pattern) instead of inlining the ternary + cast at the `<Badge variant={...}>`
-call site.
+**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1173`
+**Issue:** `estadoVariant` is already inferred as a literal union from the nested ternary a few lines
+above, so the `as "green" | "amber" | "gray" | "purple" | "secondary"` cast at the `<Badge variant={...}>`
+call site is unnecessary, and inconsistent with `parecerStatusVariant` (same file, used a few dozen lines
+later for the Pareceres tab), which needs no cast at its call site because it's a real function with an
+inferred return type. This was flagged as IN-01 in the prior review round and was correctly left unfixed
+(out of scope for a warning-only fix pass); repeating it here only for completeness of this re-review.
+**Fix:** Extract a small `processoEstadoVariant(estado: string)` helper (mirroring `parecerStatusVariant`)
+so the return type is nominal and the inline cast can be removed.
 
-### IN-02: `estado`/`estadoLabel` derivation duplicated inline instead of extracted like `parecerStatusVariant`
+### IN-02: `estado`/`estadoLabel` derivation duplicated inline instead of extracted like `parecerStatusVariant` (carried over, unfixed)
 
-**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1136-1147`
+**File:** `web/src/app/(dashboard)/clientes/[id]/page.tsx:1149-1160`
 **Issue:** `ClienteProcessosTab` computes `estado`, `estadoVariant`, and `estadoLabel` inline inside the
-`.map()` callback, whereas the equivalent logic for pareceres was correctly extracted into standalone
-helper functions (`parecerStatusVariant`, `formatParecerDate`) placed above `ClienteParecerTab`. This is a
-minor inconsistency in the codebase's own established pattern within the same file/phase, and it makes
-`ClienteProcessosTab`'s render callback harder to read than it needs to be.
-**Fix:** Extract a `processoEstadoVariant(estado: string)` / `processoEstadoLabel(estado: string)` helper
+`.map()` callback, whereas the equivalent Pareceres logic was extracted into standalone helpers
+(`parecerStatusVariant`, `formatParecerDate`) placed above `ClienteParecerTab`. Minor inconsistency within
+the same file/phase; makes `ClienteProcessosTab`'s render callback slightly harder to read. Also flagged
+in the prior round and correctly left unfixed as an Info item.
+**Fix:** Extract `processoEstadoVariant(estado: string)` / `processoEstadoLabel(estado: string)` helper
 pair next to `ClienteProcessosTab`, following the same shape as `parecerStatusVariant`.
 
 ---
 
-_Reviewed: 2026-07-05T11:33:09Z_
+_Reviewed: 2026-07-05T12:05:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
