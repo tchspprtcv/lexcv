@@ -54,6 +54,7 @@ import {
 import { useAdminUsers } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
+import { usePareceres } from "@/hooks/use-pareceres";
 import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
 import { buildClienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteContacto } from "@/types/clientes-contactos";
@@ -66,6 +67,7 @@ import type {
   DocumentoATratar,
   DocumentoEntregue,
 } from "@/types/clientes";
+import type { ParecerStatus } from "@/types/pareceres";
 import { toast } from "@/hooks/use-toast";
 
 type PageProps = {
@@ -1057,7 +1059,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           ) : tab === "processos" ? (
             <ClienteProcessosTab clienteId={id} />
           ) : tab === "pareceres" ? (
-            <PlaceholderEmBreve />
+            <ClienteParecerTab clienteId={id} />
           ) : tab === "documentosEntregues" ? (
             <PlaceholderEmBreve />
           ) : tab === "documentosATratar" ? (
@@ -1168,6 +1170,92 @@ function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
                   </TableRow>
                 );
               })}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function parecerStatusVariant(status: ParecerStatus) {
+  return status === "PENDENTE"
+    ? "gray"
+    : status === "EM_ELABORACAO"
+      ? "blue"
+      : status === "EM_REVISAO"
+        ? "amber"
+        : status === "CONCLUIDO"
+          ? "green"
+          : "secondary";
+}
+
+function formatParecerDate(v: string | undefined) {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return v;
+  return d.toLocaleDateString("pt-CV");
+}
+
+function ClienteParecerTab({ clienteId }: { clienteId: string }) {
+  const pareceres = usePareceres({ clienteId: clienteId });
+  const adminUsers = useAdminUsers();
+  const advogados = React.useMemo(
+    () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
+    [adminUsers.data],
+  );
+  const advogadoNomeById = React.useMemo(
+    () => new Map(advogados.map((u) => [u.id, u.nome] as const)),
+    [advogados],
+  );
+
+  return (
+    <Card>
+      <CardContent className="p-0 bg-white dark:bg-[#020617]">
+        {pareceres.isLoading ? (
+          <div className="p-6 text-sm text-slate-500">A carregar...</div>
+        ) : pareceres.isError ? (
+          <div className="p-6 text-sm text-red-600">
+            {pareceres.error instanceof Error
+              ? pareceres.error.message
+              : "Não foi possível carregar os pareceres deste cliente."}
+          </div>
+        ) : !pareceres.data?.length ? (
+          <div className="p-6 text-sm text-slate-500">Nenhum parecer associado a este cliente.</div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+              <TableRow className="border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
+                <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">NÚMERO/TÍTULO</TableHead>
+                <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">ESTADO</TableHead>
+                <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">ADVOGADO RESPONSÁVEL</TableHead>
+                <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">DATA DE CRIAÇÃO</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pareceres.data.map((s) => (
+                <TableRow key={s.id} className="border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <TableCell className="font-bold text-slate-700 dark:text-slate-300">
+                    <Link
+                      href={`/pareceres/${encodeURIComponent(s.id)}`}
+                      className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      {s.descricao}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={parecerStatusVariant(s.status)} className="rounded-none font-bold tracking-wide">
+                      {s.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-slate-500 dark:text-slate-400 font-medium">
+                    {advogadoNomeById.get(s.advogadoId ?? "") ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-slate-500 dark:text-slate-400 font-medium">
+                    {formatParecerDate(s.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}
