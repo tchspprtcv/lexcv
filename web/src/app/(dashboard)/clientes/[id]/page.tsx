@@ -1130,9 +1130,7 @@ function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
           <div className="p-6 text-sm text-slate-500">A carregar...</div>
         ) : processos.isError ? (
           <div className="p-6 text-sm text-red-600">
-            {processos.error instanceof Error
-              ? processos.error.message
-              : "Não foi possível carregar os processos deste cliente."}
+            Não foi possível carregar os processos deste cliente.
           </div>
         ) : !processos.data?.length ? (
           <div className="p-6 text-sm text-slate-500">Nenhum processo associado a este cliente.</div>
@@ -1233,9 +1231,7 @@ function ClienteParecerTab({ clienteId }: { clienteId: string }) {
           <div className="p-6 text-sm text-slate-500">A carregar...</div>
         ) : pareceres.isError ? (
           <div className="p-6 text-sm text-red-600">
-            {pareceres.error instanceof Error
-              ? pareceres.error.message
-              : "Não foi possível carregar os pareceres deste cliente."}
+            Não foi possível carregar os pareceres deste cliente.
           </div>
         ) : !pareceres.data?.length ? (
           <div className="p-6 text-sm text-slate-500">Nenhum parecer associado a este cliente.</div>
