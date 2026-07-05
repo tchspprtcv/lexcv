@@ -194,6 +194,24 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
     data: "",
   });
 
+  // The three "Adicionar" dialogs above are only rendered inside the "Dados" tab's JSX, but their
+  // open/draft state is hoisted here so it isn't lost across a tab round-trip. Because the dialogs
+  // are unmounted (not just hidden) when the user leaves "Dados", a controlled `open={true}` left
+  // over from before the switch would otherwise cause the dialog to reopen automatically — with
+  // stale draft text — the moment the user navigates back to "Dados". Close and clear them whenever
+  // the user is not on "Dados", mirroring the reset effect used for AdvogadosResponsaveisCard-style
+  // sub-components below (see the `if (!editable) setModalOpen(false)` pattern).
+  React.useEffect(() => {
+    if (tab !== "dados") {
+      setAddDocEntreModal(false);
+      setAddDocATratarModal(false);
+      setAddDeslocacaoModal(false);
+      setNewDocEntre({ descricao: "", data: "" });
+      setNewDocATratar({ descricao: "" });
+      setNewDeslocacao({ descricao: "", local: "", data: "" });
+    }
+  }, [tab]);
+
   const buildDefaultValues = React.useCallback((data: Cliente) => {
     const loadedTipo = (data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
     const loadedDocumentoTipo = data.documento_tipo ?? data.documentoTipo ?? "";
