@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Refatoração Ficha de Cliente
-status: executing
-last_updated: "2026-07-05T11:16:55.433Z"
+status: ready_to_plan
+last_updated: 2026-07-05T11:52:14.818Z
 last_activity: 2026-07-05 -- Phase 77 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
+stopped_at: Phase 77 complete (1/1) — ready to discuss Phase 78
 ---
 
 # Project State
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 77 — Separadores — Processos e Pareceres
+**Current focus:** Phase 78 — separadores — documentos a tratar e deslocações
 
 ## Current Position
 
-Phase: 77 (Separadores — Processos e Pareceres) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 77
-Last activity: 2026-07-05 -- Phase 77 execution started
+Phase: 78
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-05
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -35,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: —
 - Total execution time: —
 
@@ -57,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | 74 | 5 | - | - |
 | 75 | 3 | - | - |
 | 76 | 1 | - | - |
+| 77 | 1 | - | - |
 
 ## Accumulated Context
 

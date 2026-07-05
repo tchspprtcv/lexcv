@@ -16,8 +16,8 @@ Requirements for milestone v2.8 (Refatoração Ficha de Cliente). Each maps to r
 ### Navegação por Separadores
 
 - [x] **CLI-15**: Ficha de cliente apresenta 7 separadores: Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
-- [ ] **CLI-16**: Separador "Processos" lista processos do cliente (`useProcessos({cliente_id})`)
-- [ ] **CLI-17**: Separador "Pareceres" lista pareceres do cliente (`usePareceres({clienteId})`)
+- [x] **CLI-16**: Separador "Processos" lista processos do cliente (`useProcessos({cliente_id})`)
+- [x] **CLI-17**: Separador "Pareceres" lista pareceres do cliente (`usePareceres({clienteId})`)
 - [x] **CLI-18**: Separador "Contactos e Notas" apresenta os cards de Contactos e Notas atualmente na página principal
 
 ### Identificação no Card "Dados"
@@ -66,8 +66,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-13 | Phase 75 | Complete |
 | CLI-14 | Phase 75 | Complete |
 | CLI-15 | Phase 76 | Complete |
-| CLI-16 | Phase 77 | Pending |
-| CLI-17 | Phase 77 | Pending |
+| CLI-16 | Phase 77 | Complete |
+| CLI-17 | Phase 77 | Complete |
 | CLI-18 | Phase 76 | Complete |
 | CLI-19 | Phase 76 | Complete |
 | CLI-20 | Phase 74 | Complete |
