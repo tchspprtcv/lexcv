@@ -70,6 +70,15 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
+type TabKey =
+  | "dados"
+  | "contactosNotas"
+  | "processos"
+  | "pareceres"
+  | "documentosEntregues"
+  | "documentosATratar"
+  | "deslocacoes";
+
 function formatMoneyCVE(v: number) {
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
@@ -109,6 +118,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const update = useUpdateCliente(id);
 
   const [isEditing, setIsEditing] = React.useState(false);
+  const [tab, setTab] = React.useState<TabKey>("dados");
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [legacyDocumentoTipo, setLegacyDocumentoTipo] = React.useState<string | null>(null);
 
@@ -356,7 +366,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               </Button>
             </>
           ) : canEditClientes ? (
-            <Button type="button" onClick={() => setIsEditing(true)}>
+            <Button type="button" onClick={() => { setIsEditing(true); setTab("dados"); }}>
               Editar
             </Button>
           ) : null}
@@ -375,6 +385,62 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         </div>
       ) : cliente.data ? (
         <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <div className="flex gap-2 w-max">
+              <Button
+                type="button"
+                variant={tab === "dados" ? "secondary" : "outline"}
+                onClick={() => setTab("dados")}
+              >
+                Dados
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "contactosNotas" ? "secondary" : "outline"}
+                onClick={() => setTab("contactosNotas")}
+              >
+                Contactos e Notas
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "processos" ? "secondary" : "outline"}
+                onClick={() => setTab("processos")}
+              >
+                Processos
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "pareceres" ? "secondary" : "outline"}
+                onClick={() => setTab("pareceres")}
+              >
+                Pareceres
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "documentosEntregues" ? "secondary" : "outline"}
+                onClick={() => setTab("documentosEntregues")}
+              >
+                Documentos Entregues
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "documentosATratar" ? "secondary" : "outline"}
+                onClick={() => setTab("documentosATratar")}
+              >
+                Documentos a Tratar
+              </Button>
+              <Button
+                type="button"
+                variant={tab === "deslocacoes" ? "secondary" : "outline"}
+                onClick={() => setTab("deslocacoes")}
+              >
+                Deslocações
+              </Button>
+            </div>
+          </div>
+
+          {tab === "dados" ? (
+          <>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -907,25 +973,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             </Card>
           ) : null}
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ClienteContactosCard
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              data={contactos.data}
-              isLoading={contactos.isLoading}
-              isError={contactos.isError}
-            />
-            <ClienteNotasCard
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              data={notas.data}
-              isLoading={notas.isLoading}
-              isError={notas.isError}
-            />
-          </div>
-
           <div className="grid gap-4 lg:grid-cols-3">
             <ProcuracaoCard
               clienteId={id}
@@ -952,6 +999,37 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               useRemove={useRemoveAdministrativo}
             />
           </div>
+          </>
+          ) : tab === "contactosNotas" ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ClienteContactosCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              data={contactos.data}
+              isLoading={contactos.isLoading}
+              isError={contactos.isError}
+            />
+            <ClienteNotasCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              data={notas.data}
+              isLoading={notas.isLoading}
+              isError={notas.isError}
+            />
+          </div>
+          ) : tab === "processos" ? (
+            <PlaceholderEmBreve />
+          ) : tab === "pareceres" ? (
+            <PlaceholderEmBreve />
+          ) : tab === "documentosEntregues" ? (
+            <PlaceholderEmBreve />
+          ) : tab === "documentosATratar" ? (
+            <PlaceholderEmBreve />
+          ) : tab === "deslocacoes" ? (
+            <PlaceholderEmBreve />
+          ) : null}
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -974,6 +1052,19 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PlaceholderEmBreve() {
+  return (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Em breve</p>
+        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+          Esta funcionalidade estará disponível brevemente.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
