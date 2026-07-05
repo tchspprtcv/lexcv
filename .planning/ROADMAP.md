@@ -170,7 +170,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   2. Separador "Dados" apresenta NIF, tipo de documento e número de documento como parte do card principal, respeitando toggle view/edit
   3. Separador "Contactos e Notas" apresenta os mesmos cards de Contactos e Notas anteriormente na página principal, agora isolados no seu separador
 **Plans**: 1 plan (1 wave)
-- [ ] 76-01-PLAN.md — Tab shell (7 botões, estilo processos), conteúdo real para Dados (com sub-secção Identificação) e Contactos e Notas, placeholders "Em breve" para os outros 5
+- [x] 76-01-PLAN.md — Tab shell (7 botões, estilo processos), conteúdo real para Dados (com sub-secção Identificação) e Contactos e Notas, placeholders "Em breve" para os outros 5
 **UI hint**: yes
 
 #### Phase 77: Separadores — Processos e Pareceres
@@ -243,7 +243,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 73.1. Fechar gap CLI-05 (gap closure) | v2.7 | 1/1 | Complete | 2026-07-02 |
 | 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 5/5 | Complete    | 2026-07-04 |
 | 75. Componente Único View/Edit | v2.8 | 3/3 | Complete    | 2026-07-04 |
-| 76. Separadores — Dados, Contactos e Notas | v2.8 | 0/1 | Planned | - |
+| 76. Separadores — Dados, Contactos e Notas | v2.8 | 1/1 | Complete   | 2026-07-05 |
 | 77. Separadores — Processos e Pareceres | v2.8 | 0/? | Not started | - |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/? | Not started | - |
 | 79. Documentos Entregues — Upload Real | v2.8 | 0/? | Not started | - |
