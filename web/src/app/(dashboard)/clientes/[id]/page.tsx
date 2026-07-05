@@ -457,16 +457,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       ) : null}
                     </div>
 
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="nif">NIF</Label>
-                        <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
-                        {form.formState.errors.nif ? (
-                          <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
-                        ) : null}
-                      </div>
-                    </div>
-
                     <div className="space-y-2">
                       <Label>Tipo de Cliente</Label>
                       <Controller
@@ -542,6 +532,66 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       />
                       <Label htmlFor="avencado" className="cursor-pointer">Avençado</Label>
                     </div>
+
+                    <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+                      <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Identificação</h4>
+
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="nif">NIF</Label>
+                          <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
+                          {form.formState.errors.nif ? (
+                            <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="documento_tipo">Tipo de Documento</Label>
+                          <select
+                            id="documento_tipo"
+                            className={selectClassName}
+                            {...form.register("documento_tipo")}
+                          >
+                            <option value="">Nenhum</option>
+                            {getDocumentoTipoOptions(form.watch("tipo")).map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                            {legacyDocumentoTipo ? (
+                              <option value={legacyDocumentoTipo}>
+                                {legacyDocumentoTipo} (inválido para o tipo atual)
+                              </option>
+                            ) : null}
+                          </select>
+                          {legacyDocumentoTipo ? (
+                            <p className="text-sm text-amber-600">
+                              Este cliente tem um tipo de documento (&quot;{legacyDocumentoTipo}&quot;) que já não é
+                              válido para o tipo de cliente selecionado. Selecione um tipo de documento válido para
+                              corrigir, ou guarde sem alterar este campo para manter o valor legado.
+                            </p>
+                          ) : null}
+                          {form.formState.errors.documento_tipo ? (
+                            <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="documento_numero">Número do Documento</Label>
+                          <Input
+                            id="documento_numero"
+                            className="rounded-none max-sm:h-12 max-sm:text-base"
+                            placeholder="Introduza o número do documento"
+                            {...form.register("documento_numero")}
+                          />
+                          {form.formState.errors.documento_numero ? (
+                            <p className="text-sm text-red-600">{form.formState.errors.documento_numero.message}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
@@ -559,9 +609,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                         </Badge>
                       ) : null}
                     </dd>
-
-                    <dt className="text-neutral-500 dark:text-neutral-400">NIF</dt>
-                    <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
 
                     <dt className="text-neutral-500 dark:text-neutral-400">Tipo</dt>
                     <dd className="col-span-2">{cliente.data.tipo ?? "—"}</dd>
@@ -585,6 +632,22 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                     <dd className="col-span-2">{new Date(cliente.data.created_at).toLocaleString("pt-CV")}</dd>
                   </dl>
                 )}
+
+                {!isEditing ? (
+                  <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Identificação</h4>
+                    <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                      <dt className="text-neutral-500 dark:text-neutral-400">NIF</dt>
+                      <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
+
+                      <dt className="text-neutral-500 dark:text-neutral-400">Tipo de Documento</dt>
+                      <dd className="col-span-2">{cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "—"}</dd>
+
+                      <dt className="text-neutral-500 dark:text-neutral-400">Número do Documento</dt>
+                      <dd className="col-span-2">{cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "—"}</dd>
+                    </dl>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -616,99 +679,41 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 <CardContent>
                   {isEditing ? (
                     <div className="space-y-4">
-                      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-                        {/* Coluna 1: Tipo de Documento e Número de Documento */}
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="documento_tipo">Tipo de Documento</Label>
-                            <select
-                              id="documento_tipo"
-                              className={selectClassName}
-                              {...form.register("documento_tipo")}
-                            >
-                              <option value="">Nenhum</option>
-                              {getDocumentoTipoOptions(form.watch("tipo")).map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                              {legacyDocumentoTipo ? (
-                                <option value={legacyDocumentoTipo}>
-                                  {legacyDocumentoTipo} (inválido para o tipo atual)
-                                </option>
-                              ) : null}
-                            </select>
-                            {legacyDocumentoTipo ? (
-                              <p className="text-sm text-amber-600">
-                                Este cliente tem um tipo de documento (&quot;{legacyDocumentoTipo}&quot;) que já não é
-                                válido para o tipo de cliente selecionado. Selecione um tipo de documento válido para
-                                corrigir, ou guarde sem alterar este campo para manter o valor legado.
-                              </p>
-                            ) : null}
-                            {form.formState.errors.documento_tipo ? (
-                              <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
-                            ) : null}
-                          </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ramo_atividade">Ramo de Atividade</Label>
+                        <select
+                          id="ramo_atividade"
+                          className={selectClassName}
+                          {...form.register("ramo_atividade")}
+                        >
+                          <option value="">Selecione o ramo de atividade</option>
+                          <option value="Banca">Banca</option>
+                          <option value="Telecom">Telecom</option>
+                          <option value="Construção">Construção</option>
+                          <option value="Serviços">Serviços</option>
+                          <option value="Comércio">Comércio</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                        {form.formState.errors.ramo_atividade ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.ramo_atividade.message}</p>
+                        ) : null}
+                      </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="documento_numero">Número do Documento</Label>
-                            <Input
-                              id="documento_numero"
-                              className="rounded-none max-sm:h-12 max-sm:text-base"
-                              placeholder="Introduza o número do documento"
-                              {...form.register("documento_numero")}
-                            />
-                            {form.formState.errors.documento_numero ? (
-                              <p className="text-sm text-red-600">{form.formState.errors.documento_numero.message}</p>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {/* Coluna 2: Ramo de Atividade e Detalhes Adicionais */}
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="ramo_atividade">Ramo de Atividade</Label>
-                            <select
-                              id="ramo_atividade"
-                              className={selectClassName}
-                              {...form.register("ramo_atividade")}
-                            >
-                              <option value="">Selecione o ramo de atividade</option>
-                              <option value="Banca">Banca</option>
-                              <option value="Telecom">Telecom</option>
-                              <option value="Construção">Construção</option>
-                              <option value="Serviços">Serviços</option>
-                              <option value="Comércio">Comércio</option>
-                              <option value="Outros">Outros</option>
-                            </select>
-                            {form.formState.errors.ramo_atividade ? (
-                              <p className="text-sm text-red-600">{form.formState.errors.ramo_atividade.message}</p>
-                            ) : null}
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="detalhes_adicionais">Detalhes Adicionais</Label>
-                            <textarea
-                              id="detalhes_adicionais"
-                              className={textareaClassName}
-                              placeholder="Observações e detalhes adicionais sobre o cliente"
-                              {...form.register("detalhes_adicionais")}
-                            />
-                            {form.formState.errors.detalhes_adicionais ? (
-                              <p className="text-sm text-red-600">{form.formState.errors.detalhes_adicionais.message}</p>
-                            ) : null}
-                          </div>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="detalhes_adicionais">Detalhes Adicionais</Label>
+                        <textarea
+                          id="detalhes_adicionais"
+                          className={textareaClassName}
+                          placeholder="Observações e detalhes adicionais sobre o cliente"
+                          {...form.register("detalhes_adicionais")}
+                        />
+                        {form.formState.errors.detalhes_adicionais ? (
+                          <p className="text-sm text-red-600">{form.formState.errors.detalhes_adicionais.message}</p>
+                        ) : null}
                       </div>
                     </div>
                   ) : (
                     <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
-                      <dt className="text-neutral-500 dark:text-neutral-400">Tipo de Documento</dt>
-                      <dd className="col-span-2">{cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "—"}</dd>
-
-                      <dt className="text-neutral-500 dark:text-neutral-400">Número do Documento</dt>
-                      <dd className="col-span-2">{cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "—"}</dd>
-
                       <dt className="text-neutral-500 dark:text-neutral-400">Ramo de Atividade</dt>
                       <dd className="col-span-2">{cliente.data.ramo_atividade ?? cliente.data.ramoAtividade ?? "—"}</dd>
 
