@@ -181,7 +181,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   1. Separador "Processos" lista os processos associados ao cliente (via `useProcessos({cliente_id})`)
   2. Separador "Pareceres" lista os pareceres associados ao cliente (via `usePareceres({clienteId})`)
 **Plans**: 1 plan (1 wave)
-- [ ] 77-01-PLAN.md — Separadores Processos e Pareceres: sub-componentes ClienteProcessosTab/ClienteParecerTab (lazy-mount, listagem compacta 4 colunas, badge de estado, navegação para detalhe)
+- [x] 77-01-PLAN.md — Separadores Processos e Pareceres: sub-componentes ClienteProcessosTab/ClienteParecerTab (lazy-mount, listagem compacta 4 colunas, badge de estado, navegação para detalhe)
 **UI hint**: yes
 
 #### Phase 78: Separadores — Documentos a Tratar e Deslocações
@@ -245,7 +245,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 74. Enum `documento_tipo` (BI/NIF/Restrição por Tipo) | v2.8 | 5/5 | Complete    | 2026-07-04 |
 | 75. Componente Único View/Edit | v2.8 | 3/3 | Complete    | 2026-07-04 |
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 1/1 | Complete    | 2026-07-05 |
-| 77. Separadores — Processos e Pareceres | v2.8 | 0/1 | Planned | - |
+| 77. Separadores — Processos e Pareceres | v2.8 | 1/1 | Complete   | 2026-07-05 |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/? | Not started | - |
 | 79. Documentos Entregues — Upload Real | v2.8 | 0/? | Not started | - |
 
