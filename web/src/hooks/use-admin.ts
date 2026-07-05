@@ -4,8 +4,8 @@ import { apiFetch } from "@/lib/api";
 
 import type { MockUser, MockRolePermissions, MockPermissionDef } from "@/server/mock-db";
 
-export function useAdminUsers() {
-  const enabled = typeof window !== "undefined" ;
+export function useAdminUsers(options?: { enabled?: boolean }) {
+  const enabled = typeof window !== "undefined" && (options?.enabled ?? true);
 
   return useQuery({
     queryKey: ["admin", "users"],

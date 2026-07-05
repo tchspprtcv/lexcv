@@ -1199,7 +1199,9 @@ function formatParecerDate(v: string | undefined) {
 
 function ClienteParecerTab({ clienteId }: { clienteId: string }) {
   const pareceres = usePareceres({ clienteId: clienteId });
-  const adminUsers = useAdminUsers();
+  const permissions = usePermissions();
+  const isAdmin = Boolean(permissions.data?.roles?.includes("ADMIN"));
+  const adminUsers = useAdminUsers({ enabled: isAdmin });
   const advogados = React.useMemo(
     () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
     [adminUsers.data],
