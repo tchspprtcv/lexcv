@@ -112,6 +112,9 @@ export default function ClienteDetailPage({ params }: PageProps) {
 }
 
 function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClientes: boolean }) {
+  const permissions = usePermissions();
+  const canViewProcessos = permissions.can.view("processos");
+  const canViewPareceres = permissions.can.view("pareceres");
   const cliente = useCliente(id);
   const conta = useClienteContaCorrente(id);
   const contactos = useClienteContactos(id);
@@ -433,20 +436,24 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               >
                 Contactos e Notas
               </Button>
-              <Button
-                type="button"
-                variant={tab === "processos" ? "secondary" : "outline"}
-                onClick={() => setTab("processos")}
-              >
-                Processos
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "pareceres" ? "secondary" : "outline"}
-                onClick={() => setTab("pareceres")}
-              >
-                Pareceres
-              </Button>
+              {canViewProcessos ? (
+                <Button
+                  type="button"
+                  variant={tab === "processos" ? "secondary" : "outline"}
+                  onClick={() => setTab("processos")}
+                >
+                  Processos
+                </Button>
+              ) : null}
+              {canViewPareceres ? (
+                <Button
+                  type="button"
+                  variant={tab === "pareceres" ? "secondary" : "outline"}
+                  onClick={() => setTab("pareceres")}
+                >
+                  Pareceres
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant={tab === "documentosEntregues" ? "secondary" : "outline"}
@@ -1057,9 +1064,17 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             />
           </div>
           ) : tab === "processos" ? (
-            <ClienteProcessosTab clienteId={id} />
+            canViewProcessos ? (
+              <ClienteProcessosTab clienteId={id} />
+            ) : (
+              <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
+            )
           ) : tab === "pareceres" ? (
-            <ClienteParecerTab clienteId={id} />
+            canViewPareceres ? (
+              <ClienteParecerTab clienteId={id} />
+            ) : (
+              <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
+            )
           ) : tab === "documentosEntregues" ? (
             <PlaceholderEmBreve />
           ) : tab === "documentosATratar" ? (
