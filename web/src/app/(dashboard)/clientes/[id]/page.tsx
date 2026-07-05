@@ -379,7 +379,17 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={isSaving}>
+              <Button
+                type="button"
+                onClick={form.handleSubmit(onSubmit, () => {
+                  // Every editable field lives in the "Dados" tab; if validation fails while the
+                  // user is parked on another tab, the inline errors would render nowhere on
+                  // screen. Switch back to "Dados" so the errors become visible.
+                  setTab("dados");
+                  toast.error("Existem campos por corrigir no separador Dados.");
+                })}
+                disabled={isSaving}
+              >
                 {isSaving ? "A guardar..." : "Guardar"}
               </Button>
             </>
