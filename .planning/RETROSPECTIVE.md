@@ -185,6 +185,49 @@ Simplification and flattening of the client identification data model: removed t
 
 ---
 
+## Milestone: v2.8 — Refatoração Ficha de Cliente
+
+**Shipped:** 2026-07-06
+**Phases:** 6 (74–79) | **Plans:** 13 | **Tasks:** 26
+
+### What Was Built
+
+Unified the cliente ficha's view/edit split into a single component (`/clientes/[id]/editar` removed entirely) with an in-place `isEditing` toggle, then reorganized it into 7 tabs replicating processos' button-toggle pattern: Dados (identificação as its own sub-section), Contactos e Notas, Processos/Pareceres (wired to already-existing `useProcessos`/`usePareceres` hooks via lazy-mount sub-components), Documentos a Tratar/Deslocações (pure relocation of existing text-list UI), and Documentos Entregues (the only phase with new backend work — a tenant-scoped `GET /clientes/{id}/documentos` endpoint, replacing a legacy text list with real file upload reusing the generic `Documento` system). The `documento_tipo` enum was restructured first (BI added, NIF removed, restricted by client type) since every later phase's identification UI depended on the final value set.
+
+### What Worked
+
+- **Sequencing the enum phase (74) before the UI restructuring phases (75-79) that depend on it** — every later phase could assume `documento_tipo`'s final value set without any mid-milestone rework. This mirrors v2.7's "backend-first" lesson but applied at the requirements-dependency level rather than just build-breakage.
+- **Smart-discuss grey-area tables before every phase, even "obvious" relocation phases.** Phase 78 (relocating 2 existing list sections into their own tabs) surfaced a real ambiguity via the plan-checker: the smart-discuss's own assumption about read-mode visibility contradicted what the actual code did (`isEditing ? (...) : null` hides the whole section, not just the Adicionar button). Caught and corrected in CONTEXT.md *and* the UI-SPEC before any code was written — cheaper than catching it in execution.
+- **Pattern-mapper surfacing pre-existing infrastructure gaps before planning, not during execution.** For Phase 79, the pattern-mapper independently confirmed (by reading Phase 77's actual merged code) that the "hook `enabled` param" idea from the UI-SPEC draft was never how the prior phase actually solved lazy-fetch — it used lazy-mount sub-components instead. The planner was redirected to the proven pattern before writing a single task, avoiding a redundant hook refactor.
+- **Code review on the final phase caught 3 genuinely critical, ship-blocking bugs that would have silently broken the whole feature**: a FormData key-name mismatch (`cliente_id` vs backend's `clienteId`) that persisted every cliente-tab upload with `clienteId = null` (uploads would never show up in the client's own document list — undetectable by `tsc`/`pnpm build`, since FormData field names are untyped strings), a download link pointed at a JSON-returning endpoint instead of the file stream, and a missing tenant-ownership check on upload. All three were traced end-to-end and confirmed fixed in the same session, with two follow-up review rounds surfacing (and closing) 2 more real findings before the milestone audit ran.
+
+### What Was Inefficient
+
+- **Session usage limits interrupted execution mid-phase multiple times** (during phase 74's verifier, phase 76's planner) — recovered cleanly each time via scheduled wakeups timed to the stated reset window, with zero rework, but the milestone effectively spanned more wall-clock time than active work time as a result. Worth normalizing "reschedule wakeup to reset time, then resume the exact next step" as the default recovery pattern rather than re-deriving it per interruption.
+- **`*-PATTERNS.md` files were generated but not committed immediately after pattern-mapping** for at least one phase (77) — discovered only when its executor's worktree didn't have the file and had to fall back to inline plan details. Same class of miss as v2.6's commit-hygiene lesson; fixed mid-milestone by committing PATTERNS.md right after generation for all subsequent phases, but the fix should have been the default from phase 1.
+- **5 consecutive phases (75-79) modified the same single file** (`clientes/[id]/page.tsx`), which made every phase's pattern-mapper/planner/executor need to re-derive current line numbers from scratch each time (line drift after every merge) — unavoidable given the milestone's shape, but a reminder that "everything lands in one file" phases carry a structural tax that "modify 2-3 separate files" phases don't.
+- **3 of 6 phases (75, 76, 79) ended `human_needed` rather than `passed`** — not because of code defects (all scored 100% on automated must-haves), but because this environment had no running backend/DB/browser to exercise live upload, tab-switching, and save round-trips. This is an environment limitation repeated across every milestone this project has run so far, not new to v2.8, but worth flagging again: **live UAT capability would likely have caught the FormData key mismatch (CR-01) before code review did**, since it's exactly the kind of bug that's invisible to static analysis but obvious the first time someone actually uploads a file and checks the list.
+
+### Patterns Established
+
+- **Requirement-dependency-first phase ordering**: when a later phase's UI depends on an earlier phase's data model output (not just its code compiling), sequence the data-model phase first even if the UI phases would otherwise be "more visible" or higher-priority-feeling — this was the explicit rationale for placing enum work (74) before the 5 UI-restructuring phases.
+- **Lazy-mount sub-components, not hook `enabled` params, for per-tab conditional fetching.** Established in Phase 77 (`ClienteProcessosTab`/`ClienteParecerTab`), confirmed and reused in Phase 79 (`ClienteDocumentosEntreguesTab`) — avoids touching shared hook signatures that have other call sites, keeps the lazy-fetch behavior local to the one component that needs it.
+- **Corrections discovered post-planning (pattern-mapper/plan-checker) get written back into CONTEXT.md, not just patched silently into the plan.** Phase 78's read-mode visibility correction and Phase 79's lazy-mount redirection were both propagated back to the phase's own CONTEXT.md/UI-SPEC.md so the artifact trail stays internally consistent for any future re-read.
+
+### Key Lessons
+
+1. **A snake_case/camelCase FormData field mismatch is functionally invisible to `tsc --noEmit` and `pnpm build`** — `form.set("cliente_id", ...)` type-checks perfectly fine even when the backend's `@RequestParam` expects `clienteId`. This is the third milestone in a row (after v2.4's JSON key mismatch and v2.6's Spring route-concatenation bug) where a wire-format/contract mismatch survived every static check and was only caught by a reviewer actually tracing the two sides of the contract against each other. **This class of bug needs an explicit "trace the wire contract, don't trust the type" check as a standing item in code review for any FormData/multipart upload code**, the same way v2.6 established it for Spring route resolution.
+2. **When a phase relocates existing UI/state without redesigning it, verify the *actual current gating behavior* by reading the code — don't assume the "obvious" interpretation (e.g., "list stays visible, only the add button hides") is what's already there.** Phase 78's grey-area answer was wrong until the pattern-mapper caught it against real source; the fix was cheap because it happened before execution, not after.
+3. **On a request-body wire-format bug (CR-01), self-review from the same agent that wrote the code may not catch it — an independent code-review pass with an explicit instruction to trace the contract end-to-end is what worked.** The original executor's own grep-based acceptance criteria checked that fields were *sent*, not that the *names* matched what the receiving side expected.
+
+### Cost Observations
+
+- Model mix: opus for all planners (6 phases + 2 gap-closure re-plans), sonnet for everything else (research, UI-SPEC researchers/checkers, pattern-mapping, execution, code-review/fix, verification, integration audit).
+- Sessions: interrupted at least twice by Claude usage-limit resets (phase 74 verification, phase 76 planning) — both resumed cleanly via scheduled wakeup timed to the stated reset window, zero rework needed either time.
+- Notable: this milestone needed 2 gap-closure rounds on Phase 74 alone (frontend legacy-value preservation, then a related backend gap the first fix exposed) plus 2 code-review fix rounds on the final phase (3 critical + 4 warning findings total) — more iteration than v2.7's single gap-closure phase, but every round found genuinely new, real issues rather than re-litigating the same one, suggesting the iteration cost was earning its keep rather than thrashing.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -193,5 +236,6 @@ Simplification and flattening of the client identification data model: removed t
 | v2.4 Ficha de Cliente | 4 | 14 | 1 | 79+ | 19/19 (post-audit-remediation) |
 | v2.6 Módulo de Parecer Jurídico — UI | 5 | 6 | 1 | 7 (frontend+1 backend fix) | 9/9 (post-audit-remediation) |
 | v2.7 Melhoria Gestão de Clientes | 5 (incl. 1 gap-closure) | 6 | 1 | 15 (backend+frontend) | 7/7 (post-audit-remediation) |
+| v2.8 Refatoração Ficha de Cliente | 6 (incl. 2 gap-closure plans) | 13 | 3 | 81 | 20/20 (post-review-remediation) |
 
 *Table grows with each milestone*
