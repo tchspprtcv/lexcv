@@ -211,10 +211,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   React.useEffect(() => {
     if (tab !== "dados") {
       setAddDocEntreModal(false);
-      setAddDocATratarModal(false);
-      setAddDeslocacaoModal(false);
       setNewDocEntre({ descricao: "", data: "" });
+    }
+    if (tab !== "documentosATratar") {
+      setAddDocATratarModal(false);
       setNewDocATratar({ descricao: "" });
+    }
+    if (tab !== "deslocacoes") {
+      setAddDeslocacaoModal(false);
       setNewDeslocacao({ descricao: "", local: "", data: "" });
     }
   }, [tab]);
@@ -887,8 +891,75 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   )}
                 </div>
 
-                {/* Documentos a Tratar */}
-                <div className="space-y-2">
+                {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ProcuracaoCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              procuracaoKey={cliente.data.procuracao_key}
+            />
+            <ResponsaveisCard
+              title="Advogados"
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              useList={useClienteAdvogados}
+              useAdd={useAddAdvogado}
+              useRemove={useRemoveAdvogado}
+            />
+            <ResponsaveisCard
+              title="Administrativos"
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              useList={useClienteAdministrativos}
+              useAdd={useAddAdministrativo}
+              useRemove={useRemoveAdministrativo}
+            />
+          </div>
+          </>
+          ) : tab === "contactosNotas" ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ClienteContactosCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              data={contactos.data}
+              isLoading={contactos.isLoading}
+              isError={contactos.isError}
+            />
+            <ClienteNotasCard
+              clienteId={id}
+              canEditClientes={canEditClientes}
+              editable={isEditing}
+              data={notas.data}
+              isLoading={notas.isLoading}
+              isError={notas.isError}
+            />
+          </div>
+          ) : tab === "processos" ? (
+            canViewProcessos ? (
+              <ClienteProcessosTab clienteId={id} />
+            ) : (
+              <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
+            )
+          ) : tab === "pareceres" ? (
+            canViewPareceres ? (
+              <ClienteParecerTab clienteId={id} />
+            ) : (
+              <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
+            )
+          ) : tab === "documentosEntregues" ? (
+            <PlaceholderEmBreve />
+          ) : tab === "documentosATratar" ? (
+            isEditing ? (
+              <Card>
+                <CardContent className="space-y-2 pt-6">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos a Tratar</h4>
                     <Dialog open={addDocATratarModal} onOpenChange={setAddDocATratarModal}>
@@ -936,10 +1007,13 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       ))}
                     </ul>
                   )}
-                </div>
-
-                {/* Deslocações */}
-                <div className="space-y-2">
+                </CardContent>
+              </Card>
+            ) : null
+          ) : tab === "deslocacoes" ? (
+            isEditing ? (
+              <Card>
+                <CardContent className="space-y-2 pt-6">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Deslocações</h4>
                     <Dialog open={addDeslocacaoModal} onOpenChange={setAddDeslocacaoModal}>
@@ -1010,77 +1084,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       ))}
                     </ul>
                   )}
-                </div>
-
-                {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            <ProcuracaoCard
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              procuracaoKey={cliente.data.procuracao_key}
-            />
-            <ResponsaveisCard
-              title="Advogados"
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              useList={useClienteAdvogados}
-              useAdd={useAddAdvogado}
-              useRemove={useRemoveAdvogado}
-            />
-            <ResponsaveisCard
-              title="Administrativos"
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              useList={useClienteAdministrativos}
-              useAdd={useAddAdministrativo}
-              useRemove={useRemoveAdministrativo}
-            />
-          </div>
-          </>
-          ) : tab === "contactosNotas" ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ClienteContactosCard
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              data={contactos.data}
-              isLoading={contactos.isLoading}
-              isError={contactos.isError}
-            />
-            <ClienteNotasCard
-              clienteId={id}
-              canEditClientes={canEditClientes}
-              editable={isEditing}
-              data={notas.data}
-              isLoading={notas.isLoading}
-              isError={notas.isError}
-            />
-          </div>
-          ) : tab === "processos" ? (
-            canViewProcessos ? (
-              <ClienteProcessosTab clienteId={id} />
-            ) : (
-              <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
-            )
-          ) : tab === "pareceres" ? (
-            canViewPareceres ? (
-              <ClienteParecerTab clienteId={id} />
-            ) : (
-              <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
-            )
-          ) : tab === "documentosEntregues" ? (
-            <PlaceholderEmBreve />
-          ) : tab === "documentosATratar" ? (
-            <PlaceholderEmBreve />
-          ) : tab === "deslocacoes" ? (
-            <PlaceholderEmBreve />
+                </CardContent>
+              </Card>
+            ) : null
           ) : null}
         </div>
       ) : (
