@@ -57,18 +57,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — milestone v2.8 concluída, a preparar auditoria de milestone)
-
-## Current Milestone: v2.8 Refatoração Ficha de Cliente
-
-**Goal:** Transformar a ficha de cliente no formulário central de pesquisa de informação relacionada ao cliente — unificando visualização/edição num único componente e adicionando separadores (tabs) que cobrem processos, pareceres e documentos, seguindo a disposição visual de processos.
-
-**Target features:**
-- Unificação view/edit num único componente com toggle "Editar" (diverge deliberadamente do padrão de processos, que usa páginas separadas — decisão explícita do utilizador)
-- 7 tabs: Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
-- Identificação (NIF + documento_tipo + documento_numero) movida para o card "Dados" principal
-- `documento_tipo`: adicionar `BI`, remover `NIF` (corte limpo), filtrar por tipo de cliente, validado em ambas as camadas
-- "Documentos Entregues" migrado de lista de texto para upload real via sistema genérico de `Documento`, com combobox de tipo livre
+(Nenhum requisito ativo — milestone v2.8 concluída e arquivada; a aguardar definição da próxima milestone)
 
 ### Out of Scope
 
@@ -136,17 +125,18 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.7 (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes: remoção completa do card JSON `dados_tipo` (backend e frontend), tipo de documento `REG_COMERCIAL` para Empresa, NIF obrigatório (9 dígitos, validado client-side e server-side), formulários de criação/edição com labels dinâmicas ("Nome"/"Nome Comercial", "Morada"/"Sede"), e página de detalhe + ficha imprimível atualizadas. Auditoria de milestone encontrou e fechou um gap no NIF obrigatório (fase 73.1 inserida) — ver `.planning/milestones/v2.7-MILESTONE-AUDIT.md`.
+**Shipped:** v2.8 (2026-07-06) — Refatoração Ficha de Cliente. Ficha de cliente unificada (view/edit num só componente, rota `/editar` removida) e reestruturada em 7 separadores (Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações), seguindo a disposição visual de processos. Enum `documento_tipo` restrito por tipo de cliente (BI adicionado, NIF removido). "Documentos Entregues" passa de lista de texto a upload real, reutilizando o sistema genérico de `Documento`. Auditoria de milestone: 20/20 requisitos satisfeitos, integração cross-phase totalmente ligada, sem gaps críticos — dívida técnica não-bloqueante (3 fases com UAT ao vivo pendente) aceite e registada. Ver `.planning/milestones/v2.8-MILESTONE-AUDIT.md`.
+
+**v2.7** (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes, NIF obrigatório validado em ambas as camadas.
 
 **v2.6** (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5.
 
 **v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração → Aprovação interna opcional → Entrega.
 
-**v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo.
-
 <details>
-<summary>Histórico anterior (v1.0–v2.3)</summary>
+<summary>Histórico anterior (v1.0–v2.4)</summary>
 
+**v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo.
 **v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet.
 **v2.2** (2026-06-19) — Document Storage MinIO.
 **v2.1** (2026-06-18) — Agenda Avançada.
@@ -156,7 +146,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — todas as 6 fases (74–79) completas; a preparar auditoria de milestone.
+**Current focus:** Milestone v2.8 arquivada. A aguardar definição da próxima milestone via `/gsd:new-milestone`.
 
 ## Evolution
 
@@ -176,4 +166,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — after Phase 79 (Documentos Entregues — Upload Real) completed; all 6 phases of milestone v2.8 done, pending milestone audit*
+*Last updated: 2026-07-06 — after v2.8 milestone (Refatoração Ficha de Cliente) shipped and archived*

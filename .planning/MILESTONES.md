@@ -1,5 +1,28 @@
 # Milestones
 
+## v2.8 Refatoração Ficha de Cliente (Shipped: 2026-07-06)
+
+**Phases completed:** 6 phases (74–79), 13 plans, 26 tasks
+
+**Key accomplishments:**
+
+- Enum `documento_tipo` restruturado: `BI` adicionado, `NIF` removido por completo (corte limpo), opções filtradas por tipo de cliente (Particular: CNI/BI/Passaporte; Empresa: só Registo Comercial), validado em frontend e backend — incluindo preservação de valores legados não conformes em edições que não os alteram (2 rondas de gap closure)
+- `/clientes/[id]` e `/clientes/[id]/editar` unificados num único componente com toggle Editar/Guardar/Cancelar; rota `/editar` removida por completo
+- Ficha de cliente reestruturada em 7 separadores (estilo botões-toggle de processos): Dados (com identificação e conta-corrente), Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
+- Separadores Processos e Pareceres ligados aos hooks já existentes (`useProcessos`/`usePareceres`), com fetch lazy via sub-componentes de montagem condicional e permissões `processos:view`/`pareceres:view` espelhadas no frontend
+- "Documentos Entregues" passa de lista de texto para upload real de ficheiros, via novo endpoint `GET /clientes/{id}/documentos` (tenant-scoped) e reaproveitamento total do sistema genérico de `Documento` — incluindo combobox de tipo (datalist nativo) e RBAC `documentos:view/edit`
+- Auditoria de fase (Phase 79) encontrou e fechou 3 bugs críticos antes do fecho da milestone: incompatibilidade de nomes de campo no upload (`cliente_id` vs `clienteId`, que quebrava silenciosamente toda a associação de documentos ao cliente), link de download incorreto, e falta de validação de posse de tenant em `clienteId`/`processoId` no upload
+
+**Known gaps at close:**
+
+- 3 fases (75, 76, 79) com verificação estática 100% completa mas UAT ao vivo pendente (sem ambiente de browser/BD disponível nesta sessão) — ver `*-HUMAN-UAT.md` de cada fase
+- `backend/migrations/74-cleanup-nif-documento-tipo.sql` é um script de execução manual (sem runner de migração no projeto) — deve ser corrido manualmente antes/durante o deploy
+- `Cliente.documentosEntregues` (coluna backend) e `DocumentoEntregue` (tipo frontend) ficam órfãos por decisão deliberada (corte limpo, CLI-29), mesmo padrão usado para `dados_tipo` na v2.7
+
+Ver `.planning/milestones/v2.8-MILESTONE-AUDIT.md`, `.planning/milestones/v2.8-ROADMAP.md` e `.planning/milestones/v2.8-REQUIREMENTS.md` para detalhes completos.
+
+---
+
 ## v2.7 Melhoria Gestão de Clientes (Shipped: 2026-07-02)
 
 **Phases completed:** 5 phases (70–73.1, includes 1 gap-closure insertion), 6 plans

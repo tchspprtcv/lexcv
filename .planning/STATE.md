@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.8
 milestone_name: Refatoração Ficha de Cliente
-status: milestone_complete
-last_updated: 2026-07-06T17:05:27.530Z
-last_activity: 2026-07-06 -- Phase 79 execution started
+status: Awaiting next milestone
+last_updated: "2026-07-06T20:11:39.060Z"
+last_activity: 2026-07-06 — Milestone v2.8 completed and archived
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
   completed_plans: 13
-  percent: 83
-stopped_at: Milestone complete (Phase 79 was final phase)
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-02)
 
 ## Current Position
 
-Phase: 79
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-06
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Milestone v2.8 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-06 — Milestone v2.8 completed and archived
 
 ## Performance Metrics
 
@@ -155,6 +152,19 @@ Items acknowledged and deferred at milestone v2.7 close on 2026-07-02 (see .plan
 | test_debt | No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1 (missing/malformed → 400, valid → persisted as-is, never re-derived from documento_numero) | non-blocking, tracked in Pending Todos |
 | tooling | gsd-sdk roadmap-update tooling truncated ROADMAP.md to a single phase stub during Phase 73.1 planning (recovered from git history) | reported for awareness; no code-level follow-up needed in this project, but future milestones should sanity-check `roadmap.analyze` phase_count after any SDK roadmap write |
 
+Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.planning/v2.8-MILESTONE-AUDIT.md` for full detail):
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 75 (75-VERIFICATION.md) — static verification passed 9/9, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 76 (76-VERIFICATION.md) — static verification passed 7/7, live browser/backend test not performed in this environment | human_needed |
+| verification_gap | Phase 79 (79-VERIFICATION.md) — static verification passed 9/9, live browser/backend test not performed in this environment | human_needed |
+| uat_gap | 75-HUMAN-UAT.md — 5 pending scenarios (visual parity, save round-trip, cancel-discard, sub-component toggle, mobile scroll) | partial |
+| uat_gap | 76-HUMAN-UAT.md — 4 pending scenarios (7-tab click-through, cross-tab validation surfacing, intake dialog reset, mobile scroll) | partial |
+| uat_gap | 79-HUMAN-UAT.md — 3 pending scenarios (live upload flow, list/download/delete round trip, read/edit mode gating) | partial |
+| tooling | `backend/migrations/74-cleanup-nif-documento-tipo.sql` is a standalone manual-execution script — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
+| tech_debt | `Cliente.documentosEntregues` (backend field/column) and `DocumentoEntregue` (frontend type) are orphaned by design (CLI-29 "corte limpo") — no longer read/written by the UI, not migrated | intentional, matches `dados_tipo` precedent from v2.7 |
+
 ## Operator Next Steps
 
-- Milestone v2.8 roadmap created (Phases 74–79, 20/20 requirements mapped). Review `.planning/ROADMAP.md` and run `/gsd:plan-phase 74` to start planning the `documento_tipo` enum foundation phase.
+- Start the next milestone with /gsd-new-milestone

@@ -10,7 +10,7 @@
 - ✅ **v2.5 Módulo de Parecer Jurídico** — Phases 61–64 (complete 2026-06-30)
 - ✅ **v2.6 Módulo de Parecer Jurídico — UI** — Phases 65–69 (complete 2026-07-01)
 - ✅ **v2.7 Melhoria Gestão de Clientes** — Phases 70–73.1 (complete 2026-07-02)
-- 🚧 **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (in progress)
+- ✅ **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (complete 2026-07-06)
 
 
 ## Phases
@@ -125,89 +125,21 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 
 </details>
 
-### 🚧 v2.8 Refatoração Ficha de Cliente (In Progress)
+<details>
+<summary>✅ v2.8 Refatoração Ficha de Cliente (Phases 74–79) — SHIPPED 2026-07-06</summary>
 
-**Milestone Goal:** Transformar a ficha de cliente no formulário central de pesquisa de informação relacionada ao cliente — unificando visualização/edição num único componente e adicionando separadores (tabs) que cobrem processos, pareceres e documentos, seguindo a disposição visual de processos.
+Ficha de cliente unificada (view/edit num só componente via toggle Editar, rota `/editar` removida — Phase 75) e reestruturada em 7 separadores estilo botões-toggle de processos (Phase 76): Dados (identificação isolada como sub-secção), Contactos e Notas, Processos/Pareceres (Phase 77, wiring de baixo risco contra hooks já existentes), Documentos a Tratar/Deslocações (Phase 78, relocalização pura), Documentos Entregues (Phase 79, upload real via novo endpoint `GET /clientes/{id}/documentos`). Enum `documento_tipo` restruturado antes de tudo (Phase 74: `BI` adicionado, `NIF` removido, restrito por tipo de cliente, com 2 rondas de gap-closure para preservar valores legados). Auditoria de fase (79) encontrou e fechou 3 bugs críticos: incompatibilidade `cliente_id`/`clienteId` que quebrava silenciosamente a associação de uploads, link de download incorreto, falta de validação de posse de tenant no upload. Auditoria de milestone: 20/20 requisitos satisfeitos, integração cross-phase totalmente ligada, sem gaps críticos.
 
-#### Phase 74: Enum `documento_tipo` (BI/NIF/Restrição por Tipo)
-**Goal**: O tipo de documento de identificação do cliente reflete corretamente as opções válidas por tipo de cliente, em backend e frontend
-**Depends on**: Nothing (first phase of milestone)
-**Requirements**: CLI-20, CLI-21, CLI-22, CLI-23, CLI-24
-**Success Criteria** (what must be TRUE):
-  1. Utilizador vê `BI` como opção de tipo de documento para cliente Particular
-  2. Utilizador já não vê `NIF` como opção de tipo de documento (removido do enum)
-  3. Ao criar/editar cliente Particular, o dropdown de tipo de documento mostra apenas CNI/BI/Passaporte
-  4. Ao criar/editar cliente Empresa, o dropdown de tipo de documento mostra apenas Registo Comercial
-  5. Submeter uma combinação inválida (ex.: Empresa com tipo de documento de Particular) é rejeitada pelo backend com erro claro
-**Plans**: 5 plans (2 gap-closure)
-- [x] 74-01-PLAN.md — Backend enum (BI/-NIF), tipo×documento_tipo validation, defensive NIF cleanup SQL
-- [x] 74-02-PLAN.md — Frontend DocumentoTipo type + shared cliente-documento-tipo options module
-- [x] 74-03-PLAN.md — Filtered dropdown + Zod validation in both cliente form pages
-- [x] 74-04-PLAN.md — Gap closure: parameterize clienteFormSchema so legacy documento_tipo can be saved on edit (CR-01)
-- [x] 74-05-PLAN.md — Gap closure: backend updateCliente tolerates unchanged legacy documento_tipo (skip validation only when field is byte-for-byte unchanged from stored entity)
+- [x] Phase 74: Enum `documento_tipo` (BI/NIF/Restrição por Tipo) (CLI-20 a CLI-24) — 5 plans (2 gap-closure), completed 2026-07-04
+- [x] Phase 75: Componente Único View/Edit (CLI-12, CLI-13, CLI-14) — 3 plans (2 waves), completed 2026-07-04
+- [x] Phase 76: Separadores — Dados, Contactos e Notas (CLI-15, CLI-18, CLI-19) — 1 plan, completed 2026-07-05
+- [x] Phase 77: Separadores — Processos e Pareceres (CLI-16, CLI-17) — 1 plan, completed 2026-07-05
+- [x] Phase 78: Separadores — Documentos a Tratar e Deslocações (CLI-30, CLI-31) — 1 plan, completed 2026-07-06
+- [x] Phase 79: Documentos Entregues — Upload Real (CLI-25 a CLI-29) — 2 plans (2 waves), completed 2026-07-06
 
-#### Phase 75: Componente Único View/Edit
-**Goal**: A ficha de cliente é uma única página que alterna entre modo leitura e edição, sem rota dedicada de edição
-**Depends on**: Phase 74
-**Requirements**: CLI-12, CLI-13, CLI-14
-**Success Criteria** (what must be TRUE):
-  1. Utilizador visualiza os dados do cliente em `/clientes/[id]` em modo leitura por defeito
-  2. Utilizador clica "Editar" e os mesmos campos tornam-se editáveis na mesma página (sem navegação)
-  3. Em modo leitura, controlos de edição (inputs/selects/guardar/cancelar/adicionar/remover) estão inativos ou ocultos
-  4. Aceder a `/clientes/[id]/editar` deixa de existir como rota separada
-**Plans**: 3 plans (2 waves)
-- [x] 75-01-PLAN.md — Merge edit-mode logic + isEditing toggle into [id]/page.tsx; delete /editar route (Wave 1)
-- [x] 75-02-PLAN.md — Add editable prop to the 4 inline sub-cards, AND-gate CRUD affordances (Wave 2)
-- [x] 75-03-PLAN.md — Repoint the 2 Editar pencil links in clientes list page to /clientes/[id] (Wave 1)
-**UI hint**: yes
+See archive: [milestones/v2.8-ROADMAP.md](milestones/v2.8-ROADMAP.md) · [milestones/v2.8-MILESTONE-AUDIT.md](milestones/v2.8-MILESTONE-AUDIT.md)
 
-#### Phase 76: Separadores — Dados, Contactos e Notas
-**Goal**: A ficha de cliente organiza a informação em separadores, com identificação incluída no card "Dados" principal
-**Depends on**: Phase 75
-**Requirements**: CLI-15, CLI-18, CLI-19
-**Success Criteria** (what must be TRUE):
-  1. Utilizador vê 7 separadores na ficha do cliente: Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações
-  2. Separador "Dados" apresenta NIF, tipo de documento e número de documento como parte do card principal, respeitando toggle view/edit
-  3. Separador "Contactos e Notas" apresenta os mesmos cards de Contactos e Notas anteriormente na página principal, agora isolados no seu separador
-**Plans**: 1 plan (1 wave)
-- [x] 76-01-PLAN.md — Tab shell (7 botões, estilo processos), conteúdo real para Dados (com sub-secção Identificação) e Contactos e Notas, placeholders "Em breve" para os outros 5
-**UI hint**: yes
-
-#### Phase 77: Separadores — Processos e Pareceres
-**Goal**: O utilizador consulta os processos e pareceres do cliente diretamente a partir da ficha do cliente
-**Depends on**: Phase 76
-**Requirements**: CLI-16, CLI-17
-**Success Criteria** (what must be TRUE):
-  1. Separador "Processos" lista os processos associados ao cliente (via `useProcessos({cliente_id})`)
-  2. Separador "Pareceres" lista os pareceres associados ao cliente (via `usePareceres({clienteId})`)
-**Plans**: 1 plan (1 wave)
-- [x] 77-01-PLAN.md — Separadores Processos e Pareceres: sub-componentes ClienteProcessosTab/ClienteParecerTab (lazy-mount, listagem compacta 4 colunas, badge de estado, navegação para detalhe)
-**UI hint**: yes
-
-#### Phase 78: Separadores — Documentos a Tratar e Deslocações
-**Goal**: As listas de documentos a tratar e deslocações do cliente ficam isoladas nos seus próprios separadores, mantendo o comportamento atual
-**Depends on**: Phase 76
-**Requirements**: CLI-30, CLI-31
-**Success Criteria** (what must be TRUE):
-  1. Separador "Documentos a Tratar" mantém a lista de texto (descrição+data) atual, agora isolada no seu separador
-  2. Separador "Deslocações" mantém a lista de texto (descrição/local/data) atual, agora isolada no seu separador
-**Plans**: 1 plan (1 wave)
-- [x] 78-01-PLAN.md — Relocate "Documentos a Tratar" + "Deslocações" JSX from the "Dados" tab into their own tab branches (isEditing-gated, replacing PlaceholderEmBreve); extend the dialog-reset useEffect per-dialog
-**UI hint**: yes
-
-#### Phase 79: Documentos Entregues — Upload Real
-**Goal**: O separador "Documentos Entregues" passa a gerir ficheiros carregados de facto, reutilizando o sistema genérico de Documentos
-**Depends on**: Phase 76
-**Requirements**: CLI-25, CLI-26, CLI-27, CLI-28, CLI-29
-**Success Criteria** (what must be TRUE):
-  1. Utilizador carrega um ficheiro no separador "Documentos Entregues" via o sistema genérico `Documento`/`/documentos/upload` associado ao `clienteId`
-  2. Separador lista os documentos já carregados para o cliente (via novo endpoint de listagem por cliente)
-  3. Ao carregar um documento, o campo "tipo" é um combobox que permite escolher um tipo existente ou escrever um novo
-  4. Registos antigos de "documentos entregues" (texto sem ficheiro) deixam de ser editáveis na nova UI, sem processo de migração
-**Plans**: 2 plans (2 waves)
-- [x] 79-01-PLAN.md — Backend: new GET /clientes/{id}/documentos tenant-scoped list endpoint (Wave 1)
-- [x] 79-02-PLAN.md — Frontend: repoint useDocumentos + delete legacy text section + new ClienteDocumentosEntreguesTab (upload/list/download/delete, datalist tipo combobox) (Wave 2)
-**UI hint**: yes
+</details>
 
 ## Progress
 
@@ -252,4 +184,4 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete    | 2026-07-06 |
 | 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
 
-**Next:** Phase 79 planned (2 plans, 2 waves). Run `/gsd:execute-phase 79`.
+**Next:** Milestone v2.8 shipped and archived 2026-07-06. Run `/gsd:new-milestone` to start the next milestone.
