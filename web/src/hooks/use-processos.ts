@@ -281,34 +281,13 @@ export function useAddProcessoFase(id: string) {
   });
 }
 
-export function useUpdateProcessoFase(id: string, faseId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: ProcessoFaseUpdateRequest) =>
-      apiFetch<ProcessoFase>(
-        `/processos/${encodeURIComponent(id)}/fases/${encodeURIComponent(faseId)}`,
-        {
-          method: "PUT",
-          body: JSON.stringify(payload satisfies ProcessoFaseUpdateRequest),
-        },
-      ),
-    onSuccess: async (updated) => {
-      queryClient.setQueryData<ProcessoFase[] | undefined>(["processos", "fases", id], (current) => {
-        if (!current) return current;
-        return current.map((item) => (item.id === updated.id ? updated : item));
-      });
-    },
-  });
-}
-
 export function useUpdateProcessoFaseStatus(id: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { faseId: string; payload: ProcessoFaseUpdateRequest }) =>
+    mutationFn: (args: { faseId: number; payload: ProcessoFaseUpdateRequest }) =>
       apiFetch<ProcessoFase>(
-        `/processos/${encodeURIComponent(id)}/fases/${encodeURIComponent(args.faseId)}`,
+        `/processos/${encodeURIComponent(id)}/fases/${encodeURIComponent(String(args.faseId))}`,
         {
           method: "PUT",
           body: JSON.stringify(args.payload satisfies ProcessoFaseUpdateRequest),

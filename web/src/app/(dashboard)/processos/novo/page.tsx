@@ -190,7 +190,7 @@ function ProcessoWizardContent() {
 
   const intakeFormValues = intakeForm.getValues();
   const selectedClienteName =
-    (clientes.data ?? []).find((c) => c.id === intakeFormValues.cliente_id)?.nome ?? intakeFormValues.cliente_id;
+    (clientes.data ?? []).find((c) => c.id === intakeFormValues.cliente_id)?.nome ?? "";
 
   return (
     <div className="space-y-6">

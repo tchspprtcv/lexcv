@@ -210,7 +210,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
   const faseForm = useForm<ProcessoFaseFormValues>({
     resolver: zodResolver(processoFaseFormSchema),
-    defaultValues: { fase_id: "", status: "PENDENTE" },
+    defaultValues: { nome: "" },
   });
   const [faseServerError, setFaseServerError] = React.useState<string | null>(null);
 
@@ -220,7 +220,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   });
   const [movServerError, setMovServerError] = React.useState<string | null>(null);
 
-  const [faseDraftStatus, setFaseDraftStatus] = React.useState<Record<string, ProcessoFaseStatus>>({});
+  const [faseDraftStatus, setFaseDraftStatus] = React.useState<Record<number, ProcessoFaseStatus>>({});
 
   // Justificativa form for critical transitions
   const justificativaForm = useForm<TransicaoJustificativaFormValues>({
@@ -342,7 +342,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     if (!canEditProcessos) return;
     try {
       await addFase.mutateAsync(values satisfies ProcessoFaseCreateRequest);
-      faseForm.reset({ fase_id: "", status: "PENDENTE" });
+      faseForm.reset({ nome: "" });
       toast.success("Fase adicionada ao processo.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao adicionar fase";
@@ -351,7 +351,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     }
   };
 
-  const onUpdateFaseStatus = async (faseId: string) => {
+  const onUpdateFaseStatus = async (faseId: number) => {
     const status = faseDraftStatus[faseId];
     const payload: ProcessoFaseUpdateRequest = { status };
     try {
@@ -462,7 +462,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Cliente</dt>
                 <dd className="col-span-2">
-                  {clienteNomeById.get(processo.data.cliente_id) ?? processo.data.cliente_id}
+                  {clienteNomeById.get(processo.data.cliente_id) ?? "—"}
                 </dd>
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Estado</dt>
@@ -775,7 +775,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                         </span>
                         {p.responsavelId ? (
                           <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {userNomeById.get(p.responsavelId) ?? p.responsavelId}
+                            {userNomeById.get(p.responsavelId) ?? "—"}
                           </span>
                         ) : null}
                       </div>
@@ -1290,26 +1290,10 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <CardContent>
                     <form className="space-y-4" onSubmit={faseForm.handleSubmit(onSubmitFase)}>
                       <div className="space-y-2">
-                        <Label htmlFor="fase_id">Fase</Label>
-                        <Input id="fase_id" {...faseForm.register("fase_id")} placeholder="ID da fase" />
-                        {faseForm.formState.errors.fase_id ? (
-                          <p className="text-sm text-red-600">{faseForm.formState.errors.fase_id.message}</p>
-                        ) : null}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="fase_status">Status</Label>
-                        <select
-                          id="fase_status"
-                          className={selectClassName}
-                          {...faseForm.register("status")}
-                        >
-                          <option value="PENDENTE">Pendente</option>
-                          <option value="EM_ANDAMENTO">Em andamento</option>
-                          <option value="CONCLUIDA">Concluída</option>
-                        </select>
-                        {faseForm.formState.errors.status ? (
-                          <p className="text-sm text-red-600">{faseForm.formState.errors.status.message}</p>
+                        <Label htmlFor="fase_nome">Nome da fase</Label>
+                        <Input id="fase_nome" {...faseForm.register("nome")} placeholder="Ex.: Petição Inicial" />
+                        {faseForm.formState.errors.nome ? (
+                          <p className="text-sm text-red-600">{faseForm.formState.errors.nome.message}</p>
                         ) : null}
                       </div>
 
@@ -1346,7 +1330,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               key={f.id}
                               className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
                             >
-                              <td className="py-2 pr-4 font-medium">{f.fase?.nome ?? f.fase_id}</td>
+                              <td className="py-2 pr-4 font-medium">{f.nome ?? "—"}</td>
                               <td className="py-2 pr-4">
                                 <select
                                   className={selectClassName}

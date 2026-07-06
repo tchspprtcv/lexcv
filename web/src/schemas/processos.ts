@@ -34,8 +34,7 @@ export type ProcessoParteFormValues = z.infer<typeof processoParteFormSchema>;
 export const processoFaseStatusSchema = z.enum(["PENDENTE", "EM_ANDAMENTO", "CONCLUIDA"]);
 
 export const processoFaseFormSchema = z.object({
-  fase_id: z.string().trim().min(1, "A fase é obrigatória"),
-  status: processoFaseStatusSchema.optional(),
+  nome: z.string().trim().min(1, "O nome da fase é obrigatório"),
 });
 
 export type ProcessoFaseFormValues = z.infer<typeof processoFaseFormSchema>;

@@ -73,29 +73,20 @@ export interface ProcessoParteCreateRequest {
   nif?: string;
 }
 
-export interface FaseCatalog {
-  id: string;
-  tenant_id: string;
-  nome: string;
-  ordem: number;
-}
-
 export type ProcessoFaseStatus = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA";
 
 export interface ProcessoFase {
-  id: string;
-  tenant_id: string;
+  id: number;
   processo_id: string;
-  fase_id: string;
-  fase?: FaseCatalog;
+  fase_id: number;
+  nome?: string;
+  data_inicio?: string;
+  data_fim?: string;
   status: ProcessoFaseStatus;
-  created_at: string;
-  updated_at?: string;
 }
 
 export interface ProcessoFaseCreateRequest {
-  fase_id: string;
-  status?: ProcessoFaseStatus;
+  nome: string;
 }
 
 export interface ProcessoFaseUpdateRequest {
