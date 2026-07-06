@@ -528,7 +528,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       </dd>
 
                       <dt className="text-neutral-500 dark:text-neutral-400">Decisor</dt>
-                      <dd className="col-span-2 font-medium">{decisao.data.decisorId}</dd>
+                      <dd className="col-span-2 font-medium">
+                        {userNomeById.get(decisao.data.decisorId) ?? "—"}
+                      </dd>
 
                       <dt className="text-neutral-500 dark:text-neutral-400">Data</dt>
                       <dd className="col-span-2 font-medium">{decisao.data.dataDecisao}</dd>
