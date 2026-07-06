@@ -2071,6 +2071,16 @@ public class ResourceController {
     }
 
     @PreAuthorize("hasAuthority('documentos:view')")
+    @GetMapping("/clientes/{id}/documentos")
+    public ResponseEntity<?> listClienteDocumentos(@PathVariable UUID id) {
+        Cliente cliente = clienteRepository.findById(id).orElse(null);
+        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+        return ResponseEntity.ok(documentoRepository.findByTenantIdAndClienteId(getTenantId(), id));
+    }
+
+    @PreAuthorize("hasAuthority('documentos:view')")
     @GetMapping("/documentos/{id}/download")
     public ResponseEntity<?> downloadDocumento(@PathVariable UUID id) {
         Documento doc = documentoRepository.findById(id).orElse(null);
