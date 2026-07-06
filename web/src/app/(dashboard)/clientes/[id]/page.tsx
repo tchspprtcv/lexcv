@@ -353,7 +353,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             <Link href="/clientes" className="hover:underline">
               Clientes
             </Link>{" "}
-            <span>/</span> <span className="text-neutral-900 dark:text-neutral-50">{id}</span>
+            <span>/</span>{" "}
+            <span className="text-neutral-900 dark:text-neutral-50">
+              {cliente.data?.numero_cliente ?? cliente.data?.nome ?? "…"}
+            </span>
           </div>
         </div>
 

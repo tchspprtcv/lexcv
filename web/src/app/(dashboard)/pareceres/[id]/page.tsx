@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useAdminUsers } from "@/hooks/use-admin";
+import { useCliente } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -132,6 +133,7 @@ function ParecerDetailContent({
   const parecer = useParecer(id);
   const versoes = useParecerVersoes(id);
   const adminUsers = useAdminUsers();
+  const cliente = useCliente(parecer.data?.clienteId ?? "");
 
   const userNomeById = React.useMemo(
     () => new Map((adminUsers.data ?? []).map((u) => [u.id, u.nome] as const)),
@@ -140,6 +142,8 @@ function ParecerDetailContent({
 
   const resolveUserNome = (userId: string) =>
     adminUsers.isLoading ? "—" : userNomeById.get(userId) ?? userId;
+
+  const clienteNome = cliente.isLoading ? "—" : cliente.data?.nome ?? parecer.data?.clienteId ?? "—";
 
   const isLoading = parecer.isLoading;
   const isError = parecer.isError;
@@ -184,7 +188,7 @@ function ParecerDetailContent({
               <CardContent>
                 <dl className="grid grid-cols-3 gap-x-4 gap-y-3 text-sm">
                   <dt className="text-slate-500 dark:text-slate-400">Cliente</dt>
-                  <dd className="col-span-2 font-medium">{parecer.data.clienteId}</dd>
+                  <dd className="col-span-2 font-medium">{clienteNome}</dd>
 
                   <dt className="text-slate-500 dark:text-slate-400">Advogado</dt>
                   <dd className="col-span-2">

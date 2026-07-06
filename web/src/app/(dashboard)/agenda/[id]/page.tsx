@@ -139,7 +139,8 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
             <Link href="/agenda" className="hover:underline">
               Agenda
             </Link>{" "}
-            <span>/</span> <span className="text-neutral-900 dark:text-neutral-50">{id}</span>
+            <span>/</span>{" "}
+            <span className="text-neutral-900 dark:text-neutral-50">{evento.data?.titulo ?? "…"}</span>
           </div>
         </div>
 

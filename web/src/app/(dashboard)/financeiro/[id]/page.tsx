@@ -100,7 +100,6 @@ export default function HonorarioDetailPage(props: PageProps) {
   return (
     <HonorarioDetailContent
       honorarioId={honorarioId}
-      rawId={params.id}
       canEditFinanceiro={canEditFinanceiro}
       canManageFinanceiro={canManageFinanceiro}
       canViewClientes={canViewClientes}
@@ -111,14 +110,12 @@ export default function HonorarioDetailPage(props: PageProps) {
 
 function HonorarioDetailContent({
   honorarioId,
-  rawId,
   canEditFinanceiro,
   canManageFinanceiro,
   canViewClientes,
   canViewProcessos,
 }: {
   honorarioId: number;
-  rawId: string;
   canEditFinanceiro: boolean;
   canManageFinanceiro: boolean;
   canViewClientes: boolean;
@@ -244,7 +241,10 @@ function HonorarioDetailContent({
             <Link href="/financeiro" className="hover:underline">
               Financeiro
             </Link>{" "}
-            <span>/</span> <span className="text-neutral-900 dark:text-neutral-50">#{rawId}</span>
+            <span>/</span>{" "}
+            <span className="text-neutral-900 dark:text-neutral-50">
+              {honorario.data?.descricao ?? "…"}
+            </span>
           </div>
         </div>
 

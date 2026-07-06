@@ -405,7 +405,10 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
             <Link href="/processos" className="hover:underline">
               Processos
             </Link>{" "}
-            <span>/</span> <span className="text-neutral-900 dark:text-neutral-50">{id}</span>
+            <span>/</span>{" "}
+            <span className="text-neutral-900 dark:text-neutral-50">
+              {processo.data?.numero ?? processo.data?.titulo ?? "…"}
+            </span>
           </div>
         </div>
 

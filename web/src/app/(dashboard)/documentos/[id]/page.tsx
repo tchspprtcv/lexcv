@@ -79,7 +79,8 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
             <Link href="/documentos" className="hover:underline">
               Documentos
             </Link>{" "}
-            <span>/</span> <span className="text-neutral-900 dark:text-neutral-50">{id}</span>
+            <span>/</span>{" "}
+            <span className="text-neutral-900 dark:text-neutral-50">{doc.data?.nome ?? "…"}</span>
           </div>
         </div>
 

@@ -531,7 +531,6 @@ function ClienteRow({
     .join("")
     .toUpperCase();
 
-  const idShort = cliente.id.split("-")[0]?.toUpperCase() ?? "—";
   const tipo = (cliente.tipo ?? "").toUpperCase();
 
   const badgeVariant = tipo === "PARTICULAR" ? "blue" : tipo === "EMPRESA" ? "purple" : "gray";
@@ -554,7 +553,6 @@ function ClienteRow({
             <Link href={`/clientes/${encodeURIComponent(cliente.id)}`} className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               {cliente.nome}
             </Link>
-            <div className="text-[11px] font-medium tracking-wider uppercase text-slate-500 dark:text-slate-400 mt-0.5">ID: #{idShort}</div>
             {(cliente.numero_cliente || cliente.avencado) && (
               <div className="flex items-center gap-1 mt-1">
                 {cliente.numero_cliente && (
