@@ -1235,7 +1235,14 @@ function ClienteDocumentosEntreguesTab({
   const upload = useUploadDocumentoComProgresso({ onProgress: setProgresso });
 
   const tipoOptions = React.useMemo(
-    () => Array.from(new Set((documentosData ?? []).map((d) => d.tipo).filter(Boolean) as string[])),
+    () =>
+      Array.from(
+        new Set(
+          (documentosData ?? [])
+            .map((d) => d.tipo?.trim())
+            .filter((t): t is string => Boolean(t)),
+        ),
+      ),
     [documentosData],
   );
 
@@ -1252,7 +1259,7 @@ function ClienteDocumentosEntreguesTab({
     if (!novoFicheiro) return;
     setUploadError(null);
     try {
-      await upload.mutateAsync({ file: novoFicheiro, tipo: novoTipo, cliente_id: clienteId });
+      await upload.mutateAsync({ file: novoFicheiro, tipo: novoTipo.trim(), cliente_id: clienteId });
       setProgresso(null);
       toast.success("Documento enviado com sucesso.");
       resetUploadState();
