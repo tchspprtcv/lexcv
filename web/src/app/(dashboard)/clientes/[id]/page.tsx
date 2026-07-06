@@ -887,11 +887,11 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               <AccessDeniedState description="Não tem permissão para consultar os documentos deste cliente." />
             )
           ) : tab === "documentosATratar" ? (
-            isEditing ? (
-              <Card>
-                <CardContent className="space-y-2 pt-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos a Tratar</h4>
+            <Card>
+              <CardContent className="space-y-2 pt-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos a Tratar</h4>
+                  {canEditClientes && isEditing ? (
                     <Dialog open={addDocATratarModal} onOpenChange={setAddDocATratarModal}>
                       <DialogTrigger asChild>
                         <Button type="button" variant="outline" size="sm">Adicionar</Button>
@@ -917,14 +917,16 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  </div>
-                  {documentosATratar.length === 0 ? (
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento a tratar registado.</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {documentosATratar.map((doc, index) => (
-                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
-                          <span>{doc.descricao}</span>
+                  ) : null}
+                </div>
+                {documentosATratar.length === 0 ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento a tratar registado.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {documentosATratar.map((doc, index) => (
+                      <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+                        <span>{doc.descricao}</span>
+                        {canEditClientes && isEditing ? (
                           <button
                             type="button"
                             className="text-neutral-500 hover:text-red-600"
@@ -933,19 +935,19 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           >
                             ✕
                           </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
           ) : tab === "deslocacoes" ? (
-            isEditing ? (
-              <Card>
-                <CardContent className="space-y-2 pt-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Deslocações</h4>
+            <Card>
+              <CardContent className="space-y-2 pt-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Deslocações</h4>
+                  {canEditClientes && isEditing ? (
                     <Dialog open={addDeslocacaoModal} onOpenChange={setAddDeslocacaoModal}>
                       <DialogTrigger asChild>
                         <Button type="button" variant="outline" size="sm">Adicionar</Button>
@@ -990,18 +992,20 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  </div>
-                  {deslocacoes.length === 0 ? (
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma deslocação registada.</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {deslocacoes.map((d, index) => (
-                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
-                          <span>
-                            {d.descricao}
-                            {d.local ? ` (${d.local})` : ""}
-                            {d.data ? ` — ${d.data}` : ""}
-                          </span>
+                  ) : null}
+                </div>
+                {deslocacoes.length === 0 ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma deslocação registada.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {deslocacoes.map((d, index) => (
+                      <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+                        <span>
+                          {d.descricao}
+                          {d.local ? ` (${d.local})` : ""}
+                          {d.data ? ` — ${d.data}` : ""}
+                        </span>
+                        {canEditClientes && isEditing ? (
                           <button
                             type="button"
                             className="text-neutral-500 hover:text-red-600"
@@ -1010,13 +1014,13 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           >
                             ✕
                           </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
           ) : null}
         </div>
       ) : (
