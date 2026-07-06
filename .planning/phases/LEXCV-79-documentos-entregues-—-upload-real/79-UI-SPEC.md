@@ -1,10 +1,11 @@
 ---
 phase: 79
 slug: documentos-entregues-upload-real
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-06
+reviewed_at: 2026-07-06
 ---
 
 # Phase 79 — UI Design Contract
