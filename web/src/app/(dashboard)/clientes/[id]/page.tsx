@@ -55,6 +55,11 @@ import { useAdminUsers } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { usePareceres } from "@/hooks/use-pareceres";
+import {
+  useDeleteDocumento,
+  useDocumentos,
+  useUploadDocumentoComProgresso,
+} from "@/hooks/use-documentos";
 import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
 import { buildClienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteContacto } from "@/types/clientes-contactos";
@@ -67,6 +72,7 @@ import type {
   DocumentoATratar,
 } from "@/types/clientes";
 import type { ParecerStatus } from "@/types/pareceres";
+import type { Documento } from "@/types/documentos";
 import { toast } from "@/hooks/use-toast";
 
 type PageProps = {
@@ -114,6 +120,8 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const permissions = usePermissions();
   const canViewProcessos = permissions.can.view("processos");
   const canViewPareceres = permissions.can.view("pareceres");
+  const canViewDocumentos = permissions.can.view("documentos");
+  const canEditDocumentos = permissions.can.edit("documentos");
   const cliente = useCliente(id);
   const conta = useClienteContaCorrente(id);
   const contactos = useClienteContactos(id);
@@ -868,7 +876,15 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
             )
           ) : tab === "documentosEntregues" ? (
-            <PlaceholderEmBreve />
+            canViewDocumentos ? (
+              <ClienteDocumentosEntreguesTab
+                clienteId={id}
+                editable={isEditing}
+                canEditDocumentos={canEditDocumentos}
+              />
+            ) : (
+              <AccessDeniedState description="Não tem permissão para consultar os documentos deste cliente." />
+            )
           ) : tab === "documentosATratar" ? (
             isEditing ? (
               <Card>
@@ -1026,19 +1042,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   );
 }
 
-function PlaceholderEmBreve() {
-  return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Em breve</p>
-        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-          Esta funcionalidade estará disponível brevemente.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
   const processos = useProcessos({ cliente_id: clienteId });
 
@@ -1193,6 +1196,240 @@ function ClienteParecerTab({ clienteId }: { clienteId: string }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function formatDocumentoSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDocumentoDate(v: string | undefined) {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-CV");
+}
+
+function ClienteDocumentosEntreguesTab({
+  clienteId,
+  editable,
+  canEditDocumentos,
+}: {
+  clienteId: string;
+  editable: boolean;
+  canEditDocumentos: boolean;
+}) {
+  const list = useDocumentos({ cliente_id: clienteId });
+  const documentosData = list.data;
+  const documentos = documentosData ?? [];
+
+  const [addDocumentoModal, setAddDocumentoModal] = React.useState(false);
+  const [novoTipo, setNovoTipo] = React.useState("");
+  const [novoFicheiro, setNovoFicheiro] = React.useState<File | null>(null);
+  const [progresso, setProgresso] = React.useState<number | null>(null);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+
+  const upload = useUploadDocumentoComProgresso({ onProgress: setProgresso });
+
+  const tipoOptions = React.useMemo(
+    () => Array.from(new Set((documentosData ?? []).map((d) => d.tipo).filter(Boolean) as string[])),
+    [documentosData],
+  );
+
+  const datalistId = `tipo-documento-entregue-${clienteId}`;
+
+  const resetUploadState = () => {
+    setNovoFicheiro(null);
+    setNovoTipo("");
+    setProgresso(null);
+    setUploadError(null);
+  };
+
+  const onConfirmarUpload = async () => {
+    if (!novoFicheiro) return;
+    setUploadError(null);
+    try {
+      await upload.mutateAsync({ file: novoFicheiro, tipo: novoTipo, cliente_id: clienteId });
+      setProgresso(null);
+      toast.success("Documento enviado com sucesso.");
+      resetUploadState();
+      setAddDocumentoModal(false);
+    } catch (e) {
+      setProgresso(null);
+      const msg = e instanceof Error ? e.message : "Erro ao fazer upload";
+      setUploadError(msg);
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="space-y-2 pt-6">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos Entregues</h4>
+          {editable && canEditDocumentos ? (
+            <Dialog
+              open={addDocumentoModal}
+              onOpenChange={(open) => {
+                setAddDocumentoModal(open);
+                if (!open) resetUploadState();
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" size="sm">Adicionar</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Documento Entregue</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Ficheiro</Label>
+                    <FileDropZone
+                      onFileChange={(file) => setNovoFicheiro(file)}
+                      onClear={() => setNovoFicheiro(null)}
+                      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+                      disabled={upload.isPending}
+                    >
+                      Arraste um ficheiro para aqui ou clique para selecionar
+                    </FileDropZone>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={datalistId}>Tipo</Label>
+                    <input
+                      id={datalistId}
+                      list={`${datalistId}-options`}
+                      className="flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300"
+                      placeholder="Selecione ou escreva um tipo"
+                      value={novoTipo}
+                      onChange={(e) => setNovoTipo(e.target.value)}
+                      disabled={upload.isPending}
+                    />
+                    <datalist id={`${datalistId}-options`}>
+                      {tipoOptions.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {progresso !== null ? (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-neutral-500">
+                        <span>A enviar...</span>
+                        <span>{progresso}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
+                        <div
+                          className="h-2 rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${progresso}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  {uploadError ? <p className="text-sm text-red-600">{uploadError}</p> : null}
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAddDocumentoModal(false);
+                      resetUploadState();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="button" onClick={onConfirmarUpload} disabled={!novoFicheiro || upload.isPending}>
+                    Confirmar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null}
+        </div>
+
+        {list.isLoading ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</p>
+        ) : list.isError ? (
+          <p className="text-sm text-red-600">
+            {list.error instanceof Error ? list.error.message : "Não foi possível carregar os documentos entregues deste cliente."}
+          </p>
+        ) : documentos.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento entregue registado.</p>
+        ) : (
+          <ul className="space-y-1">
+            {documentos.map((doc: Documento) => (
+              <ClienteDocumentoEntregueRow
+                key={doc.id}
+                documento={doc}
+                editable={editable}
+                canEditDocumentos={canEditDocumentos}
+              />
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ClienteDocumentoEntregueRow({
+  documento,
+  editable,
+  canEditDocumentos,
+}: {
+  documento: Documento;
+  editable: boolean;
+  canEditDocumentos: boolean;
+}) {
+  const del = useDeleteDocumento(documento.id);
+
+  const onDelete = async () => {
+    const ok = window.confirm("Apagar este documento?");
+    if (!ok) return;
+    try {
+      await del.mutateAsync();
+      toast.success("Documento apagado com sucesso.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <li className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{documento.nome}</span>
+          <span className="text-neutral-500 dark:text-neutral-400">{documento.tipo || "—"}</span>
+        </div>
+        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+          {formatDocumentoSize(documento.size)} · {formatDocumentoDate(documento.created_at)}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <a
+          href={`/api/v1/documentos/${documento.id}/download`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+        >
+          Download
+        </a>
+        {editable && canEditDocumentos ? (
+          <button
+            type="button"
+            className="text-neutral-500 hover:text-red-600"
+            onClick={onDelete}
+            aria-label="Remover"
+            disabled={del.isPending}
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
