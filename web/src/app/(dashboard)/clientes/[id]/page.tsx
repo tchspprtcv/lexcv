@@ -58,6 +58,7 @@ import { usePareceres } from "@/hooks/use-pareceres";
 import {
   useDeleteDocumento,
   useDocumentos,
+  useDownloadDocumento,
   useUploadDocumentoComProgresso,
 } from "@/hooks/use-documentos";
 import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
@@ -1384,6 +1385,16 @@ function ClienteDocumentoEntregueRow({
   canEditDocumentos: boolean;
 }) {
   const del = useDeleteDocumento(documento.id);
+  const download = useDownloadDocumento(documento.id);
+
+  // WR-01: the backend serializes the raw Documento entity with its Java field
+  // names (tamanho, createdAt), not the snake_case/renamed shape declared on the
+  // shared frontend `Documento` type (size, created_at). Read the actual wire
+  // fields here rather than widening the shared type (which is also consumed by
+  // the generic /documentos pages outside this phase's scope).
+  const wireDocumento = documento as unknown as { tamanho?: number; createdAt?: string };
+  const tamanho = wireDocumento.tamanho ?? 0;
+  const criadoEm = wireDocumento.createdAt;
 
   const onDelete = async () => {
     const ok = window.confirm("Apagar este documento?");
@@ -1397,6 +1408,15 @@ function ClienteDocumentoEntregueRow({
     }
   };
 
+  const onDownload = async () => {
+    try {
+      const res = await download.mutateAsync();
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar link de download.");
+    }
+  };
+
   return (
     <li className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
       <div className="min-w-0 flex-1">
@@ -1405,18 +1425,18 @@ function ClienteDocumentoEntregueRow({
           <span className="text-neutral-500 dark:text-neutral-400">{documento.tipo || "—"}</span>
         </div>
         <div className="text-xs text-neutral-500 dark:text-neutral-400">
-          {formatDocumentoSize(documento.size)} · {formatDocumentoDate(documento.created_at)}
+          {formatDocumentoSize(tamanho)} · {formatDocumentoDate(criadoEm)}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        <a
-          href={`/api/v1/documentos/${documento.id}/download`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={download.isPending}
+          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium disabled:opacity-50"
         >
           Download
-        </a>
+        </button>
         {editable && canEditDocumentos ? (
           <button
             type="button"
