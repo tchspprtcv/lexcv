@@ -52,6 +52,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ `/clientes/[id]` e `/clientes/[id]/editar` unificados num único componente com toggle Editar/Guardar/Cancelar; rota `/editar` removida por completo; sub-componentes (Contactos, Notas, Advogados/Administrativos, Procuração) gated por `canEditClientes && editable` — v2.8 (Phase 75, verificação visual/UAT ao vivo pendente — ver 75-HUMAN-UAT.md)
 - ✓ Ficha de cliente reestruturada em 7 separadores (estilo botões toggle de processos); identificação (NIF/tipo/número) isolada como sub-secção "Identificação" no card "Dados"; Contactos e Notas isolados no seu próprio separador; 5 separadores ainda não implementados mostram placeholder "Em breve" — v2.8 (Phase 76, verificação visual/UAT ao vivo pendente — ver 76-HUMAN-UAT.md)
 - ✓ Separadores "Processos" e "Pareceres" da ficha de cliente ligados aos hooks existentes (`useProcessos({cliente_id})`, `usePareceres({clienteId})`), com fetch lazy via montagem condicional, permissões `processos:view`/`pareceres:view` espelhadas no frontend — v2.8 (Phase 77)
+- ✓ "Documentos a Tratar" e "Deslocações" relocalizados dos seus próprios separadores (antes viviam dentro do tab "Dados"), mantendo comportamento atual (gated por `isEditing`, sem campo novo) — v2.8 (Phase 78)
 
 ### Active
 
@@ -150,7 +151,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phases 74–77 complete, 2 phases remaining (78–79).
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phases 74–78 complete, 1 phase remaining (79, final).
 
 ## Evolution
 
@@ -170,4 +171,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 — after Phase 77 (Separadores — Processos e Pareceres) completed in milestone v2.8*
+*Last updated: 2026-07-06 — after Phase 78 (Separadores — Documentos a Tratar e Deslocações) completed in milestone v2.8*
