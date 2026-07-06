@@ -53,10 +53,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Ficha de cliente reestruturada em 7 separadores (estilo botões toggle de processos); identificação (NIF/tipo/número) isolada como sub-secção "Identificação" no card "Dados"; Contactos e Notas isolados no seu próprio separador; 5 separadores ainda não implementados mostram placeholder "Em breve" — v2.8 (Phase 76, verificação visual/UAT ao vivo pendente — ver 76-HUMAN-UAT.md)
 - ✓ Separadores "Processos" e "Pareceres" da ficha de cliente ligados aos hooks existentes (`useProcessos({cliente_id})`, `usePareceres({clienteId})`), com fetch lazy via montagem condicional, permissões `processos:view`/`pareceres:view` espelhadas no frontend — v2.8 (Phase 77)
 - ✓ "Documentos a Tratar" e "Deslocações" relocalizados dos seus próprios separadores (antes viviam dentro do tab "Dados"), mantendo comportamento atual (gated por `isEditing`, sem campo novo) — v2.8 (Phase 78)
+- ✓ "Documentos Entregues" passa a upload real via novo endpoint `GET /clientes/{id}/documentos` (tenant-scoped, espelha `/processos/{id}/documentos`), reutilizando sistema genérico `Documento`/`useUploadDocumentoComProgresso`, combobox de tipo (datalist nativo), RBAC `documentos:view/edit`; secção antiga de texto removida por completo, coluna órfã sem migração — v2.8 (Phase 79, verificação visual/UAT ao vivo pendente — ver 79-HUMAN-UAT.md)
 
 ### Active
 
-- [ ] "Documentos Entregues" passa a upload real (reutilizando sistema genérico `Documento`/`clienteId`), com combobox de tipo (escolher existente ou escrever novo)
+(Nenhum requisito ativo — milestone v2.8 concluída, a preparar auditoria de milestone)
 
 ## Current Milestone: v2.8 Refatoração Ficha de Cliente
 
@@ -128,6 +129,10 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | Campo `nif` dedicado passa a única fonte de verdade, substituindo a lógica legada de sincronização a partir de `documento_tipo`/`documento_numero` (frontend E backend) | Auditoria de milestone (v2.7) encontrou um bug de sobrescrita silenciosa: o campo NIF validado podia ser substituído por um valor não validado do campo legado. Fase de fecho de gap (73.1) removeu a lógica em ambas as camadas | ✓ Good |
 | `jakarta.persistence.validation.mode: none` no `application.yml`, mantendo `@Valid` ao nível do controller | Adicionar Bean Validation (`@NotBlank`/`@Pattern`) a `Cliente.nif` ativou also a validação JPA-lifecycle (`@PrePersist`/`@PreUpdate`) em todos os `save()`, incluindo operações não relacionadas (upload de procuração, merge de clientes) que não tocam `nif` — quebraria clientes legados com NIF inválido. Code review da Phase 73.1 apanhou isto antes do deploy | ✓ Good |
 | `updateCliente` só valida `documento_tipo`/`documento_numero` contra a restrição por tipo quando o valor recebido difere do valor já guardado (`documentoTipoUnchanged` via `Objects.equals`) | Auditoria de fase (Phase 74) encontrou que resubmeter um valor legado inalterado (ex.: Empresa com CNI, permitido antes da v2.8) era rejeitado pelo backend mesmo depois do frontend passar a preservá-lo corretamente — violava a decisão explícita de não forçar migração retroativa de dados. `createCliente` mantém-se totalmente estrito (sem entidade existente para comparar) | ✓ Good |
+| Ficha de cliente reestruturada em 7 separadores estilo botões-toggle (não `Tabs` do shadcn), replicando o padrão já usado em processos | Consistência visual pedida explicitamente pelo utilizador; evita introduzir um componente novo (shadcn `Tabs` nunca foi inicializado no projeto) | ✓ Good |
+| `useProcessos`/`usePareceres`/`useDocumentos` não ganharam um parâmetro `enabled` externo para fetch lazy por separador — em vez disso, cada separador usa um sub-componente que só monta quando ativo (`ClienteProcessosTab`, `ClienteParecerTab`, `ClienteDocumentosEntreguesTab`) | Nenhum destes hooks tinha essa opção; adicionar `enabled` a três hooks core arriscava efeitos colaterais nos restantes call sites. Sub-componente lazy-mount é mais isolado e replica o padrão já usado para os cards de Contactos/Notas | ✓ Good |
+| Novo endpoint `GET /clientes/{id}/documentos` em vez de corrigir o `GET /documentos` genérico (que ignora `cliente_id`/`processo_id` mesmo hoje sendo construídos pelo hook frontend) | Corrigir o endpoint genérico alargaria o raio de impacto para a página standalone `/documentos` e para o uso do endpoint por processos, fora do âmbito da milestone. O gap no `GET /documentos` fica registado como dívida técnica pré-existente, não introduzida por esta fase | ✓ Good (dívida técnica pré-existente, fora do âmbito) |
+| `POST /documentos/upload` passou a validar que `clienteId`/`processoId` (quando fornecidos) pertencem ao tenant do chamador antes de persistir | Code review da Phase 79 encontrou que o endpoint aceitava estes IDs sem verificação de posse — não era uma fuga de leitura (o lado de leitura já revalida o tenant independentemente), mas era uma lacuna real de integridade referencial/autorização. Corrigido com o mesmo padrão já usado no `responsavelId` de `createProcesso` | ✓ Good |
 
 ## Current State
 
@@ -151,7 +156,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — Phases 74–78 complete, 1 phase remaining (79, final).
+**Current focus:** Milestone v2.8 (Refatoração Ficha de Cliente) — todas as 6 fases (74–79) completas; a preparar auditoria de milestone.
 
 ## Evolution
 
@@ -171,4 +176,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — after Phase 78 (Separadores — Documentos a Tratar e Deslocações) completed in milestone v2.8*
+*Last updated: 2026-07-06 — after Phase 79 (Documentos Entregues — Upload Real) completed; all 6 phases of milestone v2.8 done, pending milestone audit*
