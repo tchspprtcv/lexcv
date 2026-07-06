@@ -39,8 +39,8 @@ Requirements for milestone v2.8 (Refatoração Ficha de Cliente). Each maps to r
 
 ### Documentos a Tratar / Deslocações
 
-- [ ] **CLI-30**: Separador "Documentos a Tratar" mantém lista de texto atual, isolado no seu próprio separador
-- [ ] **CLI-31**: Separador "Deslocações" mantém lista de texto atual (descrição/local/data), isolado no seu próprio separador
+- [x] **CLI-30**: Separador "Documentos a Tratar" mantém lista de texto atual, isolado no seu próprio separador
+- [x] **CLI-31**: Separador "Deslocações" mantém lista de texto atual (descrição/local/data), isolado no seu próprio separador
 
 ## v2 Requirements
 
@@ -80,8 +80,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-27 | Phase 79 | Pending |
 | CLI-28 | Phase 79 | Pending |
 | CLI-29 | Phase 79 | Pending |
-| CLI-30 | Phase 78 | Pending |
-| CLI-31 | Phase 78 | Pending |
+| CLI-30 | Phase 78 | Complete |
+| CLI-31 | Phase 78 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
