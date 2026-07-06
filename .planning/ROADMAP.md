@@ -205,7 +205,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   3. Ao carregar um documento, o campo "tipo" é um combobox que permite escolher um tipo existente ou escrever um novo
   4. Registos antigos de "documentos entregues" (texto sem ficheiro) deixam de ser editáveis na nova UI, sem processo de migração
 **Plans**: 2 plans (2 waves)
-- [ ] 79-01-PLAN.md — Backend: new GET /clientes/{id}/documentos tenant-scoped list endpoint (Wave 1)
+- [x] 79-01-PLAN.md — Backend: new GET /clientes/{id}/documentos tenant-scoped list endpoint (Wave 1)
 - [ ] 79-02-PLAN.md — Frontend: repoint useDocumentos + delete legacy text section + new ClienteDocumentosEntreguesTab (upload/list/download/delete, datalist tipo combobox) (Wave 2)
 **UI hint**: yes
 
@@ -250,6 +250,6 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 77. Separadores — Processos e Pareceres | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete    | 2026-07-06 |
-| 79. Documentos Entregues — Upload Real | v2.8 | 0/2 | Planned | - |
+| 79. Documentos Entregues — Upload Real | v2.8 | 1/2 | In Progress|  |
 
 **Next:** Phase 79 planned (2 plans, 2 waves). Run `/gsd:execute-phase 79`.
