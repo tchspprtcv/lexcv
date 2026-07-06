@@ -65,7 +65,6 @@ import type {
   ClienteUpdateRequest,
   Deslocacao,
   DocumentoATratar,
-  DocumentoEntregue,
 } from "@/types/clientes";
 import type { ParecerStatus } from "@/types/pareceres";
 import { toast } from "@/hooks/use-toast";
@@ -184,12 +183,8 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   }
 
   // Intake list state — managed outside react-hook-form, synced into the PUT payload on submit.
-  const [documentosEntregues, setDocumentosEntregues] = React.useState<DocumentoEntregue[]>([]);
   const [documentosATratar, setDocumentosATratar] = React.useState<DocumentoATratar[]>([]);
   const [deslocacoes, setDeslocacoes] = React.useState<Deslocacao[]>([]);
-
-  const [addDocEntreModal, setAddDocEntreModal] = React.useState(false);
-  const [newDocEntre, setNewDocEntre] = React.useState<{ descricao: string; data: string }>({ descricao: "", data: "" });
 
   const [addDocATratarModal, setAddDocATratarModal] = React.useState(false);
   const [newDocATratar, setNewDocATratar] = React.useState<{ descricao: string }>({ descricao: "" });
@@ -209,10 +204,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   // the user is not on "Dados", mirroring the reset effect used for AdvogadosResponsaveisCard-style
   // sub-components below (see the `if (!editable) setModalOpen(false)` pattern).
   React.useEffect(() => {
-    if (tab !== "dados") {
-      setAddDocEntreModal(false);
-      setNewDocEntre({ descricao: "", data: "" });
-    }
     if (tab !== "documentosATratar") {
       setAddDocATratarModal(false);
       setNewDocATratar({ descricao: "" });
@@ -264,17 +255,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
     setLegacyDocumentoTipo(isValidCombo ? null : loadedDocumentoTipo);
 
     form.reset(buildDefaultValues(cliente.data));
-    setDocumentosEntregues(cliente.data.documentos_entregues ?? []);
     setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
     setDeslocacoes(cliente.data.deslocacoes ?? []);
   }, [cliente.data, form, buildDefaultValues]);
-
-  function confirmAddDocEntre() {
-    if (!newDocEntre.descricao.trim()) return;
-    setDocumentosEntregues((prev) => [...prev, { ...newDocEntre }]);
-    setNewDocEntre({ descricao: "", data: "" });
-    setAddDocEntreModal(false);
-  }
 
   function confirmAddDocATratar() {
     if (!newDocATratar.descricao.trim()) return;
@@ -313,17 +296,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         detalhesAdicionais: values.detalhes_adicionais || undefined,
         descricaoCaso: values.descricao_caso || undefined,
         honorariosPropostos: values.honorarios_propostos,
-        documentosEntregues: documentosEntregues,
         documentosATratar: documentosATratar,
         deslocacoes: deslocacoes,
       };
 
       await update.mutateAsync(payload);
       toast.success("Cliente atualizado com sucesso.");
-      setNewDocEntre({ descricao: "", data: "" });
       setNewDocATratar({ descricao: "" });
       setNewDeslocacao({ descricao: "", local: "", data: "" });
-      setAddDocEntreModal(false);
       setAddDocATratarModal(false);
       setAddDeslocacaoModal(false);
       setIsEditing(false);
@@ -337,14 +317,11 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const onCancel = () => {
     if (cliente.data) {
       form.reset(buildDefaultValues(cliente.data));
-      setDocumentosEntregues(cliente.data.documentos_entregues ?? []);
       setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
       setDeslocacoes(cliente.data.deslocacoes ?? []);
     }
-    setNewDocEntre({ descricao: "", data: "" });
     setNewDocATratar({ descricao: "" });
     setNewDeslocacao({ descricao: "", local: "", data: "" });
-    setAddDocEntreModal(false);
     setAddDocATratarModal(false);
     setAddDeslocacaoModal(false);
     setPendingTipo(null);
@@ -825,70 +802,6 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* Documentos Entregues */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Documentos Entregues</h4>
-                    <Dialog open={addDocEntreModal} onOpenChange={setAddDocEntreModal}>
-                      <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Adicionar Documento Entregue</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="new-doc-entre-descricao">Descrição</Label>
-                            <Input
-                              id="new-doc-entre-descricao"
-                              className="rounded-none"
-                              value={newDocEntre.descricao}
-                              onChange={(e) => setNewDocEntre((prev) => ({ ...prev, descricao: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="new-doc-entre-data">Data</Label>
-                            <Input
-                              id="new-doc-entre-data"
-                              type="date"
-                              className="rounded-none"
-                              value={newDocEntre.data}
-                              onChange={(e) => setNewDocEntre((prev) => ({ ...prev, data: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setAddDocEntreModal(false)}>Cancelar</Button>
-                          <Button type="button" onClick={confirmAddDocEntre}>Confirmar</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  {documentosEntregues.length === 0 ? (
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento entregue registado.</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {documentosEntregues.map((doc, index) => (
-                        <li key={index} className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
-                          <span>
-                            {doc.descricao}
-                            {doc.data ? ` — ${doc.data}` : ""}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-neutral-500 hover:text-red-600"
-                            onClick={() => setDocumentosEntregues((prev) => prev.filter((_, i) => i !== index))}
-                            aria-label="Remover"
-                          >
-                            ✕
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
 
                 {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
