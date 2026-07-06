@@ -57,8 +57,8 @@ export function useUploadDocumento() {
       if (payload.tipo?.trim()) form.set("tipo", payload.tipo.trim());
       if (payload.confidencialidade?.trim()) form.set("confidencialidade", payload.confidencialidade.trim());
       if (payload.replace_id?.trim()) form.set("replace_id", payload.replace_id.trim());
-      if (payload.processo_id?.trim()) form.set("processo_id", payload.processo_id.trim());
-      if (payload.cliente_id?.trim()) form.set("cliente_id", payload.cliente_id.trim());
+      if (payload.processo_id?.trim()) form.set("processoId", payload.processo_id.trim());
+      if (payload.cliente_id?.trim()) form.set("clienteId", payload.cliente_id.trim());
 
       return apiFetch<DocumentoUploadResponse>("/documentos/upload", {
         method: "POST",
@@ -109,8 +109,8 @@ export function useUploadDocumentoComProgresso(options?: { onProgress?: (pct: nu
         if (payload.tipo?.trim()) form.set("tipo", payload.tipo.trim());
         if (payload.confidencialidade?.trim()) form.set("confidencialidade", payload.confidencialidade.trim());
         if (payload.replace_id?.trim()) form.set("replace_id", payload.replace_id.trim());
-        if (payload.processo_id?.trim()) form.set("processo_id", payload.processo_id.trim());
-        if (payload.cliente_id?.trim()) form.set("cliente_id", payload.cliente_id.trim());
+        if (payload.processo_id?.trim()) form.set("processoId", payload.processo_id.trim());
+        if (payload.cliente_id?.trim()) form.set("clienteId", payload.cliente_id.trim());
 
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `${API_BASE}/documentos/upload`);
