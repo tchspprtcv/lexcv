@@ -20,8 +20,8 @@ As secções "Documentos a Tratar" e "Deslocações" — hoje ainda dentro do br
 - O `useEffect` que fecha/reseta os diálogos de intake quando `tab !== "dados"` (introduzido na Phase 76, fix CR-01) é estendido para também fechar/resetar os diálogos "Adicionar Documento a Tratar" e "Adicionar Deslocação" quando o separador ativo deixar de ser o respetivo tab (`documentos-a-tratar` / `deslocacoes`).
 
 ### Estado Vazio & Visibilidade em Modo Leitura
-- Em modo leitura, a lista de itens já guardados mantém-se sempre visível nos dois separadores — só o botão "Adicionar" e o botão de remover (✕) por item ficam ocultos/inativos (gated por `editable`).
-- Mensagens de estado vazio mantêm-se inalteradas: "Nenhum documento a tratar registado." (Documentos a Tratar) e o equivalente já existente para Deslocações.
+- **Correção pós-pattern-mapping:** a leitura direta do código (78-PATTERNS.md, Secção F) confirmou que a secção inteira "Intake do Caso" (que contém ambas as listas) está hoje gated por um único `{isEditing ? (...) : null}` — em modo leitura, NADA é mostrado hoje, nem sequer uma lista read-only. Isto contradiz a suposição inicial (lista sempre visível, só Adicionar/Remover gated). Como o objetivo literal da fase é "mantendo o comportamento atual", a decisão corrigida é: preservar exatamente este comportamento existente — ambas as secções continuam totalmente ocultas em modo leitura (dentro do `isEditing ? (...) : null` já existente), sem introduzir uma vista read-only nova. Isto NÃO é uma regressão a corrigir nesta fase — é o comportamento atual a preservar tal e qual, conforme o boundary explícito da fase.
+- Mensagens de estado vazio (visíveis apenas em modo edição, como hoje) mantêm-se inalteradas: "Nenhum documento a tratar registado." (Documentos a Tratar) e o equivalente já existente para Deslocações.
 - Ambas as listas continuam a fazer parte do payload de "Guardar" do formulário principal (staged localmente em `useState`, só persistem no submit) — comportamento inalterado; o botão "Guardar" no cabeçalho persiste tudo independentemente do separador ativo.
 
 ### Claude's Discretion
