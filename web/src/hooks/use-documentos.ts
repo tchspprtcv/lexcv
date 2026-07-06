@@ -24,8 +24,12 @@ export function useDocumentos(filters: DocumentosListFilters) {
 
   return useQuery({
     queryKey: ["documentos", "list", processoId, clienteId],
-    queryFn: () =>
-      apiFetch<Documento[]>(`/documentos${buildDocumentosSearch({ processo_id: processoId, cliente_id: clienteId })}`),
+    queryFn: () => {
+      if (clienteId) {
+        return apiFetch<Documento[]>(`/clientes/${encodeURIComponent(clienteId)}/documentos`);
+      }
+      return apiFetch<Documento[]>(`/documentos${buildDocumentosSearch({ processo_id: processoId, cliente_id: clienteId })}`);
+    },
     enabled,
     staleTime: 30_000,
   });
