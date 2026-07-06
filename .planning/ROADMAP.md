@@ -250,6 +250,6 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 77. Separadores — Processos e Pareceres | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete    | 2026-07-06 |
-| 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete   | 2026-07-06 |
+| 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
 
 **Next:** Phase 79 planned (2 plans, 2 waves). Run `/gsd:execute-phase 79`.

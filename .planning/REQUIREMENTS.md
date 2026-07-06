@@ -31,11 +31,11 @@ Requirements for milestone v2.8 (Refatoração Ficha de Cliente). Each maps to r
 
 ### Documentos Entregues (upload real)
 
-- [ ] **CLI-25**: "Documentos Entregues" passa a lista de ficheiros carregados (upload), em vez de texto (descrição+data)
-- [ ] **CLI-26**: Upload reutiliza sistema genérico `Documento`/`/documentos/upload` com `clienteId`
-- [ ] **CLI-27**: Novo endpoint de listagem de documentos por cliente
-- [ ] **CLI-28**: Campo "tipo" no upload é combobox — escolher tipo existente ou escrever novo
-- [ ] **CLI-29**: Dados antigos de documentos entregues (texto sem ficheiro) deixam de ser editáveis na nova UI; coluna fica órfã (sem migração)
+- [x] **CLI-25**: "Documentos Entregues" passa a lista de ficheiros carregados (upload), em vez de texto (descrição+data)
+- [x] **CLI-26**: Upload reutiliza sistema genérico `Documento`/`/documentos/upload` com `clienteId`
+- [x] **CLI-27**: Novo endpoint de listagem de documentos por cliente
+- [x] **CLI-28**: Campo "tipo" no upload é combobox — escolher tipo existente ou escrever novo
+- [x] **CLI-29**: Dados antigos de documentos entregues (texto sem ficheiro) deixam de ser editáveis na nova UI; coluna fica órfã (sem migração)
 
 ### Documentos a Tratar / Deslocações
 
@@ -75,11 +75,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-22 | Phase 74 | Complete |
 | CLI-23 | Phase 74 | Complete |
 | CLI-24 | Phase 74 | Complete |
-| CLI-25 | Phase 79 | Pending |
-| CLI-26 | Phase 79 | Pending |
-| CLI-27 | Phase 79 | Pending |
-| CLI-28 | Phase 79 | Pending |
-| CLI-29 | Phase 79 | Pending |
+| CLI-25 | Phase 79 | Complete |
+| CLI-26 | Phase 79 | Complete |
+| CLI-27 | Phase 79 | Complete |
+| CLI-28 | Phase 79 | Complete |
+| CLI-29 | Phase 79 | Complete |
 | CLI-30 | Phase 78 | Complete |
 | CLI-31 | Phase 78 | Complete |
 
