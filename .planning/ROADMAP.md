@@ -192,7 +192,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
   1. Separador "Documentos a Tratar" mantém a lista de texto (descrição+data) atual, agora isolada no seu separador
   2. Separador "Deslocações" mantém a lista de texto (descrição/local/data) atual, agora isolada no seu separador
 **Plans**: 1 plan (1 wave)
-- [ ] 78-01-PLAN.md — Relocate "Documentos a Tratar" + "Deslocações" JSX from the "Dados" tab into their own tab branches (isEditing-gated, replacing PlaceholderEmBreve); extend the dialog-reset useEffect per-dialog
+- [x] 78-01-PLAN.md — Relocate "Documentos a Tratar" + "Deslocações" JSX from the "Dados" tab into their own tab branches (isEditing-gated, replacing PlaceholderEmBreve); extend the dialog-reset useEffect per-dialog
 **UI hint**: yes
 
 #### Phase 79: Documentos Entregues — Upload Real
@@ -247,7 +247,7 @@ See archive: [milestones/v2.7-ROADMAP.md](milestones/v2.7-ROADMAP.md) · [milest
 | 75. Componente Único View/Edit | v2.8 | 3/3 | Complete    | 2026-07-04 |
 | 76. Separadores — Dados, Contactos e Notas | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 77. Separadores — Processos e Pareceres | v2.8 | 1/1 | Complete    | 2026-07-05 |
-| 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 0/1 | Not started | - |
+| 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete   | 2026-07-06 |
 | 79. Documentos Entregues — Upload Real | v2.8 | 0/? | Not started | - |
 
 **Next:** Phase 77 planned (1 plan, 1 wave). Run `/gsd:execute-phase 77`.
