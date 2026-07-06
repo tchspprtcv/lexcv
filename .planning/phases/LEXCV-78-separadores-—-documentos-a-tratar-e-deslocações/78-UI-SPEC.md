@@ -144,10 +144,11 @@ Current effect (lines 211–220) resets all three intake dialogs (including Docu
 
 This can be one `useEffect` with per-dialog conditionals, or split into per-tab effects — implementation detail left to the executor; the observable behavior (each dialog closes/clears when its own tab is no longer active) is the contract.
 
-### 3. Gating — unchanged
+### 3. Gating — unchanged (corrected)
 
-- "Adicionar" button in both sections stays gated by `canEditClientes && editable` (same AND-gate as every other CRUD affordance since Phase 75) — this phase does not change the gating logic, only relocates the JSX that carries it.
-- In read mode, both lists remain always visible; only "Adicionar" and the per-item "✕" remove button are hidden/inactive. No new empty-state-in-read-mode variant is introduced.
+- **Correction:** direct source inspection (78-PATTERNS.md Section F) showed both sections are today wrapped in a single `{isEditing ? (...) : null}` gate (lines 774/1018) — in read mode, the ENTIRE section renders nothing, not a read-only list. The original draft of this spec incorrectly assumed a partial gate (list always visible, only Adicionar/remove hidden). 78-CONTEXT.md was corrected to match reality; this section is now corrected to match 78-CONTEXT.md.
+- Both relocated blocks stay wrapped in the exact same `isEditing ? (...) : null` gate as today — in read mode, neither section renders anything at all (no list, no empty-state text, nothing). This is the preserved existing behavior, not a regression to fix.
+- "Adicionar" button (visible only because the whole section is edit-mode-only) stays gated by `canEditClientes && editable` (same AND-gate as every other CRUD affordance since Phase 75) — this phase does not change the gating logic, only relocates the JSX that carries it.
 
 ### 4. Guardar / persistence — unchanged
 
@@ -155,7 +156,7 @@ This can be one `useEffect` with per-dialog conditionals, or split into per-tab 
 
 ### 5. Visual regression check (what "done" looks like)
 
-Before/after screenshot of the "Documentos a Tratar" list and "Deslocações" list (in both read and edit mode) must be pixel-identical, modulo which tab button is highlighted — the content itself does not move, resize, or restyle; only its parent conditional branch changes.
+In edit mode: before/after screenshot of the "Documentos a Tratar" list and "Deslocações" list must be pixel-identical, modulo which tab button is highlighted — the content itself does not move, resize, or restyle; only its parent conditional branch changes. In read mode: both tabs render nothing (matching current behavior) — there is no visual surface to compare.
 
 ---
 
