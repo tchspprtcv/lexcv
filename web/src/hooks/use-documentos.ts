@@ -130,7 +130,18 @@ export function useUploadDocumentoComProgresso(options?: { onProgress?: (pct: nu
               reject(new Error("Resposta inválida do servidor"));
             }
           } else {
-            reject(new Error(`API ${xhr.status}`));
+            let errorMessage = xhr.statusText || "Falha na comunicação com o servidor.";
+            try {
+              if (xhr.responseText) {
+                const json = JSON.parse(xhr.responseText);
+                if (json && typeof json === "object") {
+                  errorMessage = json.message || json.error || errorMessage;
+                }
+              }
+            } catch {
+              // Not a JSON object, use fallback message
+            }
+            reject(new Error(`API ${xhr.status}: ${errorMessage}`));
           }
         };
 
