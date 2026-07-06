@@ -1998,6 +1998,21 @@ public class ResourceController {
             return ResponseEntity.badRequest().body(Map.of("message", "Nome do ficheiro em falta"));
         }
 
+        if (clienteId != null) {
+            Cliente cliente = clienteRepository.findById(clienteId).orElse(null);
+            if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "clienteId não pertence a este tenant"));
+            }
+        }
+        if (processoId != null) {
+            Processo processo = processoRepository.findById(processoId).orElse(null);
+            if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "processoId não pertence a este tenant"));
+            }
+        }
+
         try {
             String fileId = UUID.randomUUID().toString();
 
