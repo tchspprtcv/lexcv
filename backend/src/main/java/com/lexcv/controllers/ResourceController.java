@@ -1782,6 +1782,66 @@ public class ResourceController {
         return ResponseEntity.ok(Map.of("message", "Decisão removida com sucesso!"));
     }
 
+    @PreAuthorize("hasAuthority('processos:view')")
+    @GetMapping("/processos/{id}/testemunhas")
+    public ResponseEntity<?> listTestemunhas(@PathVariable UUID id) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        return ResponseEntity.ok(testemunhaRepository.findByProcessoId(id));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PostMapping("/processos/{id}/testemunhas")
+    public ResponseEntity<?> createTestemunha(@PathVariable UUID id, @RequestBody Testemunha testemunha) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        testemunha.setProcessoId(id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(testemunhaRepository.save(testemunha));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PutMapping("/processos/{id}/testemunhas/{testemunhaId}")
+    public ResponseEntity<?> updateTestemunha(
+            @PathVariable UUID id,
+            @PathVariable Integer testemunhaId,
+            @RequestBody Testemunha payload) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Testemunha testemunha = testemunhaRepository.findById(testemunhaId).orElse(null);
+        if (testemunha == null || !testemunha.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Testemunha não encontrada"));
+        }
+
+        testemunha.setNome(payload.getNome());
+        testemunha.setContacto(payload.getContacto());
+        testemunha.setTipo(payload.getTipo());
+        testemunha.setNotas(payload.getNotas());
+
+        return ResponseEntity.ok(testemunhaRepository.save(testemunha));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @DeleteMapping("/processos/{id}/testemunhas/{testemunhaId}")
+    public ResponseEntity<?> deleteTestemunha(@PathVariable UUID id, @PathVariable Integer testemunhaId) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Testemunha testemunha = testemunhaRepository.findById(testemunhaId).orElse(null);
+        if (testemunha == null || !testemunha.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Testemunha não encontrada"));
+        }
+
+        testemunhaRepository.delete(testemunha);
+        return ResponseEntity.ok(Map.of("message", "Testemunha removida com sucesso!"));
+    }
+
     // ==========================================
     // TIMELINE — unified chronological feed for a processo
     // ==========================================
