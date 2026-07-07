@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: executing
-stopped_at: Completed 81-03-PLAN.md
-last_updated: "2026-07-07T21:45:23.831Z"
-last_activity: 2026-07-07 -- Phase 82 planning complete
+status: verifying
+stopped_at: Completed 82-01-PLAN.md
+last_updated: "2026-07-07T21:56:42.030Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 4
-  percent: 40
+  completed_plans: 5
+  percent: 60
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 82 — backend — criação automática de honorário na formalização
+**Current focus:** Phase 82 — Backend — Criação Automática de Honorário na Formalização
 
 ## Current Position
 
-Phase: 82
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 82 planning complete
+Phase: 82 (Backend — Criação Automática de Honorário na Formalização) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-07-07
 
 Progress: [██████████] 100%
 
@@ -60,6 +60,7 @@ Progress: [██████████] 100%
 | Phase 81 P01 | 12min | 2 tasks | 1 files |
 | Phase 81 P02 | 8min | 2 tasks | 1 files |
 | Phase 81 P03 | 12min | 1 tasks | 2 files |
+| Phase 82 P01 | 12min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 81]: [Phase 81-02] updateDecisao deliberately never copies payload.getDocumentoId() -- anexo can only be attached at creation time via multipart upload in this phase
 - [Phase 81]: [Phase 81-02] Testemunha.tipo binds directly via @RequestBody Jackson deserialization (no manual enum parsing), unlike Decisao's manually-parsed multipart tipo/data params
 - [Phase 81]: [Phase 81-03] POST /processos/{id}/factos discards client-supplied ordem and recomputes max(existing ordem for processo_id)+1 inside synchronized(FactoRepository.class); PUT explicitly trusts payload ordem with no recompute (deliberate reordering entry point)
+- [Phase 82]: Idempotency guard (honorarioRepository.findByProcessoId(id).isEmpty()) kept fully independent of the estado guard in formalizarProcesso, not merged into it, so the retry/replay protection is not mistaken for the state-machine guard's own purpose
+- [Phase 82]: valorTotal set to the literal null via the builder, never read from Cliente.honorariosPropostos -- confirmed via full-file grep that honorariosPropostos is not referenced anywhere in ResourceController.java
 
 ### Pending Todos
 
@@ -116,8 +119,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T20:03:07.063Z
-Stopped at: Completed 81-03-PLAN.md
+Last session: 2026-07-07T21:56:41.992Z
+Stopped at: Completed 82-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
