@@ -1794,6 +1794,7 @@ public class ResourceController {
         return ResponseEntity.ok(decisaoRepository.save(decisao));
     }
 
+    @Transactional
     @PreAuthorize("hasAuthority('processos:edit')")
     @DeleteMapping("/processos/{id}/decisoes/{decisaoId}")
     public ResponseEntity<?> deleteDecisao(@PathVariable UUID id, @PathVariable Integer decisaoId) {
