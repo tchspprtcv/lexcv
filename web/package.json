@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:juizo-origem": "node scripts/verify-juizo-origem-roundtrip.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
