@@ -57,7 +57,26 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — milestone v2.8 concluída e arquivada; a aguardar definição da próxima milestone)
+- [ ] Campo Juízo nos Dados do Processo (texto livre, ao lado de Tribunal/Área Jurídica)
+- [ ] Campo "origem" obrigatório no intake (Petição Inicial | Notificações Avulsas), visível na ficha
+- [ ] Sub-secção Decisões (entidade nova: data, tipo, resumo, anexo opcional)
+- [ ] Sub-secção Factos (entidade nova: descrição, data, ordem)
+- [ ] Sub-secção Testemunhas (entidade nova: nome, contacto, tipo/arrolada por, notas)
+- [ ] Aba "Documentos" dedicada na ficha do processo (upload real, reutilizando o padrão de Clientes v2.8)
+- [ ] Criação automática de Honorário ao formalizar processo (TRIAGEM→ATIVO) + geração de "Termo de Honorários" imprimível
+
+## Current Milestone: v2.9 Melhoria Módulo Processos
+
+**Goal:** Aprofundar o módulo de processos com dados jurídicos estruturados (Juízo, origem/tramitação), sub-secções de Decisões/Factos/Testemunhas, aba de documentos dedicada e criação automática do contrato de honorário na formalização — seguindo padrões internacionais de gestão processual.
+
+**Target features:**
+- Campo Juízo nos Dados do Processo (texto livre, ao lado de Tribunal/Área Jurídica)
+- Campo "origem" obrigatório no intake (Petição Inicial | Notificações Avulsas), visível na ficha
+- Sub-secção Decisões (entidade nova: data, tipo, resumo, anexo opcional)
+- Sub-secção Factos (entidade nova: descrição, data, ordem)
+- Sub-secção Testemunhas (entidade nova: nome, contacto, tipo/arrolada por, notas)
+- Aba "Documentos" dedicada na ficha do processo (upload real, reutilizando o padrão de Clientes v2.8)
+- Criação automática de Honorário ao formalizar processo (TRIAGEM→ATIVO) + geração de "Termo de Honorários" imprimível
 
 ### Out of Scope
 
@@ -146,7 +165,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.8 arquivada. A aguardar definição da próxima milestone via `/gsd:new-milestone`.
+**Current focus:** Milestone v2.9 (Melhoria Módulo Processos) — a definir requisitos e roadmap.
 
 ## Evolution
 
@@ -166,4 +185,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — after v2.8 milestone (Refatoração Ficha de Cliente) shipped and archived*
+*Last updated: 2026-07-06 — milestone v2.9 (Melhoria Módulo Processos) started*
