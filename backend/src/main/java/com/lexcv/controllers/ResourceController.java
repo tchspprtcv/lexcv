@@ -1670,6 +1670,7 @@ public class ResourceController {
         return ResponseEntity.ok(decisaoRepository.findByProcessoId(id));
     }
 
+    @Transactional
     @PreAuthorize("hasAuthority('processos:edit')")
     @PostMapping(value = "/processos/{id}/decisoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createDecisao(
