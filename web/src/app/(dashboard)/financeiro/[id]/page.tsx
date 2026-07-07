@@ -55,7 +55,8 @@ type PageProps = {
   params: { id: string };
 };
 
-function formatMoneyCVE(v: number) {
+function formatMoneyCVE(v: number | null | undefined) {
+  if (v == null) return "A confirmar";
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
 
@@ -145,7 +146,7 @@ function HonorarioDetailContent({
   const editForm = useForm<HonorarioUpdateFormValues>({
     resolver: zodResolver(honorarioUpdateSchema),
     defaultValues: {
-      valorTotal: honorario.data ? String(honorario.data.valorTotal) : "",
+      valorTotal: honorario.data?.valorTotal != null ? String(honorario.data.valorTotal) : "",
       descricao: honorario.data?.descricao ?? "",
       dataAcordo: honorario.data?.dataAcordo ?? "",
     },
@@ -154,7 +155,7 @@ function HonorarioDetailContent({
   React.useEffect(() => {
     if (honorario.data) {
       editForm.reset({
-        valorTotal: String(honorario.data.valorTotal),
+        valorTotal: honorario.data.valorTotal != null ? String(honorario.data.valorTotal) : "",
         descricao: honorario.data.descricao ?? "",
         dataAcordo: honorario.data.dataAcordo ?? "",
       });
@@ -228,7 +229,10 @@ function HonorarioDetailContent({
   const isError = honorario.isError || processo.isError || cliente.isError || pagamentos.isError;
 
   const totalPago = (pagamentos.data ?? []).reduce((acc, p) => acc + (p.valorPago ?? 0), 0);
-  const restante = honorario.data ? Math.max(0, honorario.data.valorTotal - totalPago) : 0;
+  const restante =
+    honorario.data && honorario.data.valorTotal != null
+      ? Math.max(0, honorario.data.valorTotal - totalPago)
+      : null;
 
   const clienteId = processo.data?.cliente_id;
 

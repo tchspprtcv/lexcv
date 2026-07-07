@@ -12,13 +12,15 @@ import { useHonorarios } from "@/hooks/use-financeiro";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 
-function formatMoneyCVE(v: number) {
+function formatMoneyCVE(v: number | null | undefined) {
+  if (v == null) return "A confirmar";
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
 
 type HonorarioStatus = "Pendente" | "Parcialmente Pago" | "Pago";
 
-function calcHonorarioStatus(totalPago: number, valorTotal: number): HonorarioStatus {
+function calcHonorarioStatus(totalPago: number, valorTotal: number | null): HonorarioStatus {
+  if (valorTotal == null) return "Pendente";
   if (totalPago <= 0) return "Pendente";
   if (totalPago < valorTotal) return "Parcialmente Pago";
   return "Pago";
@@ -34,7 +36,7 @@ function escapeField(value: string): string {
 interface HonorarioRow {
   id: string | number;
   processoId: string;
-  valorTotal: number;
+  valorTotal: number | null;
   totalPago: number;
   dataAcordo?: string;
 }
@@ -67,7 +69,7 @@ function exportHonorariosCsv(
         escapeField(String(h.id)),
         escapeField(processoLabel),
         escapeField(clienteLabel),
-        escapeField(String(h.valorTotal)),
+        escapeField(h.valorTotal == null ? "" : String(h.valorTotal)),
         escapeField(String(h.totalPago)),
         escapeField(estado),
         escapeField(dataAcordo),
@@ -151,7 +153,7 @@ function FinanceiroContent({
   const now = new Date();
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const kpiFaturado = list.reduce((acc, h) => acc + h.valorTotal, 0);
+  const kpiFaturado = list.reduce((acc, h) => acc + (h.valorTotal ?? 0), 0);
   const kpiRecebido = list.reduce((acc, h) => acc + h.totalPago, 0);
   const kpiDivida = kpiFaturado - kpiRecebido;
   const kpiMes = list
