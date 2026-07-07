@@ -65,6 +65,8 @@ public class ResourceController {
     private final StorageService storageService;
     private final ClienteAdvogadoRepository clienteAdvogadoRepository;
     private final ClienteAdministrativoRepository clienteAdministrativoRepository;
+    private final DecisaoRepository decisaoRepository;
+    private final TestemunhaRepository testemunhaRepository;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -1651,6 +1653,133 @@ public class ResourceController {
         mov.setProcessoId(id);
         if (mov.getData() == null) mov.setData(LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(movimentacaoRepository.save(mov));
+    }
+
+    // ==========================================
+    // DECISÕES / FACTOS / TESTEMUNHAS
+    // ==========================================
+
+    @PreAuthorize("hasAuthority('processos:view')")
+    @GetMapping("/processos/{id}/decisoes")
+    public ResponseEntity<?> listDecisoes(@PathVariable UUID id) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        return ResponseEntity.ok(decisaoRepository.findByProcessoId(id));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PostMapping(value = "/processos/{id}/decisoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createDecisao(
+            @PathVariable UUID id,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam("data") String data,
+            @RequestParam("tipo") String tipo,
+            @RequestParam(value = "resumo", required = false) String resumo) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+
+        LocalDate parsedData;
+        try {
+            parsedData = LocalDate.parse(data);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Parâmetro 'data' inválido. Esperado YYYY-MM-DD"));
+        }
+
+        TipoDecisao parsedTipo;
+        try {
+            parsedTipo = TipoDecisao.valueOf(tipo);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Parâmetro 'tipo' inválido"));
+        }
+
+        Decisao decisao = Decisao.builder()
+                .processoId(id)
+                .data(parsedData)
+                .tipo(parsedTipo)
+                .resumo(resumo)
+                .build();
+
+        if (file != null && !file.isEmpty()) {
+            String originalName = file.getOriginalFilename();
+            if (originalName == null || originalName.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Nome do ficheiro em falta"));
+            }
+            try {
+                UUID documentoId = UUID.randomUUID();
+                InputStream inputStream = file.getInputStream();
+                String objectKey = storageService.upload(getTenantId(), documentoId,
+                        originalName, inputStream, file.getContentType(), file.getSize());
+
+                Documento documento = Documento.builder()
+                        .id(documentoId)
+                        .tenantId(getTenantId())
+                        .processoId(id)
+                        .clienteId(null)
+                        .nome(originalName)
+                        .tipo("ANEXO")
+                        .confidencialidade("PUBLICO")
+                        .caminhoArquivo(objectKey)
+                        .tamanho(file.getSize())
+                        .mimeType(file.getContentType())
+                        .versao(1)
+                        .build();
+
+                Documento savedDoc = documentoRepository.save(documento);
+                decisao.setDocumentoId(savedDoc.getId());
+            } catch (StorageUnavailableException e) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body(Map.of("message", "Storage service unavailable"));
+            } catch (IOException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Erro ao ler ficheiro"));
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(decisaoRepository.save(decisao));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PutMapping("/processos/{id}/decisoes/{decisaoId}")
+    public ResponseEntity<?> updateDecisao(
+            @PathVariable UUID id,
+            @PathVariable Integer decisaoId,
+            @RequestBody Decisao payload) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Decisao decisao = decisaoRepository.findById(decisaoId).orElse(null);
+        if (decisao == null || !decisao.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Decisão não encontrada"));
+        }
+
+        decisao.setData(payload.getData());
+        decisao.setTipo(payload.getTipo());
+        decisao.setResumo(payload.getResumo());
+
+        return ResponseEntity.ok(decisaoRepository.save(decisao));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @DeleteMapping("/processos/{id}/decisoes/{decisaoId}")
+    public ResponseEntity<?> deleteDecisao(@PathVariable UUID id, @PathVariable Integer decisaoId) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Decisao decisao = decisaoRepository.findById(decisaoId).orElse(null);
+        if (decisao == null || !decisao.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Decisão não encontrada"));
+        }
+
+        decisaoRepository.delete(decisao);
+        return ResponseEntity.ok(Map.of("message", "Decisão removida com sucesso!"));
     }
 
     // ==========================================
