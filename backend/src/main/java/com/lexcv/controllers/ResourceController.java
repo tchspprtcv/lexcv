@@ -916,6 +916,8 @@ public class ResourceController {
             m.put("tipo_processo", p.getTipoProcesso());
             m.put("area_juridica", p.getAreaJuridica());
             m.put("tribunal", p.getTribunal());
+            m.put("juizo", p.getJuizo());
+            m.put("origem", p.getOrigem());
             m.put("estado", p.getEstado());
             m.put("data_inicio", p.getDataInicio());
             m.put("data_fim", p.getDataFim());
@@ -993,7 +995,9 @@ public class ResourceController {
         processo.setTipoProcesso(payload.getTipoProcesso());
         processo.setAreaJuridica(payload.getAreaJuridica());
         processo.setTribunal(payload.getTribunal());
+        processo.setJuizo(payload.getJuizo());
         // estado is intentionally excluded: changes must go through /transicao or /formalizar
+        // origem is intentionally excluded: immutable after intake, only writable via POST /processos/intake
         processo.setDescricao(payload.getDescricao());
         processo.setDataInicio(payload.getDataInicio());
         processo.setDataFim(payload.getDataFim());
