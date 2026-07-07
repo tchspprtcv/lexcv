@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: verifying
-stopped_at: Completed 81-03-PLAN.md
-last_updated: "2026-07-07T20:03:07.259Z"
+status: ready_to_plan
+stopped_at: Phase 81 complete (3/3) — ready to discuss Phase 82
+last_updated: 2026-07-07T21:31:48.476Z
 last_activity: 2026-07-07
 progress:
   total_phases: 5
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 81 — Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem
+**Current focus:** Phase 82 — backend — criação automática de honorário na formalização
 
 ## Current Position
 
-Phase: 81 (Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 82
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-07
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 22
+- Total plans completed: 25
 - Average duration: —
 - Total execution time: —
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 | 75 | 3 | - | - |
 | 79 | 2 | - | - |
 | 80 | 1 | - | - |
+| 81 | 3 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 80 P01 | 15min | 3 tasks | 10 files |
