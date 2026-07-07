@@ -1751,7 +1751,7 @@ public class ResourceController {
     public ResponseEntity<?> updateDecisao(
             @PathVariable UUID id,
             @PathVariable Integer decisaoId,
-            @RequestBody Decisao payload) {
+            @RequestBody Map<String, Object> payload) {
         Processo processo = processoRepository.findById(id).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
@@ -1761,9 +1761,34 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Decisão não encontrada"));
         }
 
-        decisao.setData(payload.getData());
-        decisao.setTipo(payload.getTipo());
-        decisao.setResumo(payload.getResumo());
+        Object dataVal = payload.get("data");
+        if (dataVal == null || dataVal.toString().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "data é obrigatória"));
+        }
+        LocalDate parsedData;
+        try {
+            parsedData = LocalDate.parse(dataVal.toString());
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Parâmetro 'data' inválido. Esperado YYYY-MM-DD"));
+        }
+
+        Object tipoVal = payload.get("tipo");
+        if (tipoVal == null || tipoVal.toString().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "tipo é obrigatório"));
+        }
+        TipoDecisao parsedTipo;
+        try {
+            parsedTipo = TipoDecisao.valueOf(tipoVal.toString());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Parâmetro 'tipo' inválido"));
+        }
+
+        Object resumoVal = payload.get("resumo");
+
+        decisao.setData(parsedData);
+        decisao.setTipo(parsedTipo);
+        decisao.setResumo(resumoVal == null ? null : resumoVal.toString());
 
         return ResponseEntity.ok(decisaoRepository.save(decisao));
     }
@@ -1810,12 +1835,38 @@ public class ResourceController {
 
     @PreAuthorize("hasAuthority('processos:edit')")
     @PostMapping("/processos/{id}/testemunhas")
-    public ResponseEntity<?> createTestemunha(@PathVariable UUID id, @RequestBody Testemunha testemunha) {
+    public ResponseEntity<?> createTestemunha(@PathVariable UUID id, @RequestBody Map<String, Object> payload) {
         Processo processo = processoRepository.findById(id).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
-        testemunha.setProcessoId(id);
+
+        Object nomeVal = payload.get("nome");
+        if (nomeVal == null || nomeVal.toString().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "nome é obrigatório"));
+        }
+
+        TipoTestemunha parsedTipo = null;
+        Object tipoVal = payload.get("tipo");
+        if (tipoVal != null && !tipoVal.toString().isBlank()) {
+            try {
+                parsedTipo = TipoTestemunha.valueOf(tipoVal.toString());
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Parâmetro 'tipo' inválido"));
+            }
+        }
+
+        Object contactoVal = payload.get("contacto");
+        Object notasVal = payload.get("notas");
+
+        Testemunha testemunha = Testemunha.builder()
+                .processoId(id)
+                .nome(nomeVal.toString())
+                .contacto(contactoVal == null ? null : contactoVal.toString())
+                .tipo(parsedTipo)
+                .notas(notasVal == null ? null : notasVal.toString())
+                .build();
+
         return ResponseEntity.status(HttpStatus.CREATED).body(testemunhaRepository.save(testemunha));
     }
 
@@ -1824,7 +1875,7 @@ public class ResourceController {
     public ResponseEntity<?> updateTestemunha(
             @PathVariable UUID id,
             @PathVariable Integer testemunhaId,
-            @RequestBody Testemunha payload) {
+            @RequestBody Map<String, Object> payload) {
         Processo processo = processoRepository.findById(id).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
@@ -1834,10 +1885,28 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Testemunha não encontrada"));
         }
 
-        testemunha.setNome(payload.getNome());
-        testemunha.setContacto(payload.getContacto());
-        testemunha.setTipo(payload.getTipo());
-        testemunha.setNotas(payload.getNotas());
+        Object nomeVal = payload.get("nome");
+        if (nomeVal == null || nomeVal.toString().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "nome é obrigatório"));
+        }
+
+        TipoTestemunha parsedTipo = null;
+        Object tipoVal = payload.get("tipo");
+        if (tipoVal != null && !tipoVal.toString().isBlank()) {
+            try {
+                parsedTipo = TipoTestemunha.valueOf(tipoVal.toString());
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Parâmetro 'tipo' inválido"));
+            }
+        }
+
+        Object contactoVal = payload.get("contacto");
+        Object notasVal = payload.get("notas");
+
+        testemunha.setNome(nomeVal.toString());
+        testemunha.setContacto(contactoVal == null ? null : contactoVal.toString());
+        testemunha.setTipo(parsedTipo);
+        testemunha.setNotas(notasVal == null ? null : notasVal.toString());
 
         return ResponseEntity.ok(testemunhaRepository.save(testemunha));
     }
@@ -1875,6 +1944,9 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
+        if (facto.getDescricao() == null || facto.getDescricao().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "descricao é obrigatória"));
+        }
         facto.setProcessoId(id);
         synchronized (FactoRepository.class) {
             int nextOrdem = factoRepository.findMaxOrdemByProcessoId(id).orElse(0) + 1;
@@ -1897,6 +1969,13 @@ public class ResourceController {
         Facto facto = factoRepository.findById(factoId).orElse(null);
         if (facto == null || !facto.getProcessoId().equals(id)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Facto não encontrado"));
+        }
+
+        if (payload.getDescricao() == null || payload.getDescricao().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "descricao é obrigatória"));
+        }
+        if (payload.getOrdem() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "ordem é obrigatória"));
         }
 
         facto.setDescricao(payload.getDescricao());
