@@ -60,4 +60,24 @@
 
 ## Traceability
 
-(Preenchido pelo roadmapper)
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PROC-01 | Phase 80 | Pending |
+| PROC-02 | Phase 81 | Pending |
+| PROC-03 | Phase 81 | Pending |
+| PROC-04 | Phase 81 | Pending |
+| PROC-05 | Phase 81 | Pending |
+| PROC-06 | Phase 80 | Pending |
+| PROC-07 | Phase 81 | Pending |
+| PROC-08 | Phase 81 | Pending |
+| PROC-09 | Phase 80 | Pending |
+| PROC-10 | Phase 81 | Pending |
+| PROC-11 | Phase 80 | Pending |
+| PROC-12 | Phase 81 | Pending |
+| PROC-13 | Phase 84 | Pending |
+| PROC-14 | Phase 82 | Pending |
+| PROC-15 | Phase 84 | Pending |
+| PROC-16 | Phase 84 | Pending |
+| PROC-17 | Phase 81 | Pending |
+
+**Coverage:** 17/17 requirements mapped ✓ (Phase 83 — Frontend Tipos/Schemas/Hooks — is a pure integration phase supporting all of the above; it owns no requirement directly but is a hard dependency for Phase 84.)
