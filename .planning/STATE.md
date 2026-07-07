@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: executing
-stopped_at: Completed 83-01-PLAN.md
-last_updated: "2026-07-07T22:59:23.202Z"
+status: verifying
+stopped_at: Completed 83-02-PLAN.md
+last_updated: "2026-07-07T23:09:00.342Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
-  percent: 60
+  completed_plans: 7
+  percent: 80
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 
 Phase: 83 (Frontend — Tipos, Schemas e Hooks) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-07
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 86%
 | Phase 81 P03 | 12min | 1 tasks | 2 files |
 | Phase 82 P01 | 12min | 2 tasks | 1 files |
 | Phase 83 P01 | 10min | 2 tasks | 5 files |
+| Phase 83 P02 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 81]: [Phase 81-03] POST /processos/{id}/factos discards client-supplied ordem and recomputes max(existing ordem for processo_id)+1 inside synchronized(FactoRepository.class); PUT explicitly trusts payload ordem with no recompute (deliberate reordering entry point)
 - [Phase 82]: Idempotency guard (honorarioRepository.findByProcessoId(id).isEmpty()) kept fully independent of the estado guard in formalizarProcesso, not merged into it, so the retry/replay protection is not mistaken for the state-machine guard's own purpose
 - [Phase 82]: valorTotal set to the literal null via the builder, never read from Cliente.honorariosPropostos -- confirmed via full-file grep that honorariosPropostos is not referenced anywhere in ResourceController.java
+- [Phase 83]: juizo/origem mapping centralizado num módulo partilhado dedicado (processo-juizo-origem-mapping.ts) — Permite que o script de verificação de round-trip importe a mesma lógica usada em runtime por use-processos.ts, em vez de a reimplementar (PITFALLS.md Pitfall 1)
+- [Phase 83]: Verificação de round-trip real implementada como script Node puro (node:assert) em vez de instalar vitest — Repo continua sem test runner instalado (precedente Phase 74/82); Node >=22 executa .ts diretamente via type-stripping nativo
 
 ### Pending Todos
 
@@ -121,8 +124,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T22:59:23.179Z
-Stopped at: Completed 83-01-PLAN.md
+Last session: 2026-07-07T23:09:00.318Z
+Stopped at: Completed 83-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
