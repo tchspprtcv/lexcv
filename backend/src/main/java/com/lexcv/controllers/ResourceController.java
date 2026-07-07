@@ -1780,6 +1780,20 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Decisão não encontrada"));
         }
 
+        if (decisao.getDocumentoId() != null) {
+            documentoRepository.findById(decisao.getDocumentoId())
+                    .filter(d -> d.getTenantId().equals(getTenantId()))
+                    .ifPresent(d -> {
+                        try {
+                            storageService.delete(d.getCaminhoArquivo());
+                        } catch (StorageUnavailableException ignored) {
+                            // Storage outage should not block decisão deletion; the object
+                            // becomes unreferenced but the DB row is still cleaned up below.
+                        }
+                        documentoRepository.delete(d);
+                    });
+        }
+
         decisaoRepository.delete(decisao);
         return ResponseEntity.ok(Map.of("message", "Decisão removida com sucesso!"));
     }
