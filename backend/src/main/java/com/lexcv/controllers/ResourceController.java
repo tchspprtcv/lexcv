@@ -67,6 +67,7 @@ public class ResourceController {
     private final ClienteAdministrativoRepository clienteAdministrativoRepository;
     private final DecisaoRepository decisaoRepository;
     private final TestemunhaRepository testemunhaRepository;
+    private final FactoRepository factoRepository;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -1840,6 +1841,70 @@ public class ResourceController {
 
         testemunhaRepository.delete(testemunha);
         return ResponseEntity.ok(Map.of("message", "Testemunha removida com sucesso!"));
+    }
+
+    @PreAuthorize("hasAuthority('processos:view')")
+    @GetMapping("/processos/{id}/factos")
+    public ResponseEntity<?> listFactos(@PathVariable UUID id) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        return ResponseEntity.ok(factoRepository.findByProcessoIdOrderByOrdemAsc(id));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PostMapping("/processos/{id}/factos")
+    public ResponseEntity<?> createFacto(@PathVariable UUID id, @RequestBody Facto facto) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        facto.setProcessoId(id);
+        synchronized (FactoRepository.class) {
+            int nextOrdem = factoRepository.findMaxOrdemByProcessoId(id).orElse(0) + 1;
+            facto.setOrdem(nextOrdem);
+            facto = factoRepository.save(facto);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(facto);
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @PutMapping("/processos/{id}/factos/{factoId}")
+    public ResponseEntity<?> updateFacto(
+            @PathVariable UUID id,
+            @PathVariable Integer factoId,
+            @RequestBody Facto payload) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Facto facto = factoRepository.findById(factoId).orElse(null);
+        if (facto == null || !facto.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Facto não encontrado"));
+        }
+
+        facto.setDescricao(payload.getDescricao());
+        facto.setData(payload.getData());
+        facto.setOrdem(payload.getOrdem());
+
+        return ResponseEntity.ok(factoRepository.save(facto));
+    }
+
+    @PreAuthorize("hasAuthority('processos:edit')")
+    @DeleteMapping("/processos/{id}/factos/{factoId}")
+    public ResponseEntity<?> deleteFacto(@PathVariable UUID id, @PathVariable Integer factoId) {
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        Facto facto = factoRepository.findById(factoId).orElse(null);
+        if (facto == null || !facto.getProcessoId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Facto não encontrado"));
+        }
+
+        factoRepository.delete(facto);
+        return ResponseEntity.ok(Map.of("message", "Facto removido com sucesso!"));
     }
 
     // ==========================================
