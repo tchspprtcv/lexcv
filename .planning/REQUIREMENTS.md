@@ -16,8 +16,8 @@
 ### Informação do Processo — Decisões
 
 - [x] **PROC-06**: Utilizador pode registar uma Decisão associada ao processo (data, tipo: Despacho | Decisão Interlocutória | Sentença | Acórdão, resumo, anexo opcional)
-- [ ] **PROC-07**: Anexo da Decisão é submetido diretamente no formulário de criação (upload multipart num só passo, criando o Documento internamente e associando-o à Decisão)
-- [ ] **PROC-08**: Utilizador pode listar, editar e remover Decisões do processo, numa sub-secção dedicada dentro de "Informação do Processo"
+- [x] **PROC-07**: Anexo da Decisão é submetido diretamente no formulário de criação (upload multipart num só passo, criando o Documento internamente e associando-o à Decisão)
+- [x] **PROC-08**: Utilizador pode listar, editar e remover Decisões do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Informação do Processo — Factos
 
@@ -27,7 +27,7 @@
 ### Informação do Processo — Testemunhas
 
 - [x] **PROC-11**: Utilizador pode registar uma Testemunha associada ao processo (nome, contacto, tipo: Autor | Réu, notas) — entidade própria, distinta de Partes
-- [ ] **PROC-12**: Utilizador pode listar, editar e remover Testemunhas do processo, numa sub-secção dedicada dentro de "Informação do Processo"
+- [x] **PROC-12**: Utilizador pode listar, editar e remover Testemunhas do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Documentos
 
@@ -41,7 +41,7 @@
 
 ### Segurança / Integridade
 
-- [ ] **PROC-17**: Endpoints de Decisões, Factos e Testemunhas verificam a posse do processo pai (tenant + `processoId`) em todas as operações de escrita (criar/editar/remover), seguindo o padrão mais rigoroso já usado em `ProcessoFase` (não o padrão mais simples de `Parte`/`Movimentacao`)
+- [x] **PROC-17**: Endpoints de Decisões, Factos e Testemunhas verificam a posse do processo pai (tenant + `processoId`) em todas as operações de escrita (criar/editar/remover), seguindo o padrão mais rigoroso já usado em `ProcessoFase` (não o padrão mais simples de `Parte`/`Movimentacao`)
 
 ## Future Requirements
 
@@ -68,16 +68,16 @@
 | PROC-04 | Phase 81 | Complete |
 | PROC-05 | Phase 81 | Complete |
 | PROC-06 | Phase 80 | Complete |
-| PROC-07 | Phase 81 | Pending |
-| PROC-08 | Phase 81 | Pending |
+| PROC-07 | Phase 81 | Complete |
+| PROC-08 | Phase 81 | Complete |
 | PROC-09 | Phase 80 | Complete |
 | PROC-10 | Phase 81 | Pending |
 | PROC-11 | Phase 80 | Complete |
-| PROC-12 | Phase 81 | Pending |
+| PROC-12 | Phase 81 | Complete |
 | PROC-13 | Phase 84 | Pending |
 | PROC-14 | Phase 82 | Pending |
 | PROC-15 | Phase 84 | Pending |
 | PROC-16 | Phase 84 | Pending |
-| PROC-17 | Phase 81 | Pending |
+| PROC-17 | Phase 81 | Complete |
 
 **Coverage:** 17/17 requirements mapped ✓ (Phase 83 — Frontend Tipos/Schemas/Hooks — is a pure integration phase supporting all of the above; it owns no requirement directly but is a hard dependency for Phase 84.)

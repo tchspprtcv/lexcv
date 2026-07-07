@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 81-01-PLAN.md
-last_updated: "2026-07-07T19:42:27.503Z"
+stopped_at: Completed 81-02-PLAN.md
+last_updated: "2026-07-07T19:51:53.919Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 ## Current Position
 
 Phase: 81 (Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-07
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████░░░░░] 50%
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 80 P01 | 15min | 3 tasks | 10 files |
 | Phase 81 P01 | 12min | 2 tasks | 1 files |
+| Phase 81 P02 | 8min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - (v2.9 roadmap) Documentos tab (PROC-13) folded into the final UI phase (84) as pure frontend wiring — its backend endpoint (`GET /processos/{id}/documentos`) already exists, no dedicated phase needed.
 - [Phase 81]: origem violations return HTTP 422 (not 400) at intake, matching formalizarProcesso's existing convention
 - [Phase 81]: PUT /processos/{id} silently ignores any origem in the payload rather than rejecting with 400 -- matches the estado-exclusion precedent
+- [Phase 81]: [Phase 81-02] updateDecisao deliberately never copies payload.getDocumentoId() -- anexo can only be attached at creation time via multipart upload in this phase
+- [Phase 81]: [Phase 81-02] Testemunha.tipo binds directly via @RequestBody Jackson deserialization (no manual enum parsing), unlike Decisao's manually-parsed multipart tipo/data params
 
 ### Pending Todos
 
@@ -110,8 +113,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T19:42:27.451Z
-Stopped at: Completed 81-01-PLAN.md
+Last session: 2026-07-07T19:51:53.870Z
+Stopped at: Completed 81-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
