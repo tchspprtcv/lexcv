@@ -43,8 +43,10 @@ type ProcessoApi = {
   clienteId?: string;
   cliente_id?: string;
   numeroProcesso?: string;
+  numero_processo?: string;
   numero?: string;
   tipoProcesso?: string;
+  tipo_processo?: string;
   titulo?: string;
   areaJuridica?: string;
   area_juridica?: string;
@@ -78,6 +80,8 @@ type ProcessoApiPayload = {
   estado?: string;
   dataInicio?: string;
   dataFim?: string;
+  legalHold?: boolean;
+  dataRetencao?: string;
   juizo?: string;
   origem?: OrigemProcesso;
 };
@@ -97,9 +101,9 @@ export function normalizeProcesso(api: ProcessoApi): Processo {
     id: api.id,
     tenant_id: api.tenant_id ?? api.tenantId ?? "",
     cliente_id: api.cliente_id ?? api.clienteId ?? "",
-    numero: api.numero ?? api.numeroProcesso,
-    titulo: api.titulo ?? api.tipoProcesso,
-    tipo_processo: api.tipoProcesso ?? api.titulo,
+    numero: api.numero ?? api.numeroProcesso ?? api.numero_processo,
+    titulo: api.titulo ?? api.tipoProcesso ?? api.tipo_processo,
+    tipo_processo: api.tipoProcesso ?? api.tipo_processo ?? api.titulo,
     area_juridica: api.area_juridica ?? api.areaJuridica,
     tribunal: api.tribunal,
     descricao: api.descricao,
@@ -127,6 +131,13 @@ export function toProcessoApiPayload(payload: ProcessoCreateRequest | ProcessoUp
     estado: payload.estado,
     dataInicio: payload.data_inicio,
     dataFim: payload.data_fim,
+    // ProcessoCreateRequest doesn't declare legal_hold/data_retencao today; only
+    // ProcessoUpdateRequest does. Guard with "in" (mirrors mapJuizoOrigemToPayload)
+    // so create requests never send these keys, while update requests always do —
+    // otherwise the backend's updateProcesso unconditionally resets legalHold to
+    // false / dataRetencao to null on every edit that omits them (CR-01).
+    legalHold: "legal_hold" in payload ? payload.legal_hold : undefined,
+    dataRetencao: "data_retencao" in payload ? payload.data_retencao : undefined,
     ...mapJuizoOrigemToPayload(payload),
   };
 }
