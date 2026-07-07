@@ -38,6 +38,11 @@ public class Processo {
 
     private String tribunal;
     private String estado;
+    private String juizo;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origem")
+    private OrigemProcesso origem;
 
     @Column(name = "data_inicio")
     private LocalDate dataInicio;
