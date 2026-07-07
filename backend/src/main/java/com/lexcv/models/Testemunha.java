@@ -27,5 +27,6 @@ public class Testemunha {
     @Enumerated(EnumType.STRING)
     private TipoTestemunha tipo;
 
+    @Column(columnDefinition = "TEXT")
     private String notas;
 }

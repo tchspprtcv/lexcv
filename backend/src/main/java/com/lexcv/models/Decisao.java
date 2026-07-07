@@ -27,6 +27,7 @@ public class Decisao {
     @Column(nullable = false)
     private TipoDecisao tipo;
 
+    @Column(columnDefinition = "TEXT")
     private String resumo;
 
     @Column(name = "documento_id")

@@ -20,7 +20,7 @@ public class Facto {
     @Column(name = "processo_id", nullable = false)
     private UUID processoId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String descricao;
 
     private LocalDate data;
