@@ -1989,7 +1989,12 @@ public class ResourceController {
         facto.setData(payload.getData());
         facto.setOrdem(payload.getOrdem());
 
-        return ResponseEntity.ok(factoRepository.save(facto));
+        try {
+            return ResponseEntity.ok(factoRepository.save(facto));
+        } catch (DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Conflito ao atribuir ordem ao facto, tente novamente"));
+        }
     }
 
     @PreAuthorize("hasAuthority('processos:edit')")
