@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 82-01-PLAN.md
-last_updated: "2026-07-07T22:53:16.102Z"
-last_activity: 2026-07-07 -- Phase 83 planning complete
+stopped_at: Completed 83-01-PLAN.md
+last_updated: "2026-07-07T22:59:23.202Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 60
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 83 — frontend — tipos, schemas e hooks
+**Current focus:** Phase 83 — Frontend — Tipos, Schemas e Hooks
 
 ## Current Position
 
-Phase: 83
-Plan: Not started
+Phase: 83 (Frontend — Tipos, Schemas e Hooks) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 83 planning complete
+Last activity: 2026-07-07
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 81 P02 | 8min | 2 tasks | 1 files |
 | Phase 81 P03 | 12min | 1 tasks | 2 files |
 | Phase 82 P01 | 12min | 2 tasks | 1 files |
+| Phase 83 P01 | 10min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -120,8 +121,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T21:56:41.992Z
-Stopped at: Completed 82-01-PLAN.md
+Last session: 2026-07-07T22:59:23.179Z
+Stopped at: Completed 83-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
