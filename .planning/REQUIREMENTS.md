@@ -22,7 +22,7 @@
 ### Informação do Processo — Factos
 
 - [x] **PROC-09**: Utilizador pode registar um Facto associado ao processo (descrição, data, ordem)
-- [ ] **PROC-10**: Utilizador pode listar, editar, remover e reordenar Factos do processo, numa sub-secção dedicada dentro de "Informação do Processo"
+- [x] **PROC-10**: Utilizador pode listar, editar, remover e reordenar Factos do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Informação do Processo — Testemunhas
 
@@ -71,7 +71,7 @@
 | PROC-07 | Phase 81 | Complete |
 | PROC-08 | Phase 81 | Complete |
 | PROC-09 | Phase 80 | Complete |
-| PROC-10 | Phase 81 | Pending |
+| PROC-10 | Phase 81 | Complete |
 | PROC-11 | Phase 80 | Complete |
 | PROC-12 | Phase 81 | Complete |
 | PROC-13 | Phase 84 | Pending |

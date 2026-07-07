@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: executing
-stopped_at: Completed 81-02-PLAN.md
-last_updated: "2026-07-07T19:51:53.919Z"
+status: verifying
+stopped_at: Completed 81-03-PLAN.md
+last_updated: "2026-07-07T20:03:07.259Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 20
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 
 Phase: 81 (Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-07
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████░░] 75%
 | Phase 80 P01 | 15min | 3 tasks | 10 files |
 | Phase 81 P01 | 12min | 2 tasks | 1 files |
 | Phase 81 P02 | 8min | 2 tasks | 1 files |
+| Phase 81 P03 | 12min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Recent decisions affecting current work:
 - [Phase 81]: PUT /processos/{id} silently ignores any origem in the payload rather than rejecting with 400 -- matches the estado-exclusion precedent
 - [Phase 81]: [Phase 81-02] updateDecisao deliberately never copies payload.getDocumentoId() -- anexo can only be attached at creation time via multipart upload in this phase
 - [Phase 81]: [Phase 81-02] Testemunha.tipo binds directly via @RequestBody Jackson deserialization (no manual enum parsing), unlike Decisao's manually-parsed multipart tipo/data params
+- [Phase 81]: [Phase 81-03] POST /processos/{id}/factos discards client-supplied ordem and recomputes max(existing ordem for processo_id)+1 inside synchronized(FactoRepository.class); PUT explicitly trusts payload ordem with no recompute (deliberate reordering entry point)
 
 ### Pending Todos
 
@@ -113,8 +115,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T19:51:53.870Z
-Stopped at: Completed 81-02-PLAN.md
+Last session: 2026-07-07T20:03:07.063Z
+Stopped at: Completed 81-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
