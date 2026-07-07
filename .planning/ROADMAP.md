@@ -223,7 +223,15 @@ Plans:
   3. `use-processos.ts` ganha o quarteto de hooks (list/create/update/delete) para cada entidade nova, seguindo a convenção `queryKey` já usada (`["processos", "<subresource>", id]`)
   4. `normalizeProcesso()`/`toProcessoApiPayload()` mapeiam `juizo`/`origem` corretamente — verificado por um teste de round-trip com refresh, não apenas por build limpo (previne a 4ª recorrência do bug de mapeamento já visto 3 vezes neste projeto)
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 83-01-PLAN.md — Tipos TypeScript (Processo.juizo/origem + Decisao/Facto/Testemunha) + schemas Zod + label maps PT
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 83-02-PLAN.md — Hooks CRUD (list/create/update/delete x Decisao/Testemunha/Facto) + mapeamento juizo/origem + verificacao de round-trip
 
 #### Phase 84: Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)
 
@@ -286,7 +294,7 @@ Plans:
 | 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 3/3 | Complete    | 2026-07-07 |
 | 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete    | 2026-07-07 |
-| 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/TBD | Not started | - |
+| 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/2 | Not started | - |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.9 roadmap created 2026-07-07. Run `/gsd:plan-phase 80` to start planning the first phase.
