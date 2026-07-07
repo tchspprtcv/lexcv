@@ -5,13 +5,13 @@
 ### Dados do Processo
 
 - [x] **PROC-01**: Utilizador pode registar o Juízo do processo (campo texto livre, ao lado de Tribunal/Área Jurídica no card "Dados")
-- [ ] **PROC-02**: Juízo é visível na ficha do processo (view e edit)
+- [x] **PROC-02**: Juízo é visível na ficha do processo (view e edit)
 
 ### Tramitação
 
-- [ ] **PROC-03**: Origem do processo (Petição Inicial | Notificações Avulsas) é um campo obrigatório no formulário de intake (passo 1)
-- [ ] **PROC-04**: Origem é validada em ambas as camadas — frontend (Zod, passo 1) e backend (`POST /processos/intake`, que hoje não valida nada, e `CAMPOS_MINIMOS_POR_TIPO` para todos os `tipo_processo`)
-- [ ] **PROC-05**: Origem é visível na ficha do processo após a formalização, mas não editável (campo definido apenas no intake)
+- [x] **PROC-03**: Origem do processo (Petição Inicial | Notificações Avulsas) é um campo obrigatório no formulário de intake (passo 1)
+- [x] **PROC-04**: Origem é validada em ambas as camadas — frontend (Zod, passo 1) e backend (`POST /processos/intake`, que hoje não valida nada, e `CAMPOS_MINIMOS_POR_TIPO` para todos os `tipo_processo`)
+- [x] **PROC-05**: Origem é visível na ficha do processo após a formalização, mas não editável (campo definido apenas no intake)
 
 ### Informação do Processo — Decisões
 
@@ -63,10 +63,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PROC-01 | Phase 80 | Complete |
-| PROC-02 | Phase 81 | Pending |
-| PROC-03 | Phase 81 | Pending |
-| PROC-04 | Phase 81 | Pending |
-| PROC-05 | Phase 81 | Pending |
+| PROC-02 | Phase 81 | Complete |
+| PROC-03 | Phase 81 | Complete |
+| PROC-04 | Phase 81 | Complete |
+| PROC-05 | Phase 81 | Complete |
 | PROC-06 | Phase 80 | Complete |
 | PROC-07 | Phase 81 | Pending |
 | PROC-08 | Phase 81 | Pending |

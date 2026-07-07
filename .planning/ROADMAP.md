@@ -185,7 +185,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 81-01-PLAN.md — Wiring juizo/origem no ciclo de vida do Processo (intake obrigatorio, update imutavel, listProcessos enriquecido)
+- [x] 81-01-PLAN.md — Wiring juizo/origem no ciclo de vida do Processo (intake obrigatorio, update imutavel, listProcessos enriquecido)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -281,7 +281,7 @@ Plans:
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete    | 2026-07-06 |
 | 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
 | 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 1/1 | Complete    | 2026-07-07 |
-| 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 0/TBD | Not started | - |
+| 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 1/3 | In Progress|  |
 | 82. Backend — Honorário Automático | v2.9 | 0/TBD | Not started | - |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/TBD | Not started | - |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/TBD | Not started | - |
