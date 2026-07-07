@@ -4,7 +4,7 @@
 
 ### Dados do Processo
 
-- [ ] **PROC-01**: Utilizador pode registar o Juízo do processo (campo texto livre, ao lado de Tribunal/Área Jurídica no card "Dados")
+- [x] **PROC-01**: Utilizador pode registar o Juízo do processo (campo texto livre, ao lado de Tribunal/Área Jurídica no card "Dados")
 - [ ] **PROC-02**: Juízo é visível na ficha do processo (view e edit)
 
 ### Tramitação
@@ -15,18 +15,18 @@
 
 ### Informação do Processo — Decisões
 
-- [ ] **PROC-06**: Utilizador pode registar uma Decisão associada ao processo (data, tipo: Despacho | Decisão Interlocutória | Sentença | Acórdão, resumo, anexo opcional)
+- [x] **PROC-06**: Utilizador pode registar uma Decisão associada ao processo (data, tipo: Despacho | Decisão Interlocutória | Sentença | Acórdão, resumo, anexo opcional)
 - [ ] **PROC-07**: Anexo da Decisão é submetido diretamente no formulário de criação (upload multipart num só passo, criando o Documento internamente e associando-o à Decisão)
 - [ ] **PROC-08**: Utilizador pode listar, editar e remover Decisões do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Informação do Processo — Factos
 
-- [ ] **PROC-09**: Utilizador pode registar um Facto associado ao processo (descrição, data, ordem)
+- [x] **PROC-09**: Utilizador pode registar um Facto associado ao processo (descrição, data, ordem)
 - [ ] **PROC-10**: Utilizador pode listar, editar, remover e reordenar Factos do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Informação do Processo — Testemunhas
 
-- [ ] **PROC-11**: Utilizador pode registar uma Testemunha associada ao processo (nome, contacto, tipo: Autor | Réu, notas) — entidade própria, distinta de Partes
+- [x] **PROC-11**: Utilizador pode registar uma Testemunha associada ao processo (nome, contacto, tipo: Autor | Réu, notas) — entidade própria, distinta de Partes
 - [ ] **PROC-12**: Utilizador pode listar, editar e remover Testemunhas do processo, numa sub-secção dedicada dentro de "Informação do Processo"
 
 ### Documentos
@@ -62,17 +62,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROC-01 | Phase 80 | Pending |
+| PROC-01 | Phase 80 | Complete |
 | PROC-02 | Phase 81 | Pending |
 | PROC-03 | Phase 81 | Pending |
 | PROC-04 | Phase 81 | Pending |
 | PROC-05 | Phase 81 | Pending |
-| PROC-06 | Phase 80 | Pending |
+| PROC-06 | Phase 80 | Complete |
 | PROC-07 | Phase 81 | Pending |
 | PROC-08 | Phase 81 | Pending |
-| PROC-09 | Phase 80 | Pending |
+| PROC-09 | Phase 80 | Complete |
 | PROC-10 | Phase 81 | Pending |
-| PROC-11 | Phase 80 | Pending |
+| PROC-11 | Phase 80 | Complete |
 | PROC-12 | Phase 81 | Pending |
 | PROC-13 | Phase 84 | Pending |
 | PROC-14 | Phase 82 | Pending |
