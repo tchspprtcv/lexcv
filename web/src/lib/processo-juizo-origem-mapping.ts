@@ -22,6 +22,13 @@ export function mapJuizoOrigemFromApi(api: ApiJuizoOrigem): { juizo?: string; or
   return { juizo: api.juizo, origem: api.origem };
 }
 
+// WARNING: disambiguation between create/update relies on the runtime "in"
+// operator over the payload's own declared shape. Never spread a full
+// Processo/ProcessoApi object into an update payload passed here — object
+// spread would carry the `origem` property along regardless of the target
+// type's declared shape, silently leaking it back into the update JSON body.
+// Only pass genuinely-typed ProcessoUpdateRequest/ProcessoCreateRequest
+// literals (WR-03).
 export function mapJuizoOrigemToPayload(
   payload: CreateJuizoOrigem | UpdateJuizoOrigem,
 ): { juizo?: string; origem?: OrigemProcesso } {

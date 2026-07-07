@@ -187,6 +187,9 @@ export interface FactoCreateRequest {
 export interface FactoUpdateRequest {
   descricao: string;
   data?: string;
+  // Must be sourced from the current Facto.ordem value, never from user input —
+  // no form collects this field yet, and reusing a stale value (e.g. after a
+  // concurrent reorder) would silently corrupt ordering (WR-02).
   ordem: number;
 }
 
