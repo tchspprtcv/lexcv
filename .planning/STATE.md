@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: planning
-last_updated: "2026-07-07T00:00:00.000Z"
-last_activity: 2026-07-07
+status: executing
+stopped_at: v2.9 ROADMAP.md, STATE.md, and REQUIREMENTS.md traceability written; 5 phases (80–84) covering 17/17 requirements, awaiting user approval.
+last_updated: "2026-07-07T12:48:00.361Z"
+last_activity: 2026-07-07 -- Phase 80 planning complete
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -26,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 
 Phase: 80 of 84 (Fundações — Processo.juizo/origem + Entidades Decisão/Facto/Testemunha)
 Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-07-07 — Roadmap created (5 phases, 80–84), 17/17 requirements mapped
+Status: Ready to execute
+Last activity: 2026-07-07 -- Phase 80 planning complete
 
 Progress: [░░░░░░░░░░] 0%
 
