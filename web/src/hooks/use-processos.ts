@@ -1,12 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
+import { mapJuizoOrigemFromApi, mapJuizoOrigemToPayload } from "@/lib/processo-juizo-origem-mapping";
 
 import type {
   AuditLogEntry,
   ConflictCheckDecisao,
   ConflictCheckDecisaoRequest,
   ConflictCheckResponse,
+  Decisao,
+  DecisaoCreateRequest,
+  DecisaoUpdateRequest,
+  Facto,
+  FactoCreateRequest,
+  FactoUpdateRequest,
+  OrigemProcesso,
   Prazo,
   PrazoCreateRequest,
   PrazoRisco,
@@ -20,6 +28,9 @@ import type {
   ProcessoParte,
   ProcessoParteCreateRequest,
   ProcessoUpdateRequest,
+  Testemunha,
+  TestemunhaCreateRequest,
+  TestemunhaUpdateRequest,
   TimelineItem,
   TransicaoRequest,
   WorkflowResponse,
@@ -53,6 +64,8 @@ type ProcessoApi = {
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
+  juizo?: string;
+  origem?: OrigemProcesso;
 };
 
 type ProcessoApiPayload = {
@@ -65,6 +78,8 @@ type ProcessoApiPayload = {
   estado?: string;
   dataInicio?: string;
   dataFim?: string;
+  juizo?: string;
+  origem?: OrigemProcesso;
 };
 
 export type ProcessosListFilters = {
@@ -77,7 +92,7 @@ export type ProcessosListFilters = {
   sortDir?: "asc" | "desc";
 };
 
-function normalizeProcesso(api: ProcessoApi): Processo {
+export function normalizeProcesso(api: ProcessoApi): Processo {
   return {
     id: api.id,
     tenant_id: api.tenant_id ?? api.tenantId ?? "",
@@ -95,12 +110,13 @@ function normalizeProcesso(api: ProcessoApi): Processo {
     responsavel_nome: api.responsavel_nome,
     risco_mais_critico: api.risco_mais_critico,
     tem_prazo_escalonado: api.tem_prazo_escalonado,
+    ...mapJuizoOrigemFromApi(api),
     created_at: api.created_at ?? api.createdAt ?? "",
     updated_at: api.updated_at ?? api.updatedAt,
   };
 }
 
-function toProcessoApiPayload(payload: ProcessoCreateRequest | ProcessoUpdateRequest): ProcessoApiPayload {
+export function toProcessoApiPayload(payload: ProcessoCreateRequest | ProcessoUpdateRequest): ProcessoApiPayload {
   return {
     clienteId: payload.cliente_id,
     numeroProcesso: payload.numero,
@@ -111,6 +127,7 @@ function toProcessoApiPayload(payload: ProcessoCreateRequest | ProcessoUpdateReq
     estado: payload.estado,
     dataInicio: payload.data_inicio,
     dataFim: payload.data_fim,
+    ...mapJuizoOrigemToPayload(payload),
   };
 }
 
@@ -224,6 +241,9 @@ export function useDeleteProcesso(id: string) {
         queryClient.removeQueries({ queryKey: ["processos", "partes", id] }),
         queryClient.removeQueries({ queryKey: ["processos", "fases", id] }),
         queryClient.removeQueries({ queryKey: ["processos", "movimentacoes", id] }),
+        queryClient.removeQueries({ queryKey: ["processos", "decisoes", id] }),
+        queryClient.removeQueries({ queryKey: ["processos", "testemunhas", id] }),
+        queryClient.removeQueries({ queryKey: ["processos", "factos", id] }),
       ]);
     },
   });
@@ -326,6 +346,195 @@ export function useAddProcessoMovimentacao(id: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["processos", "movimentacoes", id] });
       await queryClient.invalidateQueries({ queryKey: ["processos", "timeline", id] });
+    },
+  });
+}
+
+export function useDecisoes(id: string) {
+  const enabled = typeof window !== "undefined" && Boolean(id);
+
+  return useQuery({
+    queryKey: ["processos", "decisoes", id],
+    queryFn: () => apiFetch<Decisao[]>(`/processos/${encodeURIComponent(id)}/decisoes`),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
+export function useAddDecisao(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: DecisaoCreateRequest) => {
+      const form = new FormData();
+      form.set("data", payload.data);
+      form.set("tipo", payload.tipo);
+      if (payload.resumo?.trim()) form.set("resumo", payload.resumo.trim());
+      if (payload.file) form.set("file", payload.file);
+      return apiFetch<Decisao>(`/processos/${encodeURIComponent(id)}/decisoes`, {
+        method: "POST",
+        body: form,
+      });
+    },
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ["processos", "decisoes", id] });
+      if (created.documentoId) {
+        await queryClient.invalidateQueries({ queryKey: ["documentos", "list"] });
+      }
+    },
+  });
+}
+
+export function useUpdateDecisao(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { decisaoId: number; payload: DecisaoUpdateRequest }) =>
+      apiFetch<Decisao>(
+        `/processos/${encodeURIComponent(id)}/decisoes/${encodeURIComponent(String(args.decisaoId))}`,
+        { method: "PUT", body: JSON.stringify(args.payload satisfies DecisaoUpdateRequest) },
+      ),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData<Decisao[] | undefined>(["processos", "decisoes", id], (current) => {
+        if (!current) return current;
+        return current.map((item) => (item.id === updated.id ? updated : item));
+      });
+    },
+  });
+}
+
+export function useDeleteDecisao(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (decisaoId: number) =>
+      apiFetch<void>(
+        `/processos/${encodeURIComponent(id)}/decisoes/${encodeURIComponent(String(decisaoId))}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["processos", "decisoes", id] }),
+        queryClient.invalidateQueries({ queryKey: ["documentos", "list"] }),
+      ]);
+    },
+  });
+}
+
+export function useTestemunhas(id: string) {
+  const enabled = typeof window !== "undefined" && Boolean(id);
+
+  return useQuery({
+    queryKey: ["processos", "testemunhas", id],
+    queryFn: () => apiFetch<Testemunha[]>(`/processos/${encodeURIComponent(id)}/testemunhas`),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
+export function useAddTestemunha(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: TestemunhaCreateRequest) =>
+      apiFetch<Testemunha>(`/processos/${encodeURIComponent(id)}/testemunhas`, {
+        method: "POST",
+        body: JSON.stringify(payload satisfies TestemunhaCreateRequest),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["processos", "testemunhas", id] });
+    },
+  });
+}
+
+export function useUpdateTestemunha(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { testemunhaId: number; payload: TestemunhaUpdateRequest }) =>
+      apiFetch<Testemunha>(
+        `/processos/${encodeURIComponent(id)}/testemunhas/${encodeURIComponent(String(args.testemunhaId))}`,
+        { method: "PUT", body: JSON.stringify(args.payload satisfies TestemunhaUpdateRequest) },
+      ),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData<Testemunha[] | undefined>(["processos", "testemunhas", id], (current) => {
+        if (!current) return current;
+        return current.map((item) => (item.id === updated.id ? updated : item));
+      });
+    },
+  });
+}
+
+export function useDeleteTestemunha(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (testemunhaId: number) =>
+      apiFetch<void>(
+        `/processos/${encodeURIComponent(id)}/testemunhas/${encodeURIComponent(String(testemunhaId))}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["processos", "testemunhas", id] });
+    },
+  });
+}
+
+export function useFactos(id: string) {
+  const enabled = typeof window !== "undefined" && Boolean(id);
+
+  return useQuery({
+    queryKey: ["processos", "factos", id],
+    queryFn: () => apiFetch<Facto[]>(`/processos/${encodeURIComponent(id)}/factos`),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
+export function useAddFacto(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: FactoCreateRequest) =>
+      apiFetch<Facto>(`/processos/${encodeURIComponent(id)}/factos`, {
+        method: "POST",
+        body: JSON.stringify(payload satisfies FactoCreateRequest),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["processos", "factos", id] });
+    },
+  });
+}
+
+export function useUpdateFacto(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (args: { factoId: number; payload: FactoUpdateRequest }) =>
+      apiFetch<Facto>(
+        `/processos/${encodeURIComponent(id)}/factos/${encodeURIComponent(String(args.factoId))}`,
+        { method: "PUT", body: JSON.stringify(args.payload satisfies FactoUpdateRequest) },
+      ),
+    onSuccess: async (updated) => {
+      queryClient.setQueryData<Facto[] | undefined>(["processos", "factos", id], (current) => {
+        if (!current) return current;
+        return current.map((item) => (item.id === updated.id ? updated : item));
+      });
+    },
+  });
+}
+
+export function useDeleteFacto(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (factoId: number) =>
+      apiFetch<void>(
+        `/processos/${encodeURIComponent(id)}/factos/${encodeURIComponent(String(factoId))}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["processos", "factos", id] });
     },
   });
 }
