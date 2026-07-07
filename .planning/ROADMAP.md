@@ -285,7 +285,7 @@ Plans:
 | 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
 | 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 3/3 | Complete    | 2026-07-07 |
-| 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete   | 2026-07-07 |
+| 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/TBD | Not started | - |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/TBD | Not started | - |
 
