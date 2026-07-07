@@ -19,9 +19,21 @@ export const processoFormSchema = z.object({
   data_fim: optionalTrimmedString,
   legal_hold: z.boolean().optional(),
   data_retencao: optionalTrimmedString,
+  juizo: optionalTrimmedString,
 });
 
 export type ProcessoFormValues = z.infer<typeof processoFormSchema>;
+
+export const origemProcessoSchema = z.enum([
+  "PETICAO_INICIAL",
+  "NOTIFICACOES_AVULSAS",
+]);
+
+export const processoIntakeFormSchema = processoFormSchema.extend({
+  origem: origemProcessoSchema,
+});
+
+export type ProcessoIntakeFormValues = z.infer<typeof processoIntakeFormSchema>;
 
 export const processoParteFormSchema = z.object({
   tipo: optionalTrimmedString,
@@ -32,6 +44,15 @@ export const processoParteFormSchema = z.object({
 export type ProcessoParteFormValues = z.infer<typeof processoParteFormSchema>;
 
 export const processoFaseStatusSchema = z.enum(["PENDENTE", "EM_ANDAMENTO", "CONCLUIDA"]);
+
+export const tipoDecisaoSchema = z.enum([
+  "DESPACHO",
+  "DECISAO_INTERLOCUTORIA",
+  "SENTENCA",
+  "ACORDAO",
+]);
+
+export const tipoTestemunhaSchema = z.enum(["AUTOR", "REU"]);
 
 export const processoFaseFormSchema = z.object({
   nome: z.string().trim().min(1, "O nome da fase é obrigatório"),
@@ -96,3 +117,32 @@ export const prazoFormSchema = z.object({
 });
 
 export type PrazoFormValues = z.infer<typeof prazoFormSchema>;
+
+const fileListSchema = z.custom<FileList>((value) => value instanceof FileList, {
+  message: "O ficheiro é obrigatório",
+});
+
+export const decisaoFormSchema = z.object({
+  data: z.string().trim().min(1, "A data é obrigatória"),
+  tipo: tipoDecisaoSchema,
+  resumo: optionalTrimmedString,
+  file: fileListSchema.optional(),
+});
+
+export type DecisaoFormValues = z.infer<typeof decisaoFormSchema>;
+
+export const testemunhaFormSchema = z.object({
+  nome: z.string().trim().min(1, "O nome é obrigatório"),
+  tipo: tipoTestemunhaSchema.optional(),
+  contacto: optionalTrimmedString,
+  notas: optionalTrimmedString,
+});
+
+export type TestemunhaFormValues = z.infer<typeof testemunhaFormSchema>;
+
+export const factoFormSchema = z.object({
+  descricao: z.string().trim().min(1, "A descrição é obrigatória"),
+  data: optionalTrimmedString,
+});
+
+export type FactoFormValues = z.infer<typeof factoFormSchema>;
