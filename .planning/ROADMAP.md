@@ -206,7 +206,10 @@ Plans:
   2. Repetir a formalização (retry/replay) não duplica o Honorário — existe uma verificação de existência explícita (`findByProcessoId`) antes da criação, independente do guard de estado
   3. O `valorTotal` do Honorário criado automaticamente começa sempre `null` — nunca é pré-preenchido a partir de `Cliente.honorariosPropostos`
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+
+- [ ] 82-01-PLAN.md — Criação idempotente de Honorario dentro de formalizarProcesso (valorTotal sempre null)
 
 #### Phase 83: Frontend — Tipos, Schemas e Hooks
 
@@ -282,7 +285,7 @@ Plans:
 | 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
 | 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 3/3 | Complete    | 2026-07-07 |
-| 82. Backend — Honorário Automático | v2.9 | 0/TBD | Not started | - |
+| 82. Backend — Honorário Automático | v2.9 | 0/1 | Planned | - |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/TBD | Not started | - |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/TBD | Not started | - |
 
