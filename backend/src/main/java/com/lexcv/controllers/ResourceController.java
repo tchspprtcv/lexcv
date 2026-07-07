@@ -70,13 +70,13 @@ public class ResourceController {
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
     // ==========================================
     private static final Map<String, List<String>> CAMPOS_MINIMOS_POR_TIPO = Map.of(
-            "civel", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio"),
-            "penal", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio"),
-            "laboral", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio"),
-            "administrativo", List.of("clienteId", "numeroProcesso", "areaJuridica", "dataInicio"),
-            "familia", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio"),
-            "comercial", List.of("clienteId", "numeroProcesso", "areaJuridica", "dataInicio"),
-            "default", List.of("clienteId", "tipoProcesso", "areaJuridica", "dataInicio")
+            "civel", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio", "origem"),
+            "penal", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio", "origem"),
+            "laboral", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio", "origem"),
+            "administrativo", List.of("clienteId", "numeroProcesso", "areaJuridica", "dataInicio", "origem"),
+            "familia", List.of("clienteId", "numeroProcesso", "areaJuridica", "tribunal", "dataInicio", "origem"),
+            "comercial", List.of("clienteId", "numeroProcesso", "areaJuridica", "dataInicio", "origem"),
+            "default", List.of("clienteId", "tipoProcesso", "areaJuridica", "dataInicio", "origem")
     );
 
     // ==========================================
@@ -1023,6 +1023,12 @@ public class ResourceController {
     @PostMapping("/processos/intake")
     public ResponseEntity<?> createProcessoIntake(@RequestBody Processo processo) {
         processo.setTenantId(getTenantId());
+        if (processo.getOrigem() == null) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
+                    "message", "Não é possível criar processo: campo 'origem' é obrigatório no intake",
+                    "camposEmFalta", List.of("origem")
+            ));
+        }
         processo.setEstado("TRIAGEM");
         Processo saved = processoRepository.save(processo);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
@@ -1207,6 +1213,7 @@ public class ResourceController {
                 case "tribunal" -> { if (processo.getTribunal() == null || processo.getTribunal().isBlank()) camposEmFalta.add(campo); }
                 case "dataInicio" -> { if (processo.getDataInicio() == null) camposEmFalta.add(campo); }
                 case "descricao" -> { if (processo.getDescricao() == null || processo.getDescricao().isBlank()) camposEmFalta.add(campo); }
+                case "origem" -> { if (processo.getOrigem() == null) camposEmFalta.add(campo); }
             }
         }
         if (!camposEmFalta.isEmpty()) {
