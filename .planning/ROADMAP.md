@@ -171,7 +171,11 @@ Plans:
   3. Factos podem ser reordenados (campo `ordem` scoped por `processo_id`, não global)
   4. `juizo`/`origem` são persistidos e devolvidos por `createProcesso`, `updateProcesso`, `createProcessoIntake` e aparecem no mapa enriquecido devolvido por `listProcessos`
   5. `origem` é validada como obrigatória tanto em `POST /processos/intake` (que hoje não valida nada) como em `CAMPOS_MINIMOS_POR_TIPO` para todos os valores de `tipo_processo`
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 81-01-PLAN.md — Wiring juizo/origem no ciclo de vida do Processo (intake obrigatorio, update imutavel, listProcessos enriquecido)
+- [ ] 81-02-PLAN.md — CRUD Decisao (upload multipart) + Testemunha, com double-check tenant/processoId (PROC-17)
+- [ ] 81-03-PLAN.md — CRUD Facto com ordem server-computed/reordenavel, double-check tenant/processoId (PROC-17)
 
 #### Phase 82: Backend — Criação Automática de Honorário na Formalização
 **Goal**: Formalizar um processo (TRIAGEM→ATIVO) cria automaticamente e de forma segura um registo de Honorário associado, sem nunca preencher um valor financeiro sem confirmação explícita do utilizador.
