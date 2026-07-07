@@ -1247,6 +1247,18 @@ public class ResourceController {
 
         // Transition TRIAGEM -> ATIVO
         processo.setEstado("ATIVO");
+
+        // Criação idempotente do Honorario (PROC-14): existence-check independente do guard de estado acima,
+        // para proteger contra retries/replays da transação
+        if (honorarioRepository.findByProcessoId(id).isEmpty()) {
+            Honorario honorario = Honorario.builder()
+                    .processoId(id)
+                    .valorTotal(null)
+                    .dataAcordo(LocalDate.now())
+                    .build();
+            honorarioRepository.save(honorario);
+        }
+
         return ResponseEntity.ok(processoRepository.save(processo));
     }
 
