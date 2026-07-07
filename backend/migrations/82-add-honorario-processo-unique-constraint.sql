@@ -1,0 +1,21 @@
+-- Phase 82: DB-level backstop for Honorario(processo_id) uniqueness
+--
+-- IMPORTANT: This is a REQUIRED manual production migration script. It MUST be run
+-- manually (e.g. via psql or DBeaver) against the database BEFORE or DURING deploying
+-- the code change that adds `uniqueConstraints = @UniqueConstraint(columnNames =
+-- "processo_id")` to `Honorario.java`.
+--
+-- Why: `application-prod.yml` sets `ddl-auto: validate` in production (dev/CI use
+-- `ddl-auto: update`, which auto-creates this constraint locally). `ddl-auto=validate`
+-- never creates or alters schema — it only checks the existing schema is compatible at
+-- startup. Without this script, the unique constraint declared on the `Honorario` entity
+-- will exist in every developer's local DB but never in production, leaving the
+-- multi-instance concurrent-`formalizarProcesso` race this constraint exists to close
+-- fully open there while appearing closed everywhere else.
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase —
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (staging/prod)
+-- before that environment picks up the deploy that adds the constraint to the entity.
+
+ALTER TABLE t_honorario ADD CONSTRAINT uk_honorario_processo UNIQUE (processo_id);

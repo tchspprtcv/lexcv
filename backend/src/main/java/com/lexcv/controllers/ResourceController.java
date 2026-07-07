@@ -1251,12 +1251,16 @@ public class ResourceController {
         // Criação idempotente do Honorario (PROC-14): existence-check independente do guard de estado acima,
         // para proteger contra retries/replays da transação
         if (honorarioRepository.findByProcessoId(id).isEmpty()) {
-            Honorario honorario = Honorario.builder()
-                    .processoId(id)
-                    .valorTotal(null)
-                    .dataAcordo(LocalDate.now())
-                    .build();
-            honorarioRepository.save(honorario);
+            try {
+                Honorario honorario = Honorario.builder()
+                        .processoId(id)
+                        .valorTotal(null)
+                        .dataAcordo(LocalDate.now())
+                        .build();
+                honorarioRepository.save(honorario);
+            } catch (DataIntegrityViolationException ex) {
+                // outro formalizar concorrente já criou o honorário — seguro ignorar, o registo existe
+            }
         }
 
         return ResponseEntity.ok(processoRepository.save(processo));

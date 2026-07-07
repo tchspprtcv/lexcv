@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "t_honorario")
+@Table(name = "t_honorario", uniqueConstraints = @UniqueConstraint(columnNames = "processo_id"))
 @Getter
 @Setter
 @NoArgsConstructor
