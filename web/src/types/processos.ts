@@ -4,6 +4,18 @@ export type PrazoRisco = "ok" | "proximo" | "vencido";
 export type PrazoPrioridade = "ALTA" | "MEDIA" | "BAIXA";
 export type TransicaoAcao = "ativar" | "suspender" | "encerrar" | "reabrir";
 
+// --- Phase 83: Juizo/Origem + Decisao/Facto/Testemunha ---
+
+export type TipoDecisao =
+  | "DESPACHO"
+  | "DECISAO_INTERLOCUTORIA"
+  | "SENTENCA"
+  | "ACORDAO";
+
+export type TipoTestemunha = "AUTOR" | "REU";
+
+export type OrigemProcesso = "PETICAO_INICIAL" | "NOTIFICACOES_AVULSAS";
+
 // ---
 
 export interface Processo {
@@ -25,6 +37,8 @@ export interface Processo {
   tem_prazo_escalonado?: boolean;
   legal_hold?: boolean;
   data_retencao?: string;
+  juizo?: string;
+  origem?: OrigemProcesso;
   created_at: string;
   updated_at?: string;
 }
@@ -40,6 +54,8 @@ export interface ProcessoCreateRequest {
   estado?: string;
   data_inicio?: string;
   data_fim?: string;
+  juizo?: string;
+  origem?: OrigemProcesso;
 }
 
 export interface ProcessoUpdateRequest {
@@ -55,6 +71,7 @@ export interface ProcessoUpdateRequest {
   data_fim?: string;
   legal_hold?: boolean;
   data_retencao?: string;
+  juizo?: string;
 }
 
 export interface ProcessoParte {
@@ -107,6 +124,70 @@ export interface ProcessoMovimentacaoCreateRequest {
   titulo: string;
   descricao?: string;
   data?: string;
+}
+
+export interface Decisao {
+  id: number;
+  processoId: string;
+  data: string;
+  tipo: TipoDecisao;
+  resumo?: string;
+  documentoId?: string;
+}
+
+export interface DecisaoCreateRequest {
+  file?: File;
+  data: string;
+  tipo: TipoDecisao;
+  resumo?: string;
+}
+
+export interface DecisaoUpdateRequest {
+  data: string;
+  tipo: TipoDecisao;
+  resumo?: string;
+}
+
+export interface Testemunha {
+  id: number;
+  processoId: string;
+  nome: string;
+  contacto?: string;
+  tipo?: TipoTestemunha;
+  notas?: string;
+}
+
+export interface TestemunhaCreateRequest {
+  nome: string;
+  tipo?: TipoTestemunha;
+  contacto?: string;
+  notas?: string;
+}
+
+export interface TestemunhaUpdateRequest {
+  nome: string;
+  tipo?: TipoTestemunha;
+  contacto?: string;
+  notas?: string;
+}
+
+export interface Facto {
+  id: number;
+  processoId: string;
+  descricao: string;
+  data?: string;
+  ordem: number;
+}
+
+export interface FactoCreateRequest {
+  descricao: string;
+  data?: string;
+}
+
+export interface FactoUpdateRequest {
+  descricao: string;
+  data?: string;
+  ordem: number;
 }
 
 export type ConflictNivel =
