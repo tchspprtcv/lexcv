@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "t_facto")
+@Table(name = "t_facto", uniqueConstraints = @UniqueConstraint(columnNames = {"processo_id", "ordem"}))
 @Getter
 @Setter
 @NoArgsConstructor

@@ -17,6 +17,7 @@ import com.lexcv.dtos.DashboardKpiResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -1948,10 +1949,15 @@ public class ResourceController {
             return ResponseEntity.badRequest().body(Map.of("message", "descricao é obrigatória"));
         }
         facto.setProcessoId(id);
-        synchronized (FactoRepository.class) {
-            int nextOrdem = factoRepository.findMaxOrdemByProcessoId(id).orElse(0) + 1;
-            facto.setOrdem(nextOrdem);
-            facto = factoRepository.save(facto);
+        try {
+            synchronized (FactoRepository.class) {
+                int nextOrdem = factoRepository.findMaxOrdemByProcessoId(id).orElse(0) + 1;
+                facto.setOrdem(nextOrdem);
+                facto = factoRepository.save(facto);
+            }
+        } catch (DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Conflito ao atribuir ordem ao facto, tente novamente"));
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(facto);
     }
