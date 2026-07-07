@@ -1,162 +1,165 @@
 # Feature Research
 
-**Domain:** Legal Opinion (Parecer Jurídico) Request/Version/Approval/Delivery UI
-**Researched:** 2026-07-01
-**Confidence:** MEDIUM-HIGH (backend contract is HIGH confidence — read directly from existing v2.5 code/audit; ecosystem UI conventions are MEDIUM — synthesized from legal practice management vendor patterns, no single authoritative source for this exact workflow shape)
+**Domain:** Legal case/matter management — "processos" (litigation) module deep dive: court/chamber hierarchy, case-origin categorization, court decisions, facts, witnesses, and engagement-letter generation
+**Researched:** 2026-07-07
+**Confidence:** MEDIUM-HIGH (grounded in named products' public help centers/docs + official Portuguese/Brazilian judicial-system sources; some claims are WebSearch-derived and marked accordingly)
 
-## Context Recap (from backend, v2.5)
+## Context Recap
 
-The backend already enforces the full state machine; the frontend must only **present and drive** it, never reimplement business rules (per LexCV's "frontend burro" principle). Confirmed backend shape from `.planning/v2.5-MILESTONE-AUDIT.md` and `PROJECT.md`:
-
-- Entities: `ParecerSolicitacao` (request) → `ParecerVersao` (immutable, append-only versions with content + optional attachment) → optional aprovação (ADMIN-only internal approval) → entrega (irreversible, sets `versaoFinalId`).
-- 12 REST endpoints under `/api/v1/pareceres/*`.
-- RBAC scopes: `pareceres:view/create/edit/manage` — same `scope:action` convention as every other module.
-- Automatic audit logging on 5 transition points (create, atribuir, versão-criar, aprovar, entregar) via the existing `AuditLog` mechanism already surfaced in Processos' timeline/auditoria tab.
-- Advanced search (`pesquisar()`): free-text + combined filters.
-- Known gap: `versaoFinalId` is a raw field on the generic solicitação JSON — no dedicated "delivered opinion" view consumes it yet (PARC-09).
+This research covers 4 specific asks for LexCV v2.9, each mapped against how established products model the same concept. LexCV already has: `Processo` (numeroProcesso, tipoProcesso, areaJuridica, tribunal, estado, datas, legalHold), `Parte` (parties CRUD), `Fase` (phase/stage catalog CRUD), `Movimentacao` (generic case-log: tipo/descricao/data), `Documento` (generic upload, already usable via processoId FK), `Honorario` (fee entity, already has processoId FK, currently 100% manual entry via `/financeiro`), intake flow with conflict-check gating TRIAGEM→ATIVO, and a Timeline that aggregates movimentações/transições/eventos/documentos. This file evaluates what to add without duplicating what exists.
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Baseline for any request→version→approval→delivery workflow, validated against general legal practice management/document-approval-workflow conventions (Clio-style practice management, contract/document approval tooling) and against LexCV's own Processos module pattern (which already ships an equivalent list/detail/timeline shape).
-
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Lista de solicitações (`/pareceres`) | Every module in LexCV (Clientes, Processos, Documentos) has a list-first entry point; users need to triage open/assigned pareceres | LOW | Reuse existing table/mobile-card dual-view pattern (`hidden md:block` / `md:hidden`) already used in Clientes/Processos/Documentos |
-| Status badges | Users must see solicitação state (aberta, em elaboração, em aprovação, entregue) at a glance | LOW | Reuse existing badge component pattern from Financeiro (honorários status) and Processos (fase/status) |
-| Detalhe da solicitação | Single source of truth per parecer: metadata, cliente/processo vinculado, advogado atribuído, versões | LOW-MEDIUM | Mirrors Processos detail page shell |
-| Timeline/histórico de versões | Sequential, immutable list of versões with author, timestamp, content/anexo — directly analogous to Processos' existing timeline/auditoria tab | MEDIUM | **Direct reuse** of the Processos timeline/auditoria tab pattern (already built in v1.7) — same visual language (chronological, actor-attributed entries) |
-| Criação de solicitação (form) | Table stakes for any request-based workflow | LOW | React Hook Form + Zod, same as every other LexCV form |
-| Atribuição de advogado responsável | Backend already requires an atribuído advogado; UI must expose who is assigned and let authorized users reassign | LOW-MEDIUM | Reuse the "advogados ligados a Users via junção tenant-scoped" pattern established in Cliente intake (v2.4) — a searchable user-picker, not free text |
-| Criação de versão (conteúdo + anexo opcional) | Core value-add action of the module — an advogado must be able to draft/submit a new version | MEDIUM | Anexo upload should reuse the **Documentos module's existing upload component** (progress bar, drag-and-drop, MinIO-backed) rather than building a new uploader |
-| Aprovação (ADMIN-only) action | Backend enforces this as an optional gate; UI must surface an approve/reject-equivalent action only to ADMIN, matching `AdminController`'s class-level `@PreAuthorize("hasRole('ADMIN')")` convention | LOW-MEDIUM | Button visibility gated both by `pareceres:manage` (or equivalent) AND role check in the client, mirroring existing dual-check patterns |
-| Entrega (delivery) action, with irreversibility warning | Entrega is irreversible per backend contract — UI must confirm before submitting (destructive-action confirmation dialog) | LOW | Reuse existing confirm-dialog component (already used for deletes elsewhere) |
-| RBAC-gated actions/buttons | Every other module (Financeiro visible only to ADMIN/TECNICO, etc.) gates actions via `hasScopedPermission` | LOW | Direct application of `web/src/lib/permissions.ts` — no new logic needed, just new scope strings |
-| Pesquisa/filtros (mirroring `pesquisar()`) | Backend already built combined free-text + filter search; not exposing it in UI would repeat the v2.5 "backend built, unusable" mistake | MEDIUM | Search bar + filter chips (status, advogado, período, cliente/processo) — same filter-bar pattern as Processos/Documentos |
-| Empty/loading/error states | Consistent with TanStack Query conventions used everywhere else in LexCV | LOW | Standard skeleton + toast-on-error, no new pattern |
+| Campo Juízo (texto livre, ao lado de Tribunal/Área Jurídica) | Table stakes for civil-law/Portuguese-tradition litigation tracking — every PT/BR/CV court record shows tribunal + juízo together. Confirmed both by Portuguese court-hierarchy sources (Comarca → Tribunal → Juízo) and by Brazil's PJe "órgão julgador" convention | LOW | Free text is the *correct* scope, not a normalized hierarchy table — see Anti-Features |
+| Campo Origem obrigatório (Petição Inicial \| Notificações Avulsas) | Fundamental PT/BR civil-procedure distinction — whether the firm authored the first procedural act or is reacting to one already filed elsewhere (e.g., representing a defendant who was served). Determines initial deadline posture and task list | LOW | Standalone required enum on `Processo`/intake. Not the same concept as "referral source" (marketing attribution) used in Clio/MyCase — do not conflate |
+| Sub-secção Decisões (data, tipo, resumo, anexo opcional) | Table stakes for litigation tracking in PT/BR-tradition firms — lawyers need a scannable list of "what did the court decide and when," distinct from the noisy generic Movimentações log. General PM tools (Clio/MyCase/PracticePanther) treat decisions as tagged documents, not a separate entity — LexCV's scoped middle ground (first-class record, still reusing Documento for the file) fits a small/medium firm better | LOW-MEDIUM | `tipo` should use the closed PT/BR taxonomy: Despacho, Decisão Interlocutória, Sentença, Acórdão (confirmed via TJDFT/TJPR official explainers) — not free text |
+| Sub-secção Testemunhas (nome, contacto, tipo/arrolada por, notas) | Table stakes for any PT/BR civil suit involving oral evidence — witnesses are formally listed ("rol de testemunhas") and are a procedurally distinct actor from parties | LOW | Must be a separate entity from `Parte`, not a role flag on it — see Dependencies |
+| Aba Documentos dedicada na ficha do processo | `Documento` already has a `processoId` FK and is fully functional server-side; only the dedicated frontend tab is missing. Direct precedent: Clientes v2.8 "Documentos Entregues" tab (Phase 79) already solved this exact upload/list pattern | LOW | Pure pattern-reuse — no new backend capability needed |
+| Criação automática de Honorário ao TRIAGEM→ATIVO + Termo de Honorários imprimível | Template + merge-field document generation on matter data is standard across all three named common-law leaders (Clio Draft, PracticePanther templates, MyCase templates). Auto-linking matter-open to a billing record is *not* fully native even in those tools (usually manual/paid-automation-layer) — LexCV can do this natively because it controls its own state machine | LOW-MEDIUM (auto-create) / MEDIUM (printable template) | "Imprimível" (printable) matches how small/mid firms actually operate day to day — not e-signature workflow automation |
 
 ### Differentiators (Competitive Advantage)
 
-Not required for MVP usability, but raise the module above "backend exposed as forms."
-
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Vista dedicada "Parecer Entregue" | Directly resolves the audited gap (PARC-09): `versaoFinalId` currently only exists as a raw field with no consuming view. A dedicated read-only summary (final version content, delivery date/actor, attachment, full version trail collapsed) turns "data exists" into "data is usable." This is explicitly named as a target feature in PROJECT.md's v2.6 scope. | LOW-MEDIUM | This is the single highest-leverage differentiator — it's cheap (mostly a filtered/formatted read view over data the API already returns) and closes a known, named audit gap |
-| Rich text editor for versão content | Legal opinion content benefits from structured formatting (headings, lists, emphasis) rather than plain textarea — general legal-document tooling treats formatted content as baseline, not exotic | MEDIUM | Verify current backend content field is stored as plain text vs. HTML/Markdown before committing to an editor — if backend stores plain string, a rich editor implies a content-format decision (Markdown recommended: cheap to render, diffable, avoids sanitization complexity of storing raw HTML) |
-| Diff/comparação entre versões | Named directly in PARV-03 audit note as "satisfied by sequential list/detail only — no diff UI exists (deliberately deferred)." Side-by-side or inline diff between any two versões is standard practice in legal document version control tooling (redline-style clause-level diff) | MEDIUM-HIGH | Real value, but genuinely optional for v2.6 — versions are already immutable and browsable sequentially; a diff view is additive polish, not a blocker to usability. Recommend implementing only a simple text-diff (e.g. line-level) rather than clause-level redline — clause-level diff is a legal-drafting-tool-grade feature disproportionate to this milestone |
-| Indicador de "versão atual vs. versão final" distinction | Once entregue, distinguishing "latest version" from "the version that was delivered" (they may not be the same if further versions were somehow created — verify backend invariant) matters for legal defensibility/audit trust | LOW | Cheap addition once the dedicated delivered-view exists; mostly a labeling/badge concern |
-| Notificação in-app de novo parecer atribuído | LexCV already has an in-app notification system (badge + popover) from v2.1 Agenda | LOW-MEDIUM | Reuse existing notification infrastructure; extending it to a new event type is much cheaper than building notifications from scratch |
-| Ficha de parecer imprimível | LexCV already ships a "Ficha Cliente imprimível" pattern (v2.4) reproducing physical office forms; a printable parecer entregue summary follows the same precedent and may match real office workflow (delivering printed legal opinions) | LOW-MEDIUM | Only build if there's a real signal of office need — otherwise defer; flagged here because the *pattern* already exists in the codebase, making it cheap if wanted |
+| Sub-secção Factos (descrição, data, ordem) | No general practice-management tool (Clio/MyCase/PracticePanther) has an equivalent — facts normally live as narrative in matter notes. A structured, ordered chronology is genuinely useful for drafting petições and preparing for hearings without importing litigation-support-tier complexity | LOW | Scope strictly to the 3 fields already defined in PROJECT.md — no linking to Documentos/Testemunhas/Decisões in this milestone (see Anti-Features) |
+| Decisões surfaced in Timeline aggregator | The existing Timeline already aggregates movimentações/transições/eventos/documentos; extending it to include Decisões avoids creating a second, disconnected view of case history | LOW-MEDIUM | Recommended as a fast-follow within v2.9 if low-cost, otherwise first candidate for immediate next iteration |
+| Auto-linking Honorario prefill from intake's honorários propostos (totalidade, por extenso, previsão — already captured in v2.4) | Turns already-collected intake data into a working draft billing record automatically, rather than requiring re-entry — a genuine efficiency edge over Clio/MyCase's manual matter-to-billing setup | LOW | Purely additive to the existing state-transition hook; no new data capture required |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|------------------|-------------|
-| Real-time collaborative co-editing of a versão (Google-Docs-style) | Feels modern; other legal tools push "collaboration" | Backend models versões as immutable, sequential, single-author submissions — concurrent co-editing contradicts the entity design entirely and would require a completely different backend model (locking, CRDTs, draft-state) far outside this milestone's scope | Sequential immutable versioning (already built) — if two advogados need to collaborate, they coordinate outside the tool or submit successive versões |
-| Editable/deletable versões after submission | Users instinctively want to "fix a typo" | Backend enforces immutability by design (legal defensibility — an opinion history must not be rewritable); allowing edits would break the audit trail's evidentiary value and contradict PARC's core guarantee | Submit a new versão; if truly wrong, the workflow's answer is "create the next version," not "edit the last one" |
-| Reversible/undo-able entrega | "What if we delivered by mistake?" | Backend explicitly models entrega as irreversible (a compliance/defensibility feature, not an oversight) — building an "undo" would silently violate the backend contract or require a parallel unofficial mutation path | A strong confirmation dialog before entrega (this is already table stakes above); if a real mistake happens, it's a new solicitação/version, not a rollback |
-| Full clause-level redline diff (contract-negotiation-grade) | Seen in dedicated contract lifecycle management (CLM) tools like Ironclad; sounds impressive | Disproportionate engineering cost (structural document parsing, clause alignment) for a first UI milestone whose primary gap is "no UI exists at all" — this is CLM-tier tooling, not practice-management-tier | Simple text/line diff (see differentiator above) or defer diff entirely to a later milestone once basic usability is proven |
-| External e-signature / approval routing to non-system users (e.g., emailing an external senior partner for sign-off) | Common in enterprise legal-ops approval automation (Cflow, Ironclad-style templates) | Backend's aprovação step is explicitly internal/ADMIN-only and in-app; introducing external routing means new auth/identity concepts entirely outside PROJECT.md's "Out of Scope" (no Keycloak integration yet, no email notifications this milestone) | Keep approval internal-only, in-app, matching backend; PROJECT.md explicitly defers "Notificações push/email" |
-| Custom per-tenant approval workflow builder (multi-step, conditional routing) | Feels like a natural "enterprise" feature | Backend models exactly one optional approval gate (ADMIN) — a configurable workflow engine is an entirely different (and much larger) product surface not supported by any existing entity | Ship the single fixed gate the backend supports; revisit only if multiple tenants request materially different approval chains |
-| Building a new generic document viewer/comparison component from scratch | Tempting to make it "parecer-specific" and polished | Wastes effort duplicating what the Documentos module's download/preview already does for the optional anexo, and duplicates upload-progress logic that already exists | Reuse Documentos' existing upload/download components as-is for anexo handling within versões |
+| Normalized Tribunal→Juízo hierarchy table (cascading dropdown, FK catalog) | Feels "more correct" than free text; Brazil's PJe does maintain such catalogs nationally | Disproportionate for Cape Verde's small, stable court system — neither the common-law pattern (Clio's flat "Court" field) nor CV's actual court-structure size justifies a maintained hierarchy catalog. Adds migration/maintenance burden with no real user benefit at this scale | Free-text Juízo field next to existing Tribunal/Área Jurídica fields (already scoped correctly in PROJECT.md) |
+| Marketing/referral-source (lead origination) tracking bundled into "Origem" | Common-law PM tools (Clio/MyCase) do track "how did this client find us" and it's tempting to conflate with "origem do processo" | It's a different concept entirely (business development vs. procedural posture) — conflating the two fields would corrupt the procedural meaning of Origem and add unrequested scope | Keep Origem strictly procedural (Petição Inicial \| Notificações Avulsas); if lead-source tracking is wanted later, model it as a separate field on Cliente intake, not Processo |
+| Facts↔Documentos↔Testemunhas cross-linking, "favorability" tagging (Casefleet/CaseMap+-style chronology) | Sounds valuable — "connect everything" | This is trial-prep-grade litigation-support tooling (built for large firms managing thousands of discovery documents), wildly disproportionate to a CV small/medium firm's day-to-day docket tracking. High implementation cost for low realized value at this scale | Flat, unlinked Factos list (as scoped); revisit only if the firm's litigation volume/complexity genuinely grows to justify it |
+| Deposition/testimony status tracking on Testemunha (scheduled/taken/transcribed, Everchron-style witness hub) | Feels like "of course a witness needs a status" | Formal pre-trial deposition practice is a common-law (US) procedural concept; PT/BR civil procedure's witness testimony happens primarily at trial hearings (audiência), already modeled by LexCV's existing Evento/Agenda module. Building deposition tracking imports a procedural model that doesn't match CV practice | Keep Testemunha to the 4 scoped fields (nome, contacto, tipo/arrolada por, notas); link witness appearance to Evento/Agenda if/when needed, not a new status field |
+| Full unattended engagement-letter automation (auto-generate → auto-send → auto-track e-signature → auto-flip matter status on signed return) | Sounds like "modern" SaaS automation | Confirmed by research that even Clio, MyCase, and PracticePanther — mature, well-funded market leaders — do NOT do this natively; achieving it requires bolting on a third-party workflow-orchestration layer (e.g., Zapier-style tooling) even for them. Building this in-house for v2.9 is disproportionate scope and not what PROJECT.md requests ("imprimível" = printable) | Auto-create the `Honorario` record on TRIAGEM→ATIVO (LexCV's own controlled trigger) + generate a printable Termo de Honorários from a template — matches real day-to-day usage (print/manually send) at this firm scale |
+| Modeling Testemunha as a variant/role of the existing `Parte` entity | Reuses an existing table, seems DRY | Procedurally incorrect in PT/BR civil law — a witness ("testemunha arrolada") is not a party to the suit. Conflating them risks corrupting logic that assumes `Parte` rows represent litigants (e.g., the existing conflict-of-interest check built on Partes) | Separate, lightweight `Testemunha` entity as already scoped in PROJECT.md |
 
 ## Feature Dependencies
 
 ```
-[Lista de Solicitações] ──requires──> [use-pareceres.ts hooks] ──requires──> [12 backend endpoints]
+[Campo Juízo] (standalone field, Processo)
+[Campo Origem] (standalone field, Processo/intake)
+    └──informs──> [Fase catalog relevance] (existing entity — may hide/show phases based on origem, future iteration)
 
-[Detalhe da Solicitação]
-    ├──requires──> [Status badges]
-    ├──requires──> [Timeline de versões] ──reuses──> [Processos timeline/auditoria pattern]
-    └──requires──> [Atribuição de advogado] ──reuses──> [Cliente intake user-picker pattern]
+[Sub-secção Decisões] (new entity)
+    ├──requires──> [Documento] (existing — reused for anexo opcional, no new upload mechanism)
+    └──enhances──> [Timeline] (existing aggregator — should surface Decisões alongside Movimentações)
 
-[Criação de Versão]
-    ├──requires──> [Anexo upload] ──reuses──> [Documentos upload component]
-    └──enables────> [Timeline de versões] (each versão appends to timeline)
+[Sub-secção Factos] (new entity)
+    └──independent──> no FK dependency on Documento/Partes/Testemunhas in this milestone
+    (explicitly deferred: Factos↔Documento/Testemunhas linking — future milestone only if justified)
 
-[Aprovação] ──requires──> [RBAC: ADMIN role check] ──gates──> [Entrega]
+[Sub-secção Testemunhas] (new entity)
+    ├──conceptually-distinct-from──> [Parte] (existing — witnesses are NOT parties; separate table, not a role flag)
+    └──could-link-to──> [Evento/Agenda] (existing — testimony happens at audiência, already modeled) — optional, not required for v2.9
 
-[Entrega] (irreversible)
-    ├──requires──> [Confirm dialog pattern]
-    ├──sets─────> [versaoFinalId]
-    └──enables──> [Vista "Parecer Entregue"] ← closes PARC-09 gap
+[Aba Documentos dedicada] (new UI, reuses existing pattern)
+    ├──requires──> [Documento] (existing entity, already has processoId FK)
+    └──reuses-pattern-from──> [Clientes v2.8 Documentos Entregues tab] (Phase 79 — same upload/list pattern)
 
-[Pesquisa Avançada] ──requires──> [Backend pesquisar() endpoint] (already built, v2.5 Phase 64)
+[Criação automática de Honorário] (new trigger)
+    ├──requires──> [Honorario] (existing entity, processoId FK already present)
+    ├──requires──> [TRIAGEM→ATIVO transition] (existing state machine — hook point)
+    └──prefills-from──> [Intake honorários propostos fields] (existing, v2.4: totalidade, por extenso, previsão)
 
-[Diff entre versões] ──optional, depends on──> [Timeline de versões] (must exist first; diff is additive)
+[Geração Termo de Honorários imprimível] (new feature)
+    ├──requires──> [Honorario] (existing, post auto-creation)
+    └──reuses-pattern-from──> [Ficha Cliente imprimível] (existing print-view pattern, v2.4)
 ```
 
 ### Dependency Notes
 
-- **Timeline de versões directly reuses the Processos timeline/auditoria tab** built in v1.7 — same chronological, actor-attributed entry rendering. This should be treated as a near-verbatim port, not a fresh design.
-- **Anexo upload must reuse the Documentos module's existing component** (progress bar + drag-and-drop, MinIO-backed) rather than reimplementing upload UX — the backend's StorageService is already shared infrastructure.
-- **Advogado atribuído picker should reuse the user-linking pattern from Cliente intake (v2.4)** — advogados/administrativos are linked to system Users via tenant-scoped junction tables, not free text; the parecer assignment field should follow the same searchable-user-select UX rather than a plain text input.
-- **Vista "Parecer Entregue" depends only on entrega having occurred** — it's a read/formatting layer over existing API data (`versaoFinalId` + the referenced `ParecerVersao`), not a new backend capability. This is the cheapest high-value item in the entire feature set.
-- **Diff between versions is genuinely optional and last** — it depends on the timeline existing and adds no new backend capability requirement (versões are already fetched); it can be deferred to a v2.7 without harming v2.6's core value.
+- **Decisões requires Documento:** the "anexo opcional" field should be implemented via the existing generic `Documento` upload entity (processoId-scoped), exactly as the new Documentos tab will do — do not build a second file-upload mechanism.
+- **Decisões enhances Timeline:** the existing Timeline aggregator (movimentações/transições/eventos/documentos) should be extended to also surface Decisões entries, otherwise this becomes a second, disconnected view of case history — a likely UX gap if skipped.
+- **Testemunhas is conceptually distinct from Parte, not a variant of it:** do not add a `tipo=TESTEMUNHA` row to the existing `Parte` table. Procedurally (PT/BR civil law) a witness is not a party to the suit; conflating them would corrupt any future logic that assumes `Parte` rows represent litigants (e.g., conflict-of-interest checks already built on Partes).
+- **Honorario auto-creation requires the TRIAGEM→ATIVO hook:** this already exists as a state transition in the intake/conflict-check flow — the new logic is additive at that exact point, not a new workflow.
+- **Termo de Honorários reuses the Ficha Cliente printable pattern:** v2.4 already solved "printable view that reproduces a real office form" — re-deriving that CSS/print approach avoids introducing a new PDF-generation dependency (e.g., no need for a headless-Chrome or PDF library if the existing print-stylesheet approach is reused).
 
 ## MVP Definition
 
-### Launch With (v2.6)
+### Launch With (v2.9)
 
-Goal: Make the full parecer lifecycle usable end-to-end through the LexCV web app, closing the "backend-only" gap identified in the v2.5 audit.
+Goal: deepen the processos module with structured legal data (Juízo, origem/tramitação), Decisões/Factos/Testemunhas sub-sections, a dedicated documents tab, and automatic fee-agreement creation on formalization — following international standards without over-building for firm scale.
 
-- [ ] **`/pareceres` lista** — table/card dual-view, status badges, filters (status, advogado, cliente/processo)
-- [ ] **`/pareceres/[id]` detalhe** — metadata, timeline de versões, ações disponíveis conforme RBAC
-- [ ] **Formulário de criação de solicitação** — vinculado a cliente/processo, atribuição de advogado
-- [ ] **Formulário de criação de versão** — conteúdo + anexo opcional (reusing Documentos upload)
-- [ ] **Ação de aprovação (ADMIN)** — visible/actionable only under `hasRole('ADMIN')` + scope check
-- [ ] **Ação de entrega** — confirm dialog emphasizing irreversibility
-- [ ] **Vista dedicada "Parecer Entregue"** — resolves PARC-09; surfaces `versaoFinalId`'s referenced version as a clean summary
-- [ ] **Pesquisa avançada UI** — free-text + filters, mirroring backend `pesquisar()`
-- [ ] **RBAC gating in UI** — `pareceres:view/create/edit/manage` mirrored via `hasScopedPermission`, matching backend `@PreAuthorize`
-- [ ] **`use-pareceres*.ts` TanStack Query hooks** — full coverage of the 12 endpoints
+- [ ] **Campo Juízo** (texto livre) — direct, matches both PT/BR convention and Clio's flat-field pattern
+- [ ] **Campo Origem** (Petição Inicial \| Notificações Avulsas, enum, obrigatório no intake) — standalone, procedural (not marketing) field
+- [ ] **Sub-secção Decisões** (data, tipo enum: Despacho/Decisão Interlocutória/Sentença/Acórdão, resumo, anexo opcional via Documento)
+- [ ] **Sub-secção Factos** (descrição, data, ordem) — flat ordered list, no cross-linking
+- [ ] **Sub-secção Testemunhas** (nome, contacto, tipo/arrolada por, notas) — separate entity from Parte
+- [ ] **Aba Documentos dedicada** — reuses padrão v2.8 de Clientes (Phase 79)
+- [ ] **Criação automática de Honorário** ao TRIAGEM→ATIVO, prefilled from intake honorários propostos
+- [ ] **Termo de Honorários imprimível** — reuses padrão de impressão de Ficha Cliente (v2.4)
 
-### Add After Validation (v2.7+)
+### Add After Validation (fast-follow within v2.9 or immediate next iteration)
 
-- [ ] **Diff/comparação entre versões** — simple text/line diff between any two versões (not clause-level redline)
-- [ ] **Notificações in-app para atribuição/novas versões/entrega** — extends existing v2.1 notification system to parecer events
-- [ ] **Rich text editor for versão content** — upgrade from plain textarea once content-format (Markdown vs. HTML) is decided
+- [ ] **Decisões surfaced in Timeline aggregator** — extend existing Timeline to include Decisões entries alongside Movimentações/transições/eventos/documentos
+- [ ] **Fase catalog conditionally informed by Origem** — Petição Inicial vs. Notificação Avulsa likely imply different early-phase relevance
 
-### Future Consideration (v3+)
+### Future Consideration (v2+, likely never needed at this firm scale)
 
-- [ ] **Ficha de parecer imprimível** — only if office workflow explicitly needs printed delivery, following the Ficha Cliente precedent
-- [ ] **Distinção visual "versão mais recente" vs. "versão entregue"** if the two can legitimately diverge (verify backend invariant first)
-
-### Explicitly Out of Scope for This Domain
-
-- Real-time co-editing of versões
-- Editing/deleting submitted versões
-- Undo/reversal of entrega
-- External (non-system-user) approval routing or e-signature
-- Configurable multi-step/conditional approval workflow engine
-- Clause-level redline diff (CLM-grade tooling)
+- [ ] **Facts↔Documentos↔Testemunhas cross-linking** (Casefleet/CaseMap+-style chronology) — defer until/unless the firm handles complex multi-document litigation requiring trial-prep-grade chronology building
+- [ ] **Deposition/testimony status tracking on Testemunha** (scheduled/taken/transcribed) — defer; CV/PT procedure doesn't have a deposition-equivalent pre-trial practice at US litigation scale; witness testimony already covered by Evento/Agenda
+- [ ] **Normalized Tribunal→Juízo hierarchy catalog** (cascading dropdown) — defer; CV's court system is small/stable enough that free text is sufficient
+- [ ] **E-signature-integrated engagement letter workflow** (auto-send, auto-track, auto-activate matter on signature) — defer; not even Clio/MyCase/PracticePanther do this natively
+- [ ] **Marketing/referral-source (lead origination) tracking** — explicitly a different concept from "Origem" as scoped; out of scope unless separately requested
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|----------------------|----------|
-| Lista + Detalhe + Timeline de versões | HIGH | MEDIUM (reuses existing patterns) | P1 |
-| Criação de solicitação/versão (forms) | HIGH | MEDIUM | P1 |
-| Aprovação + Entrega ações (RBAC-gated) | HIGH | LOW-MEDIUM | P1 |
-| Vista "Parecer Entregue" | HIGH (closes named audit gap) | LOW | P1 |
-| Pesquisa avançada UI | HIGH (backend already built, unused otherwise) | MEDIUM | P1 |
-| Notificações in-app | MEDIUM | LOW-MEDIUM (infra exists) | P2 |
-| Diff entre versões (text-level) | MEDIUM | MEDIUM | P2 |
-| Rich text editor | MEDIUM | MEDIUM | P2 |
-| Ficha imprimível | LOW-MEDIUM | LOW-MEDIUM | P3 |
-| Clause-level redline diff | LOW (disproportionate for this domain tier) | HIGH | Do not build |
+| Campo Juízo | MEDIUM | LOW | P1 |
+| Campo Origem | HIGH | LOW | P1 |
+| Sub-secção Decisões | HIGH | MEDIUM | P1 |
+| Sub-secção Factos | MEDIUM | LOW | P1 |
+| Sub-secção Testemunhas | HIGH | LOW | P1 |
+| Aba Documentos dedicada | HIGH | LOW (pattern reuse) | P1 |
+| Auto-criação Honorário | HIGH | LOW-MEDIUM | P1 |
+| Termo de Honorários imprimível | HIGH | MEDIUM | P1 |
+| Decisões no Timeline aggregator | MEDIUM | LOW-MEDIUM | P2 |
+| Facts/Testemunhas/Documentos cross-linking | LOW (at this firm scale) | HIGH | Do not build |
+| Deposition tracking em Testemunha | LOW (procedural mismatch) | MEDIUM | Do not build |
+| Hierarquia Tribunal→Juízo normalizada | LOW | MEDIUM | Do not build |
+| E-signature workflow automation | LOW (not native even in market leaders) | HIGH | Do not build |
+
+## Competitor Feature Analysis
+
+| Feature | Clio / MyCase / PracticePanther (common-law) | Casefleet / CaseMap+ / Everchron (litigation-support tier) | LexCV v2.9 Approach |
+|---------|------------------------------------------------|---------------------------------------------------------------|----------------------|
+| Court/chamber field | Flat "Court" custom field, no hierarchy (Clio also has separate flat Judge/Case Number/County fields in litigation field sets) | N/A (not their focus) | Flat "Juízo" text field next to Tribunal — matches both |
+| Case origin/intake type | Referral-source (marketing) + intake→matter one-click conversion; no procedural-origin field | N/A | Procedural enum (Petição Inicial \| Notificação Avulsa) — CV/PT-specific, not borrowed from either |
+| Court decisions | Tagged documents in shared repository, no dedicated entity | Dedicated fact/decision chronology objects, linked to evidence, built for trial teams | Dedicated lightweight entity (data/tipo/resumo/anexo), reusing Documento for the file — middle ground |
+| Case facts | Not modeled at all | Dedicated chronology entity with linking/favorability tagging | Flat ordered list (descrição/data/ordem), no linking — differentiator vs. general PM tools, far lighter than litigation-support tools |
+| Witnesses | Contact/party record with a role tag, no dedicated entity | Hub entity auto-linked to depositions/documents/issues, real-time updates | Dedicated lightweight entity, separate from Parte, no hub/linking behavior |
+| Engagement letter generation | Template + merge fields (Clio Draft, PracticePanther templates, Actionstep), manual trigger/send, no native auto-activation of matter on signature | N/A | Template + merge fields (reuse Ficha Cliente print pattern), auto-triggered on TRIAGEM→ATIVO transition — better native automation than named competitors for the one thing LexCV fully controls, still print-based not e-sign-based |
 
 ## Sources
 
-- `.planning/PROJECT.md` (HIGH confidence — direct project source of truth, v2.6 scope statement)
-- `.planning/v2.5-MILESTONE-AUDIT.md` (HIGH confidence — direct backend contract, named gaps PARC-09/PARV-03)
-- [Legal Opinion Approvals Template — Cflow](https://www.cflowapps.com/workflow-templates/legal/legal-opinion-approvals/) (MEDIUM — general approval-workflow pattern confirmation)
-- [Legal Document Version Control Guide — Spellbook](https://www.spellbook.legal/briefs/document-version-control) (MEDIUM — version control / diff / attribution conventions in legal tooling)
-- [What Is Legal Document Management? — MyCase](https://www.mycase.com/blog/law-firm-operations/legal-document-management/) (MEDIUM — practice-management-tier baseline features)
-- [Top 6 Document Approval Workflow Software — SuiteFiles](https://www.suitefiles.com/document-approval-workflow-software/) (LOW-MEDIUM — approval routing patterns, used to justify anti-feature exclusions)
-- Internal codebase precedent (HIGH confidence, read directly): Processos timeline/auditoria tab (v1.7), Documentos upload component (v2.2), Cliente intake user-linking (v2.4), notification system (v2.1), Ficha Cliente imprimível (v2.4), permissions.ts scope convention
+- [Clio: Create Matters — Help Center](https://help.clio.com/hc/en-us/articles/9285959663131-Create-Matters) — MEDIUM confidence (WebSearch-extracted; direct WebFetch returned 403)
+- [Clio: Get Started With Custom Fields](https://help.clio.com/hc/en-us/articles/9285493193115-Get-Started-With-Custom-Fields) — MEDIUM
+- [Clio: Create Custom Fields](https://help.clio.com/hc/en-us/articles/9285496802331-Create-Custom-Fields) — MEDIUM
+- [Legal Cloud Technology: Using Clio as a Case Management System — Part Two, Custom Fields](https://legalcloudtechnology.com/using-clio-as-a-case-management-system-part-two-custom-fields/) — MEDIUM
+- [Everchron: Witnesses](https://everchron.com/witnesses) — HIGH (direct WebFetch)
+- [Casefleet: Case Management Software](https://www.casefleet.com/use-cases/case-management-software) — MEDIUM (WebSearch)
+- [Casefleet: Litigation Management Software](https://www.casefleet.com/use-cases/litigation-management-software) — MEDIUM
+- [LexisNexis: CaseMap+ AI](https://www.lexisnexis.com/en-us/products/casemap.page) — MEDIUM
+- [SmartAdvocate: Case Management Software vs. Document Management Systems](https://www.smartadvocate.com/article/case-management-software-vs-document-management-systems-what-law-firms-need-to-know) — MEDIUM
+- [One Legal: Should your firm implement case, practice, or document management software?](https://www.onelegal.com/blog/case-practice-document-management-software-for-law-firms/) — MEDIUM
+- [tribunais.org.pt: Os Tribunais / Judicial](https://tribunais.org.pt/Os-Tribunais/Judicial) — HIGH (direct WebFetch; defines comarca/tribunal/juízo hierarchy)
+- [Portal TJPE: Órgãos Julgadores com PJe](https://portal.tjpe.jus.br/web/processo-judicial-eletronico/orgaos-julgadores-com-pje/unidades-com-pje) — MEDIUM (WebSearch, Brazilian PJe court-registration terminology, "órgão julgador" convention)
+- [TJDFT: Sentença, decisão interlocutória, despacho e acórdão](https://www.tjdft.jus.br/institucional/imprensa/campanhas-e-produtos/direito-facil/edicao-semanal/sentenca-decisao-interlocutoria-despacho-e-acordao) — HIGH (official court public-education source, confirms 4-type taxonomy)
+- [TJPR: Saiba a diferença entre sentença, decisão e despacho](https://www.tjpr.jus.br/noticias/-/asset_publisher/9jZB/content/saiba-a-diferenca-entre-sentenca-decisao-e-despacho/18319) — HIGH (corroborating official source)
+- [Practiq.dev: Clio vs MyCase vs PracticePanther comparison 2026](https://practiq.dev/blog/clio-vs-mycase-vs-practicepanther-solo-small-firms) — MEDIUM (vendor-comparison blog, engagement-letter automation gap analysis across all 3 products)
+- [US Tech Automations: Automate Law Firm Client Intake 2026 (Clio vs MyCase)](https://ustechautomations.com/resources/blog/automate-law-firm-client-intake-2026) — MEDIUM
+- [CloudLex: Matter Management Software](https://www.cloudlex.com/applications/matter-management-software/) — MEDIUM (intake→matter one-click conversion pattern)
+- [SimpleLaw: Legal Case Management Software / Matter Management](https://www.simplelaw.com/matter-management) — MEDIUM
+- `.planning/PROJECT.md` — HIGH (primary source for current entity model, v2.9 milestone scope, and existing v2.4/v2.8 pattern precedents to reuse)
 
 ---
-*Feature research for: LexCV Módulo de Parecer Jurídico — UI (v2.6)*
-*Researched: 2026-07-01*
+*Feature research for: LexCV processos module (v2.9 Melhoria Módulo Processos)*
+*Researched: 2026-07-07*

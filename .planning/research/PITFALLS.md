@@ -1,174 +1,189 @@
-# Pitfalls Research: Módulo de Parecer Jurídico — UI (v2.6)
+# Domain Pitfalls
 
-**Domain:** Frontend UI for a document/opinion-versioning workflow with irreversible state transitions, added to an existing multi-tenant Spring Boot + Next.js legal practice app
-**Researched:** 2026-07-01
-**Confidence:** HIGH (backend source code read directly; prior milestone audits read directly; frontend conventions read directly from `web/src/lib/permissions.ts` and `web/src/hooks/use-documentos.ts`)
+**Domain:** Adding fields/entities/workflow side-effects to an existing "processos" module (Spring Boot + Next.js, multi-tenant legal practice management)
+**Researched:** 2026-07-07
+**Scope:** v2.9 Melhoria Módulo Processos — Juízo field, origem enum, Decisão/Facto/Testemunha child entities, Documentos tab, auto-Honorario on formalizar + Termo de Honorários print
+
+## Confidence note
+
+All findings below are HIGH confidence — they are derived directly from reading the actual code in this repository (`ResourceController.java`, `Processo.java`, `Honorario.java`, `Documento.java`, `Cliente.java`, `web/src/hooks/use-processos.ts`, `web/src/app/(dashboard)/processos/novo/page.tsx`, `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx`), not from generic web research. Line numbers cited are current as of 2026-07-07 and will drift as the codebase changes — treat them as pointers, not permanent anchors.
 
 ## Critical Pitfalls
 
-### Pitfall 1: Repeat of the v2.4 camelCase/snake_case bug class — confirmed HIGH RISK for this exact module
+### Pitfall 1: "origem" forgotten in the manual camelCase/snake_case translation layer (repeat of the project's #1 recurring bug)
 
-**What goes wrong:**
-Backend persists/serializes correctly (e.g. `versaoFinalId` set on `/entregar`), but the frontend reads/writes a differently-cased or differently-named key and silently gets `undefined`. Data is correct in the DB and in direct curl/Postman tests; it just never renders or never round-trips through forms. This is exactly what happened in v2.4: 9/19 requirements were marked "passed" by phase-level verification and were still broken end-to-end, because verification tested backend-in-isolation (curl) or frontend-code-presence (grep/`tsc --noEmit`), never a live JSON key trace.
+**What goes wrong:** `origem` is added to the `Processo` JPA entity and to the intake form UI, everything compiles and `pnpm build`/`mvn package` pass, but the value never reaches the database — or reaches the DB but never displays in the UI.
 
-**Why it happens (confirmed by reading the actual Parecer entities):**
-`ParecerSolicitacao.java` and `ParecerVersao.java` have **zero `@JsonProperty` annotations** — same as the pre-remediation v2.4 `Cliente`/`DadosTipo` entities. There is still no global `spring.jackson.property-naming-strategy` configured anywhere in `backend/` (confirmed absent in the v2.4 audit, and the v2.4 remediation deliberately used per-field `@JsonProperty` instead of a global fix, so the app-wide default remains plain Jackson camelCase). Every field the frontend will need to read is camelCase on the wire:
-- `ParecerSolicitacao`: `tenantId`, `clienteId`, `processoId`, `advogadoId`, `versaoFinalId`, `prioridade`, `status`, `prazo`, `createdAt`
-- `ParecerVersao`: `tenantId`, `solicitacaoId`, `numeroVersao`, `conteudo`, `caminhoAnexo`, `criadoPorId`, `createdAt`, `aprovado`, `aprovadoPorId`, `aprovadoEm`
+**Why it happens:** This project does not use a global camelCase↔snake_case strategy (deliberately, per `Key Decisions` in PROJECT.md: `@JsonProperty` cirúrgico por campo). Instead, `web/src/hooks/use-processos.ts` hand-maintains two conversion functions:
+- `normalizeProcesso()` (API response → UI `Processo` type) — reads `api.origem` and must be told to.
+- `toProcessoApiPayload()` (UI form values → API request body) — must explicitly add `origem: payload.origem` to the returned object.
 
-If any new `web/src/types/pareceres.ts` or hook is drafted with snake_case fields (`versao_final_id`, `numero_versao`, `criado_por_id`, `aprovado_por_id`, `aprovado_em`, `caminho_anexo`) — which is an easy mistake to make by pattern-matching on other Portuguese-domain fields elsewhere in the app that *are* snake_case at the DB/column level — every read will silently fail exactly like v2.4's `PERF-02`/`PROC-02`/`INT-01` gaps. This is the single highest-probability defect for this milestone, given it already happened once in the same codebase four milestones ago and the underlying root cause (no naming-strategy fix) was explicitly left as unaddressed tech debt.
+Both are plain object literals with **no type-level requirement that every backend field be mapped**. `ProcessoApi`/`ProcessoApiPayload` are loosely-typed intermediate shapes — omitting a field is not a type error, `tsc` will not catch it, and neither will `pnpm build`. This exact class of bug already happened 3 times in this project (v2.4 Fase migration, v2.8/Phase 79 `cliente_id`/`clienteId` on document upload, and this session's `fase_id`/`nome` mismatch).
 
-**How to avoid:**
-1. Before writing any TypeScript type or hook, fetch a *live* JSON response shape from the running backend for at least one representative object of each entity (`ParecerSolicitacao`, `ParecerVersao`) — via `curl`/Postman against a real dev instance, not by inferring from the Java class. Do this in the first phase, before building any UI that consumes these fields.
-2. Define `web/src/types/pareceres.ts` using the exact camelCase keys confirmed from the live response — `versaoFinalId`, `numeroVersao`, `caminhoAnexo`, `criadoPorId`, `aprovadoPorId`, `aprovadoEm`, `advogadoId`, `processoId`, `clienteId`.
-3. Explicitly surface `versaoFinalId` in the "parecer entregue" view planned for this milestone (this closes PARC-09 from the v2.5 audit) — read it as `data.versaoFinalId`, not `data.versao_final_id`.
-4. Do not assume other app conventions (many DB columns are snake_case, e.g. `t_parecer_versao.numero_versao`) apply to the JSON wire format — the DB column name and the JSON key are different layers; `@Column(name=...)` does not affect Jackson serialization at all.
-5. Add a lightweight runtime check in dev (e.g. log a warning if a critical field like `versaoFinalId` is `undefined` on a `CONCLUIDO` solicitação) as a tripwire.
+**Consequences:** Silent data loss — "origem" gets typed into the form, submit succeeds (200/201), but the value is `null` forever, or an already-saved value never renders on the ficha. No error is thrown anywhere in the stack.
 
-**Warning signs:**
-- A badge/field that "should" show up (e.g. delivered-version reference, aprovado timestamp) renders blank despite the network tab showing the field present under a *different* key.
-- `tsc --noEmit` and `pnpm build` pass — this is not sufficient evidence of correctness (this exact false confidence caused the v2.4 miss).
-- Any new type file introduces snake_case keys for fields that don't already have `@JsonProperty` in the corresponding Java entity.
+**Prevention:**
+1. When adding `juizo`/`origem` to `Processo.java`, in the same commit/PR grep `use-processos.ts` for every existing field name (`tipoProcesso`, `areaJuridica`, etc.) as a checklist and add the new field to **both** `normalizeProcesso()` and `toProcessoApiPayload()`, plus the `ProcessoApi`/`ProcessoApiPayload`/`ProcessoCreateRequest`/`ProcessoUpdateRequest`/`Processo` type definitions in `web/src/types/processos.ts`.
+2. After wiring, do a manual round-trip test: create a processo with `origem` set via the UI, reload the page (hard refresh, not client cache), and confirm the value survives. Do not trust `tsc`/build success as evidence.
+3. Consider (as a process-level guardrail, not required this milestone) a small integration test that POSTs an intake payload with all fields set and asserts the GET response echoes every one of them — this is the only mechanical way to catch this class of bug given the current architecture.
 
-**Phase to address:**
-Phase 1 (read-only listing/detail views) — verify field naming against a live backend response *before* building the versioning/aprovar/entregar mutation forms. Do not defer this check to a final integration phase; the v2.4 lesson is that verification-by-grep does not catch this, only a live JSON trace does.
+**Detection:** Field present in DB via direct query but absent from `GET /processos/{id}` JSON response (backend-side gap), or present in JSON but not rendered on the processo detail page (frontend mapping gap). Check both independently.
+
+**Owner phase:** Backend-entity phase (add field + `@Column`) AND frontend-integration phase (wire `use-processos.ts` + form + display) — this is two separate, easy-to-desync changesets. Roadmap should make the frontend mapping an explicit, separately-reviewed task, not an assumed side-effect of "add the field to the entity."
 
 ---
 
-### Pitfall 2: UI implies an editable/actionable state after "entregar" (irreversible transition) has occurred
+### Pitfall 2: "origem" enforced in the frontend wizard step-1 Zod schema but not in backend's `CAMPOS_MINIMOS_POR_TIPO` (or vice versa) — the two validation layers already disagree today
 
-**What goes wrong:**
-`entregarSolicitacao` is a one-way, backend-enforced irreversible transition (`status` → `CONCLUIDO`; the controller explicitly rejects re-entrega and re-aprovar and re-atribuir once `CONCLUIDO`). If the frontend doesn't mirror this state machine, users will see action buttons (versionar, aprovar, atribuir, editar prazo/prioridade) that are still clickable but will 400 at the backend — or worse, users believe they can still change something about a "closed" legal opinion, which is a serious trust/compliance issue for a legal practice tool.
+**What goes wrong:** `origem` is required at intake per the milestone spec, but ends up enforced in only one of two independent validation layers, so a processo can be formalized (or even just intake-created) without it depending on which path is taken.
 
-**Why it happens:**
-The backend enforces the state machine only in **imperative if-checks scattered across each endpoint** (`if ("CONCLUIDO".equals(solicitacao.getStatus()))` appears independently in `atribuirAdvogado`, `aprovarVersao`, `entregarSolicitacao`) rather than a single declarative state-transition table. If the frontend developer reads only one endpoint's logic (e.g. copies the pattern from `atribuir`) they may miss that `updateSolicitacao` (PUT `/{id}`) has **no such guard at all** — a `CONCLUIDO` parecer's `prazo`/`prioridade` can currently still be edited via that endpoint even after delivery. The frontend must decide independently whether to hide/disable that edit form for `CONCLUIDO` records, because the backend won't stop it.
+**Why it happens:** This codebase already has **two parallel, hand-written minimum-field-validation systems** for processo creation that do not share a definition:
+- **Frontend, step 1 (Intake):** `web/src/schemas/processos.ts` → `processoFormSchema`. Today `tipo_processo`, `area_juridica`, `tribunal`, `numero` are all `optionalTrimmedString` — i.e., the frontend wizard's step-1 Zod schema does **not** currently enforce the same "required" fields the backend enforces later. Only `cliente_id` is required client-side.
+- **Backend, formalizar step (not intake):** `ResourceController.java` lines ~72-80, `CAMPOS_MINIMOS_POR_TIPO` — a `Map<String, List<String>>` keyed by `tipo_processo`, checked only inside `formalizarProcesso()` (line ~1181), i.e., at step 3, not at intake (`POST /processos/intake`, line ~1023, does zero field validation beyond forcing `estado=TRIAGEM`).
 
-**How to avoid:**
-1. Build a single frontend state-derivation helper (e.g. `getParecerActions(status, isAdmin, isResponsavel)`) that centralizes which actions are visible/enabled for each of the 4 statuses (`PENDENTE`, `EM_ELABORACAO`, `EM_REVISAO`, `CONCLUIDO`), used consistently across list, detail, and form views — don't scatter `status === "CONCLUIDO"` checks ad hoc across components.
-2. Treat `CONCLUIDO` as fully read-only in the UI: hide/disable "nova versão", "atribuir advogado", "aprovar", "entregar", and the prazo/prioridade edit form — even though the backend endpoint for prazo/prioridade edit doesn't itself reject it server-side. Flag this backend gap (missing guard in `updateSolicitacao` for `CONCLUIDO`) as a security/consistency note for backend review — don't rely on the backend to block it.
-3. Show a clear, persistent visual indicator (e.g. a lock icon + "Parecer entregue — imutável" banner) rather than just disabling buttons silently, so users understand *why* actions are unavailable, not just that they're greyed out.
-4. Because versions themselves are immutable once created (no PUT/PATCH endpoint exists for `ParecerVersao` at all — only POST to create a new one), never build an "editar versão" affordance anywhere in the UI, even for non-`CONCLUIDO` solicitações. The versioning model is append-only by design.
+So today, a processo can already be intake-created with almost nothing filled in, and the user only discovers missing fields when formalizing (step 3), which is confusing but not a security hole. Adding `origem` risks landing in only one of these two places:
+- If added only to the frontend Zod schema: a processo created by direct API call (or if the frontend validation is bypassed/has a bug) can skip origem entirely and reach ATIVO state without it, because the backend's `formalizarProcesso` field-check is the only one that actually gates the state transition, and if `origem` isn't added there too, it's not enforced at all server-side.
+- If added only to `CAMPOS_MINIMOS_POR_TIPO`: the user fills out intake without being told origem is required, then hits an opaque 422 with `camposEmFalta` at step 3 (a jarring UX regression, and note this map is per-`tipo_processo`, so it must be added to **every** entry, including `"default"` — forgetting one entry means that one tipo_processo silently doesn't require origem).
+- The task description explicitly says "required at intake" — but the *only* backend enforcement point that currently exists for minimum fields is `formalizar` (step 3), not `POST /processos/intake` (step 1). If "required at intake" is taken literally, `createProcessoIntake()` itself needs a new check that does not exist for ANY field today (not even `clienteId`) — this is new backend logic, not an extension of an existing pattern.
 
-**Warning signs:**
-- Any component checks `status !== "CONCLUIDO"` inline in JSX rather than through a shared helper — a strong signal of drift risk if the state machine gets a 5th status later.
-- Clicking a disabled-looking button still fires the mutation (disabled only via CSS, not by omitting the handler/route).
-- A form for editing prazo/prioridade is reachable from a `CONCLUIDO` parecer's detail page.
+**Consequences:** Either a compliance gap (origem-less processo reaches ATIVO), or a UX regression (user fills 3 steps then gets blocked with no earlier warning), or both, depending on which layer is missed.
 
-**Phase to address:**
-The phase that builds the "parecer entregue"/detail view and the phase that builds the aprovar/entregar action UI — both should share the same status-derivation logic, ideally introduced once in an early phase (listing/detail) and reused, not reimplemented per phase.
+**Prevention:**
+1. Decide explicitly, in the roadmap/plan, WHERE origem is enforced and make sure it's ALL of: (a) `POST /processos/intake` backend validation (new — doesn't exist for any field today, so this is genuinely new code, not a copy-paste), (b) `CAMPOS_MINIMOS_POR_TIPO` for every `tipo_processo` key including `"default"` (defense in depth for formalizar, in case intake validation is ever bypassed), (c) frontend `processoFormSchema` step-1 Zod schema (so the user is told at step 1, not step 3).
+2. Write the origem check once as a small enum-membership validator reused in both intake creation and formalizar, rather than copy-pasting the same `Set.of("PETICAO_INICIAL", "NOTIFICACOES_AVULSAS")` check into two Java methods that could later drift.
+3. Explicitly test: create intake with `origem` omitted via a raw `curl`/Postman call bypassing the frontend wizard, confirm it's rejected server-side (proves layer (a) exists and isn't just a frontend nicety).
 
----
+**Detection:** Grep `CAMPOS_MINIMOS_POR_TIPO` for `"origem"` after implementation — confirm it's in every map entry, not just `civel`. Separately, confirm `createProcessoIntake()` itself now validates something (today it validates nothing beyond forcing `estado`).
 
-### Pitfall 3: RBAC scope/action drift between backend `@PreAuthorize` and frontend `hasScopedPermission` calls
-
-**What goes wrong:**
-Backend and frontend each independently encode which `pareceres:{view,create,edit,manage}` scope gates which action. If the frontend guesses the wrong action tier for a button (e.g. gates "atribuir advogado" behind `pareceres:create` when the backend actually requires `pareceres:edit`), a user with `edit` permission will see the action hidden in the UI (false negative — annoying but safe) or a user with only `view` will see a button that 403s on click (false positive — worse, since `hasScopedPermission`'s fallback chain treats `edit`/`manage` as implying `create`/`view` but the reverse isn't true, so under-gating in the UI is the more likely failure mode when a developer isn't careful about which tier each backend endpoint actually needs).
-
-**Why it happens:**
-Read directly from `ParecerController.java`, here is the exact scope-to-action-to-endpoint map that the frontend MUST mirror exactly (not approximate):
-
-| Endpoint | Backend scope required |
-|---|---|
-| `POST /pareceres/solicitacoes` (criar) | `pareceres:create` |
-| `GET /pareceres/solicitacoes`, `GET /{id}`, `GET .../versoes`, `GET .../versoes/{id}`, `GET .../anexo`, `GET /pareceres/pesquisa` | `pareceres:view` |
-| `PUT /{id}` (update prazo/prioridade) | `pareceres:edit` |
-| `PUT /{id}/atribuir` | `pareceres:edit` |
-| `PUT /{id}/versoes/{versaoId}/aprovar` | `pareceres:manage` (note: NOT `edit` — this is the highest tier, likely ADMIN-only in practice per seeded roles) |
-| `PUT /{id}/entregar` | `pareceres:edit` (but ALSO has an additional in-code authorization check: `isAdmin || isResponsavel` — a user could have `pareceres:edit` scope generally yet still be blocked from entregar a *specific* parecer they aren't assigned to) |
-| `POST .../versoes` (criar versão) | `pareceres:edit` (same additional `isAdmin || isResponsavel` check as entregar) |
-
-The two extra findings that are easy to miss: (a) `aprovar` uses `manage`, not `edit` — a naive frontend implementation would likely gate it the same as other edit-tier actions and get it wrong; (b) `entregar` and `createVersao` both layer a **resource-instance-level check on top of the scope check** (must be the assigned `advogadoId` or ADMIN) — `hasScopedPermission` alone cannot express this; the frontend needs the current parecer's `advogadoId` plus the current user's id/role to correctly show/hide these two specific actions, not just the permission list from the JWT/session.
-
-**How to avoid:**
-1. Build the permission-gating table above explicitly into the phase's plan/CONTEXT before writing any component — don't infer scope tiers by pattern-matching other modules.
-2. For "nova versão" and "entregar" specifically, gate visibility on **both** `hasScopedPermission(perms, "pareceres", "edit")` **and** `(currentUser.roles.includes("ADMIN") || solicitacao.advogadoId === currentUser.id)`. A helper co-located with the status-derivation helper from Pitfall 2 is the cleanest way to keep this consistent.
-3. For "aprovar", gate on `hasScopedPermission(perms, "pareceres", "manage")`, not `"edit"`.
-4. Since backend authorization is the actual security boundary, UI-side gating errors are a UX problem (confusing 403s or hidden-but-permitted actions), not a security hole — but they still need explicit verification because they were exactly the kind of cross-layer drift the v2.4 audit flagged as a systemic risk class in this codebase.
-5. `pareceres` is already present in `web/src/lib/permissions.ts`'s `KNOWN_SCOPES` — reuse `hasScopedPermission` as-is, no new permission utility needed.
-
-**Warning signs:**
-- A frontend "aprovar" button gated by `pareceres:edit` instead of `pareceres:manage` (would show the button to a broader group of users than backend actually allows, resulting in a silent 403 on click).
-- No frontend check for "is this user the assigned advogado or ADMIN" on the entregar/nova-versão actions — button shown to any user with generic `pareceres:edit`, then blocked server-side with a confusing error.
-
-**Phase to address:**
-The phase that builds the aprovar/entregar/versionar action UI. Recommend a short explicit checklist step cross-referencing each frontend gate against the `@PreAuthorize` line in `ParecerController.java` before considering that phase done — this is cheap to do and was exactly the class of gap the v2.4 audit's remediation step performed after the fact (a "field-by-field static trace"); doing the RBAC equivalent up front avoids needing a repeat audit-driven fix.
+**Owner phase:** Backend-endpoint phase must own both `intake` and `formalizar` validation; a distinct frontend-integration phase should wire the step-1 Zod `.enum()` (not `optionalTrimmedString`) and the step indicator/error messaging — do not let one phase silently assume the other covers it.
 
 ---
 
-### Pitfall 4: File upload/download UX inconsistencies reusing the Documentos/MinIO pattern
+### Pitfall 3: New child entities (Decisão/Facto/Testemunha) copy the Parte/Fase/Movimentação tenant-check pattern correctly for reads/creates, but skip the update/delete ownership re-check that Fase already had to add
 
-**What goes wrong:**
-The Parecer versão attachment flow (`POST .../versoes` multipart, `GET .../versoes/{id}/anexo` presigned URL) is structurally similar to Documentos but has different semantics that a copy-paste reuse of `use-documentos.ts` patterns would get wrong:
-- Documentos supports **delete** and **replace** (`replace_id` field); Parecer versões are immutable — there is no delete/replace endpoint for a `ParecerVersao` or its `caminhoAnexo`. A hook copied from `useUploadDocumento`/`useDeleteDocumento` that includes a delete/replace affordance for a versão attachment would be building UI for an operation the backend does not support (confirmed: no DELETE endpoint exists on `ParecerVersao` anywhere in `ParecerController.java`).
-- Documentos' upload accepts `nome`/`tipo`/`confidencialidade`/`processo_id`/`cliente_id` as separate form fields; Parecer's `createVersao` only accepts `conteudo` (text) and `file` (multipart) as form params — a much narrower payload. Blindly reusing the Documentos upload form fields would send fields the backend controller doesn't read (silently ignored, not an error, but a source of confusion/wasted UI).
-- The attachment is **optional** per version (`conteudo` and `file` are each optional but at least one is required — backend validates `(conteudo == null || blank) && (file == null || empty)` → 400). The UI must support "content-only" versions (no attachment) and "attachment-only" versions (no text) as equally valid, not force both fields to be filled.
-- Download uses the same presigned-URL pattern as Documentos (`GET .../anexo` → `{url, expiresIn}`), which is good — reuse `useDownloadDocumento`'s pattern directly for `useDownloadParecerAnexo`, including its 3600s (1 hour) expiry assumption; don't assume a longer-lived direct link is safe to cache/reuse across a user session.
-- No progress-bar variant equivalent to `useUploadDocumentoComProgresso` exists yet for pareceres — if attachments for pareceres are expected to be large (legal documents/PDFs), the plain `apiFetch`-based mutation (no progress UI) may feel broken on slow connections; decide explicitly whether to port the XHR-progress variant or accept the simpler mutation.
+**What goes wrong:** Looking at the three existing "processo child entity" precedents in `ResourceController.java`:
+- `Parte` (lines ~1521-1539): has `GET`/`POST` only, both check `processo.getTenantId().equals(getTenantId())` before touching the parte. No `PUT`/`DELETE` exists yet, so there's no precedent for the harder case.
+- `ProcessoFase` (lines ~1542-1621): has `GET`/`POST`/`PUT`. The `PUT` (`updateProcessoFase`, line ~1596) does the tenant check on the **parent processo** AND then a **second check**: `pf.getProcessoId().equals(id)` — i.e., it re-verifies the fetched `ProcessoFase` row actually belongs to the `{id}` processo in the URL, not just to *some* processo in the tenant. This is the correct, harder pattern.
+- `Movimentacao` (lines ~1624-1643): has `GET`/`POST` only, same single-check pattern as Parte.
 
-**Why it happens:**
-Reuse-by-analogy is the fastest path to a working UI (and is explicitly encouraged since a MinIO-backed `StorageService` already exists and is proven), but the two modules' business rules diverge (mutable/deletable/replaceable documents vs. immutable, append-only, one-way versions), and a straight copy of hook logic imports operations that don't map to real endpoints.
+None of these three entities have a dedicated tenant_id column — they're tenant-scoped **only transitively** through their parent `Processo`. This is a subtle, easy-to-miss design: a naive port of the `GET`/`POST` pattern to Decisão/Facto/Testemunha (child entities #3, #4, #5) is safe for `GET`/`POST`, but if `PUT`/`DELETE` are added (very likely needed — Decisões get corrected, Testemunhas get removed, Factos get reordered) and someone copies the *simpler* Parte/Movimentacao pattern instead of the *correct* Fase pattern, you get an authorization gap: **checking `processo.tenantId == currentTenant` alone is not enough for `PUT`/`DELETE {childId}` — you must also check the fetched child row's `processoId` equals the `{id}` path segment**, otherwise a user in Tenant A who knows/guesses a Decisão UUID belonging to a *different processo in the same tenant* (or worse, a cross-processo IDOR if the child ID space isn't tenant-partitioned) could update/delete a record on a processo they don't have the URL for. Since IDs here are sequential `Integer` (like `ProcessoFase`'s `faseId: Integer`) rather than `UUID`, this is a realistic guessable-ID scenario if Decisão/Facto/Testemunha reuse `GenerationType.IDENTITY` — check what Honorario used (`Integer id`, `GenerationType.IDENTITY`) versus what fully-UUID entities used.
 
-**How to avoid:**
-1. Write `use-pareceres.ts` hooks fresh, referencing `use-documentos.ts` only for the shared low-level patterns (FormData construction, `apiFetch` with `credentials: include`, presigned-URL download-then-navigate), not for the higher-level CRUD shape (no delete/replace mutations for versões).
-2. Build the "nova versão" form with `conteudo` as an optional `<textarea>` and `file` as an optional file input, with client-side validation requiring at least one non-empty — mirroring the backend's exact validation message, not inventing new copy.
-3. Do not add a delete or replace button anywhere in the versão UI.
-4. Decide progress-bar UX intentionally (likely: reuse the XHR pattern if attachments are typically PDFs of non-trivial size) rather than defaulting to the simpler no-progress mutation just because it's less code.
+**Consequences:** Cross-processo (same-tenant) IDOR on update/delete of Decisão/Facto/Testemunha — a real authorization bug, not just a UX issue, especially concerning for Decisão given it can carry an attached court document.
 
-**Warning signs:**
-- A "delete versão" or "replace anexo" button appears anywhere in the UI — there is no backend support for it.
-- Upload form requires both content and file (blocks valid single-field submissions the backend would accept).
-- Upload form sends `nome`/`tipo`/`confidencialidade` fields that `createVersao`'s `@RequestParam`s never declare (silently dropped server-side, wasted client code).
+**Prevention:**
+1. For every `PUT`/`DELETE {id}/decisoes/{decisaoId}` (and facto/testemunha equivalents), copy the **Fase** pattern exactly: fetch parent processo + tenant check, THEN fetch the child row + `child.getProcessoId().equals(id)` check, not just the Parte/Movimentacao single-check pattern.
+2. If Decisão/Facto/Testemunha use `Integer`/sequential IDs (matching the `ProcessoFase`/`Honorario` precedent), the double-check above is **mandatory**, not optional — sequential IDs are trivially enumerable.
+3. Explicitly write this ownership check into the phase's acceptance criteria / review checklist rather than assuming "we did tenant checks like the other entities" is sufficient — the *existing* codebase already has an inconsistency (Parte/Movimentacao lack it, Fase has it) that a future audit already flagged as a category of risk in this project's history (`@PreAuthorize` scope mismatches, IDOR-adjacent bugs).
 
-**Phase to address:**
-The phase that builds versioning/attachment UI (mirrors backend Phase 62 "Elaboração e Versionamento").
+**Detection:** Code review checklist per new child-entity endpoint: does every `PUT`/`DELETE`/single-item `GET` verify BOTH (a) parent processo belongs to tenant AND (b) fetched child row's `processoId` equals the path's `{id}`? If an endpoint only does (a), flag it.
+
+**Owner phase:** Backend-entity phase for Decisão/Facto/Testemunha — put this check explicitly in the phase's plan/task list per entity (3x), not as a single shared assumption. This is exactly the kind of thing a plan-checker/verifier gate should look for given the project's `config.json`-driven ASVS-level-1 enforcement.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 4: Auto-created Honorario on formalizar is not idempotent — retrying/double-clicking "Formalizar" or a network retry creates duplicate honorarios
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|--------------------|-----------------|------------------|
-| Reusing Documentos' full CRUD hook shape (delete/replace) for pareceres versões | Faster to scaffold | Builds dead/misleading UI for unsupported operations, confuses future maintainers about the immutability model | Never — write pareceres hooks against pareceres' actual endpoint set |
-| Inferring JSON field casing from the Java class instead of a live response | Saves a manual curl/Postman round-trip | Repeats the exact v2.4 defect class that broke 9/19 requirements silently | Never for this project, given the documented history |
-| Scattering `status === "CONCLUIDO"` checks ad hoc per component instead of one shared helper | Faster initial implementation | Inconsistent action-gating across list/detail/form views as statuses evolve | Acceptable only for a single, very small, throwaway prototype — not for this milestone's shipped UI |
-| Gating "aprovar" and "entregar"/"nova versão" using only scope-level `hasScopedPermission` (ignoring the backend's instance-level `isAdmin \|\| isResponsavel` check) | Simpler permission logic | Buttons shown to users who will get a 403 on click; confusing UX for an irreversible/compliance-sensitive action | Never for entregar/nova-versão; acceptable for view-only actions where there's no instance-level backend check |
+**What goes wrong:** `formalizarProcesso()` (line ~1181) is `@Transactional` and currently ends with `processo.setEstado("ATIVO"); return ResponseEntity.ok(processoRepository.save(processo));`. If Honorario auto-creation is added inside this method, the natural implementation is "if estado transitions to ATIVO, also create a Honorario row." But look at the method's own guard: `if (!"TRIAGEM".equalsIgnoreCase(processo.getEstado())) return 409 CONFLICT`. This guard *does* prevent a second full formalizar call after the first succeeds (since estado is now ATIVO) — **but only if the first call actually completed and committed**. The real risk windows are:
+1. **Frontend double-submit before the first request completes:** `onFormalizar()` in `web/src/app/(dashboard)/processos/novo/page.tsx` (line ~164) does call `formalizarProcesso.mutateAsync()` guarded by `formalizarProcesso.isPending` disabling the button — this mitigates the UI-level double click reasonably well today, so the higher risk is (2).
+2. **Client retry after a timeout/network error where the server actually succeeded** (classic "did my write happen?" ambiguity) — the frontend's `catch` block treats any thrown error as "formalizar failed, let user retry," but if the backend's transaction actually committed (estado=ATIVO, Honorario created) and only the *response* was lost, a retry will hit the `409 CONFLICT` (state guard) — but only if the Honorario-creation code is placed correctly relative to the state check. If Honorario creation is accidentally placed in a code path that can be reached from `ATIVO` state too (e.g., a separate "generate honorario" trigger added for flexibility, or if formalizar is refactored to be re-callable), duplicates become possible.
+3. Even without a bug, the **state-based guard is not the same as idempotency at the Honorario level** — nothing about `formalizarProcesso` checks "does this processo already have an auto-created Honorario" before creating one. Today's `createHonorario()` (line ~2186) endpoint has no uniqueness constraint on `processo_id` (unlike, e.g., the tenant-scoped unique `documento_numero` constraint mentioned in CLAUDE.md) — nothing in the DB schema prevents two Honorario rows for the same processo.
 
-## Integration Gotchas
+**Consequences:** Duplicate financial records tied to a real processo — a duplicate Honorario would double-count in the Financeiro module, corrupt `ContaCorrente` balance calculations on payment (see `createPagamento`'s balance-update logic at line ~2222), and require manual cleanup, which is much worse for a financial record than for e.g. a duplicate Movimentacao entry.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|-----------------|-------------------|
-| Spring Boot JSON serialization (Jackson default, no naming strategy) | Assuming DB column snake_case (`@Column(name="versao_final_id")`) implies JSON key is also snake_case | JSON key always follows the Java field name (camelCase) unless `@JsonProperty` overrides it — confirmed no such override exists on `ParecerSolicitacao`/`ParecerVersao`; treat every field as camelCase on the wire until proven otherwise by a live response |
-| MinIO-backed StorageService via existing `/documentos/*` pattern | Copying Documentos' full CRUD hook surface (delete/replace) onto pareceres versões, which have no such endpoints | Scope pareceres hooks to only the 3 real endpoints: create-versão (multipart POST), list/get-versão (GET), download-anexo (GET presigned URL) |
-| RBAC (`@PreAuthorize` vs `hasScopedPermission`) | Assuming all pareceres mutating actions use the same scope tier (`edit`) | `aprovar` requires `manage`, a stricter tier than `edit`/`entregar`/`nova-versão` — verify each endpoint's actual `@PreAuthorize` string individually, don't assume uniformity |
-| Instance-level authorization layered on top of scope-based RBAC (`entregar`, `nova versão`: `isAdmin \|\| isResponsavel`) | Gating UI only on the JWT-derived permission list, ignoring per-record ownership | Fetch/derive `advogadoId` for the current solicitação and compare to the logged-in user's id (plus ADMIN role check) before showing entregar/nova-versão actions |
+**Prevention:**
+1. Do not rely solely on the `estado != TRIAGEM → 409` guard as the idempotency mechanism. Explicitly check "does an Honorario already exist for this `processo_id`" (`honorarioRepository.findByProcessoId(id)`, which already exists per the `listHonorarios` usage) immediately before creating one inside `formalizarProcesso`, and skip creation (not error) if one already exists — this makes the whole operation naturally idempotent even under retry/replay, independent of the state guard.
+2. Consider a DB-level unique constraint or at minimum a code-level invariant comment stating "one auto-created Honorario per processo" — even if the milestone doesn't require blocking manual creation of *additional* honorarios later (e.g., amendments), the *auto-created* one specifically should be a singleton per processo, distinguishable perhaps via `descricao` convention (e.g., seeded from `honorariosPropostos`) or a boolean/source flag if the schema allows a quick addition.
+3. Write a specific test: call `formalizar` twice in sequence (simulating retry) and assert exactly one Honorario row exists for the processo afterward, regardless of whether the second call is rejected by the state guard or short-circuited by the existence check.
 
-## Performance Traps
+**Detection:** Query `SELECT processo_id, COUNT(*) FROM t_honorario GROUP BY processo_id HAVING COUNT(*) > 1` after any retry-testing session.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| `listSolicitacoes` fetches all tenant rows then filters in-memory in Java (`.stream().filter(...)`) — no DB-level pagination | Fine for demo/small tenants; slow list responses as row count grows | Frontend should still build proper filter/search UI now (mirroring `pesquisar()`), but don't assume the backend paginates — avoid rendering unbounded lists without client-side virtualization/pagination controls once volumes grow | Noticeable once a tenant accumulates hundreds+ of `t_parecer_solicitacao` rows; not a v2.6 blocker but worth flagging as a backend follow-up, not silently working around it with heavier client logic |
-| `synchronized (ParecerVersaoRepository.class)` block for `numeroVersao` generation | Works correctly for reasonably low concurrent version-creation rates | No frontend action needed — but don't build UI that assumes instantaneous version numbering under high concurrency (e.g. optimistic-UI showing "v4" before the server confirms) — wait for the server response before displaying the new version number | Only relevant under heavy concurrent multi-user editing of the same solicitação simultaneously, which is an unlikely real-world pattern for this workflow but still means optimistic version-number UI would occasionally be wrong |
+**Owner phase:** Backend-endpoint phase (the `formalizar` handler itself) — this must be an explicit line item in that phase's plan, not an assumed side-effect of "call honorarioRepository.save() at the end of formalizar."
+
+---
+
+### Pitfall 5: Auto-created Honorario silently defaults `valorTotal` to a real (wrong) currency amount instead of requiring explicit confirmation
+
+**What goes wrong:** `Cliente.honorariosPropostos` (a JSON-converted field from the v2.4 intake flow, `Cliente.java` line ~91-94, type `HonorariosPropostos`) already stores a *proposed* fee captured at client intake — totality, "por extenso" (written-out amount), and "previsão" (forecast/estimate). This is the obvious, tempting source to auto-populate the new Honorario's `valorTotal` on formalizar. But:
+1. `honorariosPropostos` is captured per-**cliente**, not per-**processo** — a cliente can have multiple processos (the ficha's own "Processos" tab, wired in Phase 77, proves this 1-to-many relationship is real and already in production use). A cliente with 3 active processos has exactly one `honorariosPropostos` value on their record; blindly copying it to Honorario on *every* processo's formalizar would give every processo the same fee, which is almost certainly wrong (each processo may have its own separately-negotiated fee, or none at all if this cliente's proposed value was for a different case entirely).
+2. `honorariosPropostos` was captured as a **proposal at intake time**, worded loosely ("por extenso" suggests it was designed to mirror a hand-written estimate on a paper intake form, not a binding contractual value) — auto-materializing it as a real `t_honorario.valor_total` row without any human review turns a soft estimate into a hard financial record with zero confirmation step. `Honorario.valorTotal` is a real `BigDecimal` that flows directly into `ContaCorrente` balance math via `Pagamento` — this is not a cosmetic field.
+3. The task description itself flags this risk explicitly ("valor should never be auto-set to a real currency amount without user confirmation") — this is the single highest-severity pitfall in this entire feature set because it's a money bug, not a display bug.
+
+**Consequences:** A processo goes ATIVO with an auto-created Honorario carrying an incorrect, stale, or cliente-level-not-processo-level fee amount, with no visible flag that it needs review, and it can silently start accruing payments against the wrong number before anyone notices — very costly to unwind in a legal billing context (client trust, financial audit trail).
+
+**Prevention:**
+1. Do NOT copy any numeric value from `Cliente.honorariosPropostos` into `Honorario.valorTotal` automatically. If the milestone wants to surface the proposed value for convenience, pre-fill it **only in a UI form the user must explicitly submit/confirm** (e.g., a "Confirmar Honorário" step shown right after formalizar succeeds, pre-populated but editable, with `valorTotal` starting `null`/blank until the user saves) — never have the backend `formalizarProcesso()` transaction itself write a non-null `valorTotal`.
+2. The backend-created Honorario stub (if auto-created inside `formalizar` for the sake of having a `processo_id` linkage/row to attach the "Termo de Honorários" to) should have `valorTotal = null` and `descricao` indicating "a confirmar" (pending), never a currency figure — this matches the existing `updateHonorario` PATCH-style endpoint (line ~2253) which already supports setting `valorTotal` after the fact via a separate authenticated action gated by `financeiro:edit`.
+3. Make the "Termo de Honorários" generation explicitly check for `valorTotal == null` and either block printing or clearly render "___________" (the existing `BLANK` placeholder pattern from `ficha/page.tsx`'s `fmt()` helper) rather than printing a legal document with a blank/zero amount that could be mistaken for "free of charge."
+4. RBAC: creating/confirming the real `valorTotal` should require `financeiro:edit` (matching the existing `createHonorario`/`updateHonorario` scope), which is a **different** permission scope than `processos:manage` (which gates `formalizar` itself) — a user with `processos:manage` but not `financeiro:edit` should be able to formalize the processo but should NOT be the one silently setting a real fee amount as a side effect of an action gated under a different permission. This is a second RBAC-scope pitfall layered on top of the money pitfall: the side-effect must not grant financial-write capability through a non-financial permission gate.
+
+**Detection:** Manual test: formalize a processo for a cliente that has `honorariosPropostos` filled in, and confirm the resulting Honorario is NOT pre-filled with that number without an explicit save action by a `financeiro:edit`-scoped user.
+
+**Owner phase:** Backend-endpoint phase must decide and implement the null-valorTotal-stub approach; a distinct frontend-integration phase must build the explicit confirmation UI. Flag this pairing explicitly in the roadmap — do not let "auto-create Honorario" be scoped as a single backend-only task, since the money-safety property depends on the frontend confirmation step existing.
+
+## Moderate Pitfalls
+
+### Pitfall 6: "Termo de Honorários" print template pulls from 3 entities (Cliente, Processo, Honorario) fetched via 3 separate hooks with independent loading/error states — stale or partial data can print silently
+
+**What goes wrong:** The existing print precedent (`ficha/page.tsx`) fetches from multiple hooks (`useCliente`, `useClienteAdvogados`, `useClienteAdministrativos`) and only gates the whole page on `cliente.isLoading`/`cliente.isError` — the secondary hooks' loading/error states are not checked before rendering, they just render empty/whatever-they-have. For "Termo de Honorários," the equivalent risk is worse because it spans 3 *different* top-level entities (Cliente, Processo, Honorario) rather than one entity plus its sub-resources, and one of those (Honorario) may not exist yet (see Pitfall 5 — `valorTotal` may be `null`, or the Honorario record may not have been created/confirmed at all if formalizar's auto-creation is skipped/failed).
+
+**Prevention:**
+- Gate the print page's render on ALL THREE hooks' `isLoading`/`isError`, not just the primary one (Cliente in the existing precedent is the "primary"; here there may be a 3-way tie).
+- Explicitly handle "Honorario not found for this processo" as a distinct state (not just a null-guarded blank field) — printing a "Termo de Honorários" for a processo with no honorario at all is a meaningless document and should probably be blocked with a clear message, not silently rendered with every value showing the `BLANK` placeholder.
+- Reuse the exact `fmt()`/`BLANK` null-guard helper from `ficha/page.tsx` for every field pulled from all three entities, especially `valorTotal` (currency formatting AND null-guard both needed — `fmt()` today does a raw `String(value)` cast, which is fine for text fields but would need a currency-aware variant for `valorTotal` to avoid printing something like `1500` unformatted on a legal document).
+- Cliente fields used in the Termo (nome, NIF, morada) went through the v2.7/v2.8 flattening — pull from the current flat columns (`cliente.nome`, `cliente.nif`, `cliente.morada`), not any legacy `dados_tipo` shape (already removed, but worth an explicit reminder given how recently that migration happened).
+
+**Owner phase:** Frontend-integration phase, same phase that builds the Documentos tab / print flow — should explicitly list "loading/error gating across 3 hooks" and "currency-safe null-guard for valorTotal" as acceptance criteria, not assume the existing `fmt()` helper covers it as-is.
+
+---
+
+### Pitfall 7: Decisão's optional document attachment reuses the generic `Documento` entity, but `Documento` has no `decisao_id` column — the linkage needs a real FK or it becomes an untracked file with no ownership trail
+
+**What goes wrong:** `Documento.java` currently has exactly two optional linkage columns: `processo_id` and `cliente_id` (line ~23-27). There is no generic "attach to any entity" pattern — every consumer of Documento so far has been either processo-scoped or cliente-scoped. If Decisão's optional attachment is implemented by just setting `documento.processoId` (reusing the existing processo linkage) with no `decisao_id` anywhere, the document becomes indistinguishable from any other processo-level document once inside the (new, v2.9) "Documentos" tab — there's no way to know "this specific PDF is the ruling attached to Decisão #4" versus "this is an unrelated document uploaded to the processo's general Documentos tab." This directly undermines the feature's own purpose (a Decisão with a traceable attached ruling).
+
+**Prevention:**
+- Add a nullable `decisao_id` column to `Documento` (following the exact precedent of `processo_id`/`cliente_id` — nullable UUID, no cascade complexity) rather than inventing a separate attachment mechanism, OR store the `documento_id` as a FK column on the `Decisao` entity itself pointing at an existing `Documento` row (simpler, one-directional, matches "optional attachment" framing better since Decisão is the owner of the relationship, not Documento).
+- Whichever direction is chosen, ensure the tenant/ownership check added in Pitfall 3 (child.processoId == path {id}) is extended to also verify, when a `documento_id`/attachment is set, that the referenced Documento belongs to the same tenant AND the same processo — otherwise this reintroduces exactly the gap Phase 79's code review caught and fixed for `POST /documentos/upload` (`clienteId`/`processoId` ownership validation before persist, per the Key Decisions log) — don't regress that fix by adding a new unvalidated FK.
+
+**Owner phase:** Backend-entity phase for Decisão — decide the FK direction explicitly as a design decision before implementation starts (this affects both the Decisão entity shape and the Documentos-tab query logic), and re-apply the Phase 79 ownership-validation pattern to whichever new endpoint sets this link.
+
+## Minor Pitfalls
+
+### Pitfall 8: New `origem` enum values risk a label/value mismatch between Portuguese display labels and stored enum constants
+
+**What goes wrong:** The milestone spec gives the two origem values as "Petição Inicial" and "Notificações Avulsas" — human-readable Portuguese labels with accents and spaces. If these are stored verbatim as the enum/string value (rather than a stable code like `PETICAO_INICIAL`/`NOTIFICACOES_AVULSAS` with the accented label only in the UI layer), any future rename of the display label becomes a data migration, and accent/encoding issues become a real risk for exact-match filtering (`WHERE origem = 'Petição Inicial'`).
+
+**Prevention:** Follow the existing `DocumentoTipo`/`conflictNivelEnum` precedent — store a stable uppercase/ASCII code server-side, map to the accented Portuguese label only in frontend display helpers (mirroring `conflictNivelToLabel()` in `web/src/lib/conflict-check.ts`).
+
+**Owner phase:** Backend-entity phase (choose the stored enum values) — flag this as a 5-minute decision to make explicit rather than accidentally storing the label text via a copy-pasted string field.
+
+---
+
+### Pitfall 9: Facto's "ordering field" gets reindexed inconsistently on delete/insert, or two Factos silently share the same order value
+
+**What goes wrong:** An explicit "ordem" field (as opposed to relying on `created_at` or a linked-list `nextId`) requires the backend to either auto-increment on insert (like `ProcessoFase`'s implicit chronological order) or accept a user-supplied position. If insert simply does `ordem = maxExistingOrdem + 1` without a per-processo scope, two Factos on different processos could collide in ways that don't matter, but on the *same* processo an insert-in-the-middle or delete operation that doesn't shift subsequent `ordem` values leaves gaps or (worse) ties, and any UI `sort by ordem` becomes non-deterministic for tied rows.
+
+**Prevention:** Scope the max-order lookup to `processo_id` explicitly (`SELECT MAX(ordem) FROM t_facto WHERE processo_id = ?`, tenant-checked the same way `ProcessoFase` creation resolves its catalog), and decide upfront whether reordering (drag-and-drop, "move up/down") is in scope for this milestone — if not, at minimum ensure delete doesn't need to compact the sequence (gaps in `ordem` are harmless for sort-only use; only tie-breaking on insert matters).
+
+**Owner phase:** Backend-entity phase for Facto — small but worth one explicit line in that phase's plan ("ordem assignment scoped per processo_id, ties broken by created_at as secondary sort").
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
-|-------------|------------------|------------|
-| Listagem/detalhe (read-only views) | camelCase/snake_case mismatch (Pitfall 1) — this is the phase where the mistake would first be introduced and is cheapest to catch | Trace a live JSON response before writing `types/pareceres.ts`; explicitly test `versaoFinalId` rendering to close PARC-09 |
-| Vista "parecer entregue" (surfacing `versaoFinalId`) | Same field-naming risk, plus risk of the view rendering as if editable | Read `versaoFinalId` correctly (Pitfall 1); render this view as fully read-only/locked (Pitfall 2) |
-| Formulário de solicitação (criação) | RBAC gating for `pareceres:create` is the simplest case (no instance-level check) — lowest risk phase | Standard `hasScopedPermission(perms, "pareceres", "create")`, straightforward |
-| Versionamento (conteúdo/anexo) | File upload UX drift from Documentos pattern (Pitfall 4); instance-level RBAC for nova-versão (Pitfall 3) | Write hooks fresh scoped to actual endpoints; gate on `edit` scope AND `isAdmin||isResponsavel` |
-| Aprovação/entrega | Wrong RBAC tier for aprovar (`manage` not `edit`) (Pitfall 3); irreversibility not reflected in UI post-entrega (Pitfall 2) | Explicit scope-to-endpoint table check per action; shared status-derivation helper disabling all mutating actions once `CONCLUIDO` |
-| Pesquisa avançada | Lower risk — mostly read-only GET with query params; still subject to Pitfall 1 for any result fields displayed | Verify search result JSON shape against live response, same discipline as listagem phase |
+|-------------|----------------|------------|
+| Backend: add `juizo`/`origem` columns to Processo | Pitfall 1 (mapping layer), Pitfall 2 (dual validation layers), Pitfall 8 (enum value stability) | Add fields to entity + both `CAMPOS_MINIMOS_POR_TIPO` and new intake-validation; choose stable enum codes upfront |
+| Backend: Decisão/Facto/Testemunha entities + endpoints | Pitfall 3 (ownership double-check on PUT/DELETE), Pitfall 7 (Documento FK direction), Pitfall 9 (ordem scoping) | Copy the `ProcessoFase` PUT pattern (parent tenant check + child.processoId re-check), not the simpler Parte/Movimentacao pattern; decide Documento↔Decisão FK direction before coding |
+| Backend: formalizar side-effect (auto Honorario) | Pitfall 4 (idempotency), Pitfall 5 (valor auto-default, RBAC scope mismatch) | Existence-check before create (not just state guard); `valorTotal` starts null; confirmation step requires `financeiro:edit` separately from `processos:manage` |
+| Frontend: intake wizard step 1 (origem field) | Pitfall 1, Pitfall 2 | `processoFormSchema` origem field must be `z.enum(...)`, not `optionalTrimmedString`; wire `normalizeProcesso`/`toProcessoApiPayload` in the same PR |
+| Frontend: Documentos tab (reuse Clientes v2.8 pattern) | Pitfall 7 (attachment ownership validation regression) | Re-apply Phase 79's tenant/ownership pre-persist check to any new processo-scoped or decisao-scoped upload path |
+| Frontend: Termo de Honorários print page | Pitfall 6 (3-hook loading/error gating, currency null-guard) | Gate render on all 3 hooks; extend `fmt()` pattern with a currency-safe variant; block/flag print when Honorario or valorTotal is missing |
+| Cross-cutting: RBAC on all new endpoints | Frontend `hasScopedPermission` vs backend `@PreAuthorize` mismatch (project's known recurring pitfall #3, not re-derived here per instructions) | Explicit side-by-side checklist per new endpoint: backend scope string vs frontend `permissions.can.*` call, reviewed together, not independently |
 
 ## Sources
 
-- `backend/src/main/java/com/lexcv/models/ParecerSolicitacao.java` (read directly — confirms no `@JsonProperty` overrides)
-- `backend/src/main/java/com/lexcv/models/ParecerVersao.java` (read directly — confirms no `@JsonProperty` overrides)
-- `backend/src/main/java/com/lexcv/controllers/ParecerController.java` (read directly — confirms exact `@PreAuthorize` scope per endpoint, state-machine guard locations, instance-level authorization checks on entregar/createVersao)
-- `.planning/milestones/v2.4-MILESTONE-AUDIT.md` (read directly — documented root cause and mechanism of the prior camelCase/snake_case defect class in this exact codebase)
-- `.planning/v2.5-MILESTONE-AUDIT.md` (read directly — confirms backend-only v2.5 scope, the `versaoFinalId` surfacing gap (PARC-09), and the milestone's own recommendation to build v2.6 as a dedicated UI milestone)
-- `.planning/PROJECT.md` (read directly — Key Decisions table entry on the v2.4 `@JsonProperty` remediation choice and its explicitly-scoped, non-global nature)
-- `web/src/lib/permissions.ts` (read directly — confirms `pareceres` is already a registered scope, and the `ACTION_FALLBACKS` semantics that `edit`/`manage`/`create` gating must respect)
-- `web/src/hooks/use-documentos.ts` (read directly — the concrete hook pattern for MinIO-backed upload/download/progress that this milestone should partially reuse and partially deliberately diverge from)
-
-All findings above are HIGH confidence: derived from direct reads of this repository's actual backend source and prior milestone audit documents, not from general domain knowledge or web search.
+- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (read directly: lines 60-1260, 1521-1660, 2171-2290) — formalizar/intake/conflict-check logic, Parte/Fase/Movimentacao/Honorario CRUD patterns, tenant-check precedents
+- `backend/src/main/java/com/lexcv/models/Processo.java`, `Honorario.java`, `Documento.java`, `Cliente.java` — entity field shapes, `@JsonProperty`/`@Column` conventions, `honorariosPropostos` JSON-converted field
+- `web/src/hooks/use-processos.ts` (lines 1-115) — `normalizeProcesso`/`toProcessoApiPayload` manual mapping layer (root cause of Pitfall 1)
+- `web/src/schemas/processos.ts` — `processoFormSchema` current field requiredness
+- `web/src/app/(dashboard)/processos/novo/page.tsx` — 3-step intake→conflict-check→formalizar wizard implementation
+- `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx` — existing `window.print()` + `fmt()`/`BLANK` null-guard pattern, direct precedent for Termo de Honorários
+- `.planning/PROJECT.md` — Key Decisions log (Phase 79 ownership-validation fix, `@JsonProperty` cirúrgico decision, `dados_tipo` flattening history) and milestone-provided pitfall history
