@@ -1,3 +1,11 @@
+import type { z } from "zod";
+
+import type {
+  origemProcessoSchema,
+  tipoDecisaoSchema,
+  tipoTestemunhaSchema,
+} from "@/schemas/processos";
+
 // --- Phase 33: Workflow, Gates e Prazos ---
 
 export type PrazoRisco = "ok" | "proximo" | "vencido";
@@ -6,15 +14,13 @@ export type TransicaoAcao = "ativar" | "suspender" | "encerrar" | "reabrir";
 
 // --- Phase 83: Juizo/Origem + Decisao/Facto/Testemunha ---
 
-export type TipoDecisao =
-  | "DESPACHO"
-  | "DECISAO_INTERLOCUTORIA"
-  | "SENTENCA"
-  | "ACORDAO";
+// Derived from the Zod enums in @/schemas/processos (single source of truth,
+// WR-05) rather than hand-duplicated literal unions, so the two can't drift.
+export type TipoDecisao = z.infer<typeof tipoDecisaoSchema>;
 
-export type TipoTestemunha = "AUTOR" | "REU";
+export type TipoTestemunha = z.infer<typeof tipoTestemunhaSchema>;
 
-export type OrigemProcesso = "PETICAO_INICIAL" | "NOTIFICACOES_AVULSAS";
+export type OrigemProcesso = z.infer<typeof origemProcessoSchema>;
 
 // ---
 
