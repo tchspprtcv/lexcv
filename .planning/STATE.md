@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: verifying
-stopped_at: Completed 83-02-PLAN.md
-last_updated: "2026-07-07T23:09:00.342Z"
+status: ready_to_plan
+stopped_at: Phase 83 complete (2/2) — ready to discuss Phase 84
+last_updated: 2026-07-07T23:44:49.204Z
 last_activity: 2026-07-07
 progress:
   total_phases: 5
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 83 — Frontend — Tipos, Schemas e Hooks
+**Current focus:** Phase 84 — frontend — ui (intake, dados, sub secções, documentos, termo de honorários)
 
 ## Current Position
 
-Phase: 83 (Frontend — Tipos, Schemas e Hooks) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 84
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-07
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 26
+- Total plans completed: 28
 - Average duration: —
 - Total execution time: —
 
@@ -55,6 +55,7 @@ Progress: [██████████] 100%
 | 80 | 1 | - | - |
 | 81 | 3 | - | - |
 | 82 | 1 | - | - |
+| 83 | 2 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 80 P01 | 15min | 3 tasks | 10 files |
