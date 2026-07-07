@@ -157,7 +157,9 @@ See archive: [milestones/v2.8-ROADMAP.md](milestones/v2.8-ROADMAP.md) · [milest
   2. Existem três entidades novas — `Decisao` (data, tipo enum `TipoDecisao`: Despacho | Decisão Interlocutória | Sentença | Acórdão, resumo, anexo opcional), `Facto` (descrição, data, ordem por processo), `Testemunha` (nome, contacto, tipo enum: Autor | Réu, notas) — cada uma com FK `processo_id`, sem coluna `tenant_id` própria (isolamento transitivo via processo pai, mesmo padrão de `Parte`)
   3. Cada entidade nova tem um repositório Spring Data JPA correspondente
   4. A aplicação arranca e persiste corretamente as tabelas novas (`ddl-auto=update`), sem quebrar nenhum fluxo existente de Processo
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 80-01-PLAN.md — Enums (OrigemProcesso/TipoDecisao/TipoTestemunha) + Processo.juizo/origem + Decisao/Facto/Testemunha entities + repositories
 
 #### Phase 81: Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem
 **Goal**: A API expõe CRUD completo e seguro para Decisões, Factos e Testemunhas, e os campos Juízo/Origem estão totalmente integrados no ciclo de vida do Processo (criação, edição, intake e listagem).
@@ -247,7 +249,7 @@ See archive: [milestones/v2.8-ROADMAP.md](milestones/v2.8-ROADMAP.md) · [milest
 | 77. Separadores — Processos e Pareceres | v2.8 | 1/1 | Complete    | 2026-07-05 |
 | 78. Separadores — Documentos a Tratar e Deslocações | v2.8 | 1/1 | Complete    | 2026-07-06 |
 | 79. Documentos Entregues — Upload Real | v2.8 | 2/2 | Complete    | 2026-07-06 |
-| 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 0/TBD | Not started | - |
+| 80. Fundações — Processo.juizo/origem + Entidades | v2.9 | 0/1 | Not started | - |
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 0/TBD | Not started | - |
 | 82. Backend — Honorário Automático | v2.9 | 0/TBD | Not started | - |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 0/TBD | Not started | - |
