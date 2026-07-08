@@ -11,6 +11,7 @@ import { useHonorarios } from "@/hooks/use-financeiro";
 import { useMe } from "@/hooks/use-me";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcesso } from "@/hooks/use-processos";
+import { origemProcessoToLabel } from "@/lib/origem-processo";
 import type { Cliente } from "@/types/clientes";
 import type { Honorario } from "@/types/financeiro";
 import type { Processo } from "@/types/processos";
@@ -39,6 +40,11 @@ const BLANK = "___________";
 function fmt(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return BLANK;
   return String(value);
+}
+
+function fmtMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return BLANK;
+  return value.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
 
 export default function TermoHonorariosPage({ params }: PageProps) {
@@ -121,17 +127,82 @@ function TermoHonorariosContent({ id }: { id: string }) {
   );
 }
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="uppercase font-semibold text-sm border-b border-gray-300 pb-1 mb-3 mt-6">
+      {children}
+    </h2>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  const isBlank = value === BLANK;
+  return (
+    <div className="grid grid-cols-2 gap-2 py-1 text-sm">
+      <span className="text-gray-600">{label}</span>
+      <span className={isBlank ? "font-mono underline" : ""}>{value}</span>
+    </div>
+  );
+}
+
 function TermoHonorarios({
-  processo: _processo,
-  cliente: _cliente,
-  honorario: _honorario,
-  tenantNome: _tenantNome,
+  processo,
+  cliente,
+  honorario,
+  tenantNome,
 }: {
   processo: Processo;
   cliente: Cliente;
   honorario: Honorario;
   tenantNome: string;
 }) {
-  // Implemented in Task 2 (document body: SectionTitle/Field sections).
-  return null;
+  const dataFormatada = new Date().toLocaleDateString("pt-CV", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  return (
+    <div className="max-w-[210mm] mx-auto p-8 bg-white text-black">
+      <div className="text-center mb-6">
+        <div className="font-bold text-lg">{tenantNome}</div>
+        <div className="font-semibold text-base uppercase mt-1">Termo de Honorários</div>
+        <div className="text-xs text-gray-600 mt-1">{dataFormatada}</div>
+      </div>
+
+      <SectionTitle>Identificação do Cliente</SectionTitle>
+      <Field label="Nome" value={fmt(cliente.nome)} />
+      <Field label="NIF" value={fmt(cliente.nif)} />
+      <Field label="Morada" value={fmt(cliente.morada)} />
+
+      <SectionTitle>Identificação do Processo</SectionTitle>
+      <Field label="Número" value={fmt(processo.numero)} />
+      <Field label="Tipo" value={fmt(processo.tipo_processo)} />
+      <Field label="Tribunal" value={fmt(processo.tribunal)} />
+      <Field label="Juízo" value={fmt(processo.juizo)} />
+      <Field
+        label="Origem"
+        value={fmt(processo.origem ? origemProcessoToLabel(processo.origem) : undefined)}
+      />
+
+      <SectionTitle>Honorários</SectionTitle>
+      <Field label="Valor Total" value={fmtMoney(honorario.valorTotal)} />
+      <Field label="Total Pago" value={fmtMoney(honorario.totalPago)} />
+      <Field label="Data do Acordo" value={fmt(honorario.dataAcordo)} />
+      <Field label="Descrição" value={fmt(honorario.descricao)} />
+
+      <SectionTitle>Data e Assinaturas</SectionTitle>
+      <div className="text-sm mb-6">Data: ___/___/______</div>
+      <div className="grid grid-cols-2 gap-8 mt-8">
+        <div>
+          <div className="border-b border-black min-w-[200px] h-8" />
+          <div className="text-center text-sm mt-2">O Advogado</div>
+        </div>
+        <div>
+          <div className="border-b border-black min-w-[200px] h-8" />
+          <div className="text-center text-sm mt-2">O Cliente</div>
+        </div>
+      </div>
+    </div>
+  );
 }
