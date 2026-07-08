@@ -49,16 +49,14 @@ Exceptions (established codebase-wide, reuse verbatim — do not invent new valu
 
 ## Typography
 
-The established codebase does not follow a strict global 2-weight system — it uses 3 weights consistently and predictably by role. Documenting the actual convention (not inventing a new one) per the "be prescriptive, reflect reality" principle, since this phase extends 83 prior phases of one running app rather than seeding a new design system.
+Exactly 2 font weights, per role. Table column headers and the page `h1` are visually distinguished from body text via size, `uppercase`/`tracking-wider`, and `tracking-tight` alone — never via a third font weight.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body / table cell / `dl dd` value | 14px (`text-sm`) | 400 (regular) | 1.5 (Tailwind default leading) |
-| Label / meta / table header / timestamp | 12px (`text-xs`) | 500 (`font-medium`); table column headers additionally use 700 (`font-bold`) + `uppercase tracking-wider` | 1.4 |
-| Card / section title (`CardTitle`) | 16px (`text-base`, CardTitle's implicit default — no explicit size class) | 600 (`font-semibold`) | 1.2 (`leading-none tracking-tight`) |
-| Page title (`h1`) | 24px (`text-2xl`) | 700 (`font-bold`) | 1.2 |
-
-Exception: 3 weights (400/500/600 or 400/500/700 depending on element) rather than the recommended 2 — kept deliberately to match every other tab/page in this app; introducing a 4th weight anywhere in Phase 84 is NOT permitted.
+| Body / table cell / `dl dd` value | 14px (`text-sm`) | 400 (regular, `font-normal`) | 1.5 (Tailwind default leading) |
+| Label / meta / timestamp | 12px (`text-xs`) | 400 (regular, `font-normal`) | 1.4 |
+| Table column headers | 12px (`text-xs`) | 600 (`font-semibold`) — visually distinguished further via `uppercase tracking-wider`, not a heavier weight | 1.4 |
+| Card / section title (`CardTitle`) / Page title (`h1`) | `CardTitle`: 16px (`text-base`, implicit default); `h1`: 24px (`text-2xl`) | 600 (`font-semibold`) | `CardTitle`: 1.2 (`leading-none tracking-tight`); `h1`: 1.2 |
 
 ---
 
@@ -80,7 +78,7 @@ Exception: 3 weights (400/500/600 or 400/500/700 depending on element) rather th
 6. Focus rings on inputs/selects/textareas (`focus-visible:ring-blue-500` / `focus-visible:ring-neutral-950` depending on which page's existing convention is being extended — `processos/[id]/page.tsx` uses `ring-blue-500`, match that file's convention for all new work in this phase since it's the file being edited)
 
 **Destructive (`red-600`) reserved for:**
-1. Remove/delete icon buttons (`✕`, `hover:text-red-600`) on Decisão/Facto/Testemunha/Documento rows
+1. Remove/delete icon buttons (`✕`, `hover:text-red-600`) on Decisão/Facto/Testemunha/Documento rows. Each is icon-only and MUST carry an accessible-name fallback (`aria-label`), entity-specific: `aria-label="Apagar decisão"` (Decisões row), `aria-label="Apagar facto"` (Factos row), `aria-label="Apagar testemunha"` (Testemunhas row), `aria-label="Apagar documento"` (Documentos row).
 2. Inline error text (`text-sm text-red-600`) under any field or as a Dialog/card-level server error
 3. The disabled-print blocking message and disabled "Imprimir" button state on Termo de Honorários when `valorTotal` is `null`
 
@@ -88,14 +86,16 @@ Exception: 3 weights (400/500/600 or 400/500/700 depending on element) rather th
 
 ## Copywriting Contract
 
-This phase touches 7 surfaces (4 new tabs, 2 refactored tabs, 1 new print route). One combined table, grouped by surface, in lieu of the single-row template (documented expansion — all rows still map onto the 5 template roles).
+This phase touches 7 surfaces (4 new tabs, 2 refactored tabs, 1 new print route). One combined table, grouped by surface, in lieu of the single-row template (documented expansion — all rows still map onto the 5 template roles). Each surface also states its primary visual anchor (the element the eye lands on first) so the Dialog/CTA is never mistaken for the focal point.
 
 ### Decisões tab
+
+Visual anchor: the decisões table (existing rows) — "Adicionar Decisão" is a secondary corner action, not the focal point.
 
 | Element | Copy |
 |---------|------|
 | Tab button label | `Decisões` |
-| Primary CTA (Dialog trigger, `size="sm" variant="outline"`) | `Adicionar` |
+| Primary CTA (Dialog trigger, `size="sm" variant="outline"`) | `Adicionar Decisão` |
 | Dialog title (create) | `Adicionar Decisão` |
 | Dialog title (edit) | `Editar Decisão` |
 | Empty state | `Nenhuma decisão registada.` |
@@ -104,13 +104,16 @@ This phase touches 7 surfaces (4 new tabs, 2 refactored tabs, 1 new print route)
 | Success toast | `Decisão adicionada com sucesso.` / `Decisão atualizada com sucesso.` |
 | Destructive confirmation | `window.confirm("Apagar esta decisão?")` — mirrors the exact established pattern in `clientes/[id]/page.tsx` (`ClienteDocumentoEntregueRow.onDelete`), same phrasing structure `"Apagar {artigo} {entidade}?"` |
 | Delete success toast | `Decisão apagada com sucesso.` |
+| Delete icon button accessible name | `aria-label="Apagar decisão"` (icon-only `✕`, no visible text) |
 
 ### Factos tab
+
+Visual anchor: the factos table, ordered by `ordem`.
 
 | Element | Copy |
 |---------|------|
 | Tab button label | `Factos` |
-| Primary CTA | `Adicionar` |
+| Primary CTA | `Adicionar Facto` |
 | Dialog title (create) | `Adicionar Facto` |
 | Dialog title (edit) | `Editar Facto` (this is the reordering entry point — the editable `ordem` field lives here per Claude's Discretion note in CONTEXT.md) |
 | Empty state | `Nenhum facto registado.` |
@@ -119,13 +122,16 @@ This phase touches 7 surfaces (4 new tabs, 2 refactored tabs, 1 new print route)
 | Success toast | `Facto adicionado com sucesso.` / `Facto atualizado com sucesso.` |
 | Destructive confirmation | `window.confirm("Apagar este facto?")` |
 | Delete success toast | `Facto apagado com sucesso.` |
+| Delete icon button accessible name | `aria-label="Apagar facto"` (icon-only `✕`, no visible text) |
 
 ### Testemunhas tab
+
+Visual anchor: the testemunhas table.
 
 | Element | Copy |
 |---------|------|
 | Tab button label | `Testemunhas` |
-| Primary CTA | `Adicionar` |
+| Primary CTA | `Adicionar Testemunha` |
 | Dialog title (create) | `Adicionar Testemunha` |
 | Dialog title (edit) | `Editar Testemunha` |
 | Empty state | `Nenhuma testemunha registada.` |
@@ -134,15 +140,18 @@ This phase touches 7 surfaces (4 new tabs, 2 refactored tabs, 1 new print route)
 | Success toast | `Testemunha adicionada com sucesso.` / `Testemunha atualizada com sucesso.` |
 | Destructive confirmation | `window.confirm("Apagar esta testemunha?")` |
 | Delete success toast | `Testemunha apagada com sucesso.` |
+| Delete icon button accessible name | `aria-label="Apagar testemunha"` (icon-only `✕`, no visible text) |
 
 ### Documentos tab (processo)
 
 Mirror `ClienteDocumentosEntreguesTab` verbatim (same FileDropZone + tipo datalist + progress bar pattern), scoped to `processo_id` instead of `cliente_id`.
 
+Visual anchor: the FileDropZone drop target at the top of the tab, with the documentos list beneath it.
+
 | Element | Copy |
 |---------|------|
 | Tab button label | `Documentos` |
-| Primary CTA | `Adicionar` |
+| Primary CTA | `Adicionar Documento` |
 | Dialog title | `Adicionar Documento` |
 | Empty state | `Nenhum documento registado.` |
 | List load error | `Não foi possível carregar os documentos deste processo.` |
@@ -150,14 +159,17 @@ Mirror `ClienteDocumentosEntreguesTab` verbatim (same FileDropZone + tipo datali
 | Upload success toast | `Documento enviado com sucesso.` (exact string reused) |
 | Destructive confirmation | `window.confirm("Apagar este documento?")` (exact string reused verbatim) |
 | Delete success toast | `Documento apagado com sucesso.` |
+| Delete icon button accessible name | `aria-label="Apagar documento"` (icon-only `✕`, no visible text) |
 
 ### Partes tab (refactored — layout only, no new CRUD capability)
 
 No update/delete hooks exist for `ProcessoParte` (`useAddProcessoParte`/`useProcessoPartes` only) — this refactor is **visual only**: move the existing "Adicionar parte" form out of its fixed side-by-side Card into a Dialog. Do not add edit/delete affordances that have no backend support.
 
+Visual anchor: the existing partes table (unchanged) — the Dialog trigger is secondary, next to the `Partes` CardTitle.
+
 | Element | Copy |
 |---------|------|
-| Primary CTA | `Adicionar` (`size="sm" variant="outline"`, next to the `Partes` CardTitle) |
+| Primary CTA | `Adicionar Parte` (`size="sm" variant="outline"`, next to the `Partes` CardTitle) |
 | Dialog title | `Adicionar Parte` |
 | Empty state (unchanged) | `Sem partes.` |
 | Create error fallback (unchanged) | `Erro ao adicionar parte` |
@@ -167,9 +179,11 @@ No update/delete hooks exist for `ProcessoParte` (`useAddProcessoParte`/`useProc
 
 No delete hook exists; the existing inline per-row status `<select>` + "Guardar" button (`useUpdateProcessoFaseStatus`) is **kept as-is** in the table's "Ações" column. Only the "Adicionar fase" form moves into a Dialog.
 
+Visual anchor: the existing fases table with inline status controls (unchanged) — the Dialog trigger is secondary.
+
 | Element | Copy |
 |---------|------|
-| Primary CTA | `Adicionar` |
+| Primary CTA | `Adicionar Fase` |
 | Dialog title | `Adicionar Fase` |
 | Empty state (unchanged) | `Sem fases.` |
 | Create error fallback (unchanged) | `Erro ao adicionar fase` |
@@ -177,6 +191,8 @@ No delete hook exists; the existing inline per-row status `<select>` + "Guardar"
 | Inline row action (unchanged) | `Guardar` (per-row status update button) |
 
 ### Dados card — Termo de Honorários trigger
+
+Visual anchor: n/a (single button described below; no competing focal element).
 
 | Element | Copy |
 |---------|------|
@@ -186,6 +202,8 @@ No delete hook exists; the existing inline per-row status `<select>` + "Guardar"
 ### Termo de Honorários route (`[id]/termo-honorarios`)
 
 Clone `clientes/[id]/ficha/page.tsx`'s `PRINT_CSS`/`window.print()`/`BLANK` pattern exactly.
+
+Visual anchor: the printable document body (the `SectionTitle` sections themselves) — the "Imprimir" button is a toolbar action, not the focal point.
 
 | Element | Copy |
 |---------|------|
@@ -223,12 +241,13 @@ Not applicable — no shadcn CLI, no `components.json`, no registries in use in 
 ## Component & Layout Notes (executor reference, beyond the standard template sections)
 
 - **`TabKey` union extension** in `processos/[id]/page.tsx`: `"timeline" | "partes" | "fases" | "decisoes" | "factos" | "testemunhas" | "documentos" | "auditoria"`. Tab button order in the toggle group: Timeline, Partes, Fases, Decisões, Factos, Testemunhas, Documentos, Auditoria (Auditoria stays last and `canManageProcessos`-gated, matching current code).
-- **Dialog pattern to replicate exactly** (structure, not copy): `Dialog open={x} onOpenChange={setX}` + `<DialogTrigger asChild><Button type="button" variant="outline" size="sm">Adicionar</Button></DialogTrigger>` + `<DialogContent><DialogHeader><DialogTitle>...</DialogTitle></DialogHeader>` body `<DialogFooter><Button variant="outline">Cancelar</Button><Button onClick={confirm...}>Confirmar</Button></DialogFooter>`. Source: `clientes/[id]/page.tsx` lines ~898-922 ("Documentos a Tratar").
+- **Dialog pattern to replicate exactly** (structure, not copy): `Dialog open={x} onOpenChange={setX}` + `<DialogTrigger asChild><Button type="button" variant="outline" size="sm">{entity-specific "Adicionar X" label — see Copywriting Contract}</Button></DialogTrigger>` + `<DialogContent><DialogHeader><DialogTitle>...</DialogTitle></DialogHeader>` body `<DialogFooter><Button variant="outline">Cancelar</Button><Button onClick={confirm...}>Confirmar</Button></DialogFooter>`. Source: `clientes/[id]/page.tsx` lines ~898-922 ("Documentos a Tratar").
 - **Edit-as-Dialog for Decisão/Facto/Testemunha** (new pattern, no direct precedent in Cliente page since those lists have no edit): reuse the same `Dialog`/`DialogTrigger`/`DialogContent` shell, but trigger via a small edit icon/button per table row instead of a single top-of-card "Adicionar" trigger; pre-populate the form via `form.reset(rowData)` when opening.
 - **Decisão file input is a native `<input type="file">` registered with RHF** (`{...decisaoForm.register("file")}`, `FileList` via `fileListSchema`), submitted as multipart in `useAddDecisao` — this is explicitly NOT the `FileDropZone` component used in the Documentos tab. Two different upload UIs coexist by design in this phase (CONTEXT.md decision).
 - **Factos `ordem` reordering** = an editable numeric field inside the "Editar Facto" Dialog (no drag-and-drop), per Claude's Discretion resolution in CONTEXT.md — satisfies PROC-10 without new interaction machinery.
 - **Termo de Honorários data sourcing**: combine `useProcesso(id)`, `useCliente(processo.cliente_id)`, and `useHonorarios({ processoId: id })` (take first/only result — one Honorário per processo by Phase 82 invariant) — `useHonorario(honorarioId)` for the single-record fetch once the id is known.
 - **Badge variants already established, reuse — do not invent new ones**: `green`/`amber`/`purple`/`gray`/`secondary`/`blue`/`red`, always paired with `className="rounded-none font-bold tracking-wide"`.
+- **Icon-only destructive buttons** (Decisão/Facto/Testemunha/Documento row `✕`): each MUST carry the entity-specific `aria-label` declared in the Color section's Destructive list — do not ship an icon-only button without an accessible name.
 
 ---
 
