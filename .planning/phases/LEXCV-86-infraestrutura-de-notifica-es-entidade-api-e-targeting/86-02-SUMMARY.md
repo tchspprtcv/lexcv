@@ -99,3 +99,12 @@ None - no external service configuration required.
 ---
 *Phase: 86-infraestrutura-de-notificacoes-entidade-api-e-targeting*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+- FOUND: backend/src/main/java/com/lexcv/services/NotificacaoService.java
+- FOUND: backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java
+- FOUND: .planning/phases/LEXCV-86-infraestrutura-de-notifica-es-entidade-api-e-targeting/86-02-SUMMARY.md
+- FOUND: 84f96c6 (test commit)
+- FOUND: 625e935 (feat commit)
+- FOUND: 50e5d0f (docs/summary commit)
