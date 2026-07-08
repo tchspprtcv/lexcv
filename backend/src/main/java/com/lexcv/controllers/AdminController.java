@@ -229,6 +229,7 @@ public class AdminController {
                 new RbacResponse.PermissionDefDto("pareceres:create", "Criar Solicitações", "Criar novas solicitações de parecer jurídico", "Pareceres"),
                 new RbacResponse.PermissionDefDto("pareceres:edit", "Elaborar e Entregar Pareceres", "Criar versões, elaborar conteúdo e entregar pareceres", "Pareceres"),
                 new RbacResponse.PermissionDefDto("pareceres:manage", "Aprovar Pareceres", "Aprovação interna de pareceres jurídicos", "Pareceres"),
+                new RbacResponse.PermissionDefDto("notificacoes:view", "Visualizar Notificações", "Ver e marcar como lidas as notificações próprias", "Notificações"),
                 new RbacResponse.PermissionDefDto("rbac:manage", "Gerir Permissões (RBAC)", "Alterar regras de acesso globais por função", "Administração"),
                 new RbacResponse.PermissionDefDto("users:manage", "Gerir Utilizadores", "Criar, ativar/desativar, e configurar utilizadores", "Administração")
         );
