@@ -51,7 +51,6 @@ import {
   useAddDecisao,
   useAddFacto,
   useAddProcessoFase,
-  useAddProcessoMovimentacao,
   useAddProcessoParte,
   useAddTestemunha,
   useAuditLog,
@@ -67,7 +66,6 @@ import {
   usePrazos,
   useProcesso,
   useProcessoFases,
-  useProcessoMovimentacoes,
   useProcessoPartes,
   useTestemunhas,
   useTimeline,
@@ -90,7 +88,6 @@ import {
   prazoFormSchema,
   processoFaseFormSchema,
   processoFaseStatusSchema,
-  processoMovimentacaoFormSchema,
   processoParteFormSchema,
   testemunhaFormSchema,
   tipoDecisaoSchema,
@@ -100,7 +97,6 @@ import {
   type FactoFormValues,
   type PrazoFormValues,
   type ProcessoFaseFormValues,
-  type ProcessoMovimentacaoFormValues,
   type ProcessoParteFormValues,
   type TestemunhaFormValues,
   type TransicaoJustificativaFormValues,
@@ -116,7 +112,6 @@ import type {
   ProcessoFaseCreateRequest,
   ProcessoFaseStatus,
   ProcessoFaseUpdateRequest,
-  ProcessoMovimentacaoCreateRequest,
   ProcessoParteCreateRequest,
   Testemunha,
   TestemunhaCreateRequest,
@@ -227,7 +222,6 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
   const partes = useProcessoPartes(id);
   const fases = useProcessoFases(id);
-  const movimentacoes = useProcessoMovimentacoes(id);
 
   // Workflow hooks
   const workflow = useWorkflow(id);
@@ -239,7 +233,6 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const addParte = useAddProcessoParte(id);
   const addFase = useAddProcessoFase(id);
   const updateFaseStatus = useUpdateProcessoFaseStatus(id);
-  const addMov = useAddProcessoMovimentacao(id);
 
   const decisoes = useDecisoes(id);
   const addDecisao = useAddDecisao(id);
@@ -280,10 +273,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
   const userNomeById = new Map((adminUsers.data ?? []).map((u) => [u.id, u.nome] as const));
 
-  const isLoading =
-    processo.isLoading || clientes.isLoading || partes.isLoading || fases.isLoading || movimentacoes.isLoading;
-  const isError =
-    processo.isError || clientes.isError || partes.isError || fases.isError || movimentacoes.isError;
+  const isLoading = processo.isLoading || clientes.isLoading || partes.isLoading || fases.isLoading;
+  const isError = processo.isError || clientes.isError || partes.isError || fases.isError;
 
   const parteForm = useForm<ProcessoParteFormValues>({
     resolver: zodResolver(processoParteFormSchema),
@@ -298,12 +289,6 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   });
   const [faseServerError, setFaseServerError] = React.useState<string | null>(null);
   const [addFaseModal, setAddFaseModal] = React.useState(false);
-
-  const movForm = useForm<ProcessoMovimentacaoFormValues>({
-    resolver: zodResolver(processoMovimentacaoFormSchema),
-    defaultValues: { titulo: "", descricao: undefined, data: undefined },
-  });
-  const [movServerError, setMovServerError] = React.useState<string | null>(null);
 
   const [addDecisaoModal, setAddDecisaoModal] = React.useState(false);
   const [editingDecisaoId, setEditingDecisaoId] = React.useState<number | null>(null);
@@ -492,25 +477,6 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     } catch {
       setFaseServerError("Erro ao atualizar status da fase");
       toast.error("Erro ao atualizar status da fase");
-    }
-  };
-
-  const onSubmitMov = async (values: ProcessoMovimentacaoFormValues) => {
-    setMovServerError(null);
-    if (!canEditProcessos) return;
-    try {
-      const data = values.data ? new Date(values.data).toISOString() : undefined;
-      await addMov.mutateAsync({
-        titulo: values.titulo,
-        descricao: values.descricao,
-        data,
-      } satisfies ProcessoMovimentacaoCreateRequest);
-      movForm.reset({ titulo: "", descricao: undefined, data: undefined });
-      toast.success("Movimentação registada.");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao adicionar movimentação";
-      setMovServerError(msg);
-      toast.error(msg);
     }
   };
 
@@ -731,9 +697,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 ? partes.error.message
                 : fases.error instanceof Error
                   ? fases.error.message
-                  : movimentacoes.error instanceof Error
-                    ? movimentacoes.error.message
-                    : "Erro ao carregar"}
+                  : "Erro ao carregar"}
         </div>
       ) : processo.data ? (
         <div className="space-y-4">
