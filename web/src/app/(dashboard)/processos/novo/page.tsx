@@ -23,11 +23,12 @@ import {
 } from "@/hooks/use-processos";
 import { toast } from "@/hooks/use-toast";
 import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-check";
+import { origemProcessoToLabel } from "@/lib/origem-processo";
 import {
   conflictCheckDecisaoFormSchema,
-  processoFormSchema,
+  processoIntakeFormSchema,
   type ConflictCheckDecisaoFormValues,
-  type ProcessoFormValues,
+  type ProcessoIntakeFormValues,
 } from "@/schemas/processos";
 import type { ConflictCheckDecisaoRequest, ConflictCheckResponse, Processo } from "@/types/processos";
 
@@ -76,8 +77,8 @@ function ProcessoWizardContent() {
   const formalizarProcesso = useFormalizarProcesso(processoId ?? "");
 
   // Step 1 form
-  const intakeForm = useForm<ProcessoFormValues>({
-    resolver: zodResolver(processoFormSchema),
+  const intakeForm = useForm<ProcessoIntakeFormValues>({
+    resolver: zodResolver(processoIntakeFormSchema),
     defaultValues: {
       cliente_id: "",
       numero: undefined,
@@ -89,6 +90,7 @@ function ProcessoWizardContent() {
       estado: undefined,
       data_inicio: undefined,
       data_fim: undefined,
+      origem: undefined,
     },
   });
 
@@ -102,7 +104,7 @@ function ProcessoWizardContent() {
     },
   });
 
-  const onStep1Submit = async (values: ProcessoFormValues) => {
+  const onStep1Submit = async (values: ProcessoIntakeFormValues) => {
     setStep1Error(null);
     if (!canCreateProcessos) {
       setStep1Error("Não tem permissão para criar processos");
@@ -321,6 +323,23 @@ function ProcessoWizardContent() {
                     <p className="text-sm text-red-600">{intakeForm.formState.errors.tipo_processo.message}</p>
                   ) : null}
                 </div>
+              </div>
+
+              {/* Row: Origem */}
+              <div className="space-y-2">
+                <Label htmlFor="origem">Origem</Label>
+                <select
+                  id="origem"
+                  className={selectClassName}
+                  {...intakeForm.register("origem")}
+                >
+                  <option value="">Selecionar origem</option>
+                  <option value="PETICAO_INICIAL">{origemProcessoToLabel("PETICAO_INICIAL")}</option>
+                  <option value="NOTIFICACOES_AVULSAS">{origemProcessoToLabel("NOTIFICACOES_AVULSAS")}</option>
+                </select>
+                {intakeForm.formState.errors.origem ? (
+                  <p className="text-sm text-red-600">{intakeForm.formState.errors.origem.message}</p>
+                ) : null}
               </div>
 
               {/* Row 2: Número + Área Jurídica */}
