@@ -31,6 +31,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ import {
 } from "@/hooks/use-processos";
 import { toast } from "@/hooks/use-toast";
 import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-check";
+import { origemProcessoToLabel } from "@/lib/origem-processo";
 import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
 import {
   prazoFormSchema,
@@ -90,7 +92,15 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-type TabKey = "timeline" | "partes" | "fases" | "auditoria";
+type TabKey =
+  | "timeline"
+  | "partes"
+  | "fases"
+  | "decisoes"
+  | "factos"
+  | "testemunhas"
+  | "documentos"
+  | "auditoria";
 
 const selectClassName =
   "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
@@ -460,6 +470,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 <dt className="text-neutral-500 dark:text-neutral-400">Tribunal</dt>
                 <dd className="col-span-2">{processo.data.tribunal ?? "—"}</dd>
 
+                <dt className="text-neutral-500 dark:text-neutral-400">Juízo</dt>
+                <dd className="col-span-2">{processo.data.juizo ?? "—"}</dd>
+
+                <dt className="text-neutral-500 dark:text-neutral-400">Origem</dt>
+                <dd className="col-span-2">
+                  {processo.data.origem ? origemProcessoToLabel(processo.data.origem) : "—"}
+                </dd>
+
                 <dt className="text-neutral-500 dark:text-neutral-400">Cliente</dt>
                 <dd className="col-span-2">
                   {clienteNomeById.get(processo.data.cliente_id) ?? "—"}
@@ -494,6 +512,20 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 <dt className="text-neutral-500 dark:text-neutral-400">Atualizado</dt>
                 <dd className="col-span-2">{formatDateTime(processo.data.updated_at)}</dd>
               </dl>
+
+              {processo.data?.estado === "ATIVO" ? (
+                <div className="pt-4">
+                  <Button asChild className="rounded-none font-bold bg-blue-600 hover:bg-blue-700 text-white">
+                    <Link
+                      href={`/processos/${encodeURIComponent(id)}/termo-honorarios`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Gerar Termo de Honorários
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -934,6 +966,34 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
             >
               Fases
             </Button>
+            <Button
+              type="button"
+              variant={tab === "decisoes" ? "secondary" : "outline"}
+              onClick={() => setTab("decisoes")}
+            >
+              Decisões
+            </Button>
+            <Button
+              type="button"
+              variant={tab === "factos" ? "secondary" : "outline"}
+              onClick={() => setTab("factos")}
+            >
+              Factos
+            </Button>
+            <Button
+              type="button"
+              variant={tab === "testemunhas" ? "secondary" : "outline"}
+              onClick={() => setTab("testemunhas")}
+            >
+              Testemunhas
+            </Button>
+            <Button
+              type="button"
+              variant={tab === "documentos" ? "secondary" : "outline"}
+              onClick={() => setTab("documentos")}
+            >
+              Documentos
+            </Button>
             {canManageProcessos ? (
               <Button
                 type="button"
@@ -1369,7 +1429,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 </CardContent>
               </Card>
             </div>
-          ) : tab === "auditoria" && canManageProcessos ? (
+          ) : tab === "decisoes" ? null : tab === "factos" ? null : tab === "testemunhas" ? null : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
