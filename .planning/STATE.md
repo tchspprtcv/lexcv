@@ -4,8 +4,8 @@ milestone: v2.10
 milestone_name: Notificações e Alertas
 status: executing
 stopped_at: v2.10 ROADMAP.md created (Phases 85–89)
-last_updated: "2026-07-08T18:56:58.133Z"
-last_activity: 2026-07-08 -- Phase 86 planning complete
+last_updated: "2026-07-08T19:22:31.567Z"
+last_activity: 2026-07-08 -- Phase 86 execution started
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 86 — infraestrutura de notificações — entidade, api e targeting
+**Current focus:** Phase 86 — Infraestrutura de Notificações — Entidade, API e Targeting
 
 ## Current Position
 
-Phase: 86
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-08 -- Phase 86 planning complete
+Phase: 86 (Infraestrutura de Notificações — Entidade, API e Targeting) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 86
+Last activity: 2026-07-08 -- Phase 86 execution started
 
 ## Performance Metrics
 
