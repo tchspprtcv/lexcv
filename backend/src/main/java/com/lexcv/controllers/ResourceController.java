@@ -2556,8 +2556,15 @@ public class ResourceController {
     // ==========================================
     @PreAuthorize("hasAuthority('financeiro:view')")
     @GetMapping("/honorarios")
-    public ResponseEntity<?> listHonorarios() {
+    public ResponseEntity<?> listHonorarios(@RequestParam(name = "processo_id", required = false) UUID processoId) {
         UUID tenantId = getTenantId();
+        if (processoId != null) {
+            Processo processo = processoRepository.findById(processoId).orElse(null);
+            if (processo == null || !processo.getTenantId().equals(tenantId)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+            }
+            return ResponseEntity.ok(honorarioRepository.findByProcessoId(processoId));
+        }
         // Return honorarios associated with processes under current tenant
         List<Processo> tenantProcs = processoRepository.findByTenantId(tenantId);
         List<Honorario> response = new ArrayList<>();
