@@ -471,8 +471,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     }
   };
 
-  const onUpdateFaseStatus = async (faseId: number) => {
-    const status = faseDraftStatus[faseId];
+  const onUpdateFaseStatus = async (faseId: number, currentStatus: ProcessoFaseStatus) => {
+    const status = faseDraftStatus[faseId] ?? currentStatus;
     const payload: ProcessoFaseUpdateRequest = { status };
     try {
       await updateFaseStatus.mutateAsync({ faseId, payload });
@@ -1734,7 +1734,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => onUpdateFaseStatus(f.id)}
+                                  onClick={() => onUpdateFaseStatus(f.id, f.status)}
                                   disabled={!canEditProcessos || updateFaseStatus.isPending}
                                 >
                                   Guardar
