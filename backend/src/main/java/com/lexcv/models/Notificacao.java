@@ -8,7 +8,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "t_notificacao")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -44,6 +43,7 @@ public class Notificacao {
     @Column(name = "link_url")
     private String linkUrl;
 
+    @Setter
     @Column(nullable = false)
     @Builder.Default
     private Boolean lida = false;
