@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: ready_to_plan
-stopped_at: Phase 86 complete (3/3) — ready to discuss Phase 87
-last_updated: 2026-07-08T23:11:08.035Z
-last_activity: 2026-07-08 -- Phase 86 execution started
+status: planning
+stopped_at: Phase 87 UI-SPEC approved
+last_updated: "2026-07-08T23:45:22.821Z"
+last_activity: 2026-07-08
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
   completed_plans: 4
-  percent: 20
+  percent: 40
 ---
 
 # Project State
@@ -135,9 +135,9 @@ Items acknowledged and deferred at milestone v2.9 close on 2026-07-08 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T14:45:00.000Z
-Stopped at: v2.10 ROADMAP.md created (Phases 85–89)
-Resume file: None
+Last session: 2026-07-08T23:45:22.791Z
+Stopped at: Phase 87 UI-SPEC approved
+Resume file: .planning/phases/LEXCV-87-alertas-de-eventos-fase-documento-atribui-o-e-parecer/87-UI-SPEC.md
 
 ## Operator Next Steps
 
