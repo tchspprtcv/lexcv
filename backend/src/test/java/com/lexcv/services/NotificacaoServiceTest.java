@@ -90,6 +90,27 @@ class NotificacaoServiceTest {
     }
 
     @Test
+    void criar_camposComTamanhoExcedido_lancaIllegalArgumentException() {
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "x".repeat(256), "t", "m", "processo", "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "x".repeat(256), "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "x".repeat(256), "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "x".repeat(256)));
+        verify(notificacaoRepository, never()).save(any());
+        // Prova requireMaxLength(...) para os quatro campos ainda não cobertos (categoria,
+        // entidadeTipo, entidadeId, linkUrl) — "titulo" já está coberto pelo teste anterior.
+        // Mesma razão do teste de requireNonBlank: uma remoção silenciosa de uma destas
+        // chamadas não seria apanhada por um teste que só exercita um campo diferente.
+    }
+
+    @Test
     void criar_camposObrigatoriosEmBranco_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
