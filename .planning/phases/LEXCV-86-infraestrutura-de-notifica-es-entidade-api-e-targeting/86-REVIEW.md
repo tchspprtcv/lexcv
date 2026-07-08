@@ -1,8 +1,8 @@
 ---
 phase: LEXCV-86-infraestrutura-de-notifica-es-entidade-api-e-targeting
-reviewed: 2026-07-08T00:00:00Z
+reviewed: 2026-07-08T23:15:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 10
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/models/Notificacao.java
   - backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java
@@ -12,189 +12,172 @@ files_reviewed_list:
   - backend/src/main/java/com/lexcv/controllers/NotificacaoController.java
   - backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java
   - backend/src/main/java/com/lexcv/controllers/AdminController.java
+  - backend/src/main/java/com/lexcv/config/UserPrincipal.java
   - web/src/lib/permissions.ts
 findings:
   critical: 0
-  warning: 5
-  info: 5
-  total: 10
+  warning: 4
+  info: 9
+  total: 13
 status: issues_found
 ---
 
 # Phase 86: Code Review Report
 
-**Reviewed:** 2026-07-08T00:00:00Z
+**Reviewed:** 2026-07-08T23:15:00Z
 **Depth:** standard
-**Files Reviewed:** 9
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Narrative Findings (AI reviewer)
 
 ### Summary
 
-This phase introduces `Notificacao` — the codebase's first per-recipient-private resource — plus its repository, service (the designated sole write chokepoint, including ADMIN fan-out), controller, unit tests, migration, and the `notificacoes:view` RBAC plumbing threaded through `DatabaseSeeder`, `AdminController`, and the frontend `permissions.ts` registry.
+This is a fresh, independent re-review of Phase 86 (`Notificacao` entity, `NotificacaoRepository`, the `NotificacaoService` write chokepoint + ADMIN fan-out, `NotificacaoController`, migration, and `notificacoes:view` RBAC plumbing across `DatabaseSeeder`/`AdminController`/`UserPrincipal`/`permissions.ts`). Two prior review cycles are on record: cycle 1 found 5 Warnings (all fixed, commits `1b095af`, `2f48092`, `35afb15`, `46b6c9d`, `aa8dd78`); cycle 2 found 2 new Warnings, of which one (missing test coverage for `criar()`'s validation branches) was fixed (commit `66ad927`) and one (the native-query/`Pageable`/`countQuery` combination never executed against real PostgreSQL) was explicitly skipped as outside an automated fixer's scope.
 
-**The specific risk this review was asked to prioritize was checked and not confirmed:** every repository finder (`buscarPorFiltros`, `countByTenantIdAndDestinatarioIdAndLidaFalse`, `findByTenantIdAndDestinatarioIdAndLidaFalse`, `findByIdAndTenantIdAndDestinatarioId`) carries both `tenant_id` and `destinatario_id` as non-optional predicates; every `NotificacaoController` endpoint sources both ids exclusively from `SecurityContextHolder` (never from client-suppliable input); and a full-codebase grep confirms `NotificacaoRepository.save`/`saveAll` is called only from `NotificacaoService` (plus the test) — no bypass writer exists. The `marcarLida` 404-not-403 design (returning empty rather than leaking existence for another destinatario's row) is implemented correctly and matches its documented intent.
+**Independently re-verified, not taken on faith:**
+- Re-traced every query and mutation path (`buscarPorFiltros`, `countByTenantIdAndDestinatarioIdAndLidaFalse`, `findByTenantIdAndDestinatarioIdAndLidaFalse`, `findByIdAndTenantIdAndDestinatarioId`, `criar`, `marcarLida`, `marcarTodasLidas`, `notificarAdmins`) end-to-end for a tenant/destinatario scoping bypass. Found none — every controller endpoint sources `tenantId`/`destinatarioId` exclusively from `SecurityContextHolder`, never from client-suppliable input, and every repository finder carries both as non-optional predicates. **0 Critical confirmed independently.**
+- Re-read `NotificacaoServiceTest.java` line-by-line against the cycle-2 fix commit (`66ad927`, +47 lines): the three new tests (`criar_destinatarioDeOutroTenant_...`, `criar_tituloExcede255Caracteres_...`, `criar_camposObrigatoriosEmBranco_...`) are present, correctly wired, and each of the five `requireNonBlank` call sites is now individually exercised. This fix is complete and correct as claimed.
+- Confirmed via `backend/pom.xml` (grep for `h2`/`testcontainers`, case-insensitive) that no embedded-database test dependency has been added since cycle 2 — the native-query verification gap (this report's WR-01) is still genuinely unresolved, not just unrevisited.
+- Grepped the full `backend/src` tree again for `notificacaoRepository.save(`/`.saveAll(` (production call sites only in `NotificacaoService.java:60,103,113`) and for any caller of `NotificacaoService.criar`/`notificarAdmins` outside the service/test (none) — the "sole write chokepoint" invariant still holds, and this remains genuinely infrastructure-only (no Phase 87 trigger code has landed yet).
+- Grepped `web/src` for `notificacoes`/`Notificacao` — still only `permissions.ts` itself references it.
 
-That said, several real gaps remain, concentrated at the write chokepoint's trust boundary, in an out-of-sync duplicate permission list, in the new entity's mutability posture, in the new controller's input validation, and in test coverage that doesn't fully prove the property it documents. Two follow-on files outside the explicit review list (`UserPrincipal.java`, `UserRepository.java`) were read only to verify claims that trace directly from the reviewed files (e.g., whether the new `notificacoes:view` permission actually reaches an authenticated principal, and whether admin fan-out is tenant-scoped) — both are cited below because the defect is only visible by following that chain.
+**New, this pass:** the requirement-length counterpart to cycle 2's now-fixed blank-field test gap was never closed — `requireMaxLength` is invoked once per field (5 call sites) from the exact same kind of shared private helper as `requireNonBlank`, using the exact same "a silently-deleted call site won't be caught" reasoning the prior fix explicitly used to justify testing all five `requireNonBlank` sites individually — yet only 1 of 5 `requireMaxLength` sites (`titulo`) has any test coverage (WR-03). Also newly found: `notificarAdmins` still has no `@Transactional` (re-raised at Warning, see WR-02) and the `size` query parameter on `GET /notificacoes` is still unbounded (raised as Info twice already and left unfixed both times; re-assessed here at Warning severity per this review's own judgment, not merely carried forward — see WR-04). Four small Info-level observations are new this pass (IN-06 through IN-09); IN-01 through IN-05 are carried forward from prior cycles, re-verified against the current files rather than copy-pasted, and remain valid.
 
 ## Warnings
 
-### WR-01: `NotificacaoService.criar()` — the sole write chokepoint — performs no validation of its own inputs
+### WR-01: First native query + `Pageable` + `countQuery` combination in the codebase is still unverified against a real PostgreSQL instance
 
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:26-39`
-**Issue:** The class comment (lines 22-25) explicitly designates `criar()` as the single place a `Notificacao` row can be born, precisely so that invariants like "never a cross-tenant write" can be enforced in one place. But the method itself does none of that enforcement — it blindly builds and saves whatever `(tenantId, destinatarioId, categoria, ...)` it's handed:
-- No check that `destinatarioId` actually belongs to `tenantId` (nothing stops a future caller from passing a recipient from a different tenant — the exact IDOR-adjacent failure mode this phase is meant to guard against, just shifted from "read" to "write").
-- No null-check on `destinatarioId`/`categoria`/`titulo`/`mensagem`/`entidadeTipo`/`entidadeId` — a null `destinatarioId` would violate the `NOT NULL` DB constraint and surface as an uncaught exception (mapped by `GlobalExceptionHandler`'s catch-all to a 500, not a controlled error).
-- No length check against the `VARCHAR(255)` columns (`titulo`, `linkUrl`, `entidadeTipo`, `entidadeId`) — an oversized value fails the same way.
+**File:** `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java:16-39`
+**Issue:** This is the third consecutive review cycle raising this gap. `buscarPorFiltros` is the query backing `GET /api/v1/notificacoes` — the first endpoint in Success Criterion 1 — and combines `nativeQuery = true`, a hand-written `countQuery`, and a `Pageable` argument. No working precedent for this exact combination exists elsewhere in the codebase (`ParecerSolicitacaoRepository.pesquisar` shares the `CAST(:param AS type) IS NULL OR ...` null-guard idiom but returns a plain unpaginated `List`, with no `countQuery`). There is still no `@DataJpaTest`/H2/Testcontainers dependency in `backend/pom.xml` (re-confirmed this pass), so this query has never executed against Postgres in an automated test — only through Mockito mocks that don't validate real SQL. Static analysis found no concrete defect in the SQL itself (the CAST-null-guard pattern is sound, and Hibernate can pick up sort/limit/offset for a simple `SELECT ... WHERE ... ORDER BY` native query once an explicit `countQuery` is supplied, exactly as done here) — this is a verification gap on the phase's riskiest, most central read path, not a proven functional bug, but it has now shipped unverified through two prior review cycles.
+**Fix:** Before this ships to an environment where it matters, do at least one manual round trip against a dev database with seeded rows covering all four filter combinations (no filters; `categoria` only; `lida` only; both) via curl/Postman against `GET /api/v1/notificacoes`, and record the result in the phase's verification artifacts. Longer-term, this is a reasonable first candidate for adopting `@DataJpaTest` if the project ever takes on an embedded-database test dependency — but that is an explicit human/architecture decision, not something to bolt on unilaterally.
 
-Per the code comment, Phase 87 will add several new public callers (`notificarFaseEntrada`, `notificarDocumentoNovo`, etc.) that funnel through this exact method. Today it is effectively a rubber stamp, not a guard rail.
+### WR-02: `notificarAdmins` fan-out is still not `@Transactional` — a mid-loop validation failure now leaves a partial ADMIN notification set
+
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:81-86`
+**Issue:** `marcarLida`/`marcarTodasLidas` are both explicitly `@Transactional`, but `notificarAdmins` — which loops over every current ADMIN and calls `criar(...)` once per admin — is not. Since the cycle-1 `criar()` fix added real validation (tenant-ownership check, blank checks, length checks), `criar(...)` can now throw `IllegalArgumentException` partway through the loop. If it throws on the Nth admin, rows already saved for admins `1..N-1` are **not** rolled back: the fan-out that Success Criterion 3 requires to produce "uma linha própria por cada ADMIN" can complete partially rather than atomically. Today's only caller is the test, using fixed literal values the validation will never reject, so there is no live exploit path yet — but Phase 87 is explicitly documented (class-level comment, lines 76-80) as the next real caller, and it will pass caller-supplied `categoria`/`titulo`/`mensagem` values that are materially more likely to trip validation than today's test fixtures.
 **Fix:**
 ```java
-public Notificacao criar(UUID tenantId, UUID destinatarioId, String categoria, String titulo,
-                          String mensagem, String entidadeTipo, String entidadeId, String linkUrl) {
-    if (tenantId == null || destinatarioId == null) {
-        throw new IllegalArgumentException("tenantId e destinatarioId são obrigatórios");
+@Transactional
+void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
+                      String entidadeTipo, String entidadeId, String linkUrl) {
+    for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
+        criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
     }
-    userRepository.findById(destinatarioId)
-            .filter(u -> tenantId.equals(u.getTenantId()))
-            .orElseThrow(() -> new IllegalArgumentException(
-                    "destinatarioId não pertence ao tenant informado"));
-
-    Notificacao n = Notificacao.builder()
-            .tenantId(tenantId)
-            .destinatarioId(destinatarioId)
-            .categoria(categoria)
-            .titulo(titulo)
-            .mensagem(mensagem)
-            .entidadeTipo(entidadeTipo)
-            .entidadeId(entidadeId)
-            .linkUrl(linkUrl)
-            .build();
-    return notificacaoRepository.save(n);
 }
 ```
 
-### WR-02: Fan-out test doesn't assert the property it claims to prove
+### WR-03: `requireMaxLength`'s 5 call sites have test coverage for only 1 field — the exact blind spot the prior fix explicitly closed for `requireNonBlank`, but left open here
 
-**File:** `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java:63-81`
-**Issue:** `notificarComFanOutAdmin_umaLinhaPorAdminAtualDoTenant` (and its docstring at lines 26-29) claims to prove "Critério de Sucesso 3" — one independent row per current ADMIN. The assertions actually made are only: `save()` was called twice, and each saved row has `lida == false` (lines 75-78). Nothing asserts that the two captured rows' `destinatarioId` values equal `admin1.getId()` and `admin2.getId()` respectively. A regression that fanned out to the wrong user (e.g., a copy-paste bug passing the same admin twice, or an off-by-one against a different list) would still pass this test as long as `save()` is invoked twice with `lida=false`. For a test whose entire purpose is to lock down per-recipient targeting, this is the one assertion that matters and it's missing.
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:44-48, 69-74` (test gap in `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java:80-90`)
+**Issue:** `criar()` calls `requireMaxLength(...)` once each for `categoria`, `titulo`, `entidadeTipo`, `entidadeId`, and `linkUrl` — five independent call sites funneling through one shared private helper, structurally identical to the five `requireNonBlank` call sites. The cycle-2 fix (commit `66ad927`) explicitly reasoned that `requireNonBlank` needed all five fields tested individually, "since `requireNonBlank` is invoked once per field from a shared private helper — a regression that silently deletes just one of the five call sites would not be caught by a test that only exercises a different field" (per `86-REVIEW-FIX.iter2.md`). That exact reasoning applies unchanged to `requireMaxLength` — yet only `criar_tituloExcede255Caracteres_lancaIllegalArgumentException` exists; `categoria`, `entidadeTipo`, `entidadeId`, and `linkUrl` have zero length-limit test coverage. A future edit that silently drops the `requireMaxLength("linkUrl", ...)` call (or any of the other three), letting an oversized value reach the `VARCHAR(255)` column and fail as an uncaught, unmapped exception at the JDBC layer instead of a clean `IllegalArgumentException`, would not be caught by this suite.
 **Fix:**
 ```java
-List<UUID> destinatarios = captor.getAllValues().stream()
-        .map(Notificacao::getDestinatarioId)
-        .toList();
-assertEquals(List.of(admin1.getId(), admin2.getId()), destinatarios);
-```
+@Test
+void criar_camposComTamanhoExcedido_lancaIllegalArgumentException() {
+    when(userRepository.findById(DESTINATARIO_A))
+            .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+    NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
 
-### WR-03: `Notificacao.tenantId` / `destinatarioId` are mutable via class-level `@Setter` with no guard
-
-**File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:11, 21-25`
-**Issue:** `@Setter` is applied at the class level (line 11), generating `setTenantId(...)` and `setDestinatarioId(...)` alongside every other field's setter. `createdAt` is protected from accidental mutation via `updatable = false` (line 51), but `tenantId`/`destinatarioId` have no equivalent guard. Today the only two mutators in the codebase (`NotificacaoService.marcarLida`/`marcarTodasLidas`) only ever call `setLida(true)`, so there is no live exploit path — but this is the codebase's first entity where accidentally calling the wrong setter re-parents a row to a different *user* (not just a different tenant), which is a materially different and easier-to-trigger-by-accident mistake than the tenant-remapping risk that already exists identically on every other entity in this codebase. There is currently no compiler- or runtime-level guard stopping a future change (including a Phase 87 caller) from doing `notificacao.setDestinatarioId(outroUserId); repo.save(notificacao);` on a fetched row.
-**Fix:** Drop the class-level `@Setter` and apply it field-by-field instead, omitting it for `id`, `tenantId`, `destinatarioId`, and `createdAt`:
-```java
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class Notificacao {
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @Column(name = "tenant_id", nullable = false)
-    private UUID tenantId;
-
-    @Column(name = "destinatario_id", nullable = false)
-    private UUID destinatarioId;
-
-    // ... other fields ...
-
-    @Setter
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean lida = false;
-    // ...
+    assertThrows(IllegalArgumentException.class, () ->
+            service.criar(TENANT_ID, DESTINATARIO_A, "x".repeat(256), "t", "m", "processo", "id-1", "/link"));
+    assertThrows(IllegalArgumentException.class, () ->
+            service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "x".repeat(256), "id-1", "/link"));
+    assertThrows(IllegalArgumentException.class, () ->
+            service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "x".repeat(256), "/link"));
+    assertThrows(IllegalArgumentException.class, () ->
+            service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "x".repeat(256)));
+    verify(notificacaoRepository, never()).save(any());
 }
 ```
 
-### WR-04: Hardcoded ADMIN permission fallback in `UserPrincipal` was not updated for `notificacoes:view`
+### WR-04: `GET /api/v1/notificacoes` still accepts an unbounded `size` — flagged as Info twice and left unfixed both times; re-assessed here at Warning
 
-**File:** `backend/src/main/java/com/lexcv/config/UserPrincipal.java:33-44` (traced from `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:303`, in the reviewed set)
-**Issue:** `DatabaseSeeder.seedRbac()` adds `"notificacoes:view"` to `permKeys` and attaches it to every role including ADMIN (line 313, `upsertRolePermissions("ADMIN", permissionMap.values())`). But `UserPrincipal.create()` has a **second, hardcoded** copy of "what ADMIN should have" (lines 34-43) that gets unioned into the principal's authorities whenever `roles.contains("ADMIN")` — and that list was not updated to include `"notificacoes:view"` (it does correctly include the `pareceres:*` scopes added in an earlier phase, showing this list has already needed — and gotten — at least one prior update, then missed this one). This is a duplicate source of truth for authorization data that has now measurably drifted.
-Concretely this is currently masked, not exploited: `JwtAuthenticationFilter` re-derives `permissions` fresh from `user.getRoles()...getPermissions()` on every request (not just at login), `seedRbac()` runs unconditionally on every application startup (it executes before the `seedEnabled` gate, `DatabaseSeeder.java:41-45`), and `AdminController.updateRbac()` explicitly refuses to let anyone edit the ADMIN role (`"ADMIN".equals(roleName)) continue;`) — so the DB-backed permission set for ADMIN self-heals to the correct value on every restart. The residual risk is a narrow window on the very first boot after this deploy (Spring's embedded server can begin accepting connections before `CommandLineRunner`s finish) and, more importantly, the next scope addition repeating this exact miss with less benign timing.
-**Fix:** Either delete the hardcoded list entirely (redundant given `dbPermissions` already carries the role-derived set) or add `"notificacoes:view"` to it and add a code comment pointing back at `DatabaseSeeder.seedRbac()` so the two stay in lockstep:
-```java
-if (roles.contains("ADMIN")) {
-    // Keep in sync with DatabaseSeeder.seedRbac()'s permKeys list.
-    permissions.addAll(java.util.Arrays.asList(
-            "clientes:view", "clientes:edit",
-            "processos:view", "processos:edit",
-            "processos:create", "processos:manage",
-            "agenda:view", "agenda:edit",
-            "documentos:view", "documentos:edit",
-            "financeiro:view", "financeiro:edit",
-            "rbac:manage", "users:manage",
-            "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage",
-            "notificacoes:view"
-    ));
-}
-```
-
-### WR-05: `NotificacaoController.listar` has no validation on `page`/`size`, turning bad input into a 500
-
-**File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:69-71`
-**Issue:** `page`/`size` are bound directly from request params with no bounds checking before `PageRequest.of(page, size)` is called. `PageRequest.of` throws `IllegalArgumentException` for `page < 0` or `size < 1` (e.g. `GET /api/v1/notificacoes?size=0`). This isn't caught anywhere in this controller, so it falls through to `GlobalExceptionHandler`'s catch-all `@ExceptionHandler(Exception.class)`, which returns **HTTP 500** with the raw exception class name and message in the JSON body — for what is really trivial, guessable client-input validation that should be a 400. This is the first use of `Pageable`/`PageRequest` in the backend (per the repository's own comment), so there's no existing safe pattern to have copied.
+**File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:69-73`
+**Issue:** The cycle-1 fix correctly rejects `page < 0 || size < 1` with a 400, but places no ceiling on `size`. `GET /api/v1/notificacoes?size=1000000` (or `size=2000000000`) is accepted as-is and passed straight into `PageRequest.of(page, size)` — no exception, just an attempt to materialize and JSON-serialize an unbounded result set scoped to the caller's own data. This was raised as an Info-level observation in the prior review cycle and left unaddressed (explicitly out of `fix_scope: critical_warning`) — it is re-classified here as a Warning on independent review: it is a live, un-remediated "missing input validation" gap (a named Security review category) on a newly introduced, publicly-reachable endpoint (every one of the four seeded roles holds `notificacoes:view`), and the fix is a one-line addition with zero risk of regressing existing behavior. It is not tenant/destinatario-boundary-breaking (results are still scoped to the caller's own rows), which is why it remains a Warning rather than Critical.
 **Fix:**
 ```java
-@GetMapping
-public ResponseEntity<?> listar(
-        @RequestParam(required = false) String categoria,
-        @RequestParam(required = false) Boolean lida,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "20") int size) {
-    if (page < 0 || size < 1) {
-        return ResponseEntity.badRequest().body(Map.of("message", "page deve ser >= 0 e size deve ser >= 1"));
-    }
-    Pageable pageable = PageRequest.of(page, size);
-    ...
+if (page < 0 || size < 1 || size > 100) {
+    return ResponseEntity.badRequest().body(Map.of("message", "page deve ser >= 0 e size deve estar entre 1 e 100"));
 }
 ```
 
 ## Info
 
-### IN-01: `createdAt` nullability inconsistent between entity and migration
+### IN-01: `createdAt` nullability still inconsistent between entity and migration
 
 **File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:51-52` vs `backend/migrations/86-create-notificacao-table.sql:30`
-**Issue:** Every other required column on this entity pairs a `NOT NULL` in the migration with an explicit `nullable = false` on the `@Column` annotation. `createdAt` is the one exception: the migration declares `created_at TIMESTAMP NOT NULL`, but `@Column(name = "created_at", updatable = false)` omits `nullable = false`. Harmless today because `@PrePersist onCreate()` always populates it before insert, and Hibernate's `ddl-auto=validate` does not enforce nullability parity — but it's an inconsistent declaration that could confuse a future reader into thinking it's optional.
-**Fix:** Add `nullable = false` for self-documentation/consistency:
+**Issue:** Carried forward from prior cycles, re-verified — still true. The migration declares `created_at TIMESTAMP NOT NULL`, but `@Column(name = "created_at", updatable = false)` still omits `nullable = false`, unlike every other required column on this entity. Harmless today (`@PrePersist onCreate()` always populates it), but an inconsistent self-declaration.
+**Fix:**
 ```java
 @Column(name = "created_at", updatable = false, nullable = false)
 private LocalDateTime createdAt;
 ```
 
-### IN-02: ADMIN fan-out doesn't filter by active status
+### IN-02: ADMIN fan-out still doesn't filter by `ativo`
 
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:48` (via `UserRepository.findByTenantIdAndRoleName`, `backend/src/main/java/com/lexcv/repositories/UserRepository.java:16-17`)
-**Issue:** `notificarAdmins` fans out to every user returned by `findByTenantIdAndRoleName(tenantId, "ADMIN")`, which does not filter on `ativo` (unlike `JwtAuthenticationFilter`, which explicitly gates authentication on `user.getAtivo()`). A deactivated admin account will still accumulate notification rows. This may be intentional (the code comment says "cada ADMIN atual", not "ativo"), but it's worth an explicit decision given the rest of the app treats `ativo=false` as "this account shouldn't be treated as a live actor."
-**Fix:** If unintentional, add an `ativo` predicate (either a new repository method or a filter in the service); if intentional, a one-line comment would save the next reader from re-litigating it.
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:81-86` (via `UserRepository.findByTenantIdAndRoleName`)
+**Issue:** Carried forward, re-verified against the current query (`SELECT u FROM User u JOIN u.roles r WHERE u.tenantId = :tenantId AND r.nome = :roleName`, `UserRepository.java:16-17`) — no `ativo` predicate, unlike `JwtAuthenticationFilter`'s login gate (`user.getAtivo()`). A deactivated admin still accumulates notification rows via `notificarAdmins`. May be intentional; worth an explicit decision either way.
+**Fix:** If unintentional, add an `ativo` predicate to the query or filter in the service; if intentional, a one-line comment saves the next reader from re-litigating it.
 
-### IN-03: New frontend scope registry has no consumers yet
+### IN-03: Frontend `KNOWN_SCOPES` registry still has no consumers
 
 **File:** `web/src/lib/permissions.ts:6-15`
-**Issue:** `KNOWN_SCOPES`/`PermissionScope` are exported but not referenced anywhere else in `web/src` (confirmed via full-tree search), and no other file references `"notificacoes"` at all — there is no notification bell/list/hook consuming this yet. Consistent with this being an infrastructure-only phase (mirrors `notificarAdmins` being unwired on the backend until Phase 87), so likely intentional groundwork rather than a defect — flagging only so it isn't mistaken for a completed feature.
+**Issue:** Carried forward, re-verified — a fresh full-tree grep of `web/src` for `notificacoes` still returns only `permissions.ts` itself. Consistent with this being infrastructure-only (the bell/list UI is Phase 89) — flagged only so it isn't mistaken for a wired-up feature.
 
-### IN-04: `@Builder.Default` on `lida` only applies via the builder
+### IN-04: `@Builder.Default` on `lida` still only applies via the builder
 
-**File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:47-49`
-**Issue:** Lombok's `@Builder.Default` moves the `= false` initializer out of the field and into the generated builder's `build()` method. It does not apply to the `@NoArgsConstructor`-generated constructor. Every current construction path goes through `.builder()...build()` (in `NotificacaoService.criar` and the test), so this doesn't manifest today, but a future `new Notificacao()` + setters path (or a Jackson deserializer relying on the no-args constructor, should this entity ever become a `@RequestBody`) would leave `lida` as `null` rather than `false`, and `null` would fail the `NOT NULL` constraint at insert time rather than being silently corrected.
+**File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:46-49`
+**Issue:** Carried forward, still true. Every current construction path (`NotificacaoService.criar`, the test file) goes through `.builder()...build()`, so this doesn't manifest today. But `@Builder.Default`'s initializer only fires inside the generated builder's `build()` — the co-existing `@NoArgsConstructor`/`@AllArgsConstructor` do not apply it, so a future `new Notificacao(...)` path (e.g. a Jackson deserializer, should this entity ever become a `@RequestBody`) would leave `lida` as `null` rather than `false`, tripping the `NOT NULL` constraint at insert time instead of being silently defaulted.
 
-### IN-05: `getTenantId()`/`getUserId()` boilerplate duplicated across a fourth controller
+### IN-05: `getTenantId()`/`getUserId()` boilerplate still duplicated across four controllers
 
 **File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:52-62`
-**Issue:** The `Authentication auth = SecurityContextHolder...; UserPrincipal principal = (UserPrincipal) auth.getPrincipal(); return principal.getXxxId();` pattern is now hand-copied in four controllers (`ResourceController.java:117`, `ParecerController.java:48`, `ParecerPesquisaController.java:37`, and this one at lines 52-62, which additionally introduces `getUserId()` as a new copy of the same shape). Not a new problem introduced by this phase, but this phase does grow it, and it's now duplicated enough times that a shared `@Component` (e.g. `CurrentUserContext.getTenantId()`/`getUserId()`) would pay for itself.
+**Issue:** Carried forward, still true — the same `SecurityContextHolder` → cast → getter pattern is hand-copied in `ResourceController.java`, `ParecerController.java`, `ParecerPesquisaController.java`, and here. A shared `CurrentUserContext` component would pay for itself, but this predates this phase.
+
+### IN-06: `notificarAdmins` has no null-check on its own `tenantId` — silently no-ops instead of failing loudly
+
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:81-86`
+**Issue:** `criar()` fails fast on a null `tenantId`/`destinatarioId` (`IllegalArgumentException`). `notificarAdmins(tenantId, ...)` has no equivalent guard: if called with a null `tenantId`, `userRepository.findByTenantIdAndRoleName(null, "ADMIN")` translates to a JPQL `u.tenantId = :tenantId` comparison against `NULL`, which matches zero rows — the `for` loop simply never executes, `criar()` is never called, and the method returns having silently done nothing. For a method whose sibling (`criar`) was specifically hardened in cycle 1 to fail loudly on exactly this kind of bad input, a caller bug that produces a null `tenantId` here (plausible once Phase 87 derives it from a business entity, e.g. a `Processo`) would manifest as "no notifications sent" with no exception and no log line, rather than a clear error at the source.
+**Fix:** Mirror `criar()`'s guard:
+```java
+void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
+                      String entidadeTipo, String entidadeId, String linkUrl) {
+    if (tenantId == null) {
+        throw new IllegalArgumentException("tenantId é obrigatório");
+    }
+    for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
+        criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
+    }
+}
+```
+
+### IN-07: `criar()`'s validation chokepoint does not constrain `linkUrl`'s scheme/format
+
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:28-61`
+**Issue:** The class comment designates `criar()` as the single enforcement point for every invariant a `Notificacao` row must satisfy, and cycle 1 added real validation (tenant ownership, blank checks, length checks) precisely so future callers (Phase 87's `notificarFaseEntrada`/`notificarDocumentoNovo`/etc.) can't accidentally violate them. `linkUrl` is validated only for length — nothing constrains its scheme or shape, so a caller could pass `javascript:alert(1)` or a `data:` URI and it would be persisted and later returned verbatim via `GET /notificacoes` and `PATCH /{id}/lida`. There is no reachable path today that feeds untrusted input into `linkUrl` (no HTTP endpoint exposes `criar()`'s parameters to a client), so this is not exploitable yet — but Phase 89's bell/list UI is the documented consumer of this exact field, and hardening the one designated chokepoint now (rather than relying on every future caller and the eventual frontend to individually get this right) is consistent with why this class exists.
+**Fix:** Constrain to the two shapes this domain actually uses (root-relative app paths):
+```java
+private static void requireSafeLinkUrl(String linkUrl) {
+    if (linkUrl != null && !linkUrl.startsWith("/")) {
+        throw new IllegalArgumentException("linkUrl deve ser um caminho relativo iniciado por '/'");
+    }
+}
+```
+
+### IN-08: `Notificacao` JPA entity is serialized directly as the API response, bypassing the DTO pattern used elsewhere
+
+**File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:75-84, 100`
+**Issue:** `listar` returns `pageResult.getContent()` (a `List<Notificacao>`) and `marcarLida` returns the `Notificacao` entity directly inside `ResponseEntity.ok(...)`, rather than mapping to a response DTO. `AdminController` (in the same reviewed set) uses `UserResponse`/`RbacResponse` for exactly this reason. Harmless today — `Notificacao` has no `@JsonIgnore`-worthy or lazily-loaded relationship fields, so nothing sensitive leaks — but it couples the wire format to the persistence model: any future column added to this entity is automatically exposed via the API with no deliberate opt-in.
+**Fix:** Introduce a small `NotificacaoResponse` DTO (mirroring `UserResponse`'s pattern) before Phase 89 builds a frontend contract against the current entity shape.
+
+### IN-09: `notificacoes:view` gates both read and mark-read/mark-all-read endpoints — a documented deviation from the project's `scope:action` convention
+
+**File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:64,86,93,103`; self-documented at `backend/src/main/java/com/lexcv/controllers/AdminController.java:232`
+**Issue:** CLAUDE.md documents the project-wide convention as `scope:action` with `action ∈ {view, create, edit, manage}`, where mutations normally require `edit`/`manage`. Here, the two state-mutating endpoints (`PATCH /{id}/lida`, `POST /ler-todas`) are gated by the same `notificacoes:view` authority as the two read endpoints — there is no `notificacoes:edit`. This is a deliberate, reasoned, and self-documented decision (86-CONTEXT.md, and the RBAC screen's own permission description: "Ver e marcar como lidas as notificações próprias"), not an oversight — marking your own notification read is a personal read-state toggle, not an edit of shared tenant data. Flagged only so a future maintainer applying the `scope:action` convention by pattern-matching doesn't "fix" this into an inconsistency with the documented design.
 
 ---
 
-_Reviewed: 2026-07-08T00:00:00Z_
+_Reviewed: 2026-07-08T23:15:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
