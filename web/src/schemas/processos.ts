@@ -133,7 +133,11 @@ export type DecisaoFormValues = z.infer<typeof decisaoFormSchema>;
 
 export const testemunhaFormSchema = z.object({
   nome: z.string().trim().min(1, "O nome é obrigatório"),
-  tipo: tipoTestemunhaSchema.optional(),
+  // preprocess: a native <select> placeholder submits "" for an unselected optional
+  // field, which z.enum(...).optional() rejects (only `undefined` is treated as
+  // absent) — map "" to undefined so leaving Tipo unselected is a valid, non-error
+  // empty selection, matching the UI-SPEC-intended behavior.
+  tipo: z.preprocess((v) => (v === "" ? undefined : v), tipoTestemunhaSchema.optional()),
   contacto: optionalTrimmedString,
   notas: optionalTrimmedString,
 });

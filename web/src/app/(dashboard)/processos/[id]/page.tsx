@@ -45,11 +45,13 @@ import {
   useAddProcessoFase,
   useAddProcessoMovimentacao,
   useAddProcessoParte,
+  useAddTestemunha,
   useAuditLog,
   useConflictCheckDecisao,
   useCreatePrazo,
   useDecisoes,
   useDeleteDecisao,
+  useDeleteTestemunha,
   useExecutarTransicao,
   useFormalizarProcesso,
   usePrazos,
@@ -57,10 +59,12 @@ import {
   useProcessoFases,
   useProcessoMovimentacoes,
   useProcessoPartes,
+  useTestemunhas,
   useTimeline,
   useTogglePrazoConcluido,
   useUpdateDecisao,
   useUpdateProcessoFaseStatus,
+  useUpdateTestemunha,
   useWorkflow,
 } from "@/hooks/use-processos";
 import { toast } from "@/hooks/use-toast";
@@ -68,6 +72,7 @@ import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-che
 import { origemProcessoToLabel } from "@/lib/origem-processo";
 import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
 import { tipoDecisaoToLabel } from "@/lib/tipo-decisao";
+import { tipoTestemunhaToLabel } from "@/lib/tipo-testemunha";
 import {
   decisaoFormSchema,
   prazoFormSchema,
@@ -75,13 +80,16 @@ import {
   processoFaseStatusSchema,
   processoMovimentacaoFormSchema,
   processoParteFormSchema,
+  testemunhaFormSchema,
   tipoDecisaoSchema,
+  tipoTestemunhaSchema,
   transicaoJustificativaFormSchema,
   type DecisaoFormValues,
   type PrazoFormValues,
   type ProcessoFaseFormValues,
   type ProcessoMovimentacaoFormValues,
   type ProcessoParteFormValues,
+  type TestemunhaFormValues,
   type TransicaoJustificativaFormValues,
 } from "@/schemas/processos";
 import type {
@@ -93,6 +101,9 @@ import type {
   ProcessoFaseUpdateRequest,
   ProcessoMovimentacaoCreateRequest,
   ProcessoParteCreateRequest,
+  Testemunha,
+  TestemunhaCreateRequest,
+  TestemunhaUpdateRequest,
   TimelineItem,
   TimelineItemType,
   TransicaoInfo,
@@ -198,6 +209,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const updateDecisao = useUpdateDecisao(id);
   const deleteDecisao = useDeleteDecisao(id);
 
+  const testemunhas = useTestemunhas(id);
+  const addTestemunha = useAddTestemunha(id);
+  const updateTestemunha = useUpdateTestemunha(id);
+  const deleteTestemunha = useDeleteTestemunha(id);
+
   // Timeline filter state
   const [selectedTipos, setSelectedTipos] = React.useState<Set<TimelineItemType>>(
     new Set(["movimentacao", "transicao", "evento", "documento", "decisao"]),
@@ -253,6 +269,19 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const decisaoForm = useForm<DecisaoFormValues>({
     resolver: zodResolver(decisaoFormSchema),
     defaultValues: { data: "", tipo: undefined, resumo: undefined, file: undefined },
+  });
+
+  const [addTestemunhaModal, setAddTestemunhaModal] = React.useState(false);
+  const [editingTestemunhaId, setEditingTestemunhaId] = React.useState<number | null>(null);
+  const [testemunhaServerError, setTestemunhaServerError] = React.useState<string | null>(null);
+  // testemunhaFormSchema's `tipo` field uses z.preprocess (to coerce a blank <select>
+  // to undefined for this optional enum) which makes the resolver's inferred input
+  // type diverge from TestemunhaFormValues (z.infer's output type) — same class of
+  // mismatch as prazoForm below, same established workaround.
+  const testemunhaForm = useForm<TestemunhaFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(testemunhaFormSchema) as any,
+    defaultValues: { nome: "", tipo: undefined, contacto: undefined, notas: undefined },
   });
 
   const [faseDraftStatus, setFaseDraftStatus] = React.useState<Record<number, ProcessoFaseStatus>>({});
@@ -472,6 +501,57 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
       toast.success("Decisão apagada com sucesso.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao apagar decisão");
+    }
+  };
+
+  const onOpenAddTestemunha = () => {
+    testemunhaForm.reset({ nome: "", tipo: undefined, contacto: undefined, notas: undefined });
+    setEditingTestemunhaId(null);
+    setTestemunhaServerError(null);
+    setAddTestemunhaModal(true);
+  };
+
+  const onOpenEditTestemunha = (t: Testemunha) => {
+    testemunhaForm.reset({ nome: t.nome, tipo: t.tipo, contacto: t.contacto, notas: t.notas });
+    setEditingTestemunhaId(t.id);
+    setTestemunhaServerError(null);
+    setAddTestemunhaModal(true);
+  };
+
+  const onSubmitTestemunha = async (values: TestemunhaFormValues) => {
+    setTestemunhaServerError(null);
+    try {
+      if (editingTestemunhaId !== null) {
+        await updateTestemunha.mutateAsync({
+          testemunhaId: editingTestemunhaId,
+          payload: values satisfies TestemunhaUpdateRequest,
+        });
+        toast.success("Testemunha atualizada com sucesso.");
+      } else {
+        await addTestemunha.mutateAsync(values satisfies TestemunhaCreateRequest);
+        toast.success("Testemunha adicionada com sucesso.");
+      }
+      setAddTestemunhaModal(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : editingTestemunhaId !== null
+            ? "Erro ao atualizar testemunha"
+            : "Erro ao adicionar testemunha";
+      setTestemunhaServerError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const onDeleteTestemunha = async (testemunhaId: number) => {
+    const ok = window.confirm("Apagar esta testemunha?");
+    if (!ok) return;
+    try {
+      await deleteTestemunha.mutateAsync(testemunhaId);
+      toast.success("Testemunha apagada com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao apagar testemunha");
     }
   };
 
@@ -1725,7 +1805,184 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "factos" ? null : tab === "testemunhas" ? null : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
+          ) : tab === "factos" ? null : tab === "testemunhas" ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Testemunhas</CardTitle>
+                  {canEditProcessos ? (
+                    <Dialog open={addTestemunhaModal} onOpenChange={setAddTestemunhaModal}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none"
+                          onClick={onOpenAddTestemunha}
+                        >
+                          Adicionar Testemunha
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingTestemunhaId === null ? "Adicionar Testemunha" : "Editar Testemunha"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <form className="space-y-4" onSubmit={testemunhaForm.handleSubmit(onSubmitTestemunha)}>
+                          <div className="space-y-2">
+                            <Label htmlFor="testemunha_nome">Nome</Label>
+                            <Input
+                              id="testemunha_nome"
+                              className="rounded-none"
+                              {...testemunhaForm.register("nome")}
+                            />
+                            {testemunhaForm.formState.errors.nome ? (
+                              <p className="text-sm text-red-600">
+                                {testemunhaForm.formState.errors.nome.message}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="testemunha_tipo">Tipo</Label>
+                            <select
+                              id="testemunha_tipo"
+                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              {...testemunhaForm.register("tipo")}
+                            >
+                              <option value="">Selecionar tipo</option>
+                              {tipoTestemunhaSchema.options.map((t) => (
+                                <option key={t} value={t}>
+                                  {tipoTestemunhaToLabel(t)}
+                                </option>
+                              ))}
+                            </select>
+                            {testemunhaForm.formState.errors.tipo ? (
+                              <p className="text-sm text-red-600">
+                                {testemunhaForm.formState.errors.tipo.message}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="testemunha_contacto">Contacto</Label>
+                            <Input
+                              id="testemunha_contacto"
+                              className="rounded-none"
+                              {...testemunhaForm.register("contacto")}
+                            />
+                            {testemunhaForm.formState.errors.contacto ? (
+                              <p className="text-sm text-red-600">
+                                {testemunhaForm.formState.errors.contacto.message}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="testemunha_notas">Notas</Label>
+                            <Textarea
+                              id="testemunha_notas"
+                              className="rounded-none"
+                              {...testemunhaForm.register("notas")}
+                            />
+                            {testemunhaForm.formState.errors.notas ? (
+                              <p className="text-sm text-red-600">
+                                {testemunhaForm.formState.errors.notas.message}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          {testemunhaServerError ? (
+                            <p className="text-sm text-red-600">{testemunhaServerError}</p>
+                          ) : null}
+
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-none"
+                              onClick={() => setAddTestemunhaModal(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="rounded-none"
+                              disabled={
+                                testemunhaForm.formState.isSubmitting ||
+                                addTestemunha.isPending ||
+                                updateTestemunha.isPending
+                              }
+                            >
+                              Confirmar
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {testemunhas.isLoading ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</p>
+                ) : testemunhas.isError ? (
+                  <p className="text-sm text-red-600">
+                    Não foi possível carregar as testemunhas deste processo.
+                  </p>
+                ) : !testemunhas.data?.length ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma testemunha registada.</p>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <table className="w-full min-w-[480px] text-sm">
+                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                          <th className="py-2 pr-4 font-medium">Nome</th>
+                          <th className="py-2 pr-4 font-medium">Tipo</th>
+                          <th className="py-2 pr-4 font-medium">Contacto</th>
+                          <th className="py-2 pr-4 font-medium">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testemunhas.data.map((t) => (
+                          <tr
+                            key={t.id}
+                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                          >
+                            <td className="py-2 pr-4 font-medium">{t.nome}</td>
+                            <td className="py-2 pr-4">{t.tipo ? tipoTestemunhaToLabel(t.tipo) : "—"}</td>
+                            <td className="py-2 pr-4">{t.contacto ?? "—"}</td>
+                            <td className="py-2 pr-4">
+                              {canEditProcessos ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 hover:underline text-xs"
+                                    onClick={() => onOpenEditTestemunha(t)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-neutral-500 hover:text-red-600"
+                                    onClick={() => onDeleteTestemunha(t.id)}
+                                    aria-label="Apagar testemunha"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
