@@ -2739,22 +2739,28 @@ public class ResourceController {
         return ResponseEntity.ok(kpis);
     }
 
-    // NOTA (WR-02, 85-REVIEW.md): eventos com prioridade ALTA e dataFim nula resultam em
+    // NOTA (WR-01, 85-REVIEW.md): eventos com prioridade ALTA e dataFim nula resultam em
     // risco="ok" (computeRiscoEvento trata data nula como "ok") e por isso NÃO são contados
-    // como urgentes aqui — comportamento aceite explicitamente para este corner case
+    // como urgentes/críticos aqui — comportamento aceite explicitamente para este corner case
     // (lembrete de prioridade ALTA sem data de fim definida). Isto é uma mudança face à
     // lógica anterior, que contava qualquer evento ALTA independentemente da data. Se o
-    // produto decidir que este corner case deve contar como urgente por definição, tratar
-    // "ALTA" + dataFim nula como urgente explicitamente antes de delegar em
-    // computeRiscoEvento. Cobertura de teste de regressão para este call site está a cargo
-    // do follow-up de testes de controller (WR-04, 85-REVIEW.md).
+    // produto decidir que este corner case deve contar como urgente/crítico por definição,
+    // tratar "ALTA" + dataFim nula como urgente explicitamente antes de delegar em
+    // computeRiscoEvento. Helper único partilhado por agendaUrgentesCount (KPI /dashboard
+    // prazos_vencer) e prazosCriticosCount (KPI /processos/dashboard prazos_criticos_count) —
+    // WR-01 (85-REVIEW.md) identificou que os dois KPIs tinham o mesmo padrão duplicado sem
+    // cross-reference entre si; consolidado aqui para que este comentário cubra ambos.
+    // Cobertura de teste de regressão está a cargo do follow-up de testes de controller
+    // (WR-03, 85-REVIEW.md).
+    private boolean isEventoCritico(Evento e) {
+        String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
+        return RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco);
+    }
+
     private long agendaUrgentesCount(UUID tenantId) {
         return eventoRepository.findByTenantIdAndConcluido(tenantId, false)
                 .stream()
-                .filter(e -> {
-                    String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
-                    return RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco);
-                })
+                .filter(this::isEventoCritico)
                 .count();
     }
 
@@ -2858,16 +2864,13 @@ public class ResourceController {
                 .sorted((a, b) -> Long.compare(b.getCount(), a.getCount()))
                 .collect(Collectors.toList());
 
-        // Prazos Críticos — via RiscoPrazoService (tabela de limiares partilhada 7d-ALTA/3d-outros)
-        long prazosCriticosCount = 0;
-
-        List<Evento> eventos = eventoRepository.findByTenantIdAndConcluido(tenantId, false);
-        for (Evento e : eventos) {
-            String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
-            if (RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco)) {
-                prazosCriticosCount++;
-            }
-        }
+        // Prazos Críticos — via RiscoPrazoService (tabela de limiares partilhada 7d-ALTA/3d-outros).
+        // Corner case (ALTA + dataFim nula não conta como crítico) documentado em isEventoCritico()
+        // — WR-01 (85-REVIEW.md).
+        long prazosCriticosCount = eventoRepository.findByTenantIdAndConcluido(tenantId, false)
+                .stream()
+                .filter(this::isEventoCritico)
+                .count();
 
         // Exposicao por Carteira list
         long finalActiveProcessCount = activeProcessCount;
