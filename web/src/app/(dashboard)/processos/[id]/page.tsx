@@ -2241,7 +2241,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
+          ) : tab === "documentos" ? (
+            <ProcessoDocumentosTab processoId={id} canEditDocumentos={canEditDocumentos} />
+          ) : tab === "auditoria" && canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
@@ -2304,5 +2306,251 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
         <div className="text-sm text-neutral-500 dark:text-neutral-400">Processo não encontrado.</div>
       )}
     </div>
+  );
+}
+
+function ProcessoDocumentosTab({
+  processoId,
+  canEditDocumentos,
+}: {
+  processoId: string;
+  canEditDocumentos: boolean;
+}) {
+  const list = useDocumentos({ processo_id: processoId });
+  const documentosData = list.data;
+  const documentos = documentosData ?? [];
+
+  const [addDocumentoModal, setAddDocumentoModal] = React.useState(false);
+  const [novoTipo, setNovoTipo] = React.useState("");
+  const [novoFicheiro, setNovoFicheiro] = React.useState<File | null>(null);
+  const [progresso, setProgresso] = React.useState<number | null>(null);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+
+  const upload = useUploadDocumentoComProgresso({ onProgress: setProgresso });
+
+  const tipoOptions = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (documentosData ?? [])
+            .map((d) => d.tipo?.trim())
+            .filter((t): t is string => Boolean(t)),
+        ),
+      ),
+    [documentosData],
+  );
+
+  const datalistId = `tipo-documento-processo-${processoId}`;
+
+  const resetUploadState = () => {
+    setNovoFicheiro(null);
+    setNovoTipo("");
+    setProgresso(null);
+    setUploadError(null);
+  };
+
+  const onConfirmarUpload = async () => {
+    if (!novoFicheiro) return;
+    setUploadError(null);
+    try {
+      await upload.mutateAsync({ file: novoFicheiro, tipo: novoTipo.trim(), processo_id: processoId });
+      setProgresso(null);
+      toast.success("Documento enviado com sucesso.");
+      resetUploadState();
+      setAddDocumentoModal(false);
+    } catch (e) {
+      setProgresso(null);
+      const msg = e instanceof Error ? e.message : "Erro ao fazer upload";
+      setUploadError(msg);
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Documentos</CardTitle>
+          {canEditDocumentos ? (
+            <Dialog
+              open={addDocumentoModal}
+              onOpenChange={(open) => {
+                setAddDocumentoModal(open);
+                if (!open) resetUploadState();
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="rounded-none">
+                  Adicionar Documento
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Documento</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Ficheiro</Label>
+                    <FileDropZone
+                      onFileChange={(file) => setNovoFicheiro(file)}
+                      onClear={() => setNovoFicheiro(null)}
+                      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.txt"
+                      disabled={upload.isPending}
+                    >
+                      Arraste um ficheiro para aqui ou clique para selecionar
+                    </FileDropZone>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={datalistId}>Tipo</Label>
+                    <input
+                      id={datalistId}
+                      list={`${datalistId}-options`}
+                      className="flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300"
+                      placeholder="Selecione ou escreva um tipo"
+                      value={novoTipo}
+                      onChange={(e) => setNovoTipo(e.target.value)}
+                      disabled={upload.isPending}
+                    />
+                    <datalist id={`${datalistId}-options`}>
+                      {tipoOptions.map((t) => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {progresso !== null ? (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-neutral-500">
+                        <span>A enviar...</span>
+                        <span>{progresso}%</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
+                        <div
+                          className="h-2 rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${progresso}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  {uploadError ? <p className="text-sm text-red-600">{uploadError}</p> : null}
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-none"
+                    onClick={() => {
+                      setAddDocumentoModal(false);
+                      resetUploadState();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    className="rounded-none"
+                    onClick={onConfirmarUpload}
+                    disabled={!novoFicheiro || upload.isPending}
+                  >
+                    Confirmar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {list.isLoading ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</p>
+        ) : list.isError ? (
+          <p className="text-sm text-red-600">Não foi possível carregar os documentos deste processo.</p>
+        ) : documentos.length === 0 ? (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento registado.</p>
+        ) : (
+          <ul className="space-y-1">
+            {documentos.map((doc: Documento) => (
+              <ProcessoDocumentoRow key={doc.id} documento={doc} canEditDocumentos={canEditDocumentos} />
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProcessoDocumentoRow({
+  documento,
+  canEditDocumentos,
+}: {
+  documento: Documento;
+  canEditDocumentos: boolean;
+}) {
+  const del = useDeleteDocumento(documento.id);
+  const download = useDownloadDocumento(documento.id);
+
+  // WR-01: the backend serializes the raw Documento entity with its Java field
+  // names (tamanho, createdAt), not the snake_case/renamed shape declared on
+  // the shared frontend `Documento` type (size, created_at) — same
+  // workaround already applied on ClienteDocumentoEntregueRow
+  // (clientes/[id]/page.tsx), transferable verbatim since both endpoints
+  // serialize the identical entity shape.
+  const wireDocumento = documento as unknown as { tamanho?: number; createdAt?: string };
+  const tamanho = wireDocumento.tamanho ?? 0;
+  const criadoEm = wireDocumento.createdAt;
+
+  const onDelete = async () => {
+    const ok = window.confirm("Apagar este documento?");
+    if (!ok) return;
+    try {
+      await del.mutateAsync();
+      toast.success("Documento apagado com sucesso.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
+      toast.error(msg);
+    }
+  };
+
+  const onDownload = async () => {
+    try {
+      const res = await download.mutateAsync();
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar link de download.");
+    }
+  };
+
+  return (
+    <li className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{documento.nome}</span>
+          <span className="text-neutral-500 dark:text-neutral-400">{documento.tipo || "—"}</span>
+        </div>
+        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+          {formatDocumentoSize(tamanho)} · {formatDocumentoDate(criadoEm)}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={download.isPending}
+          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium disabled:opacity-50"
+        >
+          Download
+        </button>
+        {canEditDocumentos ? (
+          <button
+            type="button"
+            className="text-neutral-500 hover:text-red-600"
+            onClick={onDelete}
+            aria-label="Apagar documento"
+            disabled={del.isPending}
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+    </li>
   );
 }
