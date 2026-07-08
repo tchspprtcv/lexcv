@@ -23,8 +23,30 @@ public class NotificacaoService {
     // deve chamar notificacaoRepository.save(...)/saveAll(...) diretamente para criar uma linha.
     // Centralizar aqui garante que "+ADMIN, nunca broadcast em massa" (NOTF-14) é a única forma
     // de uma notificação nascer.
+    private static final int MAX_VARCHAR_LENGTH = 255;
+
     public Notificacao criar(UUID tenantId, UUID destinatarioId, String categoria, String titulo,
                               String mensagem, String entidadeTipo, String entidadeId, String linkUrl) {
+        if (tenantId == null || destinatarioId == null) {
+            throw new IllegalArgumentException("tenantId e destinatarioId são obrigatórios");
+        }
+        userRepository.findById(destinatarioId)
+                .filter(u -> tenantId.equals(u.getTenantId()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "destinatarioId não pertence ao tenant informado"));
+
+        requireNonBlank("categoria", categoria);
+        requireNonBlank("titulo", titulo);
+        requireNonBlank("mensagem", mensagem);
+        requireNonBlank("entidadeTipo", entidadeTipo);
+        requireNonBlank("entidadeId", entidadeId);
+
+        requireMaxLength("categoria", categoria, MAX_VARCHAR_LENGTH);
+        requireMaxLength("titulo", titulo, MAX_VARCHAR_LENGTH);
+        requireMaxLength("entidadeTipo", entidadeTipo, MAX_VARCHAR_LENGTH);
+        requireMaxLength("entidadeId", entidadeId, MAX_VARCHAR_LENGTH);
+        requireMaxLength("linkUrl", linkUrl, MAX_VARCHAR_LENGTH);
+
         Notificacao n = Notificacao.builder()
                 .tenantId(tenantId)
                 .destinatarioId(destinatarioId)
@@ -36,6 +58,19 @@ public class NotificacaoService {
                 .linkUrl(linkUrl)
                 .build();
         return notificacaoRepository.save(n);
+    }
+
+    private static void requireNonBlank(String fieldName, String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " é obrigatório");
+        }
+    }
+
+    private static void requireMaxLength(String fieldName, String value, int maxLength) {
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(
+                    fieldName + " excede o tamanho máximo de " + maxLength + " caracteres");
+        }
     }
 
     // Fan-out: uma linha independente por cada ADMIN atual do tenant, cada uma com o seu próprio

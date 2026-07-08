@@ -46,6 +46,10 @@ class NotificacaoServiceTest {
     @Test
     void criar_doisDestinatariosDistintos_geramLinhasIndependentesComEstadoLidaProprio() {
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        when(userRepository.findById(DESTINATARIO_B))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_B).tenantId(TENANT_ID).build()));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link");
@@ -62,10 +66,12 @@ class NotificacaoServiceTest {
 
     @Test
     void notificarComFanOutAdmin_umaLinhaPorAdminAtualDoTenant() {
-        User admin1 = User.builder().id(UUID.randomUUID()).build();
-        User admin2 = User.builder().id(UUID.randomUUID()).build();
+        User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
                 .thenReturn(List.of(admin1, admin2));
+        when(userRepository.findById(admin1.getId())).thenReturn(Optional.of(admin1));
+        when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
