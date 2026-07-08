@@ -28,6 +28,9 @@ export function useDocumentos(filters: DocumentosListFilters) {
       if (clienteId) {
         return apiFetch<Documento[]>(`/clientes/${encodeURIComponent(clienteId)}/documentos`);
       }
+      if (processoId) {
+        return apiFetch<Documento[]>(`/processos/${encodeURIComponent(processoId)}/documentos`);
+      }
       return apiFetch<Documento[]>(`/documentos${buildDocumentosSearch({ processo_id: processoId, cliente_id: clienteId })}`);
     },
     enabled,
