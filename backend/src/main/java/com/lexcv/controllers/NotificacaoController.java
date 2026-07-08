@@ -68,8 +68,8 @@ public class NotificacaoController {
             @RequestParam(required = false) Boolean lida,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        if (page < 0 || size < 1) {
-            return ResponseEntity.badRequest().body(Map.of("message", "page deve ser >= 0 e size deve ser >= 1"));
+        if (page < 0 || size < 1 || size > 100) {
+            return ResponseEntity.badRequest().body(Map.of("message", "page deve ser >= 0 e size deve estar entre 1 e 100"));
         }
         Pageable pageable = PageRequest.of(page, size);
         Page<Notificacao> pageResult = notificacaoRepository.buscarPorFiltros(
