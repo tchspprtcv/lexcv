@@ -1,10 +1,11 @@
 ---
 phase: 84
 slug: frontend-ui-intake-dados-sub-sec-es-documentos-termo-de-hono
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-07
+reviewed_at: 2026-07-07
 ---
 
 # Phase 84 — UI Design Contract
