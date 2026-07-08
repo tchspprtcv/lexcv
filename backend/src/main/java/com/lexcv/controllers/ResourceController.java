@@ -2282,11 +2282,18 @@ public class ResourceController {
         }
         // Validate prioridade against allowed set (WR-02, 85-REVIEW.md) — mirrors createPrazo's
         // allow-list so Evento.prioridade can't silently fall back to the strict 3-day threshold
-        // in RiscoPrazoService via a typo or free-text value.
+        // in RiscoPrazoService via a typo or free-text value. Normalizes on write (WR-01,
+        // 85-REVIEW.md iteration 3) to match createPrazo's persisted-value casing — the frontend
+        // agenda page's "urgentes" counter compares prioridade === "ALTA" case-sensitively, so an
+        // unnormalized "alta" would silently be excluded from that count despite passing this check.
         Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
-        if (evento.getPrioridade() != null && !prioridadesValidas.contains(evento.getPrioridade().toUpperCase())) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
+        if (evento.getPrioridade() != null) {
+            String prioridadeUpper = evento.getPrioridade().toUpperCase();
+            if (!prioridadesValidas.contains(prioridadeUpper)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
+            }
+            evento.setPrioridade(prioridadeUpper);
         }
         evento.setTenantId(getTenantId());
         return ResponseEntity.status(HttpStatus.CREATED).body(eventoRepository.save(evento));
@@ -2309,13 +2316,18 @@ public class ResourceController {
 
         // Validate prioridade against allowed set (WR-02, 85-REVIEW.md) — mirrors createPrazo's
         // allow-list; only checked when the payload actually supplies a new value, consistent
-        // with the partial-update semantics below.
+        // with the partial-update semantics below. Normalizes on write (WR-01, 85-REVIEW.md
+        // iteration 3) to match createPrazo's persisted-value casing — the frontend agenda page's
+        // "urgentes" counter compares prioridade === "ALTA" case-sensitively, so an unnormalized
+        // "alta" would silently be excluded from that count despite passing this validation.
         if (payload.getPrioridade() != null) {
             Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
-            if (!prioridadesValidas.contains(payload.getPrioridade().toUpperCase())) {
+            String prioridadeUpper = payload.getPrioridade().toUpperCase();
+            if (!prioridadesValidas.contains(prioridadeUpper)) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
             }
+            evento.setPrioridade(prioridadeUpper);
         }
 
         // Partial update: only overwrite fields explicitly provided in the payload.
@@ -2326,7 +2338,8 @@ public class ResourceController {
         if (payload.getTipo() != null) evento.setTipo(payload.getTipo());
         if (payload.getDataInicio() != null) evento.setDataInicio(payload.getDataInicio());
         if (payload.getDataFim() != null) evento.setDataFim(payload.getDataFim());
-        if (payload.getPrioridade() != null) evento.setPrioridade(payload.getPrioridade());
+        // prioridade is validated, normalized to uppercase, and set above (WR-01, 85-REVIEW.md
+        // iteration 3) — not repeated here to avoid persisting the raw, unnormalized value.
         if (payload.getConcluido() != null) evento.setConcluido(payload.getConcluido());
         if (payload.getRecurrenceRule() != null) evento.setRecurrenceRule(payload.getRecurrenceRule());
         if (payload.getRecurrenceEndDate() != null) evento.setRecurrenceEndDate(payload.getRecurrenceEndDate());
