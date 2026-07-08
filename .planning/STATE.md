@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.9
-milestone_name: Melhoria Módulo Processos
-status: Awaiting next milestone
-stopped_at: Completed 84-05-PLAN.md
-last_updated: "2026-07-08T02:46:42.139Z"
-last_activity: 2026-07-08 — Milestone v2.9 completed and archived
+milestone: v2.10
+milestone_name: Notificações e Alertas
+status: planning
+last_updated: "2026-07-08T13:01:06.623Z"
+last_activity: 2026-07-08
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.9 arquivada. A aguardar definição da próxima milestone.
+**Current focus:** Milestone v2.10 (Notificações e Alertas) iniciada — a definir requisitos e roadmap.
 
 ## Current Position
 
-Phase: Milestone v2.9 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-08 — Milestone v2.9 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-08 — Milestone v2.10 started
 
 ## Performance Metrics
 

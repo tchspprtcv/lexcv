@@ -8,6 +8,19 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.10 Notificações e Alertas
+
+**Goal:** Substituir o sino puramente calculado (que só lê eventos de agenda) por um sistema de notificações persistido no backend, orientado por perfil/permissão, cobrindo prazos de processos, entrada de fases, documentos, atribuições e pareceres.
+
+**Target features:**
+- Infraestrutura de notificações persistida (entidade backend, API de listagem/marcar-lida, sino com polling 30-60s, página dedicada `/notificacoes` com histórico e filtros)
+- Alerta de entrada de nova fase no processo
+- Alerta de novo documento em processo/cliente
+- Alerta de processo atribuído + novo fluxo de reatribuição de responsável
+- Alerta de parecer atribuído
+- Alerta de prazos de processos e calendário crítico (lógica de "crítico" consolidada, job diário)
+- Alerta de prazos de honorários (dias sem pagamento total desde `dataAcordo`)
+
 ## Requirements
 
 ### Validated
@@ -63,7 +76,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — milestone v2.9 concluída; a aguardar definição da próxima milestone)
+- [ ] Sistema de notificações persistido (entidade backend, API de listagem/marcar-lida, sino com polling, página dedicada de histórico/filtros)
+- [ ] Alerta de entrada de nova fase no processo
+- [ ] Alerta de novo documento em processo/cliente
+- [ ] Alerta de processo atribuído + fluxo de reatribuição de responsável
+- [ ] Alerta de parecer atribuído
+- [ ] Alerta de prazos de processos e calendário crítico (lógica de "crítico" consolidada, job diário)
+- [ ] Alerta de prazos de honorários (dias sem pagamento total)
 
 ### Out of Scope
 
@@ -71,9 +90,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Regras de negócio avançadas (cálculo de honorários, prazos jurídicos, workflows) — responsabilidade do backend
 - Contabilidade completa/ERP — fora do MVP
 - Mobile app nativo — Web/PWA primeiro; desktop via Tauri numa fase posterior
-- Notificações push / email — apenas in-app neste milestone
+- Notificações push / email externas — mantém-se in-app apenas (decisão confirmada na v2.10)
 - Recorrência infinita (sem data de fim) — requer paginação especial, adiado
 - Editar todas as instâncias futuras de uma série — apenas "esta instância" ou "toda a série"
+- Notificar toda a equipa de advogados/administrativos de um processo ao reatribuir o responsável — v2.10 cobre apenas o campo `responsavelId` único, não a equipa alargada
+- Preferências de notificação por utilizador (silenciar categorias) — todas as categorias são sempre entregues na v2.10
+- Novo campo de data de vencimento em `Honorario` — alerta de prazo de honorário usa dias sem pagamento total desde `dataAcordo` em vez de uma data explícita
 
 ## Context
 
@@ -81,6 +103,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Contrato e convenções REST para o mock: `.trae/documents/API-Design.md` (base `/api/v1`)
 - Modelo relacional (fonte de verdade para entidades): `.trae/documents/ERD.sql`
 - Backend alvo: Spring Boot (frontend deve permanecer “passivo”, apenas apresentar dados e executar ações)
+- Estado do `NotificationBell` (v2.1) na abertura da v2.10: 100% computado no cliente a partir de `GET /eventos/upcoming` (janela de datas sobre `Evento.dataInicio`) — sem entidade de notificação no backend, sem estado lido/não-lido, sem job agendado (`@Scheduled`), sem WebSocket/SSE em todo o projeto. "Prazo crítico" é calculado de 4 formas inconsistentes (dashboard KPI sobre `Evento.dataFim`, `computeRisco()` sobre `Prazo`, `/eventos/upcoming` sobre `Evento.dataInicio`, página de agenda unificando `Evento`+`Prazo` no cliente) — a v2.10 consolida isto numa única lógica partilhada.
 
 ## Constraints
 
@@ -135,6 +158,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | `@UniqueConstraint(processo_id)` em `Honorario` e `@UniqueConstraint(processo_id, ordem)` em `Facto`, cada uma com script de migração manual em `backend/migrations/` | Code review encontrou que a verificação de idempotência "check-then-act" a nível de aplicação (sem `synchronized`/constraint) não protege contra uma race condition genuína entre pedidos concorrentes; o projeto não tem Flyway/Liquibase, pelo que a migração fica documentada como passo manual de deploy (mesmo padrão do script `74-cleanup-nif-documento-tipo.sql`) | ✓ Good |
 | Ficha do processo — Partes e Fases (existentes) refatoradas para o mesmo padrão lista+Dialog "Adicionar" das 4 abas novas | Pedido explícito do utilizador durante a discussão da Phase 84, para consistência visual em toda a ficha; extensão de âmbito deliberada além dos critérios de sucesso originais do ROADMAP | ✓ Good |
 | Auditoria de milestone encontrou 2 bugs de integração cross-phase — `GET /honorarios?processo_id=X` e `GET /documentos?processo_id=X` ignoravam o filtro no backend, devolvendo dados de todo o tenant em vez de apenas do processo | Cada lado "parecia correto" isoladamente (o hook envia o parâmetro, o endpoint aceita GET) — só visível ao verificar o contrato completo entre fases, exatamente a classe de problema que a auditoria de milestone existe para apanhar. Corrigido na mesma sessão: `listHonorarios` ganhou filtro opcional por `processo_id`; a aba Documentos passou a usar o endpoint `GET /processos/{id}/documentos` já existente (espelhando o padrão já usado para `cliente_id`) | ✓ Good (corrigido na mesma sessão, commits 2ce48f7/380d435) |
+| (v2.10) Polling simples (30-60s) via TanStack Query em vez de WebSocket/SSE/tempo real | Reaproveita o padrão já usado em toda a app; zero infraestrutura de push nova — nenhuma existia no projeto | — Pending |
+| (v2.10) Notificações persistidas numa entidade backend própria, com estado lido/não-lido, em vez de efémeras/computadas a pedido | Permite histórico consultável e página dedicada `/notificacoes`; o `NotificationBell` v2.1 não tinha nenhum estado persistido | — Pending |
+| (v2.10) Alvo de cada notificação = só a entidade diretamente ligada (responsável do processo, advogado do parecer, equipa do cliente via `ClienteAdvogado`/`ClienteAdministrativo`) + ADMIN — nunca notificação em massa por permissão de visualização | Evita ruído (ex.: todo TECNICO com `documentos:view` a ser notificado de cada upload no tenant inteiro) | — Pending |
+| (v2.10) Lógica de "prazo crítico" consolidada numa única fonte partilhada, substituindo as 4 implementações inconsistentes existentes (dashboard, sino v2.1, página de agenda, endpoint `/prazos`) | Reduz o risco de dashboard/agenda/notificações discordarem sobre o que conta como "crítico" | — Pending |
+| (v2.10) Reatribuição de responsável de processo passa a ter um fluxo próprio (novo endpoint); hoje `responsavelId` só é definível na criação | "Processo atribuído" só faz sentido como evento repetível se a atribuição puder mudar depois da criação | — Pending |
+| (v2.10) Alerta de honorário usa dias sem pagamento total desde `dataAcordo`, sem novo campo de data de vencimento | `Honorario` não tem hoje nenhum campo de vencimento; adicionar um exigiria desenhar UI de preenchimento fora do pedido original | — Pending |
 
 ## Current State
 
@@ -157,7 +186,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.9 arquivada. A aguardar definição da próxima milestone via `/gsd:new-milestone`.
+**Current focus:** Milestone v2.10 (Notificações e Alertas) iniciada — a definir requisitos e roadmap.
 
 ## Evolution
 
@@ -177,4 +206,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — after v2.9 milestone (Melhoria Módulo Processos) shipped and archived*
+*Last updated: 2026-07-08 — after starting v2.10 milestone (Notificações e Alertas)*
