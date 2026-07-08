@@ -54,29 +54,16 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Separadores "Processos" e "Pareceres" da ficha de cliente ligados aos hooks existentes (`useProcessos({cliente_id})`, `usePareceres({clienteId})`), com fetch lazy via montagem condicional, permissões `processos:view`/`pareceres:view` espelhadas no frontend — v2.8 (Phase 77)
 - ✓ "Documentos a Tratar" e "Deslocações" relocalizados dos seus próprios separadores (antes viviam dentro do tab "Dados"), mantendo comportamento atual (gated por `isEditing`, sem campo novo) — v2.8 (Phase 78)
 - ✓ "Documentos Entregues" passa a upload real via novo endpoint `GET /clientes/{id}/documentos` (tenant-scoped, espelha `/processos/{id}/documentos`), reutilizando sistema genérico `Documento`/`useUploadDocumentoComProgresso`, combobox de tipo (datalist nativo), RBAC `documentos:view/edit`; secção antiga de texto removida por completo, coluna órfã sem migração — v2.8 (Phase 79, verificação visual/UAT ao vivo pendente — ver 79-HUMAN-UAT.md)
+- ✓ Campo Juízo (texto livre) e Origem (`Petição Inicial | Notificações Avulsas`, obrigatório no intake, imutável após formalização) nos Dados do Processo — v2.9 (Phase 80/81/84)
+- ✓ Sub-secções Decisões (data, tipo enum `Despacho|Decisão Interlocutória|Sentença|Acórdão`, resumo, anexo via upload multipart num só passo), Factos (descrição, data, `ordem` reordenável) e Testemunhas (nome, contacto, tipo `Autor|Réu`, notas) — entidades novas próprias, distintas de Partes, com CRUD completo e verificação dupla de posse (tenant + processoId) — v2.9 (Phase 80/81/84)
+- ✓ Aba "Documentos" dedicada na ficha do processo (upload/listagem/download/remoção via `GET /processos/{id}/documentos`) — v2.9 (Phase 84)
+- ✓ Criação automática e idempotente de Honorário ao formalizar processo (TRIAGEM→ATIVO), `valorTotal` sempre `null` (nunca pré-preenchido) — v2.9 (Phase 82)
+- ✓ Termo de Honorários imprimível (`[id]/termo-honorarios`, padrão CSS-print de `clientes/[id]/ficha`), combinando Cliente+Processo+Honorário, com bloqueio de impressão quando `valorTotal` ainda está em branco — v2.9 (Phase 84)
+- ✓ Partes e Fases (existentes desde v1.0) refatoradas para o mesmo padrão lista+Dialog "Adicionar" das 4 abas novas, por consistência visual — v2.9 (Phase 84, extensão de âmbito pedida explicitamente pelo utilizador)
 
 ### Active
 
-- [ ] Campo Juízo nos Dados do Processo (texto livre, ao lado de Tribunal/Área Jurídica)
-- [ ] Campo "origem" obrigatório no intake (Petição Inicial | Notificações Avulsas), visível na ficha
-- [ ] Sub-secção Decisões (entidade nova: data, tipo, resumo, anexo opcional)
-- [ ] Sub-secção Factos (entidade nova: descrição, data, ordem)
-- [ ] Sub-secção Testemunhas (entidade nova: nome, contacto, tipo/arrolada por, notas)
-- [ ] Aba "Documentos" dedicada na ficha do processo (upload real, reutilizando o padrão de Clientes v2.8)
-- [ ] Criação automática de Honorário ao formalizar processo (TRIAGEM→ATIVO) + geração de "Termo de Honorários" imprimível
-
-## Current Milestone: v2.9 Melhoria Módulo Processos
-
-**Goal:** Aprofundar o módulo de processos com dados jurídicos estruturados (Juízo, origem/tramitação), sub-secções de Decisões/Factos/Testemunhas, aba de documentos dedicada e criação automática do contrato de honorário na formalização — seguindo padrões internacionais de gestão processual.
-
-**Target features:**
-- Campo Juízo nos Dados do Processo (texto livre, ao lado de Tribunal/Área Jurídica)
-- Campo "origem" obrigatório no intake (Petição Inicial | Notificações Avulsas), visível na ficha
-- Sub-secção Decisões (entidade nova: data, tipo, resumo, anexo opcional)
-- Sub-secção Factos (entidade nova: descrição, data, ordem)
-- Sub-secção Testemunhas (entidade nova: nome, contacto, tipo/arrolada por, notas)
-- Aba "Documentos" dedicada na ficha do processo (upload real, reutilizando o padrão de Clientes v2.8)
-- Criação automática de Honorário ao formalizar processo (TRIAGEM→ATIVO) + geração de "Termo de Honorários" imprimível
+(Nenhum requisito ativo — milestone v2.9 concluída; a aguardar definição da próxima milestone)
 
 ### Out of Scope
 
@@ -141,20 +128,25 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | `useProcessos`/`usePareceres`/`useDocumentos` não ganharam um parâmetro `enabled` externo para fetch lazy por separador — em vez disso, cada separador usa um sub-componente que só monta quando ativo (`ClienteProcessosTab`, `ClienteParecerTab`, `ClienteDocumentosEntreguesTab`) | Nenhum destes hooks tinha essa opção; adicionar `enabled` a três hooks core arriscava efeitos colaterais nos restantes call sites. Sub-componente lazy-mount é mais isolado e replica o padrão já usado para os cards de Contactos/Notas | ✓ Good |
 | Novo endpoint `GET /clientes/{id}/documentos` em vez de corrigir o `GET /documentos` genérico (que ignora `cliente_id`/`processo_id` mesmo hoje sendo construídos pelo hook frontend) | Corrigir o endpoint genérico alargaria o raio de impacto para a página standalone `/documentos` e para o uso do endpoint por processos, fora do âmbito da milestone. O gap no `GET /documentos` fica registado como dívida técnica pré-existente, não introduzida por esta fase | ✓ Good (dívida técnica pré-existente, fora do âmbito) |
 | `POST /documentos/upload` passou a validar que `clienteId`/`processoId` (quando fornecidos) pertencem ao tenant do chamador antes de persistir | Code review da Phase 79 encontrou que o endpoint aceitava estes IDs sem verificação de posse — não era uma fuga de leitura (o lado de leitura já revalida o tenant independentemente), mas era uma lacuna real de integridade referencial/autorização. Corrigido com o mesmo padrão já usado no `responsavelId` de `createProcesso` | ✓ Good |
+| `Decisao`/`Facto`/`Testemunha` mirram o shape magro de `Parte.java` (Integer identity id, `processo_id` FK, sem coluna `tenant_id` própria) | Isolamento de tenant transitivo via o `Processo` pai, verificado no controller — mesmo padrão já usado por `ProcessoFase`/`Movimentacao`; evita duplicar a coluna em três tabelas novas | ✓ Good |
+| Endpoints de escrita em Decisão/Facto/Testemunha replicam o padrão de dupla verificação de `ProcessoFase` (tenant do processo pai + `processoId` da entidade filha), não o padrão mais simples de `Parte` | Pesquisa de milestone identificou risco de IDOR se o padrão mais simples fosse copiado, dado que os IDs destas entidades são inteiros sequenciais adivinháveis | ✓ Good |
+| `Facto.ordem` calculado no servidor (`max(ordem)+1`, `synchronized`) na criação; aceite explicitamente do cliente apenas na atualização (reordenação) | Decisão de discussão de fase — evita depender de uma restrição de unicidade a nível de BD não adicionada inicialmente; a reordenação continua possível via edição | ✓ Good |
+| `Honorario` auto-criado na formalização tem `valorTotal` sempre `null`, nunca copiado de `Cliente.honorariosPropostos` (uma estimativa por cliente, não por processo) | Risco de maior severidade identificado pela pesquisa de milestone — popular automaticamente um valor financeiro real sem confirmação explícita do utilizador seria um erro de segurança financeira grave | ✓ Good |
+| `@UniqueConstraint(processo_id)` em `Honorario` e `@UniqueConstraint(processo_id, ordem)` em `Facto`, cada uma com script de migração manual em `backend/migrations/` | Code review encontrou que a verificação de idempotência "check-then-act" a nível de aplicação (sem `synchronized`/constraint) não protege contra uma race condition genuína entre pedidos concorrentes; o projeto não tem Flyway/Liquibase, pelo que a migração fica documentada como passo manual de deploy (mesmo padrão do script `74-cleanup-nif-documento-tipo.sql`) | ✓ Good |
+| Ficha do processo — Partes e Fases (existentes) refatoradas para o mesmo padrão lista+Dialog "Adicionar" das 4 abas novas | Pedido explícito do utilizador durante a discussão da Phase 84, para consistência visual em toda a ficha; extensão de âmbito deliberada além dos critérios de sucesso originais do ROADMAP | ✓ Good |
+| Auditoria de milestone encontrou 2 bugs de integração cross-phase — `GET /honorarios?processo_id=X` e `GET /documentos?processo_id=X` ignoravam o filtro no backend, devolvendo dados de todo o tenant em vez de apenas do processo | Cada lado "parecia correto" isoladamente (o hook envia o parâmetro, o endpoint aceita GET) — só visível ao verificar o contrato completo entre fases, exatamente a classe de problema que a auditoria de milestone existe para apanhar. Corrigido na mesma sessão: `listHonorarios` ganhou filtro opcional por `processo_id`; a aba Documentos passou a usar o endpoint `GET /processos/{id}/documentos` já existente (espelhando o padrão já usado para `cliente_id`) | ✓ Good (corrigido na mesma sessão, commits 2ce48f7/380d435) |
 
 ## Current State
 
-**Shipped:** v2.8 (2026-07-06) — Refatoração Ficha de Cliente. Ficha de cliente unificada (view/edit num só componente, rota `/editar` removida) e reestruturada em 7 separadores (Dados, Contactos e Notas, Processos, Pareceres, Documentos Entregues, Documentos a Tratar, Deslocações), seguindo a disposição visual de processos. Enum `documento_tipo` restrito por tipo de cliente (BI adicionado, NIF removido). "Documentos Entregues" passa de lista de texto a upload real, reutilizando o sistema genérico de `Documento`. Auditoria de milestone: 20/20 requisitos satisfeitos, integração cross-phase totalmente ligada, sem gaps críticos — dívida técnica não-bloqueante (3 fases com UAT ao vivo pendente) aceite e registada. Ver `.planning/milestones/v2.8-MILESTONE-AUDIT.md`.
-
-**v2.7** (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes, NIF obrigatório validado em ambas as camadas.
-
-**v2.6** (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5.
-
-**v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração → Aprovação interna opcional → Entrega.
+**Shipped:** v2.9 (2026-07-08) — Melhoria Módulo Processos. Módulo de processos aprofundado com dados jurídicos estruturados: Juízo/Origem no card Dados, sub-secções Decisões/Factos/Testemunhas (entidades próprias com verificação dupla de posse), aba Documentos dedicada, criação automática e idempotente de Honorário na formalização (`valorTotal` sempre em branco), Termo de Honorários imprimível com bloqueio quando o valor ainda não foi preenchido, e Partes/Fases refatoradas para o mesmo padrão visual das abas novas. Auditoria de milestone encontrou e fechou na mesma sessão 2 bugs de integração cross-phase (filtros `processo_id` ignorados pelo backend em `/honorarios` e `/documentos`) — sem estes, o Termo de Honorários e a aba Documentos exibiam dados de todo o tenant em vez de apenas do processo. 17/17 requisitos satisfeitos — dívida técnica não-bloqueante (3 fases com UAT ao vivo pendente) aceite e registada. Ver `.planning/milestones/v2.9-MILESTONE-AUDIT.md`.
 
 <details>
-<summary>Histórico anterior (v1.0–v2.4)</summary>
+<summary>Histórico anterior (v1.0–v2.8)</summary>
 
+**v2.8** (2026-07-06) — Refatoração Ficha de Cliente. Ficha de cliente unificada e reestruturada em 7 separadores; enum `documento_tipo` restrito por tipo de cliente; "Documentos Entregues" passa a upload real.
+**v2.7** (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes, NIF obrigatório validado em ambas as camadas.
+**v2.6** (2026-07-01) — Módulo de Parecer Jurídico UI. Interface frontend completa sobre a API do v2.5.
+**v2.5** (2026-06-30) — Módulo de Parecer Jurídico (backend-only). API completa para o ciclo Solicitação → Elaboração → Aprovação interna opcional → Entrega.
 **v2.4** (2026-06-30) — Ficha de Cliente. Numeração sequencial automática (CLI-0001), formulário dinâmico Particular/Empresa, procuração obrigatória com aviso não-bloqueante, intake completo.
 **v2.3** (2026-06-21) — Responsividade App. LexCV totalmente responsivo em mobile/tablet.
 **v2.2** (2026-06-19) — Document Storage MinIO.
@@ -165,7 +157,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.9 (Melhoria Módulo Processos) — a definir requisitos e roadmap.
+**Current focus:** Milestone v2.9 arquivada. A aguardar definição da próxima milestone via `/gsd:new-milestone`.
 
 ## Evolution
 
@@ -185,4 +177,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — milestone v2.9 (Melhoria Módulo Processos) started*
+*Last updated: 2026-07-08 — after v2.9 milestone (Melhoria Módulo Processos) shipped and archived*

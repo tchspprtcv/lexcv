@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: milestone_complete
-stopped_at: Milestone complete (Phase 84 was final phase)
-last_updated: 2026-07-08T02:26:53.310Z
-last_activity: 2026-07-08
+status: Awaiting next milestone
+stopped_at: Completed 84-05-PLAN.md
+last_updated: "2026-07-08T02:46:42.139Z"
+last_activity: 2026-07-08 — Milestone v2.9 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 
 ## Current Position
 
-Phase: 84
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-08
-
-Progress: [██████████] 100%
+Phase: Milestone v2.9 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-08 — Milestone v2.9 completed and archived
 
 ## Performance Metrics
 
@@ -138,6 +136,19 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 | tooling | `backend/migrations/74-cleanup-nif-documento-tipo.sql` is a standalone manual-execution script — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
 | tech_debt | `Cliente.documentosEntregues` (backend field/column) and `DocumentoEntregue` (frontend type) are orphaned by design (CLI-29 "corte limpo") | intentional, matches `dados_tipo` precedent from v2.7 |
 
+Items acknowledged and deferred at milestone v2.9 close on 2026-07-08 (see `.planning/v2.9-MILESTONE-AUDIT.md` for full detail — 2 cross-phase integration gaps found by the milestone audit were closed same session, commits 2ce48f7/380d435, before this close):
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 81 (81-VERIFICATION.md) — code-level verification passed 12/12, live HTTP round-trip not performed (credential-lockout constraint) | human_needed |
+| verification_gap | Phase 82 (82-VERIFICATION.md) — code-level verification passed 4/4, live UI/HTTP round-trip not performed | human_needed |
+| verification_gap | Phase 84 (84-VERIFICATION.md) — code-level verification passed 10/10, live browser walkthrough not performed | human_needed |
+| uat_gap | 81-HUMAN-UAT.md — 5 pending scenarios (intake origem validation, juizo/origem round-trip, full CRUD + cross-processo 404 lifecycle, Facto ordem concurrency, prod migration dry-run) | partial |
+| uat_gap | 82-HUMAN-UAT.md — 4 pending scenarios (live formalize → /financeiro render, duplicate-Honorário check, concurrency race, prod migration dry-run) | partial |
+| uat_gap | 84-HUMAN-UAT.md — 7 pending scenarios (intake wizard, Juízo edit round-trip, Termo de Honorários print flow, Partes/Fases dialog-reset + Fases-Guardar fixes, Decisão-file↔Documentos cross-link, Factos live-reorder, RBAC-gated rendering) | partial |
+| tooling | `backend/migrations/81-add-facto-ordem-unique-constraint.sql` and `backend/migrations/82-add-honorario-processo-unique-constraint.sql` are standalone manual-execution scripts — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
+| tooling | `web/scripts/verify-juizo-origem-roundtrip.mjs` is a genuine, executable, non-duplicated round-trip proof, wired into `package.json` as `verify:juizo-origem`, but not yet called from any CI step | candidate for CI wiring in a future milestone |
+
 ## Session Continuity
 
 Last session: 2026-07-08T01:40:37.971Z
@@ -146,4 +157,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Review and approve the v2.9 roadmap, then run `/gsd:plan-phase 80` to start planning the first phase.
+- Start the next milestone with /gsd-new-milestone

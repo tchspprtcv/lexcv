@@ -11,7 +11,7 @@
 - ✅ **v2.6 Módulo de Parecer Jurídico — UI** — Phases 65–69 (complete 2026-07-01)
 - ✅ **v2.7 Melhoria Gestão de Clientes** — Phases 70–73.1 (complete 2026-07-02)
 - ✅ **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (complete 2026-07-06)
-- 🚧 **v2.9 Melhoria Módulo Processos** — Phases 80–84 (in progress)
+- ✅ **v2.9 Melhoria Módulo Processos** — Phases 80–84 (complete 2026-07-08)
 
 ## Phases
 
@@ -145,124 +145,20 @@ See archive: [milestones/v2.8-ROADMAP.md](milestones/v2.8-ROADMAP.md) · [milest
 
 </details>
 
-### 🚧 v2.9 Melhoria Módulo Processos (In Progress)
+<details>
+<summary>✅ v2.9 Melhoria Módulo Processos (Phases 80–84) — SHIPPED 2026-07-08</summary>
 
-**Milestone Goal:** Aprofundar o módulo de processos com dados jurídicos estruturados (Juízo, origem/tramitação), sub-secções de Decisões/Factos/Testemunhas, aba de documentos dedicada e criação automática do contrato de honorário na formalização — seguindo padrões internacionais de gestão processual.
+Módulo de processos aprofundado com dados jurídicos estruturados: `Processo.juizo`/`origem` (Phase 80 fundação de dados), CRUD completo e seguro de Decisões/Factos/Testemunhas com dupla verificação de posse tenant+processoId (Phase 81, 12 endpoints), criação automática e idempotente de Honorário na formalização com `valorTotal` sempre em branco (Phase 82, isolada por concentrar o risco financeiro), tipos/schemas/hooks frontend com prova executável de round-trip fechando a 4ª recorrência do bug de mapeamento camelCase/snake_case (Phase 83), e UI completa — intake com Origem obrigatória, Juízo editável, 4 abas novas (Decisões/Factos/Testemunhas/Documentos), Termo de Honorários imprimível com bloqueio quando o valor está em branco, e Partes/Fases refatoradas para o mesmo padrão visual (Phase 84, extensão de âmbito pedida pelo utilizador). Auditoria de milestone encontrou e fechou na mesma sessão 2 bugs de integração cross-phase: `GET /honorarios?processo_id=X` e `GET /documentos?processo_id=X` ignoravam o filtro no backend, devolvendo dados de todo o tenant.
 
-É um milestone de "aplicar padrão existente a um módulo novo": todas as sete funcionalidades mapeiam diretamente para padrões já entregues e validados no v2.4 (Ficha Cliente imprimível) e v2.8 (upload de Documentos, abas lazy-mount, entidades filhas estilo `ClienteContacto`/`ClienteNota`). Nenhuma dependência, biblioteca ou padrão arquitetural novo é necessário. A ordem das fases segue uma cadeia de dependência estrita — fundação de dados → endpoints backend → tipos/hooks frontend → UI frontend — replicando a disciplina de sequenciamento já usada no v2.8 (Phase 74→75), para que os valores de enum (`TipoDecisao`, `Testemunha.tipo`) não mudem depois dos schemas Zod já estarem escritos. A criação automática de Honorário (Phase 82) foi isolada da Phase 81 por ser independentemente paralelizável (nenhuma dependência nas três entidades novas) e por concentrar o risco financeiro/idempotência mais sensível do milestone (flagged pela pesquisa como o pitfall de maior severidade).
+- [x] Phase 80: Fundações — Processo.juizo/origem + Entidades Decisão/Facto/Testemunha (PROC-01, PROC-06, PROC-09, PROC-11) — 1/1 plan, completed 2026-07-07
+- [x] Phase 81: Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem (PROC-02 a PROC-05, PROC-07, PROC-08, PROC-10, PROC-12, PROC-17) — 3/3 plans, completed 2026-07-07
+- [x] Phase 82: Backend — Criação Automática de Honorário na Formalização (PROC-14) — 1/1 plan, completed 2026-07-07
+- [x] Phase 83: Frontend — Tipos, Schemas e Hooks (camada de integração, sem requisito dedicado) — 2/2 plans, completed 2026-07-07
+- [x] Phase 84: Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários) (PROC-13, PROC-15, PROC-16) — 5/5 plans, completed 2026-07-08
 
-#### Phase 80: Fundações — Processo.juizo/origem + Entidades Decisão/Facto/Testemunha
+See archive: [milestones/v2.9-ROADMAP.md](milestones/v2.9-ROADMAP.md) · [milestones/v2.9-MILESTONE-AUDIT.md](milestones/v2.9-MILESTONE-AUDIT.md)
 
-**Goal**: A estrutura de dados jurídicos do processo (Juízo, Origem, Decisões, Factos, Testemunhas) existe na base de dados, estável e pronta para os endpoints e a UI construírem sobre ela, sem qualquer mudança visível para o utilizador ainda.
-**Depends on**: Nothing (first phase of milestone)
-**Requirements**: PROC-01, PROC-06, PROC-09, PROC-11
-**Success Criteria** (what must be TRUE):
-
-  1. A entidade `Processo` tem uma coluna `juizo` (texto livre) e uma coluna `origem` (enum `OrigemProcesso`: Petição Inicial | Notificações Avulsas)
-  2. Existem três entidades novas — `Decisao` (data, tipo enum `TipoDecisao`: Despacho | Decisão Interlocutória | Sentença | Acórdão, resumo, anexo opcional), `Facto` (descrição, data, ordem por processo), `Testemunha` (nome, contacto, tipo enum: Autor | Réu, notas) — cada uma com FK `processo_id`, sem coluna `tenant_id` própria (isolamento transitivo via processo pai, mesmo padrão de `Parte`)
-  3. Cada entidade nova tem um repositório Spring Data JPA correspondente
-  4. A aplicação arranca e persiste corretamente as tabelas novas (`ddl-auto=update`), sem quebrar nenhum fluxo existente de Processo
-
-**Plans**: 1 plan
-Plans:
-
-- [x] 80-01-PLAN.md — Enums (OrigemProcesso/TipoDecisao/TipoTestemunha) + Processo.juizo/origem + Decisao/Facto/Testemunha entities + repositories
-
-#### Phase 81: Backend — CRUD Decisões/Factos/Testemunhas + Wiring Juízo/Origem
-
-**Goal**: A API expõe CRUD completo e seguro para Decisões, Factos e Testemunhas, e os campos Juízo/Origem estão totalmente integrados no ciclo de vida do Processo (criação, edição, intake e listagem).
-**Depends on**: Phase 80
-**Requirements**: PROC-02, PROC-03, PROC-04, PROC-05, PROC-07, PROC-08, PROC-10, PROC-12, PROC-17
-**Success Criteria** (what must be TRUE):
-
-  1. Endpoints `GET/POST/PUT/DELETE /processos/{id}/decisoes`, `/factos`, `/testemunhas` (12 endpoints) funcionam sob os scopes `processos:view`/`processos:edit` já existentes, cada operação de escrita revalida tenant do processo pai E `processoId` da entidade filha (padrão `ProcessoFase`, não o padrão simples de `Parte`)
-  2. O endpoint de criação de Decisão aceita upload multipart direto (cria o `Documento` internamente e associa-o), não um seletor de documento pré-existente
-  3. Factos podem ser reordenados (campo `ordem` scoped por `processo_id`, não global)
-  4. `juizo`/`origem` são persistidos e devolvidos por `createProcesso`, `updateProcesso`, `createProcessoIntake` e aparecem no mapa enriquecido devolvido por `listProcessos`
-  5. `origem` é validada como obrigatória tanto em `POST /processos/intake` (que hoje não valida nada) como em `CAMPOS_MINIMOS_POR_TIPO` para todos os valores de `tipo_processo`
-
-**Plans**: 3 plans
-Plans:
-**Wave 1**
-
-- [x] 81-01-PLAN.md — Wiring juizo/origem no ciclo de vida do Processo (intake obrigatorio, update imutavel, listProcessos enriquecido)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 81-02-PLAN.md — CRUD Decisao (upload multipart) + Testemunha, com double-check tenant/processoId (PROC-17)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 81-03-PLAN.md — CRUD Facto com ordem server-computed/reordenavel, double-check tenant/processoId (PROC-17)
-
-#### Phase 82: Backend — Criação Automática de Honorário na Formalização
-
-**Goal**: Formalizar um processo (TRIAGEM→ATIVO) cria automaticamente e de forma segura um registo de Honorário associado, sem nunca preencher um valor financeiro sem confirmação explícita do utilizador.
-**Depends on**: Phase 80 (não depende de Phase 81 — trabalho paralelizável)
-**Requirements**: PROC-14
-**Success Criteria** (what must be TRUE):
-
-  1. Ao formalizar um processo, um registo de Honorário é criado automaticamente e associado ao processo, dentro de uma transação (`@Transactional`)
-  2. Repetir a formalização (retry/replay) não duplica o Honorário — existe uma verificação de existência explícita (`findByProcessoId`) antes da criação, independente do guard de estado
-  3. O `valorTotal` do Honorário criado automaticamente começa sempre `null` — nunca é pré-preenchido a partir de `Cliente.honorariosPropostos`
-
-**Plans**: 1 plan
-Plans:
-
-- [x] 82-01-PLAN.md — Criação idempotente de Honorario dentro de formalizarProcesso (valorTotal sempre null)
-
-#### Phase 83: Frontend — Tipos, Schemas e Hooks
-
-**Goal**: A camada de dados do frontend conhece os campos e entidades novos com tipagem e validação corretas, e o mapeamento camelCase/snake_case está coberto para todos eles antes de qualquer UI ser construída.
-**Depends on**: Phase 81, Phase 82
-**Requirements**: (suporte a PROC-01 a PROC-14, sem requisito dedicado — camada de integração)
-**Success Criteria** (what must be TRUE):
-
-  1. `types/processos.ts` inclui `Processo.juizo`/`origem` e os tipos `Decisao`/`Facto`/`Testemunha`
-  2. `schemas/processos.ts` inclui `decisaoFormSchema`/`factoFormSchema`/`testemunhaFormSchema`, e `origem` é um `z.enum(...)` obrigatório (não mais `optionalTrimmedString`)
-  3. `use-processos.ts` ganha o quarteto de hooks (list/create/update/delete) para cada entidade nova, seguindo a convenção `queryKey` já usada (`["processos", "<subresource>", id]`)
-  4. `normalizeProcesso()`/`toProcessoApiPayload()` mapeiam `juizo`/`origem` corretamente — verificado por um teste de round-trip com refresh, não apenas por build limpo (previne a 4ª recorrência do bug de mapeamento já visto 3 vezes neste projeto)
-
-**Plans**: 2 plans
-Plans:
-**Wave 1**
-
-- [x] 83-01-PLAN.md — Tipos TypeScript (Processo.juizo/origem + Decisao/Facto/Testemunha) + schemas Zod + label maps PT
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 83-02-PLAN.md — Hooks CRUD (list/create/update/delete x Decisao/Testemunha/Facto) + mapeamento juizo/origem + verificacao de round-trip
-
-#### Phase 84: Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)
-
-**Goal**: O utilizador consegue registar e consultar Juízo/Origem, gerir Decisões/Factos/Testemunhas, aceder a uma aba de Documentos dedicada, e gerar o Termo de Honorários impresso — tudo a partir da ficha do processo.
-**Depends on**: Phase 83
-**Requirements**: PROC-13, PROC-15, PROC-16
-**Success Criteria** (what must be TRUE):
-
-  1. O passo 1 do intake exige a escolha de Origem (Petição Inicial | Notificações Avulsas); depois de formalizado, o campo é visível na ficha mas não editável
-  2. Juízo é visível e editável no card "Dados" da ficha do processo, ao lado de Tribunal/Área Jurídica
-  3. A ficha do processo ganha quatro abas novas no grupo de botões-toggle já existente — Decisões, Factos, Testemunhas, Documentos — cada uma permitindo listar/criar/editar/remover (Documentos: upload/listagem/download/remoção via `GET /processos/{id}/documentos` já existente)
-  4. Uma nova rota `[id]/termo-honorarios` gera um documento imprimível (clone do padrão CSS-print de `clientes/[id]/ficha`) combinando dados de Cliente, Processo e Honorário
-  5. Gerar o Termo de Honorários bloqueia ou avisa claramente quando o `valorTotal` do Honorário ainda está em branco, em vez de imprimir campos vazios
-
-**Plans**: 5 plans
-Plans:
-**Wave 1**
-
-- [x] 84-01-PLAN.md — Origem obrigatório no intake (processos/novo) + Juízo editável em processos/[id]/editar
-- [x] 84-02-PLAN.md — Rota imprimível [id]/termo-honorarios (Cliente+Processo+Honorário, bloqueio quando valorTotal é null)
-- [x] 84-03-PLAN.md — processos/[id]/page.tsx: TabKey+Dados card (Juízo/Origem/Gerar Termo) + refactor Partes/Fases para Dialog
-
-**Wave 2** *(blocked on 84-03 completion)*
-
-- [x] 84-04-PLAN.md — processos/[id]/page.tsx: abas Decisões (upload multipart) e Testemunhas
-
-**Wave 3** *(blocked on 84-04 completion)*
-
-- [x] 84-05-PLAN.md — processos/[id]/page.tsx: abas Factos (reordenável) e Documentos
-
-**UI hint**: yes
+</details>
 
 ## Progress
 

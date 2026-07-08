@@ -1,5 +1,26 @@
 # Milestones
 
+## v2.9 Melhoria Módulo Processos (Shipped: 2026-07-08)
+
+**Phases completed:** 5 phases, 12 plans, 25 tasks
+
+**Key accomplishments:**
+
+- Added `juizo`/`origem` columns to `Processo` plus three new lean JPA entities (`Decisao`, `Facto`, `Testemunha`) with their enums and repositories, verified via a live Spring Boot startup against local PostgreSQL with `ddl-auto=update`.
+- `origem` is now a server-enforced required field at intake and formalização (422 gate, every `tipo_processo` including `default`), `juizo` is persisted via update while `origem` is made immutable post-intake, and both fields now appear in the `GET /processos` list response, not just the detail view.
+- 8 new REST endpoints (`GET/POST/PUT/DELETE /processos/{id}/decisoes` and `/testemunhas`) added to `ResourceController.java`, with Decisão's create accepting a direct multipart file upload that builds the `Documento` internally (no pre-existing-document picker), and every write endpoint enforcing the `ProcessoFase`-style double-check ownership pattern (parent tenant + child `processoId` re-check).
+- Facto CRUD (GET/POST/PUT/DELETE `/processos/{id}/factos`) with server-computed, processo-scoped, concurrency-safe `ordem` on create and explicit client-controlled `ordem` on update — the phase's final 4 of 12 endpoints.
+- `formalizarProcesso()` now auto-creates an empty Honorario placeholder (valorTotal=null) the first time a processo transitions TRIAGEM→ATIVO, guarded by an independent existence-check so retries never create a duplicate.
+- TypeScript types and Zod schemas for Decisao/Facto/Testemunha plus Processo.juizo/origem, with origem promoted to a required enum only in the intake flow and three new PT label-map files.
+- 12 hooks TanStack Query novos (list/create/update/delete x Decisão/Testemunha/Facto) e mapeamento juizo/origem centralizado num módulo partilhado, com prova de round-trip real executável via Node puro que importa esse mesmo módulo.
+- Closed the two small-field gaps blocking the rest of Phase 84: Origem is now a required, validated field on the intake wizard's step 1 (switched from `processoFormSchema` to `processoIntakeFormSchema`), and Juízo is now editable on `processos/[id]/editar/page.tsx` next to Tribunal/Área Jurídica.
+- New printable `/processos/{id}/termo-honorarios` route combining Cliente + Processo + Honorário data, with a hard print-block (not just a warning) when `valorTotal` is null.
+- Extended processos/[id]/page.tsx's TabKey to 8 values, added read-only Juízo/Origem rows and a conditional Gerar Termo de Honorários button to the Dados card, and refactored the Partes/Fases tabs from a side-by-side grid form to the Dialog "Adicionar" pattern.
+- Decisões and Testemunhas tab bodies in `processos/[id]/page.tsx`, using the Dialog Adicionar/Editar pattern with the 8 already-built Phase 83 hooks — Decisão's create form additionally carries a native file input for a single-step multipart anexo upload.
+- Factos tab (list/create/edit-with-reorder/delete) and Documentos tab (upload-with-progress/list/download/delete) fill the last two `null` placeholders in `processos/[id]/page.tsx`, closing the sequential 84-03/84-04/84-05 chain on that file.
+
+---
+
 ## v2.8 Refatoração Ficha de Cliente (Shipped: 2026-07-06)
 
 **Phases completed:** 6 phases (74–79), 13 plans, 26 tasks
