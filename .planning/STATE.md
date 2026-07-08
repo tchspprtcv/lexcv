@@ -4,8 +4,8 @@ milestone: v2.10
 milestone_name: Notificações e Alertas
 status: executing
 stopped_at: v2.10 ROADMAP.md created (Phases 85–89)
-last_updated: "2026-07-08T14:28:00.282Z"
-last_activity: 2026-07-08 -- Phase 85 planning complete
+last_updated: "2026-07-08T14:29:37.711Z"
+last_activity: 2026-07-08 -- Phase 85 execution started
 progress:
   total_phases: 5
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.10 (Notificações e Alertas) — roadmap criado (Phases 85–89), pronta para planeamento de fase.
+**Current focus:** Phase 85 — Consolidação da Lógica de Prazo Crítico
 
 ## Current Position
 
-Phase: 85 of 89 (Consolidação da Lógica de "Prazo Crítico")
-Plan: — (ainda não planeada)
-Status: Ready to execute
-Last activity: 2026-07-08 -- Phase 85 planning complete
+Phase: 85 (Consolidação da Lógica de Prazo Crítico) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 85
+Last activity: 2026-07-08 -- Phase 85 execution started
 
 ## Performance Metrics
 
