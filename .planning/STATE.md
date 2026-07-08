@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 84-03-PLAN.md
-last_updated: "2026-07-08T01:07:27.971Z"
+stopped_at: Completed 84-04-PLAN.md
+last_updated: "2026-07-08T01:24:29.377Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 80
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 ## Current Position
 
 Phase: 84 (Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-08
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 83%
 | Phase 84 P01 | 8min | 2 tasks | 2 files |
 | Phase 84 P02 | 15min | 2 tasks | 1 files |
 | Phase 84 P03 | 10min | 3 tasks | 1 files |
+| Phase 84 P04 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 84]: Imprimir Button on Termo de Honorarios carries explicit rounded-none per UI-SPEC Anti-Safe Harbor requirement, even though the Ficha Cliente analog it was cloned from omits it
 - [Phase 84]: [Phase 84-03] 4 new TabKey values render as explicit null branches (not omitted) in the tab-content ternary chain, keeping it type-correct until 84-04/84-05 fill in real bodies
 - [Phase 84]: [Phase 84-03] rounded-none applied explicitly to every new/moved Partes/Fases Dialog form control per UI-SPEC Anti-Safe Harbor requirement
+- [Phase 84]: [Phase 84-04] testemunhaFormSchema's optional tipo field wrapped in z.preprocess to coerce an empty-string <select> value to undefined -- z.enum().optional() only treats undefined as absent, rejecting the blank placeholder selection contrary to the plan's stated UI-SPEC intent (bug fix)
+- [Phase 84]: [Phase 84-04] testemunhaForm's zodResolver cast as any (eslint-disabled on that line) because the z.preprocess input type diverges from TestemunhaFormValues -- same class of RHF+Zod-effects mismatch already present via prazoForm, same established workaround reused
 
 ### Pending Todos
 
@@ -133,8 +136,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T01:07:27.947Z
-Stopped at: Completed 84-03-PLAN.md
+Last session: 2026-07-08T01:24:29.340Z
+Stopped at: Completed 84-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
