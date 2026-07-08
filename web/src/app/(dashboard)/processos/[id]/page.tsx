@@ -41,12 +41,15 @@ import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
+  useAddDecisao,
   useAddProcessoFase,
   useAddProcessoMovimentacao,
   useAddProcessoParte,
   useAuditLog,
   useConflictCheckDecisao,
   useCreatePrazo,
+  useDecisoes,
+  useDeleteDecisao,
   useExecutarTransicao,
   useFormalizarProcesso,
   usePrazos,
@@ -56,6 +59,7 @@ import {
   useProcessoPartes,
   useTimeline,
   useTogglePrazoConcluido,
+  useUpdateDecisao,
   useUpdateProcessoFaseStatus,
   useWorkflow,
 } from "@/hooks/use-processos";
@@ -63,13 +67,17 @@ import { toast } from "@/hooks/use-toast";
 import { conflictNivelToLabel, conflictNivelToVariant } from "@/lib/conflict-check";
 import { origemProcessoToLabel } from "@/lib/origem-processo";
 import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
+import { tipoDecisaoToLabel } from "@/lib/tipo-decisao";
 import {
+  decisaoFormSchema,
   prazoFormSchema,
   processoFaseFormSchema,
   processoFaseStatusSchema,
   processoMovimentacaoFormSchema,
   processoParteFormSchema,
+  tipoDecisaoSchema,
   transicaoJustificativaFormSchema,
+  type DecisaoFormValues,
   type PrazoFormValues,
   type ProcessoFaseFormValues,
   type ProcessoMovimentacaoFormValues,
@@ -78,6 +86,8 @@ import {
 } from "@/schemas/processos";
 import type {
   AuditLogEntry,
+  Decisao,
+  DecisaoUpdateRequest,
   ProcessoFaseCreateRequest,
   ProcessoFaseStatus,
   ProcessoFaseUpdateRequest,
@@ -183,6 +193,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const updateFaseStatus = useUpdateProcessoFaseStatus(id);
   const addMov = useAddProcessoMovimentacao(id);
 
+  const decisoes = useDecisoes(id);
+  const addDecisao = useAddDecisao(id);
+  const updateDecisao = useUpdateDecisao(id);
+  const deleteDecisao = useDeleteDecisao(id);
+
   // Timeline filter state
   const [selectedTipos, setSelectedTipos] = React.useState<Set<TimelineItemType>>(
     new Set(["movimentacao", "transicao", "evento", "documento", "decisao"]),
@@ -231,6 +246,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     defaultValues: { titulo: "", descricao: undefined, data: undefined },
   });
   const [movServerError, setMovServerError] = React.useState<string | null>(null);
+
+  const [addDecisaoModal, setAddDecisaoModal] = React.useState(false);
+  const [editingDecisaoId, setEditingDecisaoId] = React.useState<number | null>(null);
+  const [decisaoServerError, setDecisaoServerError] = React.useState<string | null>(null);
+  const decisaoForm = useForm<DecisaoFormValues>({
+    resolver: zodResolver(decisaoFormSchema),
+    defaultValues: { data: "", tipo: undefined, resumo: undefined, file: undefined },
+  });
 
   const [faseDraftStatus, setFaseDraftStatus] = React.useState<Record<number, ProcessoFaseStatus>>({});
 
@@ -393,6 +416,62 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
       const msg = e instanceof Error ? e.message : "Erro ao adicionar movimentação";
       setMovServerError(msg);
       toast.error(msg);
+    }
+  };
+
+  const onOpenAddDecisao = () => {
+    decisaoForm.reset({ data: "", tipo: undefined, resumo: undefined, file: undefined });
+    setEditingDecisaoId(null);
+    setDecisaoServerError(null);
+    setAddDecisaoModal(true);
+  };
+
+  const onOpenEditDecisao = (d: Decisao) => {
+    decisaoForm.reset({ data: d.data, tipo: d.tipo, resumo: d.resumo, file: undefined });
+    setEditingDecisaoId(d.id);
+    setDecisaoServerError(null);
+    setAddDecisaoModal(true);
+  };
+
+  const onSubmitDecisao = async (values: DecisaoFormValues) => {
+    setDecisaoServerError(null);
+    try {
+      if (editingDecisaoId !== null) {
+        await updateDecisao.mutateAsync({
+          decisaoId: editingDecisaoId,
+          payload: { data: values.data, tipo: values.tipo, resumo: values.resumo } satisfies DecisaoUpdateRequest,
+        });
+        toast.success("Decisão atualizada com sucesso.");
+      } else {
+        await addDecisao.mutateAsync({
+          data: values.data,
+          tipo: values.tipo,
+          resumo: values.resumo,
+          file: values.file?.[0],
+        });
+        toast.success("Decisão adicionada com sucesso.");
+      }
+      setAddDecisaoModal(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : editingDecisaoId !== null
+            ? "Erro ao atualizar decisão"
+            : "Erro ao adicionar decisão";
+      setDecisaoServerError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const onDeleteDecisao = async (decisaoId: number) => {
+    const ok = window.confirm("Apagar esta decisão?");
+    if (!ok) return;
+    try {
+      await deleteDecisao.mutateAsync(decisaoId);
+      toast.success("Decisão apagada com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao apagar decisão");
     }
   };
 
@@ -1479,7 +1558,174 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   )}
                 </CardContent>
               </Card>
-          ) : tab === "decisoes" ? null : tab === "factos" ? null : tab === "testemunhas" ? null : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
+          ) : tab === "decisoes" ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Decisões</CardTitle>
+                  {canEditProcessos ? (
+                    <Dialog open={addDecisaoModal} onOpenChange={setAddDecisaoModal}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none"
+                          onClick={onOpenAddDecisao}
+                        >
+                          Adicionar Decisão
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingDecisaoId === null ? "Adicionar Decisão" : "Editar Decisão"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <form className="space-y-4" onSubmit={decisaoForm.handleSubmit(onSubmitDecisao)}>
+                          <div className="space-y-2">
+                            <Label htmlFor="decisao_data">Data</Label>
+                            <input
+                              id="decisao_data"
+                              type="date"
+                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              {...decisaoForm.register("data")}
+                            />
+                            {decisaoForm.formState.errors.data ? (
+                              <p className="text-sm text-red-600">{decisaoForm.formState.errors.data.message}</p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="decisao_tipo">Tipo</Label>
+                            <select
+                              id="decisao_tipo"
+                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              {...decisaoForm.register("tipo")}
+                            >
+                              <option value="">Selecionar tipo</option>
+                              {tipoDecisaoSchema.options.map((t) => (
+                                <option key={t} value={t}>
+                                  {tipoDecisaoToLabel(t)}
+                                </option>
+                              ))}
+                            </select>
+                            {decisaoForm.formState.errors.tipo ? (
+                              <p className="text-sm text-red-600">{decisaoForm.formState.errors.tipo.message}</p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="decisao_resumo">Resumo</Label>
+                            <Textarea
+                              id="decisao_resumo"
+                              className="rounded-none"
+                              {...decisaoForm.register("resumo")}
+                            />
+                            {decisaoForm.formState.errors.resumo ? (
+                              <p className="text-sm text-red-600">{decisaoForm.formState.errors.resumo.message}</p>
+                            ) : null}
+                          </div>
+
+                          {editingDecisaoId === null ? (
+                            <div className="space-y-2">
+                              <Label htmlFor="decisao_file">Anexo (opcional)</Label>
+                              <input
+                                id="decisao_file"
+                                type="file"
+                                className="rounded-none block w-full text-sm text-neutral-600 file:mr-3 file:rounded-none file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:text-neutral-400 dark:file:bg-slate-800"
+                                {...decisaoForm.register("file")}
+                              />
+                              {decisaoForm.formState.errors.file ? (
+                                <p className="text-sm text-red-600">{decisaoForm.formState.errors.file.message}</p>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          {decisaoServerError ? <p className="text-sm text-red-600">{decisaoServerError}</p> : null}
+
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-none"
+                              onClick={() => setAddDecisaoModal(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="rounded-none"
+                              disabled={
+                                decisaoForm.formState.isSubmitting || addDecisao.isPending || updateDecisao.isPending
+                              }
+                            >
+                              Confirmar
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {decisoes.isLoading ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</p>
+                ) : decisoes.isError ? (
+                  <p className="text-sm text-red-600">Não foi possível carregar as decisões deste processo.</p>
+                ) : !decisoes.data?.length ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma decisão registada.</p>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <table className="w-full min-w-[480px] text-sm">
+                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                          <th className="py-2 pr-4 font-medium">Data</th>
+                          <th className="py-2 pr-4 font-medium">Tipo</th>
+                          <th className="py-2 pr-4 font-medium">Resumo</th>
+                          <th className="py-2 pr-4 font-medium">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {decisoes.data.map((d) => (
+                          <tr
+                            key={d.id}
+                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                          >
+                            <td className="py-2 pr-4">{formatDate(d.data)}</td>
+                            <td className="py-2 pr-4">{tipoDecisaoToLabel(d.tipo)}</td>
+                            <td className="py-2 pr-4">{d.resumo ?? "—"}</td>
+                            <td className="py-2 pr-4">
+                              {canEditProcessos ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 hover:underline text-xs"
+                                    onClick={() => onOpenEditDecisao(d)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-neutral-500 hover:text-red-600"
+                                    onClick={() => onDeleteDecisao(d.id)}
+                                    aria-label="Apagar decisão"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : tab === "factos" ? null : tab === "testemunhas" ? null : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
