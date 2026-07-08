@@ -252,7 +252,7 @@ Plans:
 
 - [x] 84-01-PLAN.md — Origem obrigatório no intake (processos/novo) + Juízo editável em processos/[id]/editar
 - [x] 84-02-PLAN.md — Rota imprimível [id]/termo-honorarios (Cliente+Processo+Honorário, bloqueio quando valorTotal é null)
-- [ ] 84-03-PLAN.md — processos/[id]/page.tsx: TabKey+Dados card (Juízo/Origem/Gerar Termo) + refactor Partes/Fases para Dialog
+- [x] 84-03-PLAN.md — processos/[id]/page.tsx: TabKey+Dados card (Juízo/Origem/Gerar Termo) + refactor Partes/Fases para Dialog
 
 **Wave 2** *(blocked on 84-03 completion)*
 
@@ -310,6 +310,6 @@ Plans:
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 3/3 | Complete    | 2026-07-07 |
 | 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 2/2 | Complete    | 2026-07-07 |
-| 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 2/5 | In Progress|  |
+| 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 3/5 | In Progress|  |
 
 **Next:** Milestone v2.9 roadmap created 2026-07-07. Run `/gsd:plan-phase 80` to start planning the first phase.

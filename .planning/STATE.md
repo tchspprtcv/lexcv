@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-07-08T00:54:26.426Z"
+stopped_at: Completed 84-03-PLAN.md
+last_updated: "2026-07-08T01:07:27.971Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 80
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 ## Current Position
 
 Phase: 84 (Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-07-08
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [████████░░] 75%
 | Phase 83 P02 | 6min | 2 tasks | 4 files |
 | Phase 84 P01 | 8min | 2 tasks | 2 files |
 | Phase 84 P02 | 15min | 2 tasks | 1 files |
+| Phase 84 P03 | 10min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,8 @@ Recent decisions affecting current work:
 - [Phase 84]: Juízo Input on processos/[id]/editar/page.tsx carries explicit rounded-none per UI-SPEC.md sharp-edges requirement — Sibling Input fields on that page rely on the component's rounded-md default (pre-existing inconsistency, left untouched); the design contract mandates rounded-none for new form controls in this phase
 - [Phase 84]: Termo de Honorarios signature captions relabelled 'O Advogado' / 'O Cliente' (neutral, non-gendered) instead of Ficha Cliente's 'A Advogada' -- signer identity unknown at render time (Claude's Discretion, UI-SPEC)
 - [Phase 84]: Imprimir Button on Termo de Honorarios carries explicit rounded-none per UI-SPEC Anti-Safe Harbor requirement, even though the Ficha Cliente analog it was cloned from omits it
+- [Phase 84]: [Phase 84-03] 4 new TabKey values render as explicit null branches (not omitted) in the tab-content ternary chain, keeping it type-correct until 84-04/84-05 fill in real bodies
+- [Phase 84]: [Phase 84-03] rounded-none applied explicitly to every new/moved Partes/Fases Dialog form control per UI-SPEC Anti-Safe Harbor requirement
 
 ### Pending Todos
 
@@ -130,8 +133,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T00:54:26.407Z
-Stopped at: Completed 84-02-PLAN.md
+Last session: 2026-07-08T01:07:27.947Z
+Stopped at: Completed 84-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
