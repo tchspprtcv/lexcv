@@ -1370,38 +1370,62 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
               </CardContent>
             </Card>
           ) : tab === "fases" ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {canEditProcessos ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Adicionar fase</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4" onSubmit={faseForm.handleSubmit(onSubmitFase)}>
-                      <div className="space-y-2">
-                        <Label htmlFor="fase_nome">Nome da fase</Label>
-                        <Input id="fase_nome" {...faseForm.register("nome")} placeholder="Ex.: Petição Inicial" />
-                        {faseForm.formState.errors.nome ? (
-                          <p className="text-sm text-red-600">{faseForm.formState.errors.nome.message}</p>
-                        ) : null}
-                      </div>
-
-                      {faseServerError ? <p className="text-sm text-red-600">{faseServerError}</p> : null}
-
-                      <Button type="submit" disabled={faseForm.formState.isSubmitting || addFase.isPending}>
-                        {faseForm.formState.isSubmitting || addFase.isPending ? "A guardar..." : "Adicionar"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              ) : null}
-
-              <Card>
-                <CardHeader>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <CardTitle>Fases</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!fases.data?.length ? (
+                  {canEditProcessos ? (
+                    <Dialog open={addFaseModal} onOpenChange={setAddFaseModal}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" className="rounded-none">
+                          Adicionar Fase
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Fase</DialogTitle>
+                        </DialogHeader>
+                        <form className="space-y-4" onSubmit={faseForm.handleSubmit(onSubmitFase)}>
+                          <div className="space-y-2">
+                            <Label htmlFor="fase_nome">Nome da fase</Label>
+                            <Input
+                              id="fase_nome"
+                              className="rounded-none"
+                              {...faseForm.register("nome")}
+                              placeholder="Ex.: Petição Inicial"
+                            />
+                            {faseForm.formState.errors.nome ? (
+                              <p className="text-sm text-red-600">{faseForm.formState.errors.nome.message}</p>
+                            ) : null}
+                          </div>
+
+                          {faseServerError ? <p className="text-sm text-red-600">{faseServerError}</p> : null}
+
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-none"
+                              onClick={() => setAddFaseModal(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="rounded-none"
+                              disabled={faseForm.formState.isSubmitting || addFase.isPending}
+                            >
+                              {faseForm.formState.isSubmitting || addFase.isPending ? "A guardar..." : "Adicionar"}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!fases.data?.length ? (
                     <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem fases.</div>
                   ) : (
                     <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -1455,7 +1479,6 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   )}
                 </CardContent>
               </Card>
-            </div>
           ) : tab === "decisoes" ? null : tab === "factos" ? null : tab === "testemunhas" ? null : tab === "documentos" ? null : tab === "auditoria" && canManageProcessos ? (
             <Card>
               <CardHeader>
