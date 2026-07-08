@@ -65,6 +65,53 @@ class NotificacaoServiceTest {
     }
 
     @Test
+    void criar_destinatarioDeOutroTenant_lancaIllegalArgumentException() {
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(UUID.randomUUID()).build()));
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link"));
+        verify(notificacaoRepository, never()).save(any());
+        // Prova o exato cenário IDOR-adjacent que o filtro .filter(u -> tenantId.equals(...))
+        // existe para bloquear — fecha o gap apontado pelo WR-01 da iteração 2.
+    }
+
+    @Test
+    void criar_tituloExcede255Caracteres_lancaIllegalArgumentException() {
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "x".repeat(256), "m", "processo", "id-1", "/link"));
+        verify(notificacaoRepository, never()).save(any());
+        // Prova o requireMaxLength(...) contra o VARCHAR(255) de "titulo".
+    }
+
+    @Test
+    void criar_camposObrigatoriosEmBranco_lancaIllegalArgumentException() {
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, null, "t", "m", "processo", "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "  ", "m", "processo", "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "", "processo", "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", null, "id-1", "/link"));
+        assertThrows(IllegalArgumentException.class, () ->
+                service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", " ", "/link"));
+        verify(notificacaoRepository, never()).save(any());
+        // Prova, campo a campo, que os cinco requireNonBlank(...) em criar() (categoria, titulo,
+        // mensagem, entidadeTipo, entidadeId) estão todos realmente ligados — uma futura remoção
+        // "silenciosa" de qualquer uma destas chamadas passaria a falhar aqui.
+    }
+
+    @Test
     void notificarComFanOutAdmin_umaLinhaPorAdminAtualDoTenant() {
         User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
