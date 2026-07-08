@@ -31,6 +31,7 @@ public class UserPrincipal implements UserDetails {
                 .collect(Collectors.toSet());
         
         if (roles.contains("ADMIN")) {
+            // Keep in sync with DatabaseSeeder.seedRbac()'s permKeys list.
             permissions.addAll(java.util.Arrays.asList(
                     "clientes:view", "clientes:edit",
                     "processos:view", "processos:edit",
@@ -39,7 +40,8 @@ public class UserPrincipal implements UserDetails {
                     "documentos:view", "documentos:edit",
                     "financeiro:view", "financeiro:edit",
                     "rbac:manage", "users:manage",
-                    "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage"
+                    "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage",
+                    "notificacoes:view"
             ));
         }
 
