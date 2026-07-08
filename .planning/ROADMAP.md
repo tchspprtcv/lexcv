@@ -246,7 +246,22 @@ Plans:
   4. Uma nova rota `[id]/termo-honorarios` gera um documento imprimível (clone do padrão CSS-print de `clientes/[id]/ficha`) combinando dados de Cliente, Processo e Honorário
   5. Gerar o Termo de Honorários bloqueia ou avisa claramente quando o `valorTotal` do Honorário ainda está em branco, em vez de imprimir campos vazios
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 84-01-PLAN.md — Origem obrigatório no intake (processos/novo) + Juízo editável em processos/[id]/editar
+- [ ] 84-02-PLAN.md — Rota imprimível [id]/termo-honorarios (Cliente+Processo+Honorário, bloqueio quando valorTotal é null)
+- [ ] 84-03-PLAN.md — processos/[id]/page.tsx: TabKey+Dados card (Juízo/Origem/Gerar Termo) + refactor Partes/Fases para Dialog
+
+**Wave 2** *(blocked on 84-03 completion)*
+
+- [ ] 84-04-PLAN.md — processos/[id]/page.tsx: abas Decisões (upload multipart) e Testemunhas
+
+**Wave 3** *(blocked on 84-04 completion)*
+
+- [ ] 84-05-PLAN.md — processos/[id]/page.tsx: abas Factos (reordenável) e Documentos
+
 **UI hint**: yes
 
 ## Progress
@@ -295,6 +310,6 @@ Plans:
 | 81. Backend — CRUD + Wiring Juízo/Origem | v2.9 | 3/3 | Complete    | 2026-07-07 |
 | 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 2/2 | Complete    | 2026-07-07 |
-| 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/TBD | Not started | - |
+| 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 0/5 | Not started | - |
 
 **Next:** Milestone v2.9 roadmap created 2026-07-07. Run `/gsd:plan-phase 80` to start planning the first phase.
