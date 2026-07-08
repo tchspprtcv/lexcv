@@ -2739,6 +2739,15 @@ public class ResourceController {
         return ResponseEntity.ok(kpis);
     }
 
+    // NOTA (WR-02, 85-REVIEW.md): eventos com prioridade ALTA e dataFim nula resultam em
+    // risco="ok" (computeRiscoEvento trata data nula como "ok") e por isso NÃO são contados
+    // como urgentes aqui — comportamento aceite explicitamente para este corner case
+    // (lembrete de prioridade ALTA sem data de fim definida). Isto é uma mudança face à
+    // lógica anterior, que contava qualquer evento ALTA independentemente da data. Se o
+    // produto decidir que este corner case deve contar como urgente por definição, tratar
+    // "ALTA" + dataFim nula como urgente explicitamente antes de delegar em
+    // computeRiscoEvento. Cobertura de teste de regressão para este call site está a cargo
+    // do follow-up de testes de controller (WR-04, 85-REVIEW.md).
     private long agendaUrgentesCount(UUID tenantId) {
         return eventoRepository.findByTenantIdAndConcluido(tenantId, false)
                 .stream()
