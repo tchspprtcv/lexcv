@@ -10,6 +10,7 @@ export const KNOWN_SCOPES = [
   "documentos",
   "financeiro",
   "pareceres",
+  "notificacoes",
 ] as const;
 export type PermissionScope = (typeof KNOWN_SCOPES)[number];
 
