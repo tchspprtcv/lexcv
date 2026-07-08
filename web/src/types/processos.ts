@@ -193,9 +193,11 @@ export interface FactoCreateRequest {
 export interface FactoUpdateRequest {
   descricao: string;
   data?: string;
-  // Must be sourced from the current Facto.ordem value, never from user input —
-  // no form collects this field yet, and reusing a stale value (e.g. after a
-  // concurrent reorder) would silently corrupt ordering (WR-02).
+  // User-editable via the numeric "Ordem" field inside the "Editar Facto"
+  // Dialog on processos/[id]/page.tsx (Phase 84) — this is the deliberate
+  // reordering mechanism for PROC-10 (no drag-and-drop). Sourced from a local
+  // numeric input pre-filled with the current Facto.ordem when the edit
+  // Dialog opens, and submitted verbatim on save.
   ordem: number;
 }
 

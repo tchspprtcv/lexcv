@@ -37,11 +37,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
+import {
+  useDeleteDocumento,
+  useDocumentos,
+  useDownloadDocumento,
+  useUploadDocumentoComProgresso,
+} from "@/hooks/use-documentos";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   useAddDecisao,
+  useAddFacto,
   useAddProcessoFase,
   useAddProcessoMovimentacao,
   useAddProcessoParte,
@@ -51,8 +59,10 @@ import {
   useCreatePrazo,
   useDecisoes,
   useDeleteDecisao,
+  useDeleteFacto,
   useDeleteTestemunha,
   useExecutarTransicao,
+  useFactos,
   useFormalizarProcesso,
   usePrazos,
   useProcesso,
@@ -63,6 +73,7 @@ import {
   useTimeline,
   useTogglePrazoConcluido,
   useUpdateDecisao,
+  useUpdateFacto,
   useUpdateProcessoFaseStatus,
   useUpdateTestemunha,
   useWorkflow,
@@ -75,6 +86,7 @@ import { tipoDecisaoToLabel } from "@/lib/tipo-decisao";
 import { tipoTestemunhaToLabel } from "@/lib/tipo-testemunha";
 import {
   decisaoFormSchema,
+  factoFormSchema,
   prazoFormSchema,
   processoFaseFormSchema,
   processoFaseStatusSchema,
@@ -85,6 +97,7 @@ import {
   tipoTestemunhaSchema,
   transicaoJustificativaFormSchema,
   type DecisaoFormValues,
+  type FactoFormValues,
   type PrazoFormValues,
   type ProcessoFaseFormValues,
   type ProcessoMovimentacaoFormValues,
@@ -92,10 +105,14 @@ import {
   type TestemunhaFormValues,
   type TransicaoJustificativaFormValues,
 } from "@/schemas/processos";
+import type { Documento } from "@/types/documentos";
 import type {
   AuditLogEntry,
   Decisao,
   DecisaoUpdateRequest,
+  Facto,
+  FactoCreateRequest,
+  FactoUpdateRequest,
   ProcessoFaseCreateRequest,
   ProcessoFaseStatus,
   ProcessoFaseUpdateRequest,
@@ -143,6 +160,19 @@ function formatDate(v: string | undefined) {
   return d.toLocaleDateString("pt-CV");
 }
 
+function formatDocumentoSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDocumentoDate(v: string | undefined) {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("pt-CV");
+}
+
 const ACAO_ICONS: Record<string, React.ReactNode> = {
   ativar: <Play className="h-4 w-4" />,
   suspender: <Pause className="h-4 w-4" />,
@@ -170,6 +200,13 @@ export default function ProcessoDetailPage({ params }: PageProps) {
 }
 
 function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { id: string; canEditProcessos: boolean; canManageProcessos: boolean }) {
+  // Re-invoking usePermissions here is cheap — it's cached by TanStack Query
+  // under the same permissions key already used by the parent
+  // ProcessoDetailPage. documentos:edit is a scope distinct from
+  // processos:edit and gates only the Documentos tab's write affordances.
+  const permissions = usePermissions();
+  const canEditDocumentos = permissions.can.edit("documentos");
+
   const [tab, setTab] = React.useState<TabKey>("timeline");
   const [formalizarError, setFormalizarError] = React.useState<string | null>(null);
 
@@ -213,6 +250,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const addTestemunha = useAddTestemunha(id);
   const updateTestemunha = useUpdateTestemunha(id);
   const deleteTestemunha = useDeleteTestemunha(id);
+
+  const factos = useFactos(id);
+  const addFacto = useAddFacto(id);
+  const updateFacto = useUpdateFacto(id);
+  const deleteFacto = useDeleteFacto(id);
 
   // Timeline filter state
   const [selectedTipos, setSelectedTipos] = React.useState<Set<TimelineItemType>>(
@@ -283,6 +325,18 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     resolver: zodResolver(testemunhaFormSchema) as any,
     defaultValues: { nome: "", tipo: undefined, contacto: undefined, notas: undefined },
   });
+
+  const [addFactoModal, setAddFactoModal] = React.useState(false);
+  const [editingFactoId, setEditingFactoId] = React.useState<number | null>(null);
+  const [factoServerError, setFactoServerError] = React.useState<string | null>(null);
+  const factoForm = useForm<FactoFormValues>({
+    resolver: zodResolver(factoFormSchema),
+    defaultValues: { descricao: "", data: undefined },
+  });
+  // Plain local state (not part of the Zod-validated form) — ordem is only
+  // ever edited via this numeric input inside the "Editar Facto" Dialog; the
+  // create form never collects it (backend recomputes it server-side).
+  const [factoOrdemDraft, setFactoOrdemDraft] = React.useState(1);
 
   const [faseDraftStatus, setFaseDraftStatus] = React.useState<Record<number, ProcessoFaseStatus>>({});
 
@@ -552,6 +606,62 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
       toast.success("Testemunha apagada com sucesso.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao apagar testemunha");
+    }
+  };
+
+  const onOpenAddFacto = () => {
+    factoForm.reset({ descricao: "", data: undefined });
+    setEditingFactoId(null);
+    setFactoServerError(null);
+    setAddFactoModal(true);
+  };
+
+  const onOpenEditFacto = (f: Facto) => {
+    factoForm.reset({ descricao: f.descricao, data: f.data });
+    setFactoOrdemDraft(f.ordem);
+    setEditingFactoId(f.id);
+    setFactoServerError(null);
+    setAddFactoModal(true);
+  };
+
+  const onSubmitFacto = async (values: FactoFormValues) => {
+    setFactoServerError(null);
+    try {
+      if (editingFactoId !== null) {
+        await updateFacto.mutateAsync({
+          factoId: editingFactoId,
+          payload: {
+            descricao: values.descricao,
+            data: values.data,
+            ordem: factoOrdemDraft,
+          } satisfies FactoUpdateRequest,
+        });
+        toast.success("Facto atualizado com sucesso.");
+      } else {
+        await addFacto.mutateAsync(values satisfies FactoCreateRequest);
+        toast.success("Facto adicionado com sucesso.");
+      }
+      setAddFactoModal(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : editingFactoId !== null
+            ? "Erro ao atualizar facto"
+            : "Erro ao adicionar facto";
+      setFactoServerError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const onDeleteFacto = async (factoId: number) => {
+    const ok = window.confirm("Apagar este facto?");
+    if (!ok) return;
+    try {
+      await deleteFacto.mutateAsync(factoId);
+      toast.success("Facto apagado com sucesso.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao apagar facto");
     }
   };
 
@@ -1805,7 +1915,156 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "factos" ? null : tab === "testemunhas" ? (
+          ) : tab === "factos" ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Factos</CardTitle>
+                  {canEditProcessos ? (
+                    <Dialog open={addFactoModal} onOpenChange={setAddFactoModal}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none"
+                          onClick={onOpenAddFacto}
+                        >
+                          Adicionar Facto
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingFactoId === null ? "Adicionar Facto" : "Editar Facto"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <form className="space-y-4" onSubmit={factoForm.handleSubmit(onSubmitFacto)}>
+                          <div className="space-y-2">
+                            <Label htmlFor="facto_descricao">Descrição</Label>
+                            <Textarea
+                              id="facto_descricao"
+                              className="rounded-none"
+                              {...factoForm.register("descricao")}
+                            />
+                            {factoForm.formState.errors.descricao ? (
+                              <p className="text-sm text-red-600">
+                                {factoForm.formState.errors.descricao.message}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="facto_data">Data</Label>
+                            <input
+                              id="facto_data"
+                              type="date"
+                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              {...factoForm.register("data")}
+                            />
+                            {factoForm.formState.errors.data ? (
+                              <p className="text-sm text-red-600">{factoForm.formState.errors.data.message}</p>
+                            ) : null}
+                          </div>
+
+                          {editingFactoId !== null ? (
+                            <div className="space-y-2">
+                              <Label htmlFor="facto_ordem">Ordem</Label>
+                              <input
+                                id="facto_ordem"
+                                type="number"
+                                min={1}
+                                className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                value={factoOrdemDraft}
+                                onChange={(e) => setFactoOrdemDraft(Number(e.target.value) || 1)}
+                              />
+                            </div>
+                          ) : null}
+
+                          {factoServerError ? <p className="text-sm text-red-600">{factoServerError}</p> : null}
+
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-none"
+                              onClick={() => setAddFactoModal(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="rounded-none"
+                              disabled={
+                                factoForm.formState.isSubmitting || addFacto.isPending || updateFacto.isPending
+                              }
+                            >
+                              Confirmar
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {factos.isLoading ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">A carregar...</p>
+                ) : factos.isError ? (
+                  <p className="text-sm text-red-600">Não foi possível carregar os factos deste processo.</p>
+                ) : !factos.data?.length ? (
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum facto registado.</p>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <table className="w-full min-w-[480px] text-sm">
+                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                          <th className="py-2 pr-4 font-medium">Ordem</th>
+                          <th className="py-2 pr-4 font-medium">Descrição</th>
+                          <th className="py-2 pr-4 font-medium">Data</th>
+                          <th className="py-2 pr-4 font-medium">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...factos.data].sort((a, b) => a.ordem - b.ordem).map((f) => (
+                          <tr
+                            key={f.id}
+                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                          >
+                            <td className="py-2 pr-4">{f.ordem}</td>
+                            <td className="py-2 pr-4">{f.descricao}</td>
+                            <td className="py-2 pr-4">{formatDate(f.data)}</td>
+                            <td className="py-2 pr-4">
+                              {canEditProcessos ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 hover:underline text-xs"
+                                    onClick={() => onOpenEditFacto(f)}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-neutral-500 hover:text-red-600"
+                                    onClick={() => onDeleteFacto(f.id)}
+                                    aria-label="Apagar facto"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : tab === "testemunhas" ? (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
