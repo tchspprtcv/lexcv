@@ -1977,7 +1977,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 min={1}
                                 className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 value={factoOrdemDraft}
-                                onChange={(e) => setFactoOrdemDraft(Number(e.target.value) || 1)}
+                                onChange={(e) =>
+                                  setFactoOrdemDraft(Math.max(1, Math.trunc(Number(e.target.value) || 1)))
+                                }
                               />
                             </div>
                           ) : null}
