@@ -31,7 +31,7 @@
 
 ### Documentos
 
-- [ ] **PROC-13**: Ficha do processo ganha uma aba "Documentos" dedicada (upload, listagem, download e remoção), reutilizando o sistema genérico de `Documento` e o endpoint já existente `GET /processos/{id}/documentos`
+- [x] **PROC-13**: Ficha do processo ganha uma aba "Documentos" dedicada (upload, listagem, download e remoção), reutilizando o sistema genérico de `Documento` e o endpoint já existente `GET /processos/{id}/documentos`
 
 ### Honorários
 
@@ -74,7 +74,7 @@
 | PROC-10 | Phase 81 | Complete |
 | PROC-11 | Phase 80 | Complete |
 | PROC-12 | Phase 81 | Complete |
-| PROC-13 | Phase 84 | Pending |
+| PROC-13 | Phase 84 | Complete |
 | PROC-14 | Phase 82 | Complete |
 | PROC-15 | Phase 84 | Complete |
 | PROC-16 | Phase 84 | Complete |

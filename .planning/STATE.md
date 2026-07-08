@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
-status: executing
-stopped_at: Completed 84-04-PLAN.md
-last_updated: "2026-07-08T01:24:29.377Z"
+status: verifying
+stopped_at: Completed 84-05-PLAN.md
+last_updated: "2026-07-08T01:40:38.002Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 11
-  percent: 80
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 
 Phase: 84 (Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-08
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 92%
 | Phase 84 P02 | 15min | 2 tasks | 1 files |
 | Phase 84 P03 | 10min | 3 tasks | 1 files |
 | Phase 84 P04 | 25min | 2 tasks | 2 files |
+| Phase 84 P05 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 84]: [Phase 84-03] rounded-none applied explicitly to every new/moved Partes/Fases Dialog form control per UI-SPEC Anti-Safe Harbor requirement
 - [Phase 84]: [Phase 84-04] testemunhaFormSchema's optional tipo field wrapped in z.preprocess to coerce an empty-string <select> value to undefined -- z.enum().optional() only treats undefined as absent, rejecting the blank placeholder selection contrary to the plan's stated UI-SPEC intent (bug fix)
 - [Phase 84]: [Phase 84-04] testemunhaForm's zodResolver cast as any (eslint-disabled on that line) because the z.preprocess input type diverges from TestemunhaFormValues -- same class of RHF+Zod-effects mismatch already present via prazoForm, same established workaround reused
+- [Phase 84]: [Phase 84-05] Facto ordem reordering managed via plain local component state (factoOrdemDraft), not added to factoFormSchema — keeps the Phase 83 create-only schema untouched while satisfying PROC-10's reorder requirement on the edit path only
+- [Phase 84]: [Phase 84-05] canEditDocumentos derived from a second permissions.can.edit("documentos") call inside ProcessoDetailContent (TanStack-Query-cached) — a scope distinct from canEditProcessos, matching the ClienteDocumentosEntreguesTab precedent
 
 ### Pending Todos
 
@@ -136,8 +139,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T01:24:29.340Z
-Stopped at: Completed 84-04-PLAN.md
+Last session: 2026-07-08T01:40:37.971Z
+Stopped at: Completed 84-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
