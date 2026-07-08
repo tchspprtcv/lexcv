@@ -228,6 +228,49 @@ Unified the cliente ficha's view/edit split into a single component (`/clientes/
 
 ---
 
+## Milestone: v2.9 — Melhoria Módulo Processos
+
+**Shipped:** 2026-07-08
+**Phases:** 5 (80–84) | **Plans:** 12 | **Tasks:** 25
+
+### What Was Built
+
+Deepened the processos module with structured legal-case data end-to-end: `Processo.juizo`/`origem` plus three new lean child entities (`Decisao`, `Facto`, `Testemunha`) at the data layer (Phase 80); 12 REST endpoints for their CRUD with the stricter `ProcessoFase`-style double tenant+processoId ownership check, plus `juizo`/`origem` wired through the full Processo create/update/intake/list lifecycle (Phase 81); an idempotent, transactional Honorário auto-creation on processo formalização with `valorTotal` always starting `null` (Phase 82, deliberately isolated since it concentrated the milestone's highest financial-safety risk); frontend types/Zod schemas/12 TanStack Query hooks with a genuine executable round-trip proof against the shared `juizo`/`origem` mapping module (Phase 83); and the full UI — required Origem in intake, editable Juízo, 4 new tabs (Decisões/Factos/Testemunhas/Documentos), a printable Termo de Honorários route with a hard print-block on missing `valorTotal`, and a user-requested mid-milestone extension refactoring the pre-existing Partes/Fases tabs to the same Dialog "Adicionar" pattern (Phase 84). The milestone's own audit then found and closed 2 real cross-phase integration bugs before shipping.
+
+### What Worked
+
+- **Milestone research (STACK/FEATURES/ARCHITECTURE/PITFALLS) correctly predicted this would be a pure pattern-reuse milestone with zero new dependencies** — confirmed true across all 5 phases; the only real risk research flagged (the project's 3-times-recurring camelCase/snake_case mapping bug) was the one thing Phase 83 was explicitly built to close, and it held.
+- **Pattern-mapper reading the *live* backend source (not the plan/research docs) before Phase 83's frontend types were written** caught that `updateDecisao`/`createTestemunha`/`updateTestemunha` had shifted to a `Map<String,Object>` request body mid-milestone (a Phase 81 code-review fix), which would have silently mismatched if the frontend hooks had been built against the originally-planned entity-typed shape instead.
+- **The plan-checker caught a genuinely fake regression test before execution**: Phase 83's round-trip verification script was planned as a hand-copied reimplementation of the mapping logic rather than an import of the real functions — exactly the "two independently-maintained copies silently diverge" bug class the script existed to prevent. Caught and fixed in one revision cycle, before a single line of the fake test ran green for the wrong reason.
+- **Code review across every phase, not just the riskiest one, kept finding real bugs**: Phase 82's review caught a critical cross-layer bug (backend correctly returning `valorTotal: null`, but the existing `/financeiro` pages' TypeScript type declared it non-nullable and crashed on render — every single `formalizar` action would have broken two already-shipped pages). Phase 83's review, while tracing the same `toProcessoApiPayload`/`normalizeProcesso` functions it was asked to extend, independently found and fixed two *pre-existing* bugs unrelated to this milestone's own diff (`legal_hold`/`data_retencao` silently dropped on every processo edit; the processos list showing "Sem número" for every row). Phase 84's review caught a broken Fases "Guardar" save path introduced by its own Partes/Fases Dialog refactor.
+- **The milestone-level integration audit earned its keep on the very last step**: both Termo de Honorários and the new Documentos tab passed every phase-level check (types compiled, hooks were called correctly, backend endpoints existed) yet were both silently broken at the seam between Phase 82/pre-existing-Financeiro and Phase 84 — a query-string filter (`processo_id`) sent by the frontend and silently ignored by two separate backend list endpoints, so both features displayed/blocked/deleted data for the *wrong* processo in any tenant with more than one formalized case. Neither individual phase's automated check could have caught this; it is exactly the class of gap a milestone-level cross-phase check exists for.
+
+### What Was Inefficient
+
+- **Two rounds of code-review-then-fix were needed on Phase 81 (7 findings) and Phase 84 (5 findings)** rather than one — in both cases the *fix itself* introduced a new, narrower defect (Phase 81: `updateFacto` gained no `DataIntegrityViolationException` handling when the sibling `createFacto` fix added a unique constraint that now also applies to updates; Phase 84: the dead-code-removal fix for one warning was correct but is exactly the kind of "large removal in a 2500-line file" change worth a dedicated re-review, which it got). Not wasted work — every round found something real — but a reminder that a fix to one finding can quietstly reopen an adjacent one in the same file, especially when the fix adds a new constraint or removes a gating condition.
+- **5 of 12 plans across the milestone all touched the same single file** (`processos/[id]/page.tsx`, growing to ~2550 lines) — identical structural tax to v2.8's `clientes/[id]/page.tsx` pattern (5 consecutive phases, same file). Sequential (not parallel) execution was chosen up front specifically to avoid this, at some wall-clock cost, and it did prevent any merge conflict — but every plan/pattern-map/review pass still had to re-derive current line numbers from scratch.
+- **3 of 5 phases (81, 82, 84) ended `human_needed` rather than `passed`** — same environment limitation as every prior milestone (no running dev server/authenticated session available), not a code defect. Notably, this is also where the Termo de Honorários/Documentos integration bug was hiding — a live click-through of "formalize two different processos, open each one's Termo de Honorários" would likely have surfaced it before the milestone audit did.
+
+### Patterns Established
+
+- **Milestone-level integration audits should specifically re-verify query-parameter filtering end-to-end, not just contract/type shape** — both bugs found here were cases where the frontend correctly sent a filter param and the backend correctly accepted the GET request (just silently ignoring the param), a shape that's invisible to `tsc`, `mvn package`, and any single-phase code review that reads one side of the contract without independently re-deriving what the *other* side actually does with the input.
+- **When a code-review fix adds a new constraint or removes a gating condition, re-review the sibling code paths in the same file, not just the fixed line** — established explicitly after Phase 81's `updateFacto` gap (sibling to the fixed `createFacto`) and reinforced by the two-round pattern on Phase 84.
+- **User-requested scope extensions mid-phase (Partes/Fases → Dialog refactor) are cheap to absorb when they land in a phase already touching the same file/pattern**, and get written into CONTEXT.md as an explicit locked decision rather than treated as out-of-band — same discipline already established in v2.8.
+
+### Key Lessons
+
+1. **A query-string filter parameter silently ignored server-side is now a confirmed 4th instance of "the wire contract looks right on both sides but isn't," alongside the project's 3 prior camelCase/snake_case incidents.** The common thread across all 4: each side of the contract "looks correct" when read in isolation, and only an explicit end-to-end trace (or, in this case, a milestone-level integration check) catches it. Recommend the pattern-mapper/plan-checker explicitly enumerate query/path parameters an endpoint *accepts in its signature* vs. what a consuming hook *sends*, not just whether the endpoint exists and compiles.
+2. **Isolating the highest-risk work into its own phase (Phase 82, Honorário auto-creation) paid off again** — same lesson as v2.8's enum-first sequencing, applied to financial/idempotency risk instead of data-model risk. The phase's own code review caught the one bug that mattered (the `/financeiro` page crash) with full focus, uncomplicated by unrelated Decisão/Facto/Testemunha changes landing in the same review pass.
+3. **A milestone that research correctly predicts as "pure pattern application, zero new dependencies" can still ship two production data-leakage bugs** — technical familiarity with the pattern doesn't substitute for verifying the *specific* wiring between phases. The audit step is not a formality even on a low-technical-risk milestone.
+
+### Cost Observations
+
+- Model mix: opus for all planners (5 phases, all first-pass — no gap-closure re-plans needed this milestone), sonnet for everything else (pattern-mapping, execution, code-review/fix, verification, UI-SPEC research/check, integration audit).
+- Sessions: continuous, no usage-limit interruptions this milestone (unlike v2.8's two interruptions).
+- Notable: this is the first milestone in the project's history where the *milestone-level audit itself* (not a phase-level code review) found and closed genuine bugs rather than only confirming requirement coverage — validating the audit step's design intent directly, not just its process compliance.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -237,5 +280,6 @@ Unified the cliente ficha's view/edit split into a single component (`/clientes/
 | v2.6 Módulo de Parecer Jurídico — UI | 5 | 6 | 1 | 7 (frontend+1 backend fix) | 9/9 (post-audit-remediation) |
 | v2.7 Melhoria Gestão de Clientes | 5 (incl. 1 gap-closure) | 6 | 1 | 15 (backend+frontend) | 7/7 (post-audit-remediation) |
 | v2.8 Refatoração Ficha de Cliente | 6 (incl. 2 gap-closure plans) | 13 | 3 | 81 | 20/20 (post-review-remediation) |
+| v2.9 Melhoria Módulo Processos | 5 | 12 | 2 | 97 | 17/17 (post-audit-remediation) |
 
 *Table grows with each milestone*
