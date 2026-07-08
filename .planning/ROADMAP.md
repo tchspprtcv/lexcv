@@ -192,7 +192,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Plans**: 3 plans (3 waves)
 - [x] 86-01-PLAN.md — Camada de dados: entidade `Notificacao` (uma linha por destinatário) + `NotificacaoRepository` dual-scoped (tenant + destinatário) + migração manual `t_notificacao` com índice composto
 - [x] 86-02-PLAN.md — `NotificacaoService` (choke point único `criar` + fan-out ADMIN) + teste Mockito a provar isolamento entre 2 destinatários e fan-out por ADMIN (Critérios de Sucesso 2 e 3)
-- [ ] 86-03-PLAN.md — `NotificacaoController` (4 endpoints dual-scoped: listar com filtros/paginação, unread-count, marcar lida, ler-todas) + seed do scope `notificacoes:view` para os 4 perfis (backend + frontend `KNOWN_SCOPES`)
+- [x] 86-03-PLAN.md — `NotificacaoController` (4 endpoints dual-scoped: listar com filtros/paginação, unread-count, marcar lida, ler-todas) + seed do scope `notificacoes:view` para os 4 perfis (backend + frontend `KNOWN_SCOPES`)
 
 #### Phase 87: Alertas de Eventos — Fase, Documento, Atribuição e Parecer
 
@@ -280,7 +280,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 2/2 | Complete    | 2026-07-07 |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 5/5 | Complete    | 2026-07-08 |
 | 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 1/1 | Complete    | 2026-07-08 |
-| 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 2/3 | In Progress|  |
+| 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete   | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 0/TBD | Not started | - |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 0/TBD | Not started | - |
 | 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
