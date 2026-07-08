@@ -69,6 +69,7 @@ function ProcessoEditContent({ id }: { id: string }) {
       data_fim: undefined,
       legal_hold: false,
       data_retencao: undefined,
+      juizo: undefined,
     },
   });
 
@@ -87,6 +88,7 @@ function ProcessoEditContent({ id }: { id: string }) {
       data_fim: processo.data.data_fim,
       legal_hold: processo.data.legal_hold ?? false,
       data_retencao: processo.data.data_retencao,
+      juizo: processo.data.juizo,
     });
   }, [processo.data, form]);
 
@@ -199,6 +201,19 @@ function ProcessoEditContent({ id }: { id: string }) {
                 <Input id="tribunal" {...form.register("tribunal")} placeholder="Ex.: Tribunal da Comarca da Praia" />
                 {form.formState.errors.tribunal ? (
                   <p className="text-sm text-red-600">{form.formState.errors.tribunal.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="juizo">Juízo</Label>
+                <Input
+                  id="juizo"
+                  className="rounded-none"
+                  {...form.register("juizo")}
+                  placeholder="Ex.: 1º Juízo Cível"
+                />
+                {form.formState.errors.juizo ? (
+                  <p className="text-sm text-red-600">{form.formState.errors.juizo.message}</p>
                 ) : null}
               </div>
 
