@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 84-01-PLAN.md
-last_updated: "2026-07-08T00:46:31.242Z"
+stopped_at: Completed 84-02-PLAN.md
+last_updated: "2026-07-08T00:54:26.426Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-06)
 ## Current Position
 
 Phase: 84 (Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-07-08
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [███████░░░] 67%
 | Phase 83 P01 | 10min | 2 tasks | 5 files |
 | Phase 83 P02 | 6min | 2 tasks | 4 files |
 | Phase 84 P01 | 8min | 2 tasks | 2 files |
+| Phase 84 P02 | 15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase 83]: juizo/origem mapping centralizado num módulo partilhado dedicado (processo-juizo-origem-mapping.ts) — Permite que o script de verificação de round-trip importe a mesma lógica usada em runtime por use-processos.ts, em vez de a reimplementar (PITFALLS.md Pitfall 1)
 - [Phase 83]: Verificação de round-trip real implementada como script Node puro (node:assert) em vez de instalar vitest — Repo continua sem test runner instalado (precedente Phase 74/82); Node >=22 executa .ts diretamente via type-stripping nativo
 - [Phase 84]: Juízo Input on processos/[id]/editar/page.tsx carries explicit rounded-none per UI-SPEC.md sharp-edges requirement — Sibling Input fields on that page rely on the component's rounded-md default (pre-existing inconsistency, left untouched); the design contract mandates rounded-none for new form controls in this phase
+- [Phase 84]: Termo de Honorarios signature captions relabelled 'O Advogado' / 'O Cliente' (neutral, non-gendered) instead of Ficha Cliente's 'A Advogada' -- signer identity unknown at render time (Claude's Discretion, UI-SPEC)
+- [Phase 84]: Imprimir Button on Termo de Honorarios carries explicit rounded-none per UI-SPEC Anti-Safe Harbor requirement, even though the Ficha Cliente analog it was cloned from omits it
 
 ### Pending Todos
 
@@ -127,8 +130,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T00:46:31.215Z
-Stopped at: Completed 84-01-PLAN.md
+Last session: 2026-07-08T00:54:26.407Z
+Stopped at: Completed 84-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -36,8 +36,8 @@
 ### Honorários
 
 - [x] **PROC-14**: Ao formalizar um processo (TRIAGEM→ATIVO), o sistema cria automaticamente um registo de Honorário associado — operação idempotente (não duplica em reformalizações/retries), com `valorTotal` em branco (nunca pré-preenchido a partir de estimativas do cliente em `honorariosPropostos`)
-- [ ] **PROC-15**: Ficha do processo ganha uma ação para gerar e imprimir o "Termo de Honorários" (modelo baseado no documento de referência anexado), combinando dados de Cliente, Processo e Honorário, seguindo o padrão CSS-print da Ficha Cliente (v2.4) — sem nova dependência de PDF/docx
-- [ ] **PROC-16**: Geração do Termo de Honorários bloqueia/avisa quando o `valorTotal` do Honorário ainda não foi preenchido, em vez de imprimir um documento com campos em branco
+- [x] **PROC-15**: Ficha do processo ganha uma ação para gerar e imprimir o "Termo de Honorários" (modelo baseado no documento de referência anexado), combinando dados de Cliente, Processo e Honorário, seguindo o padrão CSS-print da Ficha Cliente (v2.4) — sem nova dependência de PDF/docx
+- [x] **PROC-16**: Geração do Termo de Honorários bloqueia/avisa quando o `valorTotal` do Honorário ainda não foi preenchido, em vez de imprimir um documento com campos em branco
 
 ### Segurança / Integridade
 
@@ -76,8 +76,8 @@
 | PROC-12 | Phase 81 | Complete |
 | PROC-13 | Phase 84 | Pending |
 | PROC-14 | Phase 82 | Complete |
-| PROC-15 | Phase 84 | Pending |
-| PROC-16 | Phase 84 | Pending |
+| PROC-15 | Phase 84 | Complete |
+| PROC-16 | Phase 84 | Complete |
 | PROC-17 | Phase 81 | Complete |
 
 **Coverage:** 17/17 requirements mapped ✓ (Phase 83 — Frontend Tipos/Schemas/Hooks — is a pure integration phase supporting all of the above; it owns no requirement directly but is a hard dependency for Phase 84.)
