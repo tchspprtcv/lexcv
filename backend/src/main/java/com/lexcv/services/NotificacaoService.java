@@ -78,6 +78,7 @@ public class NotificacaoService {
     // só é chamado a partir deste serviço (e do teste, no mesmo pacote); a Phase 87 acrescentará
     // os métodos públicos notificarFaseEntrada/notificarDocumentoNovo/etc. que reutilizam este
     // helper — não são adicionados agora (gatilhos reais são fora do âmbito desta fase).
+    @Transactional
     void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
                           String entidadeTipo, String entidadeId, String linkUrl) {
         for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
