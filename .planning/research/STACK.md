@@ -1,161 +1,151 @@
-# Technology Stack
+# Stack Research
 
-**Project:** LexCV — v2.9 Melhoria Módulo Processos
-**Researched:** 2026-07-07
+**Domain:** Persisted, RBAC-targeted, polling-refreshed in-app notification system (backend entity + daily deadline-scan job + REST API; frontend bell + dedicated history page)
+**Project:** LexCV — v2.10 Notificações e Alertas
+**Researched:** 2026-07-08
+**Confidence:** HIGH (core recommendations verified against current official Spring Boot docs and TanStack Query v5 docs via Context7 + direct source fetch; two clearly-flagged MEDIUM-confidence footnotes are non-critical/deferred items)
 
 ## Headline Finding
 
-**No new dependency is required for this milestone.** All seven target features map directly onto patterns already shipped and validated in v2.4 (Ficha Cliente imprimível) and v2.8 (Documentos upload, lazy-mount tabs, `ClienteContacto`/`ClienteNota`-style child entities). This milestone is pure "apply existing pattern to a new module" work, not new-capability work.
+**Zero new dependencies are required to ship this milestone.** Everything asked for — the daily scheduled scan, the de-duplication of "already notified for this threshold," and the polling bell — is achievable with what's already in `backend/pom.xml` and `web/package.json`. The only genuinely new things are application code: one JPA entity (`Notificacao`), one `@Service`, one `@Scheduled` method, one controller, one TanStack Query hook file, and one route. This is consistent with this project's own track record (v2.6 Pareceres UI, v2.9 Processos: "nenhuma nova dependência" was the norm, not the exception).
 
-| # | Feature | Existing pattern to reuse | New dependency? |
-|---|---------|---------------------------|------------------|
-| 1 | Campo `juizo` (free text) | Flat column on `Processo`, same as `tribunal`/`tipoProcesso`/`areaJuridica` | No |
-| 2 | Campo `origem` (enum) | Free-text string column validated client+server, same as `documento_tipo` restriction pattern (v2.8) | No |
-| 3 | Entidade `Decisao` | `ClienteContacto`/`ClienteNota` child-entity pattern | No |
-| 4 | Entidade `Facto` | Same child-entity pattern | No |
-| 5 | Entidade `Testemunha` | Same child-entity pattern | No |
-| 6 | Aba "Documentos" no processo | `ClienteDocumentosEntreguesTab` pattern — and `GET /processos/{id}/documentos` **already exists** in the backend | No |
-| 7 | Honorário automático + Termo de Honorários imprimível | `formalizarProcesso()` hook point (already exists) + Ficha Cliente `window.print()`/CSS-print pattern (v2.4) | No |
+| Question asked | Short answer |
+|---|---|
+| Idiomatic way to add a single daily scheduled job? | `@EnableScheduling` + `@Scheduled(cron = ..., zone = "Atlantic/Cape_Verde")` on a new `@Service`. Already fully supported by `spring-boot-starter-web`, which is already in `pom.xml` — no new starter, no Quartz, no Spring Batch. |
+| Is anything heavier ever warranted at this scale? | No, not for "one tenant-wide daily scan." Quartz/Spring Batch/db-scheduler solve problems (dynamic per-tenant schedules, chunked million-row ETL, persistent misfire recovery) that don't exist here. |
+| Lightweight library for de-dup of "already notified for this threshold"? | No library — a Spring Data derived query (`findTop...OrderByCreatedAtDesc`) plus a composite unique constraint (same pattern this codebase already uses in `backend/migrations/81-*.sql` / `82-*.sql`) is sufficient and is the idiomatic tool here. |
+| Is plain TanStack Query `refetchInterval` sufficient for the bell? | Yes — it's a first-class, already-installed option (`^5.87.4`). Two real, verified pitfalls apply and need explicit handling (see below): default background-tab pausing interacting with this project's global `refetchOnWindowFocus: false`, and unauthenticated polling after logout. |
 
-## Recommended Stack (unchanged)
+## Recommended Stack
 
-### Core Framework
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Spring Boot | 3.4.1 (Java 23) | Backend REST API | Existing, unchanged |
-| Next.js | 16.2.6 (App Router) | Frontend | Existing, unchanged |
-| React | 19.2.4 | UI | Existing, unchanged |
+### Core Technologies
 
-### Data / Forms (unchanged)
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| @tanstack/react-query | ^5.87.4 | Server state / data fetching | Existing hook pattern (`use-*.ts`) extends cleanly to 3 new entities |
-| react-hook-form | ^7.62.0 | Forms | Existing |
-| zod | ^4.1.5 | Schema validation | Existing |
-| PostgreSQL | (project-pinned) | Database | Existing; 3 new tables, 1 new column, no engine change |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Spring `@EnableScheduling` + `@Scheduled` | Spring Framework 6.2.x, bundled transitively with `spring-boot-starter-parent` 3.4.1 (already pinned in `pom.xml`) | Daily tenant-wide deadline-scan job (prazos de processos, calendário crítico, prazos de honorários) | Confirmed via Spring Boot's own official docs (fetched directly, see Sources) that `spring-boot-starter-web` alone is sufficient — "doesn't require a separate starter." Auto-configures a `ThreadPoolTaskScheduler` with **1 thread by default**, which is more than adequate for one job firing once a day. |
+| New JPA entity `Notificacao` (`t_notificacao`) | Hibernate/JPA already provided by `spring-boot-starter-data-jpa` (already in `pom.xml`) | Persisted notification record with `lida`/`lida_em` read-state | Mirrors the shape of the existing `AuditLog` entity almost exactly (`tenant_id UUID`, `entidade_tipo String`, `entidade_id String` — chosen there specifically "to accommodate both UUID and Integer IDs across entities," which this feature needs too: `Processo`/`Documento`/`Parecer` use UUID ids, `Honorario`/`Facto` use Integer ids). No new persistence technology, just a new table via the project's existing `ddl-auto=update` + hand-written `backend/migrations/*.sql` convention. |
+| `@tanstack/react-query` `refetchInterval` | `^5.87.4` (already in `web/package.json`) | Bell badge + `/notificacoes` history page polling refresh (30-60s) | Already the project's sole data-fetching layer (per `CLAUDE.md`: "TanStack Query para toda interação com API"). `refetchInterval` is a built-in query option, not an add-on package — confirmed present and stable in the installed major version via Context7 (`/tanstack/query`, v5 branch). |
+| PostgreSQL composite unique constraint | Whatever Postgres version the project already runs (unchanged) | De-duplicate "already notified for this threshold crossing" | Exactly the tool this codebase already reaches for: `backend/migrations/81-add-facto-ordem-unique-constraint.sql` and `82-add-honorario-processo-unique-constraint.sql` both exist for the same reason (a "check-then-act" without a DB-level backstop was flagged in code review as a genuine race-condition risk). Extending that same convention here is the path of least surprise. |
 
-### Explicitly NOT Adding
+### Supporting Libraries
 
-| Candidate library | Why it looks tempting | Why to reject it |
-|---|---|---|
-| PDF generator (e.g. `pdf-lib`, `jsPDF`, `react-pdf`, or a backend lib like OpenPDF/iText/Flying Saucer) | "Termo de Honorários" sounds like a document-generation problem | The v2.4 Ficha Cliente already solved the identical problem — a printable, office-form-accurate one-page document — with a CSS `@media print` stylesheet + browser-native `window.print()`, zero dependencies. The Termo de Honorários brief (advogada + cliente + valor + forma de pagamento + local/data + assinaturas) is materially simpler than the Ficha Cliente (which already prints multi-section forms with checkboxes and blank-fill lines). No server-side rendering, no headless-Chrome/wkhtmltopdf sidecar, no client PDF bundle needed. |
-| `docx` generation library (e.g. `docx` npm package, Apache POI on backend) | Reference attachment is a `.docx` template | Rendering a web page styled to match the reference document and letting the user print / "Save as PDF" via the OS print dialog is the same approach already accepted for Ficha Cliente. Introducing docx generation would require binary template manipulation, a new backend dependency (POI adds significant JAR weight), and font/layout fidelity work disproportionate to a one-page contract. |
-| shadcn/ui `Tabs` component (`@radix-ui/react-tabs`) | 3rd/4th dedicated tab feels like it needs a real tabs primitive | Already explicitly rejected in v2.8 (Key Decision in PROJECT.md: "Ficha de cliente reestruturada em 7 separadores estilo botões-toggle (não `Tabs` do shadcn)"). Processos already uses the same button-toggle tab pattern (`TabKey` state + `Button variant={tab === x ? "secondary" : "outline"}`) since before v2.8. No Tabs primitive exists anywhere in `web/src/components/ui/`. Follow the established pattern, don't diverge. |
-| A generic multi-tenant "child list entity" abstraction/ORM helper | 3 new near-identical entities (Decisao, Facto, Testemunha) could invite a generics/abstraction push | Every existing child entity (`ClienteContacto`, `ClienteNota`, `ClienteAdvogado`, `Movimentacao`, `ProcessoFase`) is a hand-written flat JPA entity + repository + controller block, not a shared abstraction. Introducing generics here would be inconsistent with 5+ prior instances of the same shape and would increase risk for no benefit at this scale (single-digit new tables). |
-| A rich-text/markdown editor for `resumo`/`descricao`/`notas` fields | `Decisao.resumo`, `Facto.descricao` could look like "content" fields worth a WYSIWYG | All comparable existing fields (`Cliente.descricao_caso`, `Movimentacao.descricao`, `ClienteNota` body) use plain `<textarea>`/`Input`. No prior use of a rich text editor anywhere in the codebase — do not introduce one now. |
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `Intl.RelativeTimeFormat` (native — **zero install**) | Baseline web platform API, already available in the Node/browser runtime this project targets | Relative timestamps in the bell/history list ("há 3 horas", "há 2 dias") | Use instead of installing `date-fns`/`dayjs`. Supports `pt` locale natively (`new Intl.RelativeTimeFormat("pt", { numeric: "auto" })`); the project's only existing date-formatting need (`NotificationItem`'s `toLocaleDateString("pt-PT", ...)`) already relies on native `Intl`/`Date` APIs, not a library — this is the same pattern, applied to relative time. |
+| `java.time.temporal.ChronoUnit` (JDK stdlib — **zero install**) | Day-count-since-`dataAcordo` for the Honorário deadline category | Already the exact mechanism `ResourceController.computeRisco()` uses today (`ChronoUnit.DAYS.between(hoje, dataLimite)`) for the Prazo risk calculation. The new Honorário category is the same idiom applied to `Honorario.dataAcordo` instead of `Prazo.dataLimite`. |
+| Existing `components/ui/*` (shadcn-style primitives already in the repo) | Whatever's already installed — `popover.tsx`, `badge.tsx`, `table.tsx`, `switch.tsx`, `input.tsx` | Bell popover (already used by the current `NotificationBell`), unread badge, history table/list, read/unread + category filters on `/notificacoes` | No new shadcn primitive (`Tabs`, `Select`, `DropdownMenu`) is needed. The project has a track record of reaching for native HTML controls over adding new shadcn CLI-generated components — Phase 79 explicitly chose a native `<datalist>` combobox for exactly this reason. A native `<select>`/checkbox-driven filter bar on `/notificacoes` follows the same precedent. |
 
-## Backend Considerations (Java/Spring Boot)
+### Development Tools
 
-### (b1) Three new JPA entities — follow the `ClienteContacto`/`ClienteNota` template exactly
-
-Each of `Decisao`, `Facto`, `Testemunha` should be its own `@Entity` (not a JSON column — see the v2.7 reversal decision logged in PROJECT.md: `"dados_tipo" (coluna JSON única) removida por completo ... o padrão JSON-por-tipo mostrou-se mais difícil de validar/manter do que colunas planas para este caso específico`). Confirmed template, taken directly from `backend/src/main/java/com/lexcv/models/ClienteContacto.java`:
-
-```java
-@Entity
-@Table(name = "t_processo_decisao")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Decisao {
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-
-    @Column(name = "tenant_id", nullable = false)
-    private UUID tenantId;
-
-    @Column(name = "processo_id", nullable = false)
-    private UUID processoId;
-
-    private LocalDate data;
-    private String tipo;      // sentença | despacho | acórdão
-    private String resumo;
-    @Column(name = "documento_id")
-    private UUID documentoId; // optional FK to existing t_documento (anexo)
-
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() { this.createdAt = LocalDateTime.now(); }
-}
-```
-
-Each of the three needs: entity + `*Repository extends JpaRepository<X, UUID>` with a `findByTenantIdAndProcessoId(...)` query method + a CRUD block appended to `ResourceController.java` (the ~1000+-line controller is the established convention — do not split it out for these three; `ClienteContacto`/`ClienteNota`/`ClienteAdvogado`/`Parte`/`Movimentacao`/`ProcessoFase` all live there too) + `@PreAuthorize("hasAuthority('processos:view'|'processos:edit')")` reusing the existing `processos:*` scope (do not invent new RBAC scopes — Decisão/Facto/Testemunha are sub-resources of Processo, same as Partes/Fases/Movimentações already are).
-
-**`Decisao.anexo` (optional):** store as a nullable FK (`documento_id UUID`) to the existing generic `t_documento` table rather than inventing file-handling logic. Upload flow reuses `POST /documentos/upload` with a `processoId` param (already supported — confirmed at `ResourceController.java` line 1983-2062) — then the created `Decisao` row is updated with the returned `documento.id`. This avoids duplicating file-column logic and stays consistent with how `Cliente.procuracao` and the new processo "Documentos" tab both point at `t_documento`.
-
-**`Facto.ordem`:** plain `Integer` column, client-managed — since explicit manual ordering is requested (unlike other list entities in the app, which sort by `createdAt`), add the column and let the frontend submit/edit the position; sort `ORDER BY ordem` in the repository query.
-
-### (b2) One new enum value (`origem`) and one new free-text column (`juizo`) on `Processo`
-
-Both are trivial additive columns on the existing `t_processo` table/entity — same shape as `tribunal`/`areaJuridica` today. Standard `ALTER TABLE ADD COLUMN`, nullable by default under `ddl-auto=update` (dev). See PITFALLS.md for the gap this creates against the "obrigatório" (required) requirement on `origem` for pre-existing rows.
-
-`origem` is specified as an enum with two Portuguese-labeled values ("Petição Inicial" | "Notificações Avulsas"). Recommend a **plain `String` column with backend-validated allowed values** (not a JPA `@Enumerated` Java enum) — this matches how `documento_tipo`/`estado`/`tipo` are already handled throughout the codebase, which consistently avoids native Java enums for domain state in favor of validated strings (`Processo.estado`, `Cliente.tipo`, `Documento.tipo`, `Documento.confidencialidade` are all plain `String`). This lets `origem` reuse the exact v2.8 precedent — `documento_tipo` per-cliente-type allowed-value validation, enforced in both layers — for its own allowed-value validation.
-
-### (b3) `jakarta.persistence.validation.mode: none` gotcha applies again
-
-PROJECT.md logs a hard-won lesson from Phase 73.1: adding Bean Validation annotations (`@NotBlank`) directly to an entity field activates JPA-lifecycle validation on **every** `save()` of that entity, including unrelated codepaths that don't touch the field. If `origem` is "obrigatório" (required), enforce it at the **controller/DTO level** (explicit null/blank check in `createProcesso`, mirroring how required-field checks already happen in `formalizarProcesso`'s `camposEmFalta` block) rather than via a Bean Validation annotation on the `Processo` JPA field — otherwise every existing `processoRepository.save()` call elsewhere (fases, movimentações, workflow transitions, this milestone's own new Decisão/Facto/Testemunha flows if they touch `Processo`) risks breaking on legacy rows missing `origem`.
-
-### (b4) Honorário auto-creation hook point — confirmed exact location
-
-`formalizarProcesso()` in `ResourceController.java` (starts at line 1181) already performs the `TRIAGEM → ATIVO` transition with all its guard clauses (campos mínimos, conflict-check decision present, no impeditivo conflict) before `processo.setEstado("ATIVO")` at line 1234. Insert `Honorario` auto-creation immediately after that line, before `return ResponseEntity.ok(processoRepository.save(processo))`. `Honorario` already has every field needed (`processoId`, `valorTotal`, `descricao`, `dataAcordo`) — no entity change required. Source the initial `valorTotal`/terms from the client's existing `honorarios_propostos` intake data (already captured on `Cliente` since v2.4) when available; otherwise create with nulls for the user to complete via the existing Financeiro UI.
-
-**Flag for phase-level planning (not a stack concern):** decide whether Honorário auto-creation should be wrapped in the same transaction as the state transition, so a failure there doesn't silently leave the processo ATIVO with no Honorário.
-
-## Frontend Considerations (React/TanStack Query)
-
-### (c1) Documentos tab — easier than its Clientes v2.8 counterpart, endpoint already exists
-
-Unlike Clientes v2.8 (which needed a **new** `GET /clientes/{id}/documentos` endpoint because the generic `GET /documentos` ignores `cliente_id`/`processo_id`), `GET /processos/{id}/documentos` **already exists** (confirmed at `ResourceController.java` line 2079). This tab is lower-effort than the Clientes version: wire a `ProcessoDocumentosTab` sub-component mirroring `ClienteDocumentosEntreguesTab` — upload via the existing `useUploadDocumentoComProgresso` hook (`web/src/hooks/use-documentos.ts`), list via a processo-scoped documentos query, `documentos:view`/`documentos:edit` RBAC gating identical to the Clientes version.
-
-### (c2) 3rd/4th lazy-mount tab — pattern is proven, no TanStack Query changes needed
-
-PROJECT.md explicitly documents the chosen approach (v2.8 Key Decision): `useProcessos`/`usePareceres`/`useDocumentos` deliberately did **not** get an `enabled` parameter added; instead each tab is a separate sub-component (`ClienteProcessosTab`, `ClienteParecerTab`, `ClienteDocumentosEntreguesTab` — all confirmed present in `web/src/app/(dashboard)/clientes/[id]/page.tsx`) that only mounts — and therefore only fires its query — when its button-toggle tab is active. Apply the identical shape for Processos: `ProcessoDecisoesTab`, `ProcessoFactosTab`, `ProcessoTestemunhasTab`, `ProcessoDocumentosTab` as four new sub-components, each taking `processoId` (and `editable`/RBAC props where mutation is needed), each backed by its own new hook (`use-decisoes.ts`/`use-factos.ts`/`use-testemunhas.ts` — trivial, same shape as `useClienteAdvogados`/`useClienteAdministrativos` in `use-clientes.ts`).
-
-No TanStack Query version change or new plugin needed (no need for v5's `enabled: () => boolean` callback form, no query-level lazy-loading library) — conditional mounting is sufficient and is the codebase's established idiom.
-
-### (c3) Tab-switch state hygiene — apply the documented gotcha proactively
-
-PROJECT.md's Clientes page carries an explicit effect (around line 208-224 of `clientes/[id]/page.tsx`) closing any open "add" dialog and resetting its draft state whenever the active tab changes away from the tab that owns it — because sub-components are **unmounted** (not just hidden) on tab switch, a controlled `open={true}` dialog left over from before the switch would otherwise reopen with stale draft text the moment the user navigates back. If Decisões/Factos/Testemunhas get "Adicionar" dialogs (likely, given the field lists), replicate this same `useEffect` reset keyed off `tab` from day one rather than discovering the bug later.
-
-### (c4) Processo detail page already uses the identical button-toggle tab pattern
-
-`web/src/app/(dashboard)/processos/[id]/page.tsx` already has `const [tab, setTab] = React.useState<TabKey>("timeline")` (line 142) with existing tabs `timeline` / `partes` / `fases` / `auditoria`. Adding `juizo`/`origem` fields is a same-tab addition (goes wherever `tribunal`/`areaJuridica` currently render, not a new tab). Adding `decisoes` / `factos` / `testemunhas` / `documentos` extends the `TabKey` union with four new string literals and four new `<Button variant={tab === x ? "secondary" : "outline"}>` entries, RBAC-gated the same way `canViewProcessos`/`canViewPareceres` already gate tabs on the Clientes page.
-
-### (c5) Termo de Honorários print page — clone the Ficha Cliente route shape
-
-Create a new route (e.g. `web/src/app/(dashboard)/processos/[id]/termo-honorario/page.tsx`), following `clientes/[id]/ficha/page.tsx` closely:
-- Same `PRINT_CSS` constant (`@media print { aside, header, [data-print-hide], .bottom-nav, .ficha-print-btn { display: none !important; } ... } @page { size: A4; margin: 2cm; }`).
-- Same `BLANK = "___________"` placeholder-fill convention for empty fields — useful here for assinatura lines, valor por extenso, local/data.
-- Triggered the same way as Ficha Cliente: a `<Printer />` (lucide-react, already a dependency) icon button opening the route in a new tab (`target="_blank" rel="noopener noreferrer"`), which the user prints via the browser's native print dialog (`window.print()`).
-- Data source: the auto-created `Honorario` record (existing Financeiro hooks) joined with `Processo` (for tribunal/juízo context if needed) and `Cliente` (nome, morada) plus the responsável advogado — no new hooks needed beyond what Financeiro and `useProcesso`/`useCliente` already expose.
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| `backend/migrations/*.sql` (manual, hand-run) | Create `t_notificacao` + the composite unique index | Same convention already established by `74-cleanup-nif-documento-tipo.sql`, `81-add-facto-ordem-unique-constraint.sql`, `82-add-honorario-processo-unique-constraint.sql`. No Flyway/Liquibase is being introduced by this milestone — stay consistent with the existing manual-script-before-deploy process documented in `CLAUDE.md`. |
+| Spring Boot Actuator `scheduledtasks` endpoint (optional, **not currently in `pom.xml`**) | Runtime visibility into the new `@Scheduled` job (last/next execution) | Not required to ship this milestone — the app has no Actuator dependency today and adding one is a bigger decision than this feature warrants. Mentioned only as a documented option if operational visibility becomes a real ask later (`GET /actuator/scheduledtasks`, confirmed current in Spring Boot's own docs). |
 
 ## Installation
 
-No new packages. No `pnpm add`, no `mvn` dependency additions — this milestone adds only new source files (3 entities + repositories, controller endpoints, 4 frontend hook files, 4+ tab sub-components, 1 print route, 2 new/changed `Processo` fields).
+No new dependencies are required for the recommended path. Nothing to add to `pom.xml` or `package.json`.
 
 ```bash
-# Backend: no pom.xml changes
-# Frontend: no package.json changes
+# Backend: nothing to install.
+# @EnableScheduling / @Scheduled ship inside spring-context,
+# already pulled in transitively by spring-boot-starter-web (already in pom.xml).
+
+# Frontend: nothing to install.
+# refetchInterval is part of @tanstack/react-query, already ^5.87.4 in package.json.
+```
+
+Only if a future need actually materializes (see "Stack Patterns by Variant" below) would this change:
+
+```xml
+<!-- OPTIONAL / DEFERRED — only add if the backend is ever scaled to >1 replica.
+     Not needed today: docker-compose.prod.yml runs a single backend container. -->
+<dependency>
+    <groupId>net.javacrumbs.shedlock</groupId>
+    <artifactId>shedlock-spring</artifactId>
+    <version>7.7.0</version>
+</dependency>
+<dependency>
+    <groupId>net.javacrumbs.shedlock</groupId>
+    <artifactId>shedlock-provider-jdbc-template</artifactId>
+    <version>7.7.0</version>
+</dependency>
 ```
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Termo de Honorários rendering | `window.print()` + scoped `@media print` CSS (Ficha Cliente pattern) | Server-generated PDF (headless Chrome, wkhtmltopdf, iText) | Zero new dependencies, proven pattern already shipped and audited in v2.4; the contract is simpler (one page) than the Ficha Cliente it would clone from |
-| Decisão/Facto/Testemunha storage | Dedicated JPA entities, one table each | Single JSON column on `Processo` (like the old `dados_tipo`) | Explicitly reversed as a project-wide pattern in v2.7 for exactly this reason — JSON-per-type proved harder to validate/maintain than flat entities |
-| `origem` field type | Validated `String` column | JPA `@Enumerated(EnumType.STRING)` Java enum | No existing domain-state field in the codebase uses a native Java enum; `estado`, `tipo`, `documento_tipo`, `confidencialidade` are all validated strings — consistency with established convention |
-| 3rd/4th tab navigation | Manual `useState<TabKey>` + button toggles | shadcn/Radix `Tabs` | No Tabs primitive exists in the repo; explicitly rejected in the v2.8 Key Decision log to preserve a single tab paradigm |
-| Documentos tab data source | Existing `GET /processos/{id}/documentos` | New tenant-scoped endpoint (as Clientes needed in v2.8) | Unlike Clientes, the processo-scoped documentos endpoint already exists and is correct — no backend gap to fill here |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|--------------------------|
+| `@Scheduled(cron = ...)` | Quartz Scheduler (`spring-boot-starter-quartz`) | Only if you need per-tenant/user-configurable schedules, misfire recovery across restarts, or dynamically add/remove jobs at runtime. None of that applies to one fixed, tenant-wide, once-a-day scan. |
+| `@Scheduled(cron = ...)` | Spring Batch | Only if the scan needed chunked reads/writes over millions of rows with restart-from-checkpoint semantics. LexCV's per-tenant `Prazo`/`Honorario` row counts are nowhere near that scale. |
+| `@Scheduled(cron = ...)` | db-scheduler (kagkarlsson) | Only if you need many independently-scheduled, dynamically created one-off/recurring jobs persisted in the DB (e.g., a per-client reminder at an arbitrary future timestamp). This milestone has exactly one fixed schedule, not a per-entity dynamic one. |
+| Plain `@Scheduled`, no distributed lock | ShedLock 7.7.0 (`net.javacrumbs.shedlock`) | Only once the backend runs as more than one replica simultaneously. `docker-compose.prod.yml` currently defines a single `backend` service with resource limits but no replica count — i.e., exactly one instance runs the job. Adding ShedLock today would be solving a problem that doesn't exist yet. |
+| Exists-check (`findTop...OrderByCreatedAtDesc`) + composite unique constraint | A dedicated idempotency/dedup library | No standard, widely-adopted library exists in the Spring ecosystem for "did I already record this state transition" — this is squarely a database-constraint problem, and the codebase already has an established pattern for it (see Core Technologies). |
+| Synchronous same-transaction `notificacaoService.criar(...)` call inline in the 4 existing write endpoints (nova fase, novo documento, atribuição, parecer atribuído) | `ApplicationEventPublisher` + `@TransactionalEventListener`, or `@Async` | Only worth the indirection if notification-creation becomes a measurable bottleneck on the write path, or if the number of trigger points grows well beyond today's four. This codebase has **zero** existing `@EventListener`/`@Async` usage anywhere (confirmed by search) — introducing eventing for 4 call sites would be a new architectural pattern with no existing precedent to build on, for no measurable benefit yet. |
+| TanStack Query `refetchInterval` (30-60s) | WebSocket / SSE (`SseEmitter`, STOMP) | Already explicitly decided against for this milestone by the user. Would only be justified if sub-second delivery latency became a real product requirement — this app has zero WebSocket/SSE/STOMP infrastructure today (confirmed absent by search across the whole repo). |
+| Native `Intl.RelativeTimeFormat` | `date-fns` / `dayjs` / `luxon` | Only if the app starts needing broader date arithmetic (timezone conversion, business-day math, recurrence rules) beyond simple relative-time display — which the backend already handles today via plain `java.time`, with no library. |
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|--------------|
+| Quartz Scheduler / `spring-boot-starter-quartz` | Brings its own persistent job-store tables, migration, and clustering configuration — pure overhead for one fixed cron job that never changes at runtime. | `@EnableScheduling` + `@Scheduled(cron = "...", zone = "Atlantic/Cape_Verde")`. |
+| Spring Batch | Designed for large chunked ETL-style processing with step/restart/skip semantics. Nothing in this milestone approaches that data volume or failure-recovery complexity. | A plain `@Scheduled` method with a couple of Spring Data repository queries. |
+| ShedLock (today) | Solves a distributed-lock problem that doesn't exist yet — confirmed single-container backend deployment in `docker-compose.prod.yml`. Adding it now is speculative complexity. | Add it later — one dependency, one annotation (`@SchedulerLock`) — only if/when the backend is ever scaled horizontally. |
+| WebSocket / SSE / STOMP / any push transport | Explicitly rejected by the user for this milestone; introduces connection lifecycle, reconnect/backoff, and proxy/Caddy configuration this project has never needed (confirmed zero WebSocket/SSE code anywhere in the repo). | TanStack Query `refetchInterval` (30-60s), same as every other data surface in this app. |
+| A new date library (`date-fns`/`dayjs`/`luxon`) introduced solely for this feature | The day-count-since-`dataAcordo` calculation is one line of `java.time` on the backend (same idiom as the existing `computeRisco()`); the "relative time" display need is one native `Intl.RelativeTimeFormat` call. Neither justifies a new frontend dependency. | `ChronoUnit.DAYS.between(...)` (backend) + `Intl.RelativeTimeFormat` (frontend). |
+| New shadcn/ui primitives (`Tabs`, `Select`, `DropdownMenu`) for the `/notificacoes` filters | `popover.tsx`, `badge.tsx`, `table.tsx`, `switch.tsx`, `input.tsx` already exist and cover the same ground; the project has explicitly preferred native HTML controls over new shadcn components before (Phase 79's native `<datalist>` combobox). | Reuse existing `components/ui/*` + native `<select>` / checkbox inputs for category and read/unread filters. |
+| `ApplicationEventPublisher` / `@EventListener` / `@Async` for the four instant-trigger notifications | Zero existing precedent anywhere in this codebase; adds indirection, thread-pool considerations, and eventual-consistency edge cases for what is currently four call sites inside an already-large, procedurally-styled `ResourceController`. | A direct, synchronous call to a new `NotificacaoService` inside the same transaction as the triggering write — mirrors how every other side effect in `ResourceController` already works (e.g., `Honorario` auto-creation on formalização is already a direct synchronous call, not an event). |
+| A hard unique constraint on `(tenant_id, entidade_tipo, entidade_id, categoria)` without the threshold/recipient columns | Would silently prevent the legitimate 3-row lifecycle of one entity (`ok`→`proximo` is one row, `proximo`→`vencido` is a second row) and — because targeting fans out to multiple recipients (the directly-linked user **and every ADMIN**, per the milestone's own targeting decision) — would silently drop every recipient's row after the first if `destinatario_user_id` isn't part of the key. | A composite constraint on `(tenant_id, destinatario_user_id, entidade_tipo, entidade_id, categoria, nivel)` — narrow enough to block a true duplicate re-insert of the *same* recipient's *same* crossing, wide enough to allow the natural progression of alerts and the fan-out to multiple recipients. |
+
+## Stack Patterns by Variant
+
+**If the backend is ever scaled to more than one replica (not the case today):**
+- Add `net.javacrumbs.shedlock:shedlock-spring` + `shedlock-provider-jdbc-template` (7.7.0) and wrap the scan method with `@SchedulerLock(name = "notificacoes-scan-diario", lockAtMostFor = "PT30M")`, backed by `@EnableSchedulerLock`.
+- Because without it, N replicas would each execute `@Scheduled` independently at the same wall-clock moment and attempt to fan out duplicate notification rows on the same day (the composite unique constraint would catch and swallow the duplicates, but it's cleaner to prevent the redundant work outright once concurrency is real).
+
+**If the daily scan ever needs a different cadence per tenant (not requested in this milestone — today it's one shared schedule for all tenants):**
+- Reconsider Quartz or db-scheduler for DB-driven, per-row schedule configuration.
+- Because `@Scheduled` cron expressions are fixed at compile/startup time (or at best externalized to a single property), not configurable per database row at runtime.
+
+**If notification volume per tenant grows into the thousands per day:**
+- Add `Pageable`/pagination to the `/notificacoes` list endpoint and a supporting index on `(tenant_id, destinatario_user_id, created_at DESC)`.
+- Because this is a straightforward indexing concern as history accumulates, not a reason to reach for a new dependency.
+
+**If observability into "did the job run, when, did it fail" becomes an actual operational need:**
+- Add `spring-boot-starter-actuator` and expose `/actuator/scheduledtasks` (and optionally Micrometer metrics), rather than hand-rolling a status table.
+- Because Spring Boot already ships this integration; it's a config addition, not new code, if/when Actuator is adopted for other reasons too.
+
+## Version Compatibility
+
+| Package A | Compatible With | Notes |
+|-----------|------------------|-------|
+| `spring-boot-starter-parent` 3.4.1 (already pinned) | `@Scheduled` / `@EnableScheduling`, Java 23 | Confirmed directly against Spring Boot's official reference docs: `spring-boot-starter-web` alone is sufficient; no `spring-boot-starter-quartz`/batch needed. Default auto-configured `ThreadPoolTaskScheduler` uses 1 thread unless `spring.task.scheduling.pool.size` is raised — no tuning needed for one job/day. |
+| `@tanstack/react-query` `^5.87.4` (already installed) | `refetchInterval: (query) => number \| false` | v5 changed the callback signature from v4's `(data, query) => ...` to `(query) => ...` only — confirmed current against the v5 branch of the official docs (also verified against the newer `v5_90.3` snapshot in Context7, no further change within v5.x). The installed `^5.87.4` already has this API; no upgrade needed. |
+| Spring Framework 6.2.x (bundled with Boot 3.4.1) | `cron` attribute's `zone` parameter | `@Scheduled(cron = "...", zone = "Atlantic/Cape_Verde")` is required for a predictable local-time trigger: the backend's Docker image (`eclipse-temurin:23-jre-alpine`, confirmed in `backend/Dockerfile`) sets no `TZ`, so its JVM default is almost certainly UTC, one hour off Cabo Verde's UTC-1 (no DST) — without an explicit `zone`, "runs daily at 07:00" would actually fire at 06:00 local time. |
+| `net.javacrumbs.shedlock:shedlock-spring` 7.7.0 (deferred, not adopted now) | Spring Boot 3.x, JDBC lock provider against the project's existing PostgreSQL instance | Only relevant if/when horizontal scaling happens (see "Stack Patterns by Variant"). Version confirmed current via Maven Central at time of research (MEDIUM confidence — WebSearch cross-referenced against Maven Central and the project's own GitHub repo, not an official Spring doc). |
+
+## Integration Notes Specific to LexCV's Existing Architecture
+
+- **RBAC integration — no new `@PreAuthorize` scope needed.** The milestone's own targeting decision ("Alvo de cada notificação = só a entidade diretamente ligada... + ADMIN — nunca notificação em massa por permissão de visualização") means the list/mark-read endpoints are authorized by **row ownership** (`WHERE destinatario_user_id = <principal's user id> AND tenant_id = <principal's tenant id>`), not by a `scope:action` permission string. This is a different authorization shape than every other resource in `ResourceController` (which all use `hasAuthority('<scope>:<action>')`), but it's the correct one here: every authenticated user, regardless of role, should be able to see (only) their own notifications. No new row needs to be added to `DatabaseSeeder`'s permission set for this — `isAuthenticated()` plus the `WHERE` clause is the whole authorization story. (`permissions.ts`'s `KNOWN_SCOPES` registry does not need a `notificacoes` entry either, for the same reason.)
+- **The scheduled job runs outside any HTTP request/JWT context.** Every other piece of backend logic in this codebase derives `tenantId` from `SecurityContextHolder` via `ResourceController.getTenantId()` (which reads `UserPrincipal.getTenantId()`). A `@Scheduled` method has no `Authentication` in its thread's `SecurityContext` — it must instead query across **all** tenants directly (e.g., iterate `tenantRepository.findAll()`, or a single cross-tenant query grouped in memory), which is a genuinely new access pattern for this codebase (everything else is 100% tenant-scoped-by-request). Worth flagging explicitly during implementation review so nobody accidentally tries to reuse `getTenantId()` inside the job and gets a `NullPointerException`/`ClassCastException` on an absent principal.
+- **Threshold logic to consolidate.** `ResourceController.computeRisco(LocalDate dataLimite, String prioridade)` (currently a private method, ~line 1397) is the exact "ok/proximo/vencido" logic the milestone wants unified across dashboard, bell, agenda, and now the new job — pulling it into a shared, reusable method (rather than a fifth private-method copy) is a low-risk refactor already implied by the milestone's own stated goal ("lógica de 'crítico' consolidada numa única fonte partilhada").
+- **The frontend polling query must be gated on auth state.** `web/src/lib/api.ts`'s `apiFetch` deliberately swallows the toast for 401/403 responses ("Ignorar toast automático para rotas de auth check... para evitar spam se a sessão expirar") but still throws. A `refetchInterval`-driven query has no natural stopping condition on logout the way a one-shot query does — without gating `enabled` on a successful `useMe()` (mirroring how other hooks gate on `typeof window !== "undefined"`), the bell would keep silently retrying every 30-60s against an expired/absent session.
+- **`refetchOnWindowFocus: false` is already set globally** in `web/src/app/providers.tsx`. Combined with TanStack Query's own default of pausing `refetchInterval` while the tab is hidden, a user who alt-tabs away and back could see a bell that's stale by up to a full interval (paused while away, then waits out whatever remains of the timer before firing — no immediate catch-up). Recommend an explicit **per-query override** of `refetchOnWindowFocus: true` on just the notifications query (TanStack Query merges per-query options over the `QueryClient` defaults, so this is a one-line, fully-scoped override) so returning to the tab triggers an immediate refresh on top of the interval. Do **not** reach for `refetchIntervalInBackground: true` instead — that keeps the network request firing every 30-60s even while the tab sits unfocused in the background all day, which is unnecessary load for an internal practice-management tool.
+- **Mutation-invalidation, not a second polling loop, for "mark as read."** The existing `use-eventos.ts` pattern (`onSuccess: () => queryClient.invalidateQueries({ queryKey: [...] })`) is exactly what "marcar como lida" should do — invalidate the bell's query key so the badge count updates immediately, rather than waiting for the next interval tick. No new pattern needed here, just the one this project already uses everywhere.
 
 ## Sources
 
-- Direct repository inspection (HIGH confidence — primary source, not training data):
-  - `backend/src/main/java/com/lexcv/models/Processo.java` — current entity shape (confirms `tribunal`, `tipoProcesso`, `areaJuridica` as flat `String` columns; no existing Java enum usage)
-  - `backend/src/main/java/com/lexcv/models/ClienteContacto.java` — child-entity template (id/tenantId/parentId/fields/createdAt/`@PrePersist`)
-  - `backend/src/main/java/com/lexcv/models/Honorario.java` — existing fields confirm no entity change needed for auto-creation
-  - `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (lines 1181-1236: `formalizarProcesso`; lines 1979-2096: Documentos section including upload endpoint and both `/processos/{id}/documentos` and `/clientes/{id}/documentos` GET endpoints) — confirms exact hook point and confirms the processo-scoped documentos endpoint already exists
-  - `web/src/app/(dashboard)/clientes/[id]/page.tsx` (lines 190-460 and 1053-1260+) — lazy-mount tab pattern, button-toggle tab UI, dialog-reset-on-tab-switch effect, `ClienteProcessosTab`/`ClienteParecerTab`/`ClienteDocumentosEntreguesTab` implementations
-  - `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx` — CSS-print + `window.print()` pattern, `PRINT_CSS` constant, `BLANK` placeholder convention
-  - `web/src/app/(dashboard)/processos/[id]/page.tsx` (line 142+) — existing `TabKey` state pattern already in Processos, current tab set
-  - `web/package.json` — pinned versions (Next 16.2.6, React 19.2.4, TanStack Query ^5.87.4, RHF ^7.62.0, Zod ^4.1.5)
-  - `.planning/PROJECT.md` — Key Decisions log: JSON-column reversal (v2.7), no-new-dependency precedent (v2.6 Pareceres), Tabs-vs-button-toggle decision (v2.8), `jakarta.persistence.validation.mode: none` gotcha (Phase 73.1), `enabled`-param-avoided-in-favor-of-lazy-mount-subcomponents decision (v2.8 Phase 77)
+- Context7 `/spring-projects/spring-boot` (resolved to version `v3.4.1`, exact match to `pom.xml`) — topic: "scheduled tasks @Scheduled @EnableScheduling cron"
+- https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html — official, current Spring Boot reference docs, fetched directly; confirms `spring-boot-starter-web` sufficiency, default 1-thread `ThreadPoolTaskScheduler`, `spring.task.scheduling.*` properties, and virtual-thread behavior — HIGH confidence
+- Context7 `/tanstack/query` (React branch, v5) — topic: "refetchInterval polling refetchIntervalInBackground"
+- https://github.com/TanStack/query/blob/main/docs/framework/react/guides/polling.md — confirms default background-tab pause behavior, `refetchIntervalInBackground`, and dedup of concurrent in-flight fetches for the same query — HIGH confidence
+- https://github.com/TanStack/query/blob/main/docs/framework/react/guides/important-defaults.md — confirms window-focus/reconnect refetch defaults — HIGH confidence
+- https://github.com/TanStack/query/blob/main/docs/framework/react/guides/migrating-to-v5.md — confirms the v4→v5 `refetchInterval` callback signature change — HIGH confidence
+- https://github.com/lukas-krecan/ShedLock and https://central.sonatype.com/artifact/net.javacrumbs.shedlock/shedlock-spring/7.7.0 — current version confirmation for the deferred/optional recommendation — MEDIUM confidence (WebSearch, cross-referenced against Maven Central and the library's own GitHub repo, not an official Spring source)
+- https://github.com/spring-projects/spring-boot/issues/49949 (and related Boot issue-tracker discussion) — virtual-threads + `fixedDelay` serialization gotcha, informing the choice of `cron` over `fixedDelay` — MEDIUM confidence (GitHub issue tracker, not primary docs; non-blocking footnote since `cron` is being recommended regardless)
+- Direct codebase inspection (HIGH confidence, read first-hand for this research): `backend/pom.xml`, `web/package.json`, `backend/src/main/java/com/lexcv/models/AuditLog.java`, `backend/src/main/java/com/lexcv/models/Honorario.java`, `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (`computeRisco`, `getTenantId`), `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (permission scopes), `backend/migrations/74-*.sql`, `81-*.sql`, `82-*.sql`, `backend/src/main/resources/application.yml`, `backend/Dockerfile`, `docker-compose.prod.yml`, `web/src/app/providers.tsx`, `web/src/lib/api.ts`, `web/src/lib/permissions.ts`, `web/src/hooks/use-eventos.ts`, `web/src/lib/prazos.ts`, `web/src/components/shared/notification-bell.tsx`, `web/src/components/ui/*` — confirmed absence of `@Scheduled`/`@EnableScheduling`/Quartz/Spring Batch, WebSocket/SSE/STOMP, and any existing `refetchInterval` usage anywhere in the repository via targeted search across the whole tree
+
+---
+*Stack research for: persisted in-app notifications (backend scheduled job + REST API; frontend polling bell + history page)*
+*Researched: 2026-07-08*

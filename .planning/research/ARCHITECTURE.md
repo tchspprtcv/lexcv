@@ -1,367 +1,435 @@
 # Architecture Research
 
-**Domain:** Backend/frontend integration plan for milestone v2.9 (Melhoria Módulo Processos) — LexCV legal practice management, Spring Boot 3.4.1/Java 23 + Next.js 16/React 19
-**Researched:** 2026-07-07
-**Confidence:** HIGH (all findings verified directly against current repository source, not training-data assumptions)
+**Domain:** Backend integration plan for milestone v2.10 (Notificações e Alertas) — LexCV legal practice management, Spring Boot 3.4.1/Java 23 + Next.js 16/React 19
+**Researched:** 2026-07-08
+**Confidence:** HIGH (all codebase claims verified by direct source inspection, not training-data assumption; Spring scheduling mechanics verified against Spring Boot 3.4 official docs via Context7 CLI fallback and cross-checked with multiple current web sources — see Sources)
+
+## Decisions at a Glance
+
+| # | Question | Answer |
+|---|----------|--------|
+| 1 | Where do event-triggered notifications hook in? | New `NotificacaoService` (single class, `services/` package) called from existing controller methods — **not** raw inline `repository.save()` calls (too much duplicated recipient-resolution logic across 2 controllers), and **not** a full `ApplicationEventPublisher`/`@EventListener` bus (no existing precedent, unjustified indirection for ~4-6 call sites today) |
+| 2 | How does the daily `@Scheduled` job get wired up? | New `SchedulingConfig` (`@EnableScheduling`, `config/` package) + new `AlertasDiariosJob` (`jobs/` package, new). Job takes `tenantId` as an **explicit parameter** through every call — it cannot use the `getTenantId()` controller helper because there is no `SecurityContext` on a scheduler thread. Single backend container today (confirmed in `docker-compose*.yml`) means **no distributed lock (ShedLock etc.) is required yet** — flag it as a future trigger condition, not a build-now requirement |
+| 3 | How to consolidate the 4-5 duplicated "prazo crítico" computations? | Extract to a new `RiscoPrazoService` (`services/` package, injectable `@Service`, **not a static utility**) exposing the *exact* existing `computeRisco(...)` logic unchanged (zero regression risk) plus one new method for the `Evento`-based call sites. This extraction is a **hard prerequisite** for the daily job — the job's entire purpose is to reuse this single source of truth |
+| 4 | How does `Notificacao` carry `tenant_id` + target `user_id`, and what avoids N+1 on polling? | Flat table, **one row per (event, recipient)** — not a recipient-list column — with `tenant_id` kept as its own denormalized column (matches every other entity's isolation pattern) even though it's technically derivable through the recipient's `User.tenantId`. N+1 is avoided by **denormalizing `titulo`/`mensagem`/`linkUrl` onto the row at write time**, so polling reads are a single flat `WHERE tenant_id = ? AND destinatario_id = ?` query with zero joins and zero per-row entity re-resolution |
+
+---
 
 ## Standard Architecture
 
-### System Overview (as it exists today)
+### System Overview (as it exists today, with v2.10 additions marked `[NEW]`)
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  web/src/app/(dashboard)/processos/                                  │
-│  ┌──────────────┐ ┌──────────────────┐ ┌──────────────────────────┐ │
-│  │ novo/page.tsx│ │ [id]/page.tsx     │ │ [id]/editar/page.tsx     │ │
-│  │ intake wizard│ │ detail (button-   │ │ separate edit form       │ │
-│  │ 3-step        │ │ toggle tabs)      │ │ (NOT unified w/ view —   │ │
-│  │              │ │ Timeline/Partes/  │ │  unlike Cliente v2.8)    │ │
-│  │              │ │ Fases/Auditoria   │ │                           │ │
-│  └──────┬───────┘ └────────┬──────────┘ └──────────────┬────────────┘ │
-│         └──────────────────┴──────────────────┬─────────┘             │
-│                                                 ▼                       │
-│                              web/src/hooks/use-processos.ts (567 lines)│
-│                              web/src/hooks/use-financeiro.ts (Honorario)│
-│                              web/src/hooks/use-documentos.ts            │
-│                              web/src/types/processos.ts (216 lines)     │
-│                              web/src/schemas/processos.ts (Zod, 98 ln)  │
-├──────────────────────────────────────────────────────────────────────┤
-│  next.config.ts rewrite: /api/v1/:path* → BACKEND_API_ORIGIN          │
-├──────────────────────────────────────────────────────────────────────┤
-│  backend/src/main/java/com/lexcv/controllers/ResourceController.java  │
-│  @RequestMapping("/api/v1")  — 2504 lines, ALL Processo sub-resources  │
-│  /processos, /processos/{id}/partes|fases|movimentacoes|documentos|   │
-│  prazos|timeline|audit|workflow|transicao|conflict-check|formalizar   │
-│  + /honorarios, /pagamentos, /clientes/*, /documentos/*, /eventos/*   │
-├──────────────────────────────────────────────────────────────────────┤
-│  models/  (JPA @Entity, Lombok @Builder/@Data)                        │
-│  Processo · Parte · ProcessoFase · Movimentacao · Honorario ·         │
-│  Documento · ConflictCheckDecisao · Prazo                             │
-├──────────────────────────────────────────────────────────────────────┤
-│  repositories/  (Spring Data JpaRepository, one per entity)           │
-│  PostgreSQL — ddl-auto=update (dev) / validate (prod)                 │
-└──────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ FRONTEND (web/src)                                                         │
+│  components/shared/notification-bell.tsx                                   │
+│    today: useUpcomingEventos() → GET /eventos/upcoming (no polling)         │
+│    [NEW]: useNotificacoesUnreadCount() + useNotificacoes()                  │
+│           refetchInterval: 30-60s (first refetchInterval usage in the app)  │
+│  app/(dashboard)/notificacoes/page.tsx  [NEW — dedicated history+filters]   │
+│  hooks/use-notificacoes.ts  [NEW — mirrors use-eventos.ts shape exactly]    │
+│  lib/permissions.ts — KNOWN_SCOPES gains "notificacoes"  [MODIFIED]         │
+├────────────────────────────────────────────────────────────────────────────┤
+│ next.config.ts rewrite: /api/v1/:path* → BACKEND_API_ORIGIN (unchanged)     │
+├────────────────────────────────────────────────────────────────────────────┤
+│ HTTP CONTROLLERS (backend/.../controllers)                                 │
+│  ┌────────────────────────┐ ┌───────────────────┐ ┌──────────────────────┐│
+│  │ ResourceController.java│ │ ParecerController │ │ NotificacaoController││
+│  │ (2898 lines, MODIFIED) │ │ (518 ln, MODIFIED)│ │ [NEW]                ││
+│  │ createProcessoFase →   │ │ createSolicitacao →│ │ GET /notificacoes    ││
+│  │   notificarFaseEntrada │ │ atribuirAdvogado → │ │ GET .../unread-count ││
+│  │ uploadDocumento →      │ │   notificarParecer-│ │ PATCH .../{id}/lida  ││
+│  │   notificarDocumentoNv │ │   Atribuido         │ │                      ││
+│  │ NEW responsavel-reassign endpoint →                                     ││
+│  │   notificarProcessoAtribuido                                            ││
+│  │ 5 computeRisco() call sites → riscoPrazoService.computeRisco(...)       ││
+│  │ 3 Evento-based inline blocks → riscoPrazoService.computeRiscoEvento(...)││
+│  └───────────┬────────────┘ └─────────┬─────────┘ └──────────┬───────────┘│
+├──────────────┴───────────────────────┴────────────────────────┴───────────┤
+│ SERVICE LAYER (backend/.../services) — today: StorageService, SetupService │
+│  ┌───────────────────────┐  ┌─────────────────────────┐                    │
+│  │ NotificacaoService     │  │ RiscoPrazoService        │  [BOTH NEW]      │
+│  │ [NEW]                  │  │ [NEW]                    │                  │
+│  │ - resolves recipients  │  │ - computeRisco(Prazo)     │                  │
+│  │   per event type       │  │   (moved verbatim from    │                  │
+│  │ - criar(...) → the ONE │  │   ResourceController)     │                  │
+│  │   repository.save()    │  │ - computeRiscoEvento(...) │                  │
+│  │   choke point           │  │   (new, same thresholds)  │                  │
+│  └───────────┬─────────────┘  └────────────┬─────────────┘                  │
+├──────────────┴──────────────────────────────┴───────────────────────────────┤
+│ SCHEDULED JOB (no HTTP entry point — runs on Spring's TaskScheduler thread)  │
+│  config/SchedulingConfig.java  [NEW]  — @EnableScheduling, isolated         │
+│  jobs/AlertasDiariosJob.java  [NEW]                                          │
+│    @Scheduled(cron = "...")  — daily                                        │
+│    for (Tenant t : tenantRepository.findAll())  ← FIRST cross-tenant loop   │
+│       try { scan prazos+eventos via riscoPrazoService;                      │
+│             scan honorarios (dataAcordo + totalPago vs valorTotal);          │
+│             notificacaoService.criar(...) }                                 │
+│       catch (Exception e) { log.error(...); continue; }  ← per-tenant        │
+│                                                             isolation        │
+├───────────────────────────────────────────────────────────────────────────┤
+│ REPOSITORIES → PostgreSQL                                                   │
+│  NotificacaoRepository  [NEW]  →  t_notificacao  [NEW TABLE]                │
+│    findTop50ByTenantIdAndDestinatarioIdOrderByCreatedAtDesc(...)             │
+│    countByTenantIdAndDestinatarioIdAndLidaFalse(...)                        │
+│  existing: ProcessoRepository, EventoRepository, PrazoRepository,            │
+│    HonorarioRepository, UserRepository, ClienteAdvogadoRepository,           │
+│    ClienteAdministrativoRepository, TenantRepository (unmodified)            │
+├───────────────────────────────────────────────────────────────────────────┤
+│ backend/migrations/NN-create-notificacao-table.sql  [NEW — manual, required │
+│   for prod because application-prod.yml sets ddl-auto=validate]             │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities (existing, verified)
+### Component Responsibilities
 
-| Component | Responsibility | File |
-|-----------|----------------|------|
-| `ResourceController` | Single controller for ~95% of `/api/v1` CRUD, including all Processo sub-resources | `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (2504 lines) |
-| `ParecerController` | Separate controller for an entirely separate domain module (Pareceres), own sub-path `/api/v1/pareceres/solicitacoes` | `backend/.../ParecerController.java` (518 lines) |
-| `ParecerPesquisaController` | Split out from `ParecerController` **solely to fix a Spring routing collision** (class + method mapping concatenation bug), not an organizational precedent | `backend/.../ParecerPesquisaController.java` (58 lines) |
-| `use-processos.ts` | All TanStack Query hooks for Processo + sub-resources (partes, fases, movimentações, prazos, timeline, workflow, conflict-check, formalizar) | `web/src/hooks/use-processos.ts` |
-| `use-financeiro.ts` | Hooks for `Honorario`/`Pagamento` — already exists, already has `useHonorarios`, `useCreateHonorario` | `web/src/hooks/use-financeiro.ts` |
-| `use-documentos.ts` | Generic `Documento` hooks: list (with `cliente_id`/`processo_id` filters), upload w/ progress, delete, download | `web/src/hooks/use-documentos.ts` |
-| `[id]/page.tsx` | Processo detail page — button-toggle tab group (`TabKey = "timeline" \| "partes" \| "fases" \| "auditoria"`), NOT shadcn `Tabs` | `web/src/app/(dashboard)/processos/[id]/page.tsx` (1436 lines) |
-| `[id]/editar/page.tsx` | **Separate** edit route — Processo was NOT unified into a single view/edit component the way Cliente was in v2.8 (Phase 75). This is a divergence to be aware of, not necessarily to fix in this milestone. | `web/src/app/(dashboard)/processos/[id]/editar/page.tsx` |
+| Component | Responsibility | New or Modified |
+|-----------|-----------------|------------------|
+| `NotificacaoService` | Resolves "who gets notified for event X" per notification type; single low-level `criar(...)` method that is the only code path allowed to `notificacaoRepository.save(...)` | **New** |
+| `RiscoPrazoService` | Single source of truth for "is this deadline critical" — one pure method per entity shape (`Prazo`, `Evento`) | **New** (extracted from `ResourceController.computeRisco`) |
+| `AlertasDiariosJob` | Daily cross-tenant scan: prazos, eventos, honorários pendentes → calls into the two services above | **New** |
+| `SchedulingConfig` | Hosts `@EnableScheduling` in isolation, matching the one-responsibility-per-`@Configuration` convention already used by `SecurityConfig`/`MinioConfig` | **New** |
+| `NotificacaoController` | REST surface for listing/unread-count/mark-read, scoped to caller's own `tenantId` + `userId` exactly like every other controller | **New** |
+| `Notificacao` (entity) + `NotificacaoRepository` | Persisted notification row, one per (event, recipient) | **New** |
+| `ResourceController` | Gains 1 new endpoint (responsável reassignment) + ~8 one-line call-outs to the new services at existing save points | **Modified** (net-additive diffs, no structural rewrite) |
+| `ParecerController` | Gains 2 one-line call-outs to `NotificacaoService` | **Modified** |
+| `DatabaseSeeder`, `AdminController.getRbac()`, `UserPrincipal` (hardcoded ADMIN list), `web/src/lib/permissions.ts` | RBAC plumbing for the new `notificacoes:view` scope | **Modified** (mechanical, small) |
+| `NotificationBell`, new `use-notificacoes.ts`, new `/notificacoes` page | Frontend consumption, first use of TanStack Query `refetchInterval` in this codebase | **New/Modified** |
 
-## Key Precedent Clarification (governs decision `(a)` in the question)
-
-**`ParecerPesquisaController` is NOT a precedent for "split out sub-resources into a dedicated controller."** Its own doc comment states plainly it exists because `ParecerController` is mapped at class-level `@RequestMapping("/api/v1/pareceres/solicitacoes")`, and Spring concatenates class + method mappings regardless of leading `/` — a sibling top-level route (`/api/v1/pareceres/pesquisa`) could not be reached from inside that controller. `ResourceController` has no such problem: its class-level mapping is the bare `@RequestMapping("/api/v1")`, so any new path segment (`/processos/{id}/decisoes`, `/processos/{id}/factos`, `/processos/{id}/testemunhas`) can be added as new methods inside it with zero routing risk.
-
-**Recommendation: add all three new entities' endpoints inside the existing `ResourceController`.** This is consistent with how `Parte`, `ProcessoFase`, and `Movimentacao` (the three existing Processo child entities) are already implemented — all live in `ResourceController`, not separate controllers. Introducing a new controller for Decisão/Facto/Testemunha would be an unforced architectural inconsistency with zero technical justification (no routing collision exists, no separate RBAC domain is being introduced — all three reuse `processos:*` scopes). Only split into a dedicated controller if `ResourceController` triggers a real problem (e.g., file becomes unmanageable for the team, or a genuine routing collision appears) — neither condition applies here.
-
-## Recommended Project Structure (additions only — no restructuring)
+## Recommended Project Structure
 
 ```
 backend/src/main/java/com/lexcv/
+├── controllers/
+│   ├── ResourceController.java        # MODIFIED: +1 endpoint, +~8 call sites, computeRisco() deleted
+│   ├── ParecerController.java         # MODIFIED: +2 call sites
+│   └── NotificacaoController.java     # NEW: GET list, GET unread-count, PATCH lida
+├── services/
+│   ├── StorageService.java            # unchanged — existing precedent for "service" layer
+│   ├── SetupService.java              # unchanged
+│   ├── NotificacaoService.java        # NEW — recipient resolution + creation choke point
+│   └── RiscoPrazoService.java         # NEW — extracted "risco crítico" logic
+├── jobs/                               # NEW PACKAGE — first of its kind in this codebase
+│   └── AlertasDiariosJob.java         # NEW — the @Scheduled entry point
+├── config/
+│   ├── SecurityConfig.java            # unchanged
+│   ├── MinioConfig.java               # unchanged
+│   └── SchedulingConfig.java          # NEW — @EnableScheduling, nothing else
 ├── models/
-│   ├── Processo.java                # MODIFIED: + juizo (String), + origem (enum, @Enumerated STRING)
-│   ├── OrigemProcesso.java          # NEW: enum { PETICAO_INICIAL, NOTIFICACOES_AVULSAS }
-│   ├── Decisao.java                 # NEW: entity, mirrors Parte.java's shape (Integer IDENTITY id, processo_id FK, no tenant_id — tenant is derived via processo)
-│   ├── TipoDecisao.java             # NEW: enum for `tipo` field (values TBD by legal domain — flag for phase-specific research)
-│   ├── Facto.java                   # NEW: entity, mirrors Parte.java's shape
-│   └── Testemunha.java              # NEW: entity, mirrors Parte.java's shape
+│   └── Notificacao.java               # NEW entity
 ├── repositories/
-│   ├── DecisaoRepository.java       # NEW: extends JpaRepository<Decisao, Integer>; findByProcessoId(UUID)
-│   ├── FactoRepository.java         # NEW: extends JpaRepository<Facto, Integer>; findByProcessoId(UUID), ordered by `ordem`
-│   └── TestemunhaRepository.java    # NEW: extends JpaRepository<Testemunha, Integer>; findByProcessoId(UUID)
-└── controllers/
-    └── ResourceController.java      # MODIFIED: + 3 new @Autowired repositories in constructor,
-                                      #   + list/create/update/delete endpoints per new entity,
-                                      #   + juizo/origem wiring in createProcesso/updateProcesso/
-                                      #     createProcessoIntake/listProcessos (enriched map),
-                                      #   + Honorario auto-creation hook inside formalizarProcesso()
+│   └── NotificacaoRepository.java     # NEW
+├── dtos/
+│   └── NotificacaoResponse.java       # NEW (optional — see Pattern 4 notes)
+└── seed/
+    └── DatabaseSeeder.java             # MODIFIED — +"notificacoes:view" permission, granted to all 4 roles
+
+backend/migrations/
+└── NN-create-notificacao-table.sql    # NEW — required manual prod script (ddl-auto=validate in prod)
 
 web/src/
-├── types/processos.ts               # MODIFIED: + Processo.juizo, Processo.origem
-                                      #   + Decisao, DecisaoCreateRequest, DecisaoUpdateRequest
-                                      #   + Facto, FactoCreateRequest, FactoUpdateRequest
-                                      #   + Testemunha, TestemunhaCreateRequest, TestemunhaUpdateRequest
-├── schemas/processos.ts             # MODIFIED: + processoFormSchema.juizo/origem
-                                      #   + decisaoFormSchema, factoFormSchema, testemunhaFormSchema
-├── hooks/use-processos.ts           # MODIFIED: + useProcessoDecisoes/useAddProcessoDecisao/useUpdateProcessoDecisao/useDeleteProcessoDecisao
-                                      #   (same trio for Facto, Testemunha)
-├── hooks/use-financeiro.ts          # UNCHANGED (already has useHonorarios/useCreateHonorario — reused as-is by the printable Termo page)
-└── app/(dashboard)/processos/
-    ├── novo/page.tsx                # MODIFIED: + campo "origem" (required, radio/select) in step 1 intake form
-    ├── [id]/page.tsx                # MODIFIED: + TabKey union grows to include "decisoes" | "factos" | "testemunhas" | "documentos"
-                                      #   + 4 new button-toggle tab bodies (functions colocated in this file,
-                                      #     matching the existing pattern — NOT split into separate component files,
-                                      #     since [id]/page.tsx keeps all tab bodies inline today)
-                                      #   + "Dados" card gains Juízo/Origem <dt>/<dd> rows
-    ├── [id]/editar/page.tsx         # MODIFIED: + Juízo input (origem is NOT editable here — immutable-ish per spec)
-    └── [id]/termo-honorarios/page.tsx  # NEW: printable page, CSS-print pattern copied from
-                                      #   web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx
+├── hooks/
+│   └── use-notificacoes.ts            # NEW — mirrors use-eventos.ts shape
+├── components/shared/
+│   └── notification-bell.tsx          # MODIFIED — swap useUpcomingEventos() for the new hooks
+├── app/(dashboard)/notificacoes/
+│   └── page.tsx                       # NEW — dedicated history + filters page
+└── lib/permissions.ts                 # MODIFIED — KNOWN_SCOPES += "notificacoes"
 ```
 
 ### Structure Rationale
 
-- **New entities as siblings of `Parte`, not `Documento`-style with `tenant_id`:** `Parte` and `ProcessoFase` have no `tenant_id` column — tenant isolation is enforced transitively by first loading and tenant-checking the parent `Processo`, then trusting the `processo_id` FK. `Decisao`/`Facto`/`Testemunha` should follow the exact same shape (leaner schema, one less column, one less thing to keep in sync) rather than the `Documento`/`Movimentacao`-with-own-`tenant_id` pattern. Every existing endpoint for `partes`/`fases` already does `processoRepository.findById(id)` + tenant check first — replicate this guard verbatim for the three new resources.
-- **All three new entities' repositories/endpoints inside `ResourceController`:** see precedent clarification above. Avoids introducing an unjustified second controller for what is functionally identical to `Parte`/`Movimentacao`.
-- **No new RBAC scopes:** `processos:view/edit/create/manage` already exist and are seeded (`DatabaseSeeder.java` line ~296-297); the frontend already mirrors them via `permissions.ts`'s `"processos"` scope entry. All new endpoints reuse these four scopes exactly as `Parte`/`Movimentacao` do today — no `DatabaseSeeder` changes needed.
-- **`[id]/page.tsx` stays a single growing file, not split into sub-components:** Unlike the Cliente detail page (which extracted `ClienteDocumentosEntreguesTab`, `ClienteProcessosTab`, `ClienteParecerTab` as named functions *within the same file*, not separate files), Processo's `[id]/page.tsx` currently keeps all tab bodies inline in the render tree with `tab === "x" ? (...) : ...` ternaries. Follow whichever pattern already exists in the file at time of implementation — but note the Cliente precedent (named tab-body functions in the same file) is the more maintainable version and the one explicitly reused for the new "Documentos" tab per the milestone brief.
+- **`jobs/` is a new top-level package**, not folded into `services/` or `controllers/`. `AlertasDiariosJob` has a different caller (Spring's scheduler thread, not an HTTP request), a different testing shape (needs deterministic-date injection, not `MockMvc`), and a different transactional shape (per-tenant isolation, not one request/one transaction) than everything else in the app. Mirrors how `seed/DatabaseSeeder` — the only other "runs broadly across the system, not per-request" class today — already gets its own package rather than living inside `services/` or a controller.
+- **`NotificacaoController` is a new dedicated controller**, not more lines in `ResourceController`. This directly follows a precedent the team has *already* established in this same codebase: `ParecerPesquisaController` was extracted out of `ParecerController` specifically to give a cohesive new capability its own routing surface (see PROJECT.md Key Decisions, v2.5/v2.6). `ResourceController` is already ~2900 lines; notifications are a new, self-contained resource with no shared CRUD-workflow lineage to `Processo`/`Cliente`, making this the cleanest possible case for a new controller rather than growing the existing one further.
+- **`services/` gains its first *business-logic* services.** `StorageService`/`SetupService` are infrastructure-facing (S3/MinIO client wrapping, first-run bootstrap). `NotificacaoService`/`RiscoPrazoService` are the first services that encode domain decisions ("who should be notified," "what counts as critical"). This is a deliberate, minimal expansion of the existing pattern rather than a new one.
 
 ## Architectural Patterns
 
-### Pattern 1: Child-entity CRUD scoped through parent tenant check
+### Pattern 1: Thin recipient-resolving service, not inline saves and not an event bus
 
-**What:** For any `/processos/{id}/<child>` resource, every endpoint (GET list, POST create, PUT/PATCH update, DELETE) begins by loading the parent `Processo`, checking `processo.getTenantId().equals(getTenantId())`, and 404-ing otherwise — the child entity itself carries no `tenant_id`.
-**When to use:** All three new entities (Decisão, Facto, Testemunha), and the new "Documentos" tab reuses the *existing* `GET /processos/{id}/documentos` which already does this.
-**Trade-offs:** Simpler schema (no redundant `tenant_id`), but every child endpoint pays one extra `findById` — acceptable at current data volumes; matches `Parte`/`ProcessoFase`/`Movimentacao` exactly.
+**What:** A single `NotificacaoService` with one method per notification type (`notificarFaseEntrada`, `notificarDocumentoNovo`, `notificarProcessoAtribuido`, `notificarParecerAtribuido`), each resolving recipients and then calling one shared private `criar(...)` method that performs the actual `notificacaoRepository.save(...)`. Controllers call these methods at the exact point they currently call `auditLogRepository.save(AuditLog.builder()...)`.
 
-**Example (from `ResourceController.java:1521-1539`, `createParte`):**
+**When to use:** Whenever a controller action should also produce a notification. This is the *only* place `notificacaoRepository.save(...)` should ever be called from.
+
+**Why not inline (matching the `AuditLog` precedent literally):** `AuditLog` writes are trivial — same 5 fields, no recipient logic, no branching. Notifications are not: "who gets notified" is a genuinely different computation per event type —
+- fase entrada → `Processo.responsavelId` + tenant ADMIN(s)
+- documento novo → `Processo.responsavelId` **if** attached to a `processoId`, else every `ClienteAdvogado`/`ClienteAdministrativo` row for that `clienteId` (via `findByClienteIdAndTenantId`, already present on both repositories) + ADMIN(s)
+- processo atribuído → the *new* `responsavelId` from the reassignment endpoint + ADMIN(s)
+- parecer atribuído → `ParecerSolicitacao.advogadoId` + ADMIN(s)
+
+Inlining this branching logic at every controller call site would duplicate exactly the kind of "same concept computed differently in N places" problem this same milestone is already paying down for "prazo crítico" (see Pattern 3). One service = one place to change the "+ADMIN" rule, or add a 5th notification type, later.
+
+**Why not a full event bus (`ApplicationEventPublisher` + `@EventListener`/`@TransactionalEventListener`):** This is the textbook-correct decoupling pattern, and it is explicitly the right call *if a third consumer of "this domain event happened" shows up* (e.g. email digests, a webhook, analytics). Today it would be pure indirection for ~4-6 call sites, with real added subtlety this codebase has never had to deal with (event ordering, `@TransactionalEventListener(phase = AFTER_COMMIT)` to avoid notifying about a fase/documento whose transaction later rolls back). `ResourceController` is already a known complexity hot spot; adding a new cross-cutting abstraction on top of it is disproportionate to a feature that, at its core, is "insert a few extra rows next to writes that already happen." Revisit if/when a second real consumer of the same triggers appears.
+
+**Trade-off accepted:** A notification-insert failure shares the same transactional fate as the parent operation, exactly like `AuditLog` does today (no extra resilience machinery, e.g. no "notification failed but the fase was still created" isolation). This matches the existing risk profile in this codebase rather than inventing a new one — introducing `@Transactional(propagation = REQUIRES_NEW)` or async dispatch here would itself be new complexity unjustified by any observed problem.
+
+**Example:**
 ```java
-@PreAuthorize("hasAuthority('processos:edit')")
-@PostMapping("/processos/{id}/decisoes")
-public ResponseEntity<?> createDecisao(@PathVariable UUID id, @RequestBody Decisao decisao) {
-    Processo processo = processoRepository.findById(id).orElse(null);
-    if (processo == null || !processo.getTenantId().equals(getTenantId())) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+// ResourceController.createProcessoFase — after processoFaseRepository.save(pf):
+ProcessoFase saved = processoFaseRepository.save(pf);
+notificacaoService.notificarFaseEntrada(processo, saved, catalog);
+return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+```
+
+### Pattern 2: Explicit tenant parameter through a dedicated scheduled job — no ThreadLocal tenant context
+
+**What:** `AlertasDiariosJob` calls `tenantRepository.findAll()`, then loops, passing `tenant.getId()` as an explicit method argument into every repository/service call it makes for that iteration. No attempt is made to populate `SecurityContextHolder` with a synthetic `UserPrincipal`, and no `ThreadLocal`-based "current tenant" context is introduced.
+
+**When to use:** Any future background job that must operate across tenants without an HTTP request.
+
+**Why this is correct for *this* codebase specifically:** `getTenantId()` (defined identically in `ResourceController` and `ParecerController`) reads `SecurityContextHolder.getContext().getAuthentication()`. A `@Scheduled` method runs on a scheduler thread that never went through `JwtAuthenticationFilter` — there is no `Authentication` to read. Fabricating a fake one just to satisfy that helper method would be a workaround for a problem that doesn't need solving: the controller helper exists purely as a *convenience* over the security context for request-scoped code. A background job doesn't have that convenience available and doesn't need it — passing `tenantId` explicitly is not a compromise, it's simpler and more explicit than what controllers do, and it is the *first* cross-tenant iteration in this codebase (confirmed: even `AdminController`, which is `@PreAuthorize("hasRole('ADMIN')")`-gated, still scopes every query to `principal.getTenantId()` — the caller's own tenant, never all tenants).
+
+**Why no distributed lock (ShedLock, Quartz clustering, `SELECT ... FOR UPDATE` lock row) is needed *yet*:** `docker-compose.yml`/`docker-compose.prod.yml` define exactly one `backend` service/container, no replica count, no load balancer fanning out across multiple app instances. A single-instance deployment cannot double-run the same `@Scheduled` invocation concurrently. **This is a documented future trigger condition, not a current requirement:** if LexCV ever scales the backend horizontally, `AlertasDiariosJob` must gain a lock (ShedLock is the standard minimal-dependency choice for this exact Spring Boot use case) *before* that point, or every tenant will get duplicate notifications once per running instance.
+
+**Why per-tenant (and outer) try/catch is not optional:** Verified against current sources (see Sources) — an uncaught exception thrown out of a `@Scheduled` method does not just fail *that* run; with Spring's default single-thread scheduler it can silently cancel *all future invocations* of that scheduled task, with no crash, no alert, nothing in the logs pointing at "notifications stopped." Given this project has no monitoring/alerting infrastructure today, this is exactly the kind of failure that would go unnoticed for weeks. The job must therefore:
+1. Wrap the **entire** method body in a top-level try/catch (defense in depth).
+2. Wrap **each tenant's** processing in its own try/catch inside the loop, logging and continuing — so tenant B's bad/unexpected data (e.g., a `Prazo` with a malformed value) cannot block notifications for tenants C, D, E that would otherwise process cleanly the same day.
+
+**Why no class-level `@Transactional`:** Wrapping the whole multi-tenant loop in one transaction risks an all-or-nothing rollback across unrelated tenants (tenant #3 throwing would undo notifications already correctly created for tenants #1-2) and holds a long-lived transaction open for the job's full duration. Each `notificacaoRepository.save(...)` is already atomic on its own; no wrapping transaction is needed at the job level.
+
+**Example:**
+```java
+@Scheduled(cron = "${app.jobs.alertas-diarios-cron:0 0 6 * * *}")
+public void executar() {
+    LocalDate hoje = LocalDate.now();
+    for (Tenant tenant : tenantRepository.findAll()) {
+        try {
+            processarTenant(tenant.getId(), hoje);
+        } catch (Exception e) {
+            log.error("Falha ao processar alertas diários para tenant {}", tenant.getId(), e);
+            // deliberately continue — one tenant's failure must not block the rest
+        }
     }
-    decisao.setProcessoId(id);
-    return ResponseEntity.status(HttpStatus.CREATED).body(decisaoRepository.save(decisao));
 }
 ```
 
-### Pattern 2: List+Create+Update+Delete vs. List+Append-only — decided per entity by mutability of real-world data
+### Pattern 3: Extract-in-place into an injectable service, not a static utility — and do it *before* the job
 
-**What:** `Parte`/`Movimentacao` are list+create only (append-only — no PUT/DELETE exists for either in `ResourceController` today). `ProcessoFase` gets list+create+update (status transitions). No existing Processo child entity has DELETE.
-**When to use — applied to the 3 new entities:**
-- **Decisão** (data, tipo, resumo, anexo): court decisions are historical record — once entered, corrections are rare but real (a typo in `resumo`, wrong `anexo`). Recommend **list + create + update + delete** (full CRUD) — closer to `Prazo`'s CRUD shape than `Movimentacao`'s append-only shape, because a Decisão is a discrete user-managed record, not an automatically-generated log line.
-- **Facto** (descrição, data, ordem): needs reordering (`ordem` field implies drag-to-reorder or up/down UI), so update is mandatory. Recommend **list + create + update + delete**.
-- **Testemunha** (nome, contacto, tipo/arrolada por, notas): contact details change (phone numbers, notes), so update is needed. Recommend **list + create + update + delete**.
+**What:** Move `ResourceController.computeRisco(LocalDate dataLimite, String prioridade)` verbatim into a new `RiscoPrazoService`, add a 2-arg convenience overload that defaults `hoje = LocalDate.now()` (preserving today's exact behavior for all 5 existing internal call sites), then add a second method, `computeRiscoEvento(...)`, reusing the *same* 7-day/ALTA vs 3-day/other threshold table for the `Evento`-based call sites.
 
-**Minimal endpoint set (all three entities, identical shape):**
-```
-GET    /processos/{id}/decisoes         processos:view
-POST   /processos/{id}/decisoes         processos:edit
-PUT    /processos/{id}/decisoes/{did}   processos:edit
-DELETE /processos/{id}/decisoes/{did}   processos:edit
-```
-(repeat verbatim for `/factos` and `/testemunhas`)
+**When to use:** Any time the same non-trivial business rule is computed independently in more than one place. Not before — see the honorários note in Anti-Patterns below for the "don't pre-extract" counter-case.
 
-This is a deliberate *addition* of DELETE beyond what `Parte`/`Movimentacao` support today — justified because none of the three new entities are pure event logs (unlike `Movimentacao`, which is explicitly an append-only audit trail feeding the Timeline). If the roadmapper wants to minimize scope, DELETE can be deferred to a later phase without blocking the rest — GET+POST+PUT alone is a functioning MVP for all three.
+**Why a `@Service`, not a static utility method:** There are no static utility classes carrying business logic anywhere in `com.lexcv` today — the established convention for shared, stateless, cross-controller logic is an injectable `@Service` (`StorageService`, `SetupService`), wired via the same `@RequiredArgsConstructor` constructor-injection style already used everywhere. A static method also cannot be mocked/stubbed without PowerMock-style static mocking, which is not part of this project's test stack (`spring-boot-starter-test` + `spring-security-test` only) — an injectable bean is trivially fake-able in the future `AlertasDiariosJob` tests that need to control "what counts as critical as of date X" deterministically.
 
-**Trade-offs:** Full CRUD is 4 endpoints × 3 entities = 12 new endpoints (vs. 6 for append-only). Given `processos:edit` already gates all of them, this is a controller-size cost only, not an RBAC cost.
+**Why the extraction is a hard prerequisite for `AlertasDiariosJob`, not parallelizable work:** The daily job's *entire stated purpose* (per PROJECT.md: "lógica de crítico consolidada, job diário") is to notify based on the *same* definition of "critical" the UI already shows. Writing the job first would force either (a) a sixth ad-hoc copy of the threshold logic just to unblock it — defeating the milestone's own goal — or (b) blocking on the extraction anyway. There is no ordering in which the job can be meaningfully written first.
 
-### Pattern 3: Server-side auto-creation of a related entity inside an existing state-transition endpoint
+**The actual duplication being consolidated (verified by direct inspection, more than the "4 ways" shorthand suggests):**
 
-**What:** `formalizarProcesso()` already performs multiple validation gates (state check, required-fields check, conflict-decision check) before mutating `processo.setEstado("ATIVO")` and saving. This is the correct and *only* place to hook Honorario auto-creation — it is the single authoritative "processo just became ATIVO" transition point in the codebase (the generic `PUT /processos/{id}` explicitly excludes `estado` changes, and `/transicao/{acao}` handles ATIVO→SUSPENSO/ENCERRADO/REABERTO, not TRIAGEM→ATIVO).
+| # | Location | Field/window | Notes |
+|---|----------|--------------|-------|
+| 1 | `ResourceController.computeRisco()` (private method, `ResourceController.java:1397`) | `Prazo.dataLimite`; vencido if past, "próximo" if ≤7 days (ALTA) / ≤3 days (other) | Used at 5 call sites: `listProcessos` enrichment (`risco_mais_critico`), `listPrazos`, `listAllPrazos`, `createPrazo`, `togglePrazoConcluido` |
+| 2 | `/dashboard` KPI, `agendaUrgentesCount()` | `Evento` where `concluido=false AND prioridade=ALTA` | **No date window at all** — counts any pending ALTA event regardless of how far away, a third distinct notion of "critical" |
+| 3 | `/processos/dashboard`, inline `prazosCriticosCount` block | `Evento.dataFim` within `[hoje, hoje+7]` | Fixed 7-day window, ignores priority entirely |
+| 4 | `/eventos/upcoming` (feeds today's `NotificationBell`) | `Evento.dataInicio` within `[now, now+days]` (`days` param, default 7, capped 30) | Configurable window, different field again |
+| 5 | Frontend Agenda page, `getCategoria()` (`web/src/app/(dashboard)/agenda/page.tsx`) | String-sniffs `titulo`/`tipo` client-side | Not actually a risk-level computation (no vencido/próximo/ok) — a *visual category* (PRAZO/AUDIENCIA/DILIGENCIA/REUNIAO), independent concern from 1-4 |
 
-**Exact hook point — `ResourceController.java`, inside `formalizarProcesso`, immediately after all gates pass and before/alongside the final save (around current line 1233-1235):**
+**Migration is mechanical, not a rewrite:** each of the 5 backend call sites becomes a one-line delegation to the injected service; `computeRisco` itself is deleted from `ResourceController` once repointed (keeping a dead pass-through wrapper would just be a 6th copy waiting to drift). Item 5 (frontend category labeling) is **not** required to change for this consolidation to be complete — it never computed a risk level, so leave it alone unless a later phase wants the frontend to stop guessing risk from title strings.
 
+### Pattern 4: Fan-out at write time, denormalize display text at write time — avoid N+1 on the read/poll path
+
+**What:** `Notificacao` is a flat table with one row per `(event, recipient)` pair. Human-readable `titulo`/`mensagem`/`linkUrl` are computed and stored **when the notification is created** (`NotificacaoService.criar(...)`, at which point the triggering `Processo`/`Documento`/`ParecerSolicitacao` object is already in hand — no extra query needed), not re-derived at read time from a bare entity/id reference.
+
+**When to use:** Any per-user, persisted, polling-read notification feed.
+
+**Why fan-out (N rows), not a recipient-list column:** "Read" state (`lida`) is inherently per-user. A single row shared by 3 recipients would need a separate join table just to track who has read it — which is reinventing the exact 1:N shape a flat per-recipient row already gives for free, and would make "give me MY unread count" a join instead of a single indexed `WHERE`. Every other entity in this schema (`Documento`, `Evento`, `Prazo`, `AuditLog`) is a flat row with no "who can see this" join table; the only join tables that exist (`ClienteAdvogado`, `ClienteAdministrativo`) model a genuine many-to-many *team* relationship, which is a different shape than "this specific notification belongs to this specific user." Write amplification (typically 2-4 rows per event, given the "+ADMIN" rule) is trivial at this project's realistic scale (a handful of tenants, a handful of users per tenant).
+
+**Why `tenant_id` stays a first-class column even though `destinatario_id` already implies a tenant via `User.tenantId`:** This mirrors the isolation pattern used by *every* other entity in the schema without exception (CLAUDE.md: tenant_id is "the primary data-isolation boundary"), keeps the hot read path a single-table lookup instead of a join through `t_user` for zero benefit, and follows the same "don't trust one FK alone" defense-in-depth already used elsewhere (e.g. `uploadDocumento` independently re-validates that `clienteId`/`processoId` belong to the caller's tenant even though those FKs "should" already be consistent).
+
+**Why denormalizing display text avoids the actual N+1 risk (which is not the classic child-collection N+1):** If the read endpoint instead stored only `entidadeId` and re-resolved a display label per row (e.g. `processoRepository.findById(n.getEntidadeId())` inside a `.map()` over the notification list), it would reproduce the exact bug class this codebase has already had to fix before — see the `responsaveisMap`/`prazosPorProcesso` batch-preload rewrite in `listProcessos` ("Batch-load responsáveis to avoid N+1 queries"). Baking the text in at creation time means the poll-path query is a single flat `SELECT`, full stop — no batch-preload maps needed on the read side at all, because there is nothing left to resolve.
+
+**`entidade_tipo`/`entidade_id` as a `String` pair directly reuses a specific existing, well-justified precedent — not just a similar-looking shape:** `AuditLog.entidadeId` is already `String` "to accommodate both UUID and Integer IDs across entities" (its own code comment). This is not optional here either: `Notificacao` must be able to reference a `Processo`/`Documento`/`ParecerSolicitacao`/`Prazo` (all `UUID` ids) **or** an `Evento`/`Honorario` (both `Integer` ids) — so a single typed FK column is not possible, and `AuditLog`'s exact trick is the correct reused answer, not a new invention.
+
+**Two different read shapes need two different repository methods, not one over-generalized paginated method:**
 ```java
-// Transition TRIAGEM -> ATIVO
-processo.setEstado("ATIVO");
-Processo saved = processoRepository.save(processo);
+public interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> {
+    // Bell dropdown / unread badge — bounded, no pagination needed
+    List<Notificacao> findTop50ByTenantIdAndDestinatarioIdOrderByCreatedAtDesc(UUID tenantId, UUID destinatarioId);
+    long countByTenantIdAndDestinatarioIdAndLidaFalse(UUID tenantId, UUID destinatarioId);
 
-// Auto-create Honorario for the newly formalized processo (idempotency guard —
-// formalizar can only run once per processo because of the TRIAGEM-only gate at
-// the top of this method, so no duplicate-check is strictly required, but a
-// defensive existsByProcessoId check costs one query and protects against any
-// future relaxation of that gate)
-if (honorarioRepository.findByProcessoId(saved.getId()).isEmpty()) {
-    Honorario honorario = Honorario.builder()
-            .processoId(saved.getId())
-            .valorTotal(BigDecimal.ZERO)   // left blank/0 for the user to fill in Financeiro
-            .descricao(null)
-            .dataAcordo(LocalDate.now())
-            .build();
-    honorarioRepository.save(honorario);
+    // Dedicated /notificacoes history+filters page — genuinely unbounded over time
+    Page<Notificacao> findByTenantIdAndDestinatarioId(UUID tenantId, UUID destinatarioId, Pageable pageable);
 }
-
-return ResponseEntity.ok(saved);
 ```
+Nowhere else in this backend uses `Pageable`/`Page<T>` (every existing endpoint returns a full `List<T>` — `Processo`, `Cliente`, `Documento`, etc. are all naturally bounded per tenant). Introducing `Pageable` for the one dedicated history page is a deliberate, narrow first use of a new Spring Data idiom — flagged explicitly so the roadmapper budgets for it — while the polling-optimized bell endpoint deliberately stays on the simpler `findTop50.../count...` shape rather than forcing both read patterns through one generalized paginated method.
 
-**Pre-fill values — verified against actual `Honorario` entity shape (`Honorario.java`), which has NO `clienteId` and NO `estado` field:**
-| Field | Value | Rationale |
-|-------|-------|-----------|
-| `processoId` | `saved.getId()` | The only FK the entity has — `clienteId` is NOT a column on `Honorario` (it's reachable transitively via `Processo.clienteId` if ever needed in a DTO/join, but do not add a redundant column for this milestone — out of scope, not requested) |
-| `valorTotal` | `BigDecimal.ZERO` | Per spec: "valor left blank/0 for the user to fill" |
-| `descricao` | `null` | No sensible default; user fills via existing Financeiro edit flow (`useUpdateHonorario`) |
-| `dataAcordo` | `LocalDate.now()` | Reasonable default (date processo became ATIVO); user can edit |
-| `totalPago` | N/A — `@Formula`-computed, always 0 until a `Pagamento` exists | No action needed |
-| `estado` | **N/A — field does not exist on `Honorario`.** If the roadmap genuinely wants an explicit honorario lifecycle status, that is a new column + migration, out of the "auto-create on formalizar" scope — flag as a possible follow-up requirement, not something to silently invent during this integration. | |
-
-**Transaction/atomicity note:** `formalizarProcesso` is not currently annotated `@Transactional` (verify at implementation time — several other multi-write methods in the file, e.g. `runConflictCheck`, are not either, following the existing project convention of relying on each `repository.save()` being its own transaction). Since Honorario auto-creation is a second write in the same method, wrap the method in `@Transactional` when implementing, so a failure saving the Honorario rolls back the `estado` change too — this is a **new** requirement this feature introduces (the method currently only does one write, so atomicity was never a concern before).
-
-**RBAC note:** Auto-creation happens via direct `honorarioRepository.save()` inside a method gated by whatever `@PreAuthorize` `formalizarProcesso` already carries (verify at the method — currently no explicit `@PreAuthorize` annotation is visible directly above it in the excerpt reviewed; confirm during implementation whether it inherits a class-level rule or needs one added). This bypasses the `financeiro:edit` check that normally gates `POST /honorarios` — that is intentional and correct (the user is not creating a Honorario, they are formalizing a Processo; the system creates the Honorario as a side effect), but it means a user with `processos:manage` but NOT `financeiro:edit` can indirectly cause a Honorario row to exist. Confirm this is acceptable — flagged as a design decision, not a research gap.
-
-### Pattern 4: Printable document via CSS-print, not a PDF library
-
-**What:** `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx` establishes the pattern: a dedicated Next.js page (own route, e.g. `[id]/ficha`) that renders a `<style dangerouslySetInnerHTML>` block with `@media print { aside, header, [data-print-hide] { display:none } } @page { size:A4; margin:2cm }`, a `data-print-hide`-marked "Voltar"/"Imprimir" button bar, blank-line placeholders (`___________`) for empty fields via a `fmt()` helper, and a `window.print()` trigger button. No PDF library (`jsPDF`, `react-pdf`, `puppeteer`, etc.) is used or should be introduced.
-**When to use:** The new "Termo de Honorários" printable page.
-**Trade-offs:** Relies on the browser's print-to-PDF (user must choose "Save as PDF" in the print dialog if a file is needed) — acceptable, matches existing UX and explicitly avoids adding a new dependency (consistent with the v2.6 Key Decision: "Nenhuma nova dependência frontend... reuso total de padrões existentes").
-
-**Recommended new route:** `web/src/app/(dashboard)/processos/[id]/termo-honorarios/page.tsx`, structurally copying `clientes/[id]/ficha/page.tsx`:
-```typescript
-const PRINT_CSS = `
-  @media print {
-    aside, header, [data-print-hide], .bottom-nav, .ficha-print-btn {
-      display: none !important;
-    }
-    body { background: white !important; }
-  }
-  @page { size: A4; margin: 2cm; }
-`;
-// Data sources: useProcesso(id), useCliente(processo.data.cliente_id),
-// useHonorarios({ processoId: id }) — ALL THREE HOOKS ALREADY EXIST, no new hooks needed
-// for the printable page itself beyond what use-financeiro.ts already exports.
-```
+**Batch-fetch discipline applies to the *write* side too:** when `AlertasDiariosJob` finds N critical prazos in one tenant, it must fetch that tenant's ADMIN user list **once** per tenant iteration (not once per prazo) and reuse it — the exact same batch-preload discipline `listProcessos` already applies on the read side, just applied here on the job's write side.
 
 ## Data Flow
 
-### Request Flow — new Decisão example
+### Request Flow — event-triggered notification (e.g. fase entrada)
+
 ```
-[User clicks "Adicionar Decisão" in Processo detail tab]
+PUT/POST /processos/{id}/fases  (existing endpoint, ResourceController)
     ↓
-[Dialog form, react-hook-form + Zod decisaoFormSchema] → [useAddProcessoDecisao(id) mutation]
+processoFaseRepository.save(pf)   [unchanged]
     ↓
-apiFetch("/processos/{id}/decisoes", POST) → Next.js rewrite → Spring Boot
+notificacaoService.notificarFaseEntrada(processo, pf, catalog)   [NEW call]
+    ↓ resolves recipients: processo.responsavelId (if set) + tenant ADMIN(s)
+    ↓ for each recipient →
+notificacaoService.criar(tenantId, destinatarioId, "FASE_ENTRADA", titulo, ..., linkUrl)
     ↓
-ResourceController.createDecisao() → tenant-check via Processo → decisaoRepository.save()
+notificacaoRepository.save(new Notificacao row)   × N recipients
+    ↓ (separately, on its own timer)
+Frontend: useNotificacoesUnreadCount()  —  refetchInterval 30-60s
     ↓
-[queryClient.invalidateQueries(["processos","decisoes", id])] ← 201 Created ← saved entity
+GET /api/v1/notificacoes/unread-count  (NotificacaoController, scoped to caller's own tenantId+userId)
     ↓
-[Tab re-renders with new Decisão in list]
+countByTenantIdAndDestinatarioIdAndLidaFalse(tenantId, userId)   — single indexed COUNT
 ```
 
-### Request Flow — formalizar + Honorario auto-creation
+### Request Flow — daily scheduled scan
+
 ```
-[User clicks "Formalizar" in novo/page.tsx step 3, or wherever formalizar is triggered]
+Spring TaskScheduler thread (no HTTP request, no SecurityContext)
     ↓
-useFormalizarProcesso(processoId).mutateAsync() → POST /processos/{id}/formalizar
+AlertasDiariosJob.executar()  @Scheduled(cron = daily)
     ↓
-ResourceController.formalizarProcesso():
-  1. state gate (must be TRIAGEM)
-  2. required-fields gate (per tipo_processo)
-  3. conflict-decision gate (must exist, must not be "impeditivo")
-  4. processo.setEstado("ATIVO"); save
-  5. [NEW] honorarioRepository.save(prefilled Honorario) if none exists yet
-    ↓
-200 OK ← updated Processo (Honorario is a side effect, not in the response body —
-         frontend does NOT need to change its response handling; if the UI wants
-         to surface "Honorário criado automaticamente" it should separately call
-         useHonorarios({processoId}) after formalizar succeeds, or just navigate
-         the user to Financeiro/the new Termo page where useHonorarios already fetches it)
+tenantRepository.findAll()  — FIRST cross-tenant iteration in this codebase
+    ↓ for each Tenant (try/catch isolates failures per tenant):
+      prazoRepository.findByTenantId(tenantId) → riscoPrazoService.computeRisco(...) per Prazo
+      eventoRepository.findByTenantId(tenantId) → riscoPrazoService.computeRiscoEvento(...) per Evento
+      honorarioRepository.findAll-for-tenant-processos(...) → dataAcordo/totalPago/valorTotal check
+        (skip rows where valorTotal is null — cannot determine "sem pagamento total" without a total;
+         Honorario auto-created at formalização always starts with valorTotal = null per the v2.9 decision)
+    ↓ for each newly-critical item →
+      notificacaoService.criar(...)  (existence-check guard: skip if an equivalent
+      notification for this entidadeId was already created today, so the job stays
+      idempotent per day instead of re-alerting on every run for a still-critical item)
 ```
 
 ### Key Data Flows
 
-1. **Juízo/origem enrichment must be threaded through 3 places, not just the entity:** `Processo.java` (column), `createProcesso`/`updateProcesso`/`createProcessoIntake` (accept + persist), AND the `listProcessos` enriched-map builder (`ResourceController.java:909-952`) which manually constructs a `LinkedHashMap` field-by-field rather than serializing the entity directly — **omitting `juizo`/`origem` from that map means the list view will silently never show them even though the detail view (`getProcesso`, which returns the raw entity) does.** This is the single highest-risk integration gap in this milestone; flag for the phase that implements the list endpoint.
-2. **`origem` is set once at intake, never exposed for edit:** `createProcessoIntake` sets `estado` unconditionally; `origem` should be set the same way (required field on the intake DTO/form, written once, then excluded from `updateProcesso`'s field-copy list exactly the way `estado` already is — see `ResourceController.java:991-1001`, which explicitly comments "estado is intentionally excluded"). Add a matching comment for `origem` when implementing.
-3. **Documentos tab is read-only wiring, not new backend work:** `GET /processos/{id}/documentos` already exists and is already used implicitly by the generic `/documentos` hook infrastructure (`useDocumentos({ processo_id })` — confirm exact filter param name matches `use-documentos.ts`'s `DocumentosListFilters` type before wiring the new tab; the Cliente-side equivalent used `cliente_id`, verify the Processo-side hook already supports `processo_id` symmetrically or needs a one-line addition).
+1. **Event-triggered (synchronous, in-request):** controller write → `NotificacaoService` resolves recipients → N rows inserted in the same transaction as the triggering write. No queueing, no async dispatch — matches the `AuditLog` precedent's risk profile exactly.
+2. **Scheduled (asynchronous, out-of-request):** `AlertasDiariosJob` → per-tenant loop with explicit `tenantId` parameter threading (no `SecurityContext`, no `getTenantId()`) → same `NotificacaoService.criar(...)` choke point as the synchronous path, so both flows produce identically-shaped rows.
+3. **Polling read (frontend, new pattern):** TanStack Query `refetchInterval` (first use in this codebase) → single flat indexed query, no enrichment step needed because display text was denormalized at write time.
 
 ## Scaling Considerations
 
+Realistic scale for this product: a small number of tenants (individual law firms/institutions), each with roughly 5-50 users, single VPS, single backend container. The meaningful scaling axis for this specific feature is not concurrent users — it's **notification row count growing unboundedly over time** (every day, forever, regardless of user count), which is a fundamentally different growth curve than every other entity in this schema (`Processo`/`Cliente`/`Documento` growth is bounded by real-world case volume; `Notificacao` growth is bounded by nothing unless rows are pruned or archived).
+
 | Scale | Architecture Adjustments |
-|-------|---------------------|
-| Current (single ResourceController, ~10s of processos/tenant) | No change needed — adding 3 entities × ~4 endpoints to a 2504-line controller keeps it under ~2700 lines, still manageable by the project's own established tolerance (already larger than this before Pareceres was split into its own *domain* module, not a sub-resource split) |
-| If ResourceController exceeds ~3500-4000 lines | Consider splitting by *domain*, mirroring the Pareceres precedent (a controller per top-level resource — `ProcessoController`, `ClienteController`, `FinanceiroController`) rather than per sub-resource. Out of scope for this milestone; note for a future "controller cleanup" milestone if it becomes a real pain point. |
-| Decisão/Facto/Testemunha row counts per processo | Low cardinality (tens, not thousands) — no pagination needed on `GET /processos/{id}/<child>` list endpoints, consistent with existing `Parte`/`Movimentacao` lists. |
+|-------|--------------------------|
+| Current (single VPS, single backend container, few tenants) | Plain `@Scheduled` with Spring Boot's default single-thread `ThreadPoolTaskScheduler` is sufficient. No distributed lock needed (see Pattern 2). `findTop50...`-style bounded queries are sufficient for the bell; add the composite index `(tenant_id, destinatario_id, lida, created_at)` from day one regardless, since it costs nothing now and is exactly what both read paths need |
+| If notification volume grows unbounded per tenant over months/years | The dedicated `/notificacoes` history page is the one place this actually bites — that's exactly why it gets real `Pageable` pagination now rather than "add it later." Consider a retention/archival policy (e.g. auto-delete or archive `lida=true` rows older than N months) as a follow-up, not blocking for this milestone |
+| If the backend is ever horizontally scaled (multiple containers/replicas) | `AlertasDiariosJob` **must** gain a distributed lock (ShedLock is the standard low-dependency choice for Spring Boot) before that point, or every tenant receives duplicate daily notifications once per running instance. This is not a concern today — flagged only so it isn't silently forgotten later |
 
-## Anti-Patterns to Avoid
+### Scaling Priorities
 
-### Anti-Pattern 1: Adding `tenant_id` to the three new entities
-**What people might do:** Copy `Documento`'s shape (which does carry `tenant_id`) out of an abundance of caution.
-**Why it's wrong:** Inconsistent with the *actual* nearest sibling (`Parte`, `ProcessoFase`, `Movimentacao` — the other three Processo child entities), adds a column that must be kept in sync with the parent, and provides no additional security since every access path already tenant-checks via the parent `Processo`.
-**Instead:** Follow `Parte.java` exactly — `Integer` IDENTITY `id`, `processo_id` FK column, no `tenant_id`.
+1. **First real bottleneck:** unbounded growth of `t_notificacao` rows over calendar time on the dedicated history page — addressed now via `Pageable` on that one endpoint (see Pattern 4).
+2. **Second, much later bottleneck:** horizontal backend scaling breaking the single-instance assumption the scheduled job currently relies on for safety — addressed by adding a distributed lock only if/when that scaling actually happens.
 
-### Anti-Pattern 2: Introducing a PDF-generation library for "Termo de Honorários"
-**What people might do:** Reach for `jsPDF`/`pdfmake`/`puppeteer` because "printable legal document" sounds like it needs real PDF generation.
-**Why it's wrong:** Directly contradicts the milestone brief's explicit instruction ("reuse the CSS-print pattern... not a new PDF library") and the project's own v2.6 Key Decision precedent of avoiding new frontend dependencies when an existing pattern suffices.
-**Instead:** Copy `clientes/[id]/ficha/page.tsx`'s `PRINT_CSS` + `window.print()` approach verbatim.
+## Anti-Patterns
 
-### Anti-Pattern 3: Splitting Decisão/Facto/Testemunha into a new controller "for organization"
-**What people might do:** Cite `ParecerPesquisaController` as precedent for splitting sub-resources out of a large controller.
-**Why it's wrong:** That split fixed a genuine Spring routing bug (class+method mapping concatenation), not a stylistic preference. No such bug exists or would be introduced by adding `/processos/{id}/decisoes` etc. to `ResourceController`, which is mapped at bare `/api/v1`.
-**Instead:** Add the new endpoints to `ResourceController`, matching where `Parte`/`ProcessoFase`/`Movimentacao` already live.
+### Anti-Pattern 1: Building a full event-publisher/listener system for 4-6 call sites
 
-### Anti-Pattern 4: Forgetting the `listProcessos` enriched-map when adding `juizo`/`origem`
-**What people might do:** Add the columns to `Processo.java` and to `createProcesso`/`updateProcesso`, verify the detail page works (because `getProcesso` returns the raw entity), and ship — missing that the *list* endpoint hand-builds a `Map<String,Object>` and will silently drop the new fields from `GET /processos`.
-**Why it's wrong:** Any list-view surfacing of Juízo/Origem (e.g., a future filter or column) would silently fail to work, and it's easy to not notice during manual testing if only the detail page is checked.
-**Instead:** Explicitly add `m.put("juizo", p.getJuizo())` and `m.put("origem", p.getOrigem())` to the enrichment loop at `ResourceController.java` (~line 909-952) in the same phase that adds the columns.
+**What people do:** Reach for `ApplicationEventPublisher` + `@TransactionalEventListener` the moment "notify on domain event" comes up, because it's the textbook-correct decoupling pattern.
+**Why it's wrong here:** No precedent anywhere in this codebase, real added subtlety (event ordering, after-commit timing) for zero current benefit, and disproportionate weight added on top of an already-2898-line controller file for a feature that is fundamentally "insert a few extra rows next to writes that already happen."
+**Instead:** A thin `NotificacaoService` (Pattern 1). Revisit only when a second/third real consumer of the same triggers appears (email digest, webhook, etc.).
+
+### Anti-Pattern 2: Retrofitting a ThreadLocal "current tenant" context for the scheduled job
+
+**What people do:** Since `getTenantId()` relies on `SecurityContextHolder`, it's tempting to build a `TenantContext.setCurrentTenant(id)` ThreadLocal so "existing" tenant-scoped code can be reused unchanged inside the job.
+**Why it's wrong here:** This codebase has no such context today, and introducing one just for a single background job adds a whole new cross-cutting mechanism (and a new footgun — ThreadLocal leakage across pooled scheduler threads) to save writing one explicit parameter.
+**Instead:** Pass `tenantId` as an explicit method argument everywhere in the job (Pattern 2) — simpler, more explicit, and zero new infrastructure.
+
+### Anti-Pattern 3: Letting one bad tenant (or one bad day) silently stop the job forever
+
+**What people do:** Write the `@Scheduled` method as a plain loop with no error handling, on the assumption that "it'll just log and retry tomorrow" if something throws.
+**Why it's wrong here:** Verified against current sources — an uncaught exception in a `@Scheduled` method can silently cancel *all future* runs of that task, not just the current one, with nothing loud in the logs. Combined with this project having no monitoring/alerting, this is a "notifications quietly stop forever" bug that could go unnoticed for weeks.
+**Instead:** Outer try/catch around the whole method **and** an inner try/catch per tenant inside the loop (Pattern 2).
+
+### Anti-Pattern 4: Storing only an entity reference and re-resolving display text on every poll
+
+**What people do:** Store `entidadeTipo`/`entidadeId` only, and have the list endpoint `.map()` over notifications re-fetching each linked `Processo`/`Documento` to build a human-readable label — "keep it normalized."
+**Why it's wrong here:** This is the exact N+1-by-re-fetch bug class this codebase has already paid down once (`listProcessos`'s `responsaveisMap` batch-preload rewrite exists precisely because per-row re-fetching was a real, fixed problem). A notification feed polled every 30-60s is the worst possible place to reintroduce it.
+**Instead:** Denormalize `titulo`/`mensagem`/`linkUrl` onto the row at creation time (Pattern 4) — a small, deliberate staleness trade-off in exchange for a read path with zero joins.
+
+### Anti-Pattern 5: Pre-extracting the honorários "dias sem pagamento" check into its own service before it has a second caller
+
+**What people do:** Since the milestone is already extracting `RiscoPrazoService` for prazos/eventos, reflexively give the honorários check ("dias sem pagamento total desde `dataAcordo`") its own service class too, for symmetry.
+**Why it's wrong here:** Unlike prazo/evento criticality, this check has exactly **one** consumer today (the new daily job) — there is no existing duplication to consolidate. Premature extraction for a rule used in exactly one place adds a class for no present benefit, running against the very lesson this milestone is teaching (extract *because* something is duplicated, not in anticipation of it).
+**Instead:** Keep it as a private method inside `AlertasDiariosJob` for now. Extract it the moment a second consumer appears (e.g. a future Financeiro-dashboard "honorários em atraso" KPI) — mirroring exactly how `computeRisco()` should have been shared from the start.
+
+**A closely related, easy-to-miss gotcha for this specific check:** `Honorario.valorTotal` is `null` by design immediately after auto-creation at formalização (an explicit, deliberate v2.9 decision — see PROJECT.md Key Decisions — specifically to avoid ever pre-filling a real financial value without user confirmation). Any "days since `dataAcordo` without full payment" check **must** explicitly skip rows where `valorTotal` is null rather than let a null-comparison silently misfire (always-false) or throw — there is currently no other code in the app that reads `valorTotal` in a way that would have already surfaced this edge case for you.
 
 ## Integration Points
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `backend/src/main/java/com/lexcv/models/Notificacao.java` | New entity — see Pattern 4 for field design |
+| `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java` | New repository — bounded queries for polling + `Pageable` query for history page |
+| `backend/src/main/java/com/lexcv/services/NotificacaoService.java` | New — recipient resolution + single `criar(...)` write choke point |
+| `backend/src/main/java/com/lexcv/services/RiscoPrazoService.java` | New — extracted from `ResourceController.computeRisco`, plus `computeRiscoEvento(...)` |
+| `backend/src/main/java/com/lexcv/config/SchedulingConfig.java` | New — `@EnableScheduling` only |
+| `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java` | New — the `@Scheduled` daily entry point (first file in a new `jobs/` package) |
+| `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java` | New — list / unread-count / mark-read endpoints |
+| `backend/src/main/java/com/lexcv/dtos/NotificacaoResponse.java` | New (optional) — response shaping, or return the entity directly (both patterns exist in this codebase already) |
+| `backend/migrations/NN-create-notificacao-table.sql` | New — **required** manual prod script (`CREATE TABLE t_notificacao` + composite index), following the exact header-comment convention of `81-`/`82-` scripts, since `application-prod.yml` sets `ddl-auto: validate` |
+| `web/src/hooks/use-notificacoes.ts` | New — mirrors `use-eventos.ts` shape; introduces this codebase's first `refetchInterval` usage |
+| `web/src/app/(dashboard)/notificacoes/page.tsx` | New — dedicated history + filters page (explicitly in PROJECT.md scope) |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `backend/.../controllers/ResourceController.java` | + `NotificacaoService`/`RiscoPrazoService` constructor fields; `createProcessoFase` and `uploadDocumento` gain 1-line calls to `notificacaoService.notificar*`; new responsável-reassignment endpoint (already required by the milestone independent of notifications) calls `notificarProcessoAtribuido`; 5 `computeRisco(...)` call sites repointed to `riscoPrazoService.computeRisco(...)`, private method deleted; 3 `Evento`-based inline blocks (`agendaUrgentesCount`, `getProcessosDashboard`'s `prazosCriticosCount`, `/eventos/upcoming`) repointed to `riscoPrazoService.computeRiscoEvento(...)` |
+| `backend/.../controllers/ParecerController.java` | + `NotificacaoService` constructor field; `createSolicitacao` (when `advogadoId` present at creation) and `atribuirAdvogado` gain 1-line calls to `notificarParecerAtribuido` |
+| `backend/.../seed/DatabaseSeeder.java` | + `"notificacoes:view"` to `permKeys`, granted to ADMIN/ADVOGADO/TECNICO/ASSISTENTE — a single view-only scope is sufficient since every user only ever reads/marks-read their *own* notifications (no create/edit/manage distinction needed, unlike privilege-gated resources such as `financeiro`) |
+| `backend/.../controllers/AdminController.java` (`getRbac()`) | + `notificacoes:view` to the `systemPermissions` list so the admin RBAC-management screen can display/toggle it — an easy-to-forget cross-cutting touch point, exactly the class of gap prior milestone audits in this project have caught after the fact |
+| `backend/.../config/UserPrincipal.java` | + `notificacoes:view` to the hardcoded ADMIN bonus-permission list, for consistency with how `pareceres:*` was added previously (likely redundant once seeded for all roles, but matches existing precedent) |
+| `web/src/lib/permissions.ts` | `KNOWN_SCOPES` += `"notificacoes"` |
+| `web/src/components/shared/notification-bell.tsx` | Swap `useUpcomingEventos()` for the new unread-count/list hooks; same `Popover` shell reused |
+| `web/src/components/shared/dashboard-shell.tsx` | Optionally add a "Notificações" nav entry pointing at `/notificacoes` |
 
 ### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| `Processo` ↔ `Decisao`/`Facto`/`Testemunha` | Direct FK (`processo_id`), same-controller REST endpoints | No event bus, no async — synchronous request/response like every other Processo child entity |
-| `Decisao.anexo` ↔ `Documento` | Nullable FK column `documento_id` on `Decisao`, pointing at an existing `t_documento` row uploaded via the existing generic `/documentos/upload?processoId=...` flow | Do NOT duplicate `ParecerVersao`'s embedded `caminhoAnexo` string pattern — that pattern exists specifically to solve a `Persistable.isNew()` edge case tied to pre-assigning UUIDs for MinIO key prefixes at upload time (see `ParecerVersao.java` comment), which does not apply here since Decisão attaches an *already-uploaded* Documento by reference, it doesn't perform the upload itself |
-| `formalizarProcesso()` ↔ `Honorario` auto-creation | Direct in-process `honorarioRepository.save()` call inside the existing controller method, no new endpoint | Bypasses `financeiro:edit` `@PreAuthorize` intentionally (side effect of a `processos:*`-gated action) — confirm this is accepted before implementing |
-| Frontend `[id]/page.tsx` new tabs ↔ `use-processos.ts` new hooks | TanStack Query, same `queryKey` convention (`["processos", "<subresource>", id]`) already used by `partes`/`fases`/`movimentacoes` | New hooks should follow the exact `useProcessoPartes`/`useAddProcessoParte` naming/shape convention already in the file |
-| "Documentos" tab ↔ existing `GET /processos/{id}/documentos` | Reuses `useDocumentos` (or a processo-scoped variant) — **no new backend endpoint needed**, only frontend wiring | Mirror `ClienteDocumentosEntreguesTab` (`web/src/app/(dashboard)/clientes/[id]/page.tsx:1223-1390`) — same upload dialog, same `FileDropZone`, same datalist-for-tipo pattern, swap `cliente_id` for `processo_id` |
+| Controllers ↔ `NotificacaoService` | Direct method call, same transaction | Matches `AuditLog`'s existing risk profile; no async/event indirection (Pattern 1) |
+| `AlertasDiariosJob` ↔ `RiscoPrazoService` / `NotificacaoService` | Direct method call, explicit `tenantId` parameter, no shared request-scoped state | Job has no `SecurityContext`; this is the first code in the app to call tenant-scoped services from outside an HTTP request (Pattern 2) |
+| `NotificacaoController` ↔ Frontend | REST + polling (`refetchInterval`) | First polling usage in this codebase; existing `apiFetch` wrapper and cookie-based auth need no changes — the endpoint is scoped by `getTenantId()`/`principal.getUserId()` exactly like every other authenticated endpoint |
+| Dev vs. prod schema | Hibernate `ddl-auto=update` (dev) vs. `ddl-auto=validate` (prod) | The new `t_notificacao` table exists automatically in dev/CI but **requires** the manual migration script before prod deploy — the same discipline already documented for the `81-`/`82-` scripts |
 
-## Suggested Build Order (backend entities → endpoints → frontend types/hooks → frontend tabs)
+## Suggested Build Order
 
-This follows the same dependency-first principle the milestone context cites from v2.8 (Phase 74-before-75: enum/entity foundations land before UI that depends on their final shape).
+Ordering respects the one hard dependency called out in the question (`RiscoPrazoService` must exist before `AlertasDiariosJob` can use it), plus the natural "skeleton before consumers" shape of the rest:
 
-**Phase A — Foundations (no UI-visible change yet):**
-1. `Processo.java`: add `juizo` (String) and `origem` (new `OrigemProcesso` enum: `PETICAO_INICIAL`, `NOTIFICACOES_AVULSAS`) columns.
-2. New entities: `Decisao.java` (+ `TipoDecisao` enum — needs the actual enum values confirmed against legal-domain requirements, flag as open question), `Facto.java`, `Testemunha.java`, each mirroring `Parte.java`'s shape, plus their three repositories.
-3. Confirm `ddl-auto=update` picks up new columns/tables in dev; no manual migration needed per existing project convention (see `Cliente.numero_cliente`/`documento_tipo` precedents — no separate migration files exist in this repo's established pattern).
+**Phase A — Foundational (no user-visible behavior change from A1; A2 is a testable skeleton before anything triggers it end-to-end):**
+1. **A1:** Extract `RiscoPrazoService` (Pattern 3), repoint all 5 `Prazo`-based + 3 `Evento`-based existing call sites. Zero new tables, pure refactor with a built-in safety property (the 2-arg overload defaults to today's exact `LocalDate.now()` behavior) — verify this in isolation first, independent of everything else below.
+2. **A2 (can start in parallel with A1):** `Notificacao` entity + `NotificacaoRepository` + migration script + `NotificacaoService` skeleton (the `criar(...)` choke point, plus recipient-resolution methods) + `NotificacaoController` + RBAC plumbing (`DatabaseSeeder`/`AdminController`/`UserPrincipal`/`permissions.ts`). Demoable via direct API calls before any real event or the frontend touches it.
 
-**Phase B — Backend endpoints:**
-4. Wire `juizo`/`origem` into `createProcesso`, `updateProcesso` (with `origem` excluded from update, matching the `estado`-exclusion comment pattern), `createProcessoIntake` (required field), and — critically — the `listProcessos` enriched map (Anti-Pattern 4 above).
-5. Add list/create/update/delete endpoints for `/processos/{id}/decisoes`, `/factos`, `/testemunhas` inside `ResourceController`, gated by existing `processos:view`/`processos:edit` scopes, following the `Parte`/`ProcessoFase` tenant-check pattern.
-6. Hook Honorario auto-creation into `formalizarProcesso()` (Pattern 3 above); add `@Transactional` to the method.
-7. No backend work needed for the "Documentos" tab — endpoint already exists.
+**Phase B — Event-triggered notifications** *(depends on A2 only)*:
+3. Wire the 4 event types into their controller call sites (fase entrada, documento novo, processo atribuído + its new reassignment endpoint, parecer atribuído) — 4 small, independent, parallelizable increments once `NotificacaoService` exists.
 
-**Phase C — Frontend types/schemas/hooks:**
-8. `types/processos.ts`: extend `Processo`/`ProcessoCreateRequest`/`ProcessoUpdateRequest` with `juizo`/`origem`; add `Decisao`/`Facto`/`Testemunha` types + Create/Update request types.
-9. `schemas/processos.ts`: extend `processoFormSchema` with `juizo`/`origem`; add `decisaoFormSchema`/`factoFormSchema`/`testemunhaFormSchema`.
-10. `hooks/use-processos.ts`: add the list/create/update/delete hook trio (quad, with delete) for each of the 3 new entities, following `useProcessoPartes`/`useAddProcessoParte` naming.
-11. Verify/extend `use-documentos.ts`'s filter type to confirm `processo_id` filtering works identically to the `cliente_id` filtering already proven in v2.8 Phase 79.
+**Phase C — Scheduled/batch notifications** *(hard-depends on both A1 and A2 — this is the dependency the question explicitly flags)*:
+4. `SchedulingConfig` + `AlertasDiariosJob`, covering prazo/evento criticality (via `RiscoPrazoService`) and the honorários "dias sem pagamento" check (kept local to the job per Anti-Pattern 5). Cannot start meaningfully before both A1 and A2 exist.
 
-**Phase D — Frontend UI (depends entirely on B and C being stable):**
-12. `novo/page.tsx`: add required "Origem" field to intake step 1 form.
-13. `[id]/page.tsx` "Dados" card: add Juízo/Origem display rows.
-14. `[id]/editar/page.tsx`: add Juízo input (origem NOT editable here).
-15. `[id]/page.tsx`: add 3 new tabs (Decisões, Factos, Testemunhas) to the `TabKey` union and button group, each with its own list+add(+edit+delete) UI, following the existing `partes`/`fases` tab bodies as templates.
-16. `[id]/page.tsx`: add "Documentos" tab, copying `ClienteDocumentosEntreguesTab` structure verbatim (swap cliente_id→processo_id, swap permission scope if needed — confirm `documentos:view`/`documentos:edit` vs `processos:*` for this tab, matching whatever the existing `GET /processos/{id}/documentos` endpoint's `@PreAuthorize` already requires: `documentos:view`).
-17. New route `[id]/termo-honorarios/page.tsx`: printable Termo de Honorários, copying `clientes/[id]/ficha/page.tsx`'s CSS-print pattern, sourcing data from `useProcesso`, `useCliente`, and the already-existing `useHonorarios({ processoId })`.
+**Phase D — Frontend** *(depends on A2; benefits from B and C existing for a realistic end-to-end demo, but the read/mark-read endpoints are independently testable against manually-seeded rows as soon as A2 ships)*:
+5. `use-notificacoes.ts` + `NotificationBell` swap-over + dedicated `/notificacoes` page.
 
-**Ordering rationale:** Steps 1-3 (entity/enum foundations) must land before step 5 (endpoints reference these types) and before step 8 (frontend types mirror the backend shape — if the backend enum values for `TipoDecisao`/`OrigemProcesso` change after frontend Zod schemas are written, every dependent form breaks, exactly the failure mode the v2.8 Phase 74→75 ordering was designed to avoid). Step 6 (Honorario auto-creation) has no dependency on the other 6 target features and can be built/shipped independently/in parallel with the Decisão/Facto/Testemunha work if the roadmapper wants to parallelize phases. Step 17 (Termo printable) depends only on `Honorario` existing (already true today) — it does NOT depend on step 6 being done first, since a manually-created Honorario would also render fine; sequencing them together is a convenience, not a hard dependency.
-
-## Open Questions / Gaps for Phase-Specific Research
-
-- **`TipoDecisao` enum values:** the milestone context says "tipo enum" for Decisão but does not enumerate the values (e.g., `SENTENCA`, `ACORDAO`, `DESPACHO`, `DECISAO_INTERLOCUTORIA`...). This needs a domain-expert decision before Phase A, Step 2 can be finalized — flag as a roadmap-blocking question, not something this research can resolve from the codebase alone.
-- **`Testemunha.tipo` ("arrolada por") values:** likely `AUTOR`/`REU` or similar — same gap, needs legal-domain input.
-- **Whether `formalizarProcesso()` currently has an explicit `@PreAuthorize`:** verify at implementation time (not conclusively visible in the reviewed excerpt) — affects who can trigger the Honorario side-effect.
-- **Whether Processo should be unified into a single view/edit component like Cliente was in v2.8 Phase 75:** out of this milestone's stated scope (`[id]/editar/page.tsx` still exists as a separate route), but worth flagging to the roadmapper as a known architectural divergence between the two modules, in case a future milestone wants parity.
-- **`TimelineItemType` already contains a string literal `"decisao"`** (`web/src/types/processos.ts` line ~197), currently used for `ConflictCheckDecisao` entries in the unified timeline. The new "Decisão" entity (court decisions) is a *different* concept sharing the same Portuguese word — decide during Phase D whether the new entity should also feed the Timeline (and if so, how to disambiguate the two "decisao" kinds in the `TimelineItem` shape) or stay purely in its own tab. Flag this naming collision explicitly to avoid an accidental merge of unrelated concepts.
+This gives: **A1 → (A2 in parallel) → B and C in parallel (C also needs A1) → D**, with C strictly gated on A1+A2 as required, and B/D each gated only on A2.
 
 ## Sources
 
-- Direct repository inspection (all findings HIGH confidence, verified against current source — no training-data assumptions used):
-  - `backend/src/main/java/com/lexcv/controllers/ResourceController.java`
-  - `backend/src/main/java/com/lexcv/controllers/ParecerController.java`
-  - `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java`
-  - `backend/src/main/java/com/lexcv/models/Processo.java`, `Parte.java`, `Movimentacao.java`, `Honorario.java`, `Documento.java`, `ParecerVersao.java`, `TipoCliente.java`, `DocumentoTipo.java`
-  - `backend/src/main/java/com/lexcv/repositories/ParteRepository.java`, `MovimentacaoRepository.java`
-  - `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java`
-  - `web/src/hooks/use-processos.ts`, `use-financeiro.ts`, `use-documentos.ts`
-  - `web/src/types/processos.ts`, `financeiro.ts`
-  - `web/src/schemas/processos.ts`
-  - `web/src/app/(dashboard)/processos/[id]/page.tsx`, `novo/page.tsx`, `[id]/editar/page.tsx`
-  - `web/src/app/(dashboard)/clientes/[id]/page.tsx` (ClienteDocumentosEntreguesTab)
-  - `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx` (CSS-print pattern)
-  - `.planning/PROJECT.md` (Key Decisions log, v2.8/v2.6 precedents)
+- Direct source inspection (HIGH confidence — primary evidence for every codebase-specific claim above):
+  - `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (2898 lines — `computeRisco` at line 1397; `getTenantId()` at line 115; `createProcessoFase`/`updateProcessoFase` at lines 1601-1652; `/eventos/upcoming` at line 2247; `/dashboard` and `/processos/dashboard` KPI blocks at lines 2723-2900; `uploadDocumento` at line 2370)
+  - `backend/src/main/java/com/lexcv/controllers/ParecerController.java` (518 lines — `createSolicitacao`, `atribuirAdvogado`)
+  - `backend/src/main/java/com/lexcv/controllers/AdminController.java`, `SecurityConfig.java`, `UserPrincipal.java`
+  - `backend/src/main/java/com/lexcv/models/{Processo,Evento,Prazo,ProcessoFase,Documento,Honorario,User,AuditLog,ClienteAdvogado,ClienteAdministrativo}.java`
+  - `backend/src/main/java/com/lexcv/repositories/{ProcessoRepository,EventoRepository,AuditLogRepository,ClienteAdvogadoRepository,ClienteAdministrativoRepository,TenantRepository}.java`
+  - `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (`seedRbac()` at line 293)
+  - `backend/src/main/resources/{application.yml,application-prod.yml}` — confirms `ddl-auto: update` (dev) vs. `validate` (prod)
+  - `backend/migrations/{74-cleanup-nif-documento-tipo.sql,81-add-facto-ordem-unique-constraint.sql,82-add-honorario-processo-unique-constraint.sql}` — manual migration precedent and header-comment convention
+  - `backend/pom.xml` — confirms no Quartz/ShedLock/messaging dependency present; `@Scheduled` needs no extra dependency beyond `spring-boot-starter-web` (brings in `spring-context`)
+  - `docker-compose.yml`, `docker-compose.prod.yml` — confirms single backend container, no replicas (grounds the "no distributed lock needed yet" conclusion)
+  - `web/src/components/shared/notification-bell.tsx`, `web/src/app/(dashboard)/agenda/page.tsx`, `web/src/hooks/use-eventos.ts`, `web/src/hooks/use-processos.ts` (`useAllPrazos`), `web/src/lib/api.ts`, `web/src/lib/permissions.ts`
+  - `.planning/PROJECT.md` — v2.10 scope, Key Decisions (notably the `valorTotal` null-by-design decision from v2.9, and the "+ADMIN, never mass-notify by view-permission" v2.10 decision)
+- Spring Boot 3.4 official documentation (HIGH confidence, fetched via Context7 CLI fallback since MCP tools were unavailable in this session — `npx ctx7@latest docs "/websites/spring_io_spring-boot_3_4" "..."`, source: `https://docs.spring.io/spring-boot/3.4/reference/features/task-execution-and-scheduling.html`): confirms Spring Boot auto-configures a `ThreadPoolTaskScheduler` (single thread by default) once `@EnableScheduling` is present — no manual `TaskScheduler` bean or extra dependency required.
+- WebSearch, cross-checked across multiple sources (MEDIUM-HIGH confidence — consistent across independent sources): an uncaught exception in a `@Scheduled` method can silently cancel all future executions of that task under Spring's default scheduler, not just fail the current run — [Baeldung: The @Scheduled Annotation in Spring](https://www.baeldung.com/spring-scheduled-tasks), [A Complete Guide to Spring Boot Scheduler](https://medium.com/@ushandilusha/a-complete-guide-to-spring-boot-scheduler-320eeb88667d), [Exception in @Scheduled Tasks shutdowns Application](https://medium.com/@trivajay259/exception-scheduled-tasks-shutdowns-application-exceptionhandler-or-cleaner-solution-possible-6db4a4a3100d), [spring-projects/spring-framework#31749](https://github.com/spring-projects/spring-framework/issues/31749).
+- WebSearch (used only to confirm this codebase does *not* need the enterprise multi-tenant scheduling patterns it surfaced — MEDIUM confidence, contextual only): schema-per-tenant/DB-per-tenant Quartz-clustering patterns exist for genuinely isolated-database multi-tenancy, which does **not** describe LexCV (shared schema, `tenant_id` column, single datasource) — [Scaling Background Tasks in SaaS](https://yogeshbali.medium.com/scaling-background-tasks-in-saas-from-scheduled-to-multi-tenant-quartz-with-dedicated-databases-c1bdb82473dc), [Baeldung: Multitenancy With Spring Data JPA](https://www.baeldung.com/multitenancy-with-spring-data-jpa).
 
 ---
-*Architecture research for: LexCV v2.9 Melhoria Módulo Processos*
-*Researched: 2026-07-07*
+*Architecture research for: LexCV v2.10 (Notificações e Alertas) — backend integration of a persisted notification entity, event-triggered writes, and a daily cross-tenant scheduled scan*
+*Researched: 2026-07-08*

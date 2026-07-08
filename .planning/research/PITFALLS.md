@@ -1,189 +1,398 @@
 # Domain Pitfalls
 
-**Domain:** Adding fields/entities/workflow side-effects to an existing "processos" module (Spring Boot + Next.js, multi-tenant legal practice management)
-**Researched:** 2026-07-07
-**Scope:** v2.9 Melhoria Módulo Processos — Juízo field, origem enum, Decisão/Facto/Testemunha child entities, Documentos tab, auto-Honorario on formalizar + Termo de Honorários print
+**Domain:** Adding persisted in-app notifications (new entity, RBAC/relationship-scoped targeting, daily `@Scheduled` re-scan job, brand-new entity-reassignment endpoint) to an existing multi-tenant Spring Boot 3.4.1 / Next.js 16 legal practice management app
+**Researched:** 2026-07-08
+**Milestone:** v2.10 Notificações e Alertas
+**Confidence:** HIGH for all codebase-grounded findings (verified by reading the actual current source, cited by file/line below); HIGH/MEDIUM for external Spring/TanStack claims (verified against official docs and the Spring Framework issue tracker, cited in Sources)
 
 ## Confidence note
 
-All findings below are HIGH confidence — they are derived directly from reading the actual code in this repository (`ResourceController.java`, `Processo.java`, `Honorario.java`, `Documento.java`, `Cliente.java`, `web/src/hooks/use-processos.ts`, `web/src/app/(dashboard)/processos/novo/page.tsx`, `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx`), not from generic web research. Line numbers cited are current as of 2026-07-07 and will drift as the codebase changes — treat them as pointers, not permanent anchors.
+Most findings below are derived directly from reading this repository's actual code (`ResourceController.java`, `ParecerController.java`, `Processo.java`, `Evento.java`, `Prazo.java`, `Honorario.java`, `AuditLog.java`, `User.java`, `UserPrincipal.java`, `UserRepository.java`, `HonorarioRepository.java`, `providers.tsx`, `api.ts`, `permissions.ts`, `docker-compose.prod.yml`, and `.planning/PROJECT.md`'s Key Decisions log), not generic notification-system advice. Line numbers are current as of 2026-07-08 and will drift — treat them as pointers, not permanent anchors. Where a claim rests on Spring Framework or TanStack Query behavior rather than this codebase, it is verified against official docs/issue tracker and cited explicitly.
 
 ## Critical Pitfalls
 
-### Pitfall 1: "origem" forgotten in the manual camelCase/snake_case translation layer (repeat of the project's #1 recurring bug)
+### Pitfall 1: The daily job cannot reuse this codebase's `getTenantId()` pattern — guaranteed `NullPointerException`
 
-**What goes wrong:** `origem` is added to the `Processo` JPA entity and to the intake form UI, everything compiles and `pnpm build`/`mvn package` pass, but the value never reaches the database — or reaches the DB but never displays in the UI.
+**What goes wrong:**
+Every single existing endpoint in `ResourceController.java` derives the current tenant via a private helper:
 
-**Why it happens:** This project does not use a global camelCase↔snake_case strategy (deliberately, per `Key Decisions` in PROJECT.md: `@JsonProperty` cirúrgico por campo). Instead, `web/src/hooks/use-processos.ts` hand-maintains two conversion functions:
-- `normalizeProcesso()` (API response → UI `Processo` type) — reads `api.origem` and must be told to.
-- `toProcessoApiPayload()` (UI form values → API request body) — must explicitly add `origem: payload.origem` to the returned object.
+```java
+private UUID getTenantId() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+    return principal.getTenantId();
+}
+```
+(`ResourceController.java:115-119`)
 
-Both are plain object literals with **no type-level requirement that every backend field be mapped**. `ProcessoApi`/`ProcessoApiPayload` are loosely-typed intermediate shapes — omitting a field is not a type error, `tsc` will not catch it, and neither will `pnpm build`. This exact class of bug already happened 3 times in this project (v2.4 Fase migration, v2.8/Phase 79 `cliente_id`/`clienteId` on document upload, and this session's `fase_id`/`nome` mismatch).
+This is called 100+ times across the controller and is the *only* tenant-resolution idiom that exists anywhere in this codebase. A `@Scheduled` method runs on a background thread with **no HTTP request, no JWT, no `Authentication` in the `SecurityContextHolder`** — `SecurityContextHolder.getContext().getAuthentication()` returns `null` on that thread, so `auth.getPrincipal()` throws an immediate NPE. Since this is the *only* pattern developers have ever written in this codebase to get "the current tenant," the natural (and wrong) move when writing the new job is to copy-paste or delegate into existing private helpers/methods that assume this context — anything the job calls transitively that touches `getTenantId()` will crash on first invocation, on every scheduled run, silently (Spring swallows the exception — see Pitfall 4).
 
-**Consequences:** Silent data loss — "origem" gets typed into the form, submit succeeds (200/201), but the value is `null` forever, or an already-saved value never renders on the ficha. No error is thrown anywhere in the stack.
+**Why it happens:**
+This is the first background/non-request-driven code path ever introduced into LexCV (confirmed: zero `@Scheduled`, `@Async`, or `TaskScheduler` usage anywhere in `backend/src/main/java`). Every other piece of business logic in the app was written under the unstated assumption "there is always exactly one logged-in tenant for the duration of this call," which is true for every HTTP request but false for a batch job that must iterate **all** tenants.
 
-**Prevention:**
-1. When adding `juizo`/`origem` to `Processo.java`, in the same commit/PR grep `use-processos.ts` for every existing field name (`tipoProcesso`, `areaJuridica`, etc.) as a checklist and add the new field to **both** `normalizeProcesso()` and `toProcessoApiPayload()`, plus the `ProcessoApi`/`ProcessoApiPayload`/`ProcessoCreateRequest`/`ProcessoUpdateRequest`/`Processo` type definitions in `web/src/types/processos.ts`.
-2. After wiring, do a manual round-trip test: create a processo with `origem` set via the UI, reload the page (hard refresh, not client cache), and confirm the value survives. Do not trust `tsc`/build success as evidence.
-3. Consider (as a process-level guardrail, not required this milestone) a small integration test that POSTs an intake payload with all fields set and asserts the GET response echoes every one of them — this is the only mechanical way to catch this class of bug given the current architecture.
+**How to avoid:**
+The job must NOT call `getTenantId()` or any method that transitively depends on `SecurityContextHolder`. Instead:
+- Loop explicitly over `tenantRepository.findAll()` (bare `JpaRepository<Tenant, UUID>`, no `ativo`/status column exists on `Tenant` — every row is eligible, no filter needed).
+- Pass `tenantId` as an explicit method parameter through every layer of the job (repository query methods already take `tenantId` as a param throughout this codebase — e.g. `findByTenantId(tenantId)` — so this is consistent with existing repository-layer conventions; it's only the controller-layer `getTenantId()` shortcut that must not be reused).
+- If any shared logic (e.g. the new consolidated risk-computation service) is extracted from the controller for reuse by both the job and the existing endpoints, make sure that extraction takes `tenantId` as a parameter rather than reading it internally — do not let the shared service silently depend on `SecurityContextHolder`.
 
-**Detection:** Field present in DB via direct query but absent from `GET /processos/{id}` JSON response (backend-side gap), or present in JSON but not rendered on the processo detail page (frontend mapping gap). Check both independently.
+**Warning signs:**
+- Any new `@Service`/`@Component` class for the job that imports `SecurityContextHolder` or `UserPrincipal`.
+- A job class that only has a no-arg `run()`/`scan()` method with no `tenantId` parameter anywhere in its call chain.
+- Local manual testing of the job only ever done via an authenticated HTTP endpoint that triggers it synchronously (masking the missing-SecurityContext failure mode, since that path *does* have an Authentication).
 
-**Owner phase:** Backend-entity phase (add field + `@Column`) AND frontend-integration phase (wire `use-processos.ts` + form + display) — this is two separate, easy-to-desync changesets. Roadmap should make the frontend mapping an explicit, separately-reviewed task, not an assumed side-effect of "add the field to the entity."
-
----
-
-### Pitfall 2: "origem" enforced in the frontend wizard step-1 Zod schema but not in backend's `CAMPOS_MINIMOS_POR_TIPO` (or vice versa) — the two validation layers already disagree today
-
-**What goes wrong:** `origem` is required at intake per the milestone spec, but ends up enforced in only one of two independent validation layers, so a processo can be formalized (or even just intake-created) without it depending on which path is taken.
-
-**Why it happens:** This codebase already has **two parallel, hand-written minimum-field-validation systems** for processo creation that do not share a definition:
-- **Frontend, step 1 (Intake):** `web/src/schemas/processos.ts` → `processoFormSchema`. Today `tipo_processo`, `area_juridica`, `tribunal`, `numero` are all `optionalTrimmedString` — i.e., the frontend wizard's step-1 Zod schema does **not** currently enforce the same "required" fields the backend enforces later. Only `cliente_id` is required client-side.
-- **Backend, formalizar step (not intake):** `ResourceController.java` lines ~72-80, `CAMPOS_MINIMOS_POR_TIPO` — a `Map<String, List<String>>` keyed by `tipo_processo`, checked only inside `formalizarProcesso()` (line ~1181), i.e., at step 3, not at intake (`POST /processos/intake`, line ~1023, does zero field validation beyond forcing `estado=TRIAGEM`).
-
-So today, a processo can already be intake-created with almost nothing filled in, and the user only discovers missing fields when formalizing (step 3), which is confusing but not a security hole. Adding `origem` risks landing in only one of these two places:
-- If added only to the frontend Zod schema: a processo created by direct API call (or if the frontend validation is bypassed/has a bug) can skip origem entirely and reach ATIVO state without it, because the backend's `formalizarProcesso` field-check is the only one that actually gates the state transition, and if `origem` isn't added there too, it's not enforced at all server-side.
-- If added only to `CAMPOS_MINIMOS_POR_TIPO`: the user fills out intake without being told origem is required, then hits an opaque 422 with `camposEmFalta` at step 3 (a jarring UX regression, and note this map is per-`tipo_processo`, so it must be added to **every** entry, including `"default"` — forgetting one entry means that one tipo_processo silently doesn't require origem).
-- The task description explicitly says "required at intake" — but the *only* backend enforcement point that currently exists for minimum fields is `formalizar` (step 3), not `POST /processos/intake` (step 1). If "required at intake" is taken literally, `createProcessoIntake()` itself needs a new check that does not exist for ANY field today (not even `clienteId`) — this is new backend logic, not an extension of an existing pattern.
-
-**Consequences:** Either a compliance gap (origem-less processo reaches ATIVO), or a UX regression (user fills 3 steps then gets blocked with no earlier warning), or both, depending on which layer is missed.
-
-**Prevention:**
-1. Decide explicitly, in the roadmap/plan, WHERE origem is enforced and make sure it's ALL of: (a) `POST /processos/intake` backend validation (new — doesn't exist for any field today, so this is genuinely new code, not a copy-paste), (b) `CAMPOS_MINIMOS_POR_TIPO` for every `tipo_processo` key including `"default"` (defense in depth for formalizar, in case intake validation is ever bypassed), (c) frontend `processoFormSchema` step-1 Zod schema (so the user is told at step 1, not step 3).
-2. Write the origem check once as a small enum-membership validator reused in both intake creation and formalizar, rather than copy-pasting the same `Set.of("PETICAO_INICIAL", "NOTIFICACOES_AVULSAS")` check into two Java methods that could later drift.
-3. Explicitly test: create intake with `origem` omitted via a raw `curl`/Postman call bypassing the frontend wizard, confirm it's rejected server-side (proves layer (a) exists and isn't just a frontend nicety).
-
-**Detection:** Grep `CAMPOS_MINIMOS_POR_TIPO` for `"origem"` after implementation — confirm it's in every map entry, not just `civel`. Separately, confirm `createProcessoIntake()` itself now validates something (today it validates nothing beyond forcing `estado`).
-
-**Owner phase:** Backend-endpoint phase must own both `intake` and `formalizar` validation; a distinct frontend-integration phase should wire the step-1 Zod `.enum()` (not `optionalTrimmedString`) and the step indicator/error messaging — do not let one phase silently assume the other covers it.
+**Phase to address:**
+The phase that introduces the daily scheduled job (prazos/honorários alert scan). Should be flagged for extra plan-time review since it is the first background-thread code path in the app.
 
 ---
 
-### Pitfall 3: New child entities (Decisão/Facto/Testemunha) copy the Parte/Fase/Movimentação tenant-check pattern correctly for reads/creates, but skip the update/delete ownership re-check that Fase already had to add
+### Pitfall 2: `Notificacao` is the first per-recipient-private entity in an app where every other entity is tenant-shared — recipient scoping is easy to omit entirely
 
-**What goes wrong:** Looking at the three existing "processo child entity" precedents in `ResourceController.java`:
-- `Parte` (lines ~1521-1539): has `GET`/`POST` only, both check `processo.getTenantId().equals(getTenantId())` before touching the parte. No `PUT`/`DELETE` exists yet, so there's no precedent for the harder case.
-- `ProcessoFase` (lines ~1542-1621): has `GET`/`POST`/`PUT`. The `PUT` (`updateProcessoFase`, line ~1596) does the tenant check on the **parent processo** AND then a **second check**: `pf.getProcessoId().equals(id)` — i.e., it re-verifies the fetched `ProcessoFase` row actually belongs to the `{id}` processo in the URL, not just to *some* processo in the tenant. This is the correct, harder pattern.
-- `Movimentacao` (lines ~1624-1643): has `GET`/`POST` only, same single-check pattern as Parte.
+**What goes wrong:**
+Every existing entity in LexCV (Cliente, Processo, Documento, Honorario, Evento, ParecerSolicitacao...) is **tenant-shared**: any user in the tenant with the right permission scope (`clientes:view`, `processos:view`, etc.) sees *all* rows of that type in the tenant. The authorization pattern baked into 20+ endpoints is exactly one check: `if (x == null || !x.getTenantId().equals(getTenantId())) return 404`. There is no precedent anywhere in this codebase for "this row belongs to a specific *user*, not just a specific *tenant*."
 
-None of these three entities have a dedicated tenant_id column — they're tenant-scoped **only transitively** through their parent `Processo`. This is a subtle, easy-to-miss design: a naive port of the `GET`/`POST` pattern to Decisão/Facto/Testemunha (child entities #3, #4, #5) is safe for `GET`/`POST`, but if `PUT`/`DELETE` are added (very likely needed — Decisões get corrected, Testemunhas get removed, Factos get reordered) and someone copies the *simpler* Parte/Movimentacao pattern instead of the *correct* Fase pattern, you get an authorization gap: **checking `processo.tenantId == currentTenant` alone is not enough for `PUT`/`DELETE {childId}` — you must also check the fetched child row's `processoId` equals the `{id}` path segment**, otherwise a user in Tenant A who knows/guesses a Decisão UUID belonging to a *different processo in the same tenant* (or worse, a cross-processo IDOR if the child ID space isn't tenant-partitioned) could update/delete a record on a processo they don't have the URL for. Since IDs here are sequential `Integer` (like `ProcessoFase`'s `faseId: Integer`) rather than `UUID`, this is a realistic guessable-ID scenario if Decisão/Facto/Testemunha reuse `GenerationType.IDENTITY` — check what Honorario used (`Integer id`, `GenerationType.IDENTITY`) versus what fully-UUID entities used.
+`Notificacao` breaks this assumption: two ADVOGADOs in the same tenant must see *different* notification inboxes even though they share every other permission scope. If `GET /notificacoes` is implemented by pattern-matching the familiar shape ("apply `@PreAuthorize("hasAuthority('notificacoes:view')")`, then `notificacaoRepository.findByTenantId(tenantId)`"), it will pass every existing code-review heuristic in this codebase (permission check present, tenant filter present) while leaking every user's notifications to every other user in the tenant — a real, silent, cross-user data leak that looks identical to "done correctly" by this project's own established review pattern.
 
-**Consequences:** Cross-processo (same-tenant) IDOR on update/delete of Decisão/Facto/Testemunha — a real authorization bug, not just a UX issue, especially concerning for Decisão given it can carry an attached court document.
+**Why it happens:**
+Reviewers and implementers pattern-match against the 20+ existing tenant-only checks in `ResourceController.java` and consider "tenant-scoped" to be the complete authorization contract, because it always has been for every other entity in this app.
 
-**Prevention:**
-1. For every `PUT`/`DELETE {id}/decisoes/{decisaoId}` (and facto/testemunha equivalents), copy the **Fase** pattern exactly: fetch parent processo + tenant check, THEN fetch the child row + `child.getProcessoId().equals(id)` check, not just the Parte/Movimentacao single-check pattern.
-2. If Decisão/Facto/Testemunha use `Integer`/sequential IDs (matching the `ProcessoFase`/`Honorario` precedent), the double-check above is **mandatory**, not optional — sequential IDs are trivially enumerable.
-3. Explicitly write this ownership check into the phase's acceptance criteria / review checklist rather than assuming "we did tenant checks like the other entities" is sufficient — the *existing* codebase already has an inconsistency (Parte/Movimentacao lack it, Fase has it) that a future audit already flagged as a category of risk in this project's history (`@PreAuthorize` scope mismatches, IDOR-adjacent bugs).
+**How to avoid:**
+Every read/write on `Notificacao` needs a **second** filter dimension beyond tenant: `WHERE tenant_id = ? AND destinatario_user_id = ?` (or the ADMIN fan-out equivalent — see Pitfall 3). Write this as an explicit repository method, e.g. `findByTenantIdAndDestinatarioIdOrderByCreatedAtDesc(tenantId, userId)`, and make the "mark as read" endpoint verify **both** tenant *and* recipient ownership before mutating (`!n.getTenantId().equals(tenantId) || !n.getDestinatarioId().equals(currentUserId)` → 404/403), not just tenant. Add this as an explicit item in the phase's plan/success-criteria, since it won't be caught by copy-pasting the existing review checklist.
 
-**Detection:** Code review checklist per new child-entity endpoint: does every `PUT`/`DELETE`/single-item `GET` verify BOTH (a) parent processo belongs to tenant AND (b) fetched child row's `processoId` equals the path's `{id}`? If an endpoint only does (a), flag it.
+**Warning signs:**
+- A `NotificacaoRepository` method named only `findByTenantId(...)` with no user-id parameter.
+- A code review that says "tenant check present" without a second sentence about recipient check.
+- Manual test only performed while logged in as a single user (never verifying user A cannot see/mark-read user B's notifications within the same tenant).
 
-**Owner phase:** Backend-entity phase for Decisão/Facto/Testemunha — put this check explicitly in the phase's plan/task list per entity (3x), not as a single shared assumption. This is exactly the kind of thing a plan-checker/verifier gate should look for given the project's `config.json`-driven ASVS-level-1 enforcement.
-
----
-
-### Pitfall 4: Auto-created Honorario on formalizar is not idempotent — retrying/double-clicking "Formalizar" or a network retry creates duplicate honorarios
-
-**What goes wrong:** `formalizarProcesso()` (line ~1181) is `@Transactional` and currently ends with `processo.setEstado("ATIVO"); return ResponseEntity.ok(processoRepository.save(processo));`. If Honorario auto-creation is added inside this method, the natural implementation is "if estado transitions to ATIVO, also create a Honorario row." But look at the method's own guard: `if (!"TRIAGEM".equalsIgnoreCase(processo.getEstado())) return 409 CONFLICT`. This guard *does* prevent a second full formalizar call after the first succeeds (since estado is now ATIVO) — **but only if the first call actually completed and committed**. The real risk windows are:
-1. **Frontend double-submit before the first request completes:** `onFormalizar()` in `web/src/app/(dashboard)/processos/novo/page.tsx` (line ~164) does call `formalizarProcesso.mutateAsync()` guarded by `formalizarProcesso.isPending` disabling the button — this mitigates the UI-level double click reasonably well today, so the higher risk is (2).
-2. **Client retry after a timeout/network error where the server actually succeeded** (classic "did my write happen?" ambiguity) — the frontend's `catch` block treats any thrown error as "formalizar failed, let user retry," but if the backend's transaction actually committed (estado=ATIVO, Honorario created) and only the *response* was lost, a retry will hit the `409 CONFLICT` (state guard) — but only if the Honorario-creation code is placed correctly relative to the state check. If Honorario creation is accidentally placed in a code path that can be reached from `ATIVO` state too (e.g., a separate "generate honorario" trigger added for flexibility, or if formalizar is refactored to be re-callable), duplicates become possible.
-3. Even without a bug, the **state-based guard is not the same as idempotency at the Honorario level** — nothing about `formalizarProcesso` checks "does this processo already have an auto-created Honorario" before creating one. Today's `createHonorario()` (line ~2186) endpoint has no uniqueness constraint on `processo_id` (unlike, e.g., the tenant-scoped unique `documento_numero` constraint mentioned in CLAUDE.md) — nothing in the DB schema prevents two Honorario rows for the same processo.
-
-**Consequences:** Duplicate financial records tied to a real processo — a duplicate Honorario would double-count in the Financeiro module, corrupt `ContaCorrente` balance calculations on payment (see `createPagamento`'s balance-update logic at line ~2222), and require manual cleanup, which is much worse for a financial record than for e.g. a duplicate Movimentacao entry.
-
-**Prevention:**
-1. Do not rely solely on the `estado != TRIAGEM → 409` guard as the idempotency mechanism. Explicitly check "does an Honorario already exist for this `processo_id`" (`honorarioRepository.findByProcessoId(id)`, which already exists per the `listHonorarios` usage) immediately before creating one inside `formalizarProcesso`, and skip creation (not error) if one already exists — this makes the whole operation naturally idempotent even under retry/replay, independent of the state guard.
-2. Consider a DB-level unique constraint or at minimum a code-level invariant comment stating "one auto-created Honorario per processo" — even if the milestone doesn't require blocking manual creation of *additional* honorarios later (e.g., amendments), the *auto-created* one specifically should be a singleton per processo, distinguishable perhaps via `descricao` convention (e.g., seeded from `honorariosPropostos`) or a boolean/source flag if the schema allows a quick addition.
-3. Write a specific test: call `formalizar` twice in sequence (simulating retry) and assert exactly one Honorario row exists for the processo afterward, regardless of whether the second call is rejected by the state guard or short-circuited by the existence check.
-
-**Detection:** Query `SELECT processo_id, COUNT(*) FROM t_honorario GROUP BY processo_id HAVING COUNT(*) > 1` after any retry-testing session.
-
-**Owner phase:** Backend-endpoint phase (the `formalizar` handler itself) — this must be an explicit line item in that phase's plan, not an assumed side-effect of "call honorarioRepository.save() at the end of formalizar."
+**Phase to address:**
+Notification infrastructure phase (entity + API de listagem/marcar-lida). This is the foundation every later phase builds on — get the two-dimensional scoping right here or every consumer inherits the leak.
 
 ---
 
-### Pitfall 5: Auto-created Honorario silently defaults `valorTotal` to a real (wrong) currency amount instead of requiring explicit confirmation
+### Pitfall 3: ADMIN broad visibility + per-recipient read state is an architectural tension that needs an explicit design decision, not an afterthought
 
-**What goes wrong:** `Cliente.honorariosPropostos` (a JSON-converted field from the v2.4 intake flow, `Cliente.java` line ~91-94, type `HonorariosPropostos`) already stores a *proposed* fee captured at client intake — totality, "por extenso" (written-out amount), and "previsão" (forecast/estimate). This is the obvious, tempting source to auto-populate the new Honorario's `valorTotal` on formalizar. But:
-1. `honorariosPropostos` is captured per-**cliente**, not per-**processo** — a cliente can have multiple processos (the ficha's own "Processos" tab, wired in Phase 77, proves this 1-to-many relationship is real and already in production use). A cliente with 3 active processos has exactly one `honorariosPropostos` value on their record; blindly copying it to Honorario on *every* processo's formalizar would give every processo the same fee, which is almost certainly wrong (each processo may have its own separately-negotiated fee, or none at all if this cliente's proposed value was for a different case entirely).
-2. `honorariosPropostos` was captured as a **proposal at intake time**, worded loosely ("por extenso" suggests it was designed to mirror a hand-written estimate on a paper intake form, not a binding contractual value) — auto-materializing it as a real `t_honorario.valor_total` row without any human review turns a soft estimate into a hard financial record with zero confirmation step. `Honorario.valorTotal` is a real `BigDecimal` that flows directly into `ContaCorrente` balance math via `Pagamento` — this is not a cosmetic field.
-3. The task description itself flags this risk explicitly ("valor should never be auto-set to a real currency amount without user confirmation") — this is the single highest-severity pitfall in this entire feature set because it's a money bug, not a display bug.
+**What goes wrong:**
+The targeting rule (per `PROJECT.md` Key Decisions) is "responsável do processo / advogado do parecer / equipa do cliente + **ADMIN**." ADMIN's extra permissions are added *dynamically* at login/JWT-issuance time in `UserPrincipal.create()` (`config/UserPrincipal.java:33-44`), not stored per-row anywhere. This creates a genuine fork in how `Notificacao` can implement "ADMIN also sees this":
 
-**Consequences:** A processo goes ATIVO with an auto-created Honorario carrying an incorrect, stale, or cliente-level-not-processo-level fee amount, with no visible flag that it needs review, and it can silently start accruing payments against the wrong number before anyone notices — very costly to unwind in a legal billing context (client trust, financial audit trail).
+- **Query-time** ("`WHERE destinatario_id = ? OR (tenant has ADMIN role check)`"): cheap to write, but then *read state* ("lida"/unread) cannot live on the notification row itself — if 3 ADMINs exist in a tenant and the row is shared, one ADMIN marking it "lida" would either (a) incorrectly mark it read for the other two ADMINs too (shared mutable state on a conceptually-personal action), or (b) require a *second* join table just for read-state per (notification, admin-user) pair — which is really the fan-out model in disguise, just implemented lazily/inconsistently.
+- **Fan-out-at-creation** (create one row per concrete recipient, including one row per current ADMIN, at the moment the triggering event happens): each row has its own independent read state, consistent with every other row in the table. This requires enumerating admins at creation time — which this codebase already has a one-line repository method for: `userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")` (`UserRepository.java:16-17`, already exists, unused until now).
 
-**Prevention:**
-1. Do NOT copy any numeric value from `Cliente.honorariosPropostos` into `Honorario.valorTotal` automatically. If the milestone wants to surface the proposed value for convenience, pre-fill it **only in a UI form the user must explicitly submit/confirm** (e.g., a "Confirmar Honorário" step shown right after formalizar succeeds, pre-populated but editable, with `valorTotal` starting `null`/blank until the user saves) — never have the backend `formalizarProcesso()` transaction itself write a non-null `valorTotal`.
-2. The backend-created Honorario stub (if auto-created inside `formalizar` for the sake of having a `processo_id` linkage/row to attach the "Termo de Honorários" to) should have `valorTotal = null` and `descricao` indicating "a confirmar" (pending), never a currency figure — this matches the existing `updateHonorario` PATCH-style endpoint (line ~2253) which already supports setting `valorTotal` after the fact via a separate authenticated action gated by `financeiro:edit`.
-3. Make the "Termo de Honorários" generation explicitly check for `valorTotal == null` and either block printing or clearly render "___________" (the existing `BLANK` placeholder pattern from `ficha/page.tsx`'s `fmt()` helper) rather than printing a legal document with a blank/zero amount that could be mistaken for "free of charge."
-4. RBAC: creating/confirming the real `valorTotal` should require `financeiro:edit` (matching the existing `createHonorario`/`updateHonorario` scope), which is a **different** permission scope than `processos:manage` (which gates `formalizar` itself) — a user with `processos:manage` but not `financeiro:edit` should be able to formalize the processo but should NOT be the one silently setting a real fee amount as a side effect of an action gated under a different permission. This is a second RBAC-scope pitfall layered on top of the money pitfall: the side-effect must not grant financial-write capability through a non-financial permission gate.
+Picking the query-time approach because it seems simpler will work fine in initial testing (single-admin tenants, e.g. the seeded default tenant) and only visibly break once a tenant has 2+ ADMIN users independently reading/dismissing the same alert — an easy gap to miss in a milestone whose stated scope explicitly excludes broader team-based targeting and notification preferences (i.e., nobody is asking for this edge case to be raised, so it's easy to silently under-design it).
 
-**Detection:** Manual test: formalize a processo for a cliente that has `honorariosPropostos` filled in, and confirm the resulting Honorario is NOT pre-filled with that number without an explicit save action by a `financeiro:edit`-scoped user.
+**Why it happens:**
+The targeting rule bundles two different recipient models ("this one specific FK" vs "this dynamic role-derived set") into a single sentence in the requirements, but they need different implementations to give both audiences a coherent independent unread/read experience.
 
-**Owner phase:** Backend-endpoint phase must decide and implement the null-valorTotal-stub approach; a distinct frontend-integration phase must build the explicit confirmation UI. Flag this pairing explicitly in the roadmap — do not let "auto-create Honorario" be scoped as a single backend-only task, since the money-safety property depends on the frontend confirmation step existing.
+**How to avoid:**
+Decide explicitly and document as a Key Decision: fan out one `Notificacao` row per concrete recipient at creation time (responsável/advogado/equipa-do-cliente FK resolves to 1 row; `findByTenantIdAndRoleName(tenantId, "ADMIN")` resolves to N rows, one per current admin). Accept that an admin promoted *after* the notification was created won't retroactively see it (consistent with this milestone's explicit no-retroactive-preferences philosophy) — this is the same category of simplicity trade-off the project already made elsewhere (e.g., `Honorario.valorTotal` never auto-populated from `Cliente.honorariosPropostos`).
 
-## Moderate Pitfalls
+**Warning signs:**
+- Any SQL/JPQL for `Notificacao` containing `OR` logic against a live role check instead of a stored `destinatario_id`.
+- A "mark as read" implementation that updates a `lida` column directly on `t_notificacao` for a notification that could be shared by multiple recipients.
 
-### Pitfall 6: "Termo de Honorários" print template pulls from 3 entities (Cliente, Processo, Honorario) fetched via 3 separate hooks with independent loading/error states — stale or partial data can print silently
-
-**What goes wrong:** The existing print precedent (`ficha/page.tsx`) fetches from multiple hooks (`useCliente`, `useClienteAdvogados`, `useClienteAdministrativos`) and only gates the whole page on `cliente.isLoading`/`cliente.isError` — the secondary hooks' loading/error states are not checked before rendering, they just render empty/whatever-they-have. For "Termo de Honorários," the equivalent risk is worse because it spans 3 *different* top-level entities (Cliente, Processo, Honorario) rather than one entity plus its sub-resources, and one of those (Honorario) may not exist yet (see Pitfall 5 — `valorTotal` may be `null`, or the Honorario record may not have been created/confirmed at all if formalizar's auto-creation is skipped/failed).
-
-**Prevention:**
-- Gate the print page's render on ALL THREE hooks' `isLoading`/`isError`, not just the primary one (Cliente in the existing precedent is the "primary"; here there may be a 3-way tie).
-- Explicitly handle "Honorario not found for this processo" as a distinct state (not just a null-guarded blank field) — printing a "Termo de Honorários" for a processo with no honorario at all is a meaningless document and should probably be blocked with a clear message, not silently rendered with every value showing the `BLANK` placeholder.
-- Reuse the exact `fmt()`/`BLANK` null-guard helper from `ficha/page.tsx` for every field pulled from all three entities, especially `valorTotal` (currency formatting AND null-guard both needed — `fmt()` today does a raw `String(value)` cast, which is fine for text fields but would need a currency-aware variant for `valorTotal` to avoid printing something like `1500` unformatted on a legal document).
-- Cliente fields used in the Termo (nome, NIF, morada) went through the v2.7/v2.8 flattening — pull from the current flat columns (`cliente.nome`, `cliente.nif`, `cliente.morada`), not any legacy `dados_tipo` shape (already removed, but worth an explicit reminder given how recently that migration happened).
-
-**Owner phase:** Frontend-integration phase, same phase that builds the Documentos tab / print flow — should explicitly list "loading/error gating across 3 hooks" and "currency-safe null-guard for valorTotal" as acceptance criteria, not assume the existing `fmt()` helper covers it as-is.
+**Phase to address:**
+Notification infrastructure phase (entity design), before any alert-generation phase depends on the shape.
 
 ---
 
-### Pitfall 7: Decisão's optional document attachment reuses the generic `Documento` entity, but `Documento` has no `decisao_id` column — the linkage needs a real FK or it becomes an untracked file with no ownership trail
+### Pitfall 4: "Notify on every job run" instead of "notify on threshold crossing" — no persisted last-known-state means the job re-fires daily for every still-critical item
 
-**What goes wrong:** `Documento.java` currently has exactly two optional linkage columns: `processo_id` and `cliente_id` (line ~23-27). There is no generic "attach to any entity" pattern — every consumer of Documento so far has been either processo-scoped or cliente-scoped. If Decisão's optional attachment is implemented by just setting `documento.processoId` (reusing the existing processo linkage) with no `decisao_id` anywhere, the document becomes indistinguishable from any other processo-level document once inside the (new, v2.9) "Documentos" tab — there's no way to know "this specific PDF is the ruling attached to Decisão #4" versus "this is an unrelated document uploaded to the processo's general Documentos tab." This directly undermines the feature's own purpose (a Decisão with a traceable attached ruling).
+**What goes wrong:**
+The milestone's decision is explicit: re-notify on threshold crossing (ok → próximo → vencido), via a daily job, not notify-once. If the job's "should I create a notification?" check is only `computeRisco(...) != "ok"` (i.e., "is this currently critical"), it will create a **new** notification every single day for every prazo/honorário that remains in `proximo` or `vencido` state — a processo sitting at "vencido" for two weeks would generate 14 duplicate-content notifications, one per day, none of which represents an actual state change. This is functionally indistinguishable from spam even though no single run is "buggy" in isolation — the bug is the *absence* of a persisted "what did I last notify this recipient about this entity at" fact.
 
-**Prevention:**
-- Add a nullable `decisao_id` column to `Documento` (following the exact precedent of `processo_id`/`cliente_id` — nullable UUID, no cascade complexity) rather than inventing a separate attachment mechanism, OR store the `documento_id` as a FK column on the `Decisao` entity itself pointing at an existing `Documento` row (simpler, one-directional, matches "optional attachment" framing better since Decisão is the owner of the relationship, not Documento).
-- Whichever direction is chosen, ensure the tenant/ownership check added in Pitfall 3 (child.processoId == path {id}) is extended to also verify, when a `documento_id`/attachment is set, that the referenced Documento belongs to the same tenant AND the same processo — otherwise this reintroduces exactly the gap Phase 79's code review caught and fixed for `POST /documentos/upload` (`clienteId`/`processoId` ownership validation before persist, per the Key Decisions log) — don't regress that fix by adding a new unvalidated FK.
+**Why it happens:**
+`computeRisco()` (`ResourceController.java:1397-1404`) and every place that consumes it today is **stateless and read-time** — it recomputes fresh on every HTTP request and nothing persists "the last computed value," because until now nothing needed to compare "then" vs "now." Porting this same stateless mental model unmodified into a job whose entire purpose is "detect a change since last time" is the natural but wrong move.
 
-**Owner phase:** Backend-entity phase for Decisão — decide the FK direction explicitly as a design decision before implementation starts (this affects both the Decisão entity shape and the Documentos-tab query logic), and re-apply the Phase 79 ownership-validation pattern to whichever new endpoint sets this link.
+**How to avoid:**
+Track last-notified state explicitly, e.g. a column/table keyed by `(tenant_id, entidade_tipo, entidade_id, destinatario_id) → last_risco_notificado`. Each day, the job recomputes current risco (via the *new consolidated* function this milestone is supposed to create) and only creates a `Notificacao` row when `current_risco != last_risco_notificado`, then updates the tracking record. This is an edge-triggered design (react to the transition), not level-triggered (react to the current level) — the same distinction monitoring/alerting systems make between "alert on state change" vs. "re-alert every evaluation."
 
-## Minor Pitfalls
+**Warning signs:**
+- The job's insert condition reads only the current computed risco with no comparison to a previously stored value.
+- No new column/table anywhere that stores "last known risco level per (entity, recipient)".
+- QA only tests "one day," never simulates "run the job two days in a row against unchanged data" (which is the exact scenario that exposes this bug).
 
-### Pitfall 8: New `origem` enum values risk a label/value mismatch between Portuguese display labels and stored enum constants
-
-**What goes wrong:** The milestone spec gives the two origem values as "Petição Inicial" and "Notificações Avulsas" — human-readable Portuguese labels with accents and spaces. If these are stored verbatim as the enum/string value (rather than a stable code like `PETICAO_INICIAL`/`NOTIFICACOES_AVULSAS` with the accented label only in the UI layer), any future rename of the display label becomes a data migration, and accent/encoding issues become a real risk for exact-match filtering (`WHERE origem = 'Petição Inicial'`).
-
-**Prevention:** Follow the existing `DocumentoTipo`/`conflictNivelEnum` precedent — store a stable uppercase/ASCII code server-side, map to the accented Portuguese label only in frontend display helpers (mirroring `conflictNivelToLabel()` in `web/src/lib/conflict-check.ts`).
-
-**Owner phase:** Backend-entity phase (choose the stored enum values) — flag this as a 5-minute decision to make explicit rather than accidentally storing the label text via a copy-pasted string field.
+**Phase to address:**
+Daily scheduled job phase (prazos de processos e calendário crítico). This is the single most important behavioral contract for that phase's success criteria.
 
 ---
 
-### Pitfall 9: Facto's "ordering field" gets reindexed inconsistently on delete/insert, or two Factos silently share the same order value
+### Pitfall 5: Wrong `@Scheduled` trigger type (`fixedRate`/`fixedDelay` vs `cron`) causes the "daily" job to re-fire on every deploy
 
-**What goes wrong:** An explicit "ordem" field (as opposed to relying on `created_at` or a linked-list `nextId`) requires the backend to either auto-increment on insert (like `ProcessoFase`'s implicit chronological order) or accept a user-supplied position. If insert simply does `ordem = maxExistingOrdem + 1` without a per-processo scope, two Factos on different processos could collide in ways that don't matter, but on the *same* processo an insert-in-the-middle or delete operation that doesn't shift subsequent `ordem` values leaves gaps or (worse) ties, and any UI `sort by ordem` becomes non-deterministic for tied rows.
+**What goes wrong:**
+This project deploys via GitHub Actions → GHCR → SSH → `docker compose up` on a single-instance VPS (confirmed: `docker-compose.prod.yml` sets no `replicas:`, only resource limits, and `restart: unless-stopped`), and deploys happen frequently during active development (this repo's own commit history shows multiple phases shipped per day). `@Scheduled(fixedRate = ...)` / `@Scheduled(fixedDelay = ...)` compute their next run relative to **application startup**, not wall-clock time — so `fixedRate = 86400000` ("every 24h") actually means "24h after this specific process started," and **every container restart resets that clock and fires the job again almost immediately** (default `initialDelay` is 0). Given `restart: unless-stopped` plus routine CI/CD redeploys, a `fixedRate`-based "daily" job would in practice fire multiple times per day — reproducing exactly the "duplicate notifications on job re-run" symptom, but the root cause here is a scheduling-configuration mistake, not concurrency.
 
-**Prevention:** Scope the max-order lookup to `processo_id` explicitly (`SELECT MAX(ordem) FROM t_facto WHERE processo_id = ?`, tenant-checked the same way `ProcessoFase` creation resolves its catalog), and decide upfront whether reordering (drag-and-drop, "move up/down") is in scope for this milestone — if not, at minimum ensure delete doesn't need to compact the sequence (gaps in `ordem` are harmless for sort-only use; only tie-breaking on insert matters).
+**Why it happens:**
+`fixedRate`/`fixedDelay` are the two attributes most Spring tutorials show first (simpler syntax than a cron expression), and "run once a day" is easy to mis-translate as "every 86400000ms" without considering what happens across restarts.
 
-**Owner phase:** Backend-entity phase for Facto — small but worth one explicit line in that phase's plan ("ordem assignment scoped per processo_id, ties broken by created_at as secondary sort").
+**How to avoid:**
+Use `@Scheduled(cron = "0 0 3 * * *")` (wall-clock-anchored) for the daily scan, not `fixedRate`/`fixedDelay`. Cron-based scheduling only fires at the specified time of day regardless of when the process last started, so a redeploy at 14:00 does not cause an extra 03:00 run. This does not remove the need for idempotent inserts (Pitfall 4's state-tracking already covers "did I already notify for this exact state"), but it removes the single most likely real-world trigger of duplicate runs in *this specific deployment topology*.
 
-## Phase-Specific Warnings
+**Warning signs:**
+- `@Scheduled(fixedRate = ...)` or `@Scheduled(fixedDelay = ...)` used for anything described as "daily."
+- No test/observation of "does the job fire again if I restart the container mid-day."
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|----------------|------------|
-| Backend: add `juizo`/`origem` columns to Processo | Pitfall 1 (mapping layer), Pitfall 2 (dual validation layers), Pitfall 8 (enum value stability) | Add fields to entity + both `CAMPOS_MINIMOS_POR_TIPO` and new intake-validation; choose stable enum codes upfront |
-| Backend: Decisão/Facto/Testemunha entities + endpoints | Pitfall 3 (ownership double-check on PUT/DELETE), Pitfall 7 (Documento FK direction), Pitfall 9 (ordem scoping) | Copy the `ProcessoFase` PUT pattern (parent tenant check + child.processoId re-check), not the simpler Parte/Movimentacao pattern; decide Documento↔Decisão FK direction before coding |
-| Backend: formalizar side-effect (auto Honorario) | Pitfall 4 (idempotency), Pitfall 5 (valor auto-default, RBAC scope mismatch) | Existence-check before create (not just state guard); `valorTotal` starts null; confirmation step requires `financeiro:edit` separately from `processos:manage` |
-| Frontend: intake wizard step 1 (origem field) | Pitfall 1, Pitfall 2 | `processoFormSchema` origem field must be `z.enum(...)`, not `optionalTrimmedString`; wire `normalizeProcesso`/`toProcessoApiPayload` in the same PR |
-| Frontend: Documentos tab (reuse Clientes v2.8 pattern) | Pitfall 7 (attachment ownership validation regression) | Re-apply Phase 79's tenant/ownership pre-persist check to any new processo-scoped or decisao-scoped upload path |
-| Frontend: Termo de Honorários print page | Pitfall 6 (3-hook loading/error gating, currency null-guard) | Gate render on all 3 hooks; extend `fmt()` pattern with a currency-safe variant; block/flag print when Honorario or valorTotal is missing |
-| Cross-cutting: RBAC on all new endpoints | Frontend `hasScopedPermission` vs backend `@PreAuthorize` mismatch (project's known recurring pitfall #3, not re-derived here per instructions) | Explicit side-by-side checklist per new endpoint: backend scope string vs frontend `permissions.can.*` call, reviewed together, not independently |
+**Phase to address:**
+Daily scheduled job phase. Cheap to get right up front, expensive to diagnose after the fact (looks like random duplicate spam correlated with deploys, not obviously a scheduling bug).
+
+---
+
+### Pitfall 6: An uncaught exception inside the job silently stops it from ever running again — with no error surfaced anywhere
+
+**What goes wrong:**
+Community consensus and Spring's own issue tracker confirm: if a `@Scheduled` method throws an uncaught exception, the task scheduler does not simply log-and-continue by default in every configuration — it can stop rescheduling that task entirely, with no exception visible outside the background thread (nothing propagates to a controller, nothing produces an HTTP 500, nothing shows up as "the app crashed"). Given this job's job is to iterate every tenant, every processo/prazo/honorário, one bad row (a null `dataAcordo`, an orphaned `processo_id` with no matching Processo, a Prazo with a null `responsavelId` and no ADMIN fallback resolved) anywhere in any tenant can silently kill all future notification generation for **every** tenant, and nobody will notice until someone asks "why did notifications stop appearing three weeks ago."
+
+**Why it happens:**
+This is the first `@Scheduled` job in the app, so there is no existing convention here for "wrap scheduled work defensively." Every existing piece of code in this app runs inside an HTTP request/response cycle, where an uncaught exception is caught by Spring's default exception handling and turned into a visible 500 response — developers have never had to think about "what happens to an exception with no HTTP response to attach to."
+
+**How to avoid:**
+Wrap the entire job body in a top-level `try/catch (Exception e)` that logs with full context (tenant id, entity id) and continues to the next tenant/entity rather than letting one bad row abort the whole run. Prefer per-tenant (or even per-entity) try/catch boundaries inside the loop so one tenant's bad data doesn't prevent notifications for every other tenant. Log at `ERROR` level with enough context to be actionable, and treat "the job produced zero output for N consecutive days across all tenants" as a symptom worth a smoke-test/health-check, since there is no `@Scheduled`-specific alerting anywhere in this app today.
+
+**Warning signs:**
+- Job code with no top-level try/catch.
+- A single loop over "all tenants x all processos" with no per-iteration exception isolation — one throw anywhere aborts everything after it in that run, and (per the above) possibly all future runs too.
+
+**Phase to address:**
+Daily scheduled job phase — this is a plan-time review item ("does the job survive one bad row"), not something that shows up in isolated unit tests of the happy path.
+
+---
+
+### Pitfall 7: N+1 query pattern — this exact codebase already contains both the anti-pattern to avoid and the correct pattern to copy, right next to each other
+
+**What goes wrong:**
+`GET /honorarios` (no `processo_id` filter) currently does exactly this (`ResourceController.java:2568-2575`):
+
+```java
+List<Processo> tenantProcs = processoRepository.findByTenantId(tenantId);
+List<Honorario> response = new ArrayList<>();
+for (Processo p : tenantProcs) {
+    response.addAll(honorarioRepository.findByProcessoId(p.getId()));
+}
+```
+
+This is a live, committed, textbook N+1 (one query for processos, then one additional query *per processo* for its honorário). If the new daily job's "scan honorários for aging alerts" logic is modeled on this existing endpoint — the only place in the codebase today that already does "get all honorários for a tenant" — it inherits the N+1 for every tenant, every run. At a handful of tenants with dozens of processos this is invisible in dev; it will show up as the job's wall-clock time growing linearly with total processo count across all tenants once real data accumulates.
+
+**Why it happens:**
+Nobody has needed "all honorários for a tenant" outside a single processo before, so the only prior art for "loop over processos to reach a related table" happens to be the wrong pattern. A developer skimming the codebase for "how do we usually list financeiro data for a tenant" will find this exact loop first.
+
+**How to avoid:**
+Copy the *correct* pattern instead — it already exists 500 lines earlier in the same file, for the same problem shape (`ResourceController.java:896-911`, comment: `// Batch-load responsáveis to avoid N+1 queries`): fetch the whole collection once with a single `findByTenantId`/`findByProcessoIdIn(Collection<UUID>)`-style batch query, then group into a `Map<UUID, List<X>>` in Java, and look up per-processo from the map instead of re-querying. `HonorarioRepository` currently only exposes `findByProcessoId(UUID)` (singular) — add a `findByProcessoIdIn(Collection<UUID> processoIds)` batch method for the job (and consider fixing the existing `listHonorarios` fallback loop at the same time, since it's the same underlying gap, though that's arguably out of this milestone's scope unless it becomes a blocker).
+
+**Warning signs:**
+- Job code containing a `for` loop over processos with a repository call inside the loop body for prazos, honorários, or users.
+- Any use of `honorarioRepository.findByProcessoId(...)` inside a loop rather than a single `findByProcessoIdIn(...)` call outside it.
+
+**Phase to address:**
+Daily scheduled job phase. Also worth a one-line callout in that phase's plan: "do not model this on `listHonorarios`'s no-filter branch."
+
+---
+
+### Pitfall 8: Mixed entity ID types and non-existent `tenant_id` columns break a naive polymorphic `Notificacao.entidade_id` design
+
+**What goes wrong:**
+The six alert types reference entities with **inconsistent primary key types**: `Processo`, `Prazo`, `Documento`, `ParecerSolicitacao`, `Cliente` use `UUID` (`GenerationType.UUID`); `Evento`, `Honorario`, `Facto` use `Integer` (`GenerationType.IDENTITY`). A `Notificacao` entity that tries to store a single typed FK column (e.g. `UUID entidadeId`) cannot represent an alert about an `Evento` or `Honorario` without a lossy cast/parallel column. Separately, several of these related tables have **no `tenant_id` column of their own** — `Honorario`, `Facto`, `Decisao`, `Testemunha`, `Parte` all rely on *transitive* tenant isolation via their parent `Processo.tenant_id` (an explicit, documented Key Decision from prior phases, chosen to avoid duplicating the column). A `Notificacao` repository query that tries to filter directly by an assumed `tenant_id` column on whatever `entidade_tipo` it's joining against will not compile/work uniformly across alert types, or — worse — someone "fixes" the compile error by joining on the wrong table and silently drops the tenant filter for that alert type specifically.
+
+**Why it happens:**
+This is the first entity in the app that needs to reference *any* of six different entity types generically. Every existing FK relationship in this codebase points at exactly one fixed target type with a known ID type — there is no existing "polymorphic reference" pattern to reach for except one: `AuditLog` (`models/AuditLog.java`), which already solved exactly this problem with `@Column(name = "entidade_id") private String entidadeId;` (a string, accommodating both UUID and Integer PKs) plus a separate `entidadeTipo` discriminator string, and a nullable `processoId` for cases where the audited entity isn't itself a processo.
+
+**How to avoid:**
+Model `Notificacao` the same way `AuditLog` already does: `String entidadeId` (not a typed UUID/Integer column) + `String entidadeTipo` discriminator (`"processo" | "prazo" | "documento" | "honorario" | "parecer" | "fase"`), plus `tenantId` and `destinatarioId` columns owned directly by `Notificacao` itself (do not try to derive tenant scoping transitively through the referenced entity at query time — store it directly on the notification row, since the notification's own tenant is always known at creation time regardless of what it points to).
+
+**Warning signs:**
+- A `Notificacao` entity with a single `UUID entidadeId` (or `Integer entidadeId`) column instead of a `String`.
+- Any repository/query on `Notificacao` that tries to join to "the referenced entity" generically to re-derive `tenant_id`, rather than reading `Notificacao.tenantId` directly.
+
+**Phase to address:**
+Notification infrastructure phase (entity design) — this is a schema decision that's expensive to change once alert-generation phases depend on the shape.
+
+---
+
+### Pitfall 9: No DB-level uniqueness backs the idempotency check — and this project has no Flyway/Liquibase, so a forgotten migration script means the constraint silently doesn't exist in prod
+
+**What goes wrong:**
+This codebase's only existing idempotency tool is an **in-process** `synchronized (XRepository.class)` check-then-act block, used three times today (`ClienteRepository.class` for `numero_cliente`, `FactoRepository.class` for `ordem`, `ParecerVersaoRepository.class` for `numero_versao`). This protects against races *within a single JVM*, but is not a substitute for a real DB constraint, and this project's own commit history shows it explicitly learned this lesson already: the `Honorario` and `Facto` unique constraints were added specifically because "the application-level check-then-act idempotency check... does not protect against a genuine race condition between concurrent requests" (`PROJECT.md` Key Decisions, referencing `backend/migrations/81-add-facto-ordem-unique-constraint.sql` and `82-add-honorario-processo-unique-constraint.sql`). Backend uses `ddl-auto=update` in dev (new constraints appear automatically) but `ddl-auto=validate` in prod (constraints must already exist in the real database, or the app fails to start / silently doesn't enforce them if validation is loose) — and there is **no Flyway/Liquibase**, so any new unique constraint needed on `Notificacao` (e.g. `(tenant_id, destinatario_id, entidade_tipo, entidade_id, risco_notificado)`) requires a hand-written, manually-run SQL script following the existing `backend/migrations/NN-description.sql` numbering convention. If this step is skipped or forgotten during deployment, dev/local testing (where `ddl-auto=update` creates it automatically) will look completely fine, while prod silently has no constraint at all — the exact gap the project already hit and fixed twice before.
+
+**Why it happens:**
+`ddl-auto=update` in dev masks the absence of a migration script; the bug is invisible until someone deploys to prod, and even then it doesn't fail loudly (prod just accepts duplicate-notification inserts it shouldn't, rather than throwing at startup) — unless the constraint is required for `validate` mode to pass, which depends on how strictly that's configured. This is a "looks done" trap: the feature works perfectly in every dev/local demo.
+
+**How to avoid:**
+Write a manual migration script (`backend/migrations/NN-add-notificacao-unique-constraint.sql`) in the same phase that introduces the `Notificacao` entity, mirroring `81-add-facto-ordem-unique-constraint.sql`/`82-add-honorario-processo-unique-constraint.sql`, and add it to the deployment checklist/runbook exactly like those two were. Pair the DB constraint with a `try { save(...) } catch (DataIntegrityViolationException e) { /* already exists, ignore */ }` at the application layer (Spring's DB-agnostic translated exception for constraint violations) as defense in depth alongside — not instead of — the constraint.
+
+**Warning signs:**
+- A new unique constraint added only via `@Table(uniqueConstraints = ...)` on the entity with no corresponding file in `backend/migrations/`.
+- Deployment runbook/checklist for this milestone with no explicit "run migration NN before/during deploy" step.
+
+**Phase to address:**
+Notification infrastructure phase (entity + constraint), verified again at the milestone's final integration-audit step (this project already runs a milestone-level audit before shipping — this is exactly the kind of gap that audit exists to catch).
+
+---
+
+### Pitfall 10: Reassignment endpoint and its notification trigger live in two different controllers with no shared template — easy to build one and skip the other's guard rails
+
+**What goes wrong:**
+The closest existing precedent for "reassign an owner FK with validation and a status guard" is `PUT /pareceres/{id}/atribuir` in `ParecerController.java` (lines 235-274): it validates the new `advogadoId` belongs to the tenant *and* holds the `ADVOGADO` role (`validateAdvogado(...)`), and explicitly blocks reassignment when `status == "CONCLUIDO"`. The brand-new `processo` responsável-reassignment endpoint being built this milestone lives in a **different file** (`ResourceController.java`), addresses a structurally identical problem, but has no shared base class/utility forcing parity. Two distinct risks follow: (a) the new endpoint might accept any UUID as the new `responsavelId` without validating tenant membership/role (the existing `createProcesso` path already validates this at creation time — `ResourceController.java:1474-1480` — so skipping it on the *update* path would be an inconsistency introduced by this milestone, not a pre-existing gap); (b) whoever wires the "processo atribuído" notification into the new endpoint may correctly do so there, then forget that "parecer atribuído" needs the identical hook added to the pre-existing, unrelated-looking `atribuirAdvogado` method in the other file (that endpoint currently has zero notification side effects — it was explicitly out of scope in v2.6, per `PROJECT.md`: *"NOTF-05/06/07 ... removidas do âmbito v1 da v2.6"* — meaning this milestone must actively go back and add the hook there, not just build it fresh in the new endpoint).
+
+**Why it happens:**
+The two reassignment flows are conceptually parallel but physically distant (different controller files, different feature history — one is brand new, one is 4 milestones old and easy to forget exists), so nothing forces an implementer touching one to notice the other.
+
+**How to avoid:**
+Explicitly mirror `atribuirAdvogado`'s shape for the new endpoint: validate new `responsavelId` belongs to tenant (reuse the same `userRepository.findById(...).getTenantId().equals(tenantId)` check already used at `ResourceController.java:1475-1480`), consider whether an analogous state guard is needed (e.g., can responsável be reassigned on an `ENCERRADO` processo?), and — in the same phase or an explicitly linked phase — add the matching notification-creation call to **both** `ResourceController`'s new endpoint **and** `ParecerController.atribuirAdvogado`. Treat "parecer atribuído" and "processo atribuído" as one shared checklist item, not two independent ones, precisely because they're easy to treat as unrelated given the file separation.
+
+**Warning signs:**
+- A PR/phase that only touches `ResourceController.java` for "processo atribuído" notifications with no corresponding change to `ParecerController.java` for "parecer atribuído."
+- The new reassignment endpoint accepting a `responsavelId` with no tenant/role validation (compare directly against `createProcesso`'s existing check).
+
+**Phase to address:**
+"Reatribuição de responsável de processo" phase should explicitly cross-reference the "alerta de parecer atribuído" phase (or be sequenced so both notification hooks are verified together in the milestone's integration-audit step).
+
+---
+
+### Pitfall 11: The project's own proven repeat bug — cross-phase contract drift — applies directly to the new query params, DTO field names, and reassignment endpoint contract
+
+**What goes wrong:**
+This exact project has hit "each side looked correct in isolation, the full contract was broken" **three times** in its documented history: (1) v2.4 — backend emitted camelCase, frontend read snake_case, for newly-added fields (fixed with surgical `@JsonProperty`, `PROJECT.md` Key Decisions); (2) v2.9 milestone audit — `GET /honorarios?processo_id=X` and `GET /documentos?processo_id=X` both silently ignored the `processo_id` filter server-side while the frontend hook happily sent it, returning whole-tenant data instead of per-processo data, only caught by a milestone-level audit; (3) v2.5→v2.6 — `pesquisar()` lived in the wrong controller mapping (`ParecerController` vs. dedicated `ParecerPesquisaController`), making the documented route unreachable, undetected by unit tests or isolated review. This milestone introduces multiple new contract surfaces at once: new query params on `/notificacoes` (likely `lida`, `categoria`, `desde`, pagination), new field names in the `Notificacao` response DTO consumed by the bell + history page, and the brand-new reassignment endpoint's exact route/method/body shape. Any one of these can repeat the same failure mode — frontend sends a filter the backend accepts syntactically but ignores functionally, or reads a field name the backend never emits.
+
+**Why it happens:**
+Spring silently accepts unknown/unused `@RequestParam`s and unmatched JSON fields deserialize to `null` without error; TypeScript types are hand-written to *match an assumption* about the backend response rather than generated from it — nothing fails loudly at compile time or on first manual test if a name is off by a naming-convention or the backend never wired a param into its filtering logic. Each side passes its own isolated tests/review.
+
+**How to avoid:**
+Apply the same technique this project already uses to catch this class of bug: at the milestone-level audit (which this project already performs as a standard step, per its `.planning/milestones/vX-MILESTONE-AUDIT.md` history), explicitly grep every `@RequestParam`/query-string param the frontend hook constructs (`use-notificacoes.ts`'s `URLSearchParams`/query-string building) against the backend controller method's actual parameter list, and every field name the frontend's TypeScript type reads against what the backend DTO/`Map.of(...)`/`LinkedHashMap` response actually populates — do not accept "the frontend compiles and the backend returns 200" as sufficient verification. Given three prior instances, this warrants an explicit named check in this milestone's plan/audit rather than being left implicit.
+
+**Warning signs:**
+- A frontend hook building a query string parameter the corresponding `@GetMapping` method signature doesn't declare.
+- A frontend TypeScript type for the notification/reassignment response containing a field name not visibly constructed in the backend response map/DTO.
+- Any phase marked "done" based only on "build passes" / "manual click-through of the happy path," without an explicit request/response byte-level check.
+
+**Phase to address:**
+Cross-cutting — call out explicitly in the plan for (a) the notifications API phase, (b) the reassignment endpoint phase, and (c) the milestone-level integration audit (this project's existing practice, which caught this exact bug class twice before).
+
+---
+
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|--------------------|-----------------|-------------------|
+| No pagination on `GET /notificacoes` (this app has zero existing `Pageable`/`Page<>` usage anywhere — confirmed via codebase search) | Matches every other list endpoint's simplicity; ships faster | Unread history grows unbounded per user; `/notificacoes` page and its query get slower as months of history accumulate | Acceptable for v1 at current law-firm scale (tens of users, hundreds of processos); revisit if history isn't ever archived/pruned |
+| In-process `synchronized(NotificacaoRepository.class)` as the *only* duplicate-insert guard (no DB unique constraint) | Fast to write, matches 3 existing precedents in this codebase (Cliente, Facto, ParecerVersao) | Does not protect against a future horizontally-scaled deployment (currently single-instance, confirmed via `docker-compose.prod.yml`); the project already learned this exact lesson for Facto/Honorario and added DB constraints afterward | Acceptable only paired with the DB unique constraint (Pitfall 9) — never acceptable alone, per the project's own established precedent |
+| Denormalized/snapshotted notification text (title/body baked in at creation, not a live join to current entity state) | Immune to the "processo reassigned, notification silently relabels itself" problem (see Pitfall below); simple to implement | Renaming/correcting the source entity later won't retroactively fix historical notification text | Always acceptable here — this is the *recommended* choice, not just a shortcut, given the reassignment-mid-lifecycle risk |
+| Query-time `OR user has ROLE_ADMIN` instead of fan-out-at-creation for ADMIN visibility | Less code, no need to enumerate admins per event | Breaks independent per-admin read state the moment a tenant has 2+ ADMIN users (Pitfall 3) | Never acceptable once more than one ADMIN per tenant is possible — seed data already creates exactly this scenario |
+
+## Integration Gotchas
+
+Common mistakes when connecting the new pieces to the existing app.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|-----------------|--------------------|
+| New reassignment endpoint ↔ existing `createProcesso` responsavelId validation | Update path accepts any UUID without the tenant/role check `createProcesso` already enforces at creation | Mirror the exact check at `ResourceController.java:1474-1480`; do not treat create-time validation as sufficient for the new update path |
+| New reassignment endpoint ↔ `ParecerController.atribuirAdvogado` | Treated as unrelated because they live in different files; only one gets a notification hook, a status guard, or tenant/role validation | Explicitly diff the two implementations against each other before considering either "done" (Pitfall 10) |
+| Frontend `KNOWN_SCOPES` (`web/src/lib/permissions.ts`) ↔ backend `seedRbac()` permKeys (`DatabaseSeeder.java`) | New `notificacoes:*` scope added to only one side (e.g., backend seeds the permission and grants it, but frontend never adds `"notificacoes"` to `KNOWN_SCOPES`, so `hasScopedPermission` always returns false and the UI never shows what the backend would allow — or vice versa) | Add the scope string to both registries in the same commit; this project has a documented history of exactly this two-registry drift for other concerns (query filters, route mappings) — treat RBAC scope as the same risk class |
+| Daily job ↔ consolidated risco/threshold logic (this milestone's own stated goal) | Job re-implements its own "is this critical" check instead of calling the new shared function, recreating a 5th inconsistent computation instead of eliminating the other 4 | Job must be the *first and only* caller of the new consolidated function from a non-request context — verify by grepping for any risco-like inline computation left inside the job |
+| Notification bell polling ↔ mutations the user just performed (mark-as-read, reassign, etc.) | Bell's unread count only updates on the next 30-60s poll tick, so a user who just read/reassigned something sees a stale badge until the interval fires | `invalidateQueries` (or `setQueryData`) for the notifications query key from every mutation that could affect it, exactly as `useToggleEventoConcluido`/`useSetEventoConcluido` already invalidate `["eventos","upcoming"]` in `use-eventos.ts` — reuse that established pattern |
+
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|-----------------|
+| Per-processo repository calls inside the daily job's loop (the `listHonorarios` fallback anti-pattern, `ResourceController.java:2568-2575`) | Job wall-clock time grows linearly with total processo count across all tenants; invisible with seed data, visible after months of real usage | Batch-load per tenant once (`findByTenantId`/new `findByProcessoIdIn`), group in a `Map`, exactly like the existing `listProcessos` prazo-enrichment (`ResourceController.java:896-911`) | Noticeable once total processos across all tenants reaches the low hundreds; the existing `/honorarios` no-filter endpoint already exhibits this today at current data volume, just not yet painfully |
+| Resolving "which users are ADMIN in this tenant" inside the innermost per-entity loop instead of once per tenant | Redundant repeated `findByTenantIdAndRoleName` calls, one per processo/prazo/honorário instead of one per tenant | Hoist the ADMIN lookup to once per tenant iteration, cache in a local variable/list for that tenant's processing | Low absolute cost at this scale (few tenants, few admins) but easy and free to avoid — do it right from the start |
+| `User.roles`/`User.permissions` are `FetchType.EAGER` (`User.java:54-67`) | Every `findAllById(...)` batch-load of users (e.g., resolving recipients across many processos) eagerly pulls roles+permissions collections per user | Not a true N+1 given Hibernate's batching, but worth confirming the job doesn't re-fetch the same `User` object repeatedly inside a loop instead of reusing a pre-built map (same principle as the `responsaveisMap` pattern already in `listProcessos`) | Only matters once user/tenant counts grow well beyond current seed scale |
+
+## Security Mistakes
+
+Domain-specific issues beyond general web security.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| `Notificacao` read/mark-read endpoints scoped by tenant only (copying the pattern used by every other entity in this app) | User A can view or mark-as-read User B's notifications within the same tenant — a real, silent cross-user leak (Pitfall 2) | Every `Notificacao` query/mutation must check `destinatarioId == currentUserId` **in addition to** `tenantId == currentTenantId` |
+| Notification detail/click-through re-validates "is this still MY processo" (`responsavelId == currentUser`) instead of tenant-only, after a reassignment has happened | The user who *used to be* responsável gets a 403 opening their own historical notification, because the underlying processo's `responsavelId` has since changed — inconsistent with how this codebase authorizes viewing every other already-created record (tenant-only, never retroactive-ownership) | Click-through/detail fetch for a referenced entity from a notification should use the same tenant-only check every other detail endpoint in this codebase already uses (e.g. `!processo.getTenantId().equals(getTenantId())`), not an ownership/assignment check |
+| New `notificacoes:*` permission scope granted asymmetrically (e.g., backend allows TECNICO but frontend's `KNOWN_SCOPES`/gating never surfaces it, or vice versa) | Either a silently-broken feature for a role that should have access, or a role sees UI it can't actually use (confusing, not exactly a leak, but a contract violation of this project's stated "both layers must agree" rule) | Add the scope to `DatabaseSeeder.seedRbac()` (permKeys list + explicit per-role grant arrays) and `web/src/lib/permissions.ts` (`KNOWN_SCOPES`) in the same change, and verify against the actual role that should receive it (likely all four seeded roles, since notifications are inherently personal — not gated the way `financeiro`/`rbac:manage` are) |
+| Job running with no `Authentication` accidentally "fixed" by hardcoding a synthetic system/admin `UserPrincipal` and pushing it into `SecurityContextHolder` for the job's thread | Introduces a standing "god-mode" principal pattern that could be misused or left behind for other background code later, and duplicates/diverges from the real JWT-derived principal shape | Don't authenticate the background thread at all — the job should call tenant-scoped repository methods directly with an explicit `tenantId` parameter (see Pitfall 1), never manufacture a fake `Authentication` to satisfy `@PreAuthorize`-guarded service methods; keep `@PreAuthorize`-guarded methods for HTTP-triggered paths only, and give the job its own unguarded internal service methods |
+
+## UX Pitfalls
+
+Common user experience mistakes for this specific feature.
+
+| Pitfall | User Impact | Better Approach |
+|---------|--------------|-------------------|
+| Global `refetchOnWindowFocus: false` (`web/src/app/providers.tsx:14`, set app-wide, presumably deliberately for other reasons) silently applies to the new notifications query too | User backgrounds the tab, returns after a few minutes; the bell shows a stale unread count for up to a full poll interval (30-60s) because nothing triggers a catch-up fetch on refocus — TanStack Query v5's `refetchInterval` also pauses while the tab is hidden by default, so no background accumulation happens either, it's specifically the *return-to-tab* window that's stale | Explicitly override `refetchOnWindowFocus: true` (or `"always"`) as a **per-query** option on the new `useNotificacoes`/`useUnreadCount` hook, rather than changing the global default (which was presumably disabled for a reason relevant to other pages) |
+| No existing polling precedent anywhere in this codebase (confirmed: zero `refetchInterval` usage today) | Whoever implements the bell may reach for a hand-rolled `useEffect(() => { const t = setInterval(...); return () => clearInterval(t) }, [])` instead of the built-in `refetchInterval` option, risking leaked/duplicate timers on remount (React Strict Mode double-invoke in dev, or route remounts) and reimplementing visibility handling TanStack Query already provides for free | Use TanStack Query's native `refetchInterval` (with an explicit `refetchOnWindowFocus` override as above) — do not hand-roll `setInterval` |
+| `apiFetch` (`web/src/lib/api.ts:43-45`) triggers a `toast.error(...)` for every non-401/403 error response | A transient backend hiccup, brief container restart during a deploy, or any 5xx during a poll cycle will toast-spam the user every 30-60s until it recovers — an intrusive, repeated error banner for a background feature the user didn't explicitly action | Suppress or rate-limit toast errors specifically for the background polling query (e.g., pass a flag/option so polling failures log quietly or show a subtle inline indicator instead of the shared toast pipeline used for user-initiated actions) |
+| Reassigning a processo's responsável leaves the previous responsável's already-created notifications about that processo untouched (no retroactive revoke) | Mildly confusing if the old responsável keeps seeing "prazo crítico" alerts for a processo they're no longer responsible for, generated *before* the reassignment | Acceptable given this milestone's explicit no-extra-complexity philosophy (Out of Scope: no team broadcast, no preferences) — but the *daily job's next run* should stop generating *new* alerts to the old responsável once it re-reads the current `responsavelId`, since the job always reads fresh state per Pitfall highlighted for race conditions; only pre-existing notifications remain as historical record, which is fine as a conscious choice, not an oversight |
+
+## "Looks Done But Isn't" Checklist
+
+Verify each of these explicitly before considering the relevant phase complete — none of them fail an isolated demo, only a closer look.
+
+- [ ] **Scheduled job:** `@EnableScheduling` is actually present on a config/application class. The `@Scheduled` annotation is a silent no-op without it — no error, no log, the job simply never runs.
+- [ ] **Scheduled job:** uses `cron`, not `fixedRate`/`fixedDelay` — verify it does *not* re-fire immediately after a container restart/redeploy (Pitfall 5).
+- [ ] **Scheduled job:** does not call `getTenantId()` or anything that transitively touches `SecurityContextHolder` (Pitfall 1) — verify by actually invoking the job path in a test/manual trigger with no `Authentication` present, not just via an authenticated HTTP wrapper endpoint.
+- [ ] **Scheduled job:** wrapped in a top-level try/catch that isolates one bad tenant/entity from aborting the whole run (Pitfall 6).
+- [ ] **Notificacao entity:** the idempotency/dedup check is backed by an actual DB unique constraint with a corresponding file in `backend/migrations/`, not just in-process `synchronized` logic (Pitfall 9).
+- [ ] **Notificacao queries:** every read/write filters by `destinatario_id` (or the ADMIN fan-out equivalent) *in addition to* `tenant_id` — grep for any `NotificacaoRepository` method that only takes a `tenantId` parameter (Pitfall 2).
+- [ ] **Threshold tracking:** a persisted "last notified risco level" exists per (entity, recipient) and is actually read/compared before inserting — not just "is currently critical" (Pitfall 4).
+- [ ] **RBAC:** new `notificacoes:*` scope(s) exist in `DatabaseSeeder.seedRbac()` (permKeys + explicit per-role grant) **and** `web/src/lib/permissions.ts` `KNOWN_SCOPES`, granted to the roles actually intended to use notifications (likely all seeded roles, not just ADMIN).
+- [ ] **Reassignment endpoint:** validates new `responsavelId` belongs to the tenant (mirrors `createProcesso`'s existing check, `ResourceController.java:1474-1480`) — not just "accepts any UUID."
+- [ ] **Reassignment endpoint + parecer atribuição:** both `ResourceController`'s new endpoint and `ParecerController.atribuirAdvogado` emit their respective notification — verify explicitly, since they live in different files and are easy to address only one of (Pitfall 10).
+- [ ] **Frontend polling hook:** explicit `refetchOnWindowFocus` override present (not silently inheriting the app-wide `false`), and uses `refetchInterval` rather than a hand-rolled `setInterval`.
+- [ ] **Cross-phase contract:** every query param the frontend sends to `/notificacoes` (and the reassignment endpoint's request body) is grepped against what the backend controller method actually declares/reads — the project's own documented repeat bug (Pitfall 11).
+- [ ] **Mutation → polling interaction:** mark-as-read and reassignment mutations invalidate the relevant notifications query key, matching the existing `useToggleEventoConcluido`/`useSetEventoConcluido` invalidation pattern in `use-eventos.ts`.
+
+## Recovery Strategies
+
+When pitfalls occur despite prevention, how to recover.
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|-----------------|-------------------|
+| Duplicate notifications already inserted (missing threshold-tracking or wrong `@Scheduled` trigger type) | LOW-MEDIUM | Write a one-time cleanup migration keeping the earliest row per `(tenant_id, destinatario_id, entidade_tipo, entidade_id, risco)`, then retroactively backfill the "last notified state" tracking table from the surviving rows' max risco per entity+recipient, then add the missing DB unique constraint and fix the trigger type |
+| Cross-user notification leak discovered (missing recipient filter, Pitfall 2) | LOW | Add the missing `destinatario_id` filter to the offending repository method/endpoint immediately — same low-cost pattern this project already used twice to fix the analogous tenant-filter gaps in `/honorarios` and `/documentos` "in the same session" per the v2.9 milestone audit |
+| RBAC scope drift discovered late (backend/frontend registries out of sync) | LOW | Grep-audit both registries side by side (`seedRbac()` permKeys + role grants vs. `KNOWN_SCOPES`), add the missing entries — same low-cost fix pattern already used for the `pareceres` route-mapping bug, "corrected in the same session" |
+| Scheduled job silently stopped running after an uncaught exception (Pitfall 6) | LOW-MEDIUM | Add the top-level try/catch retroactively, redeploy, manually trigger one catch-up run (e.g., a temporary admin-only HTTP endpoint that invokes the same internal job method) to close the gap in missed notifications, or accept the gap and let the next scheduled run resume normally |
+| `Notificacao` schema needs to change from a typed FK to `String entidadeId` after alert-generation phases already depend on the wrong shape (Pitfall 8) | MEDIUM | Requires a data migration (cast/backfill existing rows) and updating every alert-generation call site — cheapest if caught during the infrastructure phase's own review, expensive if caught after multiple alert types are already wired against the wrong column type |
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls. Phase names below mirror the feature language already used in `PROJECT.md`'s target-features list, for direct mapping by the roadmapper.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|--------------------|-----------------|
+| Per-recipient scoping omitted (#2) | Infraestrutura de notificações persistida (entidade + API) | Two independent test users in the same tenant see different notification lists; mark-as-read by one never affects the other |
+| ADMIN fan-out vs shared read state (#3) | Infraestrutura de notificações persistida (entidade + API) | Seed a tenant with 2 ADMIN users; verify each has an independent read state for an ADMIN-targeted alert |
+| Mixed PK types / transitive tenant isolation (#8) | Infraestrutura de notificações persistida (entidade design) | `Notificacao` rows exist and resolve correctly for at least one UUID-keyed entity (Processo) and one Integer-keyed entity (Evento/Honorario) |
+| Missing DB-level idempotency constraint + missing migration script (#9) | Infraestrutura de notificações persistida (entidade + migration) | A file exists in `backend/migrations/` for the new constraint; prod deployment runbook references it |
+| `getTenantId()`/SecurityContext reuse in background thread (#1) | Alerta de prazos de processos e calendário crítico (job diário) | Job's internal methods take `tenantId` as an explicit parameter end-to-end; manually invoke the job's core logic outside an authenticated request and confirm no NPE |
+| Notify-every-run instead of on-crossing (#4) | Alerta de prazos de processos e calendário crítico (job diário) | Run the job twice on consecutive simulated days against unchanged data; second run produces zero new notifications for unchanged items |
+| Wrong `@Scheduled` trigger type (#5) | Alerta de prazos de processos e calendário crítico (job diário) | Restart the backend container mid-day in a test/staging environment; confirm the job does not fire again until its actual scheduled time |
+| Uncaught exception kills all future runs (#6) | Alerta de prazos de processos e calendário crítico (job diário) | Inject one deliberately malformed row (e.g., orphaned processo_id) in a test tenant; confirm other tenants still get notifications that same run, and the job still runs the next day |
+| N+1 query pattern in the scan (#7) | Alerta de prazos de processos e calendário crítico (job diário) / Alerta de prazos de honorários | Query count for a single job run scales with tenant count, not with total processo/honorário count across all tenants |
+| Reassignment endpoint ↔ parecer atribuição parity (#10) | Alerta de processo atribuído + fluxo de reatribuição de responsável | Both `ResourceController`'s new endpoint and `ParecerController.atribuirAdvogado` verified to emit their respective notification in the same review pass |
+| Cross-phase contract drift (#11) | Cross-cutting — every phase touching `/notificacoes` or the reassignment endpoint, closed out at the milestone-level integration audit | Explicit grep-diff of frontend-sent params/fields vs. backend-declared params/fields, performed as a named audit step (not implied by "build passes") |
+| Stale unread badge after backgrounding (UX) | Sino + página `/notificacoes` (frontend) | Manually background the tab past one poll interval, refocus, confirm the badge updates promptly rather than waiting a further full interval |
+| Toast spam on polling errors (UX) | Sino + página `/notificacoes` (frontend) | Simulate a backend 500/restart while polling is active; confirm the user is not shown a repeated toast every poll cycle |
 
 ## Sources
 
-- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (read directly: lines 60-1260, 1521-1660, 2171-2290) — formalizar/intake/conflict-check logic, Parte/Fase/Movimentacao/Honorario CRUD patterns, tenant-check precedents
-- `backend/src/main/java/com/lexcv/models/Processo.java`, `Honorario.java`, `Documento.java`, `Cliente.java` — entity field shapes, `@JsonProperty`/`@Column` conventions, `honorariosPropostos` JSON-converted field
-- `web/src/hooks/use-processos.ts` (lines 1-115) — `normalizeProcesso`/`toProcessoApiPayload` manual mapping layer (root cause of Pitfall 1)
-- `web/src/schemas/processos.ts` — `processoFormSchema` current field requiredness
-- `web/src/app/(dashboard)/processos/novo/page.tsx` — 3-step intake→conflict-check→formalizar wizard implementation
-- `web/src/app/(dashboard)/clientes/[id]/ficha/page.tsx` — existing `window.print()` + `fmt()`/`BLANK` null-guard pattern, direct precedent for Termo de Honorários
-- `.planning/PROJECT.md` — Key Decisions log (Phase 79 ownership-validation fix, `@JsonProperty` cirúrgico decision, `dados_tipo` flattening history) and milestone-provided pitfall history
+**Codebase (HIGH confidence — read directly, 2026-07-08):**
+- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (getTenantId at 115-119; computeRisco at 1397-1404; processo enrichment/batch-load pattern at 896-958; responsavelId create-time validation at 1474-1480; updateProcesso with no responsavelId handling at 990-1012; N+1 anti-pattern in listHonorarios at 2558-2577; dashboard prazos críticos at 2855-2867; eventos/upcoming at 2246-2270; cliente merge reassignment pattern at 759-827)
+- `backend/src/main/java/com/lexcv/controllers/ParecerController.java` (atribuirAdvogado reassignment precedent, 235-274)
+- `backend/src/main/java/com/lexcv/models/Processo.java`, `Evento.java`, `Prazo.java`, `Honorario.java`, `Documento.java`, `AuditLog.java`, `ParecerSolicitacao.java`, `User.java`, `Tenant.java`
+- `backend/src/main/java/com/lexcv/repositories/UserRepository.java` (`findByTenantIdAndRoleName`), `HonorarioRepository.java`, `TenantRepository.java`
+- `backend/src/main/java/com/lexcv/config/UserPrincipal.java` (ADMIN synthetic permissions at login time)
+- `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (`seedRbac()`, role/permission grants)
+- `backend/migrations/74-cleanup-nif-documento-tipo.sql`, `81-add-facto-ordem-unique-constraint.sql`, `82-add-honorario-processo-unique-constraint.sql` (manual migration convention)
+- `web/src/app/providers.tsx` (global `refetchOnWindowFocus: false`), `web/src/lib/api.ts` (`apiFetch` toast-on-error behavior), `web/src/lib/permissions.ts` (`KNOWN_SCOPES`), `web/src/hooks/use-eventos.ts` (existing invalidation pattern), `web/src/hooks/use-processos.ts` (mutation/invalidation pattern), `web/src/components/shared/notification-bell.tsx` (current computed-only bell)
+- `docker-compose.prod.yml` (single-instance deployment, `restart: unless-stopped`)
+- `.planning/PROJECT.md` Key Decisions log (documented history of the camelCase/snake_case bug, the twice-repeated silently-ignored-filter bug, the `pesquisar()` route-mapping bug, the Facto/Honorario constraint-race lesson, the NOTF-05/06/07 deferral)
+
+**External (verified 2026-07-08):**
+- [Task Execution and Scheduling — Spring Boot official docs](https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html) — default scheduler thread pool size is 1
+- [SimpleAsyncTaskScheduler: task with fixed delay stops working after unhandled exception · Issue #31749 · spring-projects/spring-framework](https://github.com/spring-projects/spring-framework/issues/31749) — official issue tracker confirmation of the silent-stop-after-exception behavior
+- [The @Scheduled Annotation in Spring — Baeldung](https://www.baeldung.com/spring-scheduled-tasks)
+- [Why Your @Scheduled Tasks Might Be Failing Silently in Spring Boot](https://medium.com/@himanshu675/why-your-scheduled-tasks-might-be-failing-silently-in-spring-boot-and-how-to-stop-it-%EF%B8%8F-86335cde37bc)
+- [Window Focus Refetching — TanStack Query React Docs (v5)](https://tanstack.com/query/v5/docs/react/guides/window-focus-refetching)
+- [Polling — TanStack Query React Docs](https://tanstack.com/query/latest/docs/framework/react/guides/polling) — `refetchInterval` pauses by default when the tab loses focus; `refetchIntervalInBackground` overrides this
+
+---
+*Pitfalls research for: LexCV v2.10 Notificações e Alertas*
+*Researched: 2026-07-08*
