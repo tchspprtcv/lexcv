@@ -2280,6 +2280,14 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
         }
+        // Validate prioridade against allowed set (WR-02, 85-REVIEW.md) — mirrors createPrazo's
+        // allow-list so Evento.prioridade can't silently fall back to the strict 3-day threshold
+        // in RiscoPrazoService via a typo or free-text value.
+        Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
+        if (evento.getPrioridade() != null && !prioridadesValidas.contains(evento.getPrioridade().toUpperCase())) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
+        }
         evento.setTenantId(getTenantId());
         return ResponseEntity.status(HttpStatus.CREATED).body(eventoRepository.save(evento));
     }
@@ -2297,6 +2305,17 @@ public class ResourceController {
         if (start != null && end != null && end.isBefore(start)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
+        }
+
+        // Validate prioridade against allowed set (WR-02, 85-REVIEW.md) — mirrors createPrazo's
+        // allow-list; only checked when the payload actually supplies a new value, consistent
+        // with the partial-update semantics below.
+        if (payload.getPrioridade() != null) {
+            Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
+            if (!prioridadesValidas.contains(payload.getPrioridade().toUpperCase())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
+            }
         }
 
         // Partial update: only overwrite fields explicitly provided in the payload.
