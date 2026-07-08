@@ -217,12 +217,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     defaultValues: { tipo: undefined, nome: "", nif: undefined },
   });
   const [parteServerError, setParteServerError] = React.useState<string | null>(null);
+  const [addParteModal, setAddParteModal] = React.useState(false);
 
   const faseForm = useForm<ProcessoFaseFormValues>({
     resolver: zodResolver(processoFaseFormSchema),
     defaultValues: { nome: "" },
   });
   const [faseServerError, setFaseServerError] = React.useState<string | null>(null);
+  const [addFaseModal, setAddFaseModal] = React.useState(false);
 
   const movForm = useForm<ProcessoMovimentacaoFormValues>({
     resolver: zodResolver(processoMovimentacaoFormSchema),
@@ -339,6 +341,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     try {
       await addParte.mutateAsync(values satisfies ProcessoParteCreateRequest);
       parteForm.reset({ tipo: undefined, nome: "", nif: undefined });
+      setAddParteModal(false);
       toast.success("Parte adicionada ao processo.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao adicionar parte";
@@ -353,6 +356,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     try {
       await addFase.mutateAsync(values satisfies ProcessoFaseCreateRequest);
       faseForm.reset({ nome: "" });
+      setAddFaseModal(false);
       toast.success("Fase adicionada ao processo.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao adicionar fase";
@@ -1264,84 +1268,107 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
               </CardContent>
             </Card>
           ) : tab === "partes" ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {canEditProcessos ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Adicionar parte</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4" onSubmit={parteForm.handleSubmit(onSubmitParte)}>
-                      <div className="space-y-2">
-                        <Label htmlFor="parte_nome">Nome</Label>
-                        <Input id="parte_nome" {...parteForm.register("nome")} />
-                        {parteForm.formState.errors.nome ? (
-                          <p className="text-sm text-red-600">{parteForm.formState.errors.nome.message}</p>
-                        ) : null}
-                      </div>
-
-                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="parte_tipo">Tipo</Label>
-                          <Input id="parte_tipo" {...parteForm.register("tipo")} placeholder="Ex.: Autor / Réu" />
-                          {parteForm.formState.errors.tipo ? (
-                            <p className="text-sm text-red-600">{parteForm.formState.errors.tipo.message}</p>
-                          ) : null}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="parte_nif">NIF</Label>
-                          <Input id="parte_nif" {...parteForm.register("nif")} />
-                          {parteForm.formState.errors.nif ? (
-                            <p className="text-sm text-red-600">{parteForm.formState.errors.nif.message}</p>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      {parteServerError ? <p className="text-sm text-red-600">{parteServerError}</p> : null}
-
-                      <Button type="submit" disabled={parteForm.formState.isSubmitting || addParte.isPending}>
-                        {parteForm.formState.isSubmitting || addParte.isPending ? "A guardar..." : "Adicionar"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              ) : null}
-
-              <Card>
-                <CardHeader>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <CardTitle>Partes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!partes.data?.length ? (
-                    <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem partes.</div>
-                  ) : (
-                    <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                      <table className="w-full min-w-[400px] text-sm">
-                        <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                          <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                            <th className="py-2 pr-4 font-medium">Tipo</th>
-                            <th className="py-2 pr-4 font-medium">Nome</th>
-                            <th className="py-2 pr-4 font-medium">NIF</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {partes.data.map((p) => (
-                            <tr
-                              key={p.id}
-                              className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                  {canEditProcessos ? (
+                    <Dialog open={addParteModal} onOpenChange={setAddParteModal}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" className="rounded-none">
+                          Adicionar Parte
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Adicionar Parte</DialogTitle>
+                        </DialogHeader>
+                        <form className="space-y-4" onSubmit={parteForm.handleSubmit(onSubmitParte)}>
+                          <div className="space-y-2">
+                            <Label htmlFor="parte_nome">Nome</Label>
+                            <Input id="parte_nome" className="rounded-none" {...parteForm.register("nome")} />
+                            {parteForm.formState.errors.nome ? (
+                              <p className="text-sm text-red-600">{parteForm.formState.errors.nome.message}</p>
+                            ) : null}
+                          </div>
+
+                          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="parte_tipo">Tipo</Label>
+                              <Input
+                                id="parte_tipo"
+                                className="rounded-none"
+                                {...parteForm.register("tipo")}
+                                placeholder="Ex.: Autor / Réu"
+                              />
+                              {parteForm.formState.errors.tipo ? (
+                                <p className="text-sm text-red-600">{parteForm.formState.errors.tipo.message}</p>
+                              ) : null}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="parte_nif">NIF</Label>
+                              <Input id="parte_nif" className="rounded-none" {...parteForm.register("nif")} />
+                              {parteForm.formState.errors.nif ? (
+                                <p className="text-sm text-red-600">{parteForm.formState.errors.nif.message}</p>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {parteServerError ? <p className="text-sm text-red-600">{parteServerError}</p> : null}
+
+                          <DialogFooter>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-none"
+                              onClick={() => setAddParteModal(false)}
                             >
-                              <td className="py-2 pr-4">{p.tipo ?? "—"}</td>
-                              <td className="py-2 pr-4 font-medium">{p.nome}</td>
-                              <td className="py-2 pr-4">{p.nif ?? "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                              Cancelar
+                            </Button>
+                            <Button
+                              type="submit"
+                              className="rounded-none"
+                              disabled={parteForm.formState.isSubmitting || addParte.isPending}
+                            >
+                              {parteForm.formState.isSubmitting || addParte.isPending ? "A guardar..." : "Adicionar"}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!partes.data?.length ? (
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem partes.</div>
+                ) : (
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <table className="w-full min-w-[400px] text-sm">
+                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                          <th className="py-2 pr-4 font-medium">Tipo</th>
+                          <th className="py-2 pr-4 font-medium">Nome</th>
+                          <th className="py-2 pr-4 font-medium">NIF</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {partes.data.map((p) => (
+                          <tr
+                            key={p.id}
+                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                          >
+                            <td className="py-2 pr-4">{p.tipo ?? "—"}</td>
+                            <td className="py-2 pr-4 font-medium">{p.nome}</td>
+                            <td className="py-2 pr-4">{p.nif ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           ) : tab === "fases" ? (
             <div className="grid gap-4 lg:grid-cols-2">
               {canEditProcessos ? (
