@@ -280,7 +280,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 2/2 | Complete    | 2026-07-07 |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 5/5 | Complete    | 2026-07-08 |
 | 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 1/1 | Complete    | 2026-07-08 |
-| 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete   | 2026-07-08 |
+| 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 0/TBD | Not started | - |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 0/TBD | Not started | - |
 | 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
