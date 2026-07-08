@@ -176,7 +176,8 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
   1. Um novo serviço injetável `RiscoPrazoService` calcula o risco (ok/próximo/vencido) para `Prazo` e, com um método análogo, para `Evento` — substituindo por completo o método privado `computeRisco()` e as 3 implementações ad-hoc distintas hoje baseadas em `Evento` (dashboard, `/processos/dashboard`, `/eventos/upcoming`)
   2. Todos os pontos de consumo já existentes (dashboard KPI, listagem/criação/conclusão de prazos, listagem de processos enriquecida) continuam a devolver exatamente os mesmos resultados de antes da refatoração, para os mesmos dados — zero regressão observável
   3. `Evento` passa a ser avaliado pela mesma tabela de limiares (7 dias se prioridade ALTA, 3 dias caso contrário) já usada por `Prazo`, em vez das 3 janelas fixas e inconsistentes usadas hoje
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 85-01-PLAN.md — Extrair RiscoPrazoService (@Service injetável) + repontar os 8 call sites de Prazo e os 3 blocos de Evento em ResourceController, apagando o método privado computeRisco
 
 #### Phase 86: Infraestrutura de Notificações — Entidade, API e Targeting
 
@@ -275,7 +276,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 82. Backend — Honorário Automático | v2.9 | 1/1 | Complete    | 2026-07-07 |
 | 83. Frontend — Tipos, Schemas e Hooks | v2.9 | 2/2 | Complete    | 2026-07-07 |
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 5/5 | Complete    | 2026-07-08 |
-| 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 0/TBD | Not started | - |
+| 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 0/1 | Planned | - |
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 0/TBD | Not started | - |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 0/TBD | Not started | - |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 0/TBD | Not started | - |

@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: planning
-last_updated: "2026-07-08T14:45:00.000Z"
-last_activity: 2026-07-08
+status: executing
+stopped_at: v2.10 ROADMAP.md created (Phases 85–89)
+last_updated: "2026-07-08T14:28:00.282Z"
+last_activity: 2026-07-08 -- Phase 85 planning complete
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -26,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 Phase: 85 of 89 (Consolidação da Lógica de "Prazo Crítico")
 Plan: — (ainda não planeada)
-Status: Roadmap criado — pronta para planear a Phase 85
-Last activity: 2026-07-08 — v2.10 roadmap criado (Phases 85–89), REQUIREMENTS.md traceability atualizada (16/16 requisitos mapeados)
+Status: Ready to execute
+Last activity: 2026-07-08 -- Phase 85 planning complete
 
 ## Performance Metrics
 
