@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
 status: planning
-last_updated: "2026-07-08T13:01:06.623Z"
+last_updated: "2026-07-08T14:45:00.000Z"
 last_activity: 2026-07-08
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.10 (Notificações e Alertas) iniciada — a definir requisitos e roadmap.
+**Current focus:** Milestone v2.10 (Notificações e Alertas) — roadmap criado (Phases 85–89), pronta para planeamento de fase.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-08 — Milestone v2.10 started
+Phase: 85 of 89 (Consolidação da Lógica de "Prazo Crítico")
+Plan: — (ainda não planeada)
+Status: Roadmap criado — pronta para planear a Phase 85
+Last activity: 2026-07-08 — v2.10 roadmap criado (Phases 85–89), REQUIREMENTS.md traceability atualizada (16/16 requisitos mapeados)
 
 ## Performance Metrics
 
@@ -74,47 +74,29 @@ Last activity: 2026-07-08 — Milestone v2.10 started
 ### Roadmap Evolution
 
 - v2.9 roadmap created 2026-07-07: 5 phases (80–84) derived from 17 requirements (PROC-01 to PROC-17), continuing phase numbering from v2.8 (last phase: 79). Strict dependency chain per research recommendation: (80) data-layer foundations — `Processo.juizo`/`origem` columns + `OrigemProcesso` enum, plus `Decisao`/`Facto`/`Testemunha` entities + `TipoDecisao` enum + repositories, no UI-visible change; (81) backend CRUD for the 3 new entities (12 endpoints, `ProcessoFase`-style double tenant/processoId check per PROC-17) + juizo/origem wired into create/update/intake/listProcessos + origem validation in both layers; (82) Honorário auto-creation split into its own phase — independently parallelizable (only depends on Phase 80, not Phase 81) and isolates the highest-severity financial/idempotency risk flagged by research; (83) frontend types/schemas/hooks, explicitly the phase where `normalizeProcesso`/`toProcessoApiPayload` must be updated in the same reviewed change as type definitions (4th recurrence prevention of a 3x-seen mapping bug); (84) frontend UI — intake Origem field, Dados card Juízo/Origem, 4 new tabs (Decisões/Factos/Testemunhas/Documentos), Termo de Honorários print route. 100% requirement coverage, no orphans. Phase 83 owns no requirement directly (pure integration layer) but is a hard dependency for Phase 84.
+- v2.10 roadmap created 2026-07-08: 5 phases (85–89) derived from 16 requirements (NOTF-08 to NOTF-23), continuing phase numbering from v2.9 (last phase: 84). Dependency-ordered per architecture research: (85) `RiscoPrazoService` extraction — consolidates the 4 inconsistent "prazo crítico" computations into one shared source, zero new table, pure refactor, parallelizable with 86 (NOTF-22); (86) `Notificacao` entity + full REST API (list/unread-count/mark-read/mark-all-read) + RBAC plumbing — the hard prerequisite every other phase builds on, owns NOTF-14 (targeting/ADMIN-fan-out rule, verifiable before any real trigger exists); (87) wires the 4 event-triggered alert types (fase entrada, documento novo, atribuição de processo + its new reassignment endpoint/UI, parecer atribuído) into existing controllers (NOTF-15/16/17/18/19) — NOTF-17/18 deliberately kept in the same phase since the alert is meaningless without its own trigger flow; (88) daily `@Scheduled` job (prazos, eventos críticos, honorários — NOTF-20/21/23), hard-gated on both 85 and 86 per research, since its entire purpose is reusing the consolidated risk logic rather than adding a 5th copy; (89) bell + `/notificacoes` page (NOTF-08 to 13), the user-facing consumption layer, gated only on 86. 100% requirement coverage, no orphans.
 
 ### Decisions
 
 Decisões são registadas em PROJECT.md (Key Decisions).
 Recent decisions affecting current work:
 
-- (v2.9 research) No new dependency required — existing stack (Spring Boot/PostgreSQL, Next.js/TanStack Query/RHF+Zod) covers 100% of the milestone; PDF/docx library and shadcn `Tabs` primitive both explicitly evaluated and rejected again (consistent with v2.8 Key Decision log).
 - (v2.9 research) `Decisao`/`Facto`/`Testemunha` mirror `Parte.java`'s lean shape — `Integer` IDENTITY id, `processo_id` FK, no own `tenant_id` column; isolation enforced transitively via parent Processo load+check.
-- (v2.9 research) All 3 new entities need full CRUD (not append-only like `Parte`/`Movimentacao`) since corrections/reordering/removal are all realistic use cases — and must copy the harder `ProcessoFase` double-check pattern (parent tenant + child `processoId`) for every PUT/DELETE, not the simpler `Parte`/`Movimentacao` single-check pattern (PROC-17).
-- (v2.9 research) `TipoDecisao` = Despacho | Decisão Interlocutória | Sentença | Acórdão (confirmed PT/BR judicial taxonomy); `Testemunha.tipo` = closed enum Autor | Réu (confirmed — user explicitly chose over free text).
-- (v2.9 research) Decisão anexo uses "upload direto na Decisão" — the create endpoint accepts multipart upload and creates the Documento internally, not a pre-existing-Documento picker (PROC-07).
-- (v2.9 research) Auto-created Honorário `valorTotal` must start `null`, never pre-filled from `Cliente.honorariosPropostos` (a per-cliente soft estimate, not a per-processo hard financial commitment) — flagged as the single highest-severity pitfall in the feature set.
 - (v2.9 roadmap) Honorário auto-creation split into its own phase (82) separate from the Decisões/Factos/Testemunhas CRUD phase (81) — no shared dependency beyond Phase 80, and isolates the money-safety/idempotency risk for focused review.
-- (v2.9 roadmap) Documentos tab (PROC-13) folded into the final UI phase (84) as pure frontend wiring — its backend endpoint (`GET /processos/{id}/documentos`) already exists, no dedicated phase needed.
-- [Phase 81]: origem violations return HTTP 422 (not 400) at intake, matching formalizarProcesso's existing convention
-- [Phase 81]: PUT /processos/{id} silently ignores any origem in the payload rather than rejecting with 400 -- matches the estado-exclusion precedent
-- [Phase 81]: [Phase 81-02] updateDecisao deliberately never copies payload.getDocumentoId() -- anexo can only be attached at creation time via multipart upload in this phase
-- [Phase 81]: [Phase 81-02] Testemunha.tipo binds directly via @RequestBody Jackson deserialization (no manual enum parsing), unlike Decisao's manually-parsed multipart tipo/data params
-- [Phase 81]: [Phase 81-03] POST /processos/{id}/factos discards client-supplied ordem and recomputes max(existing ordem for processo_id)+1 inside synchronized(FactoRepository.class); PUT explicitly trusts payload ordem with no recompute (deliberate reordering entry point)
-- [Phase 82]: Idempotency guard (honorarioRepository.findByProcessoId(id).isEmpty()) kept fully independent of the estado guard in formalizarProcesso, not merged into it, so the retry/replay protection is not mistaken for the state-machine guard's own purpose
-- [Phase 82]: valorTotal set to the literal null via the builder, never read from Cliente.honorariosPropostos -- confirmed via full-file grep that honorariosPropostos is not referenced anywhere in ResourceController.java
-- [Phase 83]: juizo/origem mapping centralizado num módulo partilhado dedicado (processo-juizo-origem-mapping.ts) — Permite que o script de verificação de round-trip importe a mesma lógica usada em runtime por use-processos.ts, em vez de a reimplementar (PITFALLS.md Pitfall 1)
-- [Phase 83]: Verificação de round-trip real implementada como script Node puro (node:assert) em vez de instalar vitest — Repo continua sem test runner instalado (precedente Phase 74/82); Node >=22 executa .ts diretamente via type-stripping nativo
-- [Phase 84]: Juízo Input on processos/[id]/editar/page.tsx carries explicit rounded-none per UI-SPEC.md sharp-edges requirement — Sibling Input fields on that page rely on the component's rounded-md default (pre-existing inconsistency, left untouched); the design contract mandates rounded-none for new form controls in this phase
-- [Phase 84]: Termo de Honorarios signature captions relabelled 'O Advogado' / 'O Cliente' (neutral, non-gendered) instead of Ficha Cliente's 'A Advogada' -- signer identity unknown at render time (Claude's Discretion, UI-SPEC)
-- [Phase 84]: Imprimir Button on Termo de Honorarios carries explicit rounded-none per UI-SPEC Anti-Safe Harbor requirement, even though the Ficha Cliente analog it was cloned from omits it
-- [Phase 84]: [Phase 84-03] 4 new TabKey values render as explicit null branches (not omitted) in the tab-content ternary chain, keeping it type-correct until 84-04/84-05 fill in real bodies
-- [Phase 84]: [Phase 84-03] rounded-none applied explicitly to every new/moved Partes/Fases Dialog form control per UI-SPEC Anti-Safe Harbor requirement
-- [Phase 84]: [Phase 84-04] testemunhaFormSchema's optional tipo field wrapped in z.preprocess to coerce an empty-string <select> value to undefined -- z.enum().optional() only treats undefined as absent, rejecting the blank placeholder selection contrary to the plan's stated UI-SPEC intent (bug fix)
-- [Phase 84]: [Phase 84-04] testemunhaForm's zodResolver cast as any (eslint-disabled on that line) because the z.preprocess input type diverges from TestemunhaFormValues -- same class of RHF+Zod-effects mismatch already present via prazoForm, same established workaround reused
-- [Phase 84]: [Phase 84-05] Facto ordem reordering managed via plain local component state (factoOrdemDraft), not added to factoFormSchema — keeps the Phase 83 create-only schema untouched while satisfying PROC-10's reorder requirement on the edit path only
 - [Phase 84]: [Phase 84-05] canEditDocumentos derived from a second permissions.can.edit("documentos") call inside ProcessoDetailContent (TanStack-Query-cached) — a scope distinct from canEditProcessos, matching the ClienteDocumentosEntreguesTab precedent
+- (v2.10 roadmap) NOTF-08/09/10/11/12/13 (contador do sino, lista do sino, marcar lida/todas, página dedicada, filtros) mapped to Phase 89 (frontend), not the earlier infra phase — these are phrased as "Utilizador vê/marca/filtra," which only becomes literally true once the UI exists, even though their backend endpoints are built in Phase 86.
+- (v2.10 roadmap) NOTF-17's reassignment UI (a new form/control on the ficha do processo) bundled into Phase 87 alongside its backend endpoint and its own alert (NOTF-18), rather than deferred to Phase 89 — it's a Processo-detail-page concern, not a notification-inbox concern, so it doesn't belong with the bell/history UI work.
+- (v2.10 roadmap) NOTF-14 (targeting/no-mass-broadcast rule) mapped to Phase 86 (infra), not to any single consuming phase — it's a systemic guarantee designed into `NotificacaoService`'s recipient-resolution + ADMIN fan-out at creation time, verifiable via two independent test users before any real trigger exists (per PITFALLS.md Pitfall 2/3).
+- (v2.10 roadmap) Phase 88 (daily job) hard-depends on both Phase 85 and Phase 86, per architecture research — its entire purpose is reusing the consolidated risk logic, so it cannot start meaningfully before either exists.
 
 ### Pending Todos
 
-- Carried from v2.8 close: 3 phases (75, 76, 79) have static verification 100% complete but live browser/backend UAT pending — see respective `*-HUMAN-UAT.md`. Not part of v2.9 scope but still open.
+- Carried from v2.8 close: 3 phases (75, 76, 79) have static verification 100% complete but live browser/backend UAT pending — see respective `*-HUMAN-UAT.md`. Not part of v2.9/v2.10 scope but still open.
 - `backend/migrations/74-cleanup-nif-documento-tipo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - REG_COMERCIAL and other `DocumentoTipo` values still render as raw enum strings instead of translated Portuguese labels on client detail page and printed ficha — non-blocking cosmetic gap, candidate for a small follow-up (carried since v2.7).
 - No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1 — non-blocking test debt.
-- v2.9 research flag: confirm whether `formalizarProcesso()` currently carries an explicit `@PreAuthorize` — verify at Phase 82 implementation time (not conclusively visible in research excerpt).
-- v2.9 research flag: Documento↔Decisão FK direction (nullable `decisao_id` on `Documento` vs. `documento_id` on `Decisao`) is a real design choice with a security-pattern implication — should be recorded explicitly during Phase 80/81 planning, not improvised mid-build.
+- v2.10 planning flag (from PITFALLS.md/ARCHITECTURE.md research): the daily job (Phase 88) must not call `getTenantId()`/`SecurityContextHolder` — first background-thread code path in this codebase; verify explicitly during Phase 88 planning/review, not just at code-review time.
+- v2.10 planning flag: `Notificacao` reads/writes must filter by `destinatario_id` in addition to `tenant_id` on every query (Phase 86) — this project's first per-recipient-private entity, easy to under-scope by pattern-matching the tenant-only checks used everywhere else.
 
 ### Blockers/Concerns
 
@@ -150,10 +132,10 @@ Items acknowledged and deferred at milestone v2.9 close on 2026-07-08 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-08T01:40:37.971Z
-Stopped at: Completed 84-05-PLAN.md
+Last session: 2026-07-08T14:45:00.000Z
+Stopped at: v2.10 ROADMAP.md created (Phases 85–89)
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd:plan-phase 85` to start planning the first phase of v2.10 (Consolidação da Lógica de "Prazo Crítico").

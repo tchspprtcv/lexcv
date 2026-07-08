@@ -55,28 +55,33 @@ Preenchida durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTF-08 | — | Pending |
-| NOTF-09 | — | Pending |
-| NOTF-10 | — | Pending |
-| NOTF-11 | — | Pending |
-| NOTF-12 | — | Pending |
-| NOTF-13 | — | Pending |
-| NOTF-14 | — | Pending |
-| NOTF-15 | — | Pending |
-| NOTF-16 | — | Pending |
-| NOTF-17 | — | Pending |
-| NOTF-18 | — | Pending |
-| NOTF-19 | — | Pending |
-| NOTF-20 | — | Pending |
-| NOTF-21 | — | Pending |
-| NOTF-22 | — | Pending |
-| NOTF-23 | — | Pending |
+| NOTF-08 | Phase 89 | Pending |
+| NOTF-09 | Phase 89 | Pending |
+| NOTF-10 | Phase 89 | Pending |
+| NOTF-11 | Phase 89 | Pending |
+| NOTF-12 | Phase 89 | Pending |
+| NOTF-13 | Phase 89 | Pending |
+| NOTF-14 | Phase 86 | Pending |
+| NOTF-15 | Phase 87 | Pending |
+| NOTF-16 | Phase 87 | Pending |
+| NOTF-17 | Phase 87 | Pending |
+| NOTF-18 | Phase 87 | Pending |
+| NOTF-19 | Phase 87 | Pending |
+| NOTF-20 | Phase 88 | Pending |
+| NOTF-21 | Phase 88 | Pending |
+| NOTF-22 | Phase 85 | Pending |
+| NOTF-23 | Phase 88 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0 (aguarda roadmap)
-- Unmapped: 16 ⚠️ (esperado antes da criação do roadmap)
+- Mapped to phases: 16/16 ✓
+- Unmapped: 0
+
+**Phase mapping notes:**
+- NOTF-08/09/10/11/12/13 (contador do sino, lista do sino, marcar lida/todas, página `/notificacoes`, filtros) mapeiam para Phase 89 — são fraseadas como "Utilizador vê/marca/filtra", o que só é literalmente verdade quando a interface existir, ainda que os endpoints de suporte sejam construídos na Phase 86.
+- NOTF-14 (regra de targeting/anti-broadcast) mapeia para Phase 86 — é uma garantia sistémica da resolução de destinatários em `NotificacaoService`, verificável antes de qualquer gatilho real existir (dois utilizadores de teste, fan-out de ADMIN), não uma ação de utilizador isolada.
+- NOTF-17 (reatribuição de responsável) e NOTF-18 (alerta de atribuição) mapeiam ambas para Phase 87, deliberadamente juntas — o alerta não faz sentido sem o fluxo dedicado que o desencadeia.
 
 ---
 *Requirements defined: 2026-07-08*
-*Last updated: 2026-07-08 after initial definition*
+*Last updated: 2026-07-08 after roadmap creation (Phases 85–89, 16/16 requirements mapped)*
