@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: executing
-stopped_at: v2.10 ROADMAP.md created (Phases 85–89)
-last_updated: "2026-07-08T14:29:37.711Z"
+status: ready_to_plan
+stopped_at: Phase 85 complete (1/1) — ready to discuss Phase 86
+last_updated: 2026-07-08T17:29:52.523Z
 last_activity: 2026-07-08 -- Phase 85 execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 1
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 85 — Consolidação da Lógica de Prazo Crítico
+**Current focus:** Phase 86 — infraestrutura de notificações — entidade, api e targeting
 
 ## Current Position
 
-Phase: 85 (Consolidação da Lógica de Prazo Crítico) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 85
-Last activity: 2026-07-08 -- Phase 85 execution started
+Phase: 86
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-08
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 33
+- Total plans completed: 34
 - Average duration: —
 - Total execution time: —
 
@@ -55,6 +55,7 @@ Last activity: 2026-07-08 -- Phase 85 execution started
 | 82 | 1 | - | - |
 | 83 | 2 | - | - |
 | 84 | 5 | - | - |
+| 85 | 1 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 80 P01 | 15min | 3 tasks | 10 files |

@@ -25,7 +25,7 @@ Numeração de `NOTF-` continuada a partir do histórico do projeto: `NOTF-01` (
 - [ ] **NOTF-19**: Advogado é alertado quando lhe é atribuído um parecer
 - [ ] **NOTF-20**: Responsável do processo é alertado quando um prazo do processo muda de estado de risco (próximo/vencido), via verificação diária
 - [ ] **NOTF-21**: Responsável do processo é alertado quando um evento de calendário crítico muda de estado de risco (próximo/vencido), via verificação diária
-- [ ] **NOTF-22**: Dashboard, agenda e notificações mostram sempre o mesmo veredito de "prazo crítico" — lógica consolidada numa única fonte partilhada, substituindo as 4 implementações inconsistentes existentes
+- [x] **NOTF-22**: Dashboard, agenda e notificações mostram sempre o mesmo veredito de "prazo crítico" — lógica consolidada numa única fonte partilhada, substituindo as 4 implementações inconsistentes existentes
 - [ ] **NOTF-23**: Responsável do processo é alertado quando o honorário do processo atinge N dias sem pagamento total desde a data do acordo, via verificação diária
 
 ## v2 Requirements
@@ -69,7 +69,7 @@ Preenchida durante a criação do roadmap.
 | NOTF-19 | Phase 87 | Pending |
 | NOTF-20 | Phase 88 | Pending |
 | NOTF-21 | Phase 88 | Pending |
-| NOTF-22 | Phase 85 | Pending |
+| NOTF-22 | Phase 85 | Complete |
 | NOTF-23 | Phase 88 | Pending |
 
 **Coverage:**
