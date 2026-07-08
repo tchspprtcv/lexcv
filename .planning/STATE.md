@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.9
 milestone_name: Melhoria Módulo Processos
 status: executing
-stopped_at: Completed 83-02-PLAN.md
-last_updated: "2026-07-08T00:36:29.815Z"
-last_activity: 2026-07-08 -- Phase 84 planning complete
+stopped_at: Completed 84-01-PLAN.md
+last_updated: "2026-07-08T00:46:31.242Z"
+last_activity: 2026-07-08
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 7
-  percent: 58
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 84 — frontend — ui (intake, dados, sub secções, documentos, termo de honorários)
+**Current focus:** Phase 84 — Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)
 
 ## Current Position
 
-Phase: 84
-Plan: Not started
+Phase: 84 (Frontend — UI (Intake, Dados, Sub-secções, Documentos, Termo de Honorários)) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-08 -- Phase 84 planning complete
+Last activity: 2026-07-08
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 82 P01 | 12min | 2 tasks | 1 files |
 | Phase 83 P01 | 10min | 2 tasks | 5 files |
 | Phase 83 P02 | 6min | 2 tasks | 4 files |
+| Phase 84 P01 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Recent decisions affecting current work:
 - [Phase 82]: valorTotal set to the literal null via the builder, never read from Cliente.honorariosPropostos -- confirmed via full-file grep that honorariosPropostos is not referenced anywhere in ResourceController.java
 - [Phase 83]: juizo/origem mapping centralizado num módulo partilhado dedicado (processo-juizo-origem-mapping.ts) — Permite que o script de verificação de round-trip importe a mesma lógica usada em runtime por use-processos.ts, em vez de a reimplementar (PITFALLS.md Pitfall 1)
 - [Phase 83]: Verificação de round-trip real implementada como script Node puro (node:assert) em vez de instalar vitest — Repo continua sem test runner instalado (precedente Phase 74/82); Node >=22 executa .ts diretamente via type-stripping nativo
+- [Phase 84]: Juízo Input on processos/[id]/editar/page.tsx carries explicit rounded-none per UI-SPEC.md sharp-edges requirement — Sibling Input fields on that page rely on the component's rounded-md default (pre-existing inconsistency, left untouched); the design contract mandates rounded-none for new form controls in this phase
 
 ### Pending Todos
 
@@ -125,8 +127,8 @@ Items acknowledged and deferred at milestone v2.8 close on 2026-07-06 (see `.pla
 
 ## Session Continuity
 
-Last session: 2026-07-07T23:09:00.318Z
-Stopped at: Completed 83-02-PLAN.md
+Last session: 2026-07-08T00:46:31.215Z
+Stopped at: Completed 84-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
