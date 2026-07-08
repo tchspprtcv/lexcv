@@ -12,15 +12,22 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class RiscoPrazoService {
 
+    // Valores possíveis de risco — únicas constantes de referência (WR-03, 85-REVIEW.md).
+    // Call sites devem referenciar RiscoPrazoService.OK/.PROXIMO/.VENCIDO em vez de
+    // retiparem os literais, para evitar drift silencioso (ex.: um typo "vencid0").
+    public static final String OK = "ok";
+    public static final String PROXIMO = "proximo";
+    public static final String VENCIDO = "vencido";
+
     // 3-arg: `hoje` injetável — usado pela Phase 88 para determinismo em testes.
     // É esta a implementação "real"; os wrappers de 2 args delegam nela.
     public String computeRisco(LocalDate dataLimite, String prioridade, LocalDate hoje) {
         Objects.requireNonNull(hoje, "hoje não pode ser nulo");
-        if (dataLimite == null) return "ok";
-        if (dataLimite.isBefore(hoje)) return "vencido";
+        if (dataLimite == null) return OK;
+        if (dataLimite.isBefore(hoje)) return VENCIDO;
         long diasRestantes = ChronoUnit.DAYS.between(hoje, dataLimite);
         int limiarProximo = "ALTA".equalsIgnoreCase(prioridade) ? 7 : 3;
-        return diasRestantes <= limiarProximo ? "proximo" : "ok";
+        return diasRestantes <= limiarProximo ? PROXIMO : OK;
     }
 
     // 2-arg: wrapper de conveniência — comportamento byte-idêntico ao atual (default hoje = now).

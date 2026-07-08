@@ -940,14 +940,14 @@ public class ResourceController {
                     .filter(pr -> !Boolean.TRUE.equals(pr.getConcluido()))
                     .toList();
 
-            String riscoMaisCritico = "ok";
+            String riscoMaisCritico = RiscoPrazoService.OK;
             boolean temEscalonado = false;
             for (Prazo pr : ativos) {
                 String r = riscoPrazoService.computeRisco(pr.getDataLimite(), pr.getPrioridade());
-                if ("vencido".equals(r)) {
-                    riscoMaisCritico = "vencido";
-                } else if ("proximo".equals(r) && !"vencido".equals(riscoMaisCritico)) {
-                    riscoMaisCritico = "proximo";
+                if (RiscoPrazoService.VENCIDO.equals(r)) {
+                    riscoMaisCritico = RiscoPrazoService.VENCIDO;
+                } else if (RiscoPrazoService.PROXIMO.equals(r) && !RiscoPrazoService.VENCIDO.equals(riscoMaisCritico)) {
+                    riscoMaisCritico = RiscoPrazoService.PROXIMO;
                 }
                 if (Boolean.TRUE.equals(pr.getEscalonado())) {
                     temEscalonado = true;
@@ -1474,7 +1474,7 @@ public class ResourceController {
         }
         String prioridade = payload.prioridade() != null ? payload.prioridade().toUpperCase() : "MEDIA";
         String risco = riscoPrazoService.computeRisco(payload.dataLimite(), prioridade);
-        boolean escalonado = "proximo".equals(risco) || "vencido".equals(risco);
+        boolean escalonado = RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco);
         Prazo prazo = Prazo.builder()
                 .tenantId(tenantId)
                 .processoId(id)
@@ -1520,8 +1520,8 @@ public class ResourceController {
         prazo.setConcluido(nowConcluido);
         // Recompute escalonado: concluded prazos are never escalated
         boolean nowEscalonado = !nowConcluido &&
-                ("proximo".equals(riscoPrazoService.computeRisco(prazo.getDataLimite(), prazo.getPrioridade()))
-                        || "vencido".equals(riscoPrazoService.computeRisco(prazo.getDataLimite(), prazo.getPrioridade())));
+                (RiscoPrazoService.PROXIMO.equals(riscoPrazoService.computeRisco(prazo.getDataLimite(), prazo.getPrioridade()))
+                        || RiscoPrazoService.VENCIDO.equals(riscoPrazoService.computeRisco(prazo.getDataLimite(), prazo.getPrioridade())));
         prazo.setEscalonado(nowEscalonado);
         Prazo saved = prazoRepository.save(prazo);
         // Return response map including recomputed risco (verifier requirement W1)
@@ -2753,7 +2753,7 @@ public class ResourceController {
                 .stream()
                 .filter(e -> {
                     String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
-                    return "proximo".equals(risco) || "vencido".equals(risco);
+                    return RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco);
                 })
                 .count();
     }
@@ -2864,7 +2864,7 @@ public class ResourceController {
         List<Evento> eventos = eventoRepository.findByTenantIdAndConcluido(tenantId, false);
         for (Evento e : eventos) {
             String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
-            if ("proximo".equals(risco) || "vencido".equals(risco)) {
+            if (RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco)) {
                 prazosCriticosCount++;
             }
         }
