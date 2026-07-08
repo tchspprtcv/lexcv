@@ -1723,6 +1723,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                       [f.id]: processoFaseStatusSchema.parse(e.target.value),
                                     }))
                                   }
+                                  disabled={!canEditProcessos}
                                 >
                                   <option value="PENDENTE">Pendente</option>
                                   <option value="EM_ANDAMENTO">Em andamento</option>
