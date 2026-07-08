@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-06)
+See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone complete
+**Current focus:** Milestone v2.9 arquivada. A aguardar definição da próxima milestone.
 
 ## Current Position
 
