@@ -441,6 +441,12 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     }
   };
 
+  const onOpenAddParte = () => {
+    parteForm.reset({ tipo: undefined, nome: "", nif: undefined });
+    setParteServerError(null);
+    setAddParteModal(true);
+  };
+
   const onSubmitParte = async (values: ProcessoParteFormValues) => {
     setParteServerError(null);
     if (!canEditProcessos) return;
@@ -454,6 +460,12 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
       setParteServerError(msg);
       toast.error(msg);
     }
+  };
+
+  const onOpenAddFase = () => {
+    faseForm.reset({ nome: "" });
+    setFaseServerError(null);
+    setAddFaseModal(true);
   };
 
   const onSubmitFase = async (values: ProcessoFaseFormValues) => {
@@ -1544,7 +1556,13 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   {canEditProcessos ? (
                     <Dialog open={addParteModal} onOpenChange={setAddParteModal}>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm" className="rounded-none">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none"
+                          onClick={onOpenAddParte}
+                        >
                           Adicionar Parte
                         </Button>
                       </DialogTrigger>
@@ -1646,7 +1664,13 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   {canEditProcessos ? (
                     <Dialog open={addFaseModal} onOpenChange={setAddFaseModal}>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm" className="rounded-none">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-none"
+                          onClick={onOpenAddFase}
+                        >
                           Adicionar Fase
                         </Button>
                       </DialogTrigger>
