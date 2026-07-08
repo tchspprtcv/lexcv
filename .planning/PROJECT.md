@@ -186,7 +186,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.10 (Notificações e Alertas) iniciada — a definir requisitos e roadmap.
+**Current focus:** Milestone v2.10 (Notificações e Alertas) em execução — Phase 85/89 (Consolidação da Lógica de "Prazo Crítico") concluída; `RiscoPrazoService` substitui as 4 implementações inconsistentes de "prazo crítico". 1 item de verificação humana adiado (ver `85-HUMAN-UAT.md`). Próxima: Phase 86 (Infraestrutura de Notificações).
 
 ## Evolution
 
@@ -206,4 +206,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — after starting v2.10 milestone (Notificações e Alertas)*
+*Last updated: 2026-07-08 — after Phase 85 (Consolidação da Lógica de "Prazo Crítico")*
