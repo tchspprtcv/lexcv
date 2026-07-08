@@ -82,8 +82,13 @@ class NotificacaoServiceTest {
         for (Notificacao n : captor.getAllValues()) {
             assertFalse(n.getLida());
         }
+        List<UUID> destinatarios = captor.getAllValues().stream()
+                .map(Notificacao::getDestinatarioId)
+                .toList();
+        assertEquals(List.of(admin1.getId(), admin2.getId()), destinatarios);
         // Fan-out: uma linha por ADMIN atual, nunca uma linha partilhada com uma flag
-        // "é admin" — prova o Critério de Sucesso 3.
+        // "é admin" — prova o Critério de Sucesso 3. A asserção acima é a que efetivamente
+        // prova o targeting por-destinatario (não apenas a contagem de chamadas a save()).
     }
 
     @Test
