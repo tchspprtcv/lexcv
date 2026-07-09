@@ -16,6 +16,7 @@ import com.lexcv.dtos.PrazoRequest;
 import org.springframework.transaction.annotation.Transactional;
 import com.lexcv.dtos.ConflictCheckResponse.ConflictMatchDto;
 import com.lexcv.dtos.DashboardKpiResponse;
+import com.lexcv.dtos.UserSummaryResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
@@ -1024,6 +1025,24 @@ public class ResourceController {
                 saved.getNumeroProcesso(), "/processos/" + saved.getId());
 
         return ResponseEntity.ok(saved);
+    }
+
+    // CR-02 (Phase 87 code review): tenant-scoped user listing for "assign to" pickers
+    // (Reatribuir Responsável, Novo Prazo responsável) that any processos:manage holder
+    // must be able to use. Deliberately NOT under /admin — GET /admin/users is gated
+    // hasRole('ADMIN'), which left ADVOGADO (a processos:manage holder per
+    // DatabaseSeeder.seedRbac()) unable to populate those pickers. Gated on
+    // processos:view (the same permission that gates this whole processo-detail page),
+    // so no one who couldn't already reach this page gains new access. Returns only
+    // {id, nome} — see UserSummaryResponse — never roles/permissions/email/telefone.
+    @PreAuthorize("hasAuthority('processos:view')")
+    @GetMapping("/users")
+    public ResponseEntity<?> listTenantUsers() {
+        UUID tenantId = getTenantId();
+        List<UserSummaryResponse> response = userRepository.findByTenantId(tenantId).stream()
+                .map(u -> UserSummaryResponse.builder().id(u.getId()).nome(u.getNome()).build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAuthority('processos:view')")

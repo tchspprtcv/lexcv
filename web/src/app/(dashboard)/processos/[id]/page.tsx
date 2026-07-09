@@ -50,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
-import { useAdminUsers } from "@/hooks/use-admin";
+import { useTenantUsers } from "@/hooks/use-users";
 import { useClientes } from "@/hooks/use-clientes";
 import {
   useDeleteDocumento,
@@ -248,7 +248,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
   const processo = useProcesso(id);
   const clientes = useClientes({});
-  const adminUsers = useAdminUsers();
+  const tenantUsers = useTenantUsers();
   const decisao = useConflictCheckDecisao(id);
   const formalizarProcesso = useFormalizarProcesso(id);
 
@@ -303,7 +303,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   }, [timeline.data, selectedTipos, dateFrom, dateTo]);
 
   const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
-  const userNomeById = new Map((adminUsers.data ?? []).map((u) => [u.id, u.nome] as const));
+  const userNomeById = new Map((tenantUsers.data ?? []).map((u) => [u.id, u.nome] as const));
 
   const isLoading = processo.isLoading || clientes.isLoading || partes.isLoading || fases.isLoading;
   const isError = processo.isError || clientes.isError || partes.isError || fases.isError;
@@ -1200,7 +1200,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       {...prazoForm.register("responsavelId")}
                     >
                       <option value="">— Sem responsável —</option>
-                      {(adminUsers.data ?? []).map((u) => (
+                      {(tenantUsers.data ?? []).map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.nome}
                         </option>
@@ -2357,9 +2357,9 @@ function ReatribuirResponsavelControl({
   const [reatribuirError, setReatribuirError] = React.useState<string | null>(null);
 
   const reatribuir = useReatribuirResponsavel(processoId);
-  const adminUsers = useAdminUsers();
+  const tenantUsers = useTenantUsers();
 
-  const novoNome = (adminUsers.data ?? []).find((u) => u.id === selectedUserId)?.nome ?? "";
+  const novoNome = (tenantUsers.data ?? []).find((u) => u.id === selectedUserId)?.nome ?? "";
 
   const handleConfirm = async () => {
     setReatribuirError(null);
@@ -2414,7 +2414,7 @@ function ReatribuirResponsavelControl({
                 <option value="" disabled>
                   Selecione um utilizador
                 </option>
-                {(adminUsers.data ?? []).map((u) => (
+                {(tenantUsers.data ?? []).map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.nome}
                   </option>
@@ -2434,7 +2434,7 @@ function ReatribuirResponsavelControl({
             <Button
               type="button"
               className="rounded-none"
-              disabled={!selectedUserId || selectedUserId === currentResponsavelId || adminUsers.isLoading}
+              disabled={!selectedUserId || selectedUserId === currentResponsavelId || tenantUsers.isLoading}
               onClick={() => {
                 setDialogOpen(false);
                 setConfirmOpen(true);
