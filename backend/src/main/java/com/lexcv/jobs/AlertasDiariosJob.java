@@ -84,11 +84,15 @@ public class AlertasDiariosJob {
             for (Tenant tenant : tenantRepository.findAll()) {
                 try {
                     processarTenant(tenant.getId(), hoje);
-                } catch (Exception e) {
+                } catch (Throwable e) {
+                    // WR-04 (Phase 88 code review): catch Throwable, não só Exception -- um
+                    // Error (ex.: StackOverflowError) não é subtipo de Exception e escaparia às
+                    // duas camadas, reproduzindo exatamente o "cancela silenciosamente todas as
+                    // execuções futuras" que esta defesa em profundidade existe para prevenir.
                     log.error("Falha ao processar alertas diários para tenant {}", tenant.getId(), e);
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("Falha inesperada na execução do job de alertas diários", e);
         }
     }
