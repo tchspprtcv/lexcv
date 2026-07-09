@@ -8,8 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -129,6 +132,18 @@ public class NotificacaoService {
         }
         notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
                 processoId.toString(), linkUrl);
+    }
+
+    // RED stub (Phase 87 Task 2) — implemented in the GREEN step of the same task.
+    public void notificarDocumentoNovo(UUID tenantId, String documentoId, Collection<UUID> destinatarios,
+                                        String nomeDocumento, String linkUrl, UUID atorId) {
+        // Intentionally empty for RED.
+    }
+
+    // RED stub (Phase 87 Task 2) — implemented in the GREEN step of the same task.
+    public void notificarParecerAtribuido(UUID tenantId, String solicitacaoId, UUID advogadoId,
+                                           String linkUrl, UUID atorId) {
+        // Intentionally empty for RED.
     }
 
     // Mesmo ponto de escrita que criar(...), agora para MUTAÇÃO de estado — nenhuma outra classe
