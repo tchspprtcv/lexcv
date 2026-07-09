@@ -5,6 +5,7 @@ import com.lexcv.dtos.ClienteMergeRequest;
 import com.lexcv.exceptions.StorageUnavailableException;
 import com.lexcv.services.StorageService;
 import com.lexcv.services.RiscoPrazoService;
+import com.lexcv.services.NotificacaoService;
 import com.lexcv.dtos.ConflictCheckDecisaoRequest;
 import com.lexcv.dtos.ConflictCheckResponse;
 import com.lexcv.dtos.TimelineItemDto;
@@ -66,6 +67,7 @@ public class ResourceController {
     private final AuditLogRepository auditLogRepository;
     private final StorageService storageService;
     private final RiscoPrazoService riscoPrazoService;
+    private final NotificacaoService notificacaoService;
     private final ClienteAdvogadoRepository clienteAdvogadoRepository;
     private final ClienteAdministrativoRepository clienteAdministrativoRepository;
     private final DecisaoRepository decisaoRepository;
@@ -975,7 +977,51 @@ public class ResourceController {
             }
         }
         Processo saved = processoRepository.save(processo);
+        if (saved.getResponsavelId() != null) {
+            notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
+                    saved.getNumeroProcesso(), "/processos/" + saved.getId());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PreAuthorize("hasAuthority('processos:manage')")
+    @PutMapping("/processos/{id}/atribuir")
+    @Transactional
+    public ResponseEntity<?> atribuirResponsavel(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        UUID tenantId = getTenantId();
+
+        String responsavelIdRaw = body.get("responsavelId");
+        if (responsavelIdRaw == null || responsavelIdRaw.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId é obrigatório"));
+        }
+
+        UUID responsavelId;
+        try {
+            responsavelId = UUID.fromString(responsavelIdRaw);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId inválido"));
+        }
+
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+
+        User responsavel = userRepository.findById(responsavelId).orElse(null);
+        if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId não pertence a este tenant"));
+        }
+
+        processo.setResponsavelId(responsavelId);
+        Processo saved = processoRepository.save(processo);
+
+        notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
+                saved.getNumeroProcesso(), "/processos/" + saved.getId());
+
+        return ResponseEntity.ok(saved);
     }
 
     @PreAuthorize("hasAuthority('processos:view')")
@@ -1613,7 +1659,10 @@ public class ResourceController {
                 .ativa(true)
                 .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(processoFaseRepository.save(pf));
+        ProcessoFase saved = processoFaseRepository.save(pf);
+        notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
+                processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PreAuthorize("hasAuthority('processos:edit')")
@@ -2472,6 +2521,29 @@ public class ResourceController {
             }
 
             Documento saved = documentoRepository.save(documento);
+
+            if (replaceId == null) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+                UUID atorId = principal.getUserId();
+                UUID tenantId = getTenantId();
+                if (saved.getProcessoId() != null) {
+                    Processo proc = processoRepository.findById(saved.getProcessoId()).orElse(null);
+                    UUID resp = proc != null ? proc.getResponsavelId() : null;
+                    List<UUID> dests = resp != null ? List.of(resp) : List.of();
+                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                            saved.getNome(), "/processos/" + saved.getProcessoId(), atorId);
+                } else if (saved.getClienteId() != null) {
+                    List<UUID> dests = new ArrayList<>();
+                    clienteAdvogadoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
+                            .forEach(a -> dests.add(a.getUserId()));
+                    clienteAdministrativoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
+                            .forEach(a -> dests.add(a.getUserId()));
+                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                            saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
+                }
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (StorageUnavailableException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
