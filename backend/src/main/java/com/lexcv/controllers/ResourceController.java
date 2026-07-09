@@ -977,7 +977,51 @@ public class ResourceController {
             }
         }
         Processo saved = processoRepository.save(processo);
+        if (saved.getResponsavelId() != null) {
+            notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
+                    saved.getNumeroProcesso(), "/processos/" + saved.getId());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @PreAuthorize("hasAuthority('processos:manage')")
+    @PutMapping("/processos/{id}/atribuir")
+    @Transactional
+    public ResponseEntity<?> atribuirResponsavel(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        UUID tenantId = getTenantId();
+
+        String responsavelIdRaw = body.get("responsavelId");
+        if (responsavelIdRaw == null || responsavelIdRaw.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId é obrigatório"));
+        }
+
+        UUID responsavelId;
+        try {
+            responsavelId = UUID.fromString(responsavelIdRaw);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId inválido"));
+        }
+
+        Processo processo = processoRepository.findById(id).orElse(null);
+        if (processo == null || !processo.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+
+        User responsavel = userRepository.findById(responsavelId).orElse(null);
+        if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "responsavelId não pertence a este tenant"));
+        }
+
+        processo.setResponsavelId(responsavelId);
+        Processo saved = processoRepository.save(processo);
+
+        notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
+                saved.getNumeroProcesso(), "/processos/" + saved.getId());
+
+        return ResponseEntity.ok(saved);
     }
 
     @PreAuthorize("hasAuthority('processos:view')")
