@@ -11,8 +11,9 @@ import java.util.UUID;
 // production migration backend/migrations/88-add-notificacao-dedup-unique-constraint.sql
 // (ddl-auto=validate in prod never creates this from the annotation alone).
 @Entity
-@Table(name = "t_notificacao", uniqueConstraints = @UniqueConstraint(columnNames = {
-        "tenant_id", "destinatario_id", "entidade_tipo", "entidade_id", "categoria"}))
+@Table(name = "t_notificacao", uniqueConstraints = @UniqueConstraint(
+        name = "uk_notificacao_dedup",
+        columnNames = {"tenant_id", "destinatario_id", "entidade_tipo", "entidade_id", "categoria"}))
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
