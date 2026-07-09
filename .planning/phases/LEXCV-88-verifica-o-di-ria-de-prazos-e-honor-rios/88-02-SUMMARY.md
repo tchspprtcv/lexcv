@@ -111,3 +111,12 @@ None - no external service configuration required. No new Maven dependency was a
 ---
 *Phase: 88-verificacao-diaria-de-prazos-e-honorarios*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+- FOUND: backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java
+- FOUND: backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java
+- FOUND: .planning/phases/LEXCV-88-verifica-o-di-ria-de-prazos-e-honor-rios/88-02-SUMMARY.md
+- FOUND commit: 1e999ed (Task 1 - RED)
+- FOUND commit: a4f31f2 (Task 2 - GREEN)
+- FOUND commit: 1ae280e (SUMMARY.md)
