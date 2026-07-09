@@ -5,6 +5,7 @@ import com.lexcv.models.User;
 import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificacaoService {
 
     private final NotificacaoRepository notificacaoRepository;
@@ -98,7 +100,15 @@ public class NotificacaoService {
             if (excluirUserId != null && excluirUserId.equals(admin.getId())) {
                 continue;
             }
-            criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
+            // CR-01 (Phase 87 code review, iteration 2): isolate each admin so one
+            // stale/orphaned admin reference can never prevent the rest of the ADMIN
+            // fan-out from being notified.
+            try {
+                criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
+            } catch (IllegalArgumentException ex) {
+                log.warn("{}: admin {} inválido/órfão, notificação ADMIN ignorada para este destinatário",
+                        categoria, admin.getId(), ex);
+            }
         }
     }
 
@@ -111,8 +121,17 @@ public class NotificacaoService {
         String titulo = "Nova fase";
         String mensagem = "O processo " + numeroTexto + " entrou na fase " + nomeFase;
         if (responsavelId != null) {
-            criar(tenantId, responsavelId, "FASE_ENTRADA", titulo, mensagem, "processo",
-                    processoId.toString(), linkUrl);
+            // CR-01 (Phase 87 code review, iteration 2): isolate the primary recipient so a
+            // stale/orphaned responsavelId can never prevent the unconditional ADMIN fan-out
+            // below from running -- previously this exception propagated out of the method,
+            // silently skipping notificarAdmins(...) entirely.
+            try {
+                criar(tenantId, responsavelId, "FASE_ENTRADA", titulo, mensagem, "processo",
+                        processoId.toString(), linkUrl);
+            } catch (IllegalArgumentException ex) {
+                log.warn("FASE_ENTRADA: responsavelId {} inválido/órfão, notificação primária ignorada",
+                        responsavelId, ex);
+            }
         }
         notificarAdmins(tenantId, "FASE_ENTRADA", titulo, mensagem, "processo", processoId.toString(), linkUrl);
     }
@@ -158,7 +177,14 @@ public class NotificacaoService {
         Set<UUID> destinatariosUnicos = new LinkedHashSet<>(destinatarios == null ? List.of() : destinatarios);
         for (UUID dest : destinatariosUnicos) {
             if (dest != null && !dest.equals(atorId)) {
-                criar(tenantId, dest, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl);
+                // CR-01 (Phase 87 code review, iteration 2): isolate each destinatario so one
+                // stale/orphaned reference can never prevent the remaining destinatarios (in
+                // iteration order) or the unconditional ADMIN fan-out below from being notified.
+                try {
+                    criar(tenantId, dest, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl);
+                } catch (IllegalArgumentException ex) {
+                    log.warn("DOCUMENTO_NOVO: destinatario {} inválido/órfão, ignorado", dest, ex);
+                }
             }
         }
         notificarAdmins(tenantId, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl, atorId);
