@@ -49,4 +49,10 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> 
     // tenant is what lets the controller answer 404 (not 403) without leaking existence across
     // the recipient boundary.
     Optional<Notificacao> findByIdAndTenantIdAndDestinatarioId(UUID id, UUID tenantId, UUID destinatarioId);
+
+    // Feeds the daily alertas job's (Plan 88-02) edge-triggered idempotency check: called before
+    // every criar(...) to skip creating a notification that already exists for this exact
+    // (tenant, recipient, entity, categoria) tuple.
+    boolean existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria(
+            UUID tenantId, UUID destinatarioId, String entidadeTipo, String entidadeId, String categoria);
 }
