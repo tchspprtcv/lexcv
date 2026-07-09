@@ -112,6 +112,17 @@ None — no external service configuration required.
 - `NotificacaoService` now has all 4 categories' composition logic centralized and tested; Plans 87-02/87-03 can call `notificarFaseEntrada`/`notificarDocumentoNovo`/`notificarProcessoAtribuido`/`notificarParecerAtribuido` directly from their controller trigger points (`createProcessoFase`, upload endpoint, `createProcesso` + new reassignment endpoint, `ParecerController.createSolicitacao`/`atribuirAdvogado`) without needing any further changes to `NotificacaoService`.
 - No blockers. `mvn -f backend/pom.xml -q -DskipTests compile` confirms the full backend still compiles — no existing call site was broken by the `notificarAdmins` signature change (the pre-existing 7-arg signature is untouched; only its body changed to delegate).
 
+## Self-Check: PASSED
+
+- FOUND: `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
+- FOUND: `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java`
+- FOUND: `.planning/phases/LEXCV-87-alertas-de-eventos-fase-documento-atribui-o-e-parecer/87-01-SUMMARY.md`
+- FOUND commit: `73ca8e7` (test, Task 1 RED)
+- FOUND commit: `94a12e3` (feat, Task 1 GREEN)
+- FOUND commit: `60c02f8` (test, Task 2 RED)
+- FOUND commit: `721a8e7` (feat, Task 2 GREEN)
+- FOUND commit: `32d80a2` (docs, SUMMARY)
+
 ---
 *Phase: 87-alertas-de-eventos-fase-documento-atribui-o-e-parecer*
 *Completed: 2026-07-09*
