@@ -19,6 +19,7 @@ import com.lexcv.dtos.DashboardKpiResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@Slf4j
 public class ResourceController {
 
     private final ClienteRepository clienteRepository;
@@ -1660,8 +1662,12 @@ public class ResourceController {
                 .build();
 
         ProcessoFase saved = processoFaseRepository.save(pf);
-        notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
-                processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
+        try {
+            notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
+                    processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
+        } catch (IllegalArgumentException ex) {
+            log.warn("FASE_ENTRADA: falha ao notificar (responsavelId possivelmente órfão) processo={}", id, ex);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -2531,16 +2537,26 @@ public class ResourceController {
                     Processo proc = processoRepository.findById(saved.getProcessoId()).orElse(null);
                     UUID resp = proc != null ? proc.getResponsavelId() : null;
                     List<UUID> dests = resp != null ? List.of(resp) : List.of();
-                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
-                            saved.getNome(), "/processos/" + saved.getProcessoId(), atorId);
+                    try {
+                        notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                                saved.getNome(), "/processos/" + saved.getProcessoId(), atorId);
+                    } catch (IllegalArgumentException ex) {
+                        log.warn("DOCUMENTO_NOVO: falha ao notificar (responsavelId possivelmente órfão) documento={}",
+                                saved.getId(), ex);
+                    }
                 } else if (saved.getClienteId() != null) {
                     List<UUID> dests = new ArrayList<>();
                     clienteAdvogadoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
                             .forEach(a -> dests.add(a.getUserId()));
                     clienteAdministrativoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
                             .forEach(a -> dests.add(a.getUserId()));
-                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
-                            saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
+                    try {
+                        notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                                saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
+                    } catch (IllegalArgumentException ex) {
+                        log.warn("DOCUMENTO_NOVO: falha ao notificar (destinatário possivelmente órfão) documento={}",
+                                saved.getId(), ex);
+                    }
                 }
             }
 
