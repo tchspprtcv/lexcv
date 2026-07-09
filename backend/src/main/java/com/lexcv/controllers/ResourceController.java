@@ -1046,7 +1046,7 @@ public class ResourceController {
     public ResponseEntity<?> listTenantUsers() {
         UUID tenantId = getTenantId();
         List<UserSummaryResponse> response = userRepository.findByTenantId(tenantId).stream()
-                .map(u -> UserSummaryResponse.builder().id(u.getId()).nome(u.getNome()).build())
+                .map(u -> UserSummaryResponse.builder().id(u.getId()).nome(u.getNome()).ativo(u.getAtivo()).build())
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }

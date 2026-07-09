@@ -1214,11 +1214,13 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       {...prazoForm.register("responsavelId")}
                     >
                       <option value="">— Sem responsável —</option>
-                      {(tenantUsers.data ?? []).map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.nome}
-                        </option>
-                      ))}
+                      {(tenantUsers.data ?? [])
+                        .filter((u) => u.ativo !== false)
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.nome}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -2428,11 +2430,13 @@ function ReatribuirResponsavelControl({
                 <option value="" disabled>
                   Selecione um utilizador
                 </option>
-                {(tenantUsers.data ?? []).map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nome}
-                  </option>
-                ))}
+                {(tenantUsers.data ?? [])
+                  .filter((u) => u.ativo !== false)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nome}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

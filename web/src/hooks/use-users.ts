@@ -5,6 +5,10 @@ import { apiFetch } from "@/lib/api";
 export interface TenantUserOption {
   id: string;
   nome: string;
+  // WR-01 (Phase 87 code review, iteration 2): undefined/true means active;
+  // only a strict `false` marks a deactivated account (mirrors backend
+  // UserSummaryResponse.ativo, which is nullable).
+  ativo?: boolean;
 }
 
 /**
