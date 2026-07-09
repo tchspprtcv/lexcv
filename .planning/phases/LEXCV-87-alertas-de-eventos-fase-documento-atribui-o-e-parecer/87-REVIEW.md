@@ -1,146 +1,254 @@
 ---
 phase: 87-alertas-de-eventos-fase-documento-atribui-o-e-parecer
-reviewed: 2026-07-09T10:49:04Z
+reviewed: 2026-07-09T16:00:00Z
 depth: standard
-files_reviewed: 6
+files_reviewed: 8
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/services/NotificacaoService.java
   - backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java
   - backend/src/main/java/com/lexcv/controllers/ResourceController.java
   - backend/src/main/java/com/lexcv/controllers/ParecerController.java
+  - backend/src/main/java/com/lexcv/dtos/UserSummaryResponse.java
   - web/src/hooks/use-processos.ts
+  - web/src/hooks/use-users.ts
   - web/src/app/(dashboard)/processos/[id]/page.tsx
 findings:
   critical: 2
-  warning: 3
+  warning: 5
   info: 1
-  total: 6
+  total: 8
 status: issues_found
 ---
 
 # Phase 87: Code Review Report
 
-**Reviewed:** 2026-07-09T10:49:04Z
+**Reviewed:** 2026-07-09T16:00:00Z
 **Depth:** standard
-**Files Reviewed:** 6
+**Files Reviewed:** 8
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the four notification triggers (FASE_ENTRADA, DOCUMENTO_NOVO, PROCESSO_ATRIBUIDO, PARECER_ATRIBUIDO) and the new `PUT /processos/{id}/atribuir` reassignment endpoint, front-to-back (`NotificacaoService` → `ResourceController`/`ParecerController` → `use-processos.ts` → `processos/[id]/page.tsx`).
+This is a third pass over Phase 87. The prior iteration's five findings (CR-01, WR-01, WR-02, WR-03, IN-01 in the previous `87-REVIEW.md`) were re-verified by directly re-reading each modified region rather than trusting the fix report, and all are correctly applied:
 
-Verified clean against the four specific risk areas called out in scope:
-- **Tenant validation on reassignment** — `atribuirResponsavel` (`ResourceController.java:1012-1016`) correctly mirrors `createProcesso`'s `responsavelId` tenant-ownership check verbatim, as required.
-- **Cross-tenant leak in the documento-sem-processo branch** — `uploadDocumento`'s cliente/team branch (`ResourceController.java:2536-2544`) scopes both `ClienteAdvogado`/`ClienteAdministrativo` queries by the request's own `tenantId`, and `clienteId` was already validated against that same tenant earlier in the method. No leak found.
-- **Actor exclusion** — correctly applied only to `notificarDocumentoNovo` and `notificarParecerAtribuido` (both primary destinatario and ADMIN fan-out), and correctly *not* applied to `notificarFaseEntrada`/`notificarProcessoAtribuido`, matching 87-CONTEXT.md.
-- **Null-safety of `Processo.responsavelId`** — all four call sites guard against a `null` responsavelId correctly. However, tracing this further surfaced a distinct, unguarded failure mode (CR-01 below): a *non-null but stale* responsavelId (referencing a deleted user) is not handled, and this is a real gap, not a hypothetical one — the code's own inline comments show the author was aware of and tried to mitigate "breaking the parent controller's transaction" for the null case, but missed the equally-reachable stale-reference case.
+- **CR-01 (prior)** — `notificarFaseEntrada` (`NotificacaoService.java:118-137`), `notificarDocumentoNovo` (`:164-191`), and both `notificarAdmins` overloads (`:86-113`) now isolate each individual recipient's `criar()` call in its own try/catch, so one stale/orphaned recipient can no longer suppress the ADMIN fan-out or later recipients. Confirmed present and consistent with the new tests (`notificarAdminsComExclusao_...`, etc.).
+- **WR-01 (prior)** — `UserSummaryResponse.ativo` (`UserSummaryResponse.java:24`) and the `listTenantUsers` mapping (`ResourceController.java:1063`) now carry `ativo`; both "assign to" pickers in `page.tsx` filter with `.filter((u) => u.ativo !== false)`. Confirmed present.
+- **WR-02 (prior)** — `useTenantUsers()` now guards with `const enabled = typeof window !== "undefined";` (`use-users.ts:27`), matching every other query hook. Confirmed present.
+- **WR-03 (prior)** — `atribuirResponsavel` now writes an `AuditLog` row (`acao = "processo_atribuir"`) mirroring `ParecerController.atribuirAdvogado` (`ResourceController.java:1030-1042`). Confirmed present.
 
-Beyond the four targeted areas, two more issues were found by tracing call chains and cross-referencing with sibling code in the same files: an unhandled-exception path that turns a successful write into a false 500 (CR-01), and a new UI feature that silently renders non-functional for non-ADMIN `processos:manage` holders (CR-02) because it depends on an ADMIN-only endpoint that a sibling page in the same codebase already knows to guard against.
+Two things came out of this pass that move the phase forward rather than just re-confirming prior work:
+
+1. The prior CR-01 fix's own writeup explicitly flagged, as a non-blocking suggestion, that `notificarProcessoAtribuido`/`notificarParecerAtribuido` share the exact "primary recipient, then unconditional ADMIN fan-out" shape and would "silently reproduce this exact bug the moment any future caller invokes them with an unvalidated id" — but noted they "aren't reachable with a stale ID *today*". That suggestion was never applied. Tracing the actual call sites this pass shows they *are* reachable today (Postgres `READ_COMMITTED` lets a concurrent delete/deactivation become visible to the notification service's own re-validation query, inside the same still-open `@Transactional` request), and the consequence is worse than a suppressed ADMIN notification: it rolls back the entire transaction, undoing an already-applied processo/parecer reassignment. This is promoted to CR-02 below.
+2. Reading `ParecerController.updateSolicitacao` end-to-end (not just the notification-adjacent methods) surfaced an unrelated but more severe defect: two fields are updated unconditionally where their neighbors in the same method are correctly null-guarded, silently discarding a legal deadline on ordinary partial updates. This is CR-01 below.
+
+Also found: parecer-side audit records never link back to their processo (WR-01), none of the three backend endpoints that accept a raw responsável/advogado ID enforce the `ativo` invariant the prior WR-01 fix's `ativo` field exists to support (WR-02), the "Reatribuir Responsável" picker introduced by that same prior fix mishandles the case where the *current* responsável has since gone inactive (WR-03), a concurrency gap in parecer-version numbering (WR-04), and a missing input-validation allowlist for `prioridade` (WR-05).
 
 ## Critical Issues
 
-### CR-01: Stale (deleted-user) `responsavelId`/team reference turns a successful write into a false 500
+### CR-01: `updateSolicitacao` silently wipes `prazo` and can crash on `prioridade` for any partial update
 
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:31-39` (root cause), with unguarded call sites at `backend/src/main/java/com/lexcv/controllers/ResourceController.java:1662-1664` (`createProcessoFase`) and `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2523-2544` (`uploadDocumento`, both the processo-responsável branch and the cliente-team branch)
+**File:** `backend/src/main/java/com/lexcv/controllers/ParecerController.java:210-239`
 
-**Issue:**
-`NotificacaoService.criar()` throws `IllegalArgumentException` whenever `destinatarioId` doesn't resolve to an existing `User` in the given tenant (`userRepository.findById(destinatarioId).filter(...).orElseThrow(...)`, lines 36-39). `notificarFaseEntrada`'s own inline comment acknowledges this exact risk: *"responsavelId é nullable ... null-guard evita que criar() lance IllegalArgumentException e rebente a transação do controller pai"* — but the guard added (`if (responsavelId != null)`) only covers the case where no responsável was ever assigned. It does **not** cover the case where a responsável *was* assigned but the referenced `User` row no longer exists.
+**Issue:** In `updateSolicitacao`, `clienteId` and `processoId` are only applied when present in the request body:
 
-That case is fully reachable: `AdminController.deleteUser` (`/api/v1/admin/users/{id}`) does a raw `userRepository.deleteById(id)` with no cascade cleanup of `Processo.responsavelId` (a plain `@Column(name = "responsavel_id")` UUID with no `@ManyToOne`/FK mapping — confirmed in `Processo.java:27-28`), nor of `ClienteAdvogado`/`ClienteAdministrativo` join rows. So any tenant that deletes a staff member who still owns a process (or is still on a cliente's advogado/administrativo team) will hit this the next time someone:
-- adds a fase to that process (`createProcessoFase` reads `processo.getResponsavelId()` straight off the DB row and passes it, unguarded, into `notificarFaseEntrada` → `criar()`), or
-- uploads a document to that process or cliente (`uploadDocumento` reads `proc.getResponsavelId()` or the `ClienteAdvogado`/`ClienteAdministrativo` rows and passes them, unguarded, into `notificarDocumentoNovo` → `criar()`).
-
-Neither `createProcessoFase` nor `uploadDocumento` is `@Transactional`, and the primary write (`processoFaseRepository.save(pf)` at line 1662, `documentoRepository.save(documento)` at line 2523) happens **before** the notification call. The uncaught `IllegalArgumentException` is then caught by `GlobalExceptionHandler`'s catch-all `@ExceptionHandler(Exception.class)` and turned into a 500. Net effect: the fase/documento is durably persisted, the storage object is uploaded, but the client receives a 500 and has no way to know the operation actually succeeded — and may retry, risking a duplicate fase/documento.
-
-The two currently-safe call sites for `notificarProcessoAtribuido` (`createProcesso` and `atribuirResponsavel`) are not affected, because both freshly validate `responsavelId` against the tenant in the same request immediately before calling notify — this bug is specific to the two call sites that read an already-persisted, unrevalidated FK-shaped field.
-
-**Fix:** Make the notification call best-effort at the two exposed call sites (or make `criar()` tolerant of a stale reference when invoked from a fire-and-forget context) so a side-channel notification failure can never mask a successful primary write:
 ```java
-// ResourceController.createProcessoFase
-ProcessoFase saved = processoFaseRepository.save(pf);
-try {
-    notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
-            processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
-} catch (IllegalArgumentException ex) {
-    log.warn("FASE_ENTRADA: falha ao notificar (responsavelId possivelmente órfão) processo={}", id, ex);
+if (payload.getClienteId() != null) {
+    solicitacao.setClienteId(payload.getClienteId());
 }
-return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-```
-Apply the same pattern around both `notificarDocumentoNovo(...)` calls in `uploadDocumento`. Add a regression test to `NotificacaoServiceTest` (or a new controller test) that stubs `userRepository.findById(responsavelId)` to return empty and asserts the fase/documento write still succeeds.
-
-### CR-02: New "Reatribuir Responsável" control is non-functional for ADVOGADO (and any non-ADMIN `processos:manage`) users
-
-**File:** `web/src/app/(dashboard)/processos/[id]/page.tsx:2359-2360, 2408-2422, 2437` (root cause of dependency at `web/src/hooks/use-admin.ts:7-16`, gated by `backend/src/main/java/com/lexcv/controllers/AdminController.java:26` `@PreAuthorize("hasRole('ADMIN')")` at class level)
-
-**Issue:**
-The backend endpoint this phase adds, `PUT /processos/{id}/atribuir`, is deliberately gated by the `processos:manage` **permission** rather than a hard `ADMIN` role check (per 87-CONTEXT.md: *"Novo endpoint backend gated por processos:manage (não processos:edit)"*). Per `DatabaseSeeder.seedRbac()` (`backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:336-352`), the `ADVOGADO` role is explicitly granted `processos:manage` — so `canManageProcessos` is `true`, and `ReatribuirResponsavelControl` renders, for any ADVOGADO user, not just ADMIN.
-
-However, `ReatribuirResponsavelControl` populates its "Novo Responsável" `<select>` via `useAdminUsers()` (`page.tsx:2360`), which calls `GET /admin/users` — an endpoint gated by `@PreAuthorize("hasRole('ADMIN')")` at the `AdminController` class level, with no other tenant-scoped user-listing endpoint anywhere in the backend. For an ADVOGADO (or any other non-ADMIN `processos:manage` holder), this query returns 403. `apiFetch` (`web/src/lib/api.ts:43-45`) deliberately suppresses the error toast for 401/403, so `adminUsers.data` silently stays `undefined`, the dropdown renders with only the disabled `"Selecione um utilizador"` placeholder, and the "Reatribuir"/"Confirmar Reatribuição" buttons stay permanently disabled (`disabled={!selectedUserId || ...}` at line 2437) — with zero error message surfaced anywhere in the component (it never checks `adminUsers.isError`).
-
-Net effect: the reassignment feature this phase adds is only actually usable by ADMIN-role users, even though the backend was explicitly designed to allow ADVOGADO to use it too, and the UI itself renders the control (and lets the user open the dialog) for ADVOGADO users before silently failing to let them do anything with it. Notably, this exact hazard is already known elsewhere in this same codebase: `clientes/[id]/page.tsx:1147` calls `useAdminUsers({ enabled: isAdmin })`, i.e. an existing page in this repo already gates this same hook on an admin check — this new control doesn't apply that same defensive pattern, and even if it did, gating wouldn't fix the underlying gap (an ADVOGADO would still have no candidate list at all).
-
-**Fix:** Add a tenant-scoped user-listing endpoint that any `processos:manage` (or broader) holder can call — e.g. `GET /api/v1/users` scoped to the caller's tenant, gated by a permission ADVOGADO already holds — and have `ReatribuirResponsavelControl` (and ideally the pre-existing "Novo Prazo" responsável selector, which has the same latent issue) consume that instead of `useAdminUsers()`/`/admin/users`.
-
-## Warnings
-
-### WR-01: No server-side no-op guard on reassignment — reassigning to the same user still fires "you were assigned" notifications
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:1018-1022`
-**Issue:** `atribuirResponsavel` sets `processo.setResponsavelId(responsavelId)`, saves, and unconditionally calls `notificarProcessoAtribuido` — there is no check for whether `responsavelId` actually differs from the process's current `responsavelId`. Calling this endpoint twice with the same `responsavelId` sends the "Foi-lhe atribuído o processo ..." notification (and an ADMIN broadcast) again, even though nothing changed. The frontend disables its "Reatribuir" button when `selectedUserId === currentResponsavelId` (`page.tsx:2437`), but that's a UI-only guard; any direct API call (or a future client) can trigger repeated, misleading notifications. `ParecerController.atribuirAdvogado` has the same gap, and this phase is what newly wires a notification side-effect onto that pre-existing endpoint, so the same spam risk now applies there too.
-**Fix:** Short-circuit when the value is unchanged, before mutating/saving/notifying:
-```java
-if (responsavelId.equals(processo.getResponsavelId())) {
-    return ResponseEntity.ok(processo);
+if (payload.getProcessoId() != null) {
+    solicitacao.setProcessoId(payload.getProcessoId());
 }
 ```
 
-### WR-02: `notificarProcessoAtribuido`'s ADMIN broadcast is not internally null-safe — relies entirely on callers to avoid a misleading message
+but `prazo` and `prioridade`, two lines above, are applied **unconditionally**:
 
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:123-135`
-**Issue:** Unlike `notificarFaseEntrada` (which correctly fires the ADMIN fan-out unconditionally because "a fase entrada happened" is true regardless of whether a responsável exists), `notificarProcessoAtribuido`'s ADMIN message ("O processo ... foi atribuído a um novo responsável.") asserts that an assignment occurred, but the method calls `notificarAdmins(...)` unconditionally even when `responsavelId == null` — i.e. even when nothing was actually assigned. Today this never manifests because both call sites externally prevent invoking the method with a `null` responsavelId (`createProcesso` wraps the whole call in `if (saved.getResponsavelId() != null)`, and `atribuirResponsavel` requires `responsavelId` as a non-blank input). But the method's own contract doesn't enforce or document this precondition, making it a latent foot-gun for any future caller (e.g. a Phase 89 consumer) that invokes it directly without replicating the same external guard.
-**Fix:** Make the method self-defending, consistent with how `notificarFaseEntrada` is written:
+```java
+solicitacao.setPrazo(payload.getPrazo());
+solicitacao.setPrioridade(payload.getPrioridade());
+```
+
+`ParecerSolicitacao.prazo` (`backend/src/main/java/com/lexcv/models/ParecerSolicitacao.java:49`) is a plain nullable `LocalDate` with no default. Any client that PUTs a payload omitting `prazo` — e.g. a form that only edits `clienteId`/`processoId`, or any future caller that copies the guarding convention it sees two lines below — has `payload.getPrazo()` deserialize to `null`, and this line **silently erases the existing deadline** on save. No error, no warning: a real data-loss risk on a legal-deadline field.
+
+`prioridade` (`ParecerSolicitacao.java:40-42`) is `@Column(nullable = false)`. Setting it to `null` and calling `parecerSolicitacaoRepository.save(solicitacao)` fails Hibernate's not-null check on flush, producing an uncaught 500 for what looks like an innocuous partial update. `@Builder.Default private String prioridade = "MEDIA";` does not help here — that default only applies through the Lombok-generated builder, not through the `@NoArgsConstructor` + setters path Jackson uses to deserialize `@RequestBody ParecerSolicitacao payload` — so a JSON body that simply omits `"prioridade"` deserializes to `null`, not `"MEDIA"`.
+
+Separately, `descricao` (required at creation: "descricao é obrigatória") is never touched anywhere in this method, so there is no way to edit it through this endpoint at all, silently.
+
+**Fix:**
+```java
+if (payload.getPrazo() != null) {
+    solicitacao.setPrazo(payload.getPrazo());
+}
+if (payload.getPrioridade() != null) {
+    solicitacao.setPrioridade(payload.getPrioridade());
+}
+if (payload.getDescricao() != null && !payload.getDescricao().isBlank()) {
+    solicitacao.setDescricao(payload.getDescricao());
+}
+if (payload.getClienteId() != null) {
+    solicitacao.setClienteId(payload.getClienteId());
+}
+if (payload.getProcessoId() != null) {
+    solicitacao.setProcessoId(payload.getProcessoId());
+}
+```
+If "clear the prazo" must remain possible, use an explicit signal for it (a dedicated field/endpoint) rather than "key absent from JSON" implicitly meaning "clear".
+
+---
+
+### CR-02: `notificarProcessoAtribuido` / `notificarParecerAtribuido` can roll back an already-persisted assignment
+
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:142-162` (`notificarProcessoAtribuido`) and `:198-209` (`notificarParecerAtribuido`)
+
+**Issue:** The prior iteration's CR-01 fix isolated the primary recipient's `criar()` call in `notificarFaseEntrada` and `notificarDocumentoNovo` with a try/catch, and its writeup explicitly suggested extending the same isolation to these two methods "for full symmetry/defense-in-depth", noting they weren't reachable with a stale ID "today". That suggestion was not applied — both methods still call their primary recipient's `criar()` unguarded:
+
+```java
+// notificarProcessoAtribuido, lines 158-159 — no try/catch
+criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
+        processoId.toString(), linkUrl);
+```
+```java
+// notificarParecerAtribuido, lines 204-205 — no try/catch
+criar(tenantId, advogadoId, "PARECER_ATRIBUIDO", titulo, mensagemDest, "parecer_solicitacao",
+        solicitacaoId, linkUrl);
+```
+
+This pass traced the actual call sites and found the "not reachable today" assumption no longer holds (if it ever fully did): both are invoked from `@Transactional` controller methods, immediately after those same methods validate the recipient belongs to the tenant:
+
+- `ResourceController.atribuirResponsavel` (`ResourceController.java:992`, `@Transactional`): validates `responsavelId` at lines 1015-1019, saves the reassignment and an audit row, then calls `notificarProcessoAtribuido` at 1044-1045.
+- `ParecerController.createSolicitacao` (`:103`, `@Transactional`) and `ParecerController.atribuirAdvogado` (`:244`, `@Transactional`): both validate via `validateAdvogado(...)` immediately before saving and calling `notificarParecerAtribuido` (lines 167-170 and 303-304).
+
+`criar()` re-validates tenant membership with its own `userRepository.findById(...)` (`NotificacaoService.java:38-41`). Under Postgres's default `READ_COMMITTED` isolation, a concurrent transaction's commit (e.g. an admin deleting or deactivating that exact user in a second, overlapping request) can become visible to this later statement within the *same still-open* transaction — the recipient was valid at the earlier validation read and invalid by the time `criar()` re-reads it. When that happens, the `IllegalArgumentException` is not caught anywhere in this call chain, and it rolls back the entire enclosing `@Transactional` method: the processo reassignment or parecer creation/reassignment that had already been saved, plus the audit row, all disappear, while the HTTP client sees an opaque 500 for a request that had, up to that point, fully succeeded. This directly contradicts the resilience guarantee the sibling methods (and the prior CR-01 fix) exist to provide, and no test in `NotificacaoServiceTest.java` exercises an invalid-but-non-null recipient for either method (every existing test for `notificarProcessoAtribuido`/`notificarParecerAtribuido` mocks a valid recipient), so this gap has no regression coverage.
+
+**Fix:** Apply the same per-recipient isolation already used in `notificarFaseEntrada`:
 ```java
 public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
                                         String numeroProcesso, String linkUrl) {
     if (responsavelId == null) {
-        return; // nothing was actually assigned; avoid a misleading ADMIN broadcast
+        return;
     }
-    ...
+    String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
+    String titulo = "Processo atribuído";
+    String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
+    String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+    try {
+        criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
+                processoId.toString(), linkUrl);
+    } catch (IllegalArgumentException ex) {
+        log.warn("PROCESSO_ATRIBUIDO: responsavelId {} inválido/órfão, notificação primária ignorada",
+                responsavelId, ex);
+    }
+    notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
+            processoId.toString(), linkUrl);
 }
 ```
+Apply the equivalent wrapping in `notificarParecerAtribuido`, and add a test per method mocking an invalid (non-null) primary recipient, asserting `assertDoesNotThrow(...)` and that the ADMIN fan-out still runs — mirroring `notificarFaseEntrada_responsavelNulo_geraApenasLinhaAdminSemExcecao` but for an *invalid* rather than *null* recipient.
 
-### WR-03: Tab state only reads `?tab=` once at mount — breaks the FASE_ENTRADA deep-link on same-route navigation
+## Warnings
 
-**File:** `web/src/app/(dashboard)/processos/[id]/page.tsx:233-237`
-**Issue:**
-```tsx
-const searchParams = useSearchParams();
-const tabParam = searchParams.get("tab");
-const initialTab: TabKey =
-  tabParam && (TAB_KEYS as string[]).includes(tabParam) ? (tabParam as TabKey) : "timeline";
-const [tab, setTab] = React.useState<TabKey>(initialTab);
+### WR-01: Parecer audit records always hardcode `processoId(null)`, hiding them from the processo's Auditoria tab
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ParecerController.java:160, 296, 345, 393, 504`
+
+**Issue:** All five `AuditLog.builder()` calls in this file hardcode `.processoId(null)`, even though `solicitacao.getProcessoId()` (or `saved.getProcessoId()`) is available and frequently non-null — a `ParecerSolicitacao` can be linked to a `Processo` (see `createSolicitacao`'s own `processoBelongsToCliente` validation). `ResourceController.getAuditLog` (`:2180-2189`) filters strictly by `findByTenantIdAndProcessoIdOrderByTimestampDesc(tenantId, id)`, and the frontend "Auditoria" tab (`page.tsx:2293-2333`, via `useAuditLog`) renders exactly that list. As written, `parecer_criar`, `parecer_atribuir`, `parecer_aprovar`, `parecer_entregar`, and `parecer_versao_criar` can **never** appear in a processo's audit trail, even when the parecer is explicitly linked to that processo — a real gap in what the code itself labels a "compliance trail" (`ResourceController.java:2176`).
+
+**Fix:** Use the solicitação's own `processoId` (`null` is fine when the parecer genuinely isn't linked to a processo):
+```java
+auditLogRepository.save(AuditLog.builder()
+        .tenantId(tenantId)
+        .processoId(solicitacao.getProcessoId())
+        .acao("parecer_criar")
+        ...
 ```
-`useState`'s initializer only runs on the component's first mount. Next.js App Router reuses the existing component instance (no remount) for client-side navigations that change only the search string on the same dynamic route — so navigating from `/processos/{id}?tab=timeline` to `/processos/{id}?tab=fases` while `ProcessoDetailContent` is already mounted for that same `id` will update `searchParams`/the URL but **will not** update `tab`, since the `useState` initializer doesn't re-run. This directly undermines 87-CONTEXT.md's stated goal for the FASE_ENTRADA notification link ("Link da notificação aponta para a aba 'Fases' ... usar o mesmo padrão de deep-link por aba"): a user who is already on that processo's page (e.g. two tabs open, or navigating there again via any in-app link built the same way) and then follows a `?tab=fases` link will not actually land on the Fases tab. It works correctly today only because Phase 89's notification-consumption UI (the realistic source of these links) doesn't exist yet, so the common path is a fresh mount from elsewhere in the app.
-**Fix:** Re-sync `tab` whenever `searchParams` changes, in addition to the initial value:
-```tsx
-React.useEffect(() => {
-  const p = searchParams.get("tab");
-  if (p && (TAB_KEYS as string[]).includes(p) && p !== tab) {
-    setTab(p as TabKey);
-  }
-}, [searchParams]);
-```
-
-## Info
-
-### IN-01: No direct test coverage for the new mutating endpoint or the controller-level notification wiring
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:987-1025` (and the trigger call sites throughout the same file), `backend/src/main/java/com/lexcv/controllers/ParecerController.java:164-169, 292-296`
-**Issue:** `NotificacaoServiceTest.java` thoroughly covers the new `NotificacaoService` methods in isolation (actor exclusion, null-responsável handling, admin fan-out), but there is no test exercising `atribuirResponsavel`'s own logic (UUID parsing, 404 vs 400 ordering, tenant validation) or the fact that the controllers actually call the right `notificar*` method with the right arguments at each trigger point. This matches the project's existing convention (there are only two test files in the entire backend, both service-level — `RiscoPrazoServiceTest`, `NotificacaoServiceTest` — no controller test exists anywhere in the codebase), so it isn't a regression, but the new endpoint is both mutating and security-sensitive (tenant isolation), which makes it a good candidate for at least a lightweight `@WebMvcTest`/`MockMvc` test going forward.
-**Fix:** Consider adding a minimal MockMvc/WebMvcTest for `atribuirResponsavel` covering: cross-tenant `responsavelId` rejection, cross-tenant `processo` 404, and malformed UUID 400 — as a template other controller endpoints could later follow.
+(use `saved.getProcessoId()` where `saved` rather than `solicitacao` is the variable in scope).
 
 ---
 
-_Reviewed: 2026-07-09T10:49:04Z_
+### WR-02: The `ativo` invariant the prior fix exposed is still not enforced server-side at any assignment endpoint
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:1015-1019` (`atribuirResponsavel`), `:1554-1561` (`createPrazo`); `backend/src/main/java/com/lexcv/controllers/ParecerController.java:60-71` (`validateAdvogado`)
+
+**Issue:** The prior iteration's WR-01 fix added `UserSummaryResponse.ativo`/`TenantUserOption.ativo` specifically "so 'assign to' pickers can filter out deactivated accounts" (`UserSummaryResponse.java:21-24`), and the frontend does filter correctly in both the "Reatribuir Responsável" and "Novo Prazo" pickers. But that fix only addressed *client-side* filtering of the picker's options — none of the three backend endpoints that actually accept a raw ID validate `ativo`:
+- `ResourceController.atribuirResponsavel` (processo reassignment)
+- `ResourceController.createPrazo` (prazo responsável)
+- `ParecerController.validateAdvogado` (parecer create/atribuir)
+
+A client calling these endpoints directly (or a stale cached picker, or any non-UI integration) can still assign a deactivated user as the responsible party for a processo, prazo, or parecer — the business rule the `ativo` field exists to support remains enforced only in the UI.
+
+**Fix:** e.g. for `atribuirResponsavel`:
+```java
+User responsavel = userRepository.findById(responsavelId).orElse(null);
+if (responsavel == null || !tenantId.equals(responsavel.getTenantId())
+        || Boolean.FALSE.equals(responsavel.getAtivo())) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(Map.of("message", "responsavelId não pertence a este tenant ou está inativo"));
+}
+```
+Apply the same `Boolean.FALSE.equals(user.getAtivo())` guard to `createPrazo` and `validateAdvogado`.
+
+---
+
+### WR-03: "Reatribuir Responsável" picker (introduced by the prior fix) excludes the current responsável when inactive, leaving the `<select>` in a phantom-value state
+
+**File:** `web/src/app/(dashboard)/processos/[id]/page.tsx:2372, 2405-2409, 2433-2439, 2455`
+
+**Issue:** `selectedUserId` is initialized/reset to `currentResponsavelId` (lines 2372, 2405-2409), but the `<select>`'s options are `(tenantUsers.data ?? []).filter((u) => u.ativo !== false)` (lines 2433-2439) — exactly the filter the prior WR-01 fix added. If the currently-assigned responsável has since been deactivated, `selectedUserId` holds an ID with **no matching `<option>`**, so the dropdown cannot visually show who the current responsável is. Compounding this, the confirm button is `disabled={!selectedUserId || selectedUserId === currentResponsavelId || ...}` (line 2455) — the dialog opens already disabled with no visible explanation, and `novoNome` (line 2378, used in "passará a ser da responsabilidade de {novoNome}") resolves to an empty string for as long as `selectedUserId` matches no active user.
+
+**Fix:** Always surface the current responsável as an option, even if inactive:
+```tsx
+const filteredUsers = (tenantUsers.data ?? []).filter((u) => u.ativo !== false);
+const currentStillActive = filteredUsers.some((u) => u.id === currentResponsavelId);
+...
+<select ...>
+  <option value="" disabled>Selecione um utilizador</option>
+  {!currentStillActive && currentResponsavelId && currentResponsavelNome ? (
+    <option value={currentResponsavelId}>{currentResponsavelNome} (inativo)</option>
+  ) : null}
+  {filteredUsers.map((u) => (
+    <option key={u.id} value={u.id}>{u.nome}</option>
+  ))}
+</select>
+```
+
+---
+
+### WR-04: `synchronized (ParecerVersaoRepository.class)` does not prevent concurrent `numeroVersao` collisions
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ParecerController.java:467-480`
+
+**Issue:** The monitor is released as soon as the `synchronized` block exits, right after `parecerVersaoRepository.save(versao)` (line 479) — but since `createVersao` is `@Transactional`, the row only actually commits (and becomes visible to `findMaxNumeroVersaoBySolicitacaoId`) when the whole method returns, well after the lock is released and the file-upload code (lines 482-499) runs. Two concurrent requests creating a version for the *same* `solicitacaoId` can each acquire the monitor in turn, each compute `next = max + 1` from a snapshot that doesn't yet include the other's uncommitted insert, and each persist a `ParecerVersao` with the same `numeroVersao` — no unique constraint is evident to catch this at commit time. A JVM monitor also provides no protection across multiple application instances in a horizontally-scaled deployment.
+
+**Fix:** Don't rely on an in-process lock for a cross-transaction invariant. Either add a DB-level `UNIQUE (solicitacao_id, numero_versao)` constraint and catch/retry on `DataIntegrityViolationException`, or take a row-level lock on the parent `ParecerSolicitacao` (`SELECT ... FOR UPDATE`) held for the duration of the same transaction that computes-and-inserts the new `ParecerVersao`, so the increment and the insert are atomic with respect to the database, not just the JVM.
+
+---
+
+### WR-05: `prioridade` is never validated against its documented domain in `ParecerController`
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ParecerController.java:138-140, 229`
+
+**Issue:** `ParecerSolicitacao.prioridade` is a plain `String` column documented as `// ALTA | MEDIA | BAIXA` (`ParecerSolicitacao.java:39-42`) with no enum type or DB check constraint. `createSolicitacao` (`ParecerController.java:138-140`) and `updateSolicitacao` (`:229`) both persist `body.getPrioridade()`/`payload.getPrioridade()` verbatim with no allow-list check — unlike the equivalent `Prazo.prioridade`, which `ResourceController.createPrazo` explicitly validates (`ResourceController.java:1548-1553`: `Set.of("ALTA", "MEDIA", "BAIXA")`). Arbitrary strings can be persisted, silently breaking any frontend badge/label mapping that assumes only the three documented values.
+
+**Fix:**
+```java
+Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
+if (body.getPrioridade() != null && !prioridadesValidas.contains(body.getPrioridade().toUpperCase())) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(Map.of("message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
+}
+```
+applied in both `createSolicitacao` and `updateSolicitacao`.
+
+## Info
+
+### IN-01: Inconsistent authorization tier for structurally equivalent "reassign responsible party" actions
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:990`; `backend/src/main/java/com/lexcv/controllers/ParecerController.java:242`
+
+**Issue:** Reassigning a processo's responsável requires `@PreAuthorize("hasAuthority('processos:manage')")`. Reassigning a parecer's advogado — structurally the same action — requires only `@PreAuthorize("hasAuthority('pareceres:edit')")`, one tier lower in the `manage implies edit implies create` fallback chain (`CLAUDE.md`). This may be intentional (advogados routinely handing off pareceres under `:edit`), but both actions trigger an ADMIN notification fan-out and write an audit record for the same underlying reason, so it's worth confirming with whoever owns the permission model that the asymmetry is deliberate rather than drift.
+
+**Fix:** No code change unless confirmed unintentional; if `pareceres:manage` was intended, tighten `atribuirAdvogado`'s `@PreAuthorize`.
+
+---
+
+_Reviewed: 2026-07-09T16:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
