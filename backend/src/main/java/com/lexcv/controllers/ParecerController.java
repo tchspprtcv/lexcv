@@ -275,6 +275,14 @@ public class ParecerController {
                     .body(Map.of("message", "advogadoId não pertence a este tenant ou não tem papel ADVOGADO"));
         }
 
+        // WR-01 (Phase 87 code review): no-op guard -- re-"assigning" the same advogado
+        // while already EM_ELABORACAO must not re-fire "you were assigned" notifications.
+        // If the status differs (e.g. EM_REVISAO), this is a real transition (send back
+        // for rework) and must proceed to notify.
+        if (advogadoId.equals(solicitacao.getAdvogadoId()) && "EM_ELABORACAO".equals(solicitacao.getStatus())) {
+            return ResponseEntity.ok(solicitacao);
+        }
+
         solicitacao.setAdvogadoId(advogadoId);
         solicitacao.setStatus("EM_ELABORACAO");
 

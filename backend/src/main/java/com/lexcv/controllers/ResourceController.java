@@ -1018,6 +1018,12 @@ public class ResourceController {
                     .body(Map.of("message", "responsavelId não pertence a este tenant"));
         }
 
+        // WR-01 (Phase 87 code review): no-op guard -- reassigning to the same
+        // responsavelId must not re-fire "you were assigned" notifications.
+        if (responsavelId.equals(processo.getResponsavelId())) {
+            return ResponseEntity.ok(processo);
+        }
+
         processo.setResponsavelId(responsavelId);
         Processo saved = processoRepository.save(processo);
 
