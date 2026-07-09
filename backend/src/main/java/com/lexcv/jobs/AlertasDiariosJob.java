@@ -22,6 +22,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,12 @@ public class AlertasDiariosJob {
     // (88-CONTEXT.md, lógica própria — fora do RiscoPrazoService, que só cobre prazo/evento).
     private static final int DIAS_HONORARIO_ATRASADO = 30;
 
+    // WR-02 (Phase 88 code review, iteration 2): zona explícita para LocalDate.now() -- o mesmo
+    // "não confiar no fuso horário do container" já exigido para o atributo zone= do @Scheduled
+    // abaixo (88-CONTEXT.md) também se aplica aqui; Clock.systemDefaultZone() (usado por
+    // LocalDate.now() sem argumentos) resolve para o fuso default da JVM, não Atlantic/Cape_Verde.
+    private static final ZoneId FUSO_CABO_VERDE = ZoneId.of("Atlantic/Cape_Verde");
+
     private final TenantRepository tenantRepository;
     private final ProcessoRepository processoRepository;
     private final PrazoRepository prazoRepository;
@@ -74,7 +81,7 @@ public class AlertasDiariosJob {
     // 88-CONTEXT.md, não usar fixedRate/fixedDelay).
     @Scheduled(cron = "0 0 6 * * *", zone = "Atlantic/Cape_Verde")
     public void executar() {
-        executar(LocalDate.now());
+        executar(LocalDate.now(FUSO_CABO_VERDE));
     }
 
     // Overload package-private com `hoje` injetável — é este que o teste chama diretamente,
