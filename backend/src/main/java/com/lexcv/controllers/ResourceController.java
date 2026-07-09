@@ -2477,6 +2477,29 @@ public class ResourceController {
             }
 
             Documento saved = documentoRepository.save(documento);
+
+            if (replaceId == null) {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+                UUID atorId = principal.getUserId();
+                UUID tenantId = getTenantId();
+                if (saved.getProcessoId() != null) {
+                    Processo proc = processoRepository.findById(saved.getProcessoId()).orElse(null);
+                    UUID resp = proc != null ? proc.getResponsavelId() : null;
+                    List<UUID> dests = resp != null ? List.of(resp) : List.of();
+                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                            saved.getNome(), "/processos/" + saved.getProcessoId(), atorId);
+                } else if (saved.getClienteId() != null) {
+                    List<UUID> dests = new ArrayList<>();
+                    clienteAdvogadoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
+                            .forEach(a -> dests.add(a.getUserId()));
+                    clienteAdministrativoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
+                            .forEach(a -> dests.add(a.getUserId()));
+                    notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
+                            saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
+                }
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (StorageUnavailableException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
