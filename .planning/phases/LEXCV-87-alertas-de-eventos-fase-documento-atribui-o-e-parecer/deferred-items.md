@@ -32,3 +32,23 @@ not by static security analysis.
 Java 23 (class file 67) support, verified independently of any feature phase. This means the project's
 documented SAST gate (`mvn spotbugs:check` per CLAUDE.md) has likely never actually executed
 successfully against Java 23 bytecode — worth confirming how long this has been broken.
+
+## Pre-existing frontend lint errors/warnings (Plan 87-04, out of scope)
+
+**Discovered during:** Plan 87-04, verification of Tasks 1-3 via `pnpm --dir web lint`.
+
+**Issue:** `pnpm --dir web lint` reports 22 problems (5 errors, 17 warnings) both before and after
+this plan's edits — an identical count confirmed by running lint immediately after Task 1's isolated
+change and again after Tasks 2-3. Neither file this plan modified (`web/src/hooks/use-processos.ts`,
+`web/src/app/(dashboard)/processos/[id]/page.tsx`) contributes any new entry; the only line attributed
+to the modified page file is a pre-existing `'textareaClassName' is assigned a value but never used`
+warning that predates this plan. The 5 errors are unrelated: `dashboard-shell.tsx` (`setState()` called
+synchronously inside a `useEffect`) and `documentos/novo/page.tsx` (a ref passed to
+`form.handleSubmit(...)` read during render).
+
+**Scope decision:** Out of scope per the Scope Boundary rule — none of these files are in this plan's
+`<files>` list, and none were touched by Tasks 1-3. Not auto-fixed.
+
+**Recommendation:** Candidate for a small, dedicated cleanup pass in a future milestone (unused-var
+removal in `processos/[id]/page.tsx`; effect/ref fixes in `dashboard-shell.tsx` and
+`documentos/novo/page.tsx`). Not blocking for Phase 87.
