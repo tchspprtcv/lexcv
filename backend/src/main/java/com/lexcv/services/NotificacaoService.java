@@ -81,28 +81,54 @@ public class NotificacaoService {
     @Transactional
     void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
                           String entidadeTipo, String entidadeId, String linkUrl) {
+        notificarAdmins(tenantId, categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl, null);
+    }
+
+    // Overload com exclusão de ator (Phase 87) — usado por DOCUMENTO_NOVO e PARECER_ATRIBUIDO para
+    // que o autor da própria ação não seja notificado da sua ação, mesmo quando ele próprio é ADMIN.
+    // O notificarAdmins de 7 args (acima) delega aqui com excluirUserId=null, preservando o
+    // comportamento pré-existente (Phase 86) para FASE_ENTRADA/PROCESSO_ATRIBUIDO, que não excluem ator.
+    @Transactional
+    void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
+                          String entidadeTipo, String entidadeId, String linkUrl, UUID excluirUserId) {
         for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
+            if (excluirUserId != null && excluirUserId.equals(admin.getId())) {
+                continue;
+            }
             criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
         }
     }
 
-    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
-    @Transactional
-    void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
-                          String entidadeTipo, String entidadeId, String linkUrl, UUID excluirUserId) {
-        // Intentionally empty for RED.
-    }
-
-    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
+    // NOTF-15: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a exige aqui).
+    // responsavelId é nullable (Processo ainda pode não ter responsável atribuído) — null-guard
+    // evita que criar() lance IllegalArgumentException e rebente a transação do controller pai.
     public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID responsavelId,
                                       String numeroProcesso, String nomeFase, String linkUrl) {
-        // Intentionally empty for RED.
+        String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
+        String titulo = "Nova fase";
+        String mensagem = "O processo " + numeroTexto + " entrou na fase " + nomeFase;
+        if (responsavelId != null) {
+            criar(tenantId, responsavelId, "FASE_ENTRADA", titulo, mensagem, "processo",
+                    processoId.toString(), linkUrl);
+        }
+        notificarAdmins(tenantId, "FASE_ENTRADA", titulo, mensagem, "processo", processoId.toString(), linkUrl);
     }
 
-    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
+    // NOTF-18: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a exige aqui).
+    // Mensagem do destinatário em 2ª pessoa (texto travado por CONTEXT.md); mensagem do ADMIN em
+    // 3ª pessoa, sem nome do ator.
     public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
                                             String numeroProcesso, String linkUrl) {
-        // Intentionally empty for RED.
+        String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
+        String titulo = "Processo atribuído";
+        String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
+        String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+        if (responsavelId != null) {
+            criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
+                    processoId.toString(), linkUrl);
+        }
+        notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
+                processoId.toString(), linkUrl);
     }
 
     // Mesmo ponto de escrita que criar(...), agora para MUTAÇÃO de estado — nenhuma outra classe
