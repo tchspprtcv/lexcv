@@ -1027,6 +1027,20 @@ public class ResourceController {
         processo.setResponsavelId(responsavelId);
         Processo saved = processoRepository.save(processo);
 
+        // WR-03 (Phase 87 code review, iteration 2): audit record, mirroring
+        // ParecerController.atribuirAdvogado's identical pattern for the same
+        // class of action (reassigning a responsible party).
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        auditLogRepository.save(AuditLog.builder()
+                .tenantId(tenantId)
+                .processoId(saved.getId())
+                .acao("processo_atribuir")
+                .entidadeTipo("processo")
+                .entidadeId(saved.getId().toString())
+                .autorId(principal.getUserId())
+                .build());
+
         notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
                 saved.getNumeroProcesso(), "/processos/" + saved.getId());
 
