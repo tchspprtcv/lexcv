@@ -2,7 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
+import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import {
   AlertCircle,
@@ -146,6 +148,17 @@ type TabKey =
   | "documentos"
   | "auditoria";
 
+const TAB_KEYS: TabKey[] = [
+  "timeline",
+  "partes",
+  "fases",
+  "decisoes",
+  "factos",
+  "testemunhas",
+  "documentos",
+  "auditoria",
+];
+
 const selectClassName =
   "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
 
@@ -202,7 +215,11 @@ export default function ProcessoDetailPage({ params }: PageProps) {
     );
   }
 
-  return <ProcessoDetailContent id={id} canEditProcessos={canEditProcessos} canManageProcessos={canManageProcessos} />;
+  return (
+    <Suspense fallback={<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-slate-900 mx-auto"></div>}>
+      <ProcessoDetailContent id={id} canEditProcessos={canEditProcessos} canManageProcessos={canManageProcessos} />
+    </Suspense>
+  );
 }
 
 function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { id: string; canEditProcessos: boolean; canManageProcessos: boolean }) {
@@ -213,7 +230,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const permissions = usePermissions();
   const canEditDocumentos = permissions.can.edit("documentos");
 
-  const [tab, setTab] = React.useState<TabKey>("timeline");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab: TabKey =
+    tabParam && (TAB_KEYS as string[]).includes(tabParam) ? (tabParam as TabKey) : "timeline";
+  const [tab, setTab] = React.useState<TabKey>(initialTab);
   const [formalizarError, setFormalizarError] = React.useState<string | null>(null);
 
   // Workflow state
