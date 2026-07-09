@@ -307,6 +307,32 @@ class NotificacaoServiceTest {
         assertEquals("PROCESSO_ATRIBUIDO", saved.get(1).getCategoria());
     }
 
+    @Test
+    void notificarProcessoAtribuido_responsavelInvalido_naoLancaExcecaoEAdminAindaRecebeLinha() {
+        // CR-02 (Phase 87 code review, iteration 3): a stale/orphaned responsavelId (e.g.
+        // deleted/deactivated between the controller's own validation and this call) must not
+        // let criar()'s IllegalArgumentException escape and roll back the enclosing
+        // @Transactional controller method -- mirrors notificarFaseEntrada_responsavelNulo_...
+        // but for an *invalid* (non-null) recipient rather than a null one.
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId)).thenReturn(Optional.empty());
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertDoesNotThrow(() ->
+                service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0003", "/link"));
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
+        // O responsavelId órfão nunca chega a save(), mas o fan-out ADMIN ainda ocorre.
+    }
+
     // --- Phase 87 Task 2: wrappers com exclusão de ator (DOCUMENTO_NOVO, PARECER_ATRIBUIDO) ---
 
     private static final UUID ATOR = UUID.randomUUID();
@@ -386,6 +412,30 @@ class NotificacaoServiceTest {
             assertEquals("PARECER_ATRIBUIDO", n.getCategoria());
             assertEquals("parecer_solicitacao", n.getEntidadeTipo());
         }
+    }
+
+    @Test
+    void notificarParecerAtribuido_advogadoInvalido_naoLancaExcecaoEAdminAindaRecebeLinha() {
+        // CR-02 (Phase 87 code review, iteration 3): mirrors
+        // notificarProcessoAtribuido_responsavelInvalido_... above -- a stale/orphaned
+        // advogadoId must not let criar()'s IllegalArgumentException escape and roll back
+        // the enclosing @Transactional controller method (createSolicitacao/atribuirAdvogado).
+        UUID advogadoId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(advogadoId)).thenReturn(Optional.empty());
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertDoesNotThrow(() ->
+                service.notificarParecerAtribuido(TENANT_ID, "sol-3", advogadoId, "/link", ATOR));
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
+        // O advogadoId órfão nunca chega a save(), mas o fan-out ADMIN ainda ocorre.
     }
 
     @Test

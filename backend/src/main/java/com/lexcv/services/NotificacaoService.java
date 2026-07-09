@@ -155,8 +155,21 @@ public class NotificacaoService {
         String titulo = "Processo atribuído";
         String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
         String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
-        criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
-                processoId.toString(), linkUrl);
+        // CR-02 (Phase 87 code review, iteration 3): isolate the primary recipient, same
+        // pattern as notificarFaseEntrada/notificarDocumentoNovo/notificarAdmins. Both call
+        // sites (ResourceController.atribuirResponsavel) run inside an already-open
+        // @Transactional method, right after their own tenant-membership validation of
+        // responsavelId -- under READ_COMMITTED, a concurrent delete/deactivation of that
+        // exact user can still become visible to criar()'s re-validation query before this
+        // transaction commits. Uncaught, that IllegalArgumentException would roll back the
+        // whole enclosing transaction, undoing an already-persisted processo reassignment.
+        try {
+            criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
+                    processoId.toString(), linkUrl);
+        } catch (IllegalArgumentException ex) {
+            log.warn("PROCESSO_ATRIBUIDO: responsavelId {} inválido/órfão, notificação primária ignorada",
+                    responsavelId, ex);
+        }
         notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
                 processoId.toString(), linkUrl);
     }
@@ -200,9 +213,21 @@ public class NotificacaoService {
         String titulo = "Parecer atribuído";
         String mensagemDest = "Foi-lhe atribuído um parecer jurídico.";
         String mensagemAdmin = "Um parecer jurídico foi atribuído a um advogado.";
+        // CR-02 (Phase 87 code review, iteration 3): isolate the primary recipient -- same
+        // reasoning as notificarProcessoAtribuido above. Both ParecerController.createSolicitacao
+        // and .atribuirAdvogado run this inside an already-open @Transactional method, right
+        // after validateAdvogado(...) confirms tenant membership; a concurrent deactivation/
+        // deletion of that same advogado can still make criar()'s own re-validation fail before
+        // this transaction commits, and an uncaught IllegalArgumentException here would roll
+        // back the already-persisted parecer creation/reassignment.
         if (advogadoId != null && !advogadoId.equals(atorId)) {
-            criar(tenantId, advogadoId, "PARECER_ATRIBUIDO", titulo, mensagemDest, "parecer_solicitacao",
-                    solicitacaoId, linkUrl);
+            try {
+                criar(tenantId, advogadoId, "PARECER_ATRIBUIDO", titulo, mensagemDest, "parecer_solicitacao",
+                        solicitacaoId, linkUrl);
+            } catch (IllegalArgumentException ex) {
+                log.warn("PARECER_ATRIBUIDO: advogadoId {} inválido/órfão, notificação primária ignorada",
+                        advogadoId, ex);
+            }
         }
         notificarAdmins(tenantId, "PARECER_ATRIBUIDO", titulo, mensagemAdmin, "parecer_solicitacao",
                 solicitacaoId, linkUrl, atorId);
