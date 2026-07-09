@@ -30,6 +30,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -370,5 +371,47 @@ class AlertasDiariosJobTest {
         // Total de 1 chamada -- prova que nenhuma notificação "responsavel" foi tentada (não há
         // Processo para resolver um responsavelId).
         verify(notificacaoService, times(1)).criar(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void executar_umAdminFalhaAoNotificar_restantesAdminsAindaSaoNotificados() {
+        // WR-03 (Phase 88 code review, iteration 3): prova que o try/catch por admin dentro do
+        // fan-out (WR-01, iteração 2) realmente isola uma falha de notificação -- sem este teste,
+        // um refactor que movesse o try/catch para fora do loop, ou estreitasse o tipo do catch,
+        // passaria despercebido por toda a suite.
+        Tenant tenant = Tenant.builder().id(TENANT_ID).nome("Tenant A").build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenant));
+
+        Processo processo = Processo.builder().id(PROCESSO_ID).tenantId(TENANT_ID)
+                .responsavelId(RESPONSAVEL_ID).numeroProcesso("PROC-0001").build();
+        when(processoRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(processo));
+
+        UUID prazoId = UUID.randomUUID();
+        Prazo prazo = Prazo.builder().id(prazoId).tenantId(TENANT_ID).processoId(PROCESSO_ID)
+                .descricao("Contestação").dataLimite(HOJE.plusDays(2)).prioridade("MEDIA")
+                .concluido(false).build();
+        when(prazoRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(prazo));
+
+        semEventos(TENANT_ID);
+        semHonorarios();
+        nuncaAntesNotificado();
+
+        UUID adminFalhaId = UUID.randomUUID();
+        UUID adminOkId = UUID.randomUUID();
+        User adminFalha = User.builder().id(adminFalhaId).tenantId(TENANT_ID).build();
+        User adminOk = User.builder().id(adminOkId).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
+                .thenReturn(List.of(adminFalha, adminOk));
+
+        // Primeiro admin falha ao notificar com uma RuntimeException inesperada (ex.: uma
+        // DataAccessException transitória).
+        doThrow(new RuntimeException("boom"))
+                .when(notificacaoService).criar(eq(TENANT_ID), eq(adminFalhaId), any(), any(), any(), any(), any(), any());
+
+        assertDoesNotThrow(() -> buildJob().executar(HOJE));
+
+        // O segundo admin tem de ser notificado na mesma, apesar da falha do primeiro.
+        verify(notificacaoService, times(1)).criar(eq(TENANT_ID), eq(adminOkId), eq("PRAZO_PROXIMO"),
+                anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
     }
 }
