@@ -292,6 +292,9 @@ public class ParecerController {
                 .autorId(principal.getUserId())
                 .build());
 
+        notificacaoService.notificarParecerAtribuido(tenantId, saved.getId().toString(),
+                saved.getAdvogadoId(), "/pareceres/" + saved.getId(), principal.getUserId());
+
         return ResponseEntity.ok(saved);
     }
 
