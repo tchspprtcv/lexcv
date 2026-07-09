@@ -122,14 +122,22 @@ public class NotificacaoService {
     // 3ª pessoa, sem nome do ator.
     public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
                                             String numeroProcesso, String linkUrl) {
+        // WR-02 (Phase 87 code review): self-defending null-guard. Unlike
+        // notificarFaseEntrada (where the ADMIN fan-out is unconditionally correct
+        // because "a fase entrada happened" regardless of responsável), this method's
+        // ADMIN message asserts an assignment occurred -- with a null responsavelId,
+        // nothing was actually assigned, so the whole method (including the ADMIN
+        // broadcast) must no-op rather than rely on every caller externally guarding
+        // against null before calling.
+        if (responsavelId == null) {
+            return;
+        }
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Processo atribuído";
         String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
         String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
-        if (responsavelId != null) {
-            criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
-                    processoId.toString(), linkUrl);
-        }
+        criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
+                processoId.toString(), linkUrl);
         notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
                 processoId.toString(), linkUrl);
     }
