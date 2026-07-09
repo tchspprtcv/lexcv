@@ -12,6 +12,7 @@ import com.lexcv.repositories.ParecerSolicitacaoRepository;
 import com.lexcv.repositories.ParecerVersaoRepository;
 import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.NotificacaoService;
 import com.lexcv.services.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class ParecerController {
     private final ParecerVersaoRepository parecerVersaoRepository;
     private final StorageService storageService;
     private final AuditLogRepository auditLogRepository;
+    private final NotificacaoService notificacaoService;
 
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -161,6 +163,11 @@ public class ParecerController {
                 .entidadeId(saved.getId().toString())
                 .autorId(principal.getUserId())
                 .build());
+
+        if (saved.getAdvogadoId() != null) {
+            notificacaoService.notificarParecerAtribuido(tenantId, saved.getId().toString(),
+                    saved.getAdvogadoId(), "/pareceres/" + saved.getId(), principal.getUserId());
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
