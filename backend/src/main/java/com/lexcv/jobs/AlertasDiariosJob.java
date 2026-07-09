@@ -188,7 +188,12 @@ public class AlertasDiariosJob {
                 Processo processo = processoId != null ? processoPorId.get(processoId) : null;
                 UUID responsavelId = processo != null ? processo.getResponsavelId() : null;
                 String titulo = RiscoPrazoService.PROXIMO.equals(risco) ? "Evento a aproximar-se" : "Evento em atraso";
-                String mensagem = "O evento \"" + evento.getTitulo() + "\" "
+                // WR-05 (Phase 88 code review): Evento.titulo é nullable na entidade/BD e sem
+                // validação no controller de criação -- guarda null igual ao padrão já usado em
+                // numeroProcesso(...), para nunca persistir "null" literal na mensagem da
+                // notificação (que depois não é editável).
+                String tituloTexto = evento.getTitulo() != null ? evento.getTitulo() : "(sem título)";
+                String mensagem = "O evento \"" + tituloTexto + "\" "
                         + (RiscoPrazoService.PROXIMO.equals(risco) ? "está a aproximar-se." : "está em atraso.");
                 // Evento sem processo associado (ex.: compromisso interno) -> sem página de
                 // detalhe própria, aponta para a agenda geral.
