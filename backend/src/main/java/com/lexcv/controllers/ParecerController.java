@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -126,6 +127,15 @@ public class ParecerController {
         if (body.getProcessoId() != null && !processoBelongsToCliente(body.getProcessoId(), body.getClienteId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "processoId não pertence ao cliente indicado"));
+        }
+        // WR-05 (Phase 87 code review, iteration 3): prioridade has no enum/DB check
+        // constraint backing its documented ALTA|MEDIA|BAIXA domain -- validate against an
+        // allowlist here, mirroring ResourceController.createPrazo's identical check for
+        // Prazo.prioridade.
+        Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
+        if (body.getPrioridade() != null && !prioridadesValidas.contains(body.getPrioridade().toUpperCase())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
         }
 
         // Construct the persisted entity from an explicit allowlist of creatable
@@ -226,6 +236,12 @@ public class ParecerController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "processoId não pertence ao cliente indicado"));
             }
+        }
+        // WR-05 (Phase 87 code review, iteration 3): same allowlist check as createSolicitacao.
+        Set<String> prioridadesValidas = Set.of("ALTA", "MEDIA", "BAIXA");
+        if (payload.getPrioridade() != null && !prioridadesValidas.contains(payload.getPrioridade().toUpperCase())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
         }
 
         // CR-01 (Phase 87 code review, iteration 3): prazo/prioridade/descricao are now
