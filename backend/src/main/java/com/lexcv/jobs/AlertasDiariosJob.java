@@ -167,7 +167,15 @@ public class AlertasDiariosJob {
 
                 notificar(tenantId, responsavelId, categoria, titulo, mensagem, "prazo", entidadeId, linkUrl);
                 for (User admin : admins) {
-                    notificar(tenantId, admin.getId(), categoria, titulo, mensagem, "prazo", entidadeId, linkUrl);
+                    // WR-01 (Phase 88 code review, iteration 2): isolate each admin so one
+                    // transient failure (e.g. DataAccessException) can never abort the rest of
+                    // the ADMIN fan-out for this prazo, mirroring
+                    // NotificacaoService.notificarAdmins' own per-recipient isolation.
+                    try {
+                        notificar(tenantId, admin.getId(), categoria, titulo, mensagem, "prazo", entidadeId, linkUrl);
+                    } catch (Exception e) {
+                        log.warn("Falha ao notificar admin {} para prazo {} do tenant {}", admin.getId(), prazo.getId(), tenantId, e);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Falha ao processar prazo {} do tenant {}", prazo.getId(), tenantId, e);
@@ -202,7 +210,15 @@ public class AlertasDiariosJob {
 
                 notificar(tenantId, responsavelId, categoria, titulo, mensagem, "evento", entidadeId, linkUrl);
                 for (User admin : admins) {
-                    notificar(tenantId, admin.getId(), categoria, titulo, mensagem, "evento", entidadeId, linkUrl);
+                    // WR-01 (Phase 88 code review, iteration 2): isolate each admin so one
+                    // transient failure (e.g. DataAccessException) can never abort the rest of
+                    // the ADMIN fan-out for this evento, mirroring
+                    // NotificacaoService.notificarAdmins' own per-recipient isolation.
+                    try {
+                        notificar(tenantId, admin.getId(), categoria, titulo, mensagem, "evento", entidadeId, linkUrl);
+                    } catch (Exception e) {
+                        log.warn("Falha ao notificar admin {} para evento {} do tenant {}", admin.getId(), evento.getId(), tenantId, e);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Falha ao processar evento {} do tenant {}", evento.getId(), tenantId, e);
@@ -247,8 +263,16 @@ public class AlertasDiariosJob {
                 notificar(tenantId, responsavelId, "HONORARIO_ATRASADO", titulo, mensagem, "honorario",
                         entidadeId, linkUrl);
                 for (User admin : admins) {
-                    notificar(tenantId, admin.getId(), "HONORARIO_ATRASADO", titulo, mensagem, "honorario",
-                            entidadeId, linkUrl);
+                    // WR-01 (Phase 88 code review, iteration 2): isolate each admin so one
+                    // transient failure (e.g. DataAccessException) can never abort the rest of
+                    // the ADMIN fan-out for this honorário, mirroring
+                    // NotificacaoService.notificarAdmins' own per-recipient isolation.
+                    try {
+                        notificar(tenantId, admin.getId(), "HONORARIO_ATRASADO", titulo, mensagem, "honorario",
+                                entidadeId, linkUrl);
+                    } catch (Exception e) {
+                        log.warn("Falha ao notificar admin {} para honorário {} do tenant {}", admin.getId(), honorario.getId(), tenantId, e);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Falha ao processar honorário {} do tenant {}", honorario.getId(), tenantId, e);
