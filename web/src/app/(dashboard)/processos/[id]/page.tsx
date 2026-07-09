@@ -21,6 +21,16 @@ import {
   XCircle,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +77,7 @@ import {
   useProcesso,
   useProcessoFases,
   useProcessoPartes,
+  useReatribuirResponsavel,
   useTestemunhas,
   useTimeline,
   useTogglePrazoConcluido,
@@ -899,6 +910,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic">Não atribuído</span>
                       )}
+                      {canManageProcessos ? (
+                        <ReatribuirResponsavelControl
+                          processoId={id}
+                          numero={processo.data?.numero ?? processo.data?.titulo ?? "…"}
+                          currentResponsavelId={workflow.data.responsavelId ?? null}
+                          currentResponsavelNome={workflow.data.responsavelNome ?? null}
+                        />
+                      ) : null}
                     </dd>
                     <dt className="text-neutral-500 dark:text-neutral-400">Próximo Passo</dt>
                     <dd className="col-span-2 text-sm text-slate-500 dark:text-slate-400">
@@ -2297,6 +2316,149 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
         <div className="text-sm text-neutral-500 dark:text-neutral-400">Processo não encontrado.</div>
       )}
     </div>
+  );
+}
+
+function ReatribuirResponsavelControl({
+  processoId,
+  numero,
+  currentResponsavelId,
+  currentResponsavelNome,
+}: {
+  processoId: string;
+  numero: string;
+  currentResponsavelId: string | null;
+  currentResponsavelNome: string | null;
+}) {
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [selectedUserId, setSelectedUserId] = React.useState(currentResponsavelId ?? "");
+  const [reatribuirError, setReatribuirError] = React.useState<string | null>(null);
+
+  const reatribuir = useReatribuirResponsavel(processoId);
+  const adminUsers = useAdminUsers();
+
+  const novoNome = (adminUsers.data ?? []).find((u) => u.id === selectedUserId)?.nome ?? "";
+
+  const handleConfirm = async () => {
+    setReatribuirError(null);
+    try {
+      await reatribuir.mutateAsync(selectedUserId);
+      toast.success("Responsável reatribuído com sucesso.");
+      setConfirmOpen(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Não foi possível reatribuir o responsável. Verifique a ligação e tente novamente.";
+      setReatribuirError(msg);
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-none"
+            onClick={() => {
+              setSelectedUserId(currentResponsavelId ?? "");
+              setReatribuirError(null);
+              setDialogOpen(true);
+            }}
+          >
+            Reatribuir
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reatribuir Responsável</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Responsável atual: {currentResponsavelNome ?? "Não atribuído"}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="reatribuir_responsavel">Novo Responsável</Label>
+              <select
+                id="reatribuir_responsavel"
+                className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+              >
+                <option value="" disabled>
+                  Selecione um utilizador
+                </option>
+                {(adminUsers.data ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-none"
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="rounded-none"
+              disabled={!selectedUserId || selectedUserId === currentResponsavelId || adminUsers.isLoading}
+              onClick={() => {
+                setDialogOpen(false);
+                setConfirmOpen(true);
+              }}
+            >
+              Reatribuir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(next) => {
+          if (reatribuir.isPending) return;
+          setConfirmOpen(next);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Reatribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              O processo {numero} passará a ser da responsabilidade de {novoNome}. O novo
+              responsável é notificado de imediato.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {reatribuirError ? <p className="text-sm text-red-600">{reatribuirError}</p> : null}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reatribuir.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={reatribuir.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirm();
+              }}
+            >
+              {reatribuir.isPending ? "A reatribuir..." : "Confirmar Reatribuição"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
