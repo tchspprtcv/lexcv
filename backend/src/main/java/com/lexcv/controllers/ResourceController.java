@@ -5,6 +5,7 @@ import com.lexcv.dtos.ClienteMergeRequest;
 import com.lexcv.exceptions.StorageUnavailableException;
 import com.lexcv.services.StorageService;
 import com.lexcv.services.RiscoPrazoService;
+import com.lexcv.services.NotificacaoService;
 import com.lexcv.dtos.ConflictCheckDecisaoRequest;
 import com.lexcv.dtos.ConflictCheckResponse;
 import com.lexcv.dtos.TimelineItemDto;
@@ -66,6 +67,7 @@ public class ResourceController {
     private final AuditLogRepository auditLogRepository;
     private final StorageService storageService;
     private final RiscoPrazoService riscoPrazoService;
+    private final NotificacaoService notificacaoService;
     private final ClienteAdvogadoRepository clienteAdvogadoRepository;
     private final ClienteAdministrativoRepository clienteAdministrativoRepository;
     private final DecisaoRepository decisaoRepository;
@@ -1613,7 +1615,10 @@ public class ResourceController {
                 .ativa(true)
                 .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(processoFaseRepository.save(pf));
+        ProcessoFase saved = processoFaseRepository.save(pf);
+        notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
+                processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PreAuthorize("hasAuthority('processos:edit')")
