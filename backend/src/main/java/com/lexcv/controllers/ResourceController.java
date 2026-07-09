@@ -1013,9 +1013,14 @@ public class ResourceController {
         }
 
         User responsavel = userRepository.findById(responsavelId).orElse(null);
-        if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
+        // WR-02 (Phase 87 code review, iteration 3): the ativo invariant the prior WR-01 fix's
+        // UserSummaryResponse.ativo field exists to support was only enforced client-side (the
+        // "assign to" pickers filter it out) -- a direct call to this endpoint could still
+        // assign a deactivated user. Enforced here too now.
+        if (responsavel == null || !tenantId.equals(responsavel.getTenantId())
+                || Boolean.FALSE.equals(responsavel.getAtivo())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "responsavelId não pertence a este tenant"));
+                    .body(Map.of("message", "responsavelId não pertence a este tenant ou está inativo"));
         }
 
         // WR-01 (Phase 87 code review): no-op guard -- reassigning to the same
@@ -1552,11 +1557,14 @@ public class ResourceController {
                     "message", "prioridade inválida. Valores aceites: ALTA, MEDIA, BAIXA"));
         }
         // Validate responsavelId belongs to same tenant
+        // WR-02 (Phase 87 code review, iteration 3): also reject a deactivated responsavelId --
+        // see the identical guard in atribuirResponsavel above.
         if (payload.responsavelId() != null) {
             User responsavel = userRepository.findById(payload.responsavelId()).orElse(null);
-            if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
+            if (responsavel == null || !tenantId.equals(responsavel.getTenantId())
+                    || Boolean.FALSE.equals(responsavel.getAtivo())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "responsavelId não pertence a este tenant"));
+                        .body(Map.of("message", "responsavelId não pertence a este tenant ou está inativo"));
             }
         }
         String prioridade = payload.prioridade() != null ? payload.prioridade().toUpperCase() : "MEDIA";

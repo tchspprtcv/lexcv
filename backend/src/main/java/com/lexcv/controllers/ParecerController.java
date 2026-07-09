@@ -59,7 +59,10 @@ public class ParecerController {
      */
     private User validateAdvogado(UUID advogadoId, UUID tenantId) {
         User user = userRepository.findById(advogadoId).orElse(null);
-        if (user == null || !tenantId.equals(user.getTenantId())) {
+        // WR-02 (Phase 87 code review, iteration 3): also reject a deactivated advogado --
+        // mirrors the identical ativo guard added to ResourceController.atribuirResponsavel/
+        // createPrazo. Previously only the frontend pickers filtered inactive users out.
+        if (user == null || !tenantId.equals(user.getTenantId()) || Boolean.FALSE.equals(user.getAtivo())) {
             return null;
         }
         boolean isAdvogado = user.getRoles().stream()
@@ -144,7 +147,7 @@ public class ParecerController {
             User advogado = validateAdvogado(body.getAdvogadoId(), tenantId);
             if (advogado == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "advogadoId não pertence a este tenant ou não tem papel ADVOGADO"));
+                        .body(Map.of("message", "advogadoId não pertence a este tenant, não tem papel ADVOGADO ou está inativo"));
             }
             solicitacao.setAdvogadoId(body.getAdvogadoId());
             solicitacao.setStatus("EM_ELABORACAO");
@@ -287,7 +290,7 @@ public class ParecerController {
         User advogado = validateAdvogado(advogadoId, tenantId);
         if (advogado == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "advogadoId não pertence a este tenant ou não tem papel ADVOGADO"));
+                    .body(Map.of("message", "advogadoId não pertence a este tenant, não tem papel ADVOGADO ou está inativo"));
         }
 
         // WR-01 (Phase 87 code review): no-op guard -- re-"assigning" the same advogado
