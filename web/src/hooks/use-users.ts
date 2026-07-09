@@ -20,9 +20,15 @@ export interface TenantUserOption {
  * admin-only fields.
  */
 export function useTenantUsers() {
+  // WR-02 (Phase 87 code review, iteration 2): match the SSR guard convention
+  // used by every other query hook in this codebase (e.g. useAdminUsers in
+  // use-admin.ts) -- Client Components still run once during Next.js's server
+  // render pass, and this hook was the sole exception with no `enabled` guard.
+  const enabled = typeof window !== "undefined";
   return useQuery({
     queryKey: ["users", "tenant-list"],
     queryFn: () => apiFetch<TenantUserOption[]>("/users"),
+    enabled,
     staleTime: 30_000,
   });
 }
