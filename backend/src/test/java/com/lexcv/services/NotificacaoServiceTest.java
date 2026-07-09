@@ -222,4 +222,186 @@ class NotificacaoServiceTest {
             assertTrue(n.getLida());
         }
     }
+
+    // --- Phase 87 Task 1: notificarAdmins (actor exclusion overload) + wrappers do lado processo ---
+
+    @Test
+    void notificarAdminsComExclusao_umAdminExcluido_apenasOOutroRecebeLinha() {
+        User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
+                .thenReturn(List.of(admin1, admin2));
+        when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-3", "/link", admin1.getId());
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(admin2.getId(), captor.getValue().getDestinatarioId());
+        // O admin excluído (admin1, == excluirUserId) nunca chega a save().
+    }
+
+    @Test
+    void notificarFaseEntrada_responsavelNaoNulo_geraLinhaResponsavelELinhaAdmin() {
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
+                "/processos/" + processoId + "?tab=fases");
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        assertEquals(List.of(responsavelId, admin.getId()), destinatarios);
+        for (Notificacao n : captor.getAllValues()) {
+            assertEquals("FASE_ENTRADA", n.getCategoria());
+            assertEquals("processo", n.getEntidadeTipo());
+        }
+    }
+
+    @Test
+    void notificarFaseEntrada_responsavelNulo_geraApenasLinhaAdminSemExcecao() {
+        UUID processoId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertDoesNotThrow(() ->
+                service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
+        verify(notificacaoRepository, times(1)).save(any());
+        // Null-guard: responsavelId nulo nunca chama criar() para o responsável, mas ADMIN é sempre notificado.
+    }
+
+    @Test
+    void notificarProcessoAtribuido_responsavelNaoNulo_geraLinhaResponsavelComMensagemAtribuidaELinhaAdmin() {
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<Notificacao> saved = captor.getAllValues();
+        assertEquals(responsavelId, saved.get(0).getDestinatarioId());
+        assertTrue(saved.get(0).getMensagem().startsWith("Foi-lhe atribuído o processo "));
+        assertEquals(admin.getId(), saved.get(1).getDestinatarioId());
+        assertEquals("PROCESSO_ATRIBUIDO", saved.get(1).getCategoria());
+    }
+
+    // --- Phase 87 Task 2: wrappers com exclusão de ator (DOCUMENTO_NOVO, PARECER_ATRIBUIDO) ---
+
+    private static final UUID ATOR = UUID.randomUUID();
+
+    @Test
+    void notificarDocumentoNovo_atorNaListaDeDestinatarios_atorNuncaRecebeLinha() {
+        UUID userX = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(userX))
+                .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarDocumentoNovo(TENANT_ID, "doc-1", List.of(userX, ATOR), "contrato.pdf", "/link", ATOR);
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        assertEquals(List.of(userX, admin.getId()), destinatarios);
+        assertFalse(destinatarios.contains(ATOR));
+        // O ator (userX duplicado com ele mesmo na lista de destinatários) nunca chega a save().
+    }
+
+    @Test
+    void notificarDocumentoNovo_destinatariosDuplicados_semAdmin_geraUmaUnicaLinha() {
+        UUID userX = UUID.randomUUID();
+        when(userRepository.findById(userX))
+                .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of());
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarDocumentoNovo(TENANT_ID, "doc-2", List.of(userX, userX), "contrato.pdf", "/link", ATOR);
+
+        verify(notificacaoRepository, times(1)).save(any());
+        // Dedup por Set: destinatário duplicado gera uma só linha.
+    }
+
+    @Test
+    void notificarDocumentoNovo_adminIgualAoAtor_adminExcluidoDoFanOut() {
+        User admin = User.builder().id(ATOR).tenantId(TENANT_ID).build();
+        UUID userX = UUID.randomUUID();
+        when(userRepository.findById(userX))
+                .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarDocumentoNovo(TENANT_ID, "doc-3", List.of(userX), "contrato.pdf", "/link", ATOR);
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(userX, captor.getValue().getDestinatarioId());
+        // O ADMIN que também é o ator é excluído do fan-out (nunca recebe findById nem save).
+    }
+
+    @Test
+    void notificarParecerAtribuido_advogadoDiferenteDoAtor_geraLinhaAdvogadoELinhaAdmin() {
+        UUID advogadoId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(advogadoId))
+                .thenReturn(Optional.of(User.builder().id(advogadoId).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarParecerAtribuido(TENANT_ID, "sol-1", advogadoId, "/link", ATOR);
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        assertEquals(List.of(advogadoId, admin.getId()), destinatarios);
+        for (Notificacao n : captor.getAllValues()) {
+            assertEquals("PARECER_ATRIBUIDO", n.getCategoria());
+            assertEquals("parecer_solicitacao", n.getEntidadeTipo());
+        }
+    }
+
+    @Test
+    void notificarParecerAtribuido_advogadoIgualAoAtor_geraApenasLinhaAdmin() {
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarParecerAtribuido(TENANT_ID, "sol-2", ATOR, "/link", ATOR);
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
+        // Auto-atribuição: o próprio advogado (== ator) é excluído do destinatário primário;
+        // só o ADMIN (que não é o ator) recebe linha.
+    }
 }
