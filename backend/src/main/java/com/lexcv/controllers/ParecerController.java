@@ -225,8 +225,23 @@ public class ParecerController {
             }
         }
 
-        solicitacao.setPrazo(payload.getPrazo());
-        solicitacao.setPrioridade(payload.getPrioridade());
+        // CR-01 (Phase 87 code review, iteration 3): prazo/prioridade/descricao are now
+        // null-guarded exactly like clienteId/processoId below -- previously prazo and
+        // prioridade were applied unconditionally, silently wiping an existing prazo (legal
+        // deadline) on any partial update that omitted it, and risking an uncaught 500 on
+        // flush if prioridade (NOT NULL) was omitted (its @Builder.Default only applies
+        // through the Lombok builder, not the @NoArgsConstructor+setters path Jackson uses
+        // to deserialize this @RequestBody). descricao was previously not editable through
+        // this endpoint at all; it is now updatable like every other field here.
+        if (payload.getPrazo() != null) {
+            solicitacao.setPrazo(payload.getPrazo());
+        }
+        if (payload.getPrioridade() != null) {
+            solicitacao.setPrioridade(payload.getPrioridade());
+        }
+        if (payload.getDescricao() != null && !payload.getDescricao().isBlank()) {
+            solicitacao.setDescricao(payload.getDescricao());
+        }
         if (payload.getClienteId() != null) {
             solicitacao.setClienteId(payload.getClienteId());
         }
