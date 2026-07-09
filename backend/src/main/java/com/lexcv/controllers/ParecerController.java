@@ -157,7 +157,7 @@ public class ParecerController {
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(tenantId)
-                .processoId(null)
+                .processoId(saved.getProcessoId())
                 .acao("parecer_criar")
                 .entidadeTipo("parecer_solicitacao")
                 .entidadeId(saved.getId().toString())
@@ -308,7 +308,7 @@ public class ParecerController {
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(tenantId)
-                .processoId(null)
+                .processoId(saved.getProcessoId())
                 .acao("parecer_atribuir")
                 .entidadeTipo("parecer_solicitacao")
                 .entidadeId(saved.getId().toString())
@@ -357,7 +357,7 @@ public class ParecerController {
         // Audit record — PARA-01: autor_id from SecurityContext
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(tenantId)
-                .processoId(null)
+                .processoId(solicitacao.getProcessoId())
                 .acao("parecer_aprovar")
                 .entidadeTipo("parecer_versao")
                 .entidadeId(versao.getId().toString())
@@ -405,7 +405,7 @@ public class ParecerController {
         // Audit record — PARA-01: autor_id from SecurityContext
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(tenantId)
-                .processoId(null)
+                .processoId(saved.getProcessoId())
                 .acao("parecer_entregar")
                 .entidadeTipo("parecer_solicitacao")
                 .entidadeId(saved.getId().toString())
@@ -516,7 +516,7 @@ public class ParecerController {
         // Audit record — PARA-01: autor_id from SecurityContext
         auditLogRepository.save(AuditLog.builder()
                 .tenantId(tenantId)
-                .processoId(null)
+                .processoId(solicitacao.getProcessoId())
                 .acao("parecer_versao_criar")
                 .entidadeTipo("parecer_versao")
                 .entidadeId(saved.getId().toString())
