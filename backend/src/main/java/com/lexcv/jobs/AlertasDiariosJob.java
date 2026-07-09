@@ -95,15 +95,49 @@ public class AlertasDiariosJob {
 
     // Preload único por tenant (evita N+1): mapa de processos por id + lista de ADMINs, ambos
     // reutilizados pelos 3 processar* abaixo, nunca re-consultados por entidade.
+    //
+    // WR-02 (Phase 88 code review): cada preload e cada categoria tem isolamento de falha
+    // próprio -- uma falha ao carregar processos/admins, ou dentro de um processar*, nunca
+    // deve impedir as restantes categorias (sem dependência real entre si) de serem
+    // verificadas para o mesmo tenant nesse dia.
     private void processarTenant(UUID tenantId, LocalDate hoje) {
-        List<Processo> processos = processoRepository.findByTenantId(tenantId);
-        Map<UUID, Processo> processoPorId = processos.stream()
-                .collect(Collectors.toMap(Processo::getId, p -> p));
-        List<User> admins = userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN");
+        Map<UUID, Processo> processoPorId = safeProcessoPorId(tenantId);
+        List<User> admins = safeAdmins(tenantId);
 
-        processarPrazos(tenantId, hoje, processoPorId, admins);
-        processarEventos(tenantId, hoje, processoPorId, admins);
-        processarHonorarios(tenantId, hoje, processoPorId, admins);
+        try {
+            processarPrazos(tenantId, hoje, processoPorId, admins);
+        } catch (Exception e) {
+            log.error("Falha ao processar prazos do tenant {}", tenantId, e);
+        }
+        try {
+            processarEventos(tenantId, hoje, processoPorId, admins);
+        } catch (Exception e) {
+            log.error("Falha ao processar eventos do tenant {}", tenantId, e);
+        }
+        try {
+            processarHonorarios(tenantId, hoje, processoPorId, admins);
+        } catch (Exception e) {
+            log.error("Falha ao processar honorarios do tenant {}", tenantId, e);
+        }
+    }
+
+    private Map<UUID, Processo> safeProcessoPorId(UUID tenantId) {
+        try {
+            return processoRepository.findByTenantId(tenantId).stream()
+                    .collect(Collectors.toMap(Processo::getId, p -> p));
+        } catch (Exception e) {
+            log.error("Falha ao carregar processos do tenant {}, a prosseguir sem eles", tenantId, e);
+            return Map.of();
+        }
+    }
+
+    private List<User> safeAdmins(UUID tenantId) {
+        try {
+            return userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN");
+        } catch (Exception e) {
+            log.error("Falha ao carregar admins do tenant {}, a prosseguir sem eles", tenantId, e);
+            return List.of();
+        }
     }
 
     private void processarPrazos(UUID tenantId, LocalDate hoje, Map<UUID, Processo> processoPorId,
