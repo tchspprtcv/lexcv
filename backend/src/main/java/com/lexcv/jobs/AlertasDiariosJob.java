@@ -204,6 +204,13 @@ public class AlertasDiariosJob {
     private void processarHonorarios(UUID tenantId, LocalDate hoje, Map<UUID, Processo> processoPorId,
                                       List<User> admins) {
         // Batch único via processoPorId.keySet() -- nunca findByProcessoId em loop (Pitfall 7).
+        // ATENÇÃO (WR-03, revisão fase 88): Honorario não tem coluna tenant_id -- ao contrário de
+        // todas as outras queries deste job, o isolamento por tenant desta chamada é inteiramente
+        // implícito, dependente de processoPorId.keySet() nunca conter ids de processo fora do
+        // resultado de processoRepository.findByTenantId(tenantId) (ver o preload em
+        // processarTenant/safeProcessoPorId). Nunca alargar ou substituir este conjunto de chaves
+        // por uma fonte que possa incluir processos de outro tenant -- o resultado é embutido
+        // diretamente na mensagem da notificação enviada aos utilizadores deste tenant.
         for (Honorario honorario : honorarioRepository.findByProcessoIdIn(processoPorId.keySet())) {
             try {
                 if (honorario.getValorTotal() == null || honorario.getDataAcordo() == null) {
