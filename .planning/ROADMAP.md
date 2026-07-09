@@ -222,7 +222,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
   3. Quando o honorário de um processo atinge N dias sem pagamento total desde `dataAcordo` (e apenas quando `valorTotal` já foi preenchido), o responsável do processo (e ADMIN) recebe uma notificação; honorários com `valorTotal` ainda `null` são ignorados sem gerar erro
   4. A verificação usa exclusivamente o `RiscoPrazoService` da Phase 85 para prazos e eventos — nenhuma cópia adicional da lógica de limiares é introduzida no job
 **Plans**: 2 plans (2 waves)
-- [ ] 88-01-PLAN.md — Contratos: método existence-check em NotificacaoRepository (backbone da idempotência) + findByProcessoIdIn em HonorarioRepository (batch, anti-N+1) + SchedulingConfig (@EnableScheduling isolado)
+- [x] 88-01-PLAN.md — Contratos: método existence-check em NotificacaoRepository (backbone da idempotência) + findByProcessoIdIn em HonorarioRepository (batch, anti-N+1) + SchedulingConfig (@EnableScheduling isolado)
 - [ ] 88-02-PLAN.md — AlertasDiariosJob (@Scheduled cron diário, fuso Atlantic/Cape_Verde): varre todos os tenants sem SecurityContext, alerta prazos/eventos via RiscoPrazoService e honorários >=30 dias, idempotente por nível (edge-triggered) com isolamento de falhas por tenant/entidade — TDD (teste Mockito primeiro)
 
 #### Phase 89: Sino e Página de Notificações
@@ -288,7 +288,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 1/1 | Complete    | 2026-07-08 |
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
-| 88. Verificação Diária de Prazos e Honorários | v2.10 | 0/2 | Not started | - |
+| 88. Verificação Diária de Prazos e Honorários | v2.10 | 1/2 | In Progress|  |
 | 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.10 roadmap created 2026-07-08. Run `/gsd:plan-phase 85` to start planning the first phase.
