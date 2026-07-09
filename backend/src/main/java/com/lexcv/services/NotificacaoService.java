@@ -134,16 +134,44 @@ public class NotificacaoService {
                 processoId.toString(), linkUrl);
     }
 
-    // RED stub (Phase 87 Task 2) — implemented in the GREEN step of the same task.
+    // NOTF-16: novo documento em processo/cliente. Ator (quem fez o upload) é sempre excluído do
+    // primário E do fan-out ADMIN. Destinatários deduplicados via LinkedHashSet (ex.: o mesmo user
+    // é ao mesmo tempo advogado e administrativo de um cliente) — preserva ordem de inserção para
+    // tornar a asserção de teste determinística. Mensagem única em 3ª pessoa serve responsável e
+    // admins igualmente (não há distinção 2ª/3ª pessoa aqui, ao contrário de PROCESSO_ATRIBUIDO).
+    //
+    // Nota de design: NÃO há dedup entre o destinatário primário e o fan-out ADMIN — se um membro
+    // da equipa também for ADMIN recebe 2 linhas. Comportamento preservado de notificarAdmins
+    // (Phase 86), não "corrigido" aqui.
     public void notificarDocumentoNovo(UUID tenantId, String documentoId, Collection<UUID> destinatarios,
                                         String nomeDocumento, String linkUrl, UUID atorId) {
-        // Intentionally empty for RED.
+        String titulo = "Novo documento";
+        String mensagem = "Foi adicionado o documento \"" + nomeDocumento + "\".";
+        Set<UUID> destinatariosUnicos = new LinkedHashSet<>(destinatarios == null ? List.of() : destinatarios);
+        for (UUID dest : destinatariosUnicos) {
+            if (dest != null && !dest.equals(atorId)) {
+                criar(tenantId, dest, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl);
+            }
+        }
+        notificarAdmins(tenantId, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl, atorId);
     }
 
-    // RED stub (Phase 87 Task 2) — implemented in the GREEN step of the same task.
+    // NOTF-19: parecer atribuído a um advogado (criação com advogado já definido, ou reatribuição
+    // posterior). Ator (quem atribuiu) é sempre excluído do primário E do fan-out ADMIN — cobre o
+    // caso de auto-atribuição, em que o próprio advogado é quem executa a ação.
+    //
+    // Mesma nota de design de notificarDocumentoNovo: sem dedup entre primário e fan-out ADMIN.
     public void notificarParecerAtribuido(UUID tenantId, String solicitacaoId, UUID advogadoId,
                                            String linkUrl, UUID atorId) {
-        // Intentionally empty for RED.
+        String titulo = "Parecer atribuído";
+        String mensagemDest = "Foi-lhe atribuído um parecer jurídico.";
+        String mensagemAdmin = "Um parecer jurídico foi atribuído a um advogado.";
+        if (advogadoId != null && !advogadoId.equals(atorId)) {
+            criar(tenantId, advogadoId, "PARECER_ATRIBUIDO", titulo, mensagemDest, "parecer_solicitacao",
+                    solicitacaoId, linkUrl);
+        }
+        notificarAdmins(tenantId, "PARECER_ATRIBUIDO", titulo, mensagemAdmin, "parecer_solicitacao",
+                solicitacaoId, linkUrl, atorId);
     }
 
     // Mesmo ponto de escrita que criar(...), agora para MUTAÇÃO de estado — nenhuma outra classe
