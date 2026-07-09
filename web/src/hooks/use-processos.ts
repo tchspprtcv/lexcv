@@ -647,6 +647,30 @@ export function useFormalizarProcesso(processoId: string) {
   });
 }
 
+export function useReatribuirResponsavel(processoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (responsavelId: string) => {
+      const response = await apiFetch<ProcessoApi>(
+        `/processos/${encodeURIComponent(processoId)}/atribuir`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ responsavelId }),
+        },
+      );
+      return normalizeProcesso(response);
+    },
+    onSuccess: async (updated) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["processos", "list"] }),
+        queryClient.setQueryData(["processos", "detail", processoId], updated),
+        queryClient.invalidateQueries({ queryKey: ["processos", "workflow", processoId] }),
+      ]);
+    },
+  });
+}
+
 export function useWorkflow(processoId: string) {
   const enabled = typeof window !== "undefined" && Boolean(processoId);
 
