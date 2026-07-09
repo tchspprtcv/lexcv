@@ -453,7 +453,10 @@ public class ParecerController {
             @RequestParam(value = "file", required = false) MultipartFile file
     ) {
         UUID tenantId = getTenantId();
-        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findById(solicitacaoId).orElse(null);
+        // WR-04 (Phase 87 code review, iteration 3): PESSIMISTIC_WRITE row lock, held for the
+        // rest of this @Transactional method, makes the numeroVersao increment-and-insert
+        // below atomic across concurrent requests for the same solicitacaoId (see note there).
+        ParecerSolicitacao solicitacao = parecerSolicitacaoRepository.findByIdForUpdate(solicitacaoId).orElse(null);
         if (solicitacao == null || !solicitacao.getTenantId().equals(tenantId)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
         }
@@ -482,20 +485,26 @@ public class ParecerController {
         // the pre-assignment). The file upload needs the row's real id as the storage-key prefix,
         // so it happens after this first save(), inside the same @Transactional method — if the
         // upload fails, the method returns via setRollbackOnly() below and the insert rolls back.
-        ParecerVersao saved;
-        synchronized (ParecerVersaoRepository.class) {
-            int next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
+        // WR-04 (Phase 87 code review, iteration 3): the increment-and-insert below is made
+        // atomic by the PESSIMISTIC_WRITE row lock acquired on the parent ParecerSolicitacao
+        // above (findByIdForUpdate), held until this transaction commits/rolls back -- not by
+        // a JVM monitor, which only serializes threads within a single instance and provides
+        // no protection once two concurrent transactions can each compute "next" from a
+        // snapshot that doesn't yet include the other's uncommitted insert. A second
+        // concurrent request for the same solicitacaoId now blocks at findByIdForUpdate until
+        // this transaction ends, at which point its own findMaxNumeroVersaoBySolicitacaoId(...)
+        // correctly observes this insert.
+        int next = parecerVersaoRepository.findMaxNumeroVersaoBySolicitacaoId(solicitacaoId).orElse(0) + 1;
 
-            ParecerVersao versao = ParecerVersao.builder()
-                    .tenantId(tenantId)
-                    .solicitacaoId(solicitacaoId)
-                    .conteudo(conteudo)
-                    .numeroVersao(next)
-                    .criadoPorId(principal.getUserId())
-                    .build();
+        ParecerVersao versao = ParecerVersao.builder()
+                .tenantId(tenantId)
+                .solicitacaoId(solicitacaoId)
+                .conteudo(conteudo)
+                .numeroVersao(next)
+                .criadoPorId(principal.getUserId())
+                .build();
 
-            saved = parecerVersaoRepository.save(versao);
-        }
+        ParecerVersao saved = parecerVersaoRepository.save(versao);
 
         if (file != null && !file.isEmpty()) {
             try {

@@ -1,15 +1,27 @@
 package com.lexcv.repositories;
 
 import com.lexcv.models.ParecerSolicitacao;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolicitacao, UUID> {
     List<ParecerSolicitacao> findByTenantId(UUID tenantId);
+
+    // WR-04 (Phase 87 code review, iteration 3): row-level PESSIMISTIC_WRITE lock, held for
+    // the duration of the caller's @Transactional method (same convention as
+    // SystemSettingRepository.findByIdForUpdate / SetupService.initializeSystem) -- used by
+    // ParecerController.createVersao so the numeroVersao increment-and-insert is atomic across
+    // concurrent requests for the same solicitacaoId, not just within one JVM.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from ParecerSolicitacao s where s.id = :id")
+    Optional<ParecerSolicitacao> findByIdForUpdate(@Param("id") UUID id);
 
     // T-64-04/T-64-05: all filters bound via @Param (never string-concatenated); WHERE always
     // starts with s.tenant_id = :tenantId for tenant isolation. ILIKE requires nativeQuery = true
