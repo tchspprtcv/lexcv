@@ -17,6 +17,7 @@ import com.lexcv.services.NotificacaoService;
 import com.lexcv.services.RiscoPrazoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -223,6 +224,14 @@ public class AlertasDiariosJob {
                     entidadeId, linkUrl);
         } catch (IllegalArgumentException ex) {
             log.warn("{}: destinatario {} inválido/órfão, notificação ignorada para este destinatário",
+                    categoria, destinatarioId, ex);
+        } catch (DataIntegrityViolationException ex) {
+            // WR-01 (Phase 88 code review): backstop for uk_notificacao_dedup (migration
+            // 88-add-notificacao-dedup-unique-constraint.sql). The existence-check above is a
+            // check-then-act race under concurrent execution; if the DB-level unique index still
+            // rejects a duplicate insert, fail closed here instead of throwing out of this
+            // per-entidade try/catch.
+            log.warn("{}: notificação duplicada rejeitada pelo índice único da BD para destinatario {}, ignorada",
                     categoria, destinatarioId, ex);
         }
     }

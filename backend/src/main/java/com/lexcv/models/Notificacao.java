@@ -5,8 +5,14 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+// WR-01 (Phase 88 code review): DB-level backstop mirroring the idempotency tuple checked by
+// AlertasDiariosJob.notificar(...) (existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria).
+// Same precedent as Honorario's uk_honorario_processo (Phase 82) -- see also the paired manual
+// production migration backend/migrations/88-add-notificacao-dedup-unique-constraint.sql
+// (ddl-auto=validate in prod never creates this from the annotation alone).
 @Entity
-@Table(name = "t_notificacao")
+@Table(name = "t_notificacao", uniqueConstraints = @UniqueConstraint(columnNames = {
+        "tenant_id", "destinatario_id", "entidade_tipo", "entidade_id", "categoria"}))
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
