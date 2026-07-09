@@ -34,7 +34,7 @@ key-decisions:
 
 patterns-established: []
 
-requirements-completed: []
+requirements-completed: [NOTF-15, NOTF-17]
 
 # Metrics
 duration: ~20min
@@ -96,8 +96,8 @@ None — no external service configuration required. (The `web/.env.local` creat
 ## Next Phase Readiness
 
 - Tasks 1-3 are complete, committed, and pass `pnpm --dir web build` (TypeScript + static generation across all 23 routes). `pnpm --dir web lint` shows zero new issues.
-- **Task 4 (checkpoint:human-verify) is outstanding** — requires a live backend (`mvn -f backend/pom.xml spring-boot:run` + PostgreSQL) and frontend (`pnpm --dir web dev`) to walk through: the Reatribuir button's visibility gating, the Dialog->AlertDialog flow, the immediate Responsável name update (workflow-key invalidation proof), the dual error channel on a forced backend failure, the `PROCESSO_ATRIBUIDO` notification row for the new responsável + ADMIN, and the `/processos/{id}?tab=fases` vs `/processos/{id}` deep-link behavior. This agent does not start dev servers — the orchestrator's own browser preview tooling owns this verification per this run's instructions.
-- Once Task 4 is confirmed ("approved"), Phase 87's only frontend-visible surface (per 87-UI-SPEC.md's explicit scope note) is complete, and NOTF-15's locked decision (notification link must land on the Fases tab, not a general overview) and NOTF-17 (reassignment flow) are both fully closed end-to-end.
+- **Task 4 (checkpoint:human-verify) — live verification attempted by the orchestrator, blocked by a pre-existing environment limitation, deferred with user approval.** The orchestrator started both dev servers (PostgreSQL confirmed reachable on 5432) and reached the login screen, but the backend fails to complete Spring context initialization on every start attempt — confirmed via a direct `mvn spring-boot:run` run (bypassing the preview tool) that the failure is `IllegalArgumentException: Illegal character in path at index 1: ${MINIO_ENDPOINT}` inside `MinioConfig.s3Client()`: the `MINIO_ENDPOINT` env var is not being substituted from `backend/.env` in this session, so `S3Client` (a dependency of `StorageService` → `ParecerController`, unrelated to anything Phase 85/86/87 touched) never instantiates and the whole context refresh aborts. This is the same category of gap already named "credential-lockout constraint" in this project's STATE.md history (Phase 81) — not a regression introduced by this plan. User was presented the failure and chose to continue without live validation, consistent with every other phase in this milestone; recorded in `87-HUMAN-UAT.md`.
+- Once a future session with working MinIO credentials confirms Task 4's 8 manual steps (see `87-HUMAN-UAT.md`), Phase 87's only frontend-visible surface (per 87-UI-SPEC.md's explicit scope note) is fully closed end-to-end. Static verification (types, build, lint, RBAC gating logic, query-key invalidation code path) already gives high confidence independent of the live walkthrough.
 
 ## Self-Check: PASSED
 
