@@ -1,164 +1,197 @@
 ---
 phase: 88-verificacao-diaria-de-prazos-e-honorarios
-reviewed: 2026-07-09T21:18:23Z
+reviewed: 2026-07-09T23:10:00Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 7
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/config/SchedulingConfig.java
   - backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java
   - backend/src/main/java/com/lexcv/repositories/HonorarioRepository.java
   - backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java
   - backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java
+  - backend/src/main/java/com/lexcv/models/Notificacao.java
+  - backend/migrations/88-add-notificacao-dedup-unique-constraint.sql
 findings:
   critical: 0
-  warning: 5
-  info: 1
+  warning: 3
+  info: 3
   total: 6
 status: issues_found
 ---
 
-# Phase LEXCV-88: Code Review Report
+# Phase LEXCV-88: Code Review Report (re-review, iteration 3)
 
-**Reviewed:** 2026-07-09T21:18:23Z
+**Reviewed:** 2026-07-09T23:10:00Z
 **Depth:** standard
-**Files Reviewed:** 5
+**Files Reviewed:** 7
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the codebase's first `@Scheduled`/cross-tenant background job (`AlertasDiariosJob`) plus its two enabling repository additions and its dedicated `@Configuration` class, against the six specific adversarial risk vectors called out for this phase. Read the full call graph, not just the five listed files: `NotificacaoService`, `RiscoPrazoService`, the `Prazo`/`Evento`/`Honorario`/`Processo`/`User`/`Tenant`/`Notificacao` entities, `ProcessoRepository`/`PrazoRepository`/`EventoRepository`/`UserRepository`/`TenantRepository`, all three `docker-compose*.yml` files, the `t_notificacao`/`t_honorario` manual migration SQL, and the phase's own `88-CONTEXT.md`/`88-01-SUMMARY.md`/`88-02-SUMMARY.md`. Verified `Atlantic/Cape_Verde` resolves correctly against the actual installed JDK (`ZoneId.of("Atlantic/Cape_Verde")` succeeds under Java 23.0.2).
+This is the third review pass of `AlertasDiariosJob` and its supporting files, following `88-REVIEW-FIX.iter2.md`, which fixed four of the five WARNING findings from the iteration-2 review (`WR-01`–`WR-04`) and explicitly skipped the fifth (`WR-05`, migration startup self-check) as out-of-scope cross-cutting work; `IN-01` (Mockito `LENIENT`) was excluded from that fix pass's scope entirely and was left untouched. I did not take either disposition on faith — I independently re-verified all five iteration-2 items against the current source, then re-read the full file set plus its immediate call graph (`RiscoPrazoService`, `NotificacaoService`, the `Evento`/`Prazo`/`Honorario` entities, `PrazoRequest`/`ResourceController`'s prazo endpoints, `88-CONTEXT.md`'s locked design decisions, migrations 82/86/88, `application.yml`/`application-prod.yml`) from scratch looking for anything new, rather than assuming a shrinking finding count means the code is now clean.
 
-Verification results for the six named risk vectors:
-1. **`SecurityContextHolder`/`getTenantId()` on the background thread** — confirmed absent everywhere in the call chain (`AlertasDiariosJob`, `NotificacaoService`, `RiscoPrazoService`). No NPE risk from this vector. Not a finding.
-2. **Explicit `tenantId` threading at every query** — confirmed for 6 of 7 query call sites. One gap found: `HonorarioRepository.findByProcessoIdIn` (see WR-03).
-3. **3-layer exception isolation** — the documented top-level/per-tenant/per-entity structure exists and is exercised by tests, but two gaps were found in its actual granularity/coverage (see WR-02, WR-04).
-4. **Idempotency race-freedom under the single-instance assumption** — the single-instance assumption is currently true (verified: no `replicas:`/`deploy.replicas` in `docker-compose.yml`, `docker-compose.prod.yml`, or `docker-compose.hostinger.yml`; no custom `TaskScheduler` bean overriding Spring Boot's default pool-size-1 scheduler; no manual "run job now" endpoint anywhere in the codebase). However, the mechanism has no independent backstop if that assumption ever changes (see WR-01).
-5. **Honorario `valorTotal == null` arithmetic safety** — confirmed safe. The null-guard at `AlertasDiariosJob.java:174` executes strictly before the `ChronoUnit.DAYS.between(...)` call at line 183, and `AlertasDiariosJobTest.executar_honorarioValorTotalNulo_ignoradoSemExcecao` exercises this exact path. Not a finding.
-6. **Cron zone correctness** — `zone = "Atlantic/Cape_Verde"` is present and valid (verified against a live JDK), not left to container-default UTC. Not a finding. Note, however, that no `@SpringBootTest`-style context-loading test exists anywhere in this backend, so a *future* typo in the cron string or zone ID would only be caught at real application startup, not in CI — flagged only as context for WR-04/WR-02, not as its own separate finding since the current value is correct.
+**Re-verified as correctly fixed (iteration 2 → current source):**
+- **WR-01** (admin fan-out had no per-recipient isolation): all three admin loops (`AlertasDiariosJob.java:183-193`, `:228-238`, `:283-294`) now wrap each `notificar(...)` call in its own `try/catch (Exception e)`.
+- **WR-02** (zone-naive `LocalDate.now()` in the no-arg `executar()`): line 84 now calls `executar(LocalDate.now(FUSO_CABO_VERDE))`, with the constant declared at line 67.
+- **WR-03** (category/per-entidade catches only handled `Exception`): all three category-level catches in `processarTenant` (lines 120, 130, 137) and all three per-entidade catches (lines 194, 239, 295) now read `catch (Throwable e)`.
+- **WR-04** (no test proved the outer `Throwable` catches worked): `executar_umTenantLancaError_naoEscapaDoJobEOutroTenantAindaEhProcessado` (test file, lines 241-281) now injects a genuine `StackOverflowError` and proves it is absorbed only by the per-tenant `catch (Throwable e)`, not by `safeProcessoPorId`'s inner `catch (Exception e)`.
 
-No BLOCKER/critical-severity issues were found — no crash, injection, auth-bypass, or hardcoded-secret defects. The six findings below are all robustness/defense-in-depth gaps that are not currently exploitable given today's deployment topology and data, but would silently degrade (duplicate notifications, missed alerts for a tenant, information disclosure across tenants, or literal "null" in user-facing text) if specific — plausible — future changes are made without revisiting this job.
+**Confirmed still open (not fixed, dispositioned as skip/out-of-scope last iteration):**
+- **WR-05** (migration has no automated startup verification) — re-flagged below as `WR-02`, with one additional angle found.
+- **IN-01** (`@MockitoSettings(strictness = Strictness.LENIENT)`) — re-flagged below as `IN-03`.
+
+I also specifically chased the one locked design decision most likely to hide a real recipient-resolution bug: `88-CONTEXT.md` states plainly that all three alert categories notify `Processo.responsavelId`, never a per-entity responsável. `Prazo.java` does have its own, independently-settable `responsavelId` column (wired through `PrazoRequest`/`ResourceController.createPrazo`), which the job never reads. I confirmed this is the documented, intended behavior (not an oversight) and is not a finding.
+
+No BLOCKER/Critical-severity issues found in this pass either — no crash, injection, hardcoded secret, or auth-bypass defect, and `NotificacaoService.criar` remains the single validated write choke point. The findings below are a schema-naming consistency gap that undermines the exact remediation the prior review itself proposed, a fresh test-coverage gap in the newest admin-isolation fix (the same shape of gap the prior iteration's own `WR-04` caught elsewhere), and the two carried-forward items above, none of which have changed since being deferred.
 
 ## Warnings
 
-### WR-01: Notification idempotency has no database-level backstop
+### WR-01: `Notificacao`'s dedup unique constraint has no explicit name, so it will exist under two different names in dev/CI vs. production
 
-**File:** `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java:56-57`, `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:212-228`, `backend/migrations/86-create-notificacao-table.sql:19-34`
-**Issue:** The entire idempotency guarantee ("running the job twice never duplicates a notification") rests solely on the check-then-act pair in `notificar(...)` — `existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria(...)` followed later by `notificacaoService.criar(...)`. The `t_notificacao` table (per `86-create-notificacao-table.sql`) has only a non-unique read index (`idx_notificacao_tenant_destinatario_lida_created`) — no unique constraint exists on `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria)` at the DB layer, in dev, staging, or prod. `88-01-SUMMARY.md` confirms this was a conscious choice: *"No DB unique constraint/migration added for the idempotency tuple in this plan — deliberately deferred... relying on the application-level existence-check on this single-instance deployment."*
+**File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:14-15`, `backend/migrations/88-add-notificacao-dedup-unique-constraint.sql:23-24`
+**Issue:**
+```java
+@Table(name = "t_notificacao", uniqueConstraints = @UniqueConstraint(columnNames = {
+        "tenant_id", "destinatario_id", "entidade_tipo", "entidade_id", "categoria"}))
+```
+The manual production migration creates this index under the explicit, human-chosen name `uk_notificacao_dedup`. But the `@UniqueConstraint` annotation on the entity has no `name` attribute set. When `ddl-auto=update` auto-creates this same constraint in dev/CI (confirmed: `application.yml:19` vs. `application-prod.yml:10`, no custom Hibernate naming strategy configured anywhere in `application*.yml`), Hibernate's default implicit naming strategy generates its own schema-dependent constraint name (typically a `UK`-prefixed hash), **not** `uk_notificacao_dedup`. The column set matches everywhere (already verified column-for-column in the prior iteration), so the constraint's *behavior* is identical in every environment — this is not a functional bug in `notificar(...)`'s `catch (DataIntegrityViolationException ...)`, which doesn't care about the constraint's name. But it does mean the constraint cannot be reliably referenced, queried, or dropped by name across environments, which directly undermines the exact remediation the prior review (`WR-05`, iteration 2) proposed for the sibling gap: a startup self-check querying `to_regclass('uk_notificacao_dedup')` would correctly find the constraint in production (where the manual script used that literal name) but would find nothing in dev/CI (where the constraint exists under a different, Hibernate-generated name) — a false negative for the exact tool meant to close that gap. This is also not a new pattern: the Phase-82 precedent this migration explicitly cites, `Honorario.java:12`'s `@UniqueConstraint(columnNames = "processo_id")`, has the identical gap (its own migration names it `uk_honorario_processo`, but the annotation has no matching `name`) — so this is the second occurrence of the same naming inconsistency, worth closing now that it's been noticed twice.
+**Fix:** Pin the name explicitly so it matches across every environment:
+```java
+@Table(name = "t_notificacao", uniqueConstraints = @UniqueConstraint(
+        name = "uk_notificacao_dedup",
+        columnNames = {"tenant_id", "destinatario_id", "entidade_tipo", "entidade_id", "categoria"}))
+```
+(Consider the same for `Honorario.java`'s `uk_honorario_processo` as a follow-up, though that file is outside this phase's change set.)
 
-  I independently verified the single-instance premise still holds today (no `replicas:` anywhere across all three `docker-compose*.yml`, no custom `TaskScheduler`), so this is not exploitable *right now*. But the codebase's own precedent for an analogous situation — `backend/migrations/82-add-honorario-processo-unique-constraint.sql` — explicitly added a DB-level unique constraint specifically so that *"the multi-instance concurrent-`formalizarProcesso` race this constraint exists to close" doesn't stay "fully open... while appearing closed everywhere else"* the moment the deployment topology changes. Phase 88 doesn't follow that same precedent here. Since scaling the backend to more than one replica (e.g. for zero-downtime deploys) is a routine, low-visibility infra change that lives in a completely different file than this code, nothing today would fail a build, a test, or a deploy if that assumption is silently invalidated — duplicate notifications would just start appearing in production with no error anywhere.
-**Fix:** Add a unique index mirroring migration 82's own reasoning, e.g.:
+### WR-02: Manual dedup-index migration still has no automated startup verification, and has no guard against pre-existing duplicate rows
+
+**File:** `backend/migrations/88-add-notificacao-dedup-unique-constraint.sql:1-25`, `backend/src/main/resources/application-prod.yml:10`
+**Issue:** Confirmed unchanged since the iteration-2 review's `WR-05`, which was explicitly skipped in `88-REVIEW-FIX.iter2.md` as *"out of scope for a pure code change in this phase... cross-cutting follow-up."* Re-verified `application-prod.yml:10` is still `ddl-auto: validate` and `application.yml:19` is still `ddl-auto: update`; nothing was added anywhere to detect a missing constraint at application startup. A skipped manual migration in production still fails silently at the "everything looks fine" level — the app starts, and `AlertasDiariosJob`'s idempotency guarantee quietly reverts to the pre-`WR-01` check-then-act race. "Skipped, out of scope" is a legitimate scoping decision, but it is not "fixed" — re-flagging so it doesn't quietly disappear from view.
+
+  One additional angle not previously raised: the script itself is a bare `CREATE UNIQUE INDEX` with no pre-flight check for rows that would already violate it:
+  ```sql
+  CREATE UNIQUE INDEX uk_notificacao_dedup
+      ON t_notificacao (tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria);
+  ```
+  If any duplicate `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria)` rows already exist in the target database at the moment a DBA runs this script (e.g., leftover data from manually exercising the job before this constraint existed, or from the exact concurrent-race window this migration is meant to close), `CREATE UNIQUE INDEX` fails outright with a Postgres error and blocks the deploy step this script exists to unblock — with the script's own comments giving no guidance on what to do if that happens. (The identical gap already exists in the Phase-82 precedent, `82-add-honorario-processo-unique-constraint.sql:21` — so this is a pre-existing, repo-wide pattern rather than something new to Phase 88, consistent with how `WR-05` characterized the startup-verification gap. Naming it explicitly here since it's the second manual migration script that could fail this way.)
+**Fix:** Still out of scope for a single-file patch in this phase (same reasoning as the iteration-2 disposition), but if picked up as a follow-up, the script could at least add a pre-flight duplicate check with an explicit comment on what to do if it returns rows:
 ```sql
--- New migration, e.g. 88-add-notificacao-dedup-unique-constraint.sql
-CREATE UNIQUE INDEX uk_notificacao_dedup
-    ON t_notificacao (tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria);
+-- Run first — if this returns any rows, resolve/merge the duplicates before proceeding:
+SELECT tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria, COUNT(*)
+FROM t_notificacao
+GROUP BY tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria
+HAVING COUNT(*) > 1;
 ```
-and have `notificar(...)` additionally tolerate the resulting constraint-violation exception (e.g. catch `org.springframework.dao.DataIntegrityViolationException` alongside `IllegalArgumentException`) so a future concurrent duplicate attempt fails closed instead of throwing out of the per-entity try/catch.
 
-### WR-02: One failed preload query silently skips ALL alert categories for a tenant, not just the failing one
+### WR-03: No test proves the per-admin `catch (Exception e)` fan-out isolation (iteration-2 fix) actually stops one admin's failure from blocking the rest
 
-**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:97-106`
-**Issue:** `processarTenant` is the *only* thing wrapped by the per-tenant try/catch in `executar(LocalDate)` (lines 84-88). Its own body is not internally protected:
+**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:183-193` (also `:228-238`, `:283-294`), cross-referenced with `backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java` (all 8 `@Test` methods, lines 111-374)
+**Issue:** The iteration-2 fix wrapped each admin's `notificar(...)` call in its own try/catch, e.g. in `processarPrazos`:
 ```java
-private void processarTenant(UUID tenantId, LocalDate hoje) {
-    List<Processo> processos = processoRepository.findByTenantId(tenantId);
-    Map<UUID, Processo> processoPorId = processos.stream()
-            .collect(Collectors.toMap(Processo::getId, p -> p));
-    List<User> admins = userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN");
-
-    processarPrazos(tenantId, hoje, processoPorId, admins);
-    processarEventos(tenantId, hoje, processoPorId, admins);
-    processarHonorarios(tenantId, hoje, processoPorId, admins);
-}
-```
-If `processoRepository.findByTenantId(tenantId)` or `userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")` throws (e.g. a transient DB blip), or if `processarPrazos` throws from *outside* its own per-prazo try (only possible via `prazoRepository.findByTenantId(tenantId)` at the head of its for-each, which is evaluated before the per-prazo try block is entered), then `processarEventos` and `processarHonorarios` never run at all for that tenant that day — even though eventos/honorarios verification has no actual dependency on the prazo query having succeeded. This is a stronger violation of 88-CONTEXT.md's stated intent than "one bad entity" isolation: *"Dentro de cada tenant, cada entidade... individual também tem isolamento de falha — uma entidade com dados inconsistentes não deve impedir a verificação das restantes entidades do mesmo tenant"* — here it's not "an entity with bad data," it's an unrelated query hiccup silently suppressing two entire, otherwise-healthy alert categories, with only a single generic `"Falha ao processar alertas diários para tenant {}"` log line to go on.
-**Fix:** Give each category (and its preload) independent fault isolation inside `processarTenant`, e.g.:
-```java
-private void processarTenant(UUID tenantId, LocalDate hoje) {
-    Map<UUID, Processo> processoPorId = safeProcessoPorId(tenantId);
-    List<User> admins = safeAdmins(tenantId);
-
+for (User admin : admins) {
     try {
-        processarPrazos(tenantId, hoje, processoPorId, admins);
+        notificar(tenantId, admin.getId(), categoria, titulo, mensagem, "prazo", entidadeId, linkUrl);
     } catch (Exception e) {
-        log.error("Falha ao processar prazos do tenant {}", tenantId, e);
-    }
-    try {
-        processarEventos(tenantId, hoje, processoPorId, admins);
-    } catch (Exception e) {
-        log.error("Falha ao processar eventos do tenant {}", tenantId, e);
-    }
-    try {
-        processarHonorarios(tenantId, hoje, processoPorId, admins);
-    } catch (Exception e) {
-        log.error("Falha ao processar honorarios do tenant {}", tenantId, e);
+        log.warn("Falha ao notificar admin {} para prazo {} do tenant {}", admin.getId(), prazo.getId(), tenantId, e);
     }
 }
 ```
-(with `safeProcessoPorId`/`safeAdmins` falling back to empty collections on failure, logging their own error, so a failure resolving admins doesn't block prazo/evento/honorario processing for the responsável either).
-
-### WR-03: Honorario batch query is the one tenant-scoped read that doesn't take `tenantId` as an explicit parameter
-
-**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:172`, `backend/src/main/java/com/lexcv/repositories/HonorarioRepository.java:14`
-**Issue:** Every other query in this job is tenant-scoped by an explicit repository parameter: `findByTenantId(tenantId)`, `findByTenantIdAndConcluido(tenantId, false)`, `findByTenantIdAndRoleName(tenantId, "ADMIN")`, `existsByTenantIdAnd...(tenantId, ...)`. The honorario fetch is the exception:
+This is exactly the shape of gap the prior iteration's own `WR-04` identified and fixed for the two outer `Throwable` layers — a defensive-coding change with no test proving it does what it claims. Checking every one of the 8 tests in `AlertasDiariosJobTest.java` confirms none of them exercise this specific path: tests with admins either use exactly one admin whose notification succeeds normally (`executar_prazoProximoComResponsavelDefinido_notificaResponsavelEAdmin`, `executar_eventoSemProcessoIdCritico_notificaApenasAdmins`), or use an empty admin list entirely (all the others). No test configures two-or-more admins where one throws (e.g., an `IllegalArgumentException` or transient `RuntimeException` from `notificacaoService.criar(...)`) and then verifies the remaining admin(s) still get notified. If a future change accidentally broke this isolation (e.g., moved the try/catch outside the loop, or narrowed the catch type incorrectly), nothing in this suite would catch the regression.
+**Fix:** Add a dedicated test mirroring the existing coverage pattern:
 ```java
-for (Honorario honorario : honorarioRepository.findByProcessoIdIn(processoPorId.keySet())) {
-```
-`Honorario` has no `tenant_id` column at all (confirmed in `Honorario.java` and in `86`/`82` migrations), so tenant scoping here is entirely implicit: it works *only* because `processoPorId.keySet()` happens to have been built from `processoRepository.findByTenantId(tenantId)` a few lines earlier, combined with `Processo.id` being a globally-unique UUID (not a per-tenant compound key). Today that's safe. But it means this one data path's tenant isolation lives entirely in caller discipline rather than in the query itself — and because the resulting `Processo`/`Honorario` data (numero do processo, valor, etc.) is embedded directly into the notification `mensagem` sent to the *current* tenant's own responsável/admins (a correctly-tenant-scoped recipient), a future refactor that widens or mis-scopes the `Collection<UUID>` passed to `findByProcessoIdIn` would silently leak another tenant's honorario/processo details into this tenant's notification feed — with no query-level guard anywhere to catch it, unlike every other case in this job.
-**Fix:** At minimum, add an explicit comment at the call site pinning the invariant this depends on (that `processoPorId.keySet()` must never be widened beyond `processoRepository.findByTenantId(tenantId)`'s output). Better: if a schema change is ever on the table for this area, add `tenant_id` to `t_honorario` and change the method to `findByTenantIdAndProcessoIdIn(UUID tenantId, Collection<UUID> processoIds)` so this query is self-defending like all the others.
+@Test
+void executar_umAdminFalhaAoNotificar_restantesAdminsAindaSaoNotificados() {
+    Tenant tenant = Tenant.builder().id(TENANT_ID).nome("Tenant A").build();
+    when(tenantRepository.findAll()).thenReturn(List.of(tenant));
 
-### WR-04: Top-level/per-tenant catches only handle `Exception`, not `Throwable` — the exact class of bug the 3-layer design exists to prevent can still occur
+    Processo processo = Processo.builder().id(PROCESSO_ID).tenantId(TENANT_ID)
+            .responsavelId(RESPONSAVEL_ID).numeroProcesso("PROC-0001").build();
+    when(processoRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(processo));
 
-**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:81-93`
-**Issue:**
-```java
-void executar(LocalDate hoje) {
-    try {
-        for (Tenant tenant : tenantRepository.findAll()) {
-            try {
-                processarTenant(tenant.getId(), hoje);
-            } catch (Exception e) {
-                log.error("Falha ao processar alertas diários para tenant {}", tenant.getId(), e);
-            }
-        }
-    } catch (Exception e) {
-        log.error("Falha inesperada na execução do job de alertas diários", e);
-    }
+    UUID prazoId = UUID.randomUUID();
+    Prazo prazo = Prazo.builder().id(prazoId).tenantId(TENANT_ID).processoId(PROCESSO_ID)
+            .descricao("Contestação").dataLimite(HOJE.plusDays(2)).prioridade("MEDIA")
+            .concluido(false).build();
+    when(prazoRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(prazo));
+
+    semEventos(TENANT_ID);
+    semHonorarios();
+    nuncaAntesNotificado();
+
+    UUID adminFalhaId = UUID.randomUUID();
+    UUID adminOkId = UUID.randomUUID();
+    User adminFalha = User.builder().id(adminFalhaId).tenantId(TENANT_ID).build();
+    User adminOk = User.builder().id(adminOkId).tenantId(TENANT_ID).build();
+    when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
+            .thenReturn(List.of(adminFalha, adminOk));
+
+    // First admin's notify call throws an unexpected RuntimeException (e.g. transient DataAccessException).
+    doThrow(new RuntimeException("boom"))
+            .when(notificacaoService).criar(eq(TENANT_ID), eq(adminFalhaId), any(), any(), any(), any(), any(), any());
+
+    assertDoesNotThrow(() -> buildJob().executar(HOJE));
+
+    // The second admin must still be notified despite the first admin's failure.
+    verify(notificacaoService, times(1)).criar(eq(TENANT_ID), eq(adminOkId), eq("PRAZO_PROXIMO"),
+            anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
 }
 ```
-Both catches are `catch (Exception e)`. The class Javadoc and `88-CONTEXT.md` justify this entire 3-layer structure by citing a specific, named Spring Framework risk: *"uma exceção não tratada num `@Scheduled` pode cancelar silenciosamente todas as execuções futuras desse método."* `Error` (e.g. `StackOverflowError`, `OutOfMemoryError`) is not a subtype of `Exception`, so an `Error` raised anywhere in tenant/entity processing bypasses both catch layers and escapes `executar()` uncaught — reproducing precisely the "silently cancels all future scheduled runs" failure mode this design exists to prevent. This is a narrow edge case (JVM-fatal conditions), but it is a real, provable gap relative to the stated design goal, not a hypothetical one.
-**Fix:** If the intent is genuinely "nothing this job does can ever silently kill future runs," catch `Throwable` at both layers instead of `Exception` (or at least document explicitly why `Error` is deliberately excluded, e.g. because recovering from OOM is unsafe anyway):
-```java
-} catch (Throwable e) {
-    log.error("Falha ao processar alertas diários para tenant {}", tenant.getId(), e);
-}
-```
-
-### WR-05: `Evento.titulo` can be null and is concatenated unguarded into user-facing notification text
-
-**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:152-153`
-**Issue:**
-```java
-String mensagem = "O evento \"" + evento.getTitulo() + "\" "
-        + (RiscoPrazoService.PROXIMO.equals(risco) ? "está a aproximar-se." : "está em atraso.");
-```
-`Evento.titulo` (`backend/src/main/java/com/lexcv/models/Evento.java:28`) is `private String titulo;` with no `nullable = false` and no bean validation — and `ResourceController.createEvento` (`@PostMapping("/eventos")`, line 2395) binds `@RequestBody Evento evento` directly with no `@Valid` and no manual blank/null check on `titulo` before `eventoRepository.save(evento)`. So a real (if malformed) API call can persist an `Evento` with `titulo == null`. When that evento later crosses a risk threshold, this job produces and permanently persists a notification whose `mensagem` literally reads `O evento "null" está a aproximar-se.` — a genuine, reachable, user-facing data-quality defect (unlike `numeroProcesso(processo)`, which is explicitly null-guarded a few lines above for the exact same class of concern). Not a crash; a real "null" leaking into production notification text delivered to advogados/admins, with no way to correct it after the fact (notifications aren't editable).
-**Fix:** Mirror the existing `numeroProcesso(...)` guard pattern:
-```java
-String tituloTexto = evento.getTitulo() != null ? evento.getTitulo() : "(sem título)";
-String mensagem = "O evento \"" + tituloTexto + "\" "
-        + (RiscoPrazoService.PROXIMO.equals(risco) ? "está a aproximar-se." : "está em atraso.");
-```
+(requires adding `import static org.mockito.Mockito.doThrow;`)
 
 ## Info
 
-### IN-01: `@MockitoSettings(strictness = Strictness.LENIENT)` is no longer justified now that the GREEN implementation is complete
+### IN-01: Class-level Javadoc still claims "3 camadas" of failure isolation; the code has had 4 layers since the iteration-1/2 fixes
+
+**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:42-46`, contradicted by the accurate description at `:110-113`
+**Issue:** The class Javadoc reads:
+```java
+ * <p>Isolamento de falha em 3 camadas (T-88-03): try/catch de topo em {@link #executar(LocalDate)},
+ * try/catch por tenant dentro do loop de {@link TenantRepository#findAll()}, e try/catch por
+ * entidade dentro de cada {@code processar*} — uma exceção não tratada num {@code @Scheduled}
+ * ...
+```
+This lists exactly three layers: top-level, per-tenant, per-entidade. It omits the per-category layer (the three independent try/catch blocks around `processarPrazos`/`processarEventos`/`processarHonorarios` inside `processarTenant`) that the iteration-1 `WR-02` fix introduced specifically so one category's failure can't suppress its siblings. That fourth layer is correctly documented at the method level a few lines below (`processarTenant`'s own comment, lines 110-113: *"cada preload e cada categoria tem isolamento de falha própria"*), so the class-level summary is now internally inconsistent with the method-level comment directly beneath it — a maintainer skimming only the class Javadoc would undercount the actual isolation layers and could reasonably miss the category layer entirely when reasoning about a future change.
+**Fix:**
+```java
+ * <p>Isolamento de falha em 4 camadas (T-88-03, camada de categoria acrescentada pela fix de
+ * WR-02/iteração 1): try/catch de topo em {@link #executar(LocalDate)}, try/catch por tenant
+ * dentro do loop de {@link TenantRepository#findAll()}, try/catch por categoria (prazo/evento/
+ * honorário) dentro de {@code processarTenant}, e try/catch por entidade dentro de cada
+ * {@code processar*} — uma exceção não tratada num {@code @Scheduled} pode cancelar
+ * silenciosamente todas as execuções futuras desse método (Spring Framework), daí a defesa em
+ * profundidade.
+```
+
+### IN-02: The "responsável-also-admin" natural-dedup behavior documented in `notificar()`'s own comment has no test
+
+**File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:303-306`, cross-referenced with `backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java` (lines 111-374)
+**Issue:**
+```java
+// Choke point único: nunca chama notificacaoRepository.save(...) diretamente -- toda a
+// escrita passa por notificacaoService.criar(...). Idempotência via existence-check antes de
+// cada chamada; ordem responsavel-primeiro-depois-admins faz um responsavel-que-é-também-admin
+// ser deduplicado naturalmente (a segunda existence-check já encontra a linha da primeira).
+```
+This is a real, load-bearing behavioral claim — the primary-recipient call and the admin-loop call for the same person are only deduplicated because they run sequentially and the second `existsBy...` check observes the first `criar(...)`'s effect. But no test in the suite ever configures a scenario where `admin.getId()` equals `RESPONSAVEL_ID` (every test with a non-empty admin list uses a distinct `ADMIN_ID`). If a future refactor changed the call order (admins-first) or made the two calls concurrent/batched, this claim could silently stop holding with no test failure to signal it.
+**Fix:** Add a test with an admin whose id equals the process's `responsavelId`, and stub the existence check to return `false` then `true` across the two sequential calls:
+```java
+when(notificacaoRepository.existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria(
+        TENANT_ID, RESPONSAVEL_ID, "prazo", prazoId.toString(), "PRAZO_PROXIMO"))
+        .thenReturn(false, true);
+// ... admins list contains a User with id == RESPONSAVEL_ID ...
+buildJob().executar(HOJE);
+verify(notificacaoService, times(1)).criar(eq(TENANT_ID), eq(RESPONSAVEL_ID), eq("PRAZO_PROXIMO"),
+        anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
+```
+
+### IN-03: `@MockitoSettings(strictness = Strictness.LENIENT)` remains in place, still suppressing Mockito's unused-stub safety net
 
 **File:** `backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java:58`
-**Issue:** The class-level `@MockitoSettings(strictness = Strictness.LENIENT)` was a documented, legitimate necessity during the TDD RED phase, per `88-02-SUMMARY.md`: *"during the RED phase the job's `executar(LocalDate)` body is empty, so most stubs configured here are never actually invoked... LENIENT keeps the behavioral `verify(...)` assertions below as the real gate in both RED and GREEN."* Now that Task 2 (GREEN) is complete and every stub in the class does appear to be exercised by the real implementation, this class-level override permanently disables Mockito's `UnnecessaryStubbingException` safety net (the default `STRICT_STUBS` from `MockitoExtension`) for all future edits to this test class — a future change that leaves a stub configured-but-unused (e.g. a copy-pasted test scenario, or a stub left behind after production code changes) will no longer be flagged automatically.
-**Fix:** Now that the skeleton/RED phase is behind this class, consider removing `@MockitoSettings(strictness = Strictness.LENIENT)` (reverting to Mockito's default `STRICT_STUBS`) and re-running the suite to confirm all configured stubs are still genuinely exercised, restoring the regression-detection benefit for future changes to this test.
+**Issue:** Flagged as `IN-01` in both prior reviews and explicitly excluded from both fix passes' scope (`fix_scope: critical_warning` in both `88-REVIEW-FIX.md` and `88-REVIEW-FIX.iter2.md`). Confirmed unchanged — still present, still class-level, still disabling `MockitoExtension`'s default `STRICT_STUBS`. The original RED-phase justification no longer applies; the GREEN implementation has been complete and stable across two subsequent fix iterations, and every stub in the class does appear to be genuinely exercised by the current tests.
+**Fix:** Remove the annotation and re-run the suite; if every stub is still exercised (likely, given the current test count and structure), this restores automatic detection of orphaned/unused stubs for future edits at no cost.
 
 ---
 
-_Reviewed: 2026-07-09T21:18:23Z_
+_Reviewed: 2026-07-09T23:10:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
