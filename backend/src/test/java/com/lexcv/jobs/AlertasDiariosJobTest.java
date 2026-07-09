@@ -239,6 +239,48 @@ class AlertasDiariosJobTest {
     }
 
     @Test
+    void executar_umTenantLancaError_naoEscapaDoJobEOutroTenantAindaEhProcessado() {
+        // WR-04 (Phase 88 code review, iteration 2): ao contrário do teste acima (que lança
+        // RuntimeException, hoje absorvida dentro de safeProcessoPorId antes de sequer alcançar
+        // as camadas per-tenant/top-level catch (Throwable e)), este teste prova que um Error
+        // genuíno (não-Exception) atravessa safeProcessoPorId/processarTenant sem ser
+        // intercetado por nenhuma camada catch (Exception e), e só é finalmente contido pela
+        // camada catch (Throwable e) per-tenant -- exercendo pela primeira vez o upgrade
+        // catch (Throwable e) introduzido pela revisão anterior (WR-04 original).
+        UUID tenantB = UUID.randomUUID();
+        Tenant tenantAEntity = Tenant.builder().id(TENANT_ID).nome("Tenant A").build();
+        Tenant tenantBEntity = Tenant.builder().id(tenantB).nome("Tenant B").build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantAEntity, tenantBEntity));
+
+        // Tenant A explode com um Error genuíno (não-Exception) logo na primeira leitura do seu scan.
+        when(processoRepository.findByTenantId(TENANT_ID)).thenThrow(new StackOverflowError());
+
+        // Tenant B deve ser processado normalmente, apesar da falha do Tenant A.
+        UUID processoBId = UUID.randomUUID();
+        UUID responsavelB = UUID.randomUUID();
+        Processo processoB = Processo.builder().id(processoBId).tenantId(tenantB)
+                .responsavelId(responsavelB).numeroProcesso("PROC-B").build();
+        when(processoRepository.findByTenantId(tenantB)).thenReturn(List.of(processoB));
+
+        UUID prazoBId = UUID.randomUUID();
+        Prazo prazoB = Prazo.builder().id(prazoBId).tenantId(tenantB).processoId(processoBId)
+                .descricao("Prazo B").dataLimite(HOJE.plusDays(1)).prioridade("ALTA")
+                .concluido(false).build();
+        when(prazoRepository.findByTenantId(tenantB)).thenReturn(List.of(prazoB));
+
+        semEventos(tenantB);
+        when(honorarioRepository.findByProcessoIdIn(any())).thenReturn(List.of());
+        when(userRepository.findByTenantIdAndRoleName(tenantB, "ADMIN")).thenReturn(List.of());
+        nuncaAntesNotificado();
+
+        assertDoesNotThrow(() -> buildJob().executar(HOJE));
+
+        verify(processoRepository, times(1)).findByTenantId(tenantB);
+        verify(notificacaoService, times(1)).criar(eq(tenantB), eq(responsavelB), eq("PRAZO_PROXIMO"),
+                anyString(), anyString(), eq("prazo"), eq(prazoBId.toString()), anyString());
+    }
+
+    @Test
     void executar_honorarioValorTotalNulo_ignoradoSemExcecao() {
         Tenant tenant = Tenant.builder().id(TENANT_ID).nome("Tenant A").build();
         when(tenantRepository.findAll()).thenReturn(List.of(tenant));
