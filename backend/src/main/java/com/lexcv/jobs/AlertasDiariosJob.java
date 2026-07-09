@@ -117,17 +117,24 @@ public class AlertasDiariosJob {
 
         try {
             processarPrazos(tenantId, hoje, processoPorId, admins);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // WR-03 (Phase 88 code review, iteration 2): catch Throwable, não só Exception --
+            // caso contrário um Error nesta categoria só seria intercetado duas camadas acima
+            // (catch Throwable per-tenant em executar(LocalDate)), o que aborta as restantes
+            // categorias (eventos, honorarios) deste tenant -- exatamente o cenário que o
+            // isolamento por categoria (WR-02 original) existe para prevenir.
             log.error("Falha ao processar prazos do tenant {}", tenantId, e);
         }
         try {
             processarEventos(tenantId, hoje, processoPorId, admins);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // WR-03 (Phase 88 code review, iteration 2): ver comentário equivalente acima.
             log.error("Falha ao processar eventos do tenant {}", tenantId, e);
         }
         try {
             processarHonorarios(tenantId, hoje, processoPorId, admins);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // WR-03 (Phase 88 code review, iteration 2): ver comentário equivalente acima.
             log.error("Falha ao processar honorarios do tenant {}", tenantId, e);
         }
     }
@@ -184,7 +191,9 @@ public class AlertasDiariosJob {
                         log.warn("Falha ao notificar admin {} para prazo {} do tenant {}", admin.getId(), prazo.getId(), tenantId, e);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // WR-03 (Phase 88 code review, iteration 2): catch Throwable, não só Exception --
+                // mesma razão do catch de categoria em processarTenant.
                 log.warn("Falha ao processar prazo {} do tenant {}", prazo.getId(), tenantId, e);
             }
         }
@@ -227,7 +236,9 @@ public class AlertasDiariosJob {
                         log.warn("Falha ao notificar admin {} para evento {} do tenant {}", admin.getId(), evento.getId(), tenantId, e);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // WR-03 (Phase 88 code review, iteration 2): catch Throwable, não só Exception --
+                // mesma razão do catch de categoria em processarTenant.
                 log.warn("Falha ao processar evento {} do tenant {}", evento.getId(), tenantId, e);
             }
         }
@@ -281,7 +292,9 @@ public class AlertasDiariosJob {
                         log.warn("Falha ao notificar admin {} para honorário {} do tenant {}", admin.getId(), honorario.getId(), tenantId, e);
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // WR-03 (Phase 88 code review, iteration 2): catch Throwable, não só Exception --
+                // mesma razão do catch de categoria em processarTenant.
                 log.warn("Falha ao processar honorário {} do tenant {}", honorario.getId(), tenantId, e);
             }
         }
