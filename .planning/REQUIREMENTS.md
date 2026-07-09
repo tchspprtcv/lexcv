@@ -18,11 +18,11 @@ Numeração de `NOTF-` continuada a partir do histórico do projeto: `NOTF-01` (
 - [ ] **NOTF-12**: Utilizador acede a uma página dedicada `/notificacoes` com histórico completo
 - [ ] **NOTF-13**: Utilizador filtra o histórico de notificações por categoria e por estado lida/não-lida
 - [x] **NOTF-14**: Sistema dirige cada notificação apenas à entidade diretamente ligada (responsável do processo, advogado do parecer, equipa do cliente) mais ADMIN — nunca em massa por permissão de visualização
-- [ ] **NOTF-15**: Responsável do processo é alertado quando o processo entra numa nova fase
-- [ ] **NOTF-16**: Responsável do processo (ou equipa de advogados/administrativos do cliente, quando o documento não está ligado a nenhum processo) é alertado quando um novo documento é adicionado
-- [ ] **NOTF-17**: Utilizador com permissão adequada pode reatribuir o responsável de um processo através de um novo fluxo dedicado (hoje só é definido na criação)
-- [ ] **NOTF-18**: Utilizador é alertado quando é definido ou reatribuído como responsável de um processo
-- [ ] **NOTF-19**: Advogado é alertado quando lhe é atribuído um parecer
+- [x] **NOTF-15**: Responsável do processo é alertado quando o processo entra numa nova fase
+- [x] **NOTF-16**: Responsável do processo (ou equipa de advogados/administrativos do cliente, quando o documento não está ligado a nenhum processo) é alertado quando um novo documento é adicionado
+- [x] **NOTF-17**: Utilizador com permissão adequada pode reatribuir o responsável de um processo através de um novo fluxo dedicado (hoje só é definido na criação)
+- [x] **NOTF-18**: Utilizador é alertado quando é definido ou reatribuído como responsável de um processo
+- [x] **NOTF-19**: Advogado é alertado quando lhe é atribuído um parecer
 - [ ] **NOTF-20**: Responsável do processo é alertado quando um prazo do processo muda de estado de risco (próximo/vencido), via verificação diária
 - [ ] **NOTF-21**: Responsável do processo é alertado quando um evento de calendário crítico muda de estado de risco (próximo/vencido), via verificação diária
 - [x] **NOTF-22**: Dashboard, agenda e notificações mostram sempre o mesmo veredito de "prazo crítico" — lógica consolidada numa única fonte partilhada, substituindo as 4 implementações inconsistentes existentes
@@ -62,11 +62,11 @@ Preenchida durante a criação do roadmap.
 | NOTF-12 | Phase 89 | Pending |
 | NOTF-13 | Phase 89 | Pending |
 | NOTF-14 | Phase 86 | Complete |
-| NOTF-15 | Phase 87 | Pending |
-| NOTF-16 | Phase 87 | Pending |
-| NOTF-17 | Phase 87 | Pending |
-| NOTF-18 | Phase 87 | Pending |
-| NOTF-19 | Phase 87 | Pending |
+| NOTF-15 | Phase 87 | Complete |
+| NOTF-16 | Phase 87 | Complete |
+| NOTF-17 | Phase 87 | Complete |
+| NOTF-18 | Phase 87 | Complete |
+| NOTF-19 | Phase 87 | Complete |
 | NOTF-20 | Phase 88 | Pending |
 | NOTF-21 | Phase 88 | Pending |
 | NOTF-22 | Phase 85 | Complete |

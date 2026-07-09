@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: executing
-stopped_at: Phase 87 UI-SPEC approved
-last_updated: "2026-07-09T07:19:12.250Z"
+status: ready_to_plan
+stopped_at: Phase 87 complete (4/4) — ready to discuss Phase 88
+last_updated: 2026-07-09T19:32:15.598Z
 last_activity: 2026-07-09 -- Phase 87 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 8
   percent: 40
 ---
 
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-08)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 87 — Alertas de Eventos — Fase, Documento, Atribuição e Parecer
+**Current focus:** Phase 88 — verificação diária de prazos e honorários
 
 ## Current Position
 
-Phase: 87 (Alertas de Eventos — Fase, Documento, Atribuição e Parecer) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 87
-Last activity: 2026-07-09 -- Phase 87 execution started
+Phase: 88
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-09
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 37
+- Total plans completed: 41
 - Average duration: —
 - Total execution time: —
 
@@ -57,6 +57,7 @@ Last activity: 2026-07-09 -- Phase 87 execution started
 | 84 | 5 | - | - |
 | 85 | 1 | - | - |
 | 86 | 3 | - | - |
+| 87 | 4 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 80 P01 | 15min | 3 tasks | 10 files |
