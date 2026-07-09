@@ -288,7 +288,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 1/1 | Complete    | 2026-07-08 |
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
-| 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete   | 2026-07-09 |
+| 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
 | 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.10 roadmap created 2026-07-08. Run `/gsd:plan-phase 85` to start planning the first phase.
