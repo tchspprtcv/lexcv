@@ -164,6 +164,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | (v2.10) Lógica de "prazo crítico" consolidada numa única fonte partilhada, substituindo as 4 implementações inconsistentes existentes (dashboard, sino v2.1, página de agenda, endpoint `/prazos`) | Reduz o risco de dashboard/agenda/notificações discordarem sobre o que conta como "crítico" | — Pending |
 | (v2.10) Reatribuição de responsável de processo passa a ter um fluxo próprio (novo endpoint); hoje `responsavelId` só é definível na criação | "Processo atribuído" só faz sentido como evento repetível se a atribuição puder mudar depois da criação | — Pending |
 | (v2.10) Alerta de honorário usa dias sem pagamento total desde `dataAcordo`, sem novo campo de data de vencimento | `Honorario` não tem hoje nenhum campo de vencimento; adicionar um exigiria desenhar UI de preenchimento fora do pedido original | — Pending |
+| (v2.10, Phase 87) `ParecerController.updateSolicitacao` corrigido para nunca sobrescrever `prazo`/`prioridade` com `null` num update parcial | Revisão de código da Phase 87 encontrou este bug de perda de dados pré-existente (não introduzido por esta fase) ao ler o ficheiro por inteiro para verificar os gatilhos de notificação — corrigido na mesma sessão | ✓ Good (commit `ce6d1f0`) |
+| (v2.10, Phase 87) Notificações por-destinatário isoladas com try/catch individual (nunca reverte a ação de negócio já persistida nem bloqueia o fan-out de ADMIN) | 3 rondas de revisão de código encontraram sucessivamente que um destinatário inválido/apagado podia (a) causar um 500 numa operação já bem-sucedida, depois (b) suprimir silenciosamente o fan-out de ADMIN garantido — cada gatilho de notificação isola agora a falha ao nível do destinatário individual | ✓ Good |
+| (v2.10, Phase 87) Novo endpoint `GET /users` (gated `processos:view`, devolve apenas `{id, nome}`) substitui `GET /admin/users` nos seletores de atribuição da ficha do processo | O picker de reatribuição usava um endpoint ADMIN-only, deixando ADVOGADO (que tem `processos:manage`) com uma lista vazia e o submit permanentemente desativado — mesmo padrão de bug já existente no picker de "Novo Prazo", corrigido para ambos na mesma revisão | ✓ Good (commit `8122c7d`) |
 
 ## Current State
 
@@ -186,7 +189,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.10 (Notificações e Alertas) em execução — Phase 86/89 (Infraestrutura de Notificações — Entidade, API e Targeting) concluída; entidade `Notificacao` persistida, `NotificacaoService` (único ponto de escrita, fan-out de ADMIN), API REST dual-scoped (tenant+destinatário) e RBAC `notificacoes:view` seedado. 2 itens de verificação humana adiados (ver `86-HUMAN-UAT.md`) — round-trip ao vivo contra BD real e confirmação visual no ecrã RBAC. Próxima: Phase 87 (Alertas de Eventos).
+**Current focus:** Milestone v2.10 (Notificações e Alertas) em execução — Phase 87/89 (Alertas de Eventos — Fase, Documento, Atribuição e Parecer) concluída; os 4 gatilhos de notificação (entrada de fase, documento novo, atribuição de processo, parecer atribuído) estão ligados a `NotificacaoService.criar(...)`, com novo endpoint `PUT /processos/{id}/atribuir` (reatribuição, gated `processos:manage`) e controlo de UI dedicado na ficha do processo. Revisão de código encontrou e corrigiu 5 issues críticos ao longo de 3 iterações (incluindo um bug de perda de dados pré-existente em `ParecerController.updateSolicitacao`, não introduzido por esta fase). 3 itens de verificação humana adiados (ver `87-HUMAN-UAT.md`) — walkthrough ao vivo (backend não arranca nesta sessão por falta de `MINIO_ENDPOINT`) e 2 correções sem cobertura de teste automatizada. Próxima: Phase 88 (Verificação Diária de Prazos e Honorários) — a fase de maior risco da milestone (primeiro job `@Scheduled`/cross-tenant deste código-base).
 
 ## Evolution
 
@@ -206,4 +209,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-08 — after Phase 86 (Infraestrutura de Notificações)*
+*Last updated: 2026-07-09 — after Phase 87 (Alertas de Eventos)*
