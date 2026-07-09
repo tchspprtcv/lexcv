@@ -235,6 +235,20 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   const initialTab: TabKey =
     tabParam && (TAB_KEYS as string[]).includes(tabParam) ? (tabParam as TabKey) : "timeline";
   const [tab, setTab] = React.useState<TabKey>(initialTab);
+
+  // WR-03 (Phase 87 code review): useState's initializer only runs on first
+  // mount, so a client-side navigation that changes only ?tab= on this same
+  // route (e.g. following a FASE_ENTRADA notification link while already on
+  // this processo's page) updates the URL/searchParams but not `tab`. Re-sync
+  // whenever searchParams changes so ?tab= deep-links keep working post-mount.
+  React.useEffect(() => {
+    const p = searchParams.get("tab");
+    if (p && (TAB_KEYS as string[]).includes(p) && p !== tab) {
+      setTab(p as TabKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const [formalizarError, setFormalizarError] = React.useState<string | null>(null);
 
   // Workflow state
