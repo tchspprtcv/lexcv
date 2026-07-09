@@ -206,8 +206,8 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
   4. Advogado atribuído a um parecer — na criação ou numa reatribuição posterior — recebe uma notificação de atribuição (mais ADMIN)
 **Plans**: 4 plans (3 waves)
 - [x] 87-01-PLAN.md — NotificacaoService: 4 métodos notificar* + overload notificarAdmins com actor-exclusion (fundação; testes Mockito)
-- [ ] 87-02-PLAN.md — ResourceController: gatilhos FASE_ENTRADA/DOCUMENTO_NOVO/PROCESSO_ATRIBUIDO + novo endpoint PUT /processos/{id}/atribuir (manage-gated)
-- [ ] 87-03-PLAN.md — ParecerController: gatilhos PARECER_ATRIBUIDO na criação e na reatribuição
+- [x] 87-02-PLAN.md — ResourceController: gatilhos FASE_ENTRADA/DOCUMENTO_NOVO/PROCESSO_ATRIBUIDO + novo endpoint PUT /processos/{id}/atribuir (manage-gated)
+- [x] 87-03-PLAN.md — ParecerController: gatilhos PARECER_ATRIBUIDO na criação e na reatribuição
 - [ ] 87-04-PLAN.md — Frontend: hook useReatribuirResponsavel + controlo Reatribuir (Dialog→AlertDialog) na ficha do processo
 **UI hint**: yes
 
@@ -285,7 +285,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 84. Frontend — UI (Intake, Dados, Abas, Termo) | v2.9 | 5/5 | Complete    | 2026-07-08 |
 | 85. Consolidação da Lógica de "Prazo Crítico" | v2.10 | 1/1 | Complete    | 2026-07-08 |
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
-| 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 1/4 | In Progress|  |
+| 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 3/4 | In Progress|  |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 0/TBD | Not started | - |
 | 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
 
