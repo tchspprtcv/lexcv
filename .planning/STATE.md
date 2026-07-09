@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: planning
+status: executing
 stopped_at: Phase 87 UI-SPEC approved
-last_updated: "2026-07-08T23:45:22.821Z"
-last_activity: 2026-07-08
+last_updated: "2026-07-09T07:18:18.485Z"
+last_activity: 2026-07-09 -- Phase 87 planning complete
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
+  total_plans: 8
   completed_plans: 4
   percent: 40
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 Phase: 87
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-08
+Status: Ready to execute
+Last activity: 2026-07-09 -- Phase 87 planning complete
 
 ## Performance Metrics
 
