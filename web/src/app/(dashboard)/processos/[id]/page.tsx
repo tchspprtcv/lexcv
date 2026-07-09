@@ -2376,6 +2376,15 @@ function ReatribuirResponsavelControl({
   const tenantUsers = useTenantUsers();
 
   const novoNome = (tenantUsers.data ?? []).find((u) => u.id === selectedUserId)?.nome ?? "";
+  // WR-03 (Phase 87 code review, iteration 3): the current responsável may have been
+  // deactivated since being assigned. filteredUsers (active-only) drives the normal
+  // <option> list below; when the current responsável isn't in it, a synthetic
+  // "(inativo)" option is injected so the <select> always has a matching <option> for
+  // selectedUserId's initial value -- otherwise the browser falls back to showing the
+  // disabled placeholder, silently misrepresenting who is actually assigned and leaving
+  // the confirm button disabled with no visible explanation.
+  const filteredUsers = (tenantUsers.data ?? []).filter((u) => u.ativo !== false);
+  const currentStillActive = filteredUsers.some((u) => u.id === currentResponsavelId);
 
   const handleConfirm = async () => {
     setReatribuirError(null);
@@ -2430,13 +2439,14 @@ function ReatribuirResponsavelControl({
                 <option value="" disabled>
                   Selecione um utilizador
                 </option>
-                {(tenantUsers.data ?? [])
-                  .filter((u) => u.ativo !== false)
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nome}
-                    </option>
-                  ))}
+                {!currentStillActive && currentResponsavelId && currentResponsavelNome ? (
+                  <option value={currentResponsavelId}>{currentResponsavelNome} (inativo)</option>
+                ) : null}
+                {filteredUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
