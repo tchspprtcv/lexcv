@@ -222,4 +222,88 @@ class NotificacaoServiceTest {
             assertTrue(n.getLida());
         }
     }
+
+    // --- Phase 87 Task 1: notificarAdmins (actor exclusion overload) + wrappers do lado processo ---
+
+    @Test
+    void notificarAdminsComExclusao_umAdminExcluido_apenasOOutroRecebeLinha() {
+        User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
+                .thenReturn(List.of(admin1, admin2));
+        when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-3", "/link", admin1.getId());
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+        assertEquals(admin2.getId(), captor.getValue().getDestinatarioId());
+        // O admin excluído (admin1, == excluirUserId) nunca chega a save().
+    }
+
+    @Test
+    void notificarFaseEntrada_responsavelNaoNulo_geraLinhaResponsavelELinhaAdmin() {
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
+                "/processos/" + processoId + "?tab=fases");
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        assertEquals(List.of(responsavelId, admin.getId()), destinatarios);
+        for (Notificacao n : captor.getAllValues()) {
+            assertEquals("FASE_ENTRADA", n.getCategoria());
+            assertEquals("processo", n.getEntidadeTipo());
+        }
+    }
+
+    @Test
+    void notificarFaseEntrada_responsavelNulo_geraApenasLinhaAdminSemExcecao() {
+        UUID processoId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+
+        assertDoesNotThrow(() ->
+                service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
+        verify(notificacaoRepository, times(1)).save(any());
+        // Null-guard: responsavelId nulo nunca chama criar() para o responsável, mas ADMIN é sempre notificado.
+    }
+
+    @Test
+    void notificarProcessoAtribuido_responsavelNaoNulo_geraLinhaResponsavelComMensagemAtribuidaELinhaAdmin() {
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+        List<Notificacao> saved = captor.getAllValues();
+        assertEquals(responsavelId, saved.get(0).getDestinatarioId());
+        assertTrue(saved.get(0).getMensagem().startsWith("Foi-lhe atribuído o processo "));
+        assertEquals(admin.getId(), saved.get(1).getDestinatarioId());
+        assertEquals("PROCESSO_ATRIBUIDO", saved.get(1).getCategoria());
+    }
 }

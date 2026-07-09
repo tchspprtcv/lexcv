@@ -86,6 +86,25 @@ public class NotificacaoService {
         }
     }
 
+    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
+    @Transactional
+    void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
+                          String entidadeTipo, String entidadeId, String linkUrl, UUID excluirUserId) {
+        // Intentionally empty for RED.
+    }
+
+    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
+    public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID responsavelId,
+                                      String numeroProcesso, String nomeFase, String linkUrl) {
+        // Intentionally empty for RED.
+    }
+
+    // RED stub (Phase 87 Task 1) — implemented in the GREEN step of the same task.
+    public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
+                                            String numeroProcesso, String linkUrl) {
+        // Intentionally empty for RED.
+    }
+
     // Mesmo ponto de escrita que criar(...), agora para MUTAÇÃO de estado — nenhuma outra classe
     // deve chamar notificacaoRepository.save(...) para marcar lida. @Transactional ao nível do
     // serviço (precedente: SetupService.initializeSystem, único @Transactional de serviço
