@@ -11,12 +11,12 @@ Numeração de `NOTF-` continuada a partir do histórico do projeto: `NOTF-01` (
 
 ### Notificações
 
-- [ ] **NOTF-08**: Utilizador vê um contador de notificações não lidas no sino, atualizado por polling (30-60s)
-- [ ] **NOTF-09**: Utilizador abre o sino e vê uma lista das notificações recentes, cada uma com link direto para a entidade relacionada
-- [ ] **NOTF-10**: Utilizador marca uma notificação individual como lida
-- [ ] **NOTF-11**: Utilizador marca todas as notificações como lidas de uma vez
-- [ ] **NOTF-12**: Utilizador acede a uma página dedicada `/notificacoes` com histórico completo
-- [ ] **NOTF-13**: Utilizador filtra o histórico de notificações por categoria e por estado lida/não-lida
+- [x] **NOTF-08**: Utilizador vê um contador de notificações não lidas no sino, atualizado por polling (30-60s)
+- [x] **NOTF-09**: Utilizador abre o sino e vê uma lista das notificações recentes, cada uma com link direto para a entidade relacionada
+- [x] **NOTF-10**: Utilizador marca uma notificação individual como lida
+- [x] **NOTF-11**: Utilizador marca todas as notificações como lidas de uma vez
+- [x] **NOTF-12**: Utilizador acede a uma página dedicada `/notificacoes` com histórico completo
+- [x] **NOTF-13**: Utilizador filtra o histórico de notificações por categoria e por estado lida/não-lida
 - [x] **NOTF-14**: Sistema dirige cada notificação apenas à entidade diretamente ligada (responsável do processo, advogado do parecer, equipa do cliente) mais ADMIN — nunca em massa por permissão de visualização
 - [x] **NOTF-15**: Responsável do processo é alertado quando o processo entra numa nova fase
 - [x] **NOTF-16**: Responsável do processo (ou equipa de advogados/administrativos do cliente, quando o documento não está ligado a nenhum processo) é alertado quando um novo documento é adicionado
@@ -55,12 +55,12 @@ Preenchida durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTF-08 | Phase 89 | Pending |
-| NOTF-09 | Phase 89 | Pending |
-| NOTF-10 | Phase 89 | Pending |
-| NOTF-11 | Phase 89 | Pending |
-| NOTF-12 | Phase 89 | Pending |
-| NOTF-13 | Phase 89 | Pending |
+| NOTF-08 | Phase 89 | Complete |
+| NOTF-09 | Phase 89 | Complete |
+| NOTF-10 | Phase 89 | Complete |
+| NOTF-11 | Phase 89 | Complete |
+| NOTF-12 | Phase 89 | Complete |
+| NOTF-13 | Phase 89 | Complete |
 | NOTF-14 | Phase 86 | Complete |
 | NOTF-15 | Phase 87 | Complete |
 | NOTF-16 | Phase 87 | Complete |
