@@ -60,12 +60,22 @@ function NotificacoesContent() {
 
   // Clamp `page` back into range whenever the server reports fewer pages than
   // currently selected (e.g. marking the last item on the final page as read
-  // shrinks totalPages via refetch, but `page` itself never changes on its own).
-  React.useEffect(() => {
-    if (list.data && list.data.totalPages > 0 && page >= list.data.totalPages) {
+  // shrinks totalPages via refetch, but `page` itself never changes on its
+  // own). Derived during render — React's documented "adjusting state when a
+  // prop changes" pattern — instead of via useEffect + setState: the effect
+  // version committed the stale/out-of-range page first and only corrected
+  // it on a second render/commit (a visible flash of stale content, plus an
+  // eslint `react-hooks/set-state-in-effect` error). The `lastTotalPages`
+  // guard only lets the block run when `totalPages` actually changes, so
+  // React discards the in-progress render and re-renders immediately with
+  // the corrected page before anything paints, instead of looping.
+  const [lastTotalPages, setLastTotalPages] = React.useState(list.data?.totalPages);
+  if (list.data && list.data.totalPages !== lastTotalPages) {
+    setLastTotalPages(list.data.totalPages);
+    if (list.data.totalPages > 0 && page >= list.data.totalPages) {
       setPage(list.data.totalPages - 1);
     }
-  }, [list.data, page]);
+  }
 
   const unreadCount = useNotificacoesUnreadCount();
   const marcarLida = useMarcarNotificacaoLida();
