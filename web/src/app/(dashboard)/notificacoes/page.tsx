@@ -79,8 +79,12 @@ function NotificacoesContent() {
   };
 
   const onMarcarTodas = async () => {
-    await marcarTodas.mutateAsync();
-    toast.success("Todas as notificações foram marcadas como lidas.");
+    try {
+      await marcarTodas.mutateAsync();
+      toast.success("Todas as notificações foram marcadas como lidas.");
+    } catch {
+      // Erro já reportado pelo toast automático do apiFetch (exceto 401/403).
+    }
   };
 
   const marcarTodasDisabled = marcarTodas.isPending || unreadCount.data?.count === 0;
