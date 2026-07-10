@@ -46,7 +46,7 @@ function NotificacaoConteudo({ n }: { n: Notificacao }) {
 export function NotificationBell() {
   const unread = useNotificacoesUnreadCount();
   const count = unread.data?.count ?? 0;
-  const showBadge = !unread.isLoading && count > 0;
+  const showBadge = !unread.isLoading && (unread.isError || count > 0);
 
   const list = useNotificacoes({ size: 10 }, { poll: true });
   const marcarLida = useMarcarNotificacaoLida();
@@ -71,8 +71,12 @@ export function NotificationBell() {
         >
           <Bell className="h-[1.1rem] w-[1.1rem]" />
           {showBadge && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center leading-none">
-              {count > 9 ? "9+" : count}
+            <span
+              className={`absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center leading-none ${
+                unread.isError ? "bg-slate-400" : "bg-red-500"
+              }`}
+            >
+              {unread.isError ? "!" : count > 9 ? "9+" : count}
             </span>
           )}
         </Button>
