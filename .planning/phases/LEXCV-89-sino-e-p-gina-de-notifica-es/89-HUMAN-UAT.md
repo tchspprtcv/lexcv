@@ -1,9 +1,9 @@
 ---
 status: partial
 phase: 89-sino-e-p-gina-de-notifica-es
-source: [89-04-PLAN.md]
+source: [89-04-PLAN.md, 89-VERIFICATION.md, 89-REVIEW-FIX.md]
 started: 2026-07-10T00:00:00Z
-updated: 2026-07-10T00:00:00Z
+updated: 2026-07-10T16:00:00Z
 ---
 
 ## Current Test
@@ -48,12 +48,20 @@ result: [pending]
 expected: Utilizador sem o scope `notificacoes:view` vê `AccessDeniedState` em vez do conteúdo da página /notificacoes.
 result: [pending]
 
+### 10. (REVIEW-FIX WR-01, follow-up) Confirmação visual do guard same-origin
+expected: Uma notificação com `linkUrl` contendo uma variante de bypass (protocol-relative, backslash, ou caracteres de controlo TAB/LF/CR embutidos) renderiza como texto não clicável, nunca como link navegável. Requer escrever uma linha de teste diretamente na BD — nenhum gatilho de produção gera este valor. Nota: já confirmado por análise estática (code review) e por teste comportamental independente (16/16 casos, ver 89-VERIFICATION.md) que `isInternalLinkUrl` está correto — este item é uma confirmação visual final, não um risco funcional em aberto.
+result: [pending]
+
+### 11. (REVIEW-FIX WR-02, follow-up) Transição de paginação sem flash ao ficar sem resultados
+expected: Filtrar "Não lidas", ir à última página, marcar o último item dessa página como lido — a página corrige diretamente para o novo intervalo válido, sem mostrar por um frame "Nenhuma notificação encontrada para os filtros selecionados." antes de estabilizar. Nota: já confirmado estaticamente que `pnpm lint` não reporta `react-hooks/set-state-in-effect` neste ficheiro (a causa raiz do flash foi eliminada) — este item é uma confirmação visual final.
+result: [pending]
+
 ## Summary
 
-total: 9
+total: 11
 passed: 0
 issues: 0
-pending: 9
+pending: 11
 skipped: 0
 blocked: 0
 
