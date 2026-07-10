@@ -57,6 +57,16 @@ function NotificacoesContent() {
     page,
     size: 20,
   });
+
+  // Clamp `page` back into range whenever the server reports fewer pages than
+  // currently selected (e.g. marking the last item on the final page as read
+  // shrinks totalPages via refetch, but `page` itself never changes on its own).
+  React.useEffect(() => {
+    if (list.data && list.data.totalPages > 0 && page >= list.data.totalPages) {
+      setPage(list.data.totalPages - 1);
+    }
+  }, [list.data, page]);
+
   const unreadCount = useNotificacoesUnreadCount();
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasNotificacoesLidas();
