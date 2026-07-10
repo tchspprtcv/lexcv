@@ -271,6 +271,49 @@ Deepened the processos module with structured legal-case data end-to-end: `Proce
 
 ---
 
+## Milestone: v2.10 — Notificações e Alertas
+
+**Shipped:** 2026-07-10
+**Phases:** 5 (85–89) | **Plans:** 14 | **Tasks:** 29
+
+### What Was Built
+
+A complete, persisted notification system built from zero prior infrastructure. `RiscoPrazoService` (Phase 85) consolidated 4 inconsistent backend "prazo crítico" computations into one shared source. `Notificacao`/`NotificacaoService`/`NotificacaoController` (Phase 86) shipped the project's first per-recipient-private entity with strict tenant+destinatário dual-scoping and ADMIN fan-out. Phase 87 wired 4 event-triggered alerts (fase entrada, novo documento, processo atribuído, parecer atribuído) into existing controllers, including a brand-new processo reatribuição flow (`PUT /processos/{id}/atribuir` + two-step `ReatribuirResponsavelControl` UI) that didn't exist before. Phase 88 shipped the codebase's first `@Scheduled`/cross-tenant background job — a daily risk scan with 4-layer failure isolation and edge-triggered idempotent notifications. Phase 89 closed the loop with a full sino rewrite (polling+refocus badge, fused mark-read+navigate) and a new `/notificacoes` history page. Milestone audit: 16/16 requirements satisfied, 0 cross-phase integration blockers.
+
+### What Worked
+
+- **Parallelizing the two independent foundation phases (85 + 86) at milestone start**, exactly as research predicted — neither depended on the other, and running them concurrently in separate worktrees cost nothing while saving a full sequential phase's wall-clock time.
+- **Worktree isolation for parallel waves held up cleanly all milestone** — every wave with 2+ independent plans (86's 3-plan wave, 89's 89-02/89-03 pair) ran genuinely concurrently with zero merge conflicts, because the plan-checker verified disjoint file sets before dispatch every time.
+- **The 3-iteration adversarial code-review loop earned its keep repeatedly**, but Phase 89's `isInternalLinkUrl` same-origin guard is the standout case: each of the 3 rounds found a *genuinely different* bypass class (literal `//host` → backslash-at-index-1 → embedded TAB/LF/CR anywhere in the string) before the final round replaced character-enumeration entirely with a parser-based check (`new URL(url, sentinel).origin === sentinel`) that closes the whole vulnerability class instead of one more specific string. Three rounds of "fix the reported symptom" converged on "fix the underlying defect shape" exactly as the process is designed to do.
+- **The milestone-level integration audit found zero cross-phase blockers this time** (vs. v2.9's 2 real bugs) — a genuine signal, not a rubber stamp: the checker re-ran the actual test suite (44/44), re-compiled, and traced 2 full E2E chains (fase-entrada→sino→tab-navigation; prazo-vencido→idempotent-notification→filterable) through current source before concluding this.
+
+### What Was Inefficient
+
+- **The exact same environment blocker (`MINIO_ENDPOINT` missing from `backend/.env`) recurred in Phase 87 and again in Phase 89**, blocking live E2E UAT both times for unrelated reasons (the S3Client bean fails Spring context startup for the whole app, not just notification endpoints). It was independently re-diagnosed from scratch both times rather than fixed or worked around once — a documented root-cause note after Phase 87 would have saved the second rediscovery in Phase 89.
+- **Windows `git worktree remove --force` file-locking failures were 100% reproducible this milestone** — every single worktree merge (Phase 85, 86, 87, and 3 separate merges within Phase 89 alone) hit "worktree_remove_failed" from the automated cleanup tool, even though the underlying merge had already succeeded every time. The manual recovery sequence (verify via `git log` that the merge landed, `git worktree remove --force`, `git worktree prune`, manual directory removal if needed, `git branch -D`) is no longer an edge case in this environment — it is the default path.
+- **A genuine `gsd-sdk` staleness bug was found at milestone close**: `init.milestone-op`'s `completed_phases`/`all_phases_complete` fields reported `0`/`false` despite `ROADMAP.md` and `phases.list` both correctly showing 5/5 phases complete. Worked around by trusting the ROADMAP.md progress table as ground truth instead of the SDK's derived counter — the counter itself needs a fix in a future GSD update.
+- **A Bash-tool JSON-manifest construction bug cost a wasted round-trip on the very first worktree merge**: a heredoc containing Windows double-backslash paths silently lost one level of escaping, producing invalid JSON for `worktree.cleanup-wave`. Switching to forward-slash paths (valid on Windows, valid unescaped in JSON) fixed it permanently for the rest of the milestone.
+
+### Patterns Established
+
+- **Same-origin link guards must be parser-based (`new URL(url, sentinel).origin === sentinel`), never character-position/prefix enumeration** — established the hard way, after 3 escalating review rounds each found a different bypass in a character-based check. This should be the default starting implementation for any future same-origin validation in this codebase, not something arrived at after 3 rounds of review.
+- **`useXxx(filters, { poll })` — one hook, an explicit opt-in polling flag** — the shape for "identical data, one consumer polls (a dropdown/badge), one doesn't (a full history page)," avoiding two near-duplicate hooks. Established by Phase 89's `useNotificacoes`.
+- **Top-level query-key-prefix invalidation (`["notificacoes"]`, not a deeper `["notificacoes","list"]`)** is the pattern for "one mutation must refresh N queries sharing a namespace" — TanStack Query's prefix-match semantics catch every dependent query without the call site needing to enumerate them.
+
+### Key Lessons
+
+1. **Blocklist-style validation (character/prefix enumeration) against a browser URL-parsing spec is inherently incomplete** — WHATWG URL parsing has more edge cases (whitespace/control-character stripping, backslash-as-slash normalization) than a single review pass will enumerate. Start same-origin/URL-safety checks parser-based; don't wait for 3 rounds of adversarial review to arrive there.
+2. **A recurring environment blocker should be root-caused once and documented as a fix-or-workaround, not re-diagnosed fresh each time it blocks a different phase.** By Phase 89 this was the 3rd occurrence of the identical MinIO failure in this milestone alone (2nd within this milestone, at least 1 prior in v2.9) — the diagnostic cost is now larger than the cost of just fixing `backend/.env` once.
+3. **On Windows, treat worktree-removal failure as the expected outcome, not the exception.** Every single merge this milestone needed the manual cleanup sequence; budgeting for it upfront (rather than re-verifying "did this actually fail?" each time) would save a diagnostic step per merge across a 5-phase, ~10-worktree milestone.
+
+### Cost Observations
+
+- Model mix: opus for all 5 phase planners (all first-pass, no gap-closure re-plans needed); sonnet for pattern-mapping, execution, UI research/checking, every code-review/fix iteration, verification, and the milestone integration audit.
+- Sessions: continuous, with periodic transient API/classifier outages requiring resume (not restart) of interrupted agents — handled via `SendMessage` to the same agent id each time, preserving partial progress.
+- Notable: this milestone had the highest per-phase code-review intensity to date — every phase used its full 3-iteration cap (vs. v2.9's 1-2 rounds varying by phase), and Phase 89 specifically never reached a clean "0 findings" state even at round 3 (the same-origin guard finally converged on round 3's parser-based fix, right at the cap). Worth watching whether a future milestone with a similarly security-sensitive surface needs either a higher iteration cap or an explicit escalation path when round 3 still finds new issues.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -281,5 +324,6 @@ Deepened the processos module with structured legal-case data end-to-end: `Proce
 | v2.7 Melhoria Gestão de Clientes | 5 (incl. 1 gap-closure) | 6 | 1 | 15 (backend+frontend) | 7/7 (post-audit-remediation) |
 | v2.8 Refatoração Ficha de Cliente | 6 (incl. 2 gap-closure plans) | 13 | 3 | 81 | 20/20 (post-review-remediation) |
 | v2.9 Melhoria Módulo Processos | 5 | 12 | 2 | 97 | 17/17 (post-audit-remediation) |
+| v2.10 Notificações e Alertas | 5 | 14 | 3 | 29 (backend+web+migrations) | 16/16 (0 audit gaps) |
 
 *Table grows with each milestone*
