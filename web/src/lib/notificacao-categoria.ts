@@ -2,20 +2,25 @@ import type { NotificacaoCategoria } from "@/types/notificacoes";
 
 /**
  * Fonte unica de verdade para o mapeamento de categoria de notificacao -> label PT.
+ * Elevado a constante de modulo (em vez de literal local a funcao) para que
+ * NOTIFICACAO_CATEGORIA_OPTIONS possa derivar a lista de categorias a partir
+ * deste mesmo Record exaustivo, em vez de duplicar os valores num array
+ * mantido a mao.
  */
+const CATEGORIA_LABEL_MAP: Record<NotificacaoCategoria, string> = {
+  FASE_ENTRADA: "Nova fase",
+  DOCUMENTO_NOVO: "Novo documento",
+  PROCESSO_ATRIBUIDO: "Processo atribuído",
+  PARECER_ATRIBUIDO: "Parecer atribuído",
+  PRAZO_PROXIMO: "Prazo a vencer",
+  PRAZO_VENCIDO: "Prazo vencido",
+  EVENTO_PROXIMO: "Evento a aproximar-se",
+  EVENTO_VENCIDO: "Evento em atraso",
+  HONORARIO_ATRASADO: "Honorário em atraso",
+};
+
 export function categoriaToLabel(categoria: NotificacaoCategoria): string {
-  const map: Record<NotificacaoCategoria, string> = {
-    FASE_ENTRADA: "Nova fase",
-    DOCUMENTO_NOVO: "Novo documento",
-    PROCESSO_ATRIBUIDO: "Processo atribuído",
-    PARECER_ATRIBUIDO: "Parecer atribuído",
-    PRAZO_PROXIMO: "Prazo a vencer",
-    PRAZO_VENCIDO: "Prazo vencido",
-    EVENTO_PROXIMO: "Evento a aproximar-se",
-    EVENTO_VENCIDO: "Evento em atraso",
-    HONORARIO_ATRASADO: "Honorário em atraso",
-  };
-  return map[categoria] ?? "Notificação";
+  return CATEGORIA_LABEL_MAP[categoria] ?? "Notificação";
 }
 
 /**
@@ -40,19 +45,14 @@ export function categoriaToBadgeVariant(
 
 /**
  * Fonte unica de verdade para as opcoes do filtro de categoria (select).
+ * Derivada de CATEGORIA_LABEL_MAP (Record<NotificacaoCategoria, ...>, com
+ * exaustividade garantida pelo compilador) em vez de um array literal
+ * duplicado a mao — assim, uma categoria nova que atualize o Record mas
+ * fique esquecida aqui deixa de ser possivel, porque a lista de chaves vem
+ * do proprio Record.
  */
 export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label: string }[] = (
-  [
-    "FASE_ENTRADA",
-    "DOCUMENTO_NOVO",
-    "PROCESSO_ATRIBUIDO",
-    "PARECER_ATRIBUIDO",
-    "PRAZO_PROXIMO",
-    "PRAZO_VENCIDO",
-    "EVENTO_PROXIMO",
-    "EVENTO_VENCIDO",
-    "HONORARIO_ATRASADO",
-  ] as const satisfies readonly NotificacaoCategoria[]
+  Object.keys(CATEGORIA_LABEL_MAP) as NotificacaoCategoria[]
 ).map((value) => ({ value, label: categoriaToLabel(value) }));
 
 /**
