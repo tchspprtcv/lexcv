@@ -235,7 +235,11 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
   2. Ao abrir o sino, o utilizador vê uma lista das notificações recentes, cada uma com link direto para a entidade relacionada (processo, documento, parecer ou honorário, conforme a categoria)
   3. O utilizador marca uma notificação individual como lida, ou todas de uma vez, e o contador do sino atualiza-se de imediato, sem esperar pelo próximo ciclo de polling
   4. O utilizador acede a `/notificacoes` e consulta o histórico completo, filtrável por categoria e por estado lida/não-lida
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+- [ ] 89-01-PLAN.md — Camada de dados: tipos Notificacao + mapa categoria->label/variant + 4 hooks (polling opt-in, invalidação de prefixo ["notificacoes"])
+- [ ] 89-02-PLAN.md — Sino reescrito: badge com polling 30s+refocus, dropdown de 10, clique=marcar-lida+navegar, marcar-todas, footer "Ver todas as notificações"
+- [ ] 89-03-PLAN.md — Página /notificacoes: filtros (categoria + chips 3-vias lida/não-lida), linhas com marcar-uma/marcar-todas, paginação funcional, RBAC gate
+- [ ] 89-04-PLAN.md — Checkpoint humano end-to-end (contador+polling+refocus, clique fundido, filtros, paginação, invalidação cross-surface)
 **UI hint**: yes
 
 ## Progress
@@ -289,6 +293,6 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
-| 89. Sino e Página de Notificações | v2.10 | 0/TBD | Not started | - |
+| 89. Sino e Página de Notificações | v2.10 | 0/4 | Not started | - |
 
 **Next:** Milestone v2.10 roadmap created 2026-07-08. Run `/gsd:plan-phase 85` to start planning the first phase.
