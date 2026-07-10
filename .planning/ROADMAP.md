@@ -239,7 +239,7 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 - [x] 89-01-PLAN.md — Camada de dados: tipos Notificacao + mapa categoria->label/variant + 4 hooks (polling opt-in, invalidação de prefixo ["notificacoes"])
 - [x] 89-02-PLAN.md — Sino reescrito: badge com polling 30s+refocus, dropdown de 10, clique=marcar-lida+navegar, marcar-todas, footer "Ver todas as notificações"
 - [x] 89-03-PLAN.md — Página /notificacoes: filtros (categoria + chips 3-vias lida/não-lida), linhas com marcar-uma/marcar-todas, paginação funcional, RBAC gate
-- [ ] 89-04-PLAN.md — Checkpoint humano end-to-end (contador+polling+refocus, clique fundido, filtros, paginação, invalidação cross-surface)
+- [x] 89-04-PLAN.md — Checkpoint humano end-to-end (contador+polling+refocus, clique fundido, filtros, paginação, invalidação cross-surface)
 **UI hint**: yes
 
 ## Progress
@@ -293,6 +293,6 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 | 86. Infraestrutura de Notificações — Entidade, API e Targeting | v2.10 | 3/3 | Complete    | 2026-07-08 |
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
-| 89. Sino e Página de Notificações | v2.10 | 3/4 | In Progress|  |
+| 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete   | 2026-07-10 |
 
 **Next:** Milestone v2.10 roadmap created 2026-07-08. Run `/gsd:plan-phase 85` to start planning the first phase.
