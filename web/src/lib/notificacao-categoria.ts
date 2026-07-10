@@ -58,9 +58,15 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
 /**
  * Fonte unica de verdade para a verificacao de seguranca de `linkUrl`: aceita
  * apenas caminhos internos relativos ("/processos/123"). Rejeita URLs
- * protocol-relative ("//evil.example.com") que tambem comecam por "/" mas que
- * o browser resolve como absolutas fora da origem ao navegar.
+ * protocol-relative ("//evil.example.com") e a variante equivalente com
+ * barra invertida como segundo caracter ("/\evil.example.com",
+ * "/\/evil.example.com", etc.) — ambas comecam por "/" mas o algoritmo de
+ * parsing de URL (WHATWG, usado pelo browser e pelo Next.js ao resolver
+ * `href`) trata "\" como equivalente a "/" ao construir o componente de
+ * autoridade, pelo que ambas resolvem para uma origem externa ao navegar.
  */
 export function isInternalLinkUrl(url: string | null | undefined): url is string {
-  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//");
+  if (typeof url !== "string" || !url.startsWith("/")) return false;
+  const second = url.charAt(1);
+  return second !== "/" && second !== "\\";
 }
