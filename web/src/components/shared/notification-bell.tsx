@@ -126,6 +126,7 @@ export function NotificationBell() {
                         size="sm"
                         className="flex-shrink-0"
                         aria-label="Marcar como lida"
+                        disabled={marcarLida.isPending && marcarLida.variables === n.id}
                         onClick={() => marcarLida.mutate(n.id)}
                       >
                         <Check />
