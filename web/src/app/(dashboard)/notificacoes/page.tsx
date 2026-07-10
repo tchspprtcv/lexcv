@@ -70,6 +70,14 @@ function NotificacoesContent() {
     setPage(0);
   };
 
+  const hasFilters = categoria !== "" || lidaFilter !== undefined;
+
+  const onLimparFiltros = () => {
+    setCategoria("");
+    setLidaFilter(undefined);
+    setPage(0);
+  };
+
   const onMarcarTodas = async () => {
     await marcarTodas.mutateAsync();
     toast.success("Todas as notificações foram marcadas como lidas.");
@@ -161,24 +169,60 @@ function NotificacoesContent() {
               Não foi possível carregar as notificações. Verifique a ligação e tente novamente.
             </div>
           ) : !list.data?.content.length ? (
-            <div className="space-y-1 py-6 text-center">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sem notificações</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Vai receber um alerta aqui sempre que algo relevante acontecer nos seus processos, documentos
-                ou pareceres.
-              </p>
-            </div>
+            hasFilters ? (
+              <div className="space-y-2 py-6 text-center">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Nenhuma notificação encontrada para os filtros selecionados.
+                </p>
+                <Button type="button" variant="ghost" size="sm" onClick={onLimparFiltros}>
+                  Limpar filtros
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-1 py-6 text-center">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sem notificações</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Vai receber um alerta aqui sempre que algo relevante acontecer nos seus processos,
+                  documentos ou pareceres.
+                </p>
+              </div>
+            )
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {list.data.content.map((n) => (
-                <NotificacaoRow
-                  key={n.id}
-                  notificacao={n}
-                  onMarcarLida={(id) => marcarLida.mutate(id)}
-                  isMarking={marcarLida.isPending && marcarLida.variables === n.id}
-                />
-              ))}
-            </div>
+            <>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {list.data.content.map((n) => (
+                  <NotificacaoRow
+                    key={n.id}
+                    notificacao={n}
+                    onMarcarLida={(id) => marcarLida.mutate(id)}
+                    isMarking={marcarLida.isPending && marcarLida.variables === n.id}
+                  />
+                ))}
+              </div>
+              {list.data.totalPages > 1 ? (
+                <div className="flex items-center justify-between gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                    Página {page + 1} de {list.data.totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={page + 1 >= list.data.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Seguinte
+                  </Button>
+                </div>
+              ) : null}
+            </>
           )}
         </CardContent>
       </Card>
