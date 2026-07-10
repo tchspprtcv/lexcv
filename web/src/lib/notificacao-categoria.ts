@@ -57,16 +57,27 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
 
 /**
  * Fonte unica de verdade para a verificacao de seguranca de `linkUrl`: aceita
- * apenas caminhos internos relativos ("/processos/123"). Rejeita URLs
- * protocol-relative ("//evil.example.com") e a variante equivalente com
- * barra invertida como segundo caracter ("/\evil.example.com",
- * "/\/evil.example.com", etc.) — ambas comecam por "/" mas o algoritmo de
- * parsing de URL (WHATWG, usado pelo browser e pelo Next.js ao resolver
- * `href`) trata "\" como equivalente a "/" ao construir o componente de
- * autoridade, pelo que ambas resolvem para uma origem externa ao navegar.
+ * apenas caminhos internos relativos ("/processos/123"). Em vez de enumerar
+ * caracteres/posicoes de bypass conhecidos — abordagem que ja falhou duas
+ * vezes nesta mesma funcao ("//evil.com" na 1a iteracao, "/\evil.com" na
+ * 2a, ambas reabertas por uma variante nova — a mais recente usando
+ * TAB/LF/CR embutidos, que o algoritmo de parsing de URL WHATWG remove de
+ * qualquer posicao da string antes de resolver a autoridade) — resolve o
+ * valor atraves do parser de URL real (o mesmo usado pelo browser e pelo
+ * Next.js ao resolver `href`) e compara a origem resultante com uma origem
+ * sentinela fixa. Qualquer valor que introduza a sua propria autoridade
+ * (protocol-relative, variante com barra invertida, caracteres de controlo
+ * embutidos, ou qualquer futura quirk do WHATWG) resolve para uma origem
+ * diferente da sentinela e e rejeitado por construcao — sem depender de
+ * listar cada variante de bypass conhecida.
  */
+const INTERNAL_URL_SENTINEL = "http://internal.invalid";
+
 export function isInternalLinkUrl(url: string | null | undefined): url is string {
   if (typeof url !== "string" || !url.startsWith("/")) return false;
-  const second = url.charAt(1);
-  return second !== "/" && second !== "\\";
+  try {
+    return new URL(url, INTERNAL_URL_SENTINEL).origin === INTERNAL_URL_SENTINEL;
+  } catch {
+    return false;
+  }
 }
