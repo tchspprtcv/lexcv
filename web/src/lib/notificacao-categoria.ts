@@ -54,3 +54,13 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
     "HONORARIO_ATRASADO",
   ] as const satisfies readonly NotificacaoCategoria[]
 ).map((value) => ({ value, label: categoriaToLabel(value) }));
+
+/**
+ * Fonte unica de verdade para a verificacao de seguranca de `linkUrl`: aceita
+ * apenas caminhos internos relativos ("/processos/123"). Rejeita URLs
+ * protocol-relative ("//evil.example.com") que tambem comecam por "/" mas que
+ * o browser resolve como absolutas fora da origem ao navegar.
+ */
+export function isInternalLinkUrl(url: string | null | undefined): url is string {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//");
+}

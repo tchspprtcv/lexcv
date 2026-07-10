@@ -13,7 +13,11 @@ import {
   useNotificacoes,
   useNotificacoesUnreadCount,
 } from "@/hooks/use-notificacoes";
-import { categoriaToBadgeVariant, categoriaToLabel } from "@/lib/notificacao-categoria";
+import {
+  categoriaToBadgeVariant,
+  categoriaToLabel,
+  isInternalLinkUrl,
+} from "@/lib/notificacao-categoria";
 import type { Notificacao } from "@/types/notificacoes";
 
 function NotificacaoConteudo({ n }: { n: Notificacao }) {
@@ -106,7 +110,7 @@ export function NotificationBell() {
                 key={n.id}
                 className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
               >
-                {n.linkUrl && n.linkUrl.startsWith("/") ? (
+                {isInternalLinkUrl(n.linkUrl) ? (
                   <Link href={n.linkUrl} className="block" onClick={() => marcarLida.mutate(n.id)}>
                     <NotificacaoConteudo n={n} />
                   </Link>

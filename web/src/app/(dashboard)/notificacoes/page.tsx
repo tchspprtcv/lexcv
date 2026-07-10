@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   categoriaToBadgeVariant,
   categoriaToLabel,
+  isInternalLinkUrl,
   NOTIFICACAO_CATEGORIA_OPTIONS,
 } from "@/lib/notificacao-categoria";
 import type { Notificacao, NotificacaoCategoria } from "@/types/notificacoes";
@@ -244,7 +245,7 @@ function NotificacaoRow({
   isMarking: boolean;
 }) {
   const { id, categoria, titulo, mensagem, linkUrl, lida, createdAt } = notificacao;
-  const isInternalLink = typeof linkUrl === "string" && linkUrl.startsWith("/");
+  const isInternalLink = isInternalLinkUrl(linkUrl);
   const titleClassName = lida
     ? "text-sm font-normal text-slate-900 dark:text-slate-100"
     : "text-sm font-semibold text-slate-900 dark:text-slate-100";
