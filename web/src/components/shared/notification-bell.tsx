@@ -2,6 +2,7 @@
 
 import { Bell, Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
+import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ function NotificacaoConteudo({ n }: { n: Notificacao }) {
 }
 
 export function NotificationBell() {
+  const [open, setOpen] = React.useState(false);
   const unread = useNotificacoesUnreadCount();
   const count = unread.data?.count ?? 0;
   const showBadge = !unread.isLoading && (unread.isError || count > 0);
@@ -62,7 +64,7 @@ export function NotificationBell() {
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -115,7 +117,14 @@ export function NotificationBell() {
                 className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
               >
                 {isInternalLinkUrl(n.linkUrl) ? (
-                  <Link href={n.linkUrl} className="block" onClick={() => marcarLida.mutate(n.id)}>
+                  <Link
+                    href={n.linkUrl}
+                    className="block"
+                    onClick={() => {
+                      marcarLida.mutate(n.id);
+                      setOpen(false);
+                    }}
+                  >
                     <NotificacaoConteudo n={n} />
                   </Link>
                 ) : (
@@ -146,6 +155,7 @@ export function NotificationBell() {
           <Link
             href="/notificacoes"
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            onClick={() => setOpen(false)}
           >
             Ver todas as notificações
           </Link>
