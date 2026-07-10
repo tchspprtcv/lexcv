@@ -44,7 +44,7 @@ Declared values (must be multiples of 4):
 
 | Token | Value | Usage in this phase |
 |-------|-------|----------------------|
-| xs | 4px | Unread-dot-to-title gap (`gap-1`/`gap-1.5`); icon-to-text gaps inside buttons |
+| xs | 4px | Unread-dot-to-title gap (`gap-1`); icon-to-text gaps inside buttons |
 | sm | 8px | Chip filter row gaps (`gap-2`); dropdown row internal stacking; pagination control gaps |
 | md | 16px | Row padding on the full-page list (`p-4`, matches `DocumentoMobileCard` precedent at `web/src/app/(dashboard)/documentos/page.tsx:228`); filter grid gaps (`gap-4`) |
 | lg | 24px | Card padding (`CardHeader`/`CardContent` default `p-6`); page-section spacing (`space-y-6`, matches Documentos page container) |
