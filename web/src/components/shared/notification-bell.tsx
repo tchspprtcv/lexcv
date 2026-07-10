@@ -91,6 +91,10 @@ export function NotificationBell() {
           <p className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400 text-center">
             A carregar...
           </p>
+        ) : list.isError ? (
+          <p className="px-4 py-6 text-sm text-red-600 text-center">
+            Não foi possível carregar as notificações. Verifique a ligação e tente novamente.
+          </p>
         ) : !list.data?.content.length ? (
           <p className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400 text-center">
             Sem notificações por agora.
