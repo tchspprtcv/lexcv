@@ -1,29 +1,61 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useUpcomingEventos } from "@/hooks/use-eventos";
-import type { UpcomingEvento } from "@/types/eventos";
+import { toast } from "@/hooks/use-toast";
+import {
+  useMarcarNotificacaoLida,
+  useMarcarTodasNotificacoesLidas,
+  useNotificacoes,
+  useNotificacoesUnreadCount,
+} from "@/hooks/use-notificacoes";
+import { categoriaToBadgeVariant, categoriaToLabel } from "@/lib/notificacao-categoria";
+import type { Notificacao } from "@/types/notificacoes";
 
-function NotificationItem({ ev }: { ev: UpcomingEvento }) {
+function NotificacaoConteudo({ n }: { n: Notificacao }) {
   return (
     <>
-      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{ev.titulo}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p
+          className={`text-sm truncate text-slate-900 dark:text-slate-100 ${
+            n.lida ? "font-normal" : "font-semibold"
+          }`}
+        >
+          {n.titulo}
+        </p>
+        <Badge variant={categoriaToBadgeVariant(n.categoria)} className="flex-shrink-0">
+          {categoriaToLabel(n.categoria)}
+        </Badge>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{n.mensagem}</p>
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        {new Date(ev.dataInicio).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}
-        {ev.tipo ? ` · ${ev.tipo}` : ""}
+        {new Date(n.createdAt).toLocaleDateString("pt-CV", { day: "2-digit", month: "short" })}
       </p>
     </>
   );
 }
 
 export function NotificationBell() {
-  const { data, isLoading } = useUpcomingEventos();
-  const count = data?.length ?? 0;
-  const showBadge = !isLoading && count > 0;
+  const unread = useNotificacoesUnreadCount();
+  const count = unread.data?.count ?? 0;
+  const showBadge = !unread.isLoading && count > 0;
+
+  const list = useNotificacoes({ size: 10 }, { poll: true });
+  const marcarLida = useMarcarNotificacaoLida();
+  const marcarTodas = useMarcarTodasNotificacoesLidas();
+
+  const handleMarcarTodas = async () => {
+    try {
+      await marcarTodas.mutateAsync();
+      toast.success("Todas as notificações foram marcadas como lidas.");
+    } catch {
+      // Erro já reportado pelo toast automático do apiFetch.
+    }
+  };
 
   return (
     <Popover>
@@ -42,31 +74,67 @@ export function NotificationBell() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Próximos eventos</p>
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notificações</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={count === 0 || marcarTodas.isPending}
+            onClick={handleMarcarTodas}
+          >
+            <CheckCheck />
+            {marcarTodas.isPending ? "A marcar..." : "Marcar todas como lidas"}
+          </Button>
         </div>
-        {count === 0 ? (
+        {list.isPending ? (
           <p className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400 text-center">
-            Sem eventos nos próximos 7 dias
+            A carregar...
+          </p>
+        ) : !list.data?.content.length ? (
+          <p className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400 text-center">
+            Sem notificações por agora.
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-            {data!.slice(0, 10).map((ev) => (
-              <li key={ev.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
-                {ev.processoId ? (
-                  <Link href={`/processos/${ev.processoId}`} className="block">
-                    <NotificationItem ev={ev} />
+            {list.data!.content.slice(0, 10).map((n) => (
+              <li
+                key={n.id}
+                className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+              >
+                {n.linkUrl && n.linkUrl.startsWith("/") ? (
+                  <Link href={n.linkUrl} className="block" onClick={() => marcarLida.mutate(n.id)}>
+                    <NotificacaoConteudo n={n} />
                   </Link>
                 ) : (
-                  <NotificationItem ev={ev} />
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <NotificacaoConteudo n={n} />
+                    </div>
+                    {!n.lida && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0"
+                        aria-label="Marcar como lida"
+                        onClick={() => marcarLida.mutate(n.id)}
+                      >
+                        <Check />
+                      </Button>
+                    )}
+                  </div>
                 )}
               </li>
             ))}
           </ul>
         )}
         <div className="px-4 py-2 border-t border-slate-200 dark:border-slate-800">
-          <Link href="/agenda" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">
-            Ver agenda
+          <Link
+            href="/notificacoes"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            Ver todas as notificações
           </Link>
         </div>
       </PopoverContent>
