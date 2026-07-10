@@ -1,5 +1,20 @@
 # Milestones
 
+## v2.10 Notificações e Alertas (Shipped: 2026-07-10)
+
+**Phases completed:** 5 phases, 14 plans, 29 tasks
+
+**Key accomplishments:**
+
+- Consolidated 4 inconsistent "prazo crítico" computations scattered across the backend into a single shared `RiscoPrazoService`, eliminating the risk of dashboard/agenda/notifications ever disagreeing on what counts as critical.
+- Built the project's first persisted notification entity and REST API from scratch (`Notificacao`/`NotificacaoService`/`NotificacaoController`) — strict per-recipient + per-tenant scoping, ADMIN fan-out on creation, no mass-broadcast-by-permission path.
+- Wired 4 event-triggered alert types into existing controllers (fase entrada, novo documento, processo atribuído, parecer atribuído), including a brand-new processo reatribuição flow (`PUT /processos/{id}/atribuir` + `ReatribuirResponsavelControl` UI) that didn't exist before this milestone.
+- Shipped the codebase's first `@Scheduled`/cross-tenant background job (`AlertasDiariosJob`) — daily 06:00 scan of prazo/evento/honorário risk with 4-layer failure isolation and edge-triggered idempotent notifications (never re-notifying the same risk level twice).
+- Rewrote the notification sino (contador with polling+refocus, fused mark-read+navigate) and shipped a new dedicated `/notificacoes` history page (category + read-state filters, real pagination), fully replacing the old eventos-only bell.
+- Milestone-wide adversarial code review (3 iterations per phase, every phase) caught and fixed 2 genuine pre-existing bugs unrelated to this milestone's own scope (a `ParecerController` partial-update data-loss bug, an ADMIN-only `/users` endpoint silently blocking non-admin reassignment pickers) plus a same-origin URL bypass class refined across 3 successive hardening rounds — zero critical/blocker findings remained open at close.
+
+---
+
 ## v2.9 Melhoria Módulo Processos (Shipped: 2026-07-08)
 
 **Phases completed:** 5 phases, 12 plans, 25 tasks

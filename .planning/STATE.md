@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.10
 milestone_name: Notificações e Alertas
-status: milestone_complete
+status: Awaiting next milestone
 stopped_at: Milestone complete (Phase 89 was final phase)
-last_updated: 2026-07-10T12:45:14.151Z
-last_activity: 2026-07-09 -- Phase 88 execution started
+last_updated: "2026-07-10T13:14:47.320Z"
+last_activity: 2026-07-10 — Milestone v2.10 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 ## Current Position
 
-Phase: 89
-Plan: 4/4 (all plans complete)
-Status: Milestone complete
-Last activity: 2026-07-10
+Phase: Milestone v2.10 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-10 — Milestone v2.10 completed and archived
 
 ## Performance Metrics
 
@@ -136,6 +136,23 @@ Items acknowledged and deferred at milestone v2.9 close on 2026-07-08 (see `.pla
 | tooling | `backend/migrations/81-add-facto-ordem-unique-constraint.sql` and `backend/migrations/82-add-honorario-processo-unique-constraint.sql` are standalone manual-execution scripts — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
 | tooling | `web/scripts/verify-juizo-origem-roundtrip.mjs` is a genuine, executable, non-duplicated round-trip proof, wired into `package.json` as `verify:juizo-origem`, but not yet called from any CI step | candidate for CI wiring in a future milestone |
 
+Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md` for full detail — 0 cross-phase integration gaps found; only 2 non-blocking WARNINGs, neither requiring a fix before close):
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 85 (85-VERIFICATION.md) — code-level verification passed 5/5; 1 open product decision (should an ALTA-priority Evento with null dataFim count as urgent in dashboard KPIs?) never answered across 3 review iterations | human_needed |
+| verification_gap | Phase 86 (86-VERIFICATION.md) — 11/11 plan-level truths verified; the first-ever `nativeQuery=true`+`Pageable` combination in this codebase (`buscarPorFiltros`) never executed against real Postgres (no H2/Testcontainers exists in this backend); RBAC Settings-screen visual confirmation also pending | human_needed |
+| verification_gap | Phase 87 (87-VERIFICATION.md) — code-level verification passed 7/7, live E2E walkthrough (Reatribuir flow) blocked by MinIO env issue; 2 code-review-fixed defects (ParecerController partial-update data-loss bug, concurrent numeroVersao DB lock) have zero automated test coverage | human_needed |
+| verification_gap | Phase 89 (89-VERIFICATION.md) — code-level verification passed 15/15, live E2E walkthrough blocked by the same MinIO env issue as Phase 87; 2 code-review-fixed defects (same-origin URL guard, pagination clamp) flagged for a final visual confirmation despite passing independent behavioral/lint re-verification | human_needed |
+| uat_gap | 85-HUMAN-UAT.md — 1 pending scenario (ALTA-priority Evento null-dataFim product decision) | partial |
+| uat_gap | 86-HUMAN-UAT.md — 2 pending scenarios (live notification API round-trip, RBAC screen visual) | partial |
+| uat_gap | 87-HUMAN-UAT.md — 3 pending scenarios (Reatribuir E2E flow, ParecerController partial-update, concurrent numeroVersao) | partial |
+| uat_gap | 89-HUMAN-UAT.md — 11 pending scenarios (sino contador/lista/clique/marcar-todas, página acesso/filtros/paginação, cross-surface invalidação, RBAC gate, 2 REVIEW-FIX visual follow-ups) | partial |
+| tooling | `backend/migrations/86-create-notificacao-table.sql` and `88-add-notificacao-dedup-unique-constraint.sql` are standalone manual-execution scripts — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
+| tooling | No H2/Testcontainers integration-test infrastructure exists anywhere in this backend — pre-existing, project-wide limitation that specifically blocked live verification of Phase 86's native query and Phase 87's concurrent-lock fix | candidate for a future dedicated testing-infrastructure phase |
+| tooling | `backend/spotbugs-exclude.xml`/SpotBugs SAST tooling broken against JDK 23 bytecode (discovered during Phase 87, unrelated background task, already flagged separately) | out of this milestone's scope |
+| cosmetic | `notificarDocumentoNovo`'s `linkUrl` doesn't use the `?tab=documentos` deep-link pattern that `notificarFaseEntrada` established (found by the milestone integration checker) | candidate one-line fix, non-blocking |
+
 ## Session Continuity
 
 Last session: 2026-07-10T16:00:00.000Z
@@ -144,4 +161,4 @@ Resume file: .planning/phases/LEXCV-89-sino-e-p-gina-de-notifica-es/89-VERIFICAT
 
 ## Operator Next Steps
 
-- Run `/gsd:audit-milestone` to verify v2.10's definition of done before closing it out.
+- Start the next milestone with /gsd-new-milestone
