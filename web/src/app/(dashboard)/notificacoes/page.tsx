@@ -87,7 +87,7 @@ function NotificacoesContent() {
     }
   };
 
-  const marcarTodasDisabled = marcarTodas.isPending || unreadCount.data?.count === 0;
+  const marcarTodasDisabled = marcarTodas.isPending || (unreadCount.data?.count ?? 0) === 0;
 
   return (
     <div className="space-y-6">
