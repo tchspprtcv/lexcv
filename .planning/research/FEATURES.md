@@ -1,269 +1,194 @@
-# Feature Research
+# Feature Research: Notification Preferences, Team Targeting & Snooze (NOTF-24/25/26)
 
-**Domain:** In-app notifications/alerts for multi-tenant B2B/SaaS practice-management (legal case management; adjacent verticals: accounting/consulting firm practice management, ITSM/helpdesk for SLA-alert patterns, AR/collections for overdue-payment patterns)
-**Researched:** 2026-07-08
-**Confidence:** MEDIUM-HIGH (general in-app notification-center UX patterns are HIGH confidence, multi-source corroborated; legal-specific reminder-cadence numbers and accounting-practice-management specifics are MEDIUM confidence — fewer, less authoritative sources; codebase-grounded dependency claims are HIGH confidence, verified directly against LexCV's current backend models)
+**Domain:** In-app notification system extensions for multi-tenant legal practice management (LexCV v2.11) — per-user category muting, case-team-wide alert fan-out, deadline-reminder snooze
+**Researched:** 2026-07-12
+**Confidence:** MEDIUM-HIGH (codebase-grounded dependency claims are HIGH confidence — verified directly against the shipped v2.10 `Notificacao`/`NotificacaoService`/`AlertasDiariosJob` code; cross-product UX pattern claims are MEDIUM confidence, cross-verified across 2+ independent sources each; no Context7 coverage exists for this domain, so all ecosystem claims come from WebSearch and are flagged accordingly)
 
-## Context Recap
+> Supersedes the v2.10-dated `FEATURES.md` previously at this path (that research answered "should a notification system exist at all" for v2.10; this one answers three specific extension questions for v2.11 against the system v2.10 actually shipped). Per the milestone brief, this file does **not** re-research the existing notification plumbing — it treats `Notificacao`, `NotificacaoService`, `NotificacaoController`, and `AlertasDiariosJob` as fixed and researches only how NOTF-24/25/26 attach to them.
 
-This research answers one scoped question for LexCV v2.10: how in-app-only (no email/push, no per-user preferences) notification systems typically work in B2B practice-management products, and what's specific to "deadline/SLA-approaching" alerts vs. simple event-triggered alerts. It is **not** a green-field domain survey — v2.10's 7 target features are already committed in `.planning/PROJECT.md`. This file validates that scope against ecosystem evidence, flags concrete complexity/dependency details grounded in the actual codebase, and surfaces the few genuinely open questions (chiefly: snooze/dismiss for recurring deadline reminders) that `.planning/PROJECT.md` has not yet settled either way.
+## Context Recap — What v2.10 Actually Shipped (verified in code, not inferred)
 
-LexCV's current state relevant to this research (verified directly in code, not inferred):
-- `NotificationBell` (`web/src/components/shared/notification-bell.tsx`) is 100% client-computed from `useUpcomingEventos()` → `GET /eventos/upcoming`. No backend notification entity exists anywhere in `backend/src/main/java/com/lexcv/models/`.
-- `Prazo` already has a working, if narrow, criticality convention: `computeRisco(dataLimite, prioridade)` in `ResourceController.java` returns `vencido` (overdue) / `proximo` (due within 7 days if `prioridade=ALTA`, else 3 days) / `ok`. This is one of the 4 inconsistent implementations PROJECT.md wants consolidated — but it's also the closest thing LexCV has today to a proven, tenant-tested threshold model, and a natural anchor for the new consolidated logic rather than a reason to invent something unrelated.
-- `Processo.responsavelId` is settable only at creation today — no reassignment endpoint exists. This is a hard, already-acknowledged prerequisite for the "processo atribuído" alert (see Dependencies).
-- `Honorario` has `dataAcordo` and a computed `totalPago` (`@Formula` summing `t_pagamento`) but no due-date field, and per explicit Key Decision will not get one in v2.10 — the alert must be age-since-agreement, not date-vs-deadline.
-- `ParecerSolicitacao.advogadoId` exists and is already settable.
-- `Documento.processoId` / `Documento.clienteId` are both nullable FKs — a document can belong to either.
-- No `@Scheduled` job exists anywhere in the project yet. The daily deadline-scan job is genuinely new infrastructure, not an extension of an existing pattern.
+- `Notificacao` (`backend/src/main/java/com/lexcv/models/Notificacao.java`) is a flat, per-recipient row: `tenantId`, `destinatarioId`, `categoria` (free-form string, 9 known values in use), `entidadeTipo`/`entidadeId`, `titulo`/`mensagem`/`linkUrl`, `lida` (boolean), `createdAt`. No existing column expresses "muted," "team," or "snoozed" — all three are net-new concerns.
+- The 9 live `categoria` values: `FASE_ENTRADA`, `DOCUMENTO_NOVO`, `PROCESSO_ATRIBUIDO`, `PARECER_ATRIBUIDO` (event-triggered, Phase 87) and `PRAZO_PROXIMO`, `PRAZO_VENCIDO`, `EVENTO_PROXIMO`, `EVENTO_VENCIDO`, `HONORARIO_ATRASADO` (daily-job-generated, Phase 88).
+- `NotificacaoService.criar(...)` is the **single write choke point** for row creation across the whole subsystem (event triggers in `ResourceController`/`ParecerController` and the daily job in `AlertasDiariosJob` both funnel through it). Any new gating logic (mute check, team resolution) is cheapest to add here or immediately around it, not duplicated at each of the ~9 call sites.
+- `AlertasDiariosJob` is already idempotent **per (tenantId, destinatarioId, entidadeTipo, entidadeId, categoria) tuple**, enforced by both an application-level `existsBy...` check and a DB unique constraint (`uk_notificacao_dedup`). This is the single most important fact for NOTF-26: **the job already never recreates a row for a categoria that has already fired for that entity+recipient.** A `PRAZO_PROXIMO` notification for a given prazo/recipient is created at most once, ever, regardless of how many days the job runs while it stays at that risk tier. "Snooze causing the item to reappear on the very next job run" is therefore not a job-side problem in this codebase — it is entirely a **read-side** problem (the row is still unread, so it still shows in the bell/list). This materially narrows the design space for NOTF-26 (see below).
+- Targeting today is asymmetric in a way directly relevant to NOTF-25: a **cliente**-linked `DOCUMENTO_NOVO` already fans out to the *whole* client team (`ClienteAdvogado` + `ClienteAdministrativo`, deduplicated via `LinkedHashSet`) plus ADMIN. A **processo**-linked `DOCUMENTO_NOVO` — and `FASE_ENTRADA`, and `PROCESSO_ATRIBUIDO` — notify only `Processo.responsavelId` (a single `UUID` field) plus ADMIN. `Processo` has no `equipa`/team relation of its own; it only carries `clienteId`. `ParecerSolicitacao.processoId` is **nullable** (a parecer can be linked to a cliente only) — this matters directly for scoping NOTF-25 below.
+- No per-user preference concept exists anywhere in the backend today (no `NotificacaoPreferencia`-equivalent table, no settings endpoint). `PROJECT.md`'s v2.10 Out-of-Scope entry ("todas as categorias são sempre entregues") is the thing NOTF-24 explicitly reverses.
+- Delivery is polling-only (TanStack Query, 30s) — no push/email/SMS channel exists, which simplifies NOTF-24 considerably versus generic multi-channel preference-center literature (see Anti-Features).
 
-## Feature Landscape
+---
 
-### Table Stakes (Users Expect These)
+## NOTF-24 — Per-User Notification Preferences (mute categories)
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Bell icon + unread count badge | Universal convention across every B2B SaaS product surveyed (GitHub, Slack, Linear, Notion-style patterns); users scan the badge as their primary "do I need to look" signal | LOW | `NotificationBell` component already exists and already renders a badge — this is a data-source swap (backend-driven unread count instead of `useUpcomingEventos().length`), not new UI |
-| Persisted read/unread state per recipient | Users expect a notification they've seen to stop demanding attention, and expect that state to survive a page reload/re-login — the current v2.1 bell fails this today (nothing is ever "read," it just recomputes) | LOW-MEDIUM | Needs a `lida`/`lida_em` (or `read_at`) column on the new Notification row, scoped per recipient — see Dependencies for schema shape |
-| Mark individual as read + "mark all as read" | Baseline inbox-management affordance in every notification center reviewed (SuprSend, Courier, GitHub, Jira patterns) | LOW | Two small endpoints (`PATCH /notificacoes/{id}/ler`, `POST /notificacoes/ler-todas`) mirroring existing mutation patterns already used elsewhere in `ResourceController` |
-| Dedicated history/inbox page with pagination | Already explicitly scoped (`/notificacoes`) — confirmed as standard: every product reviewed treats "see everything, not just the last 10" as a first-class page, not a bigger popover | MEDIUM | New route + new TanStack Query hook (`use-notificacoes.ts`), reusing the list+pagination pattern already used for Processos/Clientes lists |
-| Filters on history page (category/type, read/unread, date range) | Standard in every notification-center product analyzed; without filters, a shared "responsável + ADMIN" inbox (see below) becomes unusable once volume grows past a handful of items | MEDIUM | Requires the notification row to store a queryable `categoria` (fase/documento/atribuicao/parecer/prazo/honorario) — must be a stored column, not inferred at render time, or filtering breaks |
-| Deep-link from notification to source entity | Universal pattern ("click a notification, land on the thing it's about") — already partially present in the v2.1 bell (`processoId` → `/processos/{id}` link) | MEDIUM | 6 categories need 6 correctly-mapped destinations: fase→`/processos/{processoId}` (fases tab), documento→`/processos/{id}` or `/clientes/{id}` depending on which FK is set, atribuição→`/processos/{id}`, parecer→`/pareceres/{id}`, prazo/calendário→`/processos/{id}` or `/agenda`, honorário→`/processos/{id}/termo-honorarios` or `/financeiro`. Getting the document one wrong (always assuming `processoId`) is the most likely mistake since it's the only category with two possible parents |
-| Role/relationship-based targeting only, never permission-broadcast | Confirmed as correct existing decision, not a new finding: broadcasting to "everyone with `X:view`" is a documented anti-pattern (see Anti-Features) — LexCV already decided targeting = responsável/advogado/cliente-team + ADMIN | MEDIUM-HIGH | Cross-cutting correctness risk: this rule must be re-derived correctly at each of the 6 trigger sites (different entity, different owning relationship each time) — a single shared "resolve recipients for entity X" helper is worth the investment to avoid 6 subtly-different implementations |
-| Actor exclusion (never notify the user who performed the triggering action) | Extremely well-established convention (explicit standard trigger condition in Zendesk, GitHub, Jira: "don't notify the assignee if they assigned it to themselves") — without it, the ADVOGADO who just moved their own processo to a new fase gets a self-notification on every action they take, which reads as broken, not helpful | LOW | One shared guard in the notification-creation helper: skip insert when `actorUserId == recipientUserId`. Exception: the daily deadline-scan job has no "actor" (system-generated), so this guard is a no-op there, not a blocker |
-| Category icon/visual differentiation | Standard across every notification center reviewed — users triage by glancing at an icon/color before reading text | LOW | Pure frontend, one icon+color per category, no backend dependency |
-| Empty state ("Sem notificações") | Baseline UX completeness — already the pattern used in the current bell for zero-events | LOW | Trivial, matches existing component |
-| Multi-tenant isolation of notification rows | Not a new finding for this project — every entity in LexCV already carries `tenant_id` and every controller already scopes by it | LOW | Inherited convention, not new risk, provided the new `Notificacao` entity follows the same `tenant_id` + controller-level scoping already used everywhere else |
-| Near-real-time freshness via polling | Users expect a bell that updates without a manual refresh; 30-60s polling is the already-decided, already-precedented mechanism (TanStack Query is used for all data fetching in this app) | LOW | Already decided (Key Decision: polling over WebSocket/SSE) — `refetchInterval` on the existing query client pattern, zero new infrastructure |
+### How this typically works elsewhere
 
-### Deadline/SLA-Approaching Alert Patterns (Cross-Cutting — Answers the Specific Sub-Question)
+Every mature multi-category notification product surveyed (GitHub, Jira, Asana, Slack, and the generic SaaS notification-preference literature) converges on the same shape: a **per-user, per-category on/off setting**, defaulting to "on," presented as a flat settings list rather than buried in the notification stream itself. The one recurring, cross-source caveat is that **safety-critical or legally-significant categories are marked non-negotiable** — shown in the preference UI (for transparency) but not toggleable — precisely so a user cannot silently opt out of something whose absence causes real harm (security alerts in generic SaaS; by direct domain analogy here, an overdue-deadline alert in a legal practice tool). Multi-channel products (email/push/SMS/in-app) use a category×channel matrix; LexCV has exactly one channel today, so the matrix pattern is not applicable — a flat per-category toggle list is the correct scope.
 
-Deadline-approaching alerts are a **different animal** from the other 4 event-triggered categories (fase change, document, assignment, parecer assignment), which are naturally single-fire: something happened once, one notification is created, done. Deadline alerts must re-evaluate a *state* (is this still overdue/approaching?) on a recurring cadence, which raises questions event-triggered alerts don't have. Research across legal docketing systems, ITSM/helpdesk SLA tooling, and AR/collections software converges on two distinct archetypes — and LexCV's 3 named deadline-scan sources split cleanly across them:
+### Category breakdown
 
-**Archetype A — countdown-to-a-future-date** (applies to `Prazo.dataLimite` and `Evento`/calendário crítico):
-- Standard pattern is a **decreasing-interval, multi-tier reminder schedule** anchored to the deadline, not a single alert. One legal-deadline-management source (MEDIUM confidence, single source but consistent with general docketing-software framing) specifies a 30/14/7/3/1-days-before cadence, with buffer sized to deadline type (statute of limitations: 30+ days; responsive pleadings: 7-10 days; discovery: 5-7 days; motions: 3-5 days; appeals: 14+ days). ITSM/SLA tooling frames the equivalent idea as **percentage-of-window thresholds** (50% / 75-80% / 90% of the time-to-deadline elapsed, escalating who gets notified at each tier) — same underlying idea, different unit.
-- Legal docketing/tickler systems (MatterAlert, LawToolBox, Aderant — MEDIUM confidence, vendor marketing sources but consistent with each other) universally emphasize **redundant verification**: a critical date entered by one person should be checkable/visible to a second, because missed deadlines are the single leading cause of legal malpractice claims. LexCV's decision to always co-target ADMIN alongside the responsável on every category (already decided in Key Decisions) *is* a form of this redundancy — worth stating explicitly as a benefit of that existing decision, not just a side effect.
-- **Recommendation for LexCV:** don't invent a new tier scheme from scratch. `Prazo.computeRisco()` already implements a 2-tier model (vencido / próximo-within-N-days-by-prioridade / ok) that's live and tenant-tested. The v2.10 consolidation work should promote this into the single shared source (as already decided) and use its tier *transitions* as the notification-creation trigger points, rather than designing an unrelated 30/14/7/3/1 scheme the rest of the app doesn't otherwise use. `Evento` has no equivalent function today (only `Prazo` does) — extending the same threshold logic to `Evento.dataFim`/`dataInicio` is the concrete piece of consolidation work, not a redesign.
+| Aspect | Table Stakes | Differentiator | Anti-Feature |
+|---|---|---|---|
+| Per-category on/off toggle, defaulting to "on" (opt-out model) | Yes — universal in every product surveyed once a system has >3 categories; users expect it once the app has enough notification volume to be annoying (LOW-MEDIUM complexity: one new join-style table + one settings endpoint + one settings-page section) | | |
+| Non-mutable "cannot silence" categories for the highest-severity tier (`PRAZO_VENCIDO`, `HONORARIO_ATRASADO`) | | Differentiator specific to a legal-deadline domain — general SaaS guidance says "security/legal notices should not be opt-outable"; LexCV's direct analogue is an *already-breached* deadline. Missed-deadline is literature's most-cited cause of legal malpractice claims, which raises the stakes of a silent full mute above typical SaaS annoyance-reduction | |
+| Category×channel preference matrix | | | Anti-feature **right now**: this is the standard generic pattern, but LexCV has one delivery channel (in-app polling). Building a matrix UI for a single column is premature complexity with no present payoff — revisit only if/when email/push is ever added (currently explicitly Out of Scope in `PROJECT.md`) |
+| Preference change taking effect immediately for future notifications, not retroactive to already-created rows | Yes — matches how every reviewed product treats mute (stops future noise, doesn't rewrite history) | | |
+| Admin-level override of another user's personal preference | | | Anti-feature: requirement is explicit ("não global, não por tenant") — an ADMIN "unmute for everyone" or "force-mute a user" control would violate the stated per-user scope and reintroduce exactly the broadcast-creep pattern v2.10 deliberately avoided |
 
-**Archetype B — aging-since-a-past-date, no fixed end** (applies to `Honorario` unpaid since `dataAcordo`):
-- This is structurally an **accounts-receivable/dunning problem**, not a court-deadline problem — there's no future date to count down to, only an open-ended clock counting up from `dataAcordo` until `totalPago` reaches `valorTotal`. AR/collections literature (HIGH confidence, many independent, converging sources) consistently uses **escalating aging buckets** — commonly 7/14/30/60/90 days overdue, or the coarser 30/60/90(+120), with tone/severity increasing per bucket, phone/escalation entering by day ~14, and formal escalation by day ~30-60.
-- **Recommendation for LexCV:** `Honorario` has no equivalent bucket function today (unlike `Prazo`) — this is genuinely new logic, not a consolidation of something existing. Recommend a small number of buckets (e.g., 7 / 30 / 60+ days unpaid since `dataAcordo`, `valorTotal` not null, `totalPago < valorTotal`) rather than a single "N days" cutoff, so severity in the UI/history filters can scale with age the way the legal-deadline categories already do via `prioridade`.
+### Dependencies on the existing architecture
 
-**Re-notification cadence — the concrete mechanical answer:** for both archetypes, the correct model is **one notification-row creation per entity per calendar day that it remains in a notify-worthy tier** (a new `proximo`→`vencido` transition, or a newly-crossed age bucket), driven by the daily `@Scheduled` job — **never** one creation per bell poll. This distinction matters mechanically: the 30-60s poll interval is a *delivery/freshness* cadence (how fast the UI reflects existing rows), completely decoupled from the *creation* cadence (how often new rows get inserted, which is once/day at most from the scheduled job). Conflating the two — e.g., accidentally re-running scan-and-insert logic on every poll instead of only in the daily job — is a concrete, easy-to-introduce bug worth flagging explicitly for implementation (see Anti-Features). Idempotency (don't insert a second row for the same entity+day if the job runs twice) should be enforced by a uniqueness check (entity id + category + date), not by trusting the scheduler to fire exactly once.
+- **New entity, not a column on `User`:** a `NotificacaoPreferencia`-style row per `(tenantId, userId, categoria)` mirrors the existing join-table convention already used for `ClienteAdvogado`/`ClienteAdministrativo` (unique constraint on the triple; absence of a row = "not muted," matching the opt-out default). This is lower-risk than a single JSON/CSV column on `User` given the project's established preference for typed join tables over JSON blobs for anything queried (see `PROJECT.md` Key Decisions: the `dados_tipo` JSON-column approach was explicitly reverted in v2.7 for exactly this reason).
+- **Enforcement point — recommend creation-time, not read-time only:** check the preference inside (or immediately around) `NotificacaoService.criar(...)` before inserting a row, mirroring the per-recipient try/catch isolation pattern already established there (CR-01/CR-02 review comments: one bad recipient must never block the rest of a fan-out). This avoids ever persisting a row that will never be shown, keeps `unread-count` accurate without an extra join, and — because a fan-out loop (team, ADMIN) already calls `criar()` once per recipient — a mute check here naturally applies per-recipient with zero extra plumbing.
+- **Interaction with `AlertasDiariosJob`'s idempotency tuple:** if a category is muted at the moment the job would have created a row, no row is created, so nothing is "skipped" that could later resurface stale — the tuple simply doesn't exist yet. If the user un-mutes later, the next daily run creates it fresh (max 1-day latency), correctly. For the four **event-triggered** categories (one-shot: `FASE_ENTRADA`, `DOCUMENTO_NOVO`, `PROCESSO_ATRIBUIDO`, `PARECER_ATRIBUIDO`), muting at trigger time means that specific occurrence is permanently missed if unmuted later — this is expected mute semantics, not a bug, but worth stating explicitly since it differs from the job-driven categories' behavior.
+- **Interacts with NOTF-25:** once processo-linked triggers fan out to a team (not just `responsavelId`), the mute check must run **per destination user inside the fan-out loop**, not once for the whole notification — otherwise one muted team member would suppress the notification for the rest of the team. The existing per-recipient isolation pattern already used for orphaned-user handling is the same shape needed here.
+- **RBAC:** this is inherently self-scoped (a user can only read/write their own preferences), so it does not need a new `scope:action` permission pair — it can piggyback on the existing `notificacoes:view` authority already required for all `/notificacoes/*` endpoints, the same way profile self-service typically needs no additional grant beyond "authenticated."
 
-**Snooze/dismiss expectation — genuinely open, not yet decided in PROJECT.md:** general UX literature (MEDIUM confidence) consistently finds that recurring/deadline-style reminders specifically (as opposed to one-shot event notices) generate an expectation of a lightweight "remind me later" affordance, distinct from marking-as-read (which for a still-overdue item is misleading — see Anti-Features) and distinct from a full mute/preference system (which v2.10 has explicitly excluded). The literature's own recommended pattern is "snooze-with-consequence": the item resurfaces later rather than disappearing quietly, so a snooze cannot become a silent permanent mute of something still legally/financially critical. **This does not conflict with the "no per-user notification preferences" exclusion** if scoped narrowly: a snooze implemented as an ephemeral `snoozed_until` timestamp on the individual notification row (or suppressing that day's re-creation for that entity) is a per-instance UI action, not a persisted per-user/per-category configuration row — a meaningfully different thing from "silenciar categorias" which PROJECT.md correctly excludes. Recommend REQUIREMENTS.md make an explicit call on this rather than let it fall through by omission: it is not in the Active list, and the current Out-of-Scope wording ("Preferências de notificação por utilizador (silenciar categorias)") does not obviously cover it either way.
+---
 
-### Differentiators (Competitive Advantage)
+## NOTF-25 — Notify the Full Process Team, Not Just `responsavelId`
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|--------------------|------------|-------|
-| Lightweight per-notification snooze/dismiss for the two recurring deadline categories | Directly addresses the "won't a daily job just re-notify me forever" concern without reopening the excluded preferences system — see dedicated section above | MEDIUM | Only makes sense for `prazo`/`calendário` and `honorário` categories (recurring); meaningless for the 4 one-shot categories. Scope as ephemeral row-level state, not user-level config, to stay clear of the excluded scope |
-| Grouping/digest for high-volume categories | Research (MEDIUM confidence, cites Braze data via a secondary source) associates digesting with materially higher engagement and lower "tune-out" than one-notification-per-event; most directly relevant to `documento` (a processo can receive several uploads in a burst) and to the daily deadline scan if a single responsável has many prazos crossing tiers the same day | MEDIUM-HIGH | Given ADMIN is co-targeted on **every** category (already decided), ADMIN's inbox aggregates across the entire tenant's activity — this makes grouping/digest more valuable for ADMIN's experience specifically than for an individual responsável's, since ADMIN's unread count grows fastest. Worth validating with real post-launch volume before building rather than speculatively |
-| Inline actionable notifications | Letting a user act (e.g., "marcar concluído" on a prazo, approve a parecer) directly from the bell/history without navigating away reduces friction; standard "actionable notification" pattern in modern notification centers | MEDIUM-HIGH | Only viable where the underlying action endpoint already exists (e.g., `Prazo`/`Evento` conclude endpoints) — don't build new business actions just to expose them here |
-| Severity-tiered visual treatment + urgency-based sort in the history page | Reusing/extending `computeRisco()`'s existing vencido/próximo/ok vocabulary as color coding (already a familiar convention to users of the Agenda page) rather than inventing new severity language | LOW-MEDIUM | Cheap to add given the underlying computation is being consolidated anyway; mostly a rendering decision once the shared logic exists |
-| Real-time delivery (WebSocket/SSE) | Would remove the 30-60s lag entirely | HIGH | No existing real-time infrastructure anywhere in the project (confirmed: zero WebSocket/SSE usage). Disproportionate for a practice-management tool at this tenant/user scale — flag as a future consideration only, not a differentiator worth pursuing now |
-| @mentions / free-text collaborative notifications | Common in adjacent tools with comment/chat threads (e.g., Notion, Slack-integrated case tools) | HIGH | No anchor feature exists in LexCV today — there is no comment/discussion thread on any entity to "mention" someone within. Would require building that feature first; not realistically actionable for v2.10 or its near successors |
+### How this typically works elsewhere
 
-### Anti-Features (Commonly Requested, Often Problematic)
+Legal-specific practice-management products (Clio is the most directly comparable, MEDIUM confidence from vendor help-center docs) model exactly this distinction: a single **Responsible Attorney** (the equivalent of `responsavelId`) plus a separate, multi-valued **Responsible Staff** field for "any individual also responsible for matter-related tasks other than the responsible attorney" — i.e., matters commonly have one accountable owner and a broader working team, and case-management tooling treats these as two different concepts, not one. General task/PM tooling (Jira "watchers," GitHub "subscribers") reaches the same shape from a different angle: an assignee (primary responsibility, gets the strongest notification language) plus a broader set of people who get informed of activity without being the accountable owner. The common thread across both domains: **team-wide notification is additive to, not a replacement for, the primary-assignee notification** — the primary recipient still gets distinguishable ("you were assigned") messaging, while the rest of the team gets FYI-level ("the matter was...") messaging, exactly mirroring the 2nd-person/3rd-person split LexCV's `NotificacaoService` already uses between the primary recipient and the ADMIN fan-out.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|------------------|-------------|
-| Per-user notification preferences (mute/configure by category) | Feels like standard SaaS polish — "let me turn off what I don't care about" | Already explicitly excluded in PROJECT.md, and evidence supports the exclusion at this scale: with only 6 fixed categories and small per-tenant teams, a full preferences UI is disproportionate config-surface for the value delivered; it also risks the exact malpractice-adjacent failure mode research flags — a user silencing a category that included a real deadline | If noise becomes a real problem post-launch, the narrower per-instance snooze (see Differentiators) is the escape valve — it solves the "I'm getting reminded too often" complaint without a persisted mute |
-| Email/push delivery | Obvious "why not also email me" ask once in-app exists | Already explicitly excluded in PROJECT.md; correctly so — it drags in SMTP/push infrastructure, deliverability, unsubscribe-compliance concerns, and a second targeting/preferences surface, none of which exist in this project today | In-app only, as decided; revisit only as a dedicated future milestone if users request it post-launch |
-| Real-time WebSocket/SSE push | Feels more "modern" than polling | No real-time infrastructure exists anywhere in this codebase; introducing it solely for notifications is a large infrastructure investment for a freshness gain (30-60s vs. instant) unlikely to matter for a practice-management tool's usage pattern | Polling via TanStack Query, as already decided |
-| Notify the full processo team on reassignment (all advogados/administrativos, not just responsável) | Feels more "complete" — surely everyone on the matter should know | Already explicitly excluded in PROJECT.md; each additional recipient type multiplies the "who gets what" surface this milestone is trying to keep simple, and the evidence base (SLA/ticketing escalation patterns) supports narrow, role-specific targeting over broadcast | Single `responsavelId` target + ADMIN, as decided; equipe-wide notification is a defensible future milestone, not a v2.10 gap |
-| Mass/permission-based broadcast (e.g., notify every user with `documentos:view`) | Simplest to implement — "just check who can see it" | Already explicitly rejected in Key Decisions ("nunca notificação em massa por permissão de visualização") for good reason: it would notify every TECNICO in the tenant on every single document upload company-wide, producing exactly the alert-fatigue failure mode the research repeatedly warns about (users desensitize and start ignoring the bell entirely) | Relationship-derived targeting only: responsável/advogado/cliente-team (`ClienteAdvogado`/`ClienteAdministrativo`) + ADMIN |
-| Re-running deadline-scan/business logic on every bell poll | Seems simpler than maintaining a separate scheduled job — "just recompute risco() on every fetch," as the current v2.1 bell already does for eventos | Conflates delivery cadence (30-60s freshness) with creation cadence (should be ≤1x/day); re-running full scan logic on every poll either duplicates notification rows or requires expensive de-dup checks on every request instead of once a day. This is precisely the gap the v2.1 bell has today, which v2.10 exists to fix — repeating the same mistake in the new system would be a regression, not a fix | New `@Scheduled` daily job does the scan-and-insert exactly once (idempotent per entity+day); the poll only ever reads already-created rows |
-| Silently letting an unresolved critical/`vencido` item stop re-notifying after its first alert | Simplifies logic — treat every category the same as the 4 one-shot event types | Directly contradicts the legal-malpractice risk-management principle found repeatedly in docketing-system research: a still-overdue prazo or still-unpaid honorário must keep resurfacing (e.g., daily) until resolved — going silent after one notification is the single most dangerous anti-pattern for exactly the deadline categories this milestone is trying to make safer | Daily re-evaluation with idempotent, at-most-once-per-day re-creation (see dedicated section above), continuing until the underlying condition (`concluido`, `totalPago >= valorTotal`) resolves |
-| Treating "marked as read" as equivalent to "the underlying item is resolved" | Convenient to conflate in the UI — one click, done | A read prazo notification is not a completed prazo, and a read honorário-overdue notification is not a paid invoice; conflating notification-read-state with business-state would let a user "clear" a critical alert without actually acting on it, defeating the purpose of the alert entirely | Keep `lida`/`lida_em` strictly scoped to the notification row; business resolution stays driven by the existing entity fields (`Prazo.concluido`, `Evento.concluido`, `Honorario.totalPago`/`valorTotal`) which the notification only points at |
+### Category breakdown
+
+| Aspect | Table Stakes | Differentiator | Anti-Feature |
+|---|---|---|---|
+| Notifying more than the single assignee on a shared matter/case | Yes, once a firm has more than one person working a case — Clio's Responsible Attorney + Responsible Staff split and every general-PM assignee+watchers pattern surveyed treat single-assignee-only as an incomplete/legacy model | | |
+| Reusing an *existing* team concept instead of inventing a parallel one | | Differentiator for LexCV specifically: `ClienteAdvogado`/`ClienteAdministrativo` already exist, are already the "equipa" notified for cliente-linked documents, and every `Processo` already has exactly one `clienteId`. Treating "the process team" = "the client's assigned team" reuses proven infrastructure at near-zero schema cost instead of building a parallel `ProcessoEquipa` join table for a concept the data model already expresses one level up | |
+| A brand-new `ProcessoEquipa` join table, independent of the client's team | | | Anti-feature (over-engineering for this milestone): duplicates `ClienteAdvogado`/`ClienteAdministrativo` semantics one entity down, doubles the maintenance surface (two places to add/remove a team member), and the milestone's own framing question ("or a new explicit team concept") is answerable today by observing the data model already has the relationship needed — Processo→Cliente→team — without a new table. Revisit only if a firm's real workflow genuinely needs a different team per processo than the client's overall team (not evidenced by anything in `PROJECT.md`) |
+| Applying the expansion uniformly to all 4 event triggers without checking each one's semantics | | | Anti-feature: `PARECER_ATRIBUIDO` is a poor fit — `ParecerSolicitacao.processoId` is nullable (a parecer can exist with only a `clienteId`, no processo at all), and a parecer's advogado assignment is domain-modeled as an individual professional-responsibility act, not a case-team broadcast (this mirrors why Clio's Responsible Attorney and general "assignee" notifications stay individual even in team-based tools — accountability language needs one clear owner). Recommend leaving `PARECER_ATRIBUIDO` as-is (individual advogado + ADMIN) and scoping the team expansion to `FASE_ENTRADA`, `DOCUMENTO_NOVO` (processo branch), and `PROCESSO_ATRIBUIDO` |
+| Preserving the existing 2nd-person/3rd-person message-copy split for the primary responsável when adding team fan-out | Yes — matches the Clio/Jira "assignee is more strongly addressed than watchers" convention and matches LexCV's own existing precedent (destinatário vs. ADMIN message copy already differ in `notificarProcessoAtribuido`) | | |
+
+### Dependencies on the existing architecture
+
+- **No new entity required** if the "reuse client team" recommendation is adopted: resolve `Processo.clienteId` → `ClienteAdvogadoRepository.findByClienteIdAndTenantId` + `ClienteAdministrativoRepository.findByClienteIdAndTenantId`, exactly the lookup pattern already written and battle-tested in `ResourceController`'s cliente-branch of `DOCUMENTO_NOVO` (lines ~2611-2623). This is a copy-and-adapt of existing code into the three chosen event triggers, not new design.
+- **Retroactivity is automatic, not a migration concern:** because team membership is resolved live at notification-creation time (via `clienteId` lookup) rather than snapshotted onto the `Processo` row, every existing processo automatically gets the expanded targeting the moment the code ships — no backfill needed. Processos whose client currently has zero linked advogados/administrativos degrade gracefully to today's exact behavior (responsável + ADMIN only), so there is no regression risk for the (likely common, early-tenant) case of an empty team.
+- **Dedup is a solved pattern:** reuse the `LinkedHashSet<UUID>` dedup already in `notificarDocumentoNovo` so a responsável who is *also* a `ClienteAdvogado` for the same client, or a user who is both advogado and administrativo, gets exactly one row per notification event, not two or three.
+- **Extends `NotificacaoService.notificarFaseEntrada`, `notificarDocumentoNovo` (processo branch, currently in `ResourceController`), and `notificarProcessoAtribuido`** — each needs its single-`responsavelId` path widened to "responsável (2nd-person copy) + rest of team (3rd-person copy) + ADMIN (3rd-person copy, existing)," with the existing per-recipient try/catch isolation preserved for every new recipient added.
+- **Open question worth flagging for roadmap, not resolved by the literal wording of NOTF-25:** the milestone question scopes this to "the 4 existing event triggers," which are the Phase 87 set. The daily-job categories (`PRAZO_PROXIMO`/`VENCIDO`, `EVENTO_PROXIMO`/`VENCIDO`, `HONORARIO_ATRASADO` — Phase 88) currently have the *same* single-`responsavelId` limitation and would become inconsistent with the newly-expanded event triggers if left alone. Recommend the roadmap explicitly decide whether Phase-88 categories get the same team expansion in this milestone or are deliberately deferred — leaving it undecided by omission risks the same kind of "5th inconsistent implementation" pattern this project has already had to consolidate once (`RiscoPrazoService`, Phase 85).
+
+---
+
+## NOTF-26 — Snoozing a Deadline Reminder
+
+### How this typically works elsewhere
+
+Two distinct, well-precedented models exist across the products surveyed, and they answer "what does snooze mean" differently:
+
+1. **Consumer reminder/task apps (Todoist, Any.do, Due — MEDIUM confidence, direct vendor docs):** snooze = pick a concrete resurfacing point (preset intervals like 15 min/1 hour/tomorrow, or an explicit date/time) and the reminder simply stops showing until then, reappearing automatically and unconditionally at that point. Several of these apps explicitly warn against a "snooze forever" affordance — every preset has a concrete resurfacing time, never an open-ended dismiss.
+2. **Compliance/legal-deadline tooling (IntelligentContract — MEDIUM confidence, single vendor source but the closest direct domain analogue found, a contract-compliance-deadline alerting product): per-user configurable "snooze length" (default 3 days) that **overrides the standard reminder frequency once**, after which the alert reverts to the normal recurring cadence if still unresolved. Critically, the source is explicit that snoozing is a **temporary suppression of re-*notification*, never a way to make the underlying deadline stop being tracked** — the alert always eventually comes back if the deadline itself is still open.
+
+Both models converge on the same underlying principle directly relevant to LexCV: **snooze must have a concrete, bounded resurfacing point, and must never silently and permanently suppress an item that is still substantively open** (still-unpaid honorário, still-unmet prazo). Neither model treats snooze as equivalent to "mark as read" — a still-open, snoozed item that quietly counted as "read" would misrepresent the user's actual attention state to anyone reviewing the account later (a second reviewer, an ADMIN, an audit trail), which is a specifically bad property for a domain where missed deadlines are a malpractice exposure.
+
+### Category breakdown
+
+| Aspect | Table Stakes | Differentiator | Anti-Feature |
+|---|---|---|---|
+| Snooze = hide until a concrete future date/time, then reappear automatically as unread | Yes across every reminder-app precedent found — snooze without a bounded resurfacing point isn't snooze, it's dismiss-in-disguise | | |
+| Snooze that cannot suppress a *worse* subsequent alert for the same underlying deadline (escalation breaks through) | | Differentiator, and specifically the safest design for this domain: because `AlertasDiariosJob` already creates a **new row per categoria transition** (a `PRAZO_PROXIMO` row and a later `PRAZO_VENCIDO` row for the same prazo are two different rows, two different categoria values), scoping snooze to the individual notification row rather than to "this prazo, permanently" means a snooze of today's "approaching" notice cannot, even accidentally, hide tomorrow's "overdue" notice — they are different rows with independent snooze state | |
+| Snooze presets (+1 dia / +3 dias / +7 dias / data específica) rather than snooze-until-forever | Yes — matches Todoist/Any.do/Due preset patterns and IntelligentContract's per-user configurable length; "no expiry" option is explicitly the thing to avoid, not the thing to add | | |
+| Snooze silently setting `lida = true` as a side effect | | | Anti-feature: conflates two independent signals ("I looked at this" vs. "hide this for now") — a snoozed-but-never-actually-read item that shows as read would understate real outstanding risk to anyone else reviewing the account (ADMIN fan-out recipients, a future audit). Keep `lida` and `snoozedUntil` orthogonal columns/state |
+| A visible "snoozed" filter/tab on `/notificacoes` so deferred items aren't invisible forever | | Differentiator (small effort, meaningfully closes the loop) — mirrors Gmail's "Snoozed" folder and GitHub's "snoozed" issue list; without it, a user has no way to see what they've deferred except waiting for it to resurface |
+
+### Dependencies on the existing architecture, and the concrete answer to "how do other systems avoid it reappearing on the very next job run"
+
+- **This is not a job-side problem in LexCV, and does not need to be.** `AlertasDiariosJob` is already edge-triggered/idempotent per `(tenant, destinatario, entidadeTipo, entidadeId, categoria)` (Phase 88, DB-backed by `uk_notificacao_dedup`). It will never re-create a second `PRAZO_PROXIMO` row for the same prazo+recipient while the risk stays at that tier — that dedup already exists and needs no change for NOTF-26. The entire "avoid reappearing" concern is a **read-side filtering problem**: an unread row that's still unread will keep showing in the bell/list regardless of the job, simply because nothing has changed its visibility state. Snooze's job is exclusively to add a visibility filter, not to touch the job's creation logic.
+- **Recommended shape: add `snoozedUntil` (nullable `LocalDateTime`) directly to `Notificacao`,** not a separate table — it is per-instance ephemeral state on a single row, structurally unlike NOTF-24's per-user-per-category preference (a standing rule) and unlike `lida` (permanent, one-way). A nullable column with a straightforward `WHERE snoozedUntil IS NULL OR snoozedUntil <= NOW()` predicate is the lowest-complexity correct implementation.
+- **Three existing read paths need this predicate added, and each needs independent thought about "should mark-all-read reach into snoozed items?":**
+  - `NotificacaoRepository.buscarPorFiltros` (feeds `/notificacoes` page + bell dropdown, per `useNotificacoes(filters, { poll })`) — needs the visibility predicate, plus (per the differentiator above) an explicit way to *opt into* seeing snoozed items via a filter value, rather than only ever hiding them.
+  - `countByTenantIdAndDestinatarioIdAndLidaFalse` (bell badge) — must exclude snoozed-but-unread rows, or the badge count would contradict what the dropdown actually shows, reintroducing exactly the kind of surface-inconsistency Phase 89's shared `useNotificacoes` hook was built to prevent.
+  - `findByTenantIdAndDestinatarioIdAndLidaFalse` (feeds "mark all as read") — needs an explicit decision: should "mark all as read" reach into currently-snoozed rows and silently mark them read too? Recommend **no** — marking a snoozed item read defeats the purpose of having snoozed it in the first place (see the `lida`/`snoozedUntil` orthogonality anti-feature above); scope "mark all read" to only the currently-visible (non-snoozed) unread set.
+- **New endpoint(s):** `PATCH /notificacoes/{id}/snooze` (body: target datetime or a preset key) and an unsnooze path (either the same endpoint with `null`, or a `DELETE`) — same dual tenant+destinatario scoping already established in `NotificacaoController` (the codebase's first per-recipient-private resource; every new mutation on it must keep both scoping dimensions to avoid the exact IDOR-adjacent risk `NotificacaoController`'s own header comment already calls out).
+- **No interaction with NOTF-24's mute:** a muted category never creates a row to begin with, so there is nothing to snooze; a snoozed row belongs to a category the user has *not* muted (they still want to see it — just not right now). The two features are orthogonal and can be built independently.
+
+---
 
 ## Feature Dependencies
 
 ```
-Persisted Notificacao entity + list/mark-read/mark-all-read API
-    └──prerequisite-for──> Bell (backend-driven unread count)
-    └──prerequisite-for──> /notificacoes history page + filters
-    └──prerequisite-for──> all 6 alert categories below
-    (no new external dependency — reuses existing tenant_id/JWT/User patterns already used by every other entity)
+NOTF-24 (per-user category mute)
+    reads/gates ──> NotificacaoService.criar(...)  [existing single write choke point]
+    interacts with ──> NOTF-25's fan-out loop (mute must be checked per-recipient inside
+                        the team fan-out, not once per event)
+    orthogonal to ──> NOTF-26 (mute prevents row creation; snooze hides an already-created row —
+                        no row exists to snooze once muted)
 
-Bell w/ unread count (replaces v2.1 client-computed useUpcomingEventos bell)
-    └──requires──> Notificacao entity + API
+NOTF-25 (team-wide targeting)
+    requires ──> decision: reuse ClienteAdvogado/ClienteAdministrativo via Processo.clienteId
+                 (recommended, zero new entities) vs. new ProcessoEquipa table (higher cost, not
+                 evidenced as necessary)
+    extends ──> notificarFaseEntrada, notificarDocumentoNovo (processo branch),
+                notificarProcessoAtribuido
+    excludes ──> notificarParecerAtribuido (ParecerSolicitacao.processoId nullable; individual-
+                 assignment semantics, not case-team semantics)
+    open question ──> should Phase-88 daily-job categories (PRAZO_*/EVENTO_*/HONORARIO_ATRASADO)
+                       get the same team expansion for consistency? Not required by NOTF-25's
+                       literal scope but flagged as a gap the roadmap should decide explicitly
 
-/notificacoes history page + filters
-    └──requires──> Notificacao entity + API
-    └──requires──> `categoria` stored as a column on Notificacao (not derived at render time) — filters break otherwise
-
-Alerta de entrada de nova fase
-    └──requires──> ProcessoFase (exists) transition point — wherever a fase is activated (`ativa` flip) in ResourceController
-    └──targets──> Processo.responsavelId + ADMIN
-
-Alerta de novo documento em processo/cliente
-    └──requires──> Documento (exists) creation hook — the upload endpoint
-    └──targets──> depends on which FK is set: Processo.responsavelId (if processoId) or cliente team via ClienteAdvogado/ClienteAdministrativo (if clienteId) + ADMIN
-    └──risk──> a document can have neither/both FKs populated depending on upload path — recipient-resolution logic must handle both cases explicitly, not assume processoId
-
-Alerta de processo atribuído + reatribuição de responsável
-    └──hard-requires──> NEW reassignment endpoint (does not exist yet — Processo.responsavelId is creation-only today)
-    └──already-correctly-scoped──> PROJECT.md's Active list already pairs these as one roadmap item, which is the right call — the alert is meaningless without the endpoint existing first
-    └──targets──> new Processo.responsavelId (post-reassignment) + ADMIN; consider whether the *previous* responsável should also be notified (common pattern in ticketing systems is to notify the outgoing assignee too) — an open scoping question for REQUIREMENTS.md, not yet addressed in PROJECT.md
-
-Alerta de parecer atribuído
-    └──requires──> ParecerSolicitacao.advogadoId (exists, already settable at creation)
-    └──open-question──> confirm during requirements/roadmap whether advogado reassignment after creation is already possible today; if not, same category of dependency as processo reassignment applies (smaller scope, since parecer has no separate "reassign" flow mentioned in PROJECT.md)
-    └──targets──> ParecerSolicitacao.advogadoId + ADMIN
-
-Alerta de prazos de processos e calendário crítico
-    └──hard-requires──> Consolidated "prazo crítico" shared logic (already flagged as prerequisite architecture work in Key Decisions — replacing 4 inconsistent implementations: dashboard KPI, sino v2.1, /eventos/upcoming, agenda page)
-    └──hard-requires──> NEW @Scheduled daily job infrastructure (first one in the project)
-    └──reads──> Prazo (dataLimite, prioridade, responsavelId, concluido) and Evento (dataInicio/dataFim, prioridade, concluido) — both exist, no schema change needed
-    └──targets──> Prazo.responsavelId, or the associated Processo's responsável for Evento + ADMIN
-    └──ui-note──> even though the underlying risk computation is consolidated into one function, the notification `categoria` shown/filterable to users can still distinguish "Prazo de Processo" from "Evento de Agenda" as separate filter values if desired — consolidation is about the logic, not necessarily about collapsing the user-facing label into one bucket
-
-Alerta de honorário não pago (dias desde dataAcordo)
-    └──requires──> Honorario.dataAcordo + totalPago (both exist; totalPago is a computed @Formula, consistent with the explicit decision not to add a due-date column)
-    └──requires──> same NEW @Scheduled daily job infrastructure as the deadline category above — recommend one scheduled trigger with multiple scan functions internally, not two independently-scheduled jobs that can drift apart
-    └──targets──> Processo.responsavelId (via Honorario.processoId → Processo) + ADMIN
-
-Grouping/digest (differentiator)
-    └──enhances──> all 6 categories, highest value for documento and the daily deadline scan specifically
-    └──additive──> does not block MVP; requires only an aggregation query over the base Notificacao table
-
-Snooze/dismiss for deadline reminders (differentiator, open question)
-    └──enhances──> prazo/calendário + honorário categories specifically (the two recurring ones)
-    └──compatible-with──> current Out-of-Scope wording, IF implemented as ephemeral per-notification state
-    └──would-violate-scope-if──> implemented as a persisted per-user/per-category mute (duplicates the explicitly excluded "Preferências de notificação por utilizador")
+NOTF-26 (snooze)
+    requires ──> new nullable Notificacao.snoozedUntil column
+    requires ──> visibility predicate added to 3 existing read paths (list, unread-count,
+                 mark-all-read exclusion)
+    relies on ──> AlertasDiariosJob's EXISTING per-categoria idempotency (Phase 88) — no change
+                  needed there; this is what makes "escalation breaks through snooze" free
+    conflicts with ──> treating snooze as lida=true (breaks the honest-unread-signal property)
 ```
 
 ## MVP Definition
 
-### Launch With (v2.10 — already committed in PROJECT.md Active)
+### Launch With (v2.11)
 
-- [ ] Persisted `Notificacao` entity + list/mark-read/mark-all-read API — foundation, everything else depends on it
-- [ ] Bell with backend-driven unread count, 30-60s poll via TanStack Query — replaces the v2.1 computed bell
-- [ ] `/notificacoes` history page with filters (categoria, lida/não-lida, intervalo de datas)
-- [ ] Deep-link per category to its correct source entity (6 distinct destination mappings, including the two-FK case for documentos)
-- [ ] Actor-exclusion as a shared cross-cutting rule in the notification-creation helper
-- [ ] All 6 alert categories exactly as scoped: fase, documento, atribuição/reatribuição de responsável (+ new reassignment endpoint), parecer atribuído, prazo+calendário crítico (consolidated, daily job), honorário não pago (daily job)
-- [ ] Targeting strictly limited to responsável/advogado/equipa-do-cliente + ADMIN — no broadcast-by-permission
+- [ ] NOTF-24: new `NotificacaoPreferencia`-style table (tenant, user, categoria, muted), checked inside `NotificacaoService.criar(...)`, exposed via a flat settings-page toggle list (no channel matrix — only one channel exists)
+- [ ] NOTF-24: at least one category kept non-mutable (recommend `PRAZO_VENCIDO` at minimum, arguably `HONORARIO_ATRASADO` too) — decide explicitly rather than making every category equally mutable by default
+- [ ] NOTF-25: extend `FASE_ENTRADA`, `DOCUMENTO_NOVO` (processo branch), `PROCESSO_ATRIBUIDO` to fan out to the processo's client team (`ClienteAdvogado`+`ClienteAdministrativo` via `clienteId`), preserving the existing 2nd-person/3rd-person message-copy split for the responsável vs. the rest of the team
+- [ ] NOTF-26: `snoozedUntil` column + snooze/unsnooze endpoint + visibility filtering in the 3 affected read paths + preset snooze durations in the UI, with mark-all-read explicitly excluding snoozed rows
 
-### Add After Validation (v2.11+, only if real usage data shows need — do not build speculatively)
+### Add After Validation (v2.11.x)
 
-- [ ] Grouping/digest for `documento` and the daily deadline-scan output, if post-launch unread-count growth shows real flooding (validate with data, especially for ADMIN's aggregated inbox, before building)
-- [ ] Lightweight per-notification snooze ("lembrar amanhã") scoped to the two recurring categories only, if the daily job's re-surfacing proves annoying in practice — build as ephemeral row state, not user preference
-- [ ] Inline actionable notifications (e.g., "marcar concluído" directly from the bell) for prazo/evento categories, reusing existing conclude endpoints
-- [ ] Whether the previous responsável (not just the new one) should be notified on reassignment — open question, decide with real usage feedback
+- [ ] A "Snoozed" filter/tab on `/notificacoes` to review deferred items (not strictly required for MVP correctness, but closes the UX loop reviewed products all provide)
+- [ ] Roadmap decision + implementation on whether Phase-88 daily-job categories also get NOTF-25's team expansion
 
-### Future Consideration (v2+, explicitly deferred or newly identified as premature)
+### Future Consideration (post-v2.11)
 
-- [ ] Full per-user notification preferences/mute-by-category — explicitly out of scope in PROJECT.md
-- [ ] Email/push delivery — explicitly out of scope in PROJECT.md
-- [ ] Real-time WebSocket/SSE delivery replacing polling — no infrastructure exists, no evidenced need at this scale
-- [ ] @mentions / free-text collaboration alerts — no anchor comment/discussion feature exists yet to hang mentions off
-- [ ] Full processo-team notification (beyond the single responsável) — explicitly out of scope in PROJECT.md
+- [ ] Category×channel preference matrix — defer until a second delivery channel (email/push) is actually built; premature today
+- [ ] Per-processo team distinct from the client's team (only worth it if a real workflow surfaces where these genuinely diverge — not evidenced today)
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|------------|----------------------|----------|
-| Persisted Notificacao entity + API | HIGH | MEDIUM | P1 |
-| Bell w/ unread count (backend-driven) | HIGH | LOW | P1 |
-| `/notificacoes` history page + filters | HIGH | MEDIUM | P1 |
-| Deep-link to source entity (6 categories) | HIGH | MEDIUM | P1 |
-| Actor exclusion | MEDIUM | LOW | P1 |
-| Alerta de nova fase | MEDIUM | LOW | P1 |
-| Alerta de novo documento | MEDIUM | LOW-MEDIUM | P1 |
-| Alerta de atribuição + reatribuição endpoint | HIGH | MEDIUM-HIGH | P1 |
-| Alerta de parecer atribuído | MEDIUM | LOW | P1 |
-| Consolidated prazo crítico logic + daily job | HIGH | HIGH | P1 |
-| Alerta de prazos/calendário (uses consolidated logic) | HIGH | MEDIUM (given job exists) | P1 |
-| Alerta de honorário não pago | MEDIUM-HIGH | MEDIUM (shares job infra) | P1 |
-| Severity-tiered visual treatment | LOW-MEDIUM | LOW | P2 |
-| Grouping/digest | MEDIUM | MEDIUM-HIGH | P2 |
-| Snooze/dismiss (deadline categories) | MEDIUM | MEDIUM | P2 |
-| Inline actionable notifications | MEDIUM | MEDIUM-HIGH | P2 |
-| Real-time WebSocket/SSE | LOW (at this scale) | HIGH | P3 |
-| @mentions | LOW (no anchor feature) | HIGH | P3 |
-| Per-user preferences/mute | LOW (per explicit decision) | MEDIUM-HIGH | P3 |
-| Email/push delivery | LOW (per explicit decision) | HIGH | P3 |
+|---|---|---|---|
+| NOTF-24 core (mute toggle, opt-out default) | HIGH | LOW-MEDIUM | P1 |
+| NOTF-24 non-mutable critical categories | MEDIUM (risk mitigation, not asked-for by users) | LOW | P1 |
+| NOTF-25 team fan-out (3 of 4 triggers) | HIGH | LOW-MEDIUM (mostly copy-adapt of existing cliente-branch code) | P1 |
+| NOTF-25 extension to Phase-88 job categories | MEDIUM | MEDIUM | P2 |
+| NOTF-26 core snooze (bounded resurfacing) | HIGH | MEDIUM (schema + 3 read-path changes) | P1 |
+| NOTF-26 "Snoozed" filter/tab | MEDIUM | LOW | P2 |
+| Category×channel preference matrix | LOW today (single channel) | HIGH | P3 |
+| New `ProcessoEquipa` entity | LOW (no evidenced need beyond reusing client team) | HIGH | P3 (avoid unless proven necessary) |
 
-**Priority key:**
-- P1: Must have for v2.10 launch (matches PROJECT.md's already-committed Active scope)
-- P2: Should have, add once real usage data justifies it
-- P3: Explicitly deferred/out of scope per PROJECT.md, or no current driver
+## Competitor / Ecosystem Feature Analysis
 
-## Competitor Feature Analysis
-
-| Feature | Legal PM (Clio/MyCase/PracticePanther) | Accounting PM (Karbon/TaxDome/Canopy) | LexCV v2.10 Approach |
-|---------|------------------------------------------|----------------------------------------|------------------------|
-| Rules-based/tiered deadline reminders | Court-rules engines (often via LawToolBox integration) auto-calculate and tier deadlines by jurisdiction | Recurring-job schedulers with reminders, task dependencies, Kanban due-date tracking | No court-rules engine (out of scope) — reuses/extends existing `computeRisco()` priority-based tiering instead of jurisdiction rules |
-| Redundant/dual verification of critical dates | Docketing systems (MatterAlert, Aderant) emphasize a second-person check or duplicate docket as risk mitigation | Less emphasized — accounting deadlines are typically lower-stakes than statutes of limitation | Achieved indirectly: ADMIN is always co-targeted alongside the responsável on every category (already decided), giving a form of redundant visibility without a formal second-docket system |
-| Assignment/reassignment notifications | Native task/matter assignment notifications are standard | Native task assignment notifications standard (Karbon's task system in particular) | New in v2.10 — requires building the reassignment endpoint first (does not exist today) |
-| Document/upload notifications | Standard (new document on matter triggers activity feed entry) | Standard (client portal document upload triggers alerts) | In-app equivalent, scoped to responsável/cliente-team, not broadcast |
-| Client-facing reminders (client portal) | MyCase/PracticePanther send reminders directly to clients (email/SMS/portal) | TaxDome/Canopy portals notify clients of pending items | Not applicable — LexCV has no client portal; out of scope entirely for v2.10 |
-| In-app notification center depth (bell + history + filters) | Present but typically secondary to email-first alerting in these products | Present, generally tied to task/Kanban views rather than a dedicated inbox | This is LexCV's primary and only channel by explicit decision — makes the in-app experience proportionally more important to get right than in products where email is the primary channel |
-| Real-time vs. polling delivery | Mixed; largely non-real-time (page-load/refresh-based) except where paired with chat-style client portals | Similar — mostly refresh/poll-based, not WebSocket-driven | Polling (30-60s), consistent with the norm in this product category, not a competitive gap |
-| Preferences/mute granularity | Typically offers per-category email/SMS toggle | Typically offers per-category notification toggle | Deliberately excluded for v2.10; acceptable given small per-tenant team sizes and only 6 fixed categories |
+| Feature | Clio (legal, direct comparable) | Generic PM tools (Jira/Asana/GitHub) | Reminder apps (Todoist/Any.do/Due) | LexCV Approach |
+|---|---|---|---|---|
+| Team vs. single owner | Responsible Attorney (single) + Responsible Staff (multi) | Assignee (single) + Watchers/Subscribers (multi) | N/A (mostly single-user tools) | Responsável (single, existing) + client team via `ClienteAdvogado`/`ClienteAdministrativo` (multi, reused not rebuilt) |
+| Notification muting | Not clearly documented per-category in help center | Per-project/per-type mute (Jira notification schemes, Asana Do Not Disturb) | Category-level reminder toggles | Per-category, per-user, opt-out default, with select categories locked "always on" |
+| Deferring a reminder | N/A (no direct evidence found) | GitHub "snooze" issue notifications; Jira has no first-class snooze | Preset-interval snooze (15 min/1h/tomorrow), or vendor-configurable snooze length (IntelligentContract, compliance-deadline analog) | Row-level `snoozedUntil` with presets, escalation (worse categoria) always breaks through |
 
 ## Sources
 
-**In-app notification center UX (HIGH confidence — multiple corroborating sources):**
-- [In-App Notification Center for SaaS: Design Patterns and Implementation Guide](https://www.suprsend.com/post/in-app-notification-center)
-- [What is App Inbox Notification Center and How to Use it in Your SAAS Product?](https://medium.com/@nikita_79236/what-is-app-inbox-notification-center-and-how-to-use-it-in-your-saas-product-e5877086da1a)
-- [Notification UX: 8 Best Practices + Real Examples](https://www.eleken.co/blog-posts/notification-ux)
-- [Notification System Design: Architecture & Best Practices](https://www.magicbell.com/blog/notification-system-design)
-- [Notifications UI design: Why most apps annoy users instead](https://www.setproduct.com/blog/notifications-ui-design)
-- [Notification Design: UX, Performance, Security — Courier](https://www.courier.com/guides/how-to-build-a-notification-center/chapter-3-best-practices-for-notification-centers)
-
-**Legal practice management / docketing (MEDIUM confidence — vendor/marketing sources, internally consistent):**
-- [Best Legal Practice Management Software for Your Firm — MyCase](https://www.mycase.com/blog/legal-case-management/best-legal-practice-management-software/)
-- [Docketing System: Mastering Law Firm Deadlines and Compliance — RunSensible](https://www.runsensible.com/blog/docketing-system-law-firm-deadlines/)
-- [MatterAlert - Legal Matter Docketing and Calendaring System](https://paayatech.com/matteralert/)
-- [The Trick for Missing Fewer Court Deadlines — CARET Legal](https://caretlegal.com/blog/the-trick-for-missing-fewer-court-deadlines/)
-- [Attorney Deadline Management: How to Prevent Malpractice — AttorneyReview](https://attorneyreview.com/blog/attorney-deadline-management-systems) (source of the 30/14/7/3/1-day cadence and per-deadline-type buffer table)
-- [Missed Deadlines: A Litigator's Constant Fear — CARET Legal](https://caretlegal.com/blog/malpractice-for-missed-deadlines-a-litigators-constant-fear-how-to-curb-it/)
-
-**Accounting practice management (MEDIUM confidence):**
-- [TaxDome vs. Canopy — Karbon Magazine](https://karbonhq.com/resources/taxdome-vs-canopy/)
-- [Karbon vs Canopy vs TaxDome: How CPA Firms Choose — US Tech Automations](https://ustechautomations.com/resources/blog/karbon-vs-canopy-vs-taxdome-2026)
-- [10 Best Workflow Management Software for Accountants — TaxDome](https://taxdome.com/blog/workflow-management-software-for-accountants)
-
-**SLA/escalation-tier patterns (MEDIUM-HIGH confidence, ITSM/helpdesk domain, transferable pattern):**
-- [Build SLA Breach Alerts Without Coding Easily](https://www.lowcode.agency/blog/sla-breach-alert-automation-no-code)
-- [How To Design SLA-Aware Escalation Workflows That Actually Work — Unito](https://unito.io/blog/sla-aware-ticket-escalation-workflows/)
-- [SLA Severity Levels Explained: Critical vs. High vs. Medium](https://www.atlassystems.com/blog/sla-severity-levels)
-
-**AR/collections dunning cadence (HIGH confidence — multiple converging independent sources):**
-- [Dunning Letter: Definition, Examples & Free Templates — Centime](https://www.centime.com/learning-center/dunning-letter)
-- [The Dunning Process: How It Works and When to Escalate](https://www.creditpulse.com/blog/dunning-process-guide)
-- [What is Dunning in Accounts Receivable — FinanceOps](https://financeops.ai/blogs/what-is-dunning-in-accounts-receivable-examples-and-best-practices)
-
-**Notification fatigue / grouping / digest (MEDIUM confidence):**
-- [How to Reduce Notification Fatigue: 7 Proven Product Strategies — Courier](https://www.courier.com/blog/how-to-reduce-notification-fatigue-7-proven-product-strategies-for-saas)
-- [Best Practices – How to Not Over Notify Your Users — Novu](https://novu.co/blog/digest-notifications-best-practices-example/)
-- [Best practices for Batching & Digest — SuprSend docs](https://docs.suprsend.com/docs/best-practices-for-batching-digest)
-
-**Snooze/dismiss and recurring-reminder patterns (MEDIUM confidence):**
-- [A Comprehensive Guide to Notification Design — Toptal](https://www.toptal.com/designers/ux/notification-design)
-- [How to Create Contextual Reminders in a Mobile App Without Overload](https://koder.ai/blog/create-mobile-app-contextual-reminders-without-overload)
-
-**Actor-exclusion / reassignment notification convention (HIGH confidence, standard documented platform behavior):**
-- [About the standard ticket triggers — Zendesk help](https://support.zendesk.com/hc/en-us/articles/4408828984346-About-the-standard-ticket-triggers)
-- [How to set up Zendesk trigger notify assignee on assignment](https://www.eesel.ai/blog/zendesk-trigger-notify-assignee-on-assignment)
-
-**Alert fatigue / "boy who cried wolf" (HIGH confidence, well-established cross-industry phenomenon):**
-- [What Is Alert Fatigue & How to Combat It? — NinjaOne](https://www.ninjaone.com/blog/what-is-alert-fatigue/)
-- [Understanding and fighting alert fatigue — Atlassian](https://www.atlassian.com/incident-management/on-call/alert-fatigue)
-
-**Notification data model / multi-tenant architecture (HIGH confidence, general system-design consensus):**
-- [Building Scalable Notifications: A Journey to the Perfect Database Design — Medium](https://medium.com/@aboud-khalaf/building-scalable-notifications-a-journey-to-the-perfect-database-design-part-1-a7818edad0ba)
-- [Designing a Notification System — DesignGurus](https://www.designgurus.io/course-play/grokking-system-design-interview-ii/doc/designing-a-notification-system)
-
-**Codebase (primary source, HIGH confidence — read directly):**
-- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (`computeRisco`, `/processos/{id}/prazos`, `responsavelId` handling)
-- `backend/src/main/java/com/lexcv/models/{Processo,Prazo,Evento,Honorario,ParecerSolicitacao,Documento,ProcessoFase}.java`
-- `web/src/components/shared/notification-bell.tsx`
-- `.planning/PROJECT.md`
+- [Clio Help Center — Create Matters](https://help.clio.com/hc/en-us/articles/9285959663131-Create-Matters) — Responsible Attorney/Responsible Staff team model (MEDIUM confidence, vendor docs)
+- [Atlassian — Using watchers and @mentions effectively](https://www.atlassian.com/blog/jira-software/using-watchers-and-mentions-effectively) — assignee vs. watcher notification distinction (MEDIUM confidence)
+- [Atlassian — Manage your Jira personal settings](https://support.atlassian.com/jira-software-cloud/docs/manage-your-jira-personal-settings/) — per-user notification configuration (MEDIUM confidence)
+- [Asana Help Center — Notification settings](https://help.asana.com/s/article/notification-settings) — Do Not Disturb / mute pattern (MEDIUM confidence)
+- [SuprSend — Notification Preference Center: UX Patterns, GDPR, and Code](https://www.suprsend.com/post/notification-preference-center) — category structure, opt-in/opt-out defaults, non-mutable critical categories (MEDIUM confidence, cross-verified against Smashing Magazine below)
+- [SuprSend — The Ultimate Guide to Perfecting Notification Preferences](https://www.suprsend.com/post/the-ultimate-guide-to-perfecting-notification-preferences-putting-your-users-in-control) — granular preference rationale (MEDIUM confidence)
+- [Smashing Magazine — Design Guidelines For Better Notifications UX (2025)](https://www.smashingmagazine.com/2025/07/design-guidelines-better-notifications-ux/) — snooze/mute best practices, non-opt-outable critical alerts (MEDIUM confidence)
+- [IntelligentContract — Alert Behaviour](https://support.intelligentcontract.com/support/solutions/articles/22000267553-alert-behaviour) — closest direct domain analog (compliance/contract-deadline alerting): per-user configurable snooze length overriding recurring reminder frequency (MEDIUM confidence, single vendor source)
+- [Todoist — Introduction to reminders](https://www.todoist.com/help/articles/introduction-to-reminders-9PezfU) — snooze interval presets (MEDIUM confidence)
+- [Any.do Help Center — Notifications & Reminders Overview](https://support.any.do/en/articles/12812921-notifications-reminders-overview) / [Board Due Dates, Reminders, and Recurring Tasks](https://support.any.do/en/articles/8635318-board-due-dates-reminders-and-recurring-tasks) — snooze-from-notification pattern (MEDIUM confidence)
+- Direct codebase inspection (HIGH confidence): `backend/src/main/java/com/lexcv/models/Notificacao.java`, `NotificacaoService.java`, `NotificacaoController.java`, `NotificacaoRepository.java`, `jobs/AlertasDiariosJob.java`, `models/Processo.java`, `models/ClienteAdvogado.java`, `controllers/ResourceController.java` (documento-upload notification branch), `models/ParecerSolicitacao.java`, `.planning/PROJECT.md`
 
 ---
-*Feature research for: in-app notifications/alerts, LexCV v2.10*
-*Researched: 2026-07-08*
+*Feature research for: LexCV v2.11 — NOTF-24/25/26 notification system extensions*
+*Researched: 2026-07-12*

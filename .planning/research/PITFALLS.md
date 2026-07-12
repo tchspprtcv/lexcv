@@ -1,398 +1,324 @@
-# Domain Pitfalls
+# Domain Pitfalls — Milestone v2.11 (Auditoria Técnica e Notificações Avançadas)
 
-**Domain:** Adding persisted in-app notifications (new entity, RBAC/relationship-scoped targeting, daily `@Scheduled` re-scan job, brand-new entity-reassignment endpoint) to an existing multi-tenant Spring Boot 3.4.1 / Next.js 16 legal practice management app
-**Researched:** 2026-07-08
-**Milestone:** v2.10 Notificações e Alertas
-**Confidence:** HIGH for all codebase-grounded findings (verified by reading the actual current source, cited by file/line below); HIGH/MEDIUM for external Spring/TanStack claims (verified against official docs and the Spring Framework issue tracker, cited in Sources)
+**Domain:** Retrofitting notification fan-out/mute/snooze onto an existing persisted `Notificacao` subsystem; retrofitting Testcontainers/H2 and fixing SpotBugs on a mature Spring Boot 3.4.1/Java 23 multi-tenant backend; consolidating a duplicated frontend risk calculation; broad undocumented-tech-debt audit.
+**Researched:** 2026-07-12
+**Confidence:** HIGH (all findings below are grounded in direct reads of this repository's current code — `NotificacaoService.java`, `Notificacao.java`, `AlertasDiariosJob.java`, `RiscoPrazoService.java`, `ResourceController.java`, `NotificacaoController.java`, `agenda/page.tsx`, `web/src/lib/prazos.ts`, `pom.xml`, `backend/Dockerfile`, `.github/workflows/deploy.yml`, plus the uncommitted working-tree diff for the SpotBugs fix already in progress). Not third-party ecosystem research — this file is a code-grounded audit, so confidence is stated per-finding based on what was directly verified vs. inferred.
 
-## Confidence note
-
-Most findings below are derived directly from reading this repository's actual code (`ResourceController.java`, `ParecerController.java`, `Processo.java`, `Evento.java`, `Prazo.java`, `Honorario.java`, `AuditLog.java`, `User.java`, `UserPrincipal.java`, `UserRepository.java`, `HonorarioRepository.java`, `providers.tsx`, `api.ts`, `permissions.ts`, `docker-compose.prod.yml`, and `.planning/PROJECT.md`'s Key Decisions log), not generic notification-system advice. Line numbers are current as of 2026-07-08 and will drift — treat them as pointers, not permanent anchors. Where a claim rests on Spring Framework or TanStack Query behavior rather than this codebase, it is verified against official docs/issue tracker and cited explicitly.
+**Supersedes:** the previous `PITFALLS.md` in this directory was written for milestone v2.10 (Notificações e Alertas, 2026-07-08) and is no longer current — its findings (job tenant-resolution, per-recipient scoping, dedup idempotency design) are now implemented in the codebase and referenced here as established precedent rather than open risks.
 
 ## Critical Pitfalls
 
-### Pitfall 1: The daily job cannot reuse this codebase's `getTenantId()` pattern — guaranteed `NullPointerException`
+### Pitfall 1: Mute check added anywhere except `NotificacaoService.criar()` will be bypassable
 
 **What goes wrong:**
-Every single existing endpoint in `ResourceController.java` derives the current tenant via a private helper:
-
-```java
-private UUID getTenantId() {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-    return principal.getTenantId();
-}
-```
-(`ResourceController.java:115-119`)
-
-This is called 100+ times across the controller and is the *only* tenant-resolution idiom that exists anywhere in this codebase. A `@Scheduled` method runs on a background thread with **no HTTP request, no JWT, no `Authentication` in the `SecurityContextHolder`** — `SecurityContextHolder.getContext().getAuthentication()` returns `null` on that thread, so `auth.getPrincipal()` throws an immediate NPE. Since this is the *only* pattern developers have ever written in this codebase to get "the current tenant," the natural (and wrong) move when writing the new job is to copy-paste or delegate into existing private helpers/methods that assume this context — anything the job calls transitively that touches `getTenantId()` will crash on first invocation, on every scheduled run, silently (Spring swallows the exception — see Pitfall 4).
+NOTF-24 (per-category mute) gets implemented as a guard inside one or two of the *trigger* methods (`notificarFaseEntrada`, `notificarProcessoAtribuido`, `notificarDocumentoNovo`, `notificarParecerAtribuido`) instead of in the shared `criar()` method underneath all of them — plus `AlertasDiariosJob.notificar()`, which calls `notificacaoService.criar(...)` directly, bypassing all four trigger methods entirely. Any call site that isn't updated keeps notifying muted users.
 
 **Why it happens:**
-This is the first background/non-request-driven code path ever introduced into LexCV (confirmed: zero `@Scheduled`, `@Async`, or `TaskScheduler` usage anywhere in `backend/src/main/java`). Every other piece of business logic in the app was written under the unstated assumption "there is always exactly one logged-in tenant for the duration of this call," which is true for every HTTP request but false for a batch job that must iterate **all** tenants.
+There are currently **5 independent call paths** into notification creation: `notificarFaseEntrada`, `notificarProcessoAtribuido`, `notificarDocumentoNovo`, `notificarParecerAtribuido` (all in `NotificacaoService`), plus `AlertasDiariosJob.notificar()` (which calls `criar()` directly, not through any of the four). A developer implementing NOTF-24 who greps for "where notifications get created" and patches the four public trigger methods will still miss the daily job's 9 categories (`PRAZO_PROXIMO`, `PRAZO_VENCIDO`, `EVENTO_PROXIMO`, `EVENTO_VENCIDO`, `HONORARIO_ATRASADO`), because that job talks straight to `criar()`.
 
 **How to avoid:**
-The job must NOT call `getTenantId()` or any method that transitively depends on `SecurityContextHolder`. Instead:
-- Loop explicitly over `tenantRepository.findAll()` (bare `JpaRepository<Tenant, UUID>`, no `ativo`/status column exists on `Tenant` — every row is eligible, no filter needed).
-- Pass `tenantId` as an explicit method parameter through every layer of the job (repository query methods already take `tenantId` as a param throughout this codebase — e.g. `findByTenantId(tenantId)` — so this is consistent with existing repository-layer conventions; it's only the controller-layer `getTenantId()` shortcut that must not be reused).
-- If any shared logic (e.g. the new consolidated risk-computation service) is extracted from the controller for reuse by both the job and the existing endpoints, make sure that extraction takes `tenantId` as a parameter rather than reading it internally — do not let the shared service silently depend on `SecurityContextHolder`.
+Put the mute check inside `criar(...)` itself, at the very top, right after the existing tenant/destinatario validation and before `requireNonBlank(...)`. The method's own comment already declares it "ÚNICO ponto de escrita de CRIAÇÃO de Notificacao em todo o código" — this is the one place a check is structurally guaranteed to run for every current and future trigger, including the daily job. Do **not** duplicate the check in `notificarAdmins`, `notificarFaseEntrada`, etc. — that reintroduces the N-call-site risk this pitfall describes.
+
+This is a breaking contract change: `criar()` currently always returns a persisted `Notificacao` (or throws `IllegalArgumentException`). Muting introduces a third outcome — "validation passed, but nothing was persisted." Every existing caller that assumes a non-null return (there are ~9 call sites across the 5 methods above) needs to be re-reviewed for what it does with that return value today, and updated to treat "muted, no-op" as neither a success-with-object nor the existing `IllegalArgumentException`-driven "orphaned destinatario" warning path — conflating the two log paths would make real orphaned-user bugs indistinguishable from ordinary muting in the logs.
 
 **Warning signs:**
-- Any new `@Service`/`@Component` class for the job that imports `SecurityContextHolder` or `UserPrincipal`.
-- A job class that only has a no-arg `run()`/`scan()` method with no `tenantId` parameter anywhere in its call chain.
-- Local manual testing of the job only ever done via an authenticated HTTP endpoint that triggers it synchronously (masking the missing-SecurityContext failure mode, since that path *does* have an Authentication).
+- Any implementation PR that touches only `Notificacao*Service` trigger methods and never touches `AlertasDiariosJob.java`.
+- `criar()`'s signature/return type unchanged while mute logic lives elsewhere.
+- Existing per-recipient `try/catch (IllegalArgumentException)` blocks (Phase 87 CR-01/CR-02 pattern) not re-examined for the new no-op case.
 
-**Phase to address:**
-The phase that introduces the daily scheduled job (prazos/honorários alert scan). Should be flagged for extra plan-time review since it is the first background-thread code path in the app.
+**Phase to address:** NOTF-24 phase (mute preferences), as the very first implementation task before any UI is built — this is a backend-core decision, not a UI decision.
 
 ---
 
-### Pitfall 2: `Notificacao` is the first per-recipient-private entity in an app where every other entity is tenant-shared — recipient scoping is easy to omit entirely
+### Pitfall 2: Team fan-out will trip the `uk_notificacao_dedup` constraint via an uncaught `DataIntegrityViolationException` — and this bug already exists today, independent of NOTF-25
 
 **What goes wrong:**
-Every existing entity in LexCV (Cliente, Processo, Documento, Honorario, Evento, ParecerSolicitacao...) is **tenant-shared**: any user in the tenant with the right permission scope (`clientes:view`, `processos:view`, etc.) sees *all* rows of that type in the tenant. The authorization pattern baked into 20+ endpoints is exactly one check: `if (x == null || !x.getTenantId().equals(getTenantId())) return 404`. There is no precedent anywhere in this codebase for "this row belongs to a specific *user*, not just a specific *tenant*."
+`uk_notificacao_dedup` is a unique index on `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria)` (`Notificacao.java`, added by the Phase 88 migration `88-add-notificacao-dedup-unique-constraint.sql`, *after* Phase 87 wrote `notificarDocumentoNovo`/`notificarParecerAtribuido`). Both of those Phase 87 methods have a documented, deliberate behavior: "se um membro da equipa também for ADMIN recebe 2 linhas" (if a team member is also ADMIN, they get 2 rows) — i.e., the primary fan-out loop and the `notificarAdmins` fan-out loop are allowed to both call `criar()` for the *same person* with the *same* `(tenant, entidadeTipo, entidadeId, categoria)` tuple. Since the constraint didn't exist when that comment was written, this was previously harmless. **It is not harmless anymore.** The second `save()` for that overlapping person will throw `DataIntegrityViolationException` — and neither method's per-recipient `try/catch` (`catch (IllegalArgumentException ex)`) catches it. The exception propagates out of an already-committed-business-action `@Transactional` controller method (document upload, parecer attribution) and rolls back the whole request with a 500, exactly the class of bug Phase 87's three code-review rounds (CR-01/CR-02) fixed for *orphaned users* but never revisited for *constraint violations*.
 
-`Notificacao` breaks this assumption: two ADVOGADOs in the same tenant must see *different* notification inboxes even though they share every other permission scope. If `GET /notificacoes` is implemented by pattern-matching the familiar shape ("apply `@PreAuthorize("hasAuthority('notificacoes:view')")`, then `notificacaoRepository.findByTenantId(tenantId)`"), it will pass every existing code-review heuristic in this codebase (permission check present, tenant filter present) while leaking every user's notifications to every other user in the tenant — a real, silent, cross-user data leak that looks identical to "done correctly" by this project's own established review pattern.
+Expanding NOTF-25 to full teams makes this worse, not better: more recipients per event means a higher chance that at least one team member also holds the ADMIN role.
 
 **Why it happens:**
-Reviewers and implementers pattern-match against the 20+ existing tenant-only checks in `ResourceController.java` and consider "tenant-scoped" to be the complete authorization contract, because it always has been for every other entity in this app.
+The dedup constraint (Phase 88) and the "no dedup between primary and ADMIN fan-out" comment (Phase 87) were written in different phases, by different reasoning, and nobody revisited the Phase 87 assumption after the Phase 88 constraint landed. This is a cross-phase integration gap of exactly the kind past milestone audits in this project have found repeatedly (see `PROJECT.md` Key Decisions: the `pesquisar()` routing bug, the `/honorarios`/`/documentos` `processo_id` filter bugs — each "looked correct in isolation").
 
 **How to avoid:**
-Every read/write on `Notificacao` needs a **second** filter dimension beyond tenant: `WHERE tenant_id = ? AND destinatario_user_id = ?` (or the ADMIN fan-out equivalent — see Pitfall 3). Write this as an explicit repository method, e.g. `findByTenantIdAndDestinatarioIdOrderByCreatedAtDesc(tenantId, userId)`, and make the "mark as read" endpoint verify **both** tenant *and* recipient ownership before mutating (`!n.getTenantId().equals(tenantId) || !n.getDestinatarioId().equals(currentUserId)` → 404/403), not just tenant. Add this as an explicit item in the phase's plan/success-criteria, since it won't be caught by copy-pasting the existing review checklist.
+1. Before implementing NOTF-25, write a test that reproduces this today (a team member who is also ADMIN, triggering `notificarDocumentoNovo` or `notificarParecerAtribuido`) and confirm it currently 500s or violates the constraint — this is a **pre-existing latent bug, not a NOTF-25 side effect**, and should be logged/fixed as its own discovered gap in the audit, independent of whether NOTF-25 ships.
+2. Fix pattern: merge the primary-recipient set and the ADMIN set into one `LinkedHashSet<UUID>` *before* looping (mirroring how `notificarDocumentoNovo` already dedupes its own `destinatarios` collection), so each person is only ever passed to `criar()` once per event. This also finally makes the "2 linhas" comment obsolete — update/remove it once fixed.
+3. As defense-in-depth (matching the precedent already set for `AlertasDiariosJob.notificar()`, which *does* catch `DataIntegrityViolationException` as a backstop), add the same catch to the trigger methods in `NotificacaoService` — but treat this as a backstop, not the primary fix; pre-deduping is the primary fix.
+4. Whatever "team" resolution NOTF-25 introduces (see Pitfall 3) must feed into the same merged/deduped set, not a second independent loop.
 
 **Warning signs:**
-- A `NotificacaoRepository` method named only `findByTenantId(...)` with no user-id parameter.
-- A code review that says "tenant check present" without a second sentence about recipient check.
-- Manual test only performed while logged in as a single user (never verifying user A cannot see/mark-read user B's notifications within the same tenant).
+- `notificarDocumentoNovo`/`notificarParecerAtribuido` still contain the "sem dedup entre destinatário primário e fan-out ADMIN" comment after NOTF-25 ships.
+- Team-resolution code adds a *third* loop (team, then admins, then existing primary) instead of merging into one set.
+- No test exercises "team member who is also ADMIN."
 
-**Phase to address:**
-Notification infrastructure phase (entity + API de listagem/marcar-lida). This is the foundation every later phase builds on — get the two-dimensional scoping right here or every consumer inherits the leak.
+**Phase to address:** Flag as a standalone discovered-gap fix (audit-discovery phase, fixable same-session per this project's established precedent of fixing cross-phase gaps immediately rather than deferring) — then NOTF-25 phase must build on top of the fixed/deduped pattern, not the current one.
 
 ---
 
-### Pitfall 3: ADMIN broad visibility + per-recipient read state is an architectural tension that needs an explicit design decision, not an afterthought
+### Pitfall 3: "Notify the full process team" has no existing data model to point at — and the one call site that already half-solved this is inconsistent with its sibling
 
 **What goes wrong:**
-The targeting rule (per `PROJECT.md` Key Decisions) is "responsável do processo / advogado do parecer / equipa do cliente + **ADMIN**." ADMIN's extra permissions are added *dynamically* at login/JWT-issuance time in `UserPrincipal.create()` (`config/UserPrincipal.java:33-44`), not stored per-row anywhere. This creates a genuine fork in how `Notificacao` can implement "ADMIN also sees this":
+`Processo` has exactly one recipient-shaped field: `responsavelId` (single `UUID`). There is no `ProcessoAdvogado`/`ProcessoEquipa` join table. The only multi-person "team" concept that exists anywhere in this codebase is `Cliente`'s `ClienteAdvogado`/`ClienteAdministrativo` join tables. `Processo` does have a `clienteId` FK, so the natural (and already-precedented) design is: a process's "team" = the assigned advogados + administrativos of its owning `Cliente`, resolved the same way document-upload notifications already do it for cliente-linked documents.
 
-- **Query-time** ("`WHERE destinatario_id = ? OR (tenant has ADMIN role check)`"): cheap to write, but then *read state* ("lida"/unread) cannot live on the notification row itself — if 3 ADMINs exist in a tenant and the row is shared, one ADMIN marking it "lida" would either (a) incorrectly mark it read for the other two ADMINs too (shared mutable state on a conceptually-personal action), or (b) require a *second* join table just for read-state per (notification, admin-user) pair — which is really the fan-out model in disguise, just implemented lazily/inconsistently.
-- **Fan-out-at-creation** (create one row per concrete recipient, including one row per current ADMIN, at the moment the triggering event happens): each row has its own independent read state, consistent with every other row in the table. This requires enumerating admins at creation time — which this codebase already has a one-line repository method for: `userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")` (`UserRepository.java:16-17`, already exists, unused until now).
-
-Picking the query-time approach because it seems simpler will work fine in initial testing (single-admin tenants, e.g. the seeded default tenant) and only visibly break once a tenant has 2+ ADMIN users independently reading/dismissing the same alert — an easy gap to miss in a milestone whose stated scope explicitly excludes broader team-based targeting and notification preferences (i.e., nobody is asking for this edge case to be raised, so it's easy to silently under-design it).
+Except: **that resolution is already inconsistent today.** In `ResourceController`, when a document is uploaded against a **Processo**, the notification recipients are computed as `resp != null ? List.of(resp) : List.of()` — only the single `responsavelId`. A few lines below, when a document is uploaded against a **Cliente** directly, the code pulls the full team via `clienteAdvogadoRepository.findByClienteIdAndTenantId(...)` + `clienteAdministrativoRepository.findByClienteIdAndTenantId(...)`. Same `notificarDocumentoNovo(tenantId, id, Collection<UUID> destinatarios, ...)` method, same fan-out mechanism — one call site uses it correctly for "team," the other doesn't.
 
 **Why it happens:**
-The targeting rule bundles two different recipient models ("this one specific FK" vs "this dynamic role-derived set") into a single sentence in the requirements, but they need different implementations to give both audiences a coherent independent unread/read experience.
+Nobody had a reason to close this gap before now — Phase 87's brief was "notify the responsible party," not "notify the team," so `List.of(resp)` was a correct, minimal implementation for its own scope at the time. NOTF-25 is exactly the requirement that turns this from "fine for its scope" into "inconsistent with the sibling code path three lines away."
 
 **How to avoid:**
-Decide explicitly and document as a Key Decision: fan out one `Notificacao` row per concrete recipient at creation time (responsável/advogado/equipa-do-cliente FK resolves to 1 row; `findByTenantIdAndRoleName(tenantId, "ADMIN")` resolves to N rows, one per current admin). Accept that an admin promoted *after* the notification was created won't retroactively see it (consistent with this milestone's explicit no-retroactive-preferences philosophy) — this is the same category of simplicity trade-off the project already made elsewhere (e.g., `Honorario.valorTotal` never auto-populated from `Cliente.honorariosPropostos`).
+- Decide NOTF-25's team definition explicitly during phase planning, not implementation: "team of a Processo" = `responsavelId` (kept, for the primary/2nd-person-message slot) **plus** the owning `Cliente`'s `ClienteAdvogado` + `ClienteAdministrativo` members (for the broadened fan-out), reusing the exact repository calls already proven correct in the Cliente-linked document path.
+- Fix the Processo-linked `notificarDocumentoNovo` call site to resolve the same way as its Cliente-linked sibling, as part of this phase (not a separate future cleanup) — it is the most direct, ready-made template for every other NOTF-25 trigger (fase entrada, processo atribuído, parecer atribuído don't currently have a "team" concept at all and need the same resolution added).
+- Extend the *same* team-resolution helper to `notificarFaseEntrada`/`notificarProcessoAtribuido`/`AlertasDiariosJob`'s prazo/evento/honorário processing — write it once (e.g., a `resolverEquipaProcesso(UUID processoId, UUID tenantId)` helper in `NotificacaoService` or a small dedicated resolver), not 5 times with independently-drifting logic — mirroring the exact "criar() is the único ponto de escrita" discipline this codebase already follows for writes.
 
 **Warning signs:**
-- Any SQL/JPQL for `Notificacao` containing `OR` logic against a live role check instead of a stored `destinatario_id`.
-- A "mark as read" implementation that updates a `lida` column directly on `t_notificacao` for a notification that could be shared by multiple recipients.
+- A grep for `ClienteAdvogado\|ClienteAdministrativo` after NOTF-25 ships still shows only the pre-existing Cliente-document call site, not the new Processo-triggered ones.
+- Team resolution logic duplicated inline at each of the 4-5 trigger call sites instead of one shared helper.
+- No decision recorded (Key Decisions / CONTEXT.md) about whether `responsavelId` keeps a distinguished "2nd person" message slot once teams exist, or becomes just another team member.
 
-**Phase to address:**
-Notification infrastructure phase (entity design), before any alert-generation phase depends on the shape.
+**Phase to address:** NOTF-25 phase. The Processo-linked `notificarDocumentoNovo` inconsistency should be called out explicitly as an in-scope fix for this phase (it's the same requirement, discovered mid-way rather than up front).
 
 ---
 
-### Pitfall 4: "Notify on every job run" instead of "notify on threshold crossing" — no persisted last-known-state means the job re-fires daily for every still-critical item
+### Pitfall 4: Snooze has nowhere to "remember" a dismissed occurrence — the daily job's idempotency key will resurrect it the next morning
 
 **What goes wrong:**
-The milestone's decision is explicit: re-notify on threshold crossing (ok → próximo → vencido), via a daily job, not notify-once. If the job's "should I create a notification?" check is only `computeRisco(...) != "ok"` (i.e., "is this currently critical"), it will create a **new** notification every single day for every prazo/honorário that remains in `proximo` or `vencido` state — a processo sitting at "vencido" for two weeks would generate 14 duplicate-content notifications, one per day, none of which represents an actual state change. This is functionally indistinguishable from spam even though no single run is "buggy" in isolation — the bug is the *absence* of a persisted "what did I last notify this recipient about this entity at" fact.
+`AlertasDiariosJob.notificar()` only ever checks "does a row already exist for `(tenant, destinatario, entidadeTipo, entidadeId, categoria)`?" before creating one — that's the entire idempotency model (edge-triggered by `categoria`, per the class-level Javadoc and `uk_notificacao_dedup`). It has zero concept of "the user saw this and asked to be reminded later instead." If NOTF-26's snooze is implemented as simply deleting or hiding the notification row, the next day's job run sees "no existing row for this tuple" (because the row is gone/hidden) and creates a brand new one — the exact bug this feature is supposed to prevent, on day one of use.
 
 **Why it happens:**
-`computeRisco()` (`ResourceController.java:1397-1404`) and every place that consumes it today is **stateless and read-time** — it recomputes fresh on every HTTP request and nothing persists "the last computed value," because until now nothing needed to compare "then" vs "now." Porting this same stateless mental model unmodified into a job whose entire purpose is "detect a change since last time" is the natural but wrong move.
+The existing idempotency design deliberately has no state richer than "exists / doesn't exist" — that was the right, minimal design for "never duplicate," but it is the *wrong* foundation for "remember a user's per-occurrence dismissal," which is a fundamentally different kind of memory (per-user intent, not per-entity fact).
 
 **How to avoid:**
-Track last-notified state explicitly, e.g. a column/table keyed by `(tenant_id, entidade_tipo, entidade_id, destinatario_id) → last_risco_notificado`. Each day, the job recomputes current risco (via the *new consolidated* function this milestone is supposed to create) and only creates a `Notificacao` row when `current_risco != last_risco_notificado`, then updates the tracking record. This is an edge-triggered design (react to the transition), not level-triggered (react to the current level) — the same distinction monitoring/alerting systems make between "alert on state change" vs. "re-alert every evaluation."
+Do not try to make "snoozed" a variant of "lida" (read) — they answer different questions ("did the user see it" vs. "should this specific occurrence stop nagging until date X") and conflating them will corrupt the unread-count badge and the `/notificacoes` filters that already exist. Instead:
+- Add explicit state to `Notificacao` (or a new lightweight join) capturing *what* is snoozed and *until when* — at minimum `snoozedUntil: LocalDateTime` (nullable) on the notification row, or a separate `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria, snoozed_until)` table keyed identically to the existing dedup tuple, so the job's existence-check can be extended to "exists AND not currently snoozed" without restructuring the tuple.
+- The job's `notificar()` existence-check must become "skip if a non-snoozed row already exists **or** an active snooze covers this tuple" — otherwise snoozing does nothing, and un-snoozing does nothing either.
+- Decide explicitly what happens when the snooze expires while the underlying condition still holds (e.g., a prazo still overdue): does the job need to actively re-surface it that morning, or does it wait for the next natural re-run? Given the job already runs daily at 06:00, "wait for the next run" is simplest and consistent — but write this down as a decision, don't let it be discovered as a surprise during UAT.
+- This state needs the same 4-layer failure isolation (`Throwable`-catching, per-tenant/per-category/per-entity try/catch) already established in `AlertasDiariosJob` — a snooze-check that throws must not abort the whole day's run for other tenants/categories.
 
 **Warning signs:**
-- The job's insert condition reads only the current computed risco with no comparison to a previously stored value.
-- No new column/table anywhere that stores "last known risco level per (entity, recipient)".
-- QA only tests "one day," never simulates "run the job two days in a row against unchanged data" (which is the exact scenario that exposes this bug).
+- Snooze implemented purely as a frontend "hide this row" action with no backend column/table.
+- Snooze implemented by setting `lida = true` (this breaks "unread count" semantics and is indistinguishable from actually reading it).
+- No test simulates "job runs day 1 (creates), user snoozes, job runs day 2 (must NOT recreate), snooze expires, job runs day 3 (must decide explicitly whether to recreate)."
 
-**Phase to address:**
-Daily scheduled job phase (prazos de processos e calendário crítico). This is the single most important behavioral contract for that phase's success criteria.
+**Phase to address:** NOTF-26 phase. This is the single highest-complexity item of the three NOTF features because it requires new persisted state, not just new fan-out logic — plan it with its own explicit CONTEXT.md decision on the snoozed-until semantics before writing code.
 
 ---
 
-### Pitfall 5: Wrong `@Scheduled` trigger type (`fixedRate`/`fixedDelay` vs `cron`) causes the "daily" job to re-fire on every deploy
+### Pitfall 5: `@SpringBootTest`-based integration tests will hit the exact same required-env-var wall that already blocks live UAT today
 
 **What goes wrong:**
-This project deploys via GitHub Actions → GHCR → SSH → `docker compose up` on a single-instance VPS (confirmed: `docker-compose.prod.yml` sets no `replicas:`, only resource limits, and `restart: unless-stopped`), and deploys happen frequently during active development (this repo's own commit history shows multiple phases shipped per day). `@Scheduled(fixedRate = ...)` / `@Scheduled(fixedDelay = ...)` compute their next run relative to **application startup**, not wall-clock time — so `fixedRate = 86400000` ("every 24h") actually means "24h after this specific process started," and **every container restart resets that clock and fires the job again almost immediately** (default `initialDelay` is 0). Given `restart: unless-stopped` plus routine CI/CD redeploys, a `fixedRate`-based "daily" job would in practice fire multiple times per day — reproducing exactly the "duplicate notifications on job re-run" symptom, but the root cause here is a scheduling-configuration mistake, not concurrency.
+`application.yml` has **zero defaults** — every property (DB, JWT secret, MinIO/S3 config, etc.) is a required env var, imported from an optional `.env` file (`spring.config.import: optional:file:.env[.properties]`). This is already documented as the cause of a real, current blocker: `MinioConfig.s3Client()` fails at context startup before any controller becomes reachable, which is why 4 of 5 Phase 87/89 UAT scenarios in this exact project remain "human_needed" today (`PROJECT.md` Context section). A naive integration-test approach that spins up the **full** Spring context (`@SpringBootTest`) to test, say, `NotificacaoController.listar`'s native query or `AlertasDiariosJob`'s prazo processing, will fail to start the context for the same reason — not because Testcontainers/H2 doesn't work, but because unrelated beans (MinIO client, JWT provider needing a real secret, etc.) fail to construct first.
 
 **Why it happens:**
-`fixedRate`/`fixedDelay` are the two attributes most Spring tutorials show first (simpler syntax than a cron expression), and "run once a day" is easy to mis-translate as "every 86400000ms" without considering what happens across restarts.
+`@SpringBootTest` boots the *entire* application context by default. This project's context has hard dependencies unrelated to the two things this milestone actually needs to verify (STATE.md names them precisely: the native `nativeQuery=true` + `Pageable` combination in `NotificacaoRepository.buscarPorFiltros`, and the concurrency lock on `Processo`/`Parecer`'s `numeroVersao`). Reaching for the broadest test annotation is the natural first instinct and the wrong one here.
 
 **How to avoid:**
-Use `@Scheduled(cron = "0 0 3 * * *")` (wall-clock-anchored) for the daily scan, not `fixedRate`/`fixedDelay`. Cron-based scheduling only fires at the specified time of day regardless of when the process last started, so a redeploy at 14:00 does not cause an extra 03:00 run. This does not remove the need for idempotent inserts (Pitfall 4's state-tracking already covers "did I already notify for this exact state"), but it removes the single most likely real-world trigger of duplicate runs in *this specific deployment topology*.
+- Prefer narrow slice tests: `@DataJpaTest` (auto-configures an embedded/Testcontainers JPA layer only, excludes web/security/MinIO/JWT beans) for the native query and any repository-level concurrency verification, wired to a real PostgreSQL Testcontainer via `@ServiceConnection` (Spring Boot 3.1+) rather than H2 — see Pitfall 6 for why H2 specifically is risky for the native query in question.
+- If a genuine full-stack HTTP round-trip is ever needed (e.g., a future phase wants to verify RBAC + tenant scoping end-to-end), build a **dedicated minimal test property source** (`application-test.yml` under `src/test/resources`, or `@TestPropertySource`) that stubs every required-but-irrelevant property (dummy JWT secret, dummy MinIO endpoint/bucket) rather than trying to satisfy them from a real `.env`. Do not assume CI or local dev machines will have a working MinIO/Postgres available for tests — that assumption is precisely what has already blocked live UAT.
+- Scope this milestone's testing-infra phase to the two named risk areas only (native query, concurrency lock) rather than attempting broad controller-level integration coverage — matches the milestone's own stated priority and avoids scope creep into "test everything," which risks never finishing.
 
 **Warning signs:**
-- `@Scheduled(fixedRate = ...)` or `@Scheduled(fixedDelay = ...)` used for anything described as "daily."
-- No test/observation of "does the job fire again if I restart the container mid-day."
+- Any new test class annotated `@SpringBootTest` without `webEnvironment = NONE` or explicit `@MockBean`/exclusion of `MinioConfig`/security auto-config.
+- Test suite requires a real `.env` file or real MinIO instance to pass.
+- CI run fails with "required property X not set" for a property (e.g., `MINIO_ENDPOINT`, JWT secret) that has nothing to do with what the test is actually verifying.
 
-**Phase to address:**
-Daily scheduled job phase. Cheap to get right up front, expensive to diagnose after the fact (looks like random duplicate spam correlated with deploys, not obviously a scheduling bug).
+**Phase to address:** Testing-infrastructure phase, as the very first architectural decision (slice tests vs. full context) — before any Testcontainers dependency is even added to `pom.xml`.
 
 ---
 
-### Pitfall 6: An uncaught exception inside the job silently stops it from ever running again — with no error surfaced anywhere
+### Pitfall 6: H2 will give false confidence on the one query that most needs real-Postgres verification
 
 **What goes wrong:**
-Community consensus and Spring's own issue tracker confirm: if a `@Scheduled` method throws an uncaught exception, the task scheduler does not simply log-and-continue by default in every configuration — it can stop rescheduling that task entirely, with no exception visible outside the background thread (nothing propagates to a controller, nothing produces an HTTP 500, nothing shows up as "the app crashed"). Given this job's job is to iterate every tenant, every processo/prazo/honorário, one bad row (a null `dataAcordo`, an orphaned `processo_id` with no matching Processo, a Prazo with a null `responsavelId` and no ADMIN fallback resolved) anywhere in any tenant can silently kill all future notification generation for **every** tenant, and nobody will notice until someone asks "why did notifications stop appearing three weeks ago."
+The specific risk area STATE.md names is `NotificacaoRepository.buscarPorFiltros` — "the first-ever `nativeQuery=true`+`Pageable` combination in this codebase." Native queries are, by definition, written in the target database's SQL dialect (PostgreSQL). H2's PostgreSQL-compatibility mode covers common syntax but has known gaps around Postgres-specific functions, `::` casts, `ILIKE`, JSONB operators, and native pagination semantics combined with native queries (Spring Data's native-query + `Pageable` support has historically had rough edges that behave differently across H2 vs. real Postgres, e.g., around how the count query is derived). Testing this specific query against H2 can pass while the identical query fails or behaves subtly differently (wrong pagination totals, wrong ordering, silent type coercion) against real PostgreSQL in production — the exact "looks done but isn't" failure mode this milestone exists to close.
 
 **Why it happens:**
-This is the first `@Scheduled` job in the app, so there is no existing convention here for "wrap scheduled work defensively." Every existing piece of code in this app runs inside an HTTP request/response cycle, where an uncaught exception is caught by Spring's default exception handling and turned into a visible 500 response — developers have never had to think about "what happens to an exception with no HTTP response to attach to."
+H2 is faster to set up and requires no Docker, which is attractive when retrofitting test infra into a project that has never had any — but "fast and easy" is precisely why it produces false confidence for dialect-sensitive code.
 
 **How to avoid:**
-Wrap the entire job body in a top-level `try/catch (Exception e)` that logs with full context (tenant id, entity id) and continues to the next tenant/entity rather than letting one bad row abort the whole run. Prefer per-tenant (or even per-entity) try/catch boundaries inside the loop so one tenant's bad data doesn't prevent notifications for every other tenant. Log at `ERROR` level with enough context to be actionable, and treat "the job produced zero output for N consecutive days across all tenants" as a symptom worth a smoke-test/health-check, since there is no `@Scheduled`-specific alerting anywhere in this app today.
+For this specific query (and any other native query added going forward), use a real PostgreSQL Testcontainer, not H2 — Testcontainers' overhead (container startup) is the right tradeoff specifically because the milestone's own stated reason for wanting tests is to verify a native-SQL/Postgres-specific code path. If H2 is used elsewhere in this retrofit for speed (e.g., simple `@DataJpaTest`s over plain JPQL/derived-query repositories with no native SQL), that's a reasonable, lower-risk choice — but draw the line explicitly at "any repository method with `nativeQuery=true`" and route those exclusively through the Postgres Testcontainer.
 
 **Warning signs:**
-- Job code with no top-level try/catch.
-- A single loop over "all tenants x all processos" with no per-iteration exception isolation — one throw anywhere aborts everything after it in that run, and (per the above) possibly all future runs too.
+- `buscarPorFiltros` test passes against H2 and is treated as "verified" without ever running against Postgres.
+- Test suite uses H2 exclusively "for speed" with no Testcontainers dependency at all.
 
-**Phase to address:**
-Daily scheduled job phase — this is a plan-time review item ("does the job survive one bad row"), not something that shows up in isolated unit tests of the happy path.
+**Phase to address:** Testing-infrastructure phase — this is a tooling *choice*, not incidental detail; record it as an explicit decision (H2 acceptable for plain JPQL, Testcontainers-Postgres mandatory for native queries) so future phases don't quietly regress to H2-everywhere for convenience.
 
 ---
 
-### Pitfall 7: N+1 query pattern — this exact codebase already contains both the anti-pattern to avoid and the correct pattern to copy, right next to each other
+### Pitfall 7: New Testcontainers-based tests (and the already-existing 3 unit tests) provide zero regression protection unless CI is also changed — this project's pipeline currently never runs `mvn test`
 
 **What goes wrong:**
-`GET /honorarios` (no `processo_id` filter) currently does exactly this (`ResourceController.java:2568-2575`):
-
-```java
-List<Processo> tenantProcs = processoRepository.findByTenantId(tenantId);
-List<Honorario> response = new ArrayList<>();
-for (Processo p : tenantProcs) {
-    response.addAll(honorarioRepository.findByProcessoId(p.getId()));
-}
-```
-
-This is a live, committed, textbook N+1 (one query for processos, then one additional query *per processo* for its honorário). If the new daily job's "scan honorários for aging alerts" logic is modeled on this existing endpoint — the only place in the codebase today that already does "get all honorários for a tenant" — it inherits the N+1 for every tenant, every run. At a handful of tenants with dozens of processos this is invisible in dev; it will show up as the job's wall-clock time growing linearly with total processo count across all tenants once real data accumulates.
+`backend/Dockerfile` builds with `mvn -DskipTests package` explicitly. `.github/workflows/deploy.yml` (the only CI workflow in this repo) never invokes `mvn test`, `mvn verify`, or `mvn spotbugs:check` at any point — it goes straight to `docker/build-push-action`, which itself uses the Dockerfile that skips tests. This means the 3 unit tests that already exist in this codebase (`RiscoPrazoServiceTest`, `NotificacaoServiceTest`, `AlertasDiariosJobTest` — all pure JUnit 5/Mockito, no Spring context, no DB) **have never once run in CI**, and neither has SpotBugs. Adding Testcontainers-based integration tests without also adding a CI step that runs them produces the same outcome: tests that can be run manually, pass, and then silently rot the next time someone changes the code they cover — exactly the fate that already befell SpotBugs (STATE.md: "discovered during Phase 87, unrelated background task" that it was broken against JDK 23, implying nobody had run it in a long time).
 
 **Why it happens:**
-Nobody has needed "all honorários for a tenant" outside a single processo before, so the only prior art for "loop over processos to reach a related table" happens to be the wrong pattern. A developer skimming the codebase for "how do we usually list financeiro data for a tenant" will find this exact loop first.
+The CI workflow was designed purely as a build-and-deploy pipeline (push to `master` → build images → push to GHCR → deploy), not a quality gate. Retrofitting test/SAST infra without also touching CI treats "the tests exist" as equivalent to "the tests protect anything," which is false in this repository specifically.
 
 **How to avoid:**
-Copy the *correct* pattern instead — it already exists 500 lines earlier in the same file, for the same problem shape (`ResourceController.java:896-911`, comment: `// Batch-load responsáveis to avoid N+1 queries`): fetch the whole collection once with a single `findByTenantId`/`findByProcessoIdIn(Collection<UUID>)`-style batch query, then group into a `Map<UUID, List<X>>` in Java, and look up per-processo from the map instead of re-querying. `HonorarioRepository` currently only exposes `findByProcessoId(UUID)` (singular) — add a `findByProcessoIdIn(Collection<UUID> processoIds)` batch method for the job (and consider fixing the existing `listHonorarios` fallback loop at the same time, since it's the same underlying gap, though that's arguably out of this milestone's scope unless it becomes a blocker).
+Explicitly decide, as part of this milestone, whether to add a `test`/`verify` job to `deploy.yml` (running before the Docker build stages, with Docker daemon access available natively on `ubuntu-latest` runners for Testcontainers) or to consciously leave tests as a local-only/manual gate and document that decision (e.g., in Key Decisions) rather than let it happen by omission again. If a CI step is added, it should run both `mvn test` (or `mvn verify` once Testcontainers ITs exist) **and** `mvn spotbugs:check`, so the SpotBugs fix from this same milestone doesn't immediately start rotting again the moment it's merged.
 
 **Warning signs:**
-- Job code containing a `for` loop over processos with a repository call inside the loop body for prazos, honorários, or users.
-- Any use of `honorarioRepository.findByProcessoId(...)` inside a loop rather than a single `findByProcessoIdIn(...)` call outside it.
+- Milestone closes with new tests/SpotBugs config in the repo but `deploy.yml` unchanged.
+- No record of an explicit choice ("tests are local-only by design" vs. "tests gate CI") in Key Decisions.
 
-**Phase to address:**
-Daily scheduled job phase. Also worth a one-line callout in that phase's plan: "do not model this on `listHonorarios`'s no-filter branch."
+**Phase to address:** Both the testing-infrastructure phase and the SpotBugs-fix phase should each explicitly resolve this for their own tooling — ideally in the same CI-wiring change, since both problems have the identical root cause and the identical fix location.
 
 ---
 
-### Pitfall 8: Mixed entity ID types and non-existent `tenant_id` columns break a naive polymorphic `Notificacao.entidade_id` design
+### Pitfall 8: The SpotBugs/JDK-23 fix is already ~90% done, uncommitted, in the current working tree — treating this as "broken, start from scratch" risks losing or duplicating real work
 
 **What goes wrong:**
-The six alert types reference entities with **inconsistent primary key types**: `Processo`, `Prazo`, `Documento`, `ParecerSolicitacao`, `Cliente` use `UUID` (`GenerationType.UUID`); `Evento`, `Honorario`, `Facto` use `Integer` (`GenerationType.IDENTITY`). A `Notificacao` entity that tries to store a single typed FK column (e.g. `UUID entidadeId`) cannot represent an alert about an `Evento` or `Honorario` without a lossy cast/parallel column. Separately, several of these related tables have **no `tenant_id` column of their own** — `Honorario`, `Facto`, `Decisao`, `Testemunha`, `Parte` all rely on *transitive* tenant isolation via their parent `Processo.tenant_id` (an explicit, documented Key Decision from prior phases, chosen to avoid duplicating the column). A `Notificacao` repository query that tries to filter directly by an assumed `tenant_id` column on whatever `entidade_tipo` it's joining against will not compile/work uniformly across alert types, or — worse — someone "fixes" the compile error by joining on the wrong table and silently drops the tenant filter for that alert type specifically.
+`git status` at the start of this milestone already shows `backend/pom.xml` modified (spotbugs-maven-plugin bumped `4.8.3.1` → `4.10.2.0`, findsecbugs-plugin `1.13.0` → `1.14.0`, `excludeFilterFile` wired in), a new untracked `backend/spotbugs-exclude.xml` with real, individually-reviewed suppressions (dated "2026-07, after upgrading... for Java 23 support" in its own header comment), and real source fixes already applied and uncommitted: `UserPrincipal.getAuthorities()` now returns `Collections.unmodifiableCollection(...)` instead of the raw mutable set (EI_EXPOSE_REP), `ConflictCheckResponse`/`WorkflowResponse` records now defensively copy their list fields in compact constructors (same bug class), and 9 `ResourceController` create-endpoints (`createCliente`, `createProcesso`, `createProcessoIntake`, `createParte`, `createMovimentacao`, `createFacto`, `createEvento`, `createHonorario`, `createPagamento`) now call `setId(null)` before their first `save()` to close a genuine mass-assignment/IDOR-adjacent gap (a crafted client-supplied id would previously route through Hibernate's `merge()` instead of `persist()`, silently overwriting an existing, possibly cross-tenant, row).
+
+If a phase in this milestone starts "fixing SpotBugs" assuming a clean slate, it risks (a) redoing analysis that's already been done, (b) accidentally discarding this uncommitted work via a careless `git checkout`/`git stash drop`/branch switch, or (c) not noticing this work exists at all and reporting a stale "still broken" status in the audit.
 
 **Why it happens:**
-This is the first entity in the app that needs to reference *any* of six different entity types generically. Every existing FK relationship in this codebase points at exactly one fixed target type with a known ID type — there is no existing "polymorphic reference" pattern to reach for except one: `AuditLog` (`models/AuditLog.java`), which already solved exactly this problem with `@Column(name = "entidade_id") private String entidadeId;` (a string, accommodating both UUID and Integer PKs) plus a separate `entidadeTipo` discriminator string, and a nullable `processoId` for cases where the audited entity isn't itself a processo.
+This looks like leftover work from a prior session that was never committed. Uncommitted state is invisible to anyone who only reads `PROJECT.md`/`STATE.md`, both of which still describe SpotBugs as "broken"/"out of scope" from the v2.10 close.
 
 **How to avoid:**
-Model `Notificacao` the same way `AuditLog` already does: `String entidadeId` (not a typed UUID/Integer column) + `String entidadeTipo` discriminator (`"processo" | "prazo" | "documento" | "honorario" | "parecer" | "fase"`), plus `tenantId` and `destinatarioId` columns owned directly by `Notificacao` itself (do not try to derive tenant scoping transitively through the referenced entity at query time — store it directly on the notification row, since the notification's own tenant is always known at creation time regardless of what it points to).
+Before doing any SpotBugs work in this milestone: run `git status`/`git diff` on `backend/pom.xml` and `backend/spotbugs-exclude.xml` first. If this work is still present, verify it (`mvn spotbugs:check` should now succeed cleanly), read through the suppression rationale already written in `spotbugs-exclude.xml` to confirm it's still accurate, and commit it as the foundation — then look for any *remaining* findings or endpoints not yet covered (e.g., double-check `updateParte`, `updateHonorario`, `updateMovimentacao`, and any other update-style endpoints for the same client-suppliable-id class of bug, since the existing fix pass only lists 9 create endpoints and a handful of update endpoints already deemed safe — confirm that list is actually exhaustive rather than assuming it).
 
 **Warning signs:**
-- A `Notificacao` entity with a single `UUID entidadeId` (or `Integer entidadeId`) column instead of a `String`.
-- Any repository/query on `Notificacao` that tries to join to "the referenced entity" generically to re-derive `tenant_id`, rather than reading `Notificacao.tenantId` directly.
+- Milestone plan for the SpotBugs phase describes starting a version bump / dependency investigation that's already sitting in the working tree.
+- `git log` for `backend/pom.xml`/`backend/spotbugs-exclude.xml` shows no commit despite the audit claiming to have "fixed" SpotBugs.
 
-**Phase to address:**
-Notification infrastructure phase (entity design) — this is a schema decision that's expensive to change once alert-generation phases depend on the shape.
+**Phase to address:** SpotBugs-fix phase — first task should be "inventory and commit existing uncommitted work," not "investigate SpotBugs JDK 23 compatibility" (that investigation already happened).
 
 ---
 
-### Pitfall 9: No DB-level uniqueness backs the idempotency check — and this project has no Flyway/Liquibase, so a forgotten migration script means the constraint silently doesn't exist in prod
+### Pitfall 9: Consolidating `agenda/page.tsx` isn't "write a 5th formula" — it's "thread an already-correct field through," except for Eventos, where that field doesn't exist on the endpoint agenda actually calls
 
 **What goes wrong:**
-This codebase's only existing idempotency tool is an **in-process** `synchronized (XRepository.class)` check-then-act block, used three times today (`ClienteRepository.class` for `numero_cliente`, `FactoRepository.class` for `ordem`, `ParecerVersaoRepository.class` for `numero_versao`). This protects against races *within a single JVM*, but is not a substitute for a real DB constraint, and this project's own commit history shows it explicitly learned this lesson already: the `Honorario` and `Facto` unique constraints were added specifically because "the application-level check-then-act idempotency check... does not protect against a genuine race condition between concurrent requests" (`PROJECT.md` Key Decisions, referencing `backend/migrations/81-add-facto-ordem-unique-constraint.sql` and `82-add-honorario-processo-unique-constraint.sql`). Backend uses `ddl-auto=update` in dev (new constraints appear automatically) but `ddl-auto=validate` in prod (constraints must already exist in the real database, or the app fails to start / silently doesn't enforce them if validation is loose) — and there is **no Flyway/Liquibase**, so any new unique constraint needed on `Notificacao` (e.g. `(tenant_id, destinatario_id, entidade_tipo, entidade_id, risco_notificado)`) requires a hand-written, manually-run SQL script following the existing `backend/migrations/NN-description.sql` numbering convention. If this step is skipped or forgotten during deployment, dev/local testing (where `ddl-auto=update` creates it automatically) will look completely fine, while prod silently has no constraint at all — the exact gap the project already hit and fixed twice before.
+The backend already computes and returns a `risco` field (`"ok" | "proximo" | "vencido"`, via `RiscoPrazoService`) on `Prazo` objects returned by the endpoint(s) `useAllPrazos()` consumes — this is confirmed by the frontend's own `PrazoRisco` type (`web/src/types/processos.ts`, non-optional `risco` field) and the existing shared mapping utility `web/src/lib/prazos.ts` (`prazosRiscoToVariant`/`prazosRiscoToLabel`), already correctly used by the processos list/detail pages. `agenda/page.tsx`'s `allUnifiedEvents` transform builds its own `pzs` array from `prazos.data` but never copies `p.risco` onto the unified objects, and its "urgentes" week-stat instead recomputes a *different*, date-blind signal: `active.filter((e) => e.prioridade === "ALTA").length` — priority alone, ignoring how close the deadline actually is, and never distinguishing "próximo" from "vencido" at all. Meanwhile `getCategoria()`'s red "PRAZO FATAL" styling is driven purely by matching `titulo`/`tipo` strings, not by actual risk — a not-yet-due low-priority prazo gets the same red treatment as an overdue one.
+
+For **Eventos**, the situation is different and harder: the general `GET /eventos` list endpoint that `useEventos({})` actually calls does **not** return a `risco` field at all today — only the separate, legacy `GET /eventos/upcoming` endpoint does (built for the old v2.1 bell, already superseded per Phase 89's decision to replace it entirely). So full consolidation for events specifically requires a real decision, not just a frontend threading fix: either (a) add a `risco` field to the general `GET /eventos` response (broader blast radius — this endpoint also feeds the drag/drop calendar and mobile event cards, so any shape change needs those consumers re-verified), or (b) compute event risk client-side using a *shared, tested* constant/threshold table that is kept in lockstep with `RiscoPrazoService`'s Java thresholds (7 days for `ALTA`, 3 days otherwise) — which is still "a second implementation," just a deliberately mirrored and tested one, not an independent invention.
 
 **Why it happens:**
-`ddl-auto=update` in dev masks the absence of a migration script; the bug is invisible until someone deploys to prod, and even then it doesn't fail loudly (prod just accepts duplicate-notification inserts it shouldn't, rather than throwing at startup) — unless the constraint is required for `validate` mode to pass, which depends on how strictly that's configured. This is a "looks done" trap: the feature works perfectly in every dev/local demo.
+Phase 85 explicitly scoped `agenda/page.tsx` out (`85-CONTEXT.md`, referenced in `PROJECT.md`) because the consolidation work belonged to a different milestone. Nobody has since checked *how much* of the divergence is "missing plumbing" (Prazos: trivial, data's already there) vs. "missing backend support" (Eventos: real gap).
 
 **How to avoid:**
-Write a manual migration script (`backend/migrations/NN-add-notificacao-unique-constraint.sql`) in the same phase that introduces the `Notificacao` entity, mirroring `81-add-facto-ordem-unique-constraint.sql`/`82-add-honorario-processo-unique-constraint.sql`, and add it to the deployment checklist/runbook exactly like those two were. Pair the DB constraint with a `try { save(...) } catch (DataIntegrityViolationException e) { /* already exists, ignore */ }` at the application layer (Spring's DB-agnostic translated exception for constraint violations) as defense in depth alongside — not instead of — the constraint.
+Split this phase's work explicitly into the two different problems: (1) for Prazos, thread the existing `p.risco` field through `allUnifiedEvents` and replace the `prioridade === "ALTA"` stat and the string-matched styling with `prazosRiscoToVariant(risco)`/direct `risco` comparisons — this is a pure frontend change, no backend involved, low risk; (2) for Eventos, make an explicit choice (extend `GET /eventos`'s response shape vs. mirror the threshold table client-side with a parity test against `RiscoPrazoServiceTest`'s cases) and record it as a Key Decision before writing code, since the two options have very different blast radii.
 
 **Warning signs:**
-- A new unique constraint added only via `@Table(uniqueConstraints = ...)` on the entity with no corresponding file in `backend/migrations/`.
-- Deployment runbook/checklist for this milestone with no explicit "run migration NN before/during deploy" step.
+- The fix touches only `agenda/page.tsx` and claims full consolidation without checking whether `GET /eventos` was also changed.
+- A new TypeScript risk-threshold function appears in the frontend with no test tying its output to `RiscoPrazoServiceTest`'s known cases (7d/3d thresholds), reintroducing exactly the "5th divergent implementation" problem this phase exists to remove.
 
-**Phase to address:**
-Notification infrastructure phase (entity + constraint), verified again at the milestone's final integration-audit step (this project already runs a milestone-level audit before shipping — this is exactly the kind of gap that audit exists to catch).
+**Phase to address:** Agenda/RiscoPrazoService-consolidation phase.
 
 ---
 
-### Pitfall 10: Reassignment endpoint and its notification trigger live in two different controllers with no shared template — easy to build one and skip the other's guard rails
+### Pitfall 10: Multi-tenant leakage risk is concentrated in three specific new surfaces this milestone introduces — mute preferences, team resolution, and the background job's snooze/mute interaction
 
 **What goes wrong:**
-The closest existing precedent for "reassign an owner FK with validation and a status guard" is `PUT /pareceres/{id}/atribuir` in `ParecerController.java` (lines 235-274): it validates the new `advogadoId` belongs to the tenant *and* holds the `ADVOGADO` role (`validateAdvogado(...)`), and explicitly blocks reassignment when `status == "CONCLUIDO"`. The brand-new `processo` responsável-reassignment endpoint being built this milestone lives in a **different file** (`ResourceController.java`), addresses a structurally identical problem, but has no shared base class/utility forcing parity. Two distinct risks follow: (a) the new endpoint might accept any UUID as the new `responsavelId` without validating tenant membership/role (the existing `createProcesso` path already validates this at creation time — `ResourceController.java:1474-1480` — so skipping it on the *update* path would be an inconsistency introduced by this milestone, not a pre-existing gap); (b) whoever wires the "processo atribuído" notification into the new endpoint may correctly do so there, then forget that "parecer atribuído" needs the identical hook added to the pre-existing, unrelated-looking `atribuirAdvogado` method in the other file (that endpoint currently has zero notification side effects — it was explicitly out of scope in v2.6, per `PROJECT.md`: *"NOTF-05/06/07 ... removidas do âmbito v1 da v2.6"* — meaning this milestone must actively go back and add the hook there, not just build it fresh in the new endpoint).
+This codebase's established pattern for tenant isolation is: every entity carries `tenant_id` directly, OR (for lean child entities like `Decisao`/`Facto`/`Testemunha`/`Parte`) isolation is enforced *transitively* by loading and checking the parent (`Processo`) — and every write endpoint for those child entities explicitly re-verifies **both** tenant **and** parent-entity ownership (the "double-check" pattern `PROJECT.md` documents repeatedly, including a case where the *simpler* single-check `Parte` pattern was deliberately rejected in favor of the double-check because the entity IDs are guessable sequential integers). Three new v2.11 surfaces are exactly the kind of thing that historically gets under-scoped by pattern-matching the wrong precedent:
+
+1. **Mute preferences** — a new table almost certainly keyed by `(user_id, categoria)` at minimum. If it's built by pattern-matching "just key by user_id" (since a user only ever seems to belong to one tenant in this system), it should still carry `tenant_id` explicitly and every read/write should filter by both — `STATE.md` already flagged this exact risk for `Notificacao` itself ("this project's first per-recipient-private entity, easy to under-scope by pattern-matching the tenant-only checks used everywhere else"), and a preferences table is the same shape of risk one level further.
+2. **Team resolution for NOTF-25** — resolving a Processo's team via its `clienteId` must re-verify that the `Cliente` being joined through actually belongs to the same tenant as the `Processo`/the acting request, not just trust the FK blindly — the same reasoning already applied to `POST /documentos/upload`'s `clienteId`/`processoId` ownership check (Phase 79 fix, `PROJECT.md`).
+3. **`AlertasDiariosJob`'s mute/snooze checks** — this job runs with **no security context at all** (`SecurityContextHolder`/`getTenantId()` are never called; `tenantId` is always an explicit parameter threaded through every call, by deliberate design, per the job's own Javadoc and its code-review comments). Any new mute/snooze lookup added inside this job's loop must take `tenantId` as an explicit parameter through the same call chain — copy-pasting a mute-check helper written for the (session-based) trigger-method call sites into this job will null-pointer or, worse, silently query across all tenants if it falls back to some ambient/default tenant resolution.
 
 **Why it happens:**
-The two reassignment flows are conceptually parallel but physically distant (different controller files, different feature history — one is brand new, one is 4 milestones old and easy to forget exists), so nothing forces an implementer touching one to notice the other.
+Copy-paste from an adjacent, superficially-similar call site is the normal way new features get built quickly — but the adjacent call site in this codebase very often has a *subtly different* isolation requirement (session-scoped vs. job-scoped; direct-column vs. transitive-via-parent), and this project's own history (Key Decisions table) is largely a record of exactly this mistake being caught, repeatedly, across many prior phases.
 
 **How to avoid:**
-Explicitly mirror `atribuirAdvogado`'s shape for the new endpoint: validate new `responsavelId` belongs to tenant (reuse the same `userRepository.findById(...).getTenantId().equals(tenantId)` check already used at `ResourceController.java:1475-1480`), consider whether an analogous state guard is needed (e.g., can responsável be reassigned on an `ENCERRADO` processo?), and — in the same phase or an explicitly linked phase — add the matching notification-creation call to **both** `ResourceController`'s new endpoint **and** `ParecerController.atribuirAdvogado`. Treat "parecer atribuído" and "processo atribuído" as one shared checklist item, not two independent ones, precisely because they're easy to treat as unrelated given the file separation.
+For each of the three surfaces above, write the isolation check as the *first* thing implemented, verified with two independent test users/tenants (the pattern `STATE.md` already prescribes for `Notificacao` itself), before any UI or trigger wiring. For the job specifically, grep the new code path for any `getTenantId()`/`SecurityContextHolder` call before merging — its absence in the rest of the file is not incidental, it's an ADR-worthy constraint.
 
 **Warning signs:**
-- A PR/phase that only touches `ResourceController.java` for "processo atribuído" notifications with no corresponding change to `ParecerController.java` for "parecer atribuído."
-- The new reassignment endpoint accepting a `responsavelId` with no tenant/role validation (compare directly against `createProcesso`'s existing check).
+- A new preferences/team-resolution query has no `tenant_id` in its `WHERE` clause, relying on `user_id`/`cliente_id` alone.
+- Any new helper method used by `AlertasDiariosJob` calls `getTenantId()` or references `SecurityContextHolder`.
+- A team-resolution join from `Processo` → `Cliente` → `ClienteAdvogado` has no explicit tenant check at the `Cliente` step.
 
-**Phase to address:**
-"Reatribuição de responsável de processo" phase should explicitly cross-reference the "alerta de parecer atribuído" phase (or be sequenced so both notification hooks are verified together in the milestone's integration-audit step).
-
----
-
-### Pitfall 11: The project's own proven repeat bug — cross-phase contract drift — applies directly to the new query params, DTO field names, and reassignment endpoint contract
-
-**What goes wrong:**
-This exact project has hit "each side looked correct in isolation, the full contract was broken" **three times** in its documented history: (1) v2.4 — backend emitted camelCase, frontend read snake_case, for newly-added fields (fixed with surgical `@JsonProperty`, `PROJECT.md` Key Decisions); (2) v2.9 milestone audit — `GET /honorarios?processo_id=X` and `GET /documentos?processo_id=X` both silently ignored the `processo_id` filter server-side while the frontend hook happily sent it, returning whole-tenant data instead of per-processo data, only caught by a milestone-level audit; (3) v2.5→v2.6 — `pesquisar()` lived in the wrong controller mapping (`ParecerController` vs. dedicated `ParecerPesquisaController`), making the documented route unreachable, undetected by unit tests or isolated review. This milestone introduces multiple new contract surfaces at once: new query params on `/notificacoes` (likely `lida`, `categoria`, `desde`, pagination), new field names in the `Notificacao` response DTO consumed by the bell + history page, and the brand-new reassignment endpoint's exact route/method/body shape. Any one of these can repeat the same failure mode — frontend sends a filter the backend accepts syntactically but ignores functionally, or reads a field name the backend never emits.
-
-**Why it happens:**
-Spring silently accepts unknown/unused `@RequestParam`s and unmatched JSON fields deserialize to `null` without error; TypeScript types are hand-written to *match an assumption* about the backend response rather than generated from it — nothing fails loudly at compile time or on first manual test if a name is off by a naming-convention or the backend never wired a param into its filtering logic. Each side passes its own isolated tests/review.
-
-**How to avoid:**
-Apply the same technique this project already uses to catch this class of bug: at the milestone-level audit (which this project already performs as a standard step, per its `.planning/milestones/vX-MILESTONE-AUDIT.md` history), explicitly grep every `@RequestParam`/query-string param the frontend hook constructs (`use-notificacoes.ts`'s `URLSearchParams`/query-string building) against the backend controller method's actual parameter list, and every field name the frontend's TypeScript type reads against what the backend DTO/`Map.of(...)`/`LinkedHashMap` response actually populates — do not accept "the frontend compiles and the backend returns 200" as sufficient verification. Given three prior instances, this warrants an explicit named check in this milestone's plan/audit rather than being left implicit.
-
-**Warning signs:**
-- A frontend hook building a query string parameter the corresponding `@GetMapping` method signature doesn't declare.
-- A frontend TypeScript type for the notification/reassignment response containing a field name not visibly constructed in the backend response map/DTO.
-- Any phase marked "done" based only on "build passes" / "manual click-through of the happy path," without an explicit request/response byte-level check.
-
-**Phase to address:**
-Cross-cutting — call out explicitly in the plan for (a) the notifications API phase, (b) the reassignment endpoint phase, and (c) the milestone-level integration audit (this project's existing practice, which caught this exact bug class twice before).
+**Phase to address:** Cross-cutting — enforce during code review on NOTF-24, NOTF-25, and NOTF-26 phases specifically (not a separate phase of its own); the audit-discovery phase should specifically grep for these three patterns as a checklist item.
 
 ---
 
 ## Technical Debt Patterns
 
-Shortcuts that seem reasonable but create long-term problems.
-
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|--------------------|-----------------|-------------------|
-| No pagination on `GET /notificacoes` (this app has zero existing `Pageable`/`Page<>` usage anywhere — confirmed via codebase search) | Matches every other list endpoint's simplicity; ships faster | Unread history grows unbounded per user; `/notificacoes` page and its query get slower as months of history accumulate | Acceptable for v1 at current law-firm scale (tens of users, hundreds of processos); revisit if history isn't ever archived/pruned |
-| In-process `synchronized(NotificacaoRepository.class)` as the *only* duplicate-insert guard (no DB unique constraint) | Fast to write, matches 3 existing precedents in this codebase (Cliente, Facto, ParecerVersao) | Does not protect against a future horizontally-scaled deployment (currently single-instance, confirmed via `docker-compose.prod.yml`); the project already learned this exact lesson for Facto/Honorario and added DB constraints afterward | Acceptable only paired with the DB unique constraint (Pitfall 9) — never acceptable alone, per the project's own established precedent |
-| Denormalized/snapshotted notification text (title/body baked in at creation, not a live join to current entity state) | Immune to the "processo reassigned, notification silently relabels itself" problem (see Pitfall below); simple to implement | Renaming/correcting the source entity later won't retroactively fix historical notification text | Always acceptable here — this is the *recommended* choice, not just a shortcut, given the reassignment-mid-lifecycle risk |
-| Query-time `OR user has ROLE_ADMIN` instead of fan-out-at-creation for ADMIN visibility | Less code, no need to enumerate admins per event | Breaks independent per-admin read state the moment a tenant has 2+ ADMIN users (Pitfall 3) | Never acceptable once more than one ADMIN per tenant is possible — seed data already creates exactly this scenario |
+|----------|-------------------|-----------------|------------------|
+| Mute check duplicated at each trigger call site instead of centralized in `criar()` | Feels "more explicit" per-category | Silent bypass the moment a 6th trigger (or a future job) is added | Never |
+| Snooze implemented by reusing `lida` (read) flag | Zero schema change | Corrupts unread-count semantics and read/unread filters already relied on by `/notificacoes` UI | Never |
+| H2 used for the native-query test (`buscarPorFiltros`) "for speed" | Faster local test runs, no Docker needed | False confidence — dialect gaps between H2's Postgres-compat mode and real Postgres are exactly where native queries break | Only for plain-JPQL/derived-query repositories with zero native SQL |
+| `@SpringBootTest` used for a narrow repository/job verification | Feels "more realistic" | Hits the same required-env-var/MinIO wall already blocking live UAT; slow, fragile | Only if a full HTTP-level RBAC/tenant round-trip is the explicit goal, and only with a dedicated stub property source |
+| Team resolution for NOTF-25 written inline at each trigger instead of one shared helper | Faster to ship the first trigger | Drift across 4-5 independently-maintained copies, exactly the failure class `RiscoPrazoService`/`criar()` were extracted to prevent | Never — this project has already paid to remove 4 divergent copies of "prazo crítico" once (Phase 85); don't recreate the same problem shape for "team" |
+| Skipping the CI-wiring decision for new tests/SpotBugs ("we'll do it later") | Ships this milestone faster | Repeats the exact SpotBugs-rot history this milestone is fixing | Only if explicitly recorded as a deliberate decision, not silence |
 
 ## Integration Gotchas
 
-Common mistakes when connecting the new pieces to the existing app.
-
 | Integration | Common Mistake | Correct Approach |
-|-------------|-----------------|--------------------|
-| New reassignment endpoint ↔ existing `createProcesso` responsavelId validation | Update path accepts any UUID without the tenant/role check `createProcesso` already enforces at creation | Mirror the exact check at `ResourceController.java:1474-1480`; do not treat create-time validation as sufficient for the new update path |
-| New reassignment endpoint ↔ `ParecerController.atribuirAdvogado` | Treated as unrelated because they live in different files; only one gets a notification hook, a status guard, or tenant/role validation | Explicitly diff the two implementations against each other before considering either "done" (Pitfall 10) |
-| Frontend `KNOWN_SCOPES` (`web/src/lib/permissions.ts`) ↔ backend `seedRbac()` permKeys (`DatabaseSeeder.java`) | New `notificacoes:*` scope added to only one side (e.g., backend seeds the permission and grants it, but frontend never adds `"notificacoes"` to `KNOWN_SCOPES`, so `hasScopedPermission` always returns false and the UI never shows what the backend would allow — or vice versa) | Add the scope string to both registries in the same commit; this project has a documented history of exactly this two-registry drift for other concerns (query filters, route mappings) — treat RBAC scope as the same risk class |
-| Daily job ↔ consolidated risco/threshold logic (this milestone's own stated goal) | Job re-implements its own "is this critical" check instead of calling the new shared function, recreating a 5th inconsistent computation instead of eliminating the other 4 | Job must be the *first and only* caller of the new consolidated function from a non-request context — verify by grepping for any risco-like inline computation left inside the job |
-| Notification bell polling ↔ mutations the user just performed (mark-as-read, reassign, etc.) | Bell's unread count only updates on the next 30-60s poll tick, so a user who just read/reassigned something sees a stale badge until the interval fires | `invalidateQueries` (or `setQueryData`) for the notifications query key from every mutation that could affect it, exactly as `useToggleEventoConcluido`/`useSetEventoConcluido` already invalidate `["eventos","upcoming"]` in `use-eventos.ts` — reuse that established pattern |
+|-------------|----------------|-------------------|
+| `NotificacaoService.criar()` ↔ its 5 callers | Assuming `criar()`'s return contract stays "always returns a persisted object" after adding mute logic | Audit every caller's handling of the new no-op/muted outcome explicitly, don't just add the check and hope nothing downstream cared about the return value |
+| `AlertasDiariosJob` ↔ `uk_notificacao_dedup` | Assuming the existence-check and the DB constraint are redundant/interchangeable | They're a check-then-act pair by design — any new state (snooze) must be consistent with *both*, not just the application-level check |
+| `notificarDocumentoNovo`/`notificarParecerAtribuido` ↔ `uk_notificacao_dedup` | Assuming "no dedup between primary and ADMIN fan-out" (a Phase 87 comment) is still safe after the Phase 88 constraint | It isn't — see Pitfall 2. Verify every "intentional non-dedup" comment written before Phase 88 against the constraint added in Phase 88 |
+| Testcontainers ↔ this repo's Dockerfile/CI | Assuming adding the dependency to `pom.xml` is sufficient | `mvn -DskipTests package` in `Dockerfile` and no test step in `deploy.yml` mean the tests never run unless CI is also changed (Pitfall 7) |
+| `agenda/page.tsx` ↔ `GET /prazos`/`GET /eventos` | Assuming both endpoints return the same shape/fields | Only Prazos already return `risco`; Eventos' general list endpoint does not (Pitfall 9) |
 
 ## Performance Traps
 
-Patterns that work at small scale but fail as usage grows.
-
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|-----------------|
-| Per-processo repository calls inside the daily job's loop (the `listHonorarios` fallback anti-pattern, `ResourceController.java:2568-2575`) | Job wall-clock time grows linearly with total processo count across all tenants; invisible with seed data, visible after months of real usage | Batch-load per tenant once (`findByTenantId`/new `findByProcessoIdIn`), group in a `Map`, exactly like the existing `listProcessos` prazo-enrichment (`ResourceController.java:896-911`) | Noticeable once total processos across all tenants reaches the low hundreds; the existing `/honorarios` no-filter endpoint already exhibits this today at current data volume, just not yet painfully |
-| Resolving "which users are ADMIN in this tenant" inside the innermost per-entity loop instead of once per tenant | Redundant repeated `findByTenantIdAndRoleName` calls, one per processo/prazo/honorário instead of one per tenant | Hoist the ADMIN lookup to once per tenant iteration, cache in a local variable/list for that tenant's processing | Low absolute cost at this scale (few tenants, few admins) but easy and free to avoid — do it right from the start |
-| `User.roles`/`User.permissions` are `FetchType.EAGER` (`User.java:54-67`) | Every `findAllById(...)` batch-load of users (e.g., resolving recipients across many processos) eagerly pulls roles+permissions collections per user | Not a true N+1 given Hibernate's batching, but worth confirming the job doesn't re-fetch the same `User` object repeatedly inside a loop instead of reusing a pre-built map (same principle as the `responsaveisMap` pattern already in `listProcessos`) | Only matters once user/tenant counts grow well beyond current seed scale |
+| Per-team-member `existsBy...` existence-check query in `AlertasDiariosJob`'s daily loop, multiplied by team size instead of single responsavel | Job duration grows roughly linearly with average team size × entity count × tenant count | Preload today's existing notification tuples per tenant/category once (mirroring the existing `safeProcessoPorId`/`safeAdmins` preload pattern) instead of one query per recipient per entity | Noticeable once team sizes and/or entity counts per tenant grow past what a handful of admins already costs today — worth profiling once NOTF-25 ships, not before |
+| Mute-preference lookup called once per notification-creation attempt with no caching, inside a hot loop (job or fan-out) | Extra DB round-trip per recipient per entity per day | Preload the acting tenant's mute preferences once per job run (or per request for event-triggered paths), same preload-once philosophy already used for `processoPorId`/`admins` in `AlertasDiariosJob` | Same threshold as above |
 
 ## Security Mistakes
 
-Domain-specific issues beyond general web security.
-
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| `Notificacao` read/mark-read endpoints scoped by tenant only (copying the pattern used by every other entity in this app) | User A can view or mark-as-read User B's notifications within the same tenant — a real, silent cross-user leak (Pitfall 2) | Every `Notificacao` query/mutation must check `destinatarioId == currentUserId` **in addition to** `tenantId == currentTenantId` |
-| Notification detail/click-through re-validates "is this still MY processo" (`responsavelId == currentUser`) instead of tenant-only, after a reassignment has happened | The user who *used to be* responsável gets a 403 opening their own historical notification, because the underlying processo's `responsavelId` has since changed — inconsistent with how this codebase authorizes viewing every other already-created record (tenant-only, never retroactive-ownership) | Click-through/detail fetch for a referenced entity from a notification should use the same tenant-only check every other detail endpoint in this codebase already uses (e.g. `!processo.getTenantId().equals(getTenantId())`), not an ownership/assignment check |
-| New `notificacoes:*` permission scope granted asymmetrically (e.g., backend allows TECNICO but frontend's `KNOWN_SCOPES`/gating never surfaces it, or vice versa) | Either a silently-broken feature for a role that should have access, or a role sees UI it can't actually use (confusing, not exactly a leak, but a contract violation of this project's stated "both layers must agree" rule) | Add the scope to `DatabaseSeeder.seedRbac()` (permKeys list + explicit per-role grant arrays) and `web/src/lib/permissions.ts` (`KNOWN_SCOPES`) in the same change, and verify against the actual role that should receive it (likely all four seeded roles, since notifications are inherently personal — not gated the way `financeiro`/`rbac:manage` are) |
-| Job running with no `Authentication` accidentally "fixed" by hardcoding a synthetic system/admin `UserPrincipal` and pushing it into `SecurityContextHolder` for the job's thread | Introduces a standing "god-mode" principal pattern that could be misused or left behind for other background code later, and duplicates/diverges from the real JWT-derived principal shape | Don't authenticate the background thread at all — the job should call tenant-scoped repository methods directly with an explicit `tenantId` parameter (see Pitfall 1), never manufacture a fake `Authentication` to satisfy `@PreAuthorize`-guarded service methods; keep `@PreAuthorize`-guarded methods for HTTP-triggered paths only, and give the job its own unguarded internal service methods |
+| Preferences/team-resolution query keyed by `user_id` alone, no `tenant_id` filter | Cross-tenant preference/notification leakage if a user id is ever reused/guessed, or if the join chain has any gap | Always filter by `tenant_id` explicitly, even where a `user_id`-only filter would "happen to" be correct today (STATE.md already flags this exact risk class for `Notificacao`) |
+| `AlertasDiariosJob` mute/snooze helper calling `getTenantId()`/`SecurityContextHolder` | `NullPointerException` at best (no security context on a scheduler thread), or silent wrong-tenant behavior at worst if a fallback/default sneaks in | Thread `tenantId` explicitly through every call, matching the job's existing, deliberate pattern |
+| Team resolution trusting `Processo.clienteId` without re-verifying the `Cliente`'s tenant matches the request's tenant | Cross-tenant data exposure via a manipulated/mismatched FK, same class of gap already found and fixed for `POST /documentos/upload`'s `clienteId`/`processoId` (Phase 79) | Re-verify tenant ownership at the `Cliente` join step, not just at the `Processo` step |
+| `DataIntegrityViolationException` from `uk_notificacao_dedup` propagating uncaught out of an already-committed business transaction (Pitfall 2) | 500 + rollback of an unrelated, already-succeeded business action (document upload, parecer attribution) — a reliability bug more than a confidentiality one, but real user-facing breakage | Pre-dedupe recipient sets before looping; add `DataIntegrityViolationException` backstop matching `AlertasDiariosJob`'s existing pattern |
 
 ## UX Pitfalls
 
-Common user experience mistakes for this specific feature.
-
 | Pitfall | User Impact | Better Approach |
-|---------|--------------|-------------------|
-| Global `refetchOnWindowFocus: false` (`web/src/app/providers.tsx:14`, set app-wide, presumably deliberately for other reasons) silently applies to the new notifications query too | User backgrounds the tab, returns after a few minutes; the bell shows a stale unread count for up to a full poll interval (30-60s) because nothing triggers a catch-up fetch on refocus — TanStack Query v5's `refetchInterval` also pauses while the tab is hidden by default, so no background accumulation happens either, it's specifically the *return-to-tab* window that's stale | Explicitly override `refetchOnWindowFocus: true` (or `"always"`) as a **per-query** option on the new `useNotificacoes`/`useUnreadCount` hook, rather than changing the global default (which was presumably disabled for a reason relevant to other pages) |
-| No existing polling precedent anywhere in this codebase (confirmed: zero `refetchInterval` usage today) | Whoever implements the bell may reach for a hand-rolled `useEffect(() => { const t = setInterval(...); return () => clearInterval(t) }, [])` instead of the built-in `refetchInterval` option, risking leaked/duplicate timers on remount (React Strict Mode double-invoke in dev, or route remounts) and reimplementing visibility handling TanStack Query already provides for free | Use TanStack Query's native `refetchInterval` (with an explicit `refetchOnWindowFocus` override as above) — do not hand-roll `setInterval` |
-| `apiFetch` (`web/src/lib/api.ts:43-45`) triggers a `toast.error(...)` for every non-401/403 error response | A transient backend hiccup, brief container restart during a deploy, or any 5xx during a poll cycle will toast-spam the user every 30-60s until it recovers — an intrusive, repeated error banner for a background feature the user didn't explicitly action | Suppress or rate-limit toast errors specifically for the background polling query (e.g., pass a flag/option so polling failures log quietly or show a subtle inline indicator instead of the shared toast pipeline used for user-initiated actions) |
-| Reassigning a processo's responsável leaves the previous responsável's already-created notifications about that processo untouched (no retroactive revoke) | Mildly confusing if the old responsável keeps seeing "prazo crítico" alerts for a processo they're no longer responsible for, generated *before* the reassignment | Acceptable given this milestone's explicit no-extra-complexity philosophy (Out of Scope: no team broadcast, no preferences) — but the *daily job's next run* should stop generating *new* alerts to the old responsável once it re-reads the current `responsavelId`, since the job always reads fresh state per Pitfall highlighted for race conditions; only pre-existing notifications remain as historical record, which is fine as a conscious choice, not an oversight |
+|---------|-------------|-------------------|
+| Mute granularity mismatched to what users actually think in (e.g., forcing 9 individual per-`categoria` toggles when users think in terms of "prazos" vs. "documentos" vs. "atribuições") | Settings screen with 9 confusing raw-enum toggles | Reuse the existing `CATEGORIA_LABEL_MAP`/`NOTIFICACAO_CATEGORIA_OPTIONS` (`web/src/lib/notificacao-categoria.ts`) as the UI's source of truth for labels/grouping — it's already the exhaustive, translated list this feature needs, don't reinvent it |
+| Snooze with no visible "snoozed until X" indicator anywhere in the bell/`/notificacoes` list | User forgets they snoozed something and is confused when it reappears (or doesn't) | Surface snooze state explicitly in the list (e.g., a "Silenciado até DD/MM" badge), consistent with how `lida`/categoria are already surfaced |
+| Agenda's "urgentes" stat silently changing behavior once consolidated with `RiscoPrazoService` (fewer/more items counted than before) | Users who relied on the old, wrong count for daily triage see a sudden shift with no explanation | Call out the behavior change explicitly in this phase's UAT notes — this is a deliberate correctness fix, but it will look like a regression to anyone comparing before/after counts without context |
 
 ## "Looks Done But Isn't" Checklist
 
-Verify each of these explicitly before considering the relevant phase complete — none of them fail an isolated demo, only a closer look.
-
-- [ ] **Scheduled job:** `@EnableScheduling` is actually present on a config/application class. The `@Scheduled` annotation is a silent no-op without it — no error, no log, the job simply never runs.
-- [ ] **Scheduled job:** uses `cron`, not `fixedRate`/`fixedDelay` — verify it does *not* re-fire immediately after a container restart/redeploy (Pitfall 5).
-- [ ] **Scheduled job:** does not call `getTenantId()` or anything that transitively touches `SecurityContextHolder` (Pitfall 1) — verify by actually invoking the job path in a test/manual trigger with no `Authentication` present, not just via an authenticated HTTP wrapper endpoint.
-- [ ] **Scheduled job:** wrapped in a top-level try/catch that isolates one bad tenant/entity from aborting the whole run (Pitfall 6).
-- [ ] **Notificacao entity:** the idempotency/dedup check is backed by an actual DB unique constraint with a corresponding file in `backend/migrations/`, not just in-process `synchronized` logic (Pitfall 9).
-- [ ] **Notificacao queries:** every read/write filters by `destinatario_id` (or the ADMIN fan-out equivalent) *in addition to* `tenant_id` — grep for any `NotificacaoRepository` method that only takes a `tenantId` parameter (Pitfall 2).
-- [ ] **Threshold tracking:** a persisted "last notified risco level" exists per (entity, recipient) and is actually read/compared before inserting — not just "is currently critical" (Pitfall 4).
-- [ ] **RBAC:** new `notificacoes:*` scope(s) exist in `DatabaseSeeder.seedRbac()` (permKeys + explicit per-role grant) **and** `web/src/lib/permissions.ts` `KNOWN_SCOPES`, granted to the roles actually intended to use notifications (likely all seeded roles, not just ADMIN).
-- [ ] **Reassignment endpoint:** validates new `responsavelId` belongs to the tenant (mirrors `createProcesso`'s existing check, `ResourceController.java:1474-1480`) — not just "accepts any UUID."
-- [ ] **Reassignment endpoint + parecer atribuição:** both `ResourceController`'s new endpoint and `ParecerController.atribuirAdvogado` emit their respective notification — verify explicitly, since they live in different files and are easy to address only one of (Pitfall 10).
-- [ ] **Frontend polling hook:** explicit `refetchOnWindowFocus` override present (not silently inheriting the app-wide `false`), and uses `refetchInterval` rather than a hand-rolled `setInterval`.
-- [ ] **Cross-phase contract:** every query param the frontend sends to `/notificacoes` (and the reassignment endpoint's request body) is grepped against what the backend controller method actually declares/reads — the project's own documented repeat bug (Pitfall 11).
-- [ ] **Mutation → polling interaction:** mark-as-read and reassignment mutations invalidate the relevant notifications query key, matching the existing `useToggleEventoConcluido`/`useSetEventoConcluido` invalidation pattern in `use-eventos.ts`.
+- [ ] **NOTF-24 mute:** Verify the mute check is inside `criar()` itself — grep for the string `"criar("` and confirm every call site (including `AlertasDiariosJob.notificar()`) is covered by inspection, not just the 4 public trigger methods.
+- [ ] **NOTF-25 team:** Verify the Processo-linked `notificarDocumentoNovo` call site was actually changed (currently `List.of(resp)`) — don't assume "team support was added" means every existing single-recipient call site was upgraded.
+- [ ] **NOTF-25 + dedup constraint:** Verify a test exists for "team member who is also ADMIN" specifically — this is the collision case that trips `uk_notificacao_dedup`.
+- [ ] **NOTF-26 snooze:** Verify a test simulates at least 3 consecutive daily job runs (create → snooze → don't-recreate) — a single-run test will not catch the reappearing-snooze bug.
+- [ ] **Testing infra:** Verify the native-query test (`buscarPorFiltros`) runs against a real Postgres Testcontainer, not H2 — check the actual `@Testcontainers`/`@ServiceConnection` config, not just that "a test exists."
+- [ ] **Testing infra + CI:** Verify `deploy.yml` (or a new workflow) actually invokes the new tests — a green `mvn test` on a developer's machine proves nothing about CI unless CI was changed too.
+- [ ] **SpotBugs fix:** Verify the uncommitted working-tree changes (`pom.xml`, `spotbugs-exclude.xml`, `UserPrincipal`/`ConflictCheckResponse`/`WorkflowResponse`/`ResourceController` fixes) were actually reviewed and committed, not silently lost or redone from scratch.
+- [ ] **Agenda consolidation:** Verify `GET /eventos` (the endpoint agenda's calendar actually calls) was checked for whether it needed a `risco` field added — don't assume "Prazos now show correct risk" means "Eventos do too."
+- [ ] **Multi-tenant:** Verify every new table/query introduced by NOTF-24/25/26 has an explicit `tenant_id` filter, even where a narrower key (`user_id`, `cliente_id`) would "happen to" produce the right answer today.
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
-|---------|-----------------|-------------------|
-| Duplicate notifications already inserted (missing threshold-tracking or wrong `@Scheduled` trigger type) | LOW-MEDIUM | Write a one-time cleanup migration keeping the earliest row per `(tenant_id, destinatario_id, entidade_tipo, entidade_id, risco)`, then retroactively backfill the "last notified state" tracking table from the surviving rows' max risco per entity+recipient, then add the missing DB unique constraint and fix the trigger type |
-| Cross-user notification leak discovered (missing recipient filter, Pitfall 2) | LOW | Add the missing `destinatario_id` filter to the offending repository method/endpoint immediately — same low-cost pattern this project already used twice to fix the analogous tenant-filter gaps in `/honorarios` and `/documentos` "in the same session" per the v2.9 milestone audit |
-| RBAC scope drift discovered late (backend/frontend registries out of sync) | LOW | Grep-audit both registries side by side (`seedRbac()` permKeys + role grants vs. `KNOWN_SCOPES`), add the missing entries — same low-cost fix pattern already used for the `pareceres` route-mapping bug, "corrected in the same session" |
-| Scheduled job silently stopped running after an uncaught exception (Pitfall 6) | LOW-MEDIUM | Add the top-level try/catch retroactively, redeploy, manually trigger one catch-up run (e.g., a temporary admin-only HTTP endpoint that invokes the same internal job method) to close the gap in missed notifications, or accept the gap and let the next scheduled run resume normally |
-| `Notificacao` schema needs to change from a typed FK to `String entidadeId` after alert-generation phases already depend on the wrong shape (Pitfall 8) | MEDIUM | Requires a data migration (cast/backfill existing rows) and updating every alert-generation call site — cheapest if caught during the infrastructure phase's own review, expensive if caught after multiple alert types are already wired against the wrong column type |
+|---------|---------------|-----------------|
+| Mute check bypassed by a missed call site | LOW | Since `criar()` is the single choke point, moving the check there retroactively fixes every past and future call site at once — no data migration needed, just relocate the guard |
+| Team fan-out trips `uk_notificacao_dedup` in production | MEDIUM | Deploy the pre-dedup fix (merge recipient sets before looping) + the `DataIntegrityViolationException` backstop; no data cleanup needed since the failure mode is "500, transaction rolled back," not "bad data persisted" |
+| Snooze reappears immediately (Pitfall 4 realized) | MEDIUM | Add the snoozed-until column/table and extend the job's existence-check; existing rows are unaffected, this is additive |
+| Integration tests added but never wired into CI, discovered late | LOW | Add the CI step; no code changes needed, purely pipeline configuration |
+| SpotBugs uncommitted work lost via a careless git operation | HIGH (if truly lost — re-deriving the ENTITY_MASS_ASSIGNMENT/EI_EXPOSE_REP fixes and their review rationale takes real re-analysis time) | Check `git reflog`/any stash immediately if this happens; otherwise, redo the `mvn spotbugs:check` run and re-triage from scratch, using this document's Pitfall 8 as a checklist of what was already found once |
+| Agenda consolidation ships without the Eventos `risco` field, leaving a partial fix | LOW | Frontend-only or backend-only follow-up depending on which half was skipped; no data migration involved either way |
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls. Phase names below mirror the feature language already used in `PROJECT.md`'s target-features list, for direct mapping by the roadmapper.
-
 | Pitfall | Prevention Phase | Verification |
-|---------|--------------------|-----------------|
-| Per-recipient scoping omitted (#2) | Infraestrutura de notificações persistida (entidade + API) | Two independent test users in the same tenant see different notification lists; mark-as-read by one never affects the other |
-| ADMIN fan-out vs shared read state (#3) | Infraestrutura de notificações persistida (entidade + API) | Seed a tenant with 2 ADMIN users; verify each has an independent read state for an ADMIN-targeted alert |
-| Mixed PK types / transitive tenant isolation (#8) | Infraestrutura de notificações persistida (entidade design) | `Notificacao` rows exist and resolve correctly for at least one UUID-keyed entity (Processo) and one Integer-keyed entity (Evento/Honorario) |
-| Missing DB-level idempotency constraint + missing migration script (#9) | Infraestrutura de notificações persistida (entidade + migration) | A file exists in `backend/migrations/` for the new constraint; prod deployment runbook references it |
-| `getTenantId()`/SecurityContext reuse in background thread (#1) | Alerta de prazos de processos e calendário crítico (job diário) | Job's internal methods take `tenantId` as an explicit parameter end-to-end; manually invoke the job's core logic outside an authenticated request and confirm no NPE |
-| Notify-every-run instead of on-crossing (#4) | Alerta de prazos de processos e calendário crítico (job diário) | Run the job twice on consecutive simulated days against unchanged data; second run produces zero new notifications for unchanged items |
-| Wrong `@Scheduled` trigger type (#5) | Alerta de prazos de processos e calendário crítico (job diário) | Restart the backend container mid-day in a test/staging environment; confirm the job does not fire again until its actual scheduled time |
-| Uncaught exception kills all future runs (#6) | Alerta de prazos de processos e calendário crítico (job diário) | Inject one deliberately malformed row (e.g., orphaned processo_id) in a test tenant; confirm other tenants still get notifications that same run, and the job still runs the next day |
-| N+1 query pattern in the scan (#7) | Alerta de prazos de processos e calendário crítico (job diário) / Alerta de prazos de honorários | Query count for a single job run scales with tenant count, not with total processo/honorário count across all tenants |
-| Reassignment endpoint ↔ parecer atribuição parity (#10) | Alerta de processo atribuído + fluxo de reatribuição de responsável | Both `ResourceController`'s new endpoint and `ParecerController.atribuirAdvogado` verified to emit their respective notification in the same review pass |
-| Cross-phase contract drift (#11) | Cross-cutting — every phase touching `/notificacoes` or the reassignment endpoint, closed out at the milestone-level integration audit | Explicit grep-diff of frontend-sent params/fields vs. backend-declared params/fields, performed as a named audit step (not implied by "build passes") |
-| Stale unread badge after backgrounding (UX) | Sino + página `/notificacoes` (frontend) | Manually background the tab past one poll interval, refocus, confirm the badge updates promptly rather than waiting a further full interval |
-| Toast spam on polling errors (UX) | Sino + página `/notificacoes` (frontend) | Simulate a backend 500/restart while polling is active; confirm the user is not shown a repeated toast every poll cycle |
+|---------|-------------------|----------------|
+| 1 — mute check placement | NOTF-24 phase | Grep confirms mute check lives only in `criar()`; test exercises the daily job path specifically, not just the 4 trigger methods |
+| 2 — team fan-out vs. dedup constraint | Audit-discovery phase (fix, pre-existing) + NOTF-25 phase (don't reintroduce) | Test: team member who is also ADMIN, same category/entity — no `DataIntegrityViolationException`, exactly one row per person |
+| 3 — team concept doesn't exist / inconsistent call site | NOTF-25 phase | Processo-linked `notificarDocumentoNovo` call site pulls full team (not just `responsavelId`); shared resolver used by all 4-5 trigger points |
+| 4 — snooze vs. job idempotency | NOTF-26 phase | 3-consecutive-run simulation test (create/snooze/no-recreate/expire-decision) |
+| 5 — `@SpringBootTest` env-var wall | Testing-infrastructure phase | New tests use `@DataJpaTest`/slice scope; no test requires a real `.env`/MinIO |
+| 6 — H2 false confidence on native query | Testing-infrastructure phase | `buscarPorFiltros` test specifically runs against a Postgres Testcontainer |
+| 7 — CI never runs tests/SpotBugs | Testing-infrastructure phase + SpotBugs-fix phase (shared) | `deploy.yml` diff shows a new test/verify step, or an explicit recorded decision not to add one |
+| 8 — uncommitted SpotBugs work | SpotBugs-fix phase | `git log` shows the existing working-tree diff committed (not redone) as the phase's first commit |
+| 9 — agenda consolidation split (Prazos vs. Eventos) | Agenda/RiscoPrazoService-consolidation phase | Both `GET /prazos`-derived and `GET /eventos`-derived risk displays verified separately, with an explicit recorded decision for the Eventos gap |
+| 10 — multi-tenant leakage in 3 new surfaces | Cross-cutting, enforced in NOTF-24/25/26 phases + audit-discovery phase checklist | Two-tenant test for each new query; grep for `getTenantId()`/`SecurityContextHolder` inside `AlertasDiariosJob`-reachable code returns zero matches |
 
 ## Sources
 
-**Codebase (HIGH confidence — read directly, 2026-07-08):**
-- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (getTenantId at 115-119; computeRisco at 1397-1404; processo enrichment/batch-load pattern at 896-958; responsavelId create-time validation at 1474-1480; updateProcesso with no responsavelId handling at 990-1012; N+1 anti-pattern in listHonorarios at 2558-2577; dashboard prazos críticos at 2855-2867; eventos/upcoming at 2246-2270; cliente merge reassignment pattern at 759-827)
-- `backend/src/main/java/com/lexcv/controllers/ParecerController.java` (atribuirAdvogado reassignment precedent, 235-274)
-- `backend/src/main/java/com/lexcv/models/Processo.java`, `Evento.java`, `Prazo.java`, `Honorario.java`, `Documento.java`, `AuditLog.java`, `ParecerSolicitacao.java`, `User.java`, `Tenant.java`
-- `backend/src/main/java/com/lexcv/repositories/UserRepository.java` (`findByTenantIdAndRoleName`), `HonorarioRepository.java`, `TenantRepository.java`
-- `backend/src/main/java/com/lexcv/config/UserPrincipal.java` (ADMIN synthetic permissions at login time)
-- `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (`seedRbac()`, role/permission grants)
-- `backend/migrations/74-cleanup-nif-documento-tipo.sql`, `81-add-facto-ordem-unique-constraint.sql`, `82-add-honorario-processo-unique-constraint.sql` (manual migration convention)
-- `web/src/app/providers.tsx` (global `refetchOnWindowFocus: false`), `web/src/lib/api.ts` (`apiFetch` toast-on-error behavior), `web/src/lib/permissions.ts` (`KNOWN_SCOPES`), `web/src/hooks/use-eventos.ts` (existing invalidation pattern), `web/src/hooks/use-processos.ts` (mutation/invalidation pattern), `web/src/components/shared/notification-bell.tsx` (current computed-only bell)
-- `docker-compose.prod.yml` (single-instance deployment, `restart: unless-stopped`)
-- `.planning/PROJECT.md` Key Decisions log (documented history of the camelCase/snake_case bug, the twice-repeated silently-ignored-filter bug, the `pesquisar()` route-mapping bug, the Facto/Honorario constraint-race lesson, the NOTF-05/06/07 deferral)
-
-**External (verified 2026-07-08):**
-- [Task Execution and Scheduling — Spring Boot official docs](https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html) — default scheduler thread pool size is 1
-- [SimpleAsyncTaskScheduler: task with fixed delay stops working after unhandled exception · Issue #31749 · spring-projects/spring-framework](https://github.com/spring-projects/spring-framework/issues/31749) — official issue tracker confirmation of the silent-stop-after-exception behavior
-- [The @Scheduled Annotation in Spring — Baeldung](https://www.baeldung.com/spring-scheduled-tasks)
-- [Why Your @Scheduled Tasks Might Be Failing Silently in Spring Boot](https://medium.com/@himanshu675/why-your-scheduled-tasks-might-be-failing-silently-in-spring-boot-and-how-to-stop-it-%EF%B8%8F-86335cde37bc)
-- [Window Focus Refetching — TanStack Query React Docs (v5)](https://tanstack.com/query/v5/docs/react/guides/window-focus-refetching)
-- [Polling — TanStack Query React Docs](https://tanstack.com/query/latest/docs/framework/react/guides/polling) — `refetchInterval` pauses by default when the tab loses focus; `refetchIntervalInBackground` overrides this
+- Direct code reads (this repository, 2026-07-12): `backend/src/main/java/com/lexcv/services/NotificacaoService.java`, `backend/src/main/java/com/lexcv/models/Notificacao.java`, `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java`, `backend/src/main/java/com/lexcv/services/RiscoPrazoService.java`, `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java`, `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (notification trigger call sites, `ClienteAdvogado`/`ClienteAdministrativo` endpoints, `Processo.clienteId`), `backend/migrations/88-add-notificacao-dedup-unique-constraint.sql`, `backend/pom.xml` (+ uncommitted diff), `backend/spotbugs-exclude.xml` (untracked), `backend/Dockerfile`, `.github/workflows/deploy.yml`, `web/src/app/(dashboard)/agenda/page.tsx`, `web/src/lib/prazos.ts`, `web/src/lib/notificacao-categoria.ts`, `web/src/types/processos.ts`, `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java`, `backend/src/test/java/com/lexcv/jobs/AlertasDiariosJobTest.java`.
+- Project history/precedent: `.planning/PROJECT.md` (Key Decisions table — cross-phase integration bugs already found and fixed in this exact codebase: `pesquisar()` routing bug, `/honorarios`/`/documentos` filter bugs, `POST /documentos/upload` ownership gap, Phase 87 CR-01/CR-02 per-recipient isolation fixes, Phase 88 WR-01/02/03/04 job failure-isolation and idempotency design).
+- `.planning/STATE.md` (Pending Todos, Deferred Items — explicit prior flags for `Notificacao` as "first per-recipient-private entity," `AlertasDiariosJob` as "first background-thread code path," the H2/Testcontainers gap, and the SpotBugs/JDK-23 gap).
+- Git history/working-tree inspection (`git log`/`git diff`/`git status` on the files above) used to establish phase ordering (Phase 86 vs. 87 vs. 88) and to discover the uncommitted SpotBugs fix already present in the working tree.
 
 ---
-*Pitfalls research for: LexCV v2.10 Notificações e Alertas*
-*Researched: 2026-07-08*
+*Pitfalls research for: LexCV milestone v2.11 (Auditoria Técnica e Notificações Avançadas)*
+*Researched: 2026-07-12*
