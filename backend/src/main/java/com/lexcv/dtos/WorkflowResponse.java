@@ -10,6 +10,10 @@ public record WorkflowResponse(
         String proximoPasso,       // derived from state map; null -> "—" in UI
         List<TransicaoInfo> transicoesDisponiveis
 ) {
+    public WorkflowResponse {
+        transicoesDisponiveis = transicoesDisponiveis == null ? List.of() : List.copyOf(transicoesDisponiveis);
+    }
+
     public record TransicaoInfo(
             String acao,                    // "ativar" | "suspender" | "encerrar" | "reabrir"
             String label,                   // "Ativar Processo" | "Suspender" | "Encerrar" | "Reabrir"
