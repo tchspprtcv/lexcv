@@ -234,6 +234,10 @@ public class ResourceController {
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
 
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): id is client-suppliable via the bound
+        // entity; without clearing it, save() would route through merge() instead of persist()
+        // for an attacker-guessed id, silently overwriting an existing (possibly cross-tenant) row.
+        cliente.setId(null);
         cliente.setTenantId(getTenantId());
         if (cliente.getAtivo() == null) {
             cliente.setAtivo(true);
@@ -971,6 +975,8 @@ public class ResourceController {
     @PostMapping("/processos")
     public ResponseEntity<?> createProcesso(@RequestBody Processo processo) {
         UUID tenantId = getTenantId();
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        processo.setId(null);
         processo.setTenantId(tenantId);
         if (processo.getResponsavelId() != null) {
             User responsavel = userRepository.findById(processo.getResponsavelId()).orElse(null);
@@ -1124,6 +1130,8 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('processos:create')")
     @PostMapping("/processos/intake")
     public ResponseEntity<?> createProcessoIntake(@RequestBody Processo processo) {
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        processo.setId(null);
         processo.setTenantId(getTenantId());
         if (processo.getOrigem() == null) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
@@ -1316,6 +1324,7 @@ public class ResourceController {
                 case "dataInicio" -> { if (processo.getDataInicio() == null) camposEmFalta.add(campo); }
                 case "descricao" -> { if (processo.getDescricao() == null || processo.getDescricao().isBlank()) camposEmFalta.add(campo); }
                 case "origem" -> { if (processo.getOrigem() == null) camposEmFalta.add(campo); }
+                default -> log.warn("FORMALIZAR: campo obrigatório desconhecido '{}' em CAMPOS_MINIMOS_POR_TIPO, ignorado na validação", campo);
             }
         }
         if (!camposEmFalta.isEmpty()) {
@@ -1653,6 +1662,8 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        parte.setId(null);
         parte.setProcessoId(id);
         return ResponseEntity.status(HttpStatus.CREATED).body(parteRepository.save(parte));
     }
@@ -1763,6 +1774,8 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        mov.setId(null);
         mov.setProcessoId(id);
         if (mov.getData() == null) mov.setData(LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(movimentacaoRepository.save(mov));
@@ -2060,6 +2073,8 @@ public class ResourceController {
         if (facto.getDescricao() == null || facto.getDescricao().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "descricao é obrigatória"));
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        facto.setId(null);
         facto.setProcessoId(id);
         try {
             synchronized (FactoRepository.class) {
@@ -2397,6 +2412,8 @@ public class ResourceController {
             }
             evento.setPrioridade(prioridadeUpper);
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        evento.setId(null);
         evento.setTenantId(getTenantId());
         return ResponseEntity.status(HttpStatus.CREATED).body(eventoRepository.save(evento));
     }
@@ -2744,6 +2761,8 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        hon.setId(null);
         return ResponseEntity.status(HttpStatus.CREATED).body(honorarioRepository.save(hon));
     }
 
@@ -2772,6 +2791,8 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo associado não encontrado"));
         }
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
+        pag.setId(null);
         Pagamento saved = pagamentoRepository.save(pag);
 
         // Lógica de Negócio: Atualizar Saldo da Conta Corrente do Cliente
@@ -2785,7 +2806,9 @@ public class ResourceController {
                     // A payment increases account balance (positive inflow)
                     cc.setSaldo(cc.getSaldo().add(pag.getValorPago()));
                     contaCorrenteRepository.save(cc);
-        } catch (Exception ignored) {}
+        } catch (Exception ex) {
+            log.warn("PAGAMENTO_CREATE: falha ao atualizar saldo da conta corrente, pagamento={}", saved.getId(), ex);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
@@ -2872,7 +2895,9 @@ public class ResourceController {
                 cc.setSaldo(cc.getSaldo().subtract(pag.getValorPago()));
                 contaCorrenteRepository.save(cc);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ex) {
+            log.warn("PAGAMENTO_DELETE: falha ao atualizar saldo da conta corrente, pagamento={}", id, ex);
+        }
         pagamentoRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

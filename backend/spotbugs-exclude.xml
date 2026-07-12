@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs/FindSecBugs suppressions for findings reviewed during the first-ever successful
+  mvn spotbugs:check run (2026-07, after upgrading spotbugs-maven-plugin to 4.10.2.0 for Java 23
+  support). Each entry below was individually read and verified against the actual data flow
+  before being suppressed here. Do not add new entries without the same level of review.
+-->
+<FindBugsFilter>
+    <!--
+      ENTITY_MASS_ASSIGNMENT: FindSecBugs flags any @RequestBody/@ModelAttribute parameter typed
+      as a JPA @Entity purely by its static type, regardless of what happens to that object
+      afterward. Two groups are suppressed here:
+
+      Group 1, already safe, no code change needed. Each method either (a) fetches the target by
+      a tenant-verified path id and copies only an explicit allowlist of fields onto the FETCHED
+      entity, so the bound payload itself is read from but never saved, or (b) builds a brand-new
+      entity and copies an explicit field allowlist from the bound payload, so the payload itself
+      is discarded and never persisted (id/tenant/status stay server-controlled):
+        ResourceController.updateCliente, createClienteContacto, updateClienteContacto,
+        createClienteNota, updateClienteNota, updateProcesso, updateFacto, updateEvento
+        ParecerController.createSolicitacao, updateSolicitacao
+
+      Group 2, genuine gaps found during this review and fixed in source, suppressed here because
+      the detector matches on parameter type alone and still fires after the fix. Each of these
+      create endpoints used to persist the bound entity directly with its id left as supplied by
+      the client; a crafted id would route save() through merge() instead of persist(), silently
+      overwriting an existing (possibly cross-tenant) row. Each now calls setId(null) before its
+      first save() - see the inline comment at each call site:
+        ResourceController.createCliente, createProcesso, createProcessoIntake, createParte,
+        createMovimentacao, createFacto, createEvento, createHonorario, createPagamento
+    -->
+    <Match>
+        <Class name="com.lexcv.controllers.ResourceController"/>
+        <Or>
+            <Method name="updateCliente"/>
+            <Method name="createClienteContacto"/>
+            <Method name="updateClienteContacto"/>
+            <Method name="createClienteNota"/>
+            <Method name="updateClienteNota"/>
+            <Method name="updateProcesso"/>
+            <Method name="updateFacto"/>
+            <Method name="updateEvento"/>
+            <Method name="createCliente"/>
+            <Method name="createProcesso"/>
+            <Method name="createProcessoIntake"/>
+            <Method name="createParte"/>
+            <Method name="createMovimentacao"/>
+            <Method name="createFacto"/>
+            <Method name="createEvento"/>
+            <Method name="createHonorario"/>
+            <Method name="createPagamento"/>
+        </Or>
+        <Bug pattern="ENTITY_MASS_ASSIGNMENT"/>
+    </Match>
+    <Match>
+        <Class name="com.lexcv.controllers.ParecerController"/>
+        <Or>
+            <Method name="createSolicitacao"/>
+            <Method name="updateSolicitacao"/>
+        </Or>
+        <Bug pattern="ENTITY_MASS_ASSIGNMENT"/>
+    </Match>
+
+    <!--
+      NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE on ParecerVersao.getId(): SpotBugs can't see that
+      Hibernate assigns the id synchronously inside save()/persist() for
+      @GeneratedValue(strategy = GenerationType.UUID) entities. Both call sites dereference it
+      safely: aprovarVersao loads an already-persisted ParecerVersao via findById (its id was
+      assigned when it was first created), and createVersao dereferences it on the object
+      returned by save() itself, after persist() has already run - see ParecerVersao's
+      isNew()/Persistable override for the full mechanics this relies on.
+    -->
+    <Match>
+        <Class name="com.lexcv.controllers.ParecerController"/>
+        <Or>
+            <Method name="aprovarVersao"/>
+            <Method name="createVersao"/>
+        </Or>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+</FindBugsFilter>
