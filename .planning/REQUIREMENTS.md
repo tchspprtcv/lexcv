@@ -53,31 +53,31 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAST-01 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| AGD-34 | — | Pending |
-| AGD-35 | — | Pending |
-| NOTF-24 | — | Pending |
-| NOTF-25 | — | Pending |
-| NOTF-26 | — | Pending |
-| NOTF-27 | — | Pending |
-| AUD-01 | — | Pending |
-| AUD-02 | — | Pending |
-| AUD-03 | — | Pending |
-| AUD-04 | — | Pending |
-| AUD-05 | — | Pending |
+| SAST-01 | Phase 90 | Pending |
+| TEST-01 | Phase 91 | Pending |
+| TEST-02 | Phase 91 | Pending |
+| TEST-03 | Phase 91 | Pending |
+| AGD-34 | Phase 92 | Pending |
+| AGD-35 | Phase 92 | Pending |
+| NOTF-24 | Phase 93 | Pending |
+| NOTF-27 | Phase 94 | Pending |
+| NOTF-25 | Phase 95 | Pending |
+| NOTF-26 | Phase 96 | Pending |
+| AUD-01 | Phase 97 | Pending |
+| AUD-02 | Phase 97 | Pending |
+| AUD-03 | Phase 97 | Pending |
+| AUD-04 | Phase 97 | Pending |
+| AUD-05 | Phase 97 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 15 ⚠️ (expected — filled by `/gsd-new-milestone` step 10, roadmapper)
+- Mapped to phases: 15/15 ✓
+- Unmapped: 0
+
+**Phase order note:** Phases 90 (SAST), 91 (Testcontainers) and 92 (Agenda) have no file overlap with each other or with the notification track and are mutually parallelizable. Phases 93→94→95→96 (NOTF-24 → NOTF-27 → NOTF-25 → NOTF-26) are a hard sequential chain — all collide on `NotificacaoService.java` and its test file. Phase 97 (cross-cutting audit) runs last, after all other phases, per this project's established retrospective pattern.
 
 ---
 *Requirements defined: 2026-07-12*
-*Last updated: 2026-07-12 after initial definition (milestone v2.11 start)*
+*Last updated: 2026-07-12 after roadmap creation (milestone v2.11) — 8 phases (90–97), 100% coverage*

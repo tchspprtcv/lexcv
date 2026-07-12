@@ -13,6 +13,7 @@
 - ✅ **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (complete 2026-07-06)
 - ✅ **v2.9 Melhoria Módulo Processos** — Phases 80–84 (complete 2026-07-08)
 - ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
+- 🚧 **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (in progress)
 
 ## Phases
 
@@ -87,7 +88,7 @@ See archive: [milestones/v2.3-ROADMAP.md](milestones/v2.3-ROADMAP.md)
 
 Auditoria de integração pós-execução encontrou um mismatch snake_case/camelCase (9/19 requisitos afectados) e uma fuga de password hash — ambos corrigidos antes do fecho. Ver archive para detalhes completos.
 
-See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md) · [milestones/v2.4-MILESTONE-AUDIT.md](milestones/v2.4-MILESTONE-AUDIT.md)
+See archive: [milestones/v2.4-ROADMAP.md](milestones/v2.4-ROADMAP.md)
 
 </details>
 
@@ -247,6 +248,111 @@ See archive: [milestones/v2.10-ROADMAP.md](milestones/v2.10-ROADMAP.md) · [mile
 
 </details>
 
+### 🚧 v2.11 Auditoria Técnica e Notificações Avançadas (In Progress)
+
+**Milestone Goal:** Fechar a dívida técnica acumulada do projeto (infraestrutura de testes, inconsistências de "prazo crítico" na Agenda, UAT ao vivo pendente, SAST) e expandir o sistema de notificações com preferências por utilizador, alcance de equipa e snooze.
+
+A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição de ficheiros entre si (SAST/Testcontainers, Agenda/RiscoPrazoService, e a cadeia de notificações), mais uma auditoria final que fecha tudo. Track A (SAST — Phase 90 — e Testcontainers — Phase 91) e Track B (Agenda — Phase 92) não colidem com a track de notificações nem entre si e podem correr em paralelo com ela. Track C (Phases 93–96) é uma cadeia sequencial obrigatória: todas as 4 fases colidem mecanicamente em `NotificacaoService.java` e no seu ficheiro de teste, independentemente da sua independência lógica. NOTF-24 (silenciar categorias) vai primeiro por ser a inserção mais pequena e autocontida no choke point `criar()` — isto faz com que o alargamento de destinatários da NOTF-25 herde automaticamente o gate de silenciamento sem re-verificação separada. A correção do bug pré-existente de colisão de dedup com ADMIN (NOTF-27) tem de aterrar antes da NOTF-25, porque é o alargamento de destinatários da NOTF-25 que transforma esse bug de latente/improvável em quase certo à medida que as equipas crescem. NOTF-26 (snooze) fecha a cadeia por ser a mais aditiva e a de menor risco de conflito com a lógica central das outras duas. A auditoria de milestone (Phase 97) fecha tudo, replicando o padrão retrospetivo já estabelecido em v2.7/v2.9/v2.10 de auditar no fecho da milestone, não a meio.
+
+#### Phase 90: SpotBugs/SAST — Commit e Verificação
+
+**Goal**: A análise SpotBugs/FindSecBugs corre sem erros contra bytecode JDK 23, com as versões atualizadas, o ficheiro de exclusões e as correções defensivas já presentes no working tree devidamente comprometidos ao repositório.
+**Depends on**: Nothing (primeira fase da milestone; paralelizável com Phases 91 e 92)
+**Requirements**: SAST-01
+**Success Criteria** (what must be TRUE):
+  1. `mvn spotbugs:check` corre sem erro de execução do plugin (compatível com bytecode JDK 23) e sem findings de alta severidade não suprimidos
+  2. `backend/spotbugs-exclude.xml` e os bumps de versão de SpotBugs/FindSecBugs em `backend/pom.xml` estão commitados ao git, não apenas presentes no working tree
+  3. As correções defensivas já aplicadas (`UserPrincipal`, `ConflictCheckResponse`, `WorkflowResponse`, `ResourceController`) permanecem no código e fazem parte do mesmo commit
+**Plans**: TBD
+
+#### Phase 91: Infraestrutura de Testes de Integração (Testcontainers)
+
+**Goal**: O backend passa a ter, pela primeira vez, testes de integração reais contra PostgreSQL, cobrindo os dois riscos de maior severidade identificados (query nativa de `Notificacao`, lock de concorrência de `numeroVersao`), com uma decisão explícita sobre a sua execução em CI.
+**Depends on**: Nothing (independente da track de notificações e da Agenda; paralelizável com Phases 90 e 92)
+**Requirements**: TEST-01, TEST-02, TEST-03
+**Success Criteria** (what must be TRUE):
+  1. Um teste `@DataJpaTest` + `@Testcontainers` + `@ServiceConnection` com um `postgres:16-alpine` real executa e passa `NotificacaoRepository.buscarPorFiltros` (query nativa), não contra H2
+  2. Um teste análogo exercita escrita concorrente sobre `ParecerVersao.numeroVersao` e comprova o comportamento do lock
+  3. Ambos os testes correm sem exigir `MINIO_ENDPOINT` nem qualquer outra variável de ambiente de produção (via `@DataJpaTest`, que exclui os beans de MinIO/segurança)
+  4. Existe uma decisão registada (STATE.md/PROJECT.md) sobre se `.github/workflows/deploy.yml` passa a correr `mvn test`/`spotbugs:check`, com a mudança aplicada caso a decisão seja afirmativa
+**Plans**: TBD
+
+#### Phase 92: Agenda ↔ RiscoPrazoService — Consolidação
+
+**Goal**: A página de Agenda deixa de calcular o seu próprio veredito de "prazo crítico" e passa a confiar inteiramente no `RiscoPrazoService` já usado pelo resto do sistema, tanto para Prazos como para Eventos.
+**Depends on**: Nothing (`RiscoPrazoService` já existe desde a Phase 85, v2.10, shipped; frontend-mostly; paralelizável com Phases 90 e 91)
+**Requirements**: AGD-34, AGD-35
+**Success Criteria** (what must be TRUE):
+  1. `agenda/page.tsx` usa o campo `risco` já calculado pelo backend para Prazos, em vez de recalcular um veredito próprio no cliente
+  2. Existe uma decisão explícita registada sobre como Eventos devem expor `risco` (novo campo em `GET /eventos`, ou réplica de limiares no frontend com teste de paridade contra `RiscoPrazoServiceTest`) — e essa decisão está implementada
+  3. Prazos e Eventos mostrados na Agenda concordam com o Dashboard e com o job diário sobre o que é "próximo"/"vencido", para os mesmos dados
+  4. Deixa de existir qualquer 5ª implementação divergente de "prazo crítico" no código depois desta fase
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 93: NOTF-24 — Preferências de Notificação por Utilizador
+
+**Goal**: Cada utilizador pode silenciar, só para si próprio, as categorias de notificação que não lhe interessam, com pelo menos uma categoria crítica sempre entregue e sem escape possível pelo job diário.
+**Depends on**: Nothing (primeira fase da cadeia sequencial de notificações — Phases 93→96 colidem todas em `NotificacaoService.java` e no seu ficheiro de teste)
+**Requirements**: NOTF-24
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue silenciar uma categoria de notificação (ex.: `FASE_ENTRADA`) para si próprio e deixa de receber novas notificações dessa categoria, sem afetar outros utilizadores do mesmo tenant
+  2. `PRAZO_VENCIDO` (no mínimo) não pode ser silenciado — a opção não existe na UI e uma tentativa direta via API é rejeitada ou ignorada pelo backend
+  3. O job diário (`AlertasDiariosJob`), que chama `criar()` diretamente sem passar pelos 4 métodos `notificar*`, também respeita o silenciamento
+  4. Reativar uma categoria previamente silenciada volta a entregar notificações futuras dessa categoria normalmente
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 94: NOTF-27 — Corrigir Colisão de Dedup ADMIN
+
+**Goal**: Notificar um destinatário que é simultaneamente membro de equipa/responsável e ADMIN nunca falha por colisão da constraint `uk_notificacao_dedup` — um bug pré-existente desde a Phase 88 (v2.10), agravado pelo alargamento de destinatários que a Phase 95 (NOTF-25) está para introduzir.
+**Depends on**: Phase 93 (mesmo ficheiro `NotificacaoService.java` e mesmo ficheiro de teste; sequenciado depois do mute)
+**Requirements**: NOTF-27
+**Success Criteria** (what must be TRUE):
+  1. Um utilizador de teste que é simultaneamente responsável/membro de equipa de um processo e ADMIN do mesmo tenant recebe a notificação corretamente, sem exceção nem 500, quando um gatilho dispara para ambos os papéis
+  2. `notificarFaseEntrada`, `notificarDocumentoNovo`, `notificarProcessoAtribuido` e `notificarParecerAtribuido` deduplicam o conjunto de destinatários antes de persistir, nunca tentando duas escritas para a mesma tupla `(tenant, destinatario, entidade, categoria)`
+  3. A operação de negócio que disparou a notificação (upload de documento, atribuição, etc.) nunca é revertida nem falha com 500 por causa deste cenário
+**Plans**: TBD
+
+#### Phase 95: NOTF-25 — Notificar Toda a Equipa do Processo
+
+**Goal**: Eventos de processo (entrada de fase, novo documento, atribuição) deixam de notificar apenas o responsável único, passando a alcançar toda a equipa de advogados/administrativos ligada ao cliente do processo.
+**Depends on**: Phase 93 (herda o gate de silenciamento automaticamente), Phase 94 (requer a correção de dedup antes de alargar o pool de destinatários)
+**Requirements**: NOTF-25
+**Success Criteria** (what must be TRUE):
+  1. Quando um processo muda de fase ou recebe um novo documento, todos os advogados/administrativos ligados ao cliente do processo (via `ClienteAdvogado`/`ClienteAdministrativo`, transitivamente por `Processo.clienteId`) recebem a notificação, não só o `responsavelId`
+  2. Quando um processo é atribuído/reatribuído, o novo responsável recebe uma cópia redigida em 2ª pessoa ("foi-lhe atribuído") e o resto da equipa recebe uma cópia informativa em 3ª pessoa
+  3. Um membro de equipa que também é ADMIN não gera duplicado nem falha (herdado da correção da Phase 94), e um membro de equipa que silenciou a categoria não recebe a notificação (herdado da Phase 93)
+  4. Existe uma decisão explícita registada sobre se as categorias do job diário (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) também recebem esta expansão de equipa nesta milestone, ou ficam deliberadamente fora de âmbito
+  5. Notificação de parecer atribuído permanece individual (advogado atribuído), não afetada por esta expansão, salvo decisão explícita em contrário
+**Plans**: TBD
+
+#### Phase 96: NOTF-26 — Snooze de Lembrete de Prazo
+
+**Goal**: Utilizador pode adiar um lembrete de prazo por um período pré-definido, e a notificação reaparece automaticamente como não lida quando esse período termina, sem ser recriada prematuramente pelo job diário.
+**Depends on**: Phase 93, Phase 94, Phase 95 (mesmo choke point da cadeia de notificações; última e mais aditiva)
+**Requirements**: NOTF-26
+**Success Criteria** (what must be TRUE):
+  1. Utilizador consegue adiar (snooze) uma notificação de prazo por uma duração pré-definida (ex.: 1/3/7 dias) através de um controlo na UI
+  2. A notificação adiada desaparece do contador/badge do sino e da lista de não lidas durante o período de snooze, mas continua visível/pesquisável na página `/notificacoes`
+  3. Ao expirar o período de snooze, a notificação reaparece automaticamente como não lida, sem intervenção do utilizador
+  4. Correr o job diário durante o período de snooze não recria nem duplica a notificação adiada — a idempotência por categoria do job permanece intacta
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 97: Auditoria de Milestone — Dívida Técnica e UAT Pendente
+
+**Goal**: A milestone termina com isolamento de tenant verificado nas superfícies novas, UAT ao vivo pendente das fases 75/76/79/81/82/84/85/89 fechado ou explicitamente contornado, dívidas menores conhecidas corrigidas, e uma auditoria fresca ao código sem gaps não documentados.
+**Depends on**: Phase 90, Phase 91, Phase 92, Phase 93, Phase 94, Phase 95, Phase 96 (vê a forma final de integração da milestone, por decisão deliberada de sequenciamento — mesmo padrão de v2.7/v2.9/v2.10)
+**Requirements**: AUD-01, AUD-02, AUD-03, AUD-04, AUD-05
+**Success Criteria** (what must be TRUE):
+  1. Auditoria confirma que a tabela de preferências de notificação (Phase 93), a resolução de equipa (Phase 95) e o novo campo `snoozedUntil` (Phase 96) filtram explicitamente por `tenant_id` em toda a query nova desta milestone, não apenas por `user_id`/`cliente_id`
+  2. As UAT/verificações ao vivo pendentes das fases 75, 76, 79, 81, 82, 84, 85 e 89 estão fechadas com evidência real, ou o bloqueio `MINIO_ENDPOINT` está resolvido/contornado (com a solução documentada) e qualquer item que permaneça em aberto tem a razão registada explicitamente
+  3. Labels do enum `DocumentoTipo` não traduzidas estão corrigidas no frontend (página de detalhe do cliente e ficha impressa), e passam a existir testes automatizados cobrindo os cenários de validação de NIF hoje sem cobertura
+  4. Uma nova auditoria de código (não repetição da lista já conhecida) é executada e qualquer gap novo encontrado é corrigido nesta sessão (se viável) ou registado explicitamente como dívida técnica em STATE.md/PROJECT.md
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -299,5 +405,13 @@ See archive: [milestones/v2.10-ROADMAP.md](milestones/v2.10-ROADMAP.md) · [mile
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
 | 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete    | 2026-07-10 |
+| 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 0/TBD | Not started | - |
+| 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 0/TBD | Not started | - |
+| 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 0/TBD | Not started | - |
+| 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 0/TBD | Not started | - |
+| 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
+| 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/TBD | Not started | - |
+| 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/TBD | Not started | - |
+| 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 0/TBD | Not started | - |
 
-**Next:** Milestone v2.10 shipped 2026-07-10 (5/5 phases, 16/16 requirements). Run `/gsd:new-milestone` to define the next milestone's scope.
+**Next:** Milestone v2.11 roadmap created 2026-07-12 (8 phases, 90–97, 15/15 requirements mapped). Run `/gsd:plan-phase 90` to start planning (Phases 90, 91, 92 are mutually parallelizable; Phases 93→94→95→96 are a hard sequential chain; Phase 97 runs last).
