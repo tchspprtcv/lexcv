@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.10
-milestone_name: Notificações e Alertas
-status: Awaiting next milestone
-stopped_at: Milestone complete (Phase 89 was final phase)
-last_updated: "2026-07-10T13:14:47.320Z"
-last_activity: 2026-07-10 — Milestone v2.10 completed and archived
+milestone: v2.11
+milestone_name: Auditoria Técnica e Notificações Avançadas
+status: planning
+last_updated: "2026-07-12T14:30:45.102Z"
+last_activity: 2026-07-12
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-08)
 
 ## Current Position
 
-Phase: Milestone v2.10 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-10 — Milestone v2.10 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-12 — Milestone v2.11 started
 
 ## Performance Metrics
 

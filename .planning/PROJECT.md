@@ -8,9 +8,19 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone
+## Current Milestone: v2.11 Auditoria Técnica e Notificações Avançadas
 
-Nenhuma — v2.10 (Notificações e Alertas) enviada e arquivada em 2026-07-10 (ver `.planning/milestones/v2.10-MILESTONE-AUDIT.md`, `.planning/milestones/v2.10-ROADMAP.md`). A aguardar `/gsd-new-milestone` para a próxima.
+**Goal:** Fechar a dívida técnica acumulada do projeto (infraestrutura de testes, inconsistências de lógica de prazo crítico, UAT ao vivo pendente, SAST) e expandir o sistema de notificações com preferências, alcance de equipa e snooze.
+
+**Target features:**
+- Infraestrutura de testes de integração no backend (H2/Testcontainers), priorizando as áreas de maior risco já identificadas (query nativa da Phase 86, lock de concorrência da Phase 87)
+- Unificação de `agenda/page.tsx` com `RiscoPrazoService` (remoção da 5ª implementação divergente de "prazo crítico")
+- Fecho de UAT/verificação ao vivo pendente em 10 fases (75, 76, 79, 81, 82, 84, 85, 86, 87, 89), incluindo resolver/contornar o bloqueio ambiental `MINIO_ENDPOINT`
+- Correção do SpotBugs/SAST contra bytecode JDK 23
+- Fecho de dívidas menores conhecidas (labels de enum não traduzidas, testes de validação de NIF ausentes) + nova auditoria ao código para gaps ainda não documentadas
+- NOTF-24: preferências de notificação por utilizador (silenciar categorias)
+- NOTF-25: notificar toda a equipa do processo, não só o responsável único
+- NOTF-26: snooze de lembrete de prazo
 
 ## Requirements
 
@@ -75,7 +85,7 @@ Nenhuma — v2.10 (Notificações e Alertas) enviada e arquivada em 2026-07-10 (
 
 ### Active
 
-_Nenhum item ativo — a aguardar definição da próxima milestone via `/gsd-new-milestone`. Candidatos v2 já reconhecidos: NOTF-24 (preferências de notificação por utilizador), NOTF-25 (notificar toda a equipa, não só o responsável único), NOTF-26 (snooze de lembrete de prazo) — ver `.planning/milestones/v2.10-REQUIREMENTS.md`._
+- Milestone v2.11 em definição (`/gsd-new-milestone`, 2026-07-12) — auditoria/fecho de dívida técnica (infra de testes, Agenda/RiscoPrazoService, UAT pendente, SAST) + NOTF-24/25/26. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
 
 ### Out of Scope
 
@@ -193,7 +203,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.10 arquivada. A aguardar `/gsd-new-milestone` para definir o próximo âmbito. Candidatos v2 já reconhecidos e registados em `.planning/milestones/v2.10-REQUIREMENTS.md`: NOTF-24 (preferências de notificação), NOTF-25 (notificar equipa alargada, não só o responsável), NOTF-26 (snooze de lembrete de prazo).
+**Current focus:** Milestone v2.11 (Auditoria Técnica e Notificações Avançadas) em definição de requisitos/roadmap — auditoria e fecho de dívida técnica (infra de testes, Agenda/RiscoPrazoService, UAT ao vivo pendente, SAST) combinada com NOTF-24/25/26.
 
 ## Evolution
 
@@ -213,4 +223,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 — after v2.10 (Notificações e Alertas) milestone close*
+*Last updated: 2026-07-12 — milestone v2.11 (Auditoria Técnica e Notificações Avançadas) started*
