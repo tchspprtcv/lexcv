@@ -263,7 +263,8 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   1. `mvn spotbugs:check` corre sem erro de execução do plugin (compatível com bytecode JDK 23) e sem findings de alta severidade não suprimidos
   2. `backend/spotbugs-exclude.xml` e os bumps de versão de SpotBugs/FindSecBugs em `backend/pom.xml` estão commitados ao git, não apenas presentes no working tree
   3. As correções defensivas já aplicadas (`UserPrincipal`, `ConflictCheckResponse`, `WorkflowResponse`, `ResourceController`) permanecem no código e fazem parte do mesmo commit
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 90-01-PLAN.md — Reconfirmar `mvn spotbugs:check` verde contra o working tree atual (JDK 23) e commitar o deliverable SAST (pom.xml + spotbugs-exclude.xml + 4 correções defensivas) num único commit. Wiring de CI adiado para a Phase 91 (TEST-03).
 
 #### Phase 91: Infraestrutura de Testes de Integração (Testcontainers)
 
