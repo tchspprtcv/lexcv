@@ -2974,7 +2974,20 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
         }
         if (body.containsKey("valorTotal")) {
-            hon.setValorTotal(new BigDecimal(body.get("valorTotal").toString()));
+            // WR-03 (Phase 90 code review, iteration 3): guard the parse the same way the
+            // dataAcordo handling below already does, and reject a negative value, so a
+            // malformed/negative valorTotal returns a clean 400 instead of an uncaught
+            // NumberFormatException surfacing as a generic 500.
+            BigDecimal valorTotal;
+            try {
+                valorTotal = new BigDecimal(body.get("valorTotal").toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("message", "valorTotal inválido"));
+            }
+            if (valorTotal.compareTo(BigDecimal.ZERO) < 0) {
+                return ResponseEntity.badRequest().body(Map.of("message", "valorTotal não pode ser negativo"));
+            }
+            hon.setValorTotal(valorTotal);
         }
         if (body.containsKey("descricao")) {
             hon.setDescricao(body.get("descricao") == null ? null : body.get("descricao").toString());
