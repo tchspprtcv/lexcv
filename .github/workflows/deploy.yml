@@ -9,7 +9,37 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 23
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '23'
+          cache: maven
+
+      # Runs surefire *Test unit tests AND failsafe *IT integration tests.
+      # Testcontainers uses the runner's built-in Docker daemon (postgres:16-alpine),
+      # no extra service/config needed on ubuntu-latest.
+      - name: Run backend tests (unit + Testcontainers integration)
+        working-directory: backend
+        run: mvn -B verify
+
+      # OWASP dependency-check:check is intentionally deferred — downloads the full
+      # NVD dataset (slow, needs an API key/caching strategy) and is out of TEST-03's scope.
+      - name: Run SpotBugs + FindSecBugs SAST
+        working-directory: backend
+        run: mvn -B spotbugs:check
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
