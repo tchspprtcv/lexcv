@@ -13,9 +13,9 @@ Requisitos desta milestone (v2.11 — Auditoria Técnica e Notificações Avanç
 
 ### TEST
 
-- [ ] **TEST-01**: Teste de integração (Testcontainers+PostgreSQL) cobre a query nativa `buscarPorFiltros` de `Notificacao` (Phase 86, risco de dialecto nunca verificado contra Postgres real)
-- [ ] **TEST-02**: Teste de integração cobre o lock de concorrência de `numeroVersao` em `ParecerVersao` (Phase 87, risco de concorrência nunca verificado)
-- [ ] **TEST-03**: Decisão registada e aplicada sobre se o CI (`.github/workflows/deploy.yml`) passa a correr `mvn test`/`spotbugs:check`
+- [x] **TEST-01**: Teste de integração (Testcontainers+PostgreSQL) cobre a query nativa `buscarPorFiltros` de `Notificacao` (Phase 86, risco de dialecto nunca verificado contra Postgres real)
+- [x] **TEST-02**: Teste de integração cobre o lock de concorrência de `numeroVersao` em `ParecerVersao` (Phase 87, risco de concorrência nunca verificado)
+- [x] **TEST-03**: Decisão registada e aplicada sobre se o CI (`.github/workflows/deploy.yml`) passa a correr `mvn test`/`spotbugs:check`
 
 ### AGD
 
@@ -56,9 +56,9 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SAST-01 | Phase 90 | Complete |
-| TEST-01 | Phase 91 | Pending |
-| TEST-02 | Phase 91 | Pending |
-| TEST-03 | Phase 91 | Pending |
+| TEST-01 | Phase 91 | Complete |
+| TEST-02 | Phase 91 | Complete |
+| TEST-03 | Phase 91 | Complete |
 | AGD-34 | Phase 92 | Pending |
 | AGD-35 | Phase 92 | Pending |
 | NOTF-24 | Phase 93 | Pending |

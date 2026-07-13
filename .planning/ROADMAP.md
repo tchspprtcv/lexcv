@@ -410,7 +410,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
 | 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete    | 2026-07-10 |
 | 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 1/1 | Complete    | 2026-07-13 |
-| 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 3/3 | Complete   | 2026-07-13 |
+| 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 3/3 | Complete    | 2026-07-13 |
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 0/TBD | Not started | - |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 0/TBD | Not started | - |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
