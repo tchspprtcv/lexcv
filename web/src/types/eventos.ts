@@ -35,10 +35,15 @@ export interface EventoCreateRequest {
 }
 
 export interface EventoUpdateRequest {
-  processoId?: string | null;
-  tipo?: string | null;
+  // WR-05 (92-REVIEW.md): narrowed from `| null` — updateEvento's partial-update pattern
+  // (`if (payload.getX() != null) evento.setX(...)`) can't distinguish an omitted field from
+  // an explicit null, so there is currently no way to actually clear these via PUT /eventos/{id}
+  // despite the wider type previously implying otherwise. Revert to `| null` if/when the backend
+  // gains a proper PATCH DTO that can express "clear this field".
+  processoId?: string;
+  tipo?: string;
   titulo?: string;
-  descricao?: string | null;
+  descricao?: string;
   dataInicio?: string;
   dataFim?: string;
   prioridade?: EventoPrioridade;
