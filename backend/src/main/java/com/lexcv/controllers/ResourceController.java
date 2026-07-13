@@ -2811,6 +2811,9 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('financeiro:edit')")
     @PostMapping("/honorarios")
     public ResponseEntity<?> createHonorario(@RequestBody Honorario hon) {
+        if (hon.getProcessoId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "processoId é obrigatório"));
+        }
         Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
@@ -2837,6 +2840,9 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('financeiro:edit')")
     @PostMapping("/pagamentos")
     public ResponseEntity<?> createPagamento(@RequestBody Pagamento pag) {
+        if (pag.getHonorarioId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "honorarioId é obrigatório"));
+        }
         Honorario hon = honorarioRepository.findById(pag.getHonorarioId()).orElse(null);
         if (hon == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
