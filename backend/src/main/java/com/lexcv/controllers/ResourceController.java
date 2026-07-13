@@ -2828,6 +2828,9 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo associado não encontrado"));
         }
+        if (pag.getValorPago() == null || pag.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "valorPago é obrigatório e deve ser positivo"));
+        }
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         pag.setId(null);
         Pagamento saved = pagamentoRepository.save(pag);
