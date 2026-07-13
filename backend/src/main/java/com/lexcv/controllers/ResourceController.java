@@ -985,6 +985,13 @@ public class ResourceController {
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         processo.setId(null);
         processo.setTenantId(tenantId);
+        if (processo.getClienteId() != null) {
+            Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
+            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "clienteId não pertence a este tenant"));
+            }
+        }
         if (processo.getResponsavelId() != null) {
             User responsavel = userRepository.findById(processo.getResponsavelId()).orElse(null);
             if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
@@ -1096,11 +1103,19 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('processos:edit')")
     @PutMapping("/processos/{id}")
     public ResponseEntity<?> updateProcesso(@PathVariable UUID id, @RequestBody Processo payload) {
+        UUID tenantId = getTenantId();
         Processo processo = processoRepository.findById(id).orElse(null);
-        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+        if (processo == null || !processo.getTenantId().equals(tenantId)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
 
+        if (payload.getClienteId() != null) {
+            Cliente cliente = clienteRepository.findById(payload.getClienteId()).orElse(null);
+            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "clienteId não pertence a este tenant"));
+            }
+        }
         processo.setClienteId(payload.getClienteId());
         processo.setNumeroProcesso(payload.getNumeroProcesso());
         processo.setTipoProcesso(payload.getTipoProcesso());
@@ -1137,9 +1152,24 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('processos:create')")
     @PostMapping("/processos/intake")
     public ResponseEntity<?> createProcessoIntake(@RequestBody Processo processo) {
+        UUID tenantId = getTenantId();
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         processo.setId(null);
-        processo.setTenantId(getTenantId());
+        processo.setTenantId(tenantId);
+        if (processo.getClienteId() != null) {
+            Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
+            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "clienteId não pertence a este tenant"));
+            }
+        }
+        if (processo.getResponsavelId() != null) {
+            User responsavel = userRepository.findById(processo.getResponsavelId()).orElse(null);
+            if (responsavel == null || !tenantId.equals(responsavel.getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "responsavelId não pertence a este tenant"));
+            }
+        }
         if (processo.getOrigem() == null) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
                     "message", "Não é possível criar processo: campo 'origem' é obrigatório no intake",
