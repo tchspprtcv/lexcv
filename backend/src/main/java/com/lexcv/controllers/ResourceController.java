@@ -1030,12 +1030,13 @@ public class ResourceController {
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         processo.setId(null);
         processo.setTenantId(tenantId);
-        if (processo.getClienteId() != null) {
-            Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
-            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "clienteId não pertence a este tenant"));
-            }
+        if (processo.getClienteId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "clienteId é obrigatório"));
+        }
+        Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
+        if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "clienteId não pertence a este tenant"));
         }
         if (processo.getResponsavelId() != null) {
             User responsavel = userRepository.findById(processo.getResponsavelId()).orElse(null);
@@ -1201,12 +1202,13 @@ public class ResourceController {
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         processo.setId(null);
         processo.setTenantId(tenantId);
-        if (processo.getClienteId() != null) {
-            Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
-            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "clienteId não pertence a este tenant"));
-            }
+        if (processo.getClienteId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "clienteId é obrigatório"));
+        }
+        Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
+        if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "clienteId não pertence a este tenant"));
         }
         if (processo.getResponsavelId() != null) {
             User responsavel = userRepository.findById(processo.getResponsavelId()).orElse(null);
@@ -1743,6 +1745,9 @@ public class ResourceController {
         Processo processo = processoRepository.findById(id).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        if (parte.getNome() == null || parte.getNome().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "nome é obrigatório"));
         }
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         parte.setId(null);
