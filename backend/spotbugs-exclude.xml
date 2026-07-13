@@ -16,8 +16,8 @@
       entity, so the bound payload itself is read from but never saved, or (b) builds a brand-new
       entity and copies an explicit field allowlist from the bound payload, so the payload itself
       is discarded and never persisted (id/tenant/status stay server-controlled):
-        ResourceController.updateCliente, createClienteContacto, updateClienteContacto,
-        createClienteNota, updateClienteNota, updateProcesso, updateFacto, updateEvento
+        ResourceController.updateCliente, updateClienteContacto, updateClienteNota, updateProcesso,
+        updateFacto, updateEvento
         ParecerController.createSolicitacao, updateSolicitacao
 
       Group 2, genuine gaps found during this review and fixed in source, suppressed here because
@@ -27,7 +27,8 @@
       overwriting an existing (possibly cross-tenant) row. Each now calls setId(null) before its
       first save() - see the inline comment at each call site:
         ResourceController.createCliente, createProcesso, createProcessoIntake, createParte,
-        createMovimentacao, createFacto, createEvento, createHonorario, createPagamento
+        createMovimentacao, createFacto, createEvento, createHonorario, createPagamento,
+        createClienteContacto, createClienteNota
     -->
     <Match>
         <Class name="com.lexcv.controllers.ResourceController"/>

@@ -623,6 +623,7 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "O valor é obrigatório"));
         }
 
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         payload.setId(null);
         payload.setTenantId(getTenantId());
         payload.setClienteId(id);
@@ -713,6 +714,7 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "O conteúdo é obrigatório"));
         }
 
+        // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.
         payload.setId(null);
         payload.setTenantId(getTenantId());
         payload.setClienteId(id);
