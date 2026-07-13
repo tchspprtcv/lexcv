@@ -2499,6 +2499,16 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
         }
+        // CR-02 (92-REVIEW.md): processoId is client-supplied and must be verified as belonging
+        // to the caller's own tenant — mirrors the same check already established in
+        // uploadDocumento and listHonorarios for this exact relationship.
+        if (evento.getProcessoId() != null) {
+            Processo processo = processoRepository.findById(evento.getProcessoId()).orElse(null);
+            if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "processoId não pertence a este tenant"));
+            }
+        }
         // Validate prioridade against allowed set (WR-02, 85-REVIEW.md) — mirrors createPrazo's
         // allow-list so Evento.prioridade can't silently fall back to the strict 3-day threshold
         // in RiscoPrazoService via a typo or free-text value. Normalizes on write (WR-01,
