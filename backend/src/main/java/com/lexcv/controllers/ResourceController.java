@@ -307,6 +307,17 @@ public class ResourceController {
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
 
+        // WR-01 (Phase 90 code review, iteration 3): mirror createCliente's documentoNumero
+        // uniqueness check here, so a PUT that changes documentoNumero to a value already used
+        // by another client in this tenant surfaces as a clean 409 instead of an uncaught
+        // DataIntegrityViolationException leaking raw JDBC/Hibernate text via the 500 catch-all.
+        boolean documentoNumeroChanged = !java.util.Objects.equals(cliente.getDocumentoNumero(), payload.getDocumentoNumero());
+        if (documentoNumeroChanged && payload.getDocumentoNumero() != null
+                && clienteRepository.findByTenantIdAndDocumentoNumero(getTenantId(), payload.getDocumentoNumero()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Já existe um cliente com este número de documento"));
+        }
+
         cliente.setNome(payload.getNome());
         if (payload.getTipo() != null) cliente.setTipo(payload.getTipo());
         cliente.setEmail(payload.getEmail());
