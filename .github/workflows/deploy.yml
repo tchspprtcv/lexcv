@@ -3,6 +3,8 @@ name: "CI/CD — Build and Deploy"
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io/tchspprtcv/lexcv
@@ -40,6 +42,7 @@ jobs:
 
   build-and-push:
     needs: test
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
