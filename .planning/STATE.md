@@ -82,6 +82,7 @@ Recent decisions affecting current work:
 - (v2.11 research/roadmap) Notification-chain internal order is NOTF-24 → NOTF-27 (dedup fix) → NOTF-25 → NOTF-26, not the research SUMMARY.md's own initially-listed phase order (which had the dedup fix before NOTF-24) — the orchestrator's explicit sequencing instruction (matching the research executive summary's own recommended NOTF-24-first rationale) takes precedence: mute lands first so team fan-out inherits it for free, dedup fix lands immediately before the fan-out widens the recipient pool.
 - (v2.11 roadmap) SpotBugs/SAST (Phase 90), Testcontainers infra (Phase 91), and Agenda/RiscoPrazoService consolidation (Phase 92) have zero file overlap with each other or with the notification chain — explicitly marked mutually parallelizable, not sequential filler.
 - (v2.11 roadmap) Cross-cutting milestone audit (AUD-01 to AUD-05) placed last (Phase 97), depending on all other 7 phases — matches the established v2.7/v2.9/v2.10 pattern of auditing the milestone's final integration shape rather than mid-stream.
+- (v2.11 TEST-03) CI (`deploy.yml`) gains a `test` job (`mvn verify` + `mvn spotbugs:check`) gating `build-and-push` via `needs: test` — closes the requirement's "decision registered + implemented" clause (Phase 91); OWASP `dependency-check:check` deliberately deferred (out of scope, NVD download cost).
 
 ### Pending Todos
 
@@ -89,7 +90,7 @@ Recent decisions affecting current work:
 - `backend/migrations/74-cleanup-nif-documento-tipo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - REG_COMERCIAL and other `DocumentoTipo` values still render as raw enum strings instead of translated Portuguese labels — now explicitly owned by v2.11's AUD-03 (Phase 97).
 - No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1 — now explicitly owned by v2.11's AUD-03 (Phase 97).
-- No H2/Testcontainers integration-test infrastructure exists anywhere in this backend — now explicitly owned by v2.11's TEST-01/02/03 (Phase 91).
+- ~~No H2/Testcontainers integration-test infrastructure exists anywhere in this backend~~ — CLOSED by v2.11 Phase 91 (TEST-01/02/03): Testcontainers PostgreSQL integration-test infra + CI gate now exist; `buscarPorFiltros` (native query) and the `numeroVersao` concurrency lock are proven against real Postgres in `NotificacaoRepositoryIT`/`ParecerVersaoConcorrenciaIT`.
 - `backend/spotbugs-exclude.xml`/SpotBugs SAST tooling broken against JDK 23 bytecode — now explicitly owned by v2.11's SAST-01 (Phase 90).
 - `web/src/app/(dashboard)/agenda/page.tsx` independently recomputes its own "prazo crítico" verdict instead of using `RiscoPrazoService` — now explicitly owned by v2.11's AGD-34/AGD-35 (Phase 92).
 
@@ -104,12 +105,12 @@ Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.pl
 | Category | Item | Status |
 |----------|------|--------|
 | verification_gap | Phase 85 (85-VERIFICATION.md) — code-level verification passed 5/5; 1 open product decision (should an ALTA-priority Evento with null dataFim count as urgent in dashboard KPIs?) never answered across 3 review iterations | human_needed — owned by v2.11 AUD-02 |
-| verification_gap | Phase 86 (86-VERIFICATION.md) — 11/11 plan-level truths verified; the first-ever `nativeQuery=true`+`Pageable` combination in this codebase (`buscarPorFiltros`) never executed against real Postgres (no H2/Testcontainers exists in this backend); RBAC Settings-screen visual confirmation also pending | human_needed — owned by v2.11 TEST-01 (Phase 91) |
+| verification_gap | Phase 86 (86-VERIFICATION.md) — 11/11 plan-level truths verified; the first-ever `nativeQuery=true`+`Pageable` combination in this codebase (`buscarPorFiltros`) — CLOSED by v2.11 Phase 91 (TEST-01): Testcontainers infra now exists and `NotificacaoRepositoryIT` exercises `buscarPorFiltros` against real Postgres; RBAC Settings-screen visual confirmation still pending | human_needed — RBAC visual confirmation only, owned by v2.11 AUD-02 |
 | verification_gap | Phase 87 (87-VERIFICATION.md) — code-level verification passed 7/7, live E2E walkthrough (Reatribuir flow) blocked by MinIO env issue; 2 code-review-fixed defects (ParecerController partial-update data-loss bug, concurrent numeroVersao DB lock) have zero automated test coverage | human_needed — owned by v2.11 TEST-02/AUD-02/AUD-04 |
 | verification_gap | Phase 89 (89-VERIFICATION.md) — code-level verification passed 15/15, live E2E walkthrough blocked by the same MinIO env issue as Phase 87; 2 code-review-fixed defects (same-origin URL guard, pagination clamp) flagged for a final visual confirmation despite passing independent behavioral/lint re-verification | human_needed — owned by v2.11 AUD-02/AUD-04 |
 | uat_gap | 85/86/87/89-HUMAN-UAT.md pending scenarios | partial — owned by v2.11 AUD-02 (Phase 97) |
 | tooling | `backend/migrations/86-create-notificacao-table.sql` and `88-add-notificacao-dedup-unique-constraint.sql` are standalone manual-execution scripts — no migration runner exists in this repo | must be run manually against the database before/alongside deploy |
-| tooling | No H2/Testcontainers integration-test infrastructure exists anywhere in this backend | now v2.11 Phase 91 |
+| tooling | No H2/Testcontainers integration-test infrastructure exists anywhere in this backend | CLOSED by v2.11 Phase 91 — Testcontainers PostgreSQL infra + CI gate (`deploy.yml` `test` job) now exist |
 | tooling | `backend/spotbugs-exclude.xml`/SpotBugs SAST tooling broken against JDK 23 bytecode | now v2.11 Phase 90 |
 | cosmetic | `notificarDocumentoNovo`'s `linkUrl` doesn't use the `?tab=documentos` deep-link pattern that `notificarFaseEntrada` established | candidate one-line fix, non-blocking — reassess during v2.11 Phase 94/95 (same file being touched) |
 
