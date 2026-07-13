@@ -2505,6 +2505,16 @@ public class ResourceController {
     @PreAuthorize("hasAuthority('agenda:edit')")
     @PostMapping("/eventos")
     public ResponseEntity<?> createEvento(@RequestBody Evento evento) {
+        // WR-01 (92-REVIEW.md): titulo/dataInicio are not DB-level nullable=false, so nothing
+        // previously stopped a client from persisting an Evento with a null title/start date,
+        // producing "Invalid Date" artifacts wherever the calendar derives grouping/labels from
+        // these fields.
+        if (evento.getTitulo() == null || evento.getTitulo().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "titulo é obrigatório"));
+        }
+        if (evento.getDataInicio() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "dataInicio é obrigatório"));
+        }
         if (evento.getDataInicio() != null && evento.getDataFim() != null && evento.getDataFim().isBefore(evento.getDataInicio())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "A data de fim não pode ser anterior à data de início"));
