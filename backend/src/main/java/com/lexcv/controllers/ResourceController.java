@@ -369,9 +369,11 @@ public class ResourceController {
         try {
             String oldKey = cliente.getProcuracaoKey();
             UUID syntheticId = UUID.randomUUID();
-            InputStream inputStream = file.getInputStream();
-            String newKey = storageService.upload(getTenantId(), syntheticId,
-                    originalName, inputStream, file.getContentType(), file.getSize());
+            String newKey;
+            try (InputStream inputStream = file.getInputStream()) {
+                newKey = storageService.upload(getTenantId(), syntheticId,
+                        originalName, inputStream, file.getContentType(), file.getSize());
+            }
 
             // Upload new object before deleting old one — old remains intact if upload fails.
             if (oldKey != null) {
@@ -1876,9 +1878,11 @@ public class ResourceController {
             }
             try {
                 UUID documentoId = UUID.randomUUID();
-                InputStream inputStream = file.getInputStream();
-                String objectKey = storageService.upload(getTenantId(), documentoId,
-                        originalName, inputStream, file.getContentType(), file.getSize());
+                String objectKey;
+                try (InputStream inputStream = file.getInputStream()) {
+                    objectKey = storageService.upload(getTenantId(), documentoId,
+                            originalName, inputStream, file.getContentType(), file.getSize());
+                }
 
                 Documento documento = Documento.builder()
                         .id(documentoId)
@@ -2594,9 +2598,11 @@ public class ResourceController {
                 // Upload the new object BEFORE deleting the old one.
                 // If the upload fails, the old object remains intact (WR-01).
                 String oldKey = documento.getCaminhoArquivo();
-                InputStream inputStream = file.getInputStream();
-                String objectKey = storageService.upload(getTenantId(), documento.getId(),
-                        originalName, inputStream, file.getContentType(), file.getSize());
+                String objectKey;
+                try (InputStream inputStream = file.getInputStream()) {
+                    objectKey = storageService.upload(getTenantId(), documento.getId(),
+                            originalName, inputStream, file.getContentType(), file.getSize());
+                }
                 storageService.delete(oldKey);
 
                 documento.setNome(originalName);
@@ -2608,9 +2614,11 @@ public class ResourceController {
                 documento.setVersao((documento.getVersao() != null ? documento.getVersao() : 1) + 1);
             } else {
                 UUID documentoId = UUID.fromString(fileId);
-                InputStream inputStream = file.getInputStream();
-                String objectKey = storageService.upload(getTenantId(), documentoId,
-                        originalName, inputStream, file.getContentType(), file.getSize());
+                String objectKey;
+                try (InputStream inputStream = file.getInputStream()) {
+                    objectKey = storageService.upload(getTenantId(), documentoId,
+                            originalName, inputStream, file.getContentType(), file.getSize());
+                }
 
                 documento = Documento.builder()
                         .id(documentoId)
