@@ -1155,12 +1155,13 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
 
-        if (payload.getClienteId() != null) {
-            Cliente cliente = clienteRepository.findById(payload.getClienteId()).orElse(null);
-            if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "clienteId não pertence a este tenant"));
-            }
+        if (payload.getClienteId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "clienteId é obrigatório"));
+        }
+        Cliente cliente = clienteRepository.findById(payload.getClienteId()).orElse(null);
+        if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "clienteId não pertence a este tenant"));
         }
         processo.setClienteId(payload.getClienteId());
         processo.setNumeroProcesso(payload.getNumeroProcesso());
