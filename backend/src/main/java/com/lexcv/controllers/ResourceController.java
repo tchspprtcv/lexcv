@@ -2475,6 +2475,10 @@ public class ResourceController {
             }
         }
 
+        for (Evento e : expanded) {
+            e.setRisco(riscoPrazoService.computeRiscoEvento(e.getDataInicio(), e.getPrioridade()));
+        }
+
         return ResponseEntity.ok(expanded);
     }
 

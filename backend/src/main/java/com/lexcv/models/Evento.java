@@ -58,6 +58,9 @@ public class Evento {
     @Transient
     private String recurrenceInstanceDate;
 
+    @Transient
+    private String risco;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
