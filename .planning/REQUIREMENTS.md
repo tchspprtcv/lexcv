@@ -9,7 +9,7 @@ Requisitos desta milestone (v2.11 — Auditoria Técnica e Notificações Avanç
 
 ### SAST
 
-- [ ] **SAST-01**: Análise SpotBugs/FindSecBugs corre sem erros contra bytecode JDK 23 (versões já corrigidas e ficheiro de exclusões já presentes no working tree, não committed — falta verificar e commitar)
+- [x] **SAST-01**: Análise SpotBugs/FindSecBugs corre sem erros contra bytecode JDK 23 (versões já corrigidas e ficheiro de exclusões já presentes no working tree, não committed — falta verificar e commitar)
 
 ### TEST
 
@@ -55,7 +55,7 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAST-01 | Phase 90 | Pending |
+| SAST-01 | Phase 90 | Complete |
 | TEST-01 | Phase 91 | Pending |
 | TEST-02 | Phase 91 | Pending |
 | TEST-03 | Phase 91 | Pending |
