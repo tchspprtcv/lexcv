@@ -13,6 +13,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
     List<Cliente> findByTenantIdAndNomeContainingIgnoreCase(UUID tenantId, String nome);
     List<Cliente> findByTenantIdAndNif(UUID tenantId, String nif);
     List<Cliente> findByTenantIdAndNomeContainingIgnoreCaseAndNif(UUID tenantId, String nome, String nif);
+    Optional<Cliente> findByTenantIdAndDocumentoNumero(UUID tenantId, String documentoNumero);
 
     @Query("SELECT MAX(c.numeroSequencial) FROM Cliente c WHERE c.tenantId = :tenantId")
     Optional<Integer> findMaxNumeroSequencialByTenantId(@Param("tenantId") UUID tenantId);

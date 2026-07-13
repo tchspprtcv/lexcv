@@ -234,6 +234,15 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Tipo de documento inválido para o tipo de cliente selecionado"));
         }
+        // WR-03 (Phase 90 code review, iteration 2): validate the documento_numero unique
+        // constraint explicitly, so the DataIntegrityViolationException catch below is reserved
+        // for the numero_sequencial race it's actually meant to handle, instead of also catching
+        // (and mislabeling as a "client number conflict") this permanent validation failure.
+        if (cliente.getDocumentoNumero() != null
+                && clienteRepository.findByTenantIdAndDocumentoNumero(getTenantId(), cliente.getDocumentoNumero()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Já existe um cliente com este número de documento"));
+        }
 
         // ENTITY_MASS_ASSIGNMENT (SpotBugs triage): id is client-suppliable via the bound
         // entity; without clearing it, save() would route through merge() instead of persist()
