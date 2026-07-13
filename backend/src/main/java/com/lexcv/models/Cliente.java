@@ -13,7 +13,8 @@ import java.util.UUID;
 @Table(
     name = "t_cliente",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"tenant_id", "documento_numero"})
+        @UniqueConstraint(columnNames = {"tenant_id", "documento_numero"}),
+        @UniqueConstraint(columnNames = {"tenant_id", "numero_sequencial"})
     }
 )
 @Getter

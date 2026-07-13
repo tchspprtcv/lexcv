@@ -242,14 +242,20 @@ public class ResourceController {
         if (cliente.getAtivo() == null) {
             cliente.setAtivo(true);
         }
-        synchronized (ClienteRepository.class) {
-            java.util.Optional<Integer> result = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId());
-            int maxSeq = result.orElse(0);
-            int nextSeq = maxSeq + 1;
-            cliente.setNumeroSequencial(nextSeq);
-            cliente.setNumeroCliente(String.format("CLI-%04d", nextSeq));
+        Cliente saved;
+        try {
+            synchronized (ClienteRepository.class) {
+                java.util.Optional<Integer> result = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId());
+                int maxSeq = result.orElse(0);
+                int nextSeq = maxSeq + 1;
+                cliente.setNumeroSequencial(nextSeq);
+                cliente.setNumeroCliente(String.format("CLI-%04d", nextSeq));
+                saved = clienteRepository.save(cliente);
+            }
+        } catch (DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Conflito ao atribuir número de cliente, tente novamente"));
         }
-        Cliente saved = clienteRepository.save(cliente);
 
         // Auto initialize Cuenta Corriente
         ContaCorrente cc = ContaCorrente.builder()
