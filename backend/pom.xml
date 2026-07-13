@@ -113,6 +113,26 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Testcontainers: real-PostgreSQL integration-test infrastructure. Versions are
+             BOM-managed by spring-boot-starter-parent:3.4.1 (testcontainers-bom 1.20.4);
+             do NOT add an explicit <version> and do NOT import testcontainers-bom at 2.0.x
+             (renamed artifacts, breaks @ServiceConnection per spring-boot#47639). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     
     <build>
@@ -167,6 +187,15 @@
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                 </configuration>
+            </plugin>
+            <!-- Failsafe: activates the integration-test/verify goal binding that
+                 spring-boot-starter-parent only declares in <pluginManagement>. Without this
+                 explicit declaration, *IT classes (Testcontainers integration tests) are never
+                 run by `mvn verify`; Surefire keeps running only the existing *Test unit
+                 classes, deliberately separating fast unit tests from slow container tests. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
