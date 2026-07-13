@@ -292,7 +292,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   3. Prazos e Eventos mostrados na Agenda concordam com o Dashboard e com o job diário sobre o que é "próximo"/"vencido", para os mesmos dados
   4. Deixa de existir qualquer 5ª implementação divergente de "prazo crítico" no código depois desta fase
 **Plans**: 2 plans (2 waves)
-- [ ] 92-01-PLAN.md — GET /eventos devolve `risco` por evento (RiscoPrazoService) + remoção do endpoint órfão /eventos/upcoming
+- [x] 92-01-PLAN.md — GET /eventos devolve `risco` por evento (RiscoPrazoService) + remoção do endpoint órfão /eventos/upcoming
 - [ ] 92-02-PLAN.md — Agenda usa o `risco` do backend para Prazos e Eventos (remove o proxy prioridade===ALTA) + limpeza do hook/tipo mortos de upcoming
 **UI hint**: yes
 
@@ -413,7 +413,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete    | 2026-07-10 |
 | 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 1/1 | Complete    | 2026-07-13 |
 | 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 3/3 | Complete    | 2026-07-13 |
-| 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 0/2 | Not started | - |
+| 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 1/2 | In Progress|  |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 0/TBD | Not started | - |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/TBD | Not started | - |
