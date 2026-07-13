@@ -88,7 +88,11 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
         const newInicio = optimisticOverrides.get(e.id)!;
         const durMs = new Date(e.dataFim).getTime() - new Date(e.dataInicio).getTime();
         const newFim = new Date(new Date(newInicio).getTime() + durMs).toISOString().slice(0, 19);
-        return { ...e, isPrazo: false, dataInicio: newInicio, dataFim: newFim };
+        // WR-04 (92-REVIEW.md): drop the stale server-computed risco (based on the pre-move
+        // dataInicio) rather than carrying it over via the spread — weekStats.urgentes and any
+        // risk badge read e.risco directly, so an unmoved value would misreport urgency until
+        // the invalidated query refetches.
+        return { ...e, isPrazo: false, dataInicio: newInicio, dataFim: newFim, risco: undefined };
       }
       return { ...e, isPrazo: false };
     });
