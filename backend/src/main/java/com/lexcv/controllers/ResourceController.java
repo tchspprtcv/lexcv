@@ -2567,6 +2567,18 @@ public class ResourceController {
         if (payload.getTitulo() != null) evento.setTitulo(payload.getTitulo());
         if (payload.getDescricao() != null) evento.setDescricao(payload.getDescricao());
         if (payload.getTipo() != null) evento.setTipo(payload.getTipo());
+        // CR-01 (92-REVIEW.md): processoId was previously absent from this whitelist, so
+        // "change processo" edits from the frontend were silently dropped. Verifies tenant
+        // ownership the same way createEvento (CR-02) does. Note: under the current
+        // `if (x != null)` partial-update convention this still cannot express "clear/unlink
+        // to null" — that would need an explicit sentinel or a dedicated PATCH DTO (see WR-05).
+        if (payload.getProcessoId() != null) {
+            Processo linkedProcesso = processoRepository.findById(payload.getProcessoId()).orElse(null);
+            if (linkedProcesso == null || !linkedProcesso.getTenantId().equals(getTenantId())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "processoId não pertence a este tenant"));
+            }
+            evento.setProcessoId(payload.getProcessoId());
+        }
         if (payload.getDataInicio() != null) evento.setDataInicio(payload.getDataInicio());
         if (payload.getDataFim() != null) evento.setDataFim(payload.getDataFim());
         // prioridade is validated, normalized to uppercase, and set above (WR-01, 85-REVIEW.md
