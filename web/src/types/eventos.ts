@@ -1,3 +1,5 @@
+import type { PrazoRisco } from "@/types/processos";
+
 export type EventoPrioridade = "BAIXA" | "MEDIA" | "ALTA";
 
 export interface Evento {
@@ -16,6 +18,7 @@ export interface Evento {
   recurrenceExceptions?: string;
   isRecurrenceInstance?: boolean;
   recurrenceInstanceDate?: string;
+  risco?: PrazoRisco;
 }
 
 export interface EventoCreateRequest {
@@ -42,12 +45,4 @@ export interface EventoUpdateRequest {
   concluido?: boolean;
   recurrenceRule?: string;
   recurrenceEndDate?: string;
-}
-
-export interface UpcomingEvento {
-  id: number;
-  titulo: string;
-  dataInicio: string;
-  processoId: string; // string vazia quando null no backend
-  tipo: string; // string vazia quando null no backend
 }
