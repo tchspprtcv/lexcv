@@ -129,7 +129,14 @@ class ParecerVersaoConcorrenciaIT {
             futureA.get(20, TimeUnit.SECONDS);
             futureB.get(20, TimeUnit.SECONDS);
         } finally {
-            executor.shutdown();
+            // WR-03 (Phase 91 code review): shutdown() alone stops accepting new tasks but does
+            // not interrupt in-flight ones. If the lock under test were ever broken, one of the
+            // futures above could throw TimeoutException while the other worker thread is still
+            // blocked inside the DB call -- shutdownNow() interrupts that stuck worker (and its
+            // open DB connection/lock) instead of letting it leak into the shared forked JVM that
+            // Surefire/Failsafe reuse across subsequently-run test classes.
+            executor.shutdownNow();
+            executor.awaitTermination(5, TimeUnit.SECONDS);
         }
 
         List<ParecerVersao> versoes = parecerVersaoRepository.findBySolicitacaoId(solicitacaoId);
