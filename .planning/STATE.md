@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.11
 milestone_name: Auditoria Técnica e Notificações Avançadas
-status: executing
-stopped_at: ROADMAP.md and REQUIREMENTS.md traceability written for v2.11 (8 phases, 15/15 requirements, no orphans)
-last_updated: "2026-07-13T22:24:04.918Z"
+status: ready_to_plan
+stopped_at: Phase 92 complete (2/2) — ready to discuss Phase 93
+last_updated: 2026-07-13T23:04:18.543Z
 last_activity: 2026-07-13 -- Phase 92 execution started
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 6
   percent: 25
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 92 — Agenda ↔ RiscoPrazoService — Consolidação
+**Current focus:** Phase 93 — notf 24 — preferências de notificação por utilizador
 
 ## Current Position
 
-Phase: 92 (Agenda ↔ RiscoPrazoService — Consolidação) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 92
-Last activity: 2026-07-13 -- Phase 92 execution started
+Phase: 93
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-13
 
 Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 
 **Velocity:**
 
-- Total plans completed: 51
+- Total plans completed: 53
 - Average duration: —
 - Total execution time: —
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 | 88 | 2 | - | - |
 | 89 | 4 | - | - |
 | 90 | 1 | - | - |
+| 92 | 2 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 

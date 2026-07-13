@@ -19,8 +19,8 @@ Requisitos desta milestone (v2.11 — Auditoria Técnica e Notificações Avanç
 
 ### AGD
 
-- [ ] **AGD-34**: Prazos na Agenda usam o campo `risco` já calculado pelo backend (`RiscoPrazoService`) em vez de recomputar um veredito próprio no cliente
-- [ ] **AGD-35**: Eventos na Agenda refletem o mesmo veredito de risco que o resto do sistema (decisão explícita + implementação — `GET /eventos` não devolve `risco` hoje)
+- [x] **AGD-34**: Prazos na Agenda usam o campo `risco` já calculado pelo backend (`RiscoPrazoService`) em vez de recomputar um veredito próprio no cliente
+- [x] **AGD-35**: Eventos na Agenda refletem o mesmo veredito de risco que o resto do sistema (decisão explícita + implementação — `GET /eventos` não devolve `risco` hoje)
 
 ### NOTF
 
@@ -59,8 +59,8 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 | TEST-01 | Phase 91 | Complete |
 | TEST-02 | Phase 91 | Complete |
 | TEST-03 | Phase 91 | Complete |
-| AGD-34 | Phase 92 | Pending |
-| AGD-35 | Phase 92 | Pending |
+| AGD-34 | Phase 92 | Complete |
+| AGD-35 | Phase 92 | Complete |
 | NOTF-24 | Phase 93 | Pending |
 | NOTF-27 | Phase 94 | Pending |
 | NOTF-25 | Phase 95 | Pending |
