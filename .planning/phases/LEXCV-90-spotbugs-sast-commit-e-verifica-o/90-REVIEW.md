@@ -1,8 +1,8 @@
 ---
 phase: LEXCV-90-spotbugs-sast-commit-e-verifica-o
-reviewed: 2026-07-13T14:00:00Z
+reviewed: 2026-07-13T19:00:00Z
 depth: standard
-files_reviewed: 6
+files_reviewed: 10
 files_reviewed_list:
   - backend/pom.xml
   - backend/spotbugs-exclude.xml
@@ -10,196 +10,105 @@ files_reviewed_list:
   - backend/src/main/java/com/lexcv/controllers/ResourceController.java
   - backend/src/main/java/com/lexcv/dtos/ConflictCheckResponse.java
   - backend/src/main/java/com/lexcv/dtos/WorkflowResponse.java
+  - backend/src/main/java/com/lexcv/models/Cliente.java
+  - backend/src/main/java/com/lexcv/repositories/ClienteRepository.java
+  - web/src/hooks/use-clientes.ts
+  - web/src/app/(dashboard)/clientes/merge/page.tsx
 findings:
-  critical: 4
-  warning: 5
-  info: 5
-  total: 14
+  critical: 0
+  warning: 3
+  info: 6
+  total: 9
 status: issues_found
 ---
 
 # Phase LEXCV-90: Code Review Report
 
-**Reviewed:** 2026-07-13T14:00:00Z
+**Reviewed:** 2026-07-13T19:00:00Z
 **Depth:** standard
-**Files Reviewed:** 6
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the SpotBugs/FindSecBugs SAST wiring (`pom.xml`, `spotbugs-exclude.xml`) and the entity-mass-assignment remediation it documents across `ResourceController.java`, plus the small supporting files (`UserPrincipal`, `ConflictCheckResponse`, `WorkflowResponse`).
+This is the iteration-3 re-review of this phase, over the iteration-2 fix pass (commits `69965f8`..`126079e`, see `90-REVIEW-FIX.md`). Scope grew from 7 to 10 files this round (`Cliente.java` and `ClienteRepository.java` were touched by the WR-03 fix; `use-clientes.ts` and `clientes/merge/page.tsx` were touched by the CR-01 fix). I re-read every in-scope file end to end — including all ~3,220 lines of `ResourceController.java` — and independently re-verified each of the four iteration-2 findings at its cited line range rather than trusting the fix report:
 
-The `setId(null)` mass-assignment mitigations described in `spotbugs-exclude.xml` are present and functionally correct everywhere they're claimed. However, the review surfaced several defects that are independent of the SpotBugs triage: a missing `@Transactional` boundary on the multi-entity cliente merge, a genuine TOCTOU race in client-number generation (contrasted with the correct pattern used a few hundred lines later for `Facto.ordem`), a multi-tenant boundary gap on `Processo.clienteId` that the project's own architecture rules (CLAUDE.md) call out as the primary data-isolation mechanism, and a silent-failure path in payment/balance reconciliation that can leave a persisted payment with no corresponding ledger update. `spotbugs-exclude.xml` itself also contains one factual inaccuracy in its own audit trail (two methods placed in the wrong justification group), which undermines the file's stated goal of being individually verified.
+- **CR-01** (`mergeClientes` discarding `ContaCorrente` balance / orphaning `Documento`/`ClienteAdvogado`/`ClienteAdministrativo`) — confirmed fixed: the secondary's `saldo` is now added onto the primary's `ContaCorrente` before the secondary row is deleted (lines 852-866), `Documento` rows are re-pointed at the primary (lines 868-870), and `ClienteAdvogado`/`ClienteAdministrativo` links are migrated with de-duplication against the primary's existing links (lines 872-887). The response map and the frontend hook/page were updated accordingly and confirmed consistent (`moved_documentos`, `merged_saldo` both present end-to-end in `use-clientes.ts` and `merge/page.tsx`).
+- **WR-01** (`createProcesso`/`createProcessoIntake`/`createParte` missing presence checks) — confirmed fixed at all three call sites (lines 1042-1044, 1215-1217, 1759-1761); cross-checked against `Processo.java`/`Parte.java` and found no other `nullable = false` column left unvalidated.
+- **WR-02** (`updateProcesso` nulling `clienteId` and bypassing the CR-03 tenant check when omitted) — confirmed fixed: the null check (lines 1167-1169) now runs *before* the tenant-ownership lookup, so the tenant check can no longer be skipped by omitting the field, and no regression was found in this pass.
+- **WR-03** (`createCliente`'s `DataIntegrityViolationException` catch mislabeling unrelated constraint violations) — confirmed fixed for the `createCliente` path: `Cliente.nome` now carries `@NotBlank` (`Cliente.java:35`), and an explicit `documentoNumero` uniqueness check (lines 241-245) runs before the `synchronized` block, using the new `ClienteRepository.findByTenantIdAndDocumentoNumero` (confirmed present). However, this pass found the fix was applied asymmetrically — see WR-01 below, a new finding.
 
-## Critical Issues
-
-### CR-01: `mergeClientes` performs a multi-entity merge without a transactional boundary
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:770-838`
-**Issue:** `mergeClientes` performs seven sequential writes (`clienteRepository.save(primary)`, `processoRepository.saveAll(...)`, `clienteContactoRepository.saveAll(...)`, `clienteNotaRepository.saveAll(...)`, a conditional `contaCorrenteRepository.delete(...)`, and finally `clienteRepository.delete(secondary)`) with no `@Transactional` annotation on the method. Every other multi-write mutation in this controller that must be atomic is explicitly annotated (`atribuirResponsavel`, `registarDecisaoConflito`, `formalizarProcesso`, `executarTransicao`, `createPrazo`, `togglePrazoConcluido`, `createDecisao`, `deleteDecisao`) — this is the one multi-step write path that isn't, despite being the highest-blast-radius operation in the file (it reassigns ownership of processes, contacts, and notes, then deletes a client row). If any `saveAll`/`delete` call in the middle fails (constraint violation, connection blip), the merge is left half-done: e.g. processes already repointed to `primary` while `secondary` is still not deleted, or contacts moved but notes not moved, with no rollback.
-**Fix:**
-```java
-@PreAuthorize("hasAuthority('clientes:edit')")
-@Transactional
-@PostMapping("/clientes/merge")
-public ResponseEntity<?> mergeClientes(@RequestBody ClienteMergeRequest payload) {
-    ...
-}
-```
-
-### CR-02: TOCTOU race in `createCliente`'s `numeroSequencial`/`numeroCliente` assignment can mint duplicate client numbers
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:245-252`
-**Issue:**
-```java
-synchronized (ClienteRepository.class) {
-    java.util.Optional<Integer> result = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId());
-    int maxSeq = result.orElse(0);
-    int nextSeq = maxSeq + 1;
-    cliente.setNumeroSequencial(nextSeq);
-    cliente.setNumeroCliente(String.format("CLI-%04d", nextSeq));
-}
-Cliente saved = clienteRepository.save(cliente);
-```
-The `save()` call is **outside** the synchronized block. Two concurrent requests (same tenant) can both enter the block sequentially, both read the same `maxSeq` (since neither has persisted yet), both compute the same `nextSeq`, both release the lock, and then both call `save()` with the identical `numeroSequencial`/`numeroCliente`. There is no unique constraint on `t_cliente` for either column — `Cliente.java`'s only `@UniqueConstraint` is `(tenant_id, documento_numero)` — so both inserts succeed silently, producing two clients with the same `CLI-00NN` number. Contrast with `createFacto` a few hundred lines later (`ResourceController.java:2079-2088`), which holds the lock through the `save()` call itself *and* additionally catches `DataIntegrityViolationException` as defense-in-depth against cross-instance races — the correct pattern is right there in the same file.
-**Fix:**
-```java
-Cliente saved;
-synchronized (ClienteRepository.class) {
-    int nextSeq = clienteRepository.findMaxNumeroSequencialByTenantId(getTenantId()).orElse(0) + 1;
-    cliente.setNumeroSequencial(nextSeq);
-    cliente.setNumeroCliente(String.format("CLI-%04d", nextSeq));
-    saved = clienteRepository.save(cliente);
-}
-```
-Also add a DB-level `@UniqueConstraint(columnNames = {"tenant_id", "numero_sequencial"})` on `Cliente` so multi-instance deployments (where the in-JVM `synchronized` provides no protection at all) fail loudly instead of silently duplicating.
-
-### CR-03: `Processo.clienteId` is never validated against the caller's tenant on create/update
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:976-994` (createProcesso), `:1132-1145` (createProcessoIntake), `:1091-1112` (updateProcesso, specifically line 1097)
-**Issue:** CLAUDE.md states plainly: "Every domain entity carries a `tenant_id`. Controllers... **must** scope all reads/writes by it... this is the primary data-isolation boundary." `createProcesso` validates `responsavelId` against the tenant (lines 981-987) but never validates `processo.getClienteId()`. `createProcessoIntake` validates neither `clienteId` nor `responsavelId` at all. `updateProcesso` copies `payload.getClienteId()` straight onto the tenant-verified, fetched `processo` entity with zero validation:
-```java
-processo.setClienteId(payload.getClienteId());
-```
-Any user holding `processos:manage`/`processos:create`/`processos:edit` can therefore link a `Processo` in their own tenant to a `Cliente` UUID belonging to a **different** tenant (a small closed set of law-firm tenants, but UUIDs do leak through URLs, logs, and support tickets). This is exactly the class of cross-tenant FK the merge/mass-assignment work in this phase was supposedly hardening against, just on a different field. It is also directly exploitable downstream: `runConflictCheck` (line 1165) does
-```java
-Cliente clienteDoProcesso = processo.getClienteId() != null
-        ? clienteRepository.findById(processo.getClienteId()).orElse(null)
-        : null;
-```
-with no tenant check on the fetched `Cliente`, trusting that `processo.getClienteId()` already belongs to this tenant — a trust that CR-03 shows is unfounded.
-**Fix:** Mirror the `responsavelId` check already present for `createProcesso`:
-```java
-if (processo.getClienteId() != null) {
-    Cliente cliente = clienteRepository.findById(processo.getClienteId()).orElse(null);
-    if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", "clienteId não pertence a este tenant"));
-    }
-}
-```
-Apply the same guard in `createProcessoIntake` (also add the `responsavelId` check there) and in `updateProcesso` before line 1097.
-
-### CR-04: `createPagamento` can silently persist a payment that never updates the conta corrente balance
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2784-2814`
-**Issue:** `Pagamento.valorPago` (`backend/.../models/Pagamento.java:23-24`) has no `nullable = false` and no bean-validation annotation, and `createPagamento` doesn't use `@Valid` or check it. A request omitting `valorPago` (or with `valorPago: null`) is persisted successfully by `pagamentoRepository.save(pag)` (line 2796). The very next block then does:
-```java
-try {
-    ...
-    cc.setSaldo(cc.getSaldo().add(pag.getValorPago()));
-    contaCorrenteRepository.save(cc);
-} catch (Exception ex) {
-    log.warn("PAGAMENTO_CREATE: falha ao atualizar saldo da conta corrente, pagamento={}", saved.getId(), ex);
-}
-return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-```
-`BigDecimal.add(null)` throws `NullPointerException`, which is swallowed by the broad `catch (Exception ex)` and merely logged as a warning. The endpoint still returns `201 Created` with the saved (nonsensical, amount-less) payment, and the client's account balance is never adjusted — a financial record now exists that is invisible to the reconciliation the whole `ContaCorrente` mechanism exists for, and the caller has no way to know it failed. The same null also blows up `calculateMensalReceived` (line 2969, `total.add(pag.getValorPago())`) uncaught, which will 500 the `/dashboard` KPI endpoint for the rest of that tenant's month.
-**Fix:** Validate before persisting, not just before using the value:
-```java
-if (pag.getValorPago() == null || pag.getValorPago().compareTo(BigDecimal.ZERO) <= 0) {
-    return ResponseEntity.badRequest().body(Map.of("message", "valorPago é obrigatório e deve ser positivo"));
-}
-```
-placed before `pag.setId(null)` at line 2795. Consider also tightening the column to `@Column(name = "valor_pago", nullable = false)` on the entity.
+Beyond re-verifying iteration 2, this pass surfaced **three new warnings**, all instances of the same "fix applied to one path, sibling path left open" pattern that iteration 2 itself found in iteration 1's work: `updateCliente` still lacks the `documentoNumero` uniqueness check that was added only to `createCliente`; `mergeClientes`'s otherwise-thorough data migration still misses one FK class (`ParecerSolicitacao.clienteId`, a `nullable = false` reference resolved by `ParecerController`), leaving it orphaned exactly like the `Documento`/link cases CR-01 just fixed; and `updateHonorario` has no validation around its `valorTotal` parsing, unlike its sibling `dataAcordo` handling two lines below it. None of these are regressions of the iteration-2 fixes themselves — each is a previously-unreviewed adjacent code path. The five carried-forward Info items from the iteration-2 review (out of `fix_scope: critical_warning`) remain accurate and unaddressed; one new Info item is added for a minor transparency gap in the CR-01 fix's response payload.
 
 ## Warnings
 
-### WR-01: `MultipartFile` `InputStream`s are never closed
+### WR-01: `updateCliente` has no `documentoNumero` uniqueness check, unlike `createCliente` — an uncaught `DataIntegrityViolationException` surfaces as a generic 500 with a raw exception message
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:366` (uploadProcuracao), `:1842` (createDecisao), `:2560` and `:2574` (uploadDocumento)
-**Issue:** Every upload path does `InputStream inputStream = file.getInputStream();` and hands it to `storageService.upload(...)` without a `try-with-resources` or explicit `close()`. Depending on the multipart resolver's threshold, large uploads are backed by a temp-file-based `FileInputStream`, so the underlying file descriptor can remain open until GC finalizes it, not until the request completes.
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:291-336`
+**Issue:** The iteration-2 WR-03 fix added an explicit `documentoNumero` uniqueness check to `createCliente` (lines 241-245) specifically so that the `(tenant_id, documento_numero)` unique-constraint violation would be caught as a clean `409` instead of misreported. `updateCliente` has the identical constraint exposure — line 318 does `cliente.setDocumentoNumero(payload.getDocumentoNumero());` unconditionally (whenever the value changed) — but has **no** equivalent check and **no** `try/catch` around `clienteRepository.save(cliente)` at line 334 at all. A `PUT /clientes/{id}` request that sets `documentoNumero` to a value already used by another client in the same tenant hits the DB unique constraint at `save()`, throws an uncaught `DataIntegrityViolationException`, and falls through to `GlobalExceptionHandler`'s catch-all `Exception` handler (`GlobalExceptionHandler.java:42-49`), which returns `500` with `body.put("message", ex.getMessage())` — leaking the raw JDBC/Hibernate exception text (constraint name, sometimes table/column names) to the client instead of a clean `409` with a Portuguese-language message consistent with the rest of the controller.
 **Fix:**
 ```java
-try (InputStream inputStream = file.getInputStream()) {
-    String newKey = storageService.upload(getTenantId(), syntheticId, originalName, inputStream, file.getContentType(), file.getSize());
-    ...
+// After the documentoTipoUnchanged / isDocumentoTipoValidoParaTipo check, before any setters:
+boolean documentoNumeroChanged = !java.util.Objects.equals(cliente.getDocumentoNumero(), payload.getDocumentoNumero());
+if (documentoNumeroChanged && payload.getDocumentoNumero() != null
+        && clienteRepository.findByTenantIdAndDocumentoNumero(getTenantId(), payload.getDocumentoNumero()).isPresent()) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Map.of("message", "Já existe um cliente com este número de documento"));
 }
 ```
 
-### WR-02: Old storage object is deleted before the DB write confirming the new reference is committed
+### WR-02: `mergeClientes` still doesn't migrate `ParecerSolicitacao.clienteId` — the same orphaned-FK defect class CR-01 fixed for `Documento`/`ClienteAdvogado`/`ClienteAdministrativo`, left open for a different table
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:371-376` (uploadProcuracao), `:2557-2568` (uploadDocumento replace path)
-**Issue:** Both "replace" flows upload the new object, then delete the old object, and only afterward update/save the entity that references the new key:
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:866-889` (cross-referenced against `backend/src/main/java/com/lexcv/models/ParecerSolicitacao.java:24` and `backend/src/main/java/com/lexcv/controllers/ParecerController.java:80-121`, both out of this phase's file scope but load-bearing for this finding)
+**Issue:** `ParecerSolicitacao.clienteId` is declared `@Column(name = "cliente_id", nullable = false)` and is validated at create/update time by `ParecerController.clienteBelongsToTenant`, i.e. it is a real, enforced FK-like reference to `Cliente` from the "Parecer Jurídico" module. `mergeClientes` migrates `Processo` (836-840), `ClienteContacto` (842-845), `ClienteNota` (847-850), `ContaCorrente` (852-866), `Documento` (868-870), and `ClienteAdvogado`/`ClienteAdministrativo` (872-887) off of `secondaryId` before deleting the secondary `Cliente` row at line 889 — but no equivalent step exists for `ParecerSolicitacao`. Any parecer request still referencing `secondaryId` becomes an orphaned row pointing at a `cliente_id` that no longer exists in `t_cliente` once the merge completes; the parecer becomes permanently disconnected from any client's history (it won't show up under the surviving primary client, and any code path that resolves `clienteId` back to a `Cliente` — e.g., for display — will silently get nothing). This is exactly the defect class CR-01 fixed in the iteration-2 pass, just for a table that CR-01's fix didn't enumerate.
+**Fix:** Add a migration loop analogous to the `Documento` one, requiring `ParecerSolicitacaoRepository` (already exists for `ParecerController`) as a dependency of `ResourceController`, plus a tenant-scoped finder:
 ```java
-storageService.delete(oldKey);
-cliente.setProcuracaoKey(newKey);
-clienteRepository.save(cliente); // if this throws, DB still points at oldKey, which is now gone
+List<ParecerSolicitacao> pareceresToMove =
+        parecerSolicitacaoRepository.findByTenantIdAndClienteId(tenantId, payload.secondaryId());
+pareceresToMove.forEach(ps -> ps.setClienteId(savedPrimary.getId()));
+parecerSolicitacaoRepository.saveAll(pareceresToMove);
 ```
-The in-line comment ("old remains intact if upload fails") only covers the upload-failure case; it doesn't cover the case where the *subsequent DB save* fails after the old object has already been deleted. In that window the persisted entity still references the just-deleted `oldKey`, so the next download attempt (`downloadProcuracao`/`downloadDocumento`) will fail against the storage backend even though the DB row looks fine.
-**Fix:** Reorder to save the DB reference first (inside a transaction) and only delete the old storage object after the DB commit succeeds, or wrap the whole sequence in a compensating action / outbox pattern if eventual consistency is acceptable.
+(`findByTenantIdAndClienteId` doesn't exist yet on `ParecerSolicitacaoRepository` — add it alongside whatever finder the repository already exposes.) Include `moved_pareceres` in the response map for the same operator-visibility reason CR-01 added `moved_documentos`.
 
-### WR-03: `createHonorario`/`createPagamento` surface a generic 500 instead of 400 for a missing FK in the body
+### WR-03: `updateHonorario` doesn't validate `valorTotal` before parsing — a malformed value throws an uncaught `NumberFormatException`, surfaced as a generic 500
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2759-2767` (createHonorario), `:2785-2793` (createPagamento)
-**Issue:** `processoRepository.findById(hon.getProcessoId())` / `honorarioRepository.findById(pag.getHonorarioId())` are called directly on a body-supplied field that has no `@NotNull`/`@Valid` enforcement. Spring Data's `findById` does `Assert.notNull(id, ...)`, throwing `IllegalArgumentException` when the field is omitted from the JSON payload. That's caught only by `GlobalExceptionHandler`'s catch-all `@ExceptionHandler(Exception.class)`, producing a `500 INTERNAL_SERVER_ERROR` for what is really a client input error.
-**Fix:**
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2965-2967`
+**Issue:**
 ```java
-if (hon.getProcessoId() == null) {
-    return ResponseEntity.badRequest().body(Map.of("message", "processoId é obrigatório"));
+if (body.containsKey("valorTotal")) {
+    hon.setValorTotal(new BigDecimal(body.get("valorTotal").toString()));
 }
 ```
-(and the equivalent for `pag.getHonorarioId()`).
-
-### WR-04: `spotbugs-exclude.xml`'s own justification for `createClienteContacto`/`createClienteNota` doesn't match their actual code
-
-**File:** `backend/spotbugs-exclude.xml:14-31`, cross-referenced against `backend/src/main/java/com/lexcv/controllers/ResourceController.java:606-626` (createClienteContacto) and `:696-716` (createClienteNota)
-**Issue:** The file's header states each suppressed entry "was individually read and verified against the actual data flow." `createClienteContacto` and `createClienteNota` are listed under **Group 1** ("already safe, no code change needed"), described as either (a) copying an allowlist onto a *fetched* entity, or (b) building a *brand-new* entity and copying an allowlist onto it, discarding the payload. Neither description matches what these two methods do — they mutate the **bound `payload` object itself** and persist it directly:
+Unlike the adjacent `dataAcordo` handling four lines below (2971-2976), which wraps its parse in `try { ... } catch (Exception e) { return ResponseEntity.status(HttpStatus.BAD_REQUEST)...}`, this line has no error handling at all. A request body with a non-numeric `valorTotal` (e.g. `"abc"`, or a locale-formatted number like `"1.234,56"`) throws `NumberFormatException` from `new BigDecimal(String)`, which is not caught anywhere in this method and propagates to `GlobalExceptionHandler`'s catch-all, returning a generic `500` instead of a `400` with an actionable message. There is also no check that the parsed value is non-negative.
+**Fix:**
 ```java
-payload.setId(null);
-payload.setTenantId(getTenantId());
-payload.setClienteId(id);
-payload.setValor(payload.getValor().trim());
-...
-ClienteContacto saved = clienteContactoRepository.save(payload);
+if (body.containsKey("valorTotal")) {
+    try {
+        hon.setValorTotal(new BigDecimal(body.get("valorTotal").toString()));
+    } catch (NumberFormatException e) {
+        return ResponseEntity.badRequest().body(Map.of("message", "valorTotal inválido"));
+    }
+}
 ```
-This is actually the **Group 2** pattern (bound entity persisted directly, safety comes from the explicit `setId(null)` call), just missing the "ENTITY_MASS_ASSIGNMENT (SpotBugs triage)" inline comment that all the real Group 2 methods carry. The suppression is not unsafe (the `setId(null)` call does prevent the merge()-based overwrite), but the written rationale is factually wrong about *why* it's safe, which defeats the purpose of an audit trail that explicitly asks future readers to trust it without re-deriving the analysis.
-**Fix:** Move `createClienteContacto`/`createClienteNota` into the Group 2 match block (or rewrite the Group 1 description to also cover "mutates and persists the bound payload directly, protected only by `setId(null)`"), and add the same `// ENTITY_MASS_ASSIGNMENT (SpotBugs triage): see createCliente's setId(null) comment.` inline comment at their `setId(null)` call sites for consistency with every other Group 2 method.
-
-### WR-05: Broad `catch (Exception ex)` around conta-corrente balance updates hides real bugs as recoverable warnings
-
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2798-2811` (createPagamento), `:2891-2900` (deletePagamento)
-**Issue:** Both balance-adjustment blocks catch `Exception` broadly and merely `log.warn`, treating storage-outage-style transient failures the same as programming errors (see CR-04's NPE). This means genuine bugs (null arithmetic operands, `ClassCastException`, etc.) are indistinguishable in logs/monitoring from an expected/tolerable failure mode, and there is no compensating mechanism (retry queue, reconciliation job, alert) to catch the resulting balance drift.
-**Fix:** Narrow the catch to the specific exception types that are actually expected to be recoverable (e.g. optimistic-locking failures), and validate the arithmetic inputs before entering the block so a `NullPointerException` can't occur in the first place (see CR-04).
 
 ## Info
 
 ### IN-01: `UserPrincipal.getRoles()`/`getPermissions()` expose the live mutable `Set`
 
 **File:** `backend/src/main/java/com/lexcv/config/UserPrincipal.java:19-25, 64-67`
-**Issue:** `@Getter` generates plain accessors for `roles` and `permissions` (both backed by mutable `Set` implementations built in `create()`), returning direct references to the internal collections. This is inconsistent with `getAuthorities()`, which is explicitly overridden to return `Collections.unmodifiableCollection(authorities)`. Any caller holding a `UserPrincipal` could mutate its `roles`/`permissions` in place.
-**Fix:** Either wrap the fields in `Collections.unmodifiableSet(...)` at construction time in `create()`, or override `getRoles()`/`getPermissions()` the same way `getAuthorities()` is overridden.
+**Issue:** Carried forward from the prior review, still unfixed (out of iteration-2 fix scope). `@Getter` generates plain accessors for `roles`/`permissions` (both mutable `Set`s built in `create()`), returning direct references — inconsistent with `getAuthorities()`, which is explicitly overridden to return an unmodifiable view.
+**Fix:** Wrap the fields in `Collections.unmodifiableSet(...)` at construction time in `create()`, or override the getters the same way `getAuthorities()` is overridden.
 
 ### IN-02: Hardcoded ADMIN permission list duplicates `DatabaseSeeder.seedRbac()`
 
 **File:** `backend/src/main/java/com/lexcv/config/UserPrincipal.java:34-47`
-**Issue:** The comment itself flags this: "Keep in sync with DatabaseSeeder.seedRbac()'s permKeys list." A manually-maintained duplicate list is a standing maintenance risk — if a new `scope:action` permission is added to the seeder and this list isn't updated in the same change, ADMIN's fallback grant here silently drifts out of sync with the source of truth.
-**Fix:** Consider deriving this list from a single shared constant (e.g. a `Permissions` enum/constants class referenced by both `DatabaseSeeder` and `UserPrincipal`) instead of maintaining two hand-written lists.
+**Issue:** Carried forward from the prior review, still unfixed. The inline comment itself flags the risk: "Keep in sync with DatabaseSeeder.seedRbac()'s permKeys list" — a manually-maintained duplicate that can silently drift. Verified this pass: the two lists are still in sync (`DatabaseSeeder.java:294-303`), but the drift risk itself is what's being flagged, not a current mismatch.
+**Fix:** Derive this list from a single shared constant referenced by both `DatabaseSeeder` and `UserPrincipal`.
 
 ### IN-03: Misleading no-op `break` in `listEventos`'s recurrence-expansion loop
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2340-2349`
-**Issue:**
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2439-2448`
+**Issue:** Carried forward from the prior review, still unfixed.
 ```java
 switch (master.getRecurrenceRule()) {
     case "DAILY" -> cursor = cursor.plusDays(1);
@@ -207,26 +116,31 @@ switch (master.getRecurrenceRule()) {
     case "MONTHLY" -> cursor = cursor.plusMonths(1);
     default -> { break; }
 }
-// Safety: if rule unknown, avoid infinite loop
 if (!master.getRecurrenceRule().equals("DAILY") && ...) break;
 ```
-The `break;` inside the arrow-switch `default` case has no effect on the enclosing `while` loop (it exits the switch block, which arrow-form switch cases don't need anyway). The loop is actually terminated by the following `if` statement. The code isn't wrong, but the `default -> { break; }` reads as if it's the safety mechanism when it's actually inert, which will confuse the next person who touches this method.
-**Fix:** Remove the misleading `default -> { break; }` and rely solely on the explicit `if` check, or restructure with a boolean flag (`boolean advanced = switch (...) {...}`) so the termination condition is a single, unambiguous check.
+The `break;` inside the arrow-switch `default` has no effect on the enclosing `while` loop; the loop is actually terminated by the following `if`. Not incorrect, but misleading to future readers.
+**Fix:** Remove the no-op `default -> { break; }`, or restructure with an explicit boolean so the termination condition is a single, unambiguous check.
 
 ### IN-04: Magic number `3600` (presigned URL TTL) duplicated
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:400` (downloadProcuracao), `:2685` (downloadDocumento)
-**Issue:** `Map.of("url", url, "expiresIn", 3600)` repeats the literal `3600` in two places with no shared constant, and no visible connection to whatever TTL `storageService.presignedDownloadUrl(...)` actually configured on the presigned URL itself — if the storage service's TTL ever changes, this reported value would silently drift out of sync with reality.
-**Fix:** Extract a `private static final long PRESIGNED_URL_EXPIRES_IN_SECONDS = 3600;` (or source it from `storageService`) and reuse it at both call sites.
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:420` (downloadProcuracao), `:2795` (downloadDocumento)
+**Issue:** Carried forward from the prior review, still unfixed. `Map.of("url", url, "expiresIn", 3600)` repeats the literal in two places, with no visible link to whatever TTL `storageService.presignedDownloadUrl(...)` actually configured.
+**Fix:** Extract a shared `private static final long PRESIGNED_URL_EXPIRES_IN_SECONDS = 3600;` (or source it from `storageService`) and reuse it at both call sites.
 
 ### IN-05: SpotBugs/OWASP dependency-check are configured but not enforced by CI
 
 **File:** `backend/pom.xml:146-170`
-**Issue:** `spotbugs-maven-plugin` and `dependency-check-maven` are declared with no `<executions>` binding them to a lifecycle phase, matching the documented manual-invocation workflow (`mvn spotbugs:check` per CLAUDE.md). However, the repository's only CI/CD workflow (`.github/workflows/deploy.yml`) builds and pushes both Docker images to the production registry on every push to `master` without running `mvn test`, `mvn spotbugs:check`, or `mvn dependency-check:check` at any point. As configured, this phase's SAST/SCA tooling cannot actually prevent a regression from reaching production — it only runs when a developer remembers to invoke it locally.
-**Fix:** Add a `mvn -B verify` (or explicit `spotbugs:check`/`dependency-check:check`/`test` goals) step to `deploy.yml` gating the `build-and-push` job, so a SpotBugs/FindSecBugs or CVSS≥7 finding fails the build before an image is pushed.
+**Issue:** Carried forward from the prior review, still unfixed. `spotbugs-maven-plugin` and `dependency-check-maven` have no `<executions>` binding them to a lifecycle phase. Verified this pass: `.github/workflows/deploy.yml` still only runs `docker/build-push-action` for both images — no `mvn test`, `mvn spotbugs:check`, or `mvn dependency-check:check` step exists anywhere in the pipeline gating `build-and-push`.
+**Fix:** Add a `mvn -B verify` (or explicit `spotbugs:check`/`dependency-check:check`/`test` goals) step to `deploy.yml` gating the `build-and-push` job.
+
+### IN-06: `mergeClientes`'s response doesn't report how many `ClienteAdvogado`/`ClienteAdministrativo` links were migrated or dropped as duplicates
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:872-898`; `web/src/hooks/use-clientes.ts:129-139`; `web/src/app/(dashboard)/clientes/merge/page.tsx:52-58`
+**Issue:** The CR-01 fix's stated goal was "so the operator can see what actually happened to the balance and documents instead of only `moved_processos`/`moved_contactos`/`moved_notas`" — and it delivers that for `ContaCorrente` (`merged_saldo`) and `Documento` (`moved_documentos`). The staff-assignment migration added in the same fix (lines 872-887) has no corresponding counter in the response map (891-898), so an operator merging two clients who each had different lawyers/administrative staff assigned has no visibility into whether those assignments were carried over, silently dropped as duplicates, or how many of each happened — the same visibility gap CR-01 explicitly closed for the other two data classes.
+**Fix:** Track counts while building the two loops (e.g. `movedAdvogados`/`droppedDuplicateAdvogados`) and add them to the response map; surface in the frontend toast alongside `moved_documentos`.
 
 ---
 
-_Reviewed: 2026-07-13T14:00:00Z_
+_Reviewed: 2026-07-13T19:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
