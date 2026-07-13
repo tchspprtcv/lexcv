@@ -767,6 +767,7 @@ public class ResourceController {
     }
 
     @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
     @PostMapping("/clientes/merge")
     public ResponseEntity<?> mergeClientes(@RequestBody ClienteMergeRequest payload) {
         if (payload == null || payload.primaryId() == null || payload.secondaryId() == null) {
