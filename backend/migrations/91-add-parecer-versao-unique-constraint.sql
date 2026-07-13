@@ -21,11 +21,18 @@
 -- it in production (same precedent/reasoning as migrations 81/82/88 for their respective tables).
 --
 -- Before running this script against a given environment, verify whether the constraint already
--- exists there (e.g. `\d t_parecer_versao` or a query against
--- `information_schema.table_constraints`) -- if this environment's DB was ever bootstrapped with
--- `ddl-auto: update`, the constraint (under an auto-generated name) may already be present, and
--- this script should be skipped or adapted for that environment to avoid a duplicate-constraint
--- error.
+-- exists there. Postgres allows multiple unique constraints on the same column set under
+-- different names, so checking only for the literal name `uk_parecer_versao_solicitacao_numero`
+-- is NOT sufficient -- an environment bootstrapped via `ddl-auto: update` will have this
+-- constraint under a Hibernate/Postgres auto-generated name instead, and running this script
+-- there would silently add a second, functionally-redundant unique constraint rather than fail
+-- with a duplicate-constraint error. Check by column set instead:
+--
+--   SELECT conname FROM pg_constraint
+--   WHERE conrelid = 't_parecer_versao'::regclass AND contype = 'u';
+--
+-- If a row already covers (solicitacao_id, numero_versao), this script should be skipped or
+-- adapted for that environment.
 --
 -- There is no automated migration runner in this repository (no Flyway, no Liquibase --
 -- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
