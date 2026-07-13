@@ -2483,33 +2483,6 @@ public class ResourceController {
     }
 
     @PreAuthorize("hasAuthority('agenda:view')")
-    @GetMapping("/eventos/upcoming")
-    public ResponseEntity<?> getUpcomingEventos(@RequestParam(defaultValue = "7") int days) {
-        if (days <= 0) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", "O parâmetro 'days' deve ser maior que zero"));
-        }
-        int effectiveDays = Math.min(days, 30);
-        UUID tenantId = getTenantId();
-        List<Evento> eventos = eventoRepository.findByTenantId(tenantId);
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime limit = now.plusDays(effectiveDays);
-        eventos.removeIf(e -> Boolean.TRUE.equals(e.getConcluido()));
-        eventos.removeIf(e -> e.getDataInicio() == null || e.getDataInicio().isBefore(now) || e.getDataInicio().isAfter(limit));
-        eventos.sort(Comparator.comparing(Evento::getDataInicio));
-        List<Evento> slice = eventos.size() > 10 ? eventos.subList(0, 10) : eventos;
-        List<?> slimList = slice.stream().map(e -> Map.of(
-                "id", e.getId(),
-                "titulo", e.getTitulo() != null ? e.getTitulo() : "",
-                "dataInicio", e.getDataInicio().toString(),
-                "processoId", e.getProcessoId() != null ? e.getProcessoId().toString() : "",
-                "tipo", e.getTipo() != null ? e.getTipo() : "",
-                "risco", riscoPrazoService.computeRiscoEvento(e.getDataInicio(), e.getPrioridade())
-        )).toList();
-        return ResponseEntity.ok(slimList);
-    }
-
-    @PreAuthorize("hasAuthority('agenda:view')")
     @GetMapping("/eventos/{id}")
     public ResponseEntity<?> getEvento(@PathVariable Integer id) {
         Evento evento = eventoRepository.findById(id).orElse(null);
