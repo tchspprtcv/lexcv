@@ -375,13 +375,15 @@ public class ResourceController {
                         originalName, inputStream, file.getContentType(), file.getSize());
             }
 
-            // Upload new object before deleting old one — old remains intact if upload fails.
+            // Upload new object before touching the DB reference — old remains intact if upload fails.
+            cliente.setProcuracaoKey(newKey);
+            clienteRepository.save(cliente);
+
+            // Only delete the old object after the DB reference is committed (WR-02): if the
+            // save above fails, the DB still points at oldKey, which must still exist.
             if (oldKey != null) {
                 storageService.delete(oldKey);
             }
-
-            cliente.setProcuracaoKey(newKey);
-            clienteRepository.save(cliente);
             return ResponseEntity.ok(Map.of("procuracaoKey", newKey));
         } catch (StorageUnavailableException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -2590,6 +2592,7 @@ public class ResourceController {
             String fileId = UUID.randomUUID().toString();
 
             Documento documento;
+            String oldKeyToDeleteAfterSave = null;
             if (replaceId != null) {
                 documento = documentoRepository.findById(replaceId).orElse(null);
                 if (documento == null || !documento.getTenantId().equals(getTenantId())) {
@@ -2603,7 +2606,9 @@ public class ResourceController {
                     objectKey = storageService.upload(getTenantId(), documento.getId(),
                             originalName, inputStream, file.getContentType(), file.getSize());
                 }
-                storageService.delete(oldKey);
+                // Deletion is deferred until after the DB save commits (WR-02): if the save
+                // below fails, the DB still points at oldKey, which must still exist.
+                oldKeyToDeleteAfterSave = oldKey;
 
                 documento.setNome(originalName);
                 if (tipo != null) documento.setTipo(tipo);
@@ -2636,6 +2641,10 @@ public class ResourceController {
             }
 
             Documento saved = documentoRepository.save(documento);
+
+            if (oldKeyToDeleteAfterSave != null) {
+                storageService.delete(oldKeyToDeleteAfterSave);
+            }
 
             if (replaceId == null) {
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
