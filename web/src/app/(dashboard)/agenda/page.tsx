@@ -103,6 +103,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       prioridade: p.prioridade as Evento["prioridade"],
       concluido: p.concluido,
       isPrazo: true,
+      risco: p.risco,
     }));
     return [...evs, ...pzs];
   }, [eventos.data, prazos.data, optimisticOverrides]);
@@ -163,7 +164,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
     const prazosAtivos = active.filter((e) => getCategoria(e).id === "PRAZO").length;
     const audiencias = active.filter((e) => getCategoria(e).id === "AUDIENCIA").length;
-    const urgentes = active.filter((e) => e.prioridade === "ALTA").length;
+    const urgentes = active.filter((e) => e.risco === "proximo" || e.risco === "vencido").length;
 
     return { prazosAtivos, audiencias, urgentes };
   }, [filteredEvents]);
