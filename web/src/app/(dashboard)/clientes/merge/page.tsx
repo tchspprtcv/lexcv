@@ -42,13 +42,19 @@ export default function ClientesMergePage() {
       toast.error("Seleciona dois clientes diferentes.");
       return;
     }
-    const ok = window.confirm("Confirmas o merge? O cliente duplicado será removido.");
+    const ok = window.confirm(
+      "Confirmas o merge? O cliente duplicado será removido. O saldo da conta-corrente e os documentos do cliente duplicado serão transferidos para o cliente principal.",
+    );
     if (!ok) return;
 
     try {
       const res = await merge.mutateAsync({ primaryId, secondaryId });
+      const saldoInfo =
+        res.merged_saldo && Number(res.merged_saldo) !== 0
+          ? `, saldo transferido: ${res.merged_saldo}`
+          : "";
       toast.success(
-        `Merge concluído. Processos: ${res.moved_processos}, contactos: ${res.moved_contactos}, notas: ${res.moved_notas}.`,
+        `Merge concluído. Processos: ${res.moved_processos}, contactos: ${res.moved_contactos}, notas: ${res.moved_notas}, documentos: ${res.moved_documentos}${saldoInfo}.`,
       );
       router.push(`/clientes/${encodeURIComponent(res.primary_id)}`);
     } catch (e) {

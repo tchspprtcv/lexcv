@@ -131,6 +131,8 @@ export function useMergeClientes() {
         moved_processos: number;
         moved_contactos: number;
         moved_notas: number;
+        moved_documentos: number;
+        merged_saldo: string;
       }>("/clientes/merge", {
         method: "POST",
         body: JSON.stringify(payload),

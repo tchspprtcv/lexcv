@@ -840,14 +840,52 @@ public class ResourceController {
         notasToMove.forEach(n -> n.setClienteId(savedPrimary.getId()));
         clienteNotaRepository.saveAll(notasToMove);
 
-        contaCorrenteRepository.findByClienteId(payload.secondaryId()).ifPresent(contaCorrenteRepository::delete);
+        BigDecimal mergedSaldo = BigDecimal.ZERO;
+        Optional<ContaCorrente> secondaryCcOpt = contaCorrenteRepository.findByClienteId(payload.secondaryId());
+        if (secondaryCcOpt.isPresent()) {
+            ContaCorrente secondaryCc = secondaryCcOpt.get();
+            mergedSaldo = secondaryCc.getSaldo() != null ? secondaryCc.getSaldo() : BigDecimal.ZERO;
+            if (mergedSaldo.compareTo(BigDecimal.ZERO) != 0) {
+                ContaCorrente primaryCc = contaCorrenteRepository.findByClienteId(savedPrimary.getId())
+                        .orElseGet(() -> contaCorrenteRepository.save(
+                                ContaCorrente.builder().clienteId(savedPrimary.getId()).saldo(BigDecimal.ZERO).build()));
+                BigDecimal primarySaldo = primaryCc.getSaldo() != null ? primaryCc.getSaldo() : BigDecimal.ZERO;
+                primaryCc.setSaldo(primarySaldo.add(mergedSaldo));
+                contaCorrenteRepository.save(primaryCc);
+            }
+            contaCorrenteRepository.delete(secondaryCc);
+        }
+
+        List<Documento> docsToMove = documentoRepository.findByTenantIdAndClienteId(tenantId, payload.secondaryId());
+        docsToMove.forEach(d -> d.setClienteId(savedPrimary.getId()));
+        documentoRepository.saveAll(docsToMove);
+
+        for (ClienteAdvogado link : clienteAdvogadoRepository.findByClienteIdAndTenantId(payload.secondaryId(), tenantId)) {
+            if (clienteAdvogadoRepository.findByClienteIdAndUserIdAndTenantId(savedPrimary.getId(), link.getUserId(), tenantId).isEmpty()) {
+                link.setClienteId(savedPrimary.getId());
+                clienteAdvogadoRepository.save(link);
+            } else {
+                clienteAdvogadoRepository.delete(link);
+            }
+        }
+        for (ClienteAdministrativo link : clienteAdministrativoRepository.findByClienteIdAndTenantId(payload.secondaryId(), tenantId)) {
+            if (clienteAdministrativoRepository.findByClienteIdAndUserIdAndTenantId(savedPrimary.getId(), link.getUserId(), tenantId).isEmpty()) {
+                link.setClienteId(savedPrimary.getId());
+                clienteAdministrativoRepository.save(link);
+            } else {
+                clienteAdministrativoRepository.delete(link);
+            }
+        }
+
         clienteRepository.delete(secondary);
 
         return ResponseEntity.ok(Map.of(
                 "primary_id", savedPrimary.getId().toString(),
                 "moved_processos", processosToMove.size(),
                 "moved_contactos", contactosToMove.size(),
-                "moved_notas", notasToMove.size()
+                "moved_notas", notasToMove.size(),
+                "moved_documentos", docsToMove.size(),
+                "merged_saldo", mergedSaldo.toString()
         ));
     }
 
