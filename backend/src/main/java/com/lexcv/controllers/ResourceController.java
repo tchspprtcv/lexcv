@@ -2368,7 +2368,10 @@ public class ResourceController {
         }
 
         if (concluido != null) {
-            eventos.removeIf(e -> !e.getConcluido().equals(concluido));
+            // WR-02 (92-REVIEW.md): flip operand order so a legacy/null-DB Boolean on `e` can't
+            // NPE the whole tenant's /eventos listing — `concluido` (the request param) is
+            // already null-checked by the enclosing `if`.
+            eventos.removeIf(e -> !concluido.equals(e.getConcluido()));
         }
 
         LocalDateTime start = null;
