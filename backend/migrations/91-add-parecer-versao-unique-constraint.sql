@@ -1,0 +1,36 @@
+-- Phase 91 code review (WR-04): DB-level backstop for ParecerVersao(solicitacao_id, numero_versao)
+-- uniqueness
+--
+-- IMPORTANT: This is a REQUIRED manual production migration script. It MUST be run
+-- manually (e.g. via psql or DBeaver) against the database BEFORE or DURING deploying
+-- any environment that does not already have this constraint.
+--
+-- Why: `application-prod.yml` sets `ddl-auto: validate` in production (dev/CI use
+-- `ddl-auto: update`, which auto-creates this constraint locally from the entity mapping).
+-- `ddl-auto=validate` never creates or alters schema -- it only checks the existing schema
+-- is compatible at startup. The `uniqueConstraints = @UniqueConstraint(columnNames =
+-- {"solicitacao_id", "numero_versao"})` annotation on `ParecerVersao.java` was added in commit
+-- 02b46d3 ("fix(62): WR-01 add unique constraint on (solicitacao_id, numero_versao)") without an
+-- accompanying manual migration, unlike every later constraint (81, 82, 86, 88) which paired the
+-- annotation change with a manual script once that pattern was established. This means the
+-- constraint may exist in every developer's local DB (via `ddl-auto: update`) but never have
+-- been applied in production, leaving `ParecerController.createVersao`'s
+-- `PESSIMISTIC_WRITE`-lock-based serialization (`ParecerSolicitacaoRepository.findByIdForUpdate`)
+-- as production's only real protection against duplicate `numeroVersao` rows for the same
+-- `solicitacao_id` -- if that lock ever regresses, there would be no DB-level safety net to catch
+-- it in production (same precedent/reasoning as migrations 81/82/88 for their respective tables).
+--
+-- Before running this script against a given environment, verify whether the constraint already
+-- exists there (e.g. `\d t_parecer_versao` or a query against
+-- `information_schema.table_constraints`) -- if this environment's DB was ever bootstrapped with
+-- `ddl-auto: update`, the constraint (under an auto-generated name) may already be present, and
+-- this script should be skipped or adapted for that environment to avoid a duplicate-constraint
+-- error.
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase --
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (staging/prod)
+-- before that environment picks up a deploy that relies on this constraint.
+
+ALTER TABLE t_parecer_versao
+    ADD CONSTRAINT uk_parecer_versao_solicitacao_numero UNIQUE (solicitacao_id, numero_versao);
