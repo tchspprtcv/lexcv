@@ -2397,15 +2397,12 @@ public class ResourceController {
                     .body(Map.of("message", "O parâmetro 'dataFim' não pode ser anterior a 'dataInicio'"));
         }
 
-        if (start != null) {
-            LocalDateTime finalStart = start;
-            eventos.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isBefore(finalStart));
-        }
-
-        if (end != null) {
-            LocalDateTime finalEnd = end;
-            eventos.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isAfter(finalEnd));
-        }
+        // CR-04 (92-REVIEW.md): the start/end date-window filter used to run here, against the
+        // master row's own dataInicio, *before* recurrence expansion — so any recurring event
+        // whose original dataInicio predated the requested window was dropped outright, taking
+        // every one of its otherwise in-window recurring instances with it. The window is now
+        // applied to the *expanded* instances below instead (each instance carries its own
+        // occurrence date in dataInicio), after the expansion loop runs.
 
         // Expand recurring instances
         LocalDateTime effectiveStart = start != null ? start : LocalDateTime.now().minusYears(1);
@@ -2473,6 +2470,16 @@ public class ResourceController {
                     !master.getRecurrenceRule().equals("WEEKLY") &&
                     !master.getRecurrenceRule().equals("MONTHLY")) break;
             }
+        }
+
+        if (start != null) {
+            LocalDateTime finalStart = start;
+            expanded.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isBefore(finalStart));
+        }
+
+        if (end != null) {
+            LocalDateTime finalEnd = end;
+            expanded.removeIf(e -> e.getDataInicio() != null && e.getDataInicio().isAfter(finalEnd));
         }
 
         for (Evento e : expanded) {
