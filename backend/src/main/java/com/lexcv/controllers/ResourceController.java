@@ -21,6 +21,7 @@ import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -2871,7 +2872,12 @@ public class ResourceController {
                     // A payment increases account balance (positive inflow)
                     cc.setSaldo(cc.getSaldo().add(pag.getValorPago()));
                     contaCorrenteRepository.save(cc);
-        } catch (Exception ex) {
+        } catch (DataAccessException ex) {
+            // WR-05: narrowed from Exception -- only persistence-layer failures (transient DB
+            // issues) are treated as recoverable here. valorPago is already validated non-null
+            // above (CR-04), so a NullPointerException from bad arithmetic input can no longer
+            // reach this block; if one does, or any other programming error occurs, it now
+            // propagates instead of being silently logged as a warning.
             log.warn("PAGAMENTO_CREATE: falha ao atualizar saldo da conta corrente, pagamento={}", saved.getId(), ex);
         }
 
@@ -2956,11 +2962,14 @@ public class ResourceController {
         try {
             UUID clienteId = processo.getClienteId();
             ContaCorrente cc = contaCorrenteRepository.findByClienteId(clienteId).orElse(null);
-            if (cc != null) {
+            // WR-05: guard against null valorPago on legacy rows persisted before CR-04's
+            // validation existed, so BigDecimal#subtract can't NPE here.
+            if (cc != null && pag.getValorPago() != null) {
                 cc.setSaldo(cc.getSaldo().subtract(pag.getValorPago()));
                 contaCorrenteRepository.save(cc);
             }
-        } catch (Exception ex) {
+        } catch (DataAccessException ex) {
+            // WR-05: narrowed from Exception -- see createPagamento's equivalent catch clause.
             log.warn("PAGAMENTO_DELETE: falha ao atualizar saldo da conta corrente, pagamento={}", id, ex);
         }
         pagamentoRepository.deleteById(id);
