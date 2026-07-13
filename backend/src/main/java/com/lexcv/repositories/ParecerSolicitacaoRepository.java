@@ -14,6 +14,11 @@ import java.util.UUID;
 public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolicitacao, UUID> {
     List<ParecerSolicitacao> findByTenantId(UUID tenantId);
 
+    // WR-02 (Phase 90 code review, iteration 3): used by ResourceController.mergeClientes to
+    // migrate clienteId off the secondary client before it is deleted, tenant-scoped for
+    // isolation consistency with every other finder in this class.
+    List<ParecerSolicitacao> findByTenantIdAndClienteId(UUID tenantId, UUID clienteId);
+
     // WR-04 (Phase 87 code review, iteration 3): row-level PESSIMISTIC_WRITE lock, held for
     // the duration of the caller's @Transactional method (same convention as
     // SystemSettingRepository.findByIdForUpdate / SetupService.initializeSystem) -- used by

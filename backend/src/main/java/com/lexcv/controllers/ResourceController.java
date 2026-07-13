@@ -77,6 +77,10 @@ public class ResourceController {
     private final DecisaoRepository decisaoRepository;
     private final TestemunhaRepository testemunhaRepository;
     private final FactoRepository factoRepository;
+    // WR-02 (Phase 90 code review, iteration 3): used only by mergeClientes, to migrate
+    // ParecerSolicitacao.clienteId (nullable = false, validated by ParecerController) off the
+    // secondary client before it is deleted -- see the migration loop there for context.
+    private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -897,6 +901,16 @@ public class ResourceController {
             }
         }
 
+        // WR-02 (Phase 90 code review, iteration 3): ParecerSolicitacao.clienteId is
+        // nullable = false and enforced as a real FK-like reference by ParecerController; without
+        // this migration a parecer still referencing secondaryId becomes permanently orphaned
+        // once the secondary Cliente row is deleted below -- the same defect class CR-01 fixed
+        // for Documento/ClienteAdvogado/ClienteAdministrativo.
+        List<ParecerSolicitacao> pareceresToMove =
+                parecerSolicitacaoRepository.findByTenantIdAndClienteId(tenantId, payload.secondaryId());
+        pareceresToMove.forEach(ps -> ps.setClienteId(savedPrimary.getId()));
+        parecerSolicitacaoRepository.saveAll(pareceresToMove);
+
         clienteRepository.delete(secondary);
 
         return ResponseEntity.ok(Map.of(
@@ -905,7 +919,8 @@ public class ResourceController {
                 "moved_contactos", contactosToMove.size(),
                 "moved_notas", notasToMove.size(),
                 "moved_documentos", docsToMove.size(),
-                "merged_saldo", mergedSaldo.toString()
+                "merged_saldo", mergedSaldo.toString(),
+                "moved_pareceres", pareceresToMove.size()
         ));
     }
 
