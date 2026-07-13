@@ -276,7 +276,10 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   2. Um teste análogo exercita escrita concorrente sobre `ParecerVersao.numeroVersao` e comprova o comportamento do lock
   3. Ambos os testes correm sem exigir `MINIO_ENDPOINT` nem qualquer outra variável de ambiente de produção (via `@DataJpaTest`, que exclui os beans de MinIO/segurança)
   4. Existe uma decisão registada (STATE.md/PROJECT.md) sobre se `.github/workflows/deploy.yml` passa a correr `mvn test`/`spotbugs:check`, com a mudança aplicada caso a decisão seja afirmativa
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+- [ ] 91-01-PLAN.md — Testcontainers infra (deps + failsafe + test properties) + NotificacaoRepositoryIT: native buscarPorFiltros contra postgres:16-alpine real (TEST-01)
+- [ ] 91-02-PLAN.md — ParecerVersaoConcorrenciaIT: corrida de 2 threads sobre o lock PESSIMISTIC_WRITE de numeroVersao + backstop da constraint única (solicitacao_id, numero_versao) (TEST-02)
+- [ ] 91-03-PLAN.md — Gate de CI em deploy.yml (mvn verify + spotbugs:check, needs: test) + decisão TEST-03 registada em PROJECT.md/STATE.md (TEST-03)
 
 #### Phase 92: Agenda ↔ RiscoPrazoService — Consolidação
 
@@ -407,7 +410,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
 | 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete    | 2026-07-10 |
 | 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 1/1 | Complete    | 2026-07-13 |
-| 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 0/TBD | Not started | - |
+| 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 0/3 | Not started | - |
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 0/TBD | Not started | - |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 0/TBD | Not started | - |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
