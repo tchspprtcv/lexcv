@@ -127,3 +127,13 @@ None for the code itself. **For live verification** (deferred item above), one o
 ---
 *Phase: 91-infraestrutura-de-testes-de-integracao*
 *Completed: 2026-07-13*
+
+## Self-Check: PASSED
+
+- FOUND: backend/pom.xml
+- FOUND: backend/src/test/resources/application.properties
+- FOUND: backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java
+- FOUND: .planning/phases/LEXCV-91-infraestrutura-de-testes-de-integração-(testcontainers)/91-01-SUMMARY.md
+- FOUND commit: 0d56ed9 (Task 1)
+- FOUND commit: e77cbab (Task 2)
+- FOUND commit: af63ce3 (SUMMARY.md)
