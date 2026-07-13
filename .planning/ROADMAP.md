@@ -264,7 +264,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   2. `backend/spotbugs-exclude.xml` e os bumps de versão de SpotBugs/FindSecBugs em `backend/pom.xml` estão commitados ao git, não apenas presentes no working tree
   3. As correções defensivas já aplicadas (`UserPrincipal`, `ConflictCheckResponse`, `WorkflowResponse`, `ResourceController`) permanecem no código e fazem parte do mesmo commit
 **Plans**: 1 plan
-- [ ] 90-01-PLAN.md — Reconfirmar `mvn spotbugs:check` verde contra o working tree atual (JDK 23) e commitar o deliverable SAST (pom.xml + spotbugs-exclude.xml + 4 correções defensivas) num único commit. Wiring de CI adiado para a Phase 91 (TEST-03).
+- [x] 90-01-PLAN.md — Reconfirmar `mvn spotbugs:check` verde contra o working tree atual (JDK 23) e commitar o deliverable SAST (pom.xml + spotbugs-exclude.xml + 4 correções defensivas) num único commit. Wiring de CI adiado para a Phase 91 (TEST-03).
 
 #### Phase 91: Infraestrutura de Testes de Integração (Testcontainers)
 
@@ -406,7 +406,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 87. Alertas de Eventos — Fase, Documento, Atribuição e Parecer | v2.10 | 4/4 | Complete    | 2026-07-09 |
 | 88. Verificação Diária de Prazos e Honorários | v2.10 | 2/2 | Complete    | 2026-07-09 |
 | 89. Sino e Página de Notificações | v2.10 | 4/4 | Complete    | 2026-07-10 |
-| 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 0/TBD | Not started | - |
+| 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 1/1 | Complete   | 2026-07-13 |
 | 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 0/TBD | Not started | - |
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 0/TBD | Not started | - |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 0/TBD | Not started | - |

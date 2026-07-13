@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.11
 milestone_name: Auditoria Técnica e Notificações Avançadas
-status: planning
-last_updated: "2026-07-12T15:10:00.000Z"
-last_activity: 2026-07-12
+status: executing
+stopped_at: ROADMAP.md and REQUIREMENTS.md traceability written for v2.11 (8 phases, 15/15 requirements, no orphans)
+last_updated: "2026-07-12T21:42:55.849Z"
+last_activity: 2026-07-12 -- Phase 90 execution started
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.11 (Auditoria Técnica e Notificações Avançadas) — roadmap criado, pronto para planeamento da Phase 90.
+**Current focus:** Phase 90 — SpotBugs/SAST — Commit e Verificação
 
 ## Current Position
 
-Phase: 90 of 97 (SpotBugs/SAST — Commit e Verificação)
-Plan: TBD (not yet broken down)
-Status: Ready to plan
-Last activity: 2026-07-12 — ROADMAP.md e REQUIREMENTS.md (traceability) criados para v2.11: 8 fases (90–97), 15/15 requisitos mapeados, 0 orphans
+Phase: 90 (SpotBugs/SAST — Commit e Verificação) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 90
+Last activity: 2026-07-12 -- Phase 90 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 
