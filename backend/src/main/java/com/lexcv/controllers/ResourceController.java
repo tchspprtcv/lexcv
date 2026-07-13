@@ -2604,6 +2604,14 @@ public class ResourceController {
         // prioridade is validated, normalized to uppercase, and set above (WR-01, 85-REVIEW.md
         // iteration 3) — not repeated here to avoid persisting the raw, unnormalized value.
         if (payload.getConcluido() != null) evento.setConcluido(payload.getConcluido());
+        // WR-01 (92-REVIEW.md, iteration 2): same architectural class of gap as processoId/tipo/
+        // descricao (WR-05, iteration 1) — binding the raw Evento entity as the PUT payload means
+        // `if (x != null)` can only ever *set* these fields, never *clear* them. Once an evento is
+        // made recurring there is currently no way via PUT /eventos/{id} to turn it back into a
+        // one-off (null out recurrenceRule) or drop a previously-set recurrenceEndDate/
+        // recurrenceExceptions. This is an accepted, documented product constraint for now: to stop
+        // a recurring series, delete it and recreate it as one-off. Revisit if/when the backend
+        // gains a proper PATCH DTO that can express "clear this field" (see WR-05's note above).
         if (payload.getRecurrenceRule() != null) evento.setRecurrenceRule(payload.getRecurrenceRule());
         if (payload.getRecurrenceEndDate() != null) evento.setRecurrenceEndDate(payload.getRecurrenceEndDate());
         if (payload.getRecurrenceExceptions() != null) evento.setRecurrenceExceptions(payload.getRecurrenceExceptions());
