@@ -1,6 +1,7 @@
 package com.lexcv.repositories;
 
 import com.lexcv.models.Notificacao;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -12,6 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +47,9 @@ class NotificacaoRepositoryIT {
 
     @Autowired
     private NotificacaoRepository notificacaoRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     /**
      * Persiste uma linha válida via o builder, variando sempre entidadeId para nunca colidir
@@ -126,16 +131,28 @@ class NotificacaoRepositoryIT {
     }
 
     @Test
-    void buscarPorFiltros_paginacao_totalElementsCorretoETamanhoDePaginaRespeitado_ordemDescPorCreatedAt() throws InterruptedException {
+    void buscarPorFiltros_paginacao_totalElementsCorretoETamanhoDePaginaRespeitado_ordemDescPorCreatedAt() {
         UUID tenantId = UUID.randomUUID();
         UUID destinatarioId = UUID.randomUUID();
-        // created_at é preenchido por @PrePersist com LocalDateTime.now(); um pequeno atraso
-        // entre inserções garante ordenação determinística mesmo com baixa resolução de relógio.
-        persistir(tenantId, destinatarioId, "FASE_ENTRADA", "id-30", false);
-        Thread.sleep(5);
+        Notificacao n1 = persistir(tenantId, destinatarioId, "FASE_ENTRADA", "id-30", false);
         Notificacao n2 = persistir(tenantId, destinatarioId, "FASE_ENTRADA", "id-31", false);
-        Thread.sleep(5);
         Notificacao n3 = persistir(tenantId, destinatarioId, "FASE_ENTRADA", "id-32", false);
+
+        // WR-01 (Phase 91 code review): created_at é preenchido por @PrePersist com
+        // LocalDateTime.now() e a coluna é updatable=false (a entidade não expõe setter), pelo
+        // que não dá para pré-atribuir o valor antes do save(). Em vez de depender de
+        // Thread.sleep() entre inserções -- um padrão de teste inerentemente instável, já que
+        // duas inserções podem cair no mesmo milissegundo sob carga de CI/GC -- força-se aqui
+        // timestamps estritamente crescentes via UPDATE nativo pós-persistência.
+        entityManager.flush();
+        LocalDateTime base = LocalDateTime.now();
+        forcarCreatedAt(n1.getId(), base.minusSeconds(2));
+        forcarCreatedAt(n2.getId(), base.minusSeconds(1));
+        forcarCreatedAt(n3.getId(), base);
+        // Descarta o 1º-level cache: sem isto, a query nativa abaixo devolveria as instâncias
+        // já geridas (com os createdAt originais, quase simultâneos entre si) em vez dos valores
+        // reais agora persistidos na BD.
+        entityManager.clear();
 
         Page<Notificacao> page = notificacaoRepository.buscarPorFiltros(
                 tenantId, destinatarioId, null, null, PageRequest.of(0, 2));
@@ -146,6 +163,13 @@ class NotificacaoRepositoryIT {
         List<Notificacao> content = page.getContent();
         assertEquals(n3.getId(), content.get(0).getId());
         assertEquals(n2.getId(), content.get(1).getId());
-        assertTrue(!content.get(0).getCreatedAt().isBefore(content.get(1).getCreatedAt()));
+        assertTrue(content.get(0).getCreatedAt().isAfter(content.get(1).getCreatedAt()));
+    }
+
+    private void forcarCreatedAt(UUID id, LocalDateTime createdAt) {
+        entityManager.createNativeQuery("UPDATE t_notificacao SET created_at = :createdAt WHERE id = :id")
+                .setParameter("createdAt", createdAt)
+                .setParameter("id", id)
+                .executeUpdate();
     }
 }
