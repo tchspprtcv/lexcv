@@ -16,7 +16,8 @@ import {
   UserMinus,
   ShieldAlert,
   Save,
-  Bell
+  Bell,
+  AlertCircle
 } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
@@ -859,7 +860,7 @@ function RbacTab() {
 // NOTIFICATION PREFERENCES TAB SUB-COMPONENT
 // ==========================================
 function NotificationPreferencesTab() {
-  const { data, isLoading } = useNotificacaoPreferencias();
+  const { data, isLoading, isError, refetch } = useNotificacaoPreferencias();
   const silenciar = useSilenciarCategoria();
   const reativar = useReativarCategoria();
 
@@ -867,6 +868,20 @@ function NotificationPreferencesTab() {
     return (
       <div className="flex justify-center items-center h-48">
         <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-48 text-center px-4">
+        <AlertCircle className="h-6 w-6 text-red-500" />
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Não foi possível carregar as preferências de notificação.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Tentar novamente
+        </Button>
       </div>
     );
   }
