@@ -2763,8 +2763,13 @@ public class ResourceController {
                 UUID tenantId = getTenantId();
                 if (saved.getProcessoId() != null) {
                     Processo proc = processoRepository.findById(saved.getProcessoId()).orElse(null);
-                    UUID resp = proc != null ? proc.getResponsavelId() : null;
-                    List<UUID> dests = resp != null ? List.of(resp) : List.of();
+                    List<UUID> dests = new ArrayList<>();
+                    if (proc != null) {
+                        dests.addAll(notificacaoService.resolverEquipaCliente(tenantId, proc.getClienteId()));
+                        if (proc.getResponsavelId() != null) {
+                            dests.add(proc.getResponsavelId());
+                        }
+                    }
                     try {
                         notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
                                 saved.getNome(), "/processos/" + saved.getProcessoId(), atorId);
