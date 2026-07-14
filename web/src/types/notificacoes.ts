@@ -19,6 +19,7 @@ export interface Notificacao {
   linkUrl: string | null;
   lida: boolean;
   createdAt: string;
+  snoozedUntil: string | null;
 }
 
 export type NotificacoesListFilters = {
