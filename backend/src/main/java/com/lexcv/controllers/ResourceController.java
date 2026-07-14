@@ -3126,21 +3126,26 @@ public class ResourceController {
         return ResponseEntity.ok(kpis);
     }
 
-    // NOTA (WR-01, 85-REVIEW.md): eventos com prioridade ALTA e dataFim nula resultam em
-    // risco="ok" (computeRiscoEvento trata data nula como "ok") e por isso NÃO são contados
-    // como urgentes/críticos aqui — comportamento aceite explicitamente para este corner case
-    // (lembrete de prioridade ALTA sem data de fim definida). Isto é uma mudança face à
-    // lógica anterior, que contava qualquer evento ALTA independentemente da data. Se o
-    // produto decidir que este corner case deve contar como urgente/crítico por definição,
-    // tratar "ALTA" + dataFim nula como urgente explicitamente antes de delegar em
-    // computeRiscoEvento. Helper único partilhado por agendaUrgentesCount (KPI /dashboard
-    // prazos_vencer) e prazosCriticosCount (KPI /processos/dashboard prazos_criticos_count) —
-    // WR-01 (85-REVIEW.md) identificou que os dois KPIs tinham o mesmo padrão duplicado sem
-    // cross-reference entre si; consolidado aqui para que este comentário cubra ambos.
-    // Cobertura de teste de regressão está a cargo do follow-up de testes de controller
-    // (WR-03, 85-REVIEW.md).
+    // NOTA (WR-01, 85-REVIEW.md; corrigido na auditoria de milestone v2.11, Phase 97):
+    // usa dataInicio (não dataFim) para concordar com listEventos (GET /eventos, AGD-34/35)
+    // e AlertasDiariosJob — as 3 implementações de "evento crítico" desta base de código
+    // partilhavam RiscoPrazoService.computeRiscoEvento, mas duas delas já usavam dataInicio
+    // e só este helper (KPIs do dashboard) ainda divergia em dataFim, uma 5ª implementação
+    // divergente de facto que o próprio objetivo da Phase 92 (AGD-34/35: "deixa de existir
+    // qualquer 5ª implementação divergente de prazo crítico") pretendia eliminar. dataInicio
+    // é a data semanticamente relevante para um lembrete/evento de agenda (quando o evento
+    // acontece, não quando termina). Achado pelo integration-checker do audit-milestone,
+    // referenciado em 92-REVIEW.md CR-01/92-CONTEXT.md como item deferido para esta fase.
+    //
+    // Eventos com prioridade ALTA e dataInicio nula resultam em risco="ok" (computeRiscoEvento
+    // trata data nula como "ok") e por isso NÃO são contados como urgentes/críticos aqui —
+    // comportamento aceite explicitamente para este corner case (permanece um item de decisão
+    // de produto em aberto, não resolvido por esta correção). Helper único partilhado por
+    // agendaUrgentesCount (KPI /dashboard prazos_vencer) e prazosCriticosCount (KPI
+    // /processos/dashboard prazos_criticos_count). Cobertura de teste de regressão está a
+    // cargo do follow-up de testes de controller (WR-03, 85-REVIEW.md).
     private boolean isEventoCritico(Evento e) {
-        String risco = riscoPrazoService.computeRiscoEvento(e.getDataFim(), e.getPrioridade());
+        String risco = riscoPrazoService.computeRiscoEvento(e.getDataInicio(), e.getPrioridade());
         return RiscoPrazoService.PROXIMO.equals(risco) || RiscoPrazoService.VENCIDO.equals(risco);
     }
 
@@ -3252,8 +3257,8 @@ public class ResourceController {
                 .collect(Collectors.toList());
 
         // Prazos Críticos — via RiscoPrazoService (tabela de limiares partilhada 7d-ALTA/3d-outros).
-        // Corner case (ALTA + dataFim nula não conta como crítico) documentado em isEventoCritico()
-        // — WR-01 (85-REVIEW.md).
+        // Corner case (ALTA + dataInicio nula não conta como crítico) documentado em isEventoCritico()
+        // — WR-01 (85-REVIEW.md), dataFim->dataInicio corrigido na auditoria v2.11 (Phase 97).
         long prazosCriticosCount = eventoRepository.findByTenantIdAndConcluido(tenantId, false)
                 .stream()
                 .filter(this::isEventoCritico)
