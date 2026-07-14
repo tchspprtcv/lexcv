@@ -31,11 +31,11 @@ Requisitos desta milestone (v2.11 — Auditoria Técnica e Notificações Avanç
 
 ### AUD
 
-- [ ] **AUD-01**: Auditoria de isolamento de tenant nas novas superfícies desta milestone (preferências de notificação, resolução de equipa, snooze)
-- [ ] **AUD-02**: Fecho das UAT/verificações ao vivo pendentes nas fases 75, 76, 79, 81, 82, 84, 85, 89
-- [ ] **AUD-03**: Fecho de dívidas menores conhecidas (labels de enum `DocumentoTipo` não traduzidas, testes de validação de NIF ausentes)
-- [ ] **AUD-04**: Resolução ou contorno documentado do bloqueio ambiental `MINIO_ENDPOINT` que impediu verificação ao vivo em milestones anteriores
-- [ ] **AUD-05**: Nova auditoria ao código para descobrir gaps técnicas ainda não documentadas em `STATE.md`/`PROJECT.md`
+- [x] **AUD-01**: Auditoria de isolamento de tenant nas novas superfícies desta milestone (preferências de notificação, resolução de equipa, snooze)
+- [x] **AUD-02**: Fecho das UAT/verificações ao vivo pendentes nas fases 75, 76, 79, 81, 82, 84, 85, 89
+- [x] **AUD-03**: Fecho de dívidas menores conhecidas (labels de enum `DocumentoTipo` não traduzidas, testes de validação de NIF ausentes)
+- [x] **AUD-04**: Resolução ou contorno documentado do bloqueio ambiental `MINIO_ENDPOINT` que impediu verificação ao vivo em milestones anteriores
+- [x] **AUD-05**: Nova auditoria ao código para descobrir gaps técnicas ainda não documentadas em `STATE.md`/`PROJECT.md`
 
 ## v2 Requirements
 
@@ -65,11 +65,11 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 | NOTF-27 | Phase 94 | Complete |
 | NOTF-25 | Phase 95 | Complete |
 | NOTF-26 | Phase 96 | Complete |
-| AUD-01 | Phase 97 | Pending |
-| AUD-02 | Phase 97 | Pending |
-| AUD-03 | Phase 97 | Pending |
-| AUD-04 | Phase 97 | Pending |
-| AUD-05 | Phase 97 | Pending |
+| AUD-01 | Phase 97 | Complete |
+| AUD-02 | Phase 97 | Complete |
+| AUD-03 | Phase 97 | Complete |
+| AUD-04 | Phase 97 | Complete |
+| AUD-05 | Phase 97 | Complete |
 
 **Coverage:**
 - v1 requirements: 15 total
