@@ -1,9 +1,13 @@
 package com.lexcv.services;
 
 import com.lexcv.models.CategoriaNotificacao;
+import com.lexcv.models.ClienteAdministrativo;
+import com.lexcv.models.ClienteAdvogado;
 import com.lexcv.models.Notificacao;
 import com.lexcv.models.NotificacaoPreferencia;
 import com.lexcv.models.User;
+import com.lexcv.repositories.ClienteAdministrativoRepository;
+import com.lexcv.repositories.ClienteAdvogadoRepository;
 import com.lexcv.repositories.NotificacaoPreferenciaRepository;
 import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
@@ -17,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -27,6 +32,10 @@ public class NotificacaoService {
     private final NotificacaoRepository notificacaoRepository;
     private final UserRepository userRepository;
     private final NotificacaoPreferenciaRepository notificacaoPreferenciaRepository;
+    // NOTF-25: repositórios de junção tenant-scoped que alimentam resolverEquipaCliente — a
+    // mesma dupla que ResourceController já injeta para o ramo cliente de uploadDocumento.
+    private final ClienteAdvogadoRepository clienteAdvogadoRepository;
+    private final ClienteAdministrativoRepository clienteAdministrativoRepository;
 
     // ÚNICO ponto de escrita de CRIAÇÃO de Notificacao em todo o código — nenhuma outra classe
     // deve chamar notificacaoRepository.save(...)/saveAll(...) diretamente para criar uma linha.
@@ -123,6 +132,30 @@ public class NotificacaoService {
         }
     }
 
+    // NOTF-25: helper único de resolução da equipa do cliente -- devolve a união (deduplicada,
+    // ordem de inserção preservada: advogados antes de administrativos) dos userId de
+    // ClienteAdvogado + ClienteAdministrativo para o clienteId indicado. AMBOS os repositórios de
+    // junção são consultados pelo par (clienteId, tenantId) -- nunca por clienteId sozinho -- o
+    // filtro tenant_id na linha de junção É o próprio controlo de posse (Pitfall 10), sem
+    // necessidade de uma consulta adicional a Cliente. Devolve o conjunto vazio, sem qualquer
+    // chamada a repositório, quando clienteId é null (processo ainda sem cliente definido não tem
+    // equipa a resolver). Público porque o plano 95-02 (ResourceController, ramo processo de
+    // uploadDocumento) reutiliza esta MESMA implementação -- não deve existir uma segunda
+    // resolução de equipa inline noutro sítio (Pitfall 3).
+    public Set<UUID> resolverEquipaCliente(UUID tenantId, UUID clienteId) {
+        if (clienteId == null) {
+            return new LinkedHashSet<>();
+        }
+        LinkedHashSet<UUID> equipa = new LinkedHashSet<>();
+        for (ClienteAdvogado ca : clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, tenantId)) {
+            equipa.add(ca.getUserId());
+        }
+        for (ClienteAdministrativo ca : clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, tenantId)) {
+            equipa.add(ca.getUserId());
+        }
+        return equipa;
+    }
+
     // NOTF-27 (Phase 94): helper único que funde destinatário(s) primário(s) + fan-out ADMIN num
     // único LinkedHashSet<UUID> deduplicado ANTES do loop de criação, para que criar() seja
     // chamado no máximo uma vez por pessoa por evento -- mesmo quando o primário também é ADMIN
@@ -137,9 +170,29 @@ public class NotificacaoService {
     // excluirUserId (ator) é removido de AMBOS os conjuntos antes do merge -- preserva o
     // comportamento pré-existente de DOCUMENTO_NOVO/PARECER_ATRIBUIDO (o autor nunca é notificado
     // da sua própria ação, mesmo sendo ADMIN).
+    // NOTF-25: forma "fina" de 10 argumentos preservada tal e qual para notificarDocumentoNovo e
+    // notificarParecerAtribuido (CONTEXT.md: parecer mantém-se individual) -- delega para a nova
+    // forma de 11 argumentos com destinatariosSecundarios vazio, logo o comportamento observável
+    // desta sobrecarga é idêntico ao de antes desta fase.
     private void criarComFanOutAdmin(UUID tenantId, String categoria, String titulo, String entidadeTipo,
                                       String entidadeId, String linkUrl, Collection<UUID> destinatariosPrimarios,
                                       String mensagemPrimario, String mensagemAdmin, UUID excluirUserId) {
+        criarComFanOutAdmin(tenantId, categoria, titulo, entidadeTipo, entidadeId, linkUrl,
+                destinatariosPrimarios, List.of(), mensagemPrimario, mensagemAdmin, excluirUserId);
+    }
+
+    // NOTF-25: sobrecarga de 11 argumentos que acrescenta um segundo nível de destinatários --
+    // "secundários" (ex.: a equipa do cliente que não é o novo responsável) que recebem a MESMA
+    // mensagem informativa que os ADMIN, distinta da mensagem em 2ª pessoa reservada aos
+    // primários -- sem criar um caminho de escrita paralelo ao helper já existente (Phase 94).
+    // destinatariosPrimarios ∪ destinatariosSecundarios ∪ fan-out ADMIN são fundidos no MESMO
+    // LinkedHashSet deduplicado antes do loop de escrita -- um UUID presente em primários E
+    // secundários (ou também ADMIN) permanece primário e é escrito uma única vez, preservando
+    // exatamente a garantia de dedup do helper de 10 argumentos.
+    private void criarComFanOutAdmin(UUID tenantId, String categoria, String titulo, String entidadeTipo,
+                                      String entidadeId, String linkUrl, Collection<UUID> destinatariosPrimarios,
+                                      Collection<UUID> destinatariosSecundarios, String mensagemPrimario,
+                                      String mensagemInformativo, UUID excluirUserId) {
         // WR-01 (Phase 94 code review): validar os campos ao nível do EVENTO (partilhados por
         // todos os destinatários) uma única vez, ANTES do loop, e deixar propagar
         // IllegalArgumentException imediatamente -- em vez de deixar que a mesma falha (ex.:
@@ -167,6 +220,14 @@ public class NotificacaoService {
             }
         }
         LinkedHashSet<UUID> todos = new LinkedHashSet<>(primarios);
+        for (UUID dest : destinatariosSecundarios) {
+            if (dest != null && !dest.equals(excluirUserId)) {
+                // Set deduplica por construção: um destinatário secundário que já é primário
+                // não é re-adicionado -- fica marcado como primário (mensagemPrimario) e é
+                // escrito uma única vez.
+                todos.add(dest);
+            }
+        }
         // WR-02 (Phase 94 code review): AndAtivoTrue exclui admins desativados do fan-out --
         // mirrors the `ativo` check ResourceController.atribuirResponsavel already applies
         // before assigning a responsible party. Without this, a deactivated ADMIN account would
@@ -174,14 +235,14 @@ public class NotificacaoService {
         // them.
         for (User admin : userRepository.findByTenantIdAndRoleNameAndAtivoTrue(tenantId, "ADMIN")) {
             if (!admin.getId().equals(excluirUserId)) {
-                // Set deduplica por construção: um admin que já é primário não é
+                // Set deduplica por construção: um admin que já é primário ou secundário não é
                 // re-adicionado -- é aqui que a colisão de uk_notificacao_dedup deixa de
                 // ser possível, em vez de ser "corrigida" depois de já ter acontecido.
                 todos.add(admin.getId());
             }
         }
         for (UUID dest : todos) {
-            String mensagem = primarios.contains(dest) ? mensagemPrimario : mensagemAdmin;
+            String mensagem = primarios.contains(dest) ? mensagemPrimario : mensagemInformativo;
             try {
                 // CR-01 (Phase 87 code review, iteration 2): isolate each destinatario so one
                 // stale/orphaned reference can never prevent the remaining destinatarios (in
@@ -194,23 +255,31 @@ public class NotificacaoService {
         }
     }
 
-    // NOTF-15: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a exige aqui).
-    // responsavelId é nullable (Processo ainda pode não ter responsável atribuído) — filtrado pelo
-    // helper (destinatariosPrimarios vazio) em vez de um null-guard local.
-    public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID responsavelId,
+    // NOTF-15/NOTF-25: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a
+    // exige aqui). primarios = equipa do cliente do processo (resolverEquipaCliente) ∪
+    // responsavelId (nullable -- Processo ainda pode não ter responsável atribuído). Fase entrada
+    // não tem distinção 2ª/3ª pessoa (CONTEXT.md), logo a mesma mensagem serve o(s) primário(s) e
+    // o fan-out ADMIN -- mantém-se a forma de 10 argumentos do helper.
+    public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID clienteId, UUID responsavelId,
                                       String numeroProcesso, String nomeFase, String linkUrl) {
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Nova fase";
         String mensagem = "O processo " + numeroTexto + " entrou na fase " + nomeFase;
-        List<UUID> primarios = responsavelId != null ? List.of(responsavelId) : List.of();
+        LinkedHashSet<UUID> primarios = new LinkedHashSet<>(resolverEquipaCliente(tenantId, clienteId));
+        if (responsavelId != null) {
+            primarios.add(responsavelId);
+        }
         criarComFanOutAdmin(tenantId, "FASE_ENTRADA", titulo, "processo", processoId.toString(), linkUrl,
                 primarios, mensagem, mensagem, null);
     }
 
-    // NOTF-18: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a exige aqui).
-    // Mensagem do destinatário em 2ª pessoa (texto travado por CONTEXT.md); mensagem do ADMIN em
-    // 3ª pessoa, sem nome do ator.
-    public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
+    // NOTF-18/NOTF-25: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a
+    // exige aqui). Mensagem do responsável em 2ª pessoa (texto travado por CONTEXT.md); resto da
+    // equipa do cliente + ADMIN recebem a mensagem informativa em 3ª pessoa, sem nome do ator --
+    // usa a sobrecarga de 11 argumentos do helper (destinatariosSecundarios = equipa menos o
+    // responsável, para que um responsável também presente na equipa não seja escrito duas vezes
+    // nem "perca" a mensagem em 2ª pessoa para a informativa).
+    public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID clienteId, UUID responsavelId,
                                             String numeroProcesso, String linkUrl) {
         // WR-02 (Phase 87 code review): self-defending null-guard. Unlike
         // notificarFaseEntrada (where the ADMIN fan-out is unconditionally correct
@@ -225,9 +294,11 @@ public class NotificacaoService {
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Processo atribuído";
         String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
-        String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+        String mensagemInformativo = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+        LinkedHashSet<UUID> equipa = new LinkedHashSet<>(resolverEquipaCliente(tenantId, clienteId));
+        equipa.remove(responsavelId);
         criarComFanOutAdmin(tenantId, "PROCESSO_ATRIBUIDO", titulo, "processo", processoId.toString(), linkUrl,
-                List.of(responsavelId), mensagemDest, mensagemAdmin, null);
+                List.of(responsavelId), equipa, mensagemDest, mensagemInformativo, null);
     }
 
     // NOTF-16: novo documento em processo/cliente. Ator (quem fez o upload) é sempre excluído do

@@ -1082,8 +1082,8 @@ public class ResourceController {
         }
         Processo saved = processoRepository.save(processo);
         if (saved.getResponsavelId() != null) {
-            notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
-                    saved.getNumeroProcesso(), "/processos/" + saved.getId());
+            notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getClienteId(),
+                    saved.getResponsavelId(), saved.getNumeroProcesso(), "/processos/" + saved.getId());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
@@ -1147,8 +1147,8 @@ public class ResourceController {
                 .autorId(principal.getUserId())
                 .build());
 
-        notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getResponsavelId(),
-                saved.getNumeroProcesso(), "/processos/" + saved.getId());
+        notificacaoService.notificarProcessoAtribuido(tenantId, saved.getId(), saved.getClienteId(),
+                saved.getResponsavelId(), saved.getNumeroProcesso(), "/processos/" + saved.getId());
 
         return ResponseEntity.ok(saved);
     }
@@ -1844,8 +1844,9 @@ public class ResourceController {
 
         ProcessoFase saved = processoFaseRepository.save(pf);
         try {
-            notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getResponsavelId(),
-                    processo.getNumeroProcesso(), faseNome, "/processos/" + id + "?tab=fases");
+            notificacaoService.notificarFaseEntrada(processo.getTenantId(), id, processo.getClienteId(),
+                    processo.getResponsavelId(), processo.getNumeroProcesso(), faseNome,
+                    "/processos/" + id + "?tab=fases");
         } catch (IllegalArgumentException ex) {
             log.warn("FASE_ENTRADA: falha ao notificar (responsavelId possivelmente órfão) processo={}", id, ex);
         }
