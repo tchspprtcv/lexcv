@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -889,5 +890,93 @@ class NotificacaoServiceTest {
         // A primeira chamada colide com uk_notificacao_dedup (simulado via retorno 0, "duplicado")
         // e criar() devolve Optional.empty() sem lançar nada; a segunda (fan-out ADMIN) ainda
         // persiste (retorno 1) — nada propaga para fora do método.
+    }
+
+    // --- Plan 96-01 Task 2: snooze() (NOTF-26) ---
+
+    @Test
+    void snooze_presetValido_persisteSnoozedUntilFuturoEChamaSaveUmaVez() {
+        Notificacao existente = Notificacao.builder()
+                .id(ID)
+                .tenantId(TENANT_ID)
+                .destinatarioId(DESTINATARIO_A)
+                .categoria("FASE_ENTRADA")
+                .titulo("t")
+                .mensagem("m")
+                .entidadeTipo("processo")
+                .entidadeId("id-1")
+                .lida(false)
+                .build();
+        when(notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(ID, TENANT_ID, DESTINATARIO_A))
+                .thenReturn(Optional.of(existente));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+        LocalDateTime antes = LocalDateTime.now();
+        Optional<Notificacao> resultado = service.snooze(TENANT_ID, DESTINATARIO_A, ID, 3);
+
+        assertTrue(resultado.isPresent());
+        assertNotNull(resultado.get().getSnoozedUntil());
+        assertTrue(resultado.get().getSnoozedUntil().isAfter(antes.plusDays(2)));
+        assertTrue(resultado.get().getSnoozedUntil().isBefore(antes.plusDays(4)));
+        verify(notificacaoRepository, times(1)).save(any());
+        // Prova o preset válido (3 em {1,3,7}): snoozedUntil ≈ now + 3 dias, uma única save().
+    }
+
+    @Test
+    void snooze_diasInvalido_lancaIllegalArgumentExceptionSemCarregarLinha() {
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.snooze(TENANT_ID, DESTINATARIO_A, ID, 2));
+
+        verify(notificacaoRepository, never()).findByIdAndTenantIdAndDestinatarioId(any(), any(), any());
+        verify(notificacaoRepository, never()).save(any());
+        // Prova que a validação do preset (1/3/7) acontece ANTES de qualquer acesso ao
+        // repositório — nenhuma linha é carregada nem gravada para um valor fora do conjunto.
+    }
+
+    @Test
+    void snooze_naoPertenceAoDestinatario_retornaVazioENuncaChamaSave() {
+        when(notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(ID, TENANT_ID, DESTINATARIO_A))
+                .thenReturn(Optional.empty());
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+        Optional<Notificacao> resultado = service.snooze(TENANT_ID, DESTINATARIO_A, ID, 7);
+
+        assertTrue(resultado.isEmpty());
+        verify(notificacaoRepository, never()).save(any());
+        // Prova o mesmo contrato 404-via-Optional.empty() de marcarLida: uma linha não
+        // pertencente a (tenant, destinatario) nunca é gravada, sem leak de existência.
+    }
+
+    @Test
+    void snooze_categoriaPrazoVencido_lancaIllegalArgumentExceptionSemChamarSave() {
+        Notificacao existente = Notificacao.builder()
+                .id(ID)
+                .tenantId(TENANT_ID)
+                .destinatarioId(DESTINATARIO_A)
+                .categoria("PRAZO_VENCIDO")
+                .titulo("t")
+                .mensagem("m")
+                .entidadeTipo("evento")
+                .entidadeId("id-1")
+                .lida(false)
+                .build();
+        when(notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(ID, TENANT_ID, DESTINATARIO_A))
+                .thenReturn(Optional.of(existente));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.snooze(TENANT_ID, DESTINATARIO_A, ID, 1));
+
+        verify(notificacaoRepository, never()).save(any());
+        // Prova o bloqueio de PRAZO_VENCIDO via isSilenciavelCategoria — a única categoria
+        // não-silenciável também não pode ser adiada (raciocínio de segurança jurídica).
     }
 }
