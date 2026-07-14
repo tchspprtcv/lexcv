@@ -51,16 +51,20 @@ export function NotificationBell() {
   const count = unread.data?.count ?? 0;
   const showBadge = !unread.isLoading && (unread.isError || count > 0);
 
-  const list = useNotificacoes({ size: 10 }, { poll: true });
+  // Over-fetch a larger page than what's displayed (10) so that a handful of
+  // currently-snoozed items within the fetched window don't starve the
+  // visible list down to zero while the (server-side-filtered) unread badge
+  // count still shows non-zero — see 96-REVIEW.md WR-01.
+  const list = useNotificacoes({ size: 20 }, { poll: true });
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasNotificacoesLidas();
 
   // Display-only filter: hide currently-snoozed items from the bell preview
   // without altering the useNotificacoes call/query (the history page keeps
   // showing every item, snoozed or not — locked decision in 96-CONTEXT.md).
-  const visibleNotificacoes = (list.data?.content ?? []).filter(
-    (n) => !(n.snoozedUntil && new Date(n.snoozedUntil) > new Date()),
-  );
+  const visibleNotificacoes = (list.data?.content ?? [])
+    .filter((n) => !(n.snoozedUntil && new Date(n.snoozedUntil) > new Date()))
+    .slice(0, 10);
 
   const handleMarcarTodas = async () => {
     try {
