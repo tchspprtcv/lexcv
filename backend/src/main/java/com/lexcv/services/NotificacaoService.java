@@ -140,6 +140,26 @@ public class NotificacaoService {
     private void criarComFanOutAdmin(UUID tenantId, String categoria, String titulo, String entidadeTipo,
                                       String entidadeId, String linkUrl, Collection<UUID> destinatariosPrimarios,
                                       String mensagemPrimario, String mensagemAdmin, UUID excluirUserId) {
+        // WR-01 (Phase 94 code review): validar os campos ao nível do EVENTO (partilhados por
+        // todos os destinatários) uma única vez, ANTES do loop, e deixar propagar
+        // IllegalArgumentException imediatamente -- em vez de deixar que a mesma falha (ex.:
+        // linkUrl > 255 caracteres) seja apanhada, repetida e mal-interpretada como
+        // "destinatario inválido/órfão" em CADA iteração do loop abaixo, mascarando um bug do
+        // chamador como um problema de dados de um destinatário específico e causando perda
+        // silenciosa da notificação para TODOS os destinatários (primário e ADMINs). A validação
+        // per-destinatario dentro de criar() (linhas 53-63) mantém-se intacta como defesa em
+        // profundidade -- esta chamada antecipada só cobre os campos que são idênticos em toda
+        // iteração (categoria/titulo/entidadeTipo/entidadeId/linkUrl), nunca "dest"/"mensagem".
+        requireNonBlank("categoria", categoria);
+        requireNonBlank("titulo", titulo);
+        requireNonBlank("entidadeTipo", entidadeTipo);
+        requireNonBlank("entidadeId", entidadeId);
+        requireMaxLength("categoria", categoria, MAX_VARCHAR_LENGTH);
+        requireMaxLength("titulo", titulo, MAX_VARCHAR_LENGTH);
+        requireMaxLength("entidadeTipo", entidadeTipo, MAX_VARCHAR_LENGTH);
+        requireMaxLength("entidadeId", entidadeId, MAX_VARCHAR_LENGTH);
+        requireMaxLength("linkUrl", linkUrl, MAX_VARCHAR_LENGTH);
+
         LinkedHashSet<UUID> primarios = new LinkedHashSet<>();
         for (UUID dest : destinatariosPrimarios) {
             if (dest != null && !dest.equals(excluirUserId)) {
