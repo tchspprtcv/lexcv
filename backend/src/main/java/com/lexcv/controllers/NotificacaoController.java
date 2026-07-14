@@ -13,14 +13,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -105,5 +108,37 @@ public class NotificacaoController {
     public ResponseEntity<?> marcarTodasLidas() {
         int marcadas = notificacaoService.marcarTodasLidas(getTenantId(), getUserId());
         return ResponseEntity.ok(Map.of("marcadas", marcadas));
+    }
+
+    // NOTF-24: leitura das categorias silenciadas do próprio user. Self-service — tenant e
+    // userId vêm sempre do JWT (getTenantId()/getUserId()), nunca do pedido.
+    @PreAuthorize("hasAuthority('notificacoes:view')")
+    @GetMapping("/preferencias")
+    public ResponseEntity<?> listarPreferencias() {
+        List<String> silenciadas = notificacaoService.listarCategoriasSilenciadas(getTenantId(), getUserId());
+        return ResponseEntity.ok(Map.of("silenciadas", silenciadas));
+    }
+
+    // NOTF-24: silenciar uma categoria para o próprio user. O serviço rejeita categoria
+    // desconhecida ou PRAZO_VENCIDO (única categoria não-silenciável) via IllegalArgumentException,
+    // que este endpoint traduz em 400 Bad Request.
+    @PreAuthorize("hasAuthority('notificacoes:view')")
+    @PutMapping("/preferencias/{categoria}")
+    public ResponseEntity<?> silenciar(@PathVariable String categoria) {
+        try {
+            notificacaoService.silenciarCategoria(getTenantId(), getUserId(), categoria);
+            return ResponseEntity.ok(Map.of("categoria", categoria, "silenciada", true));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    // NOTF-24: reativar (deixar de silenciar) uma categoria para o próprio user. Idempotente —
+    // o serviço não erra se a linha já não existir.
+    @PreAuthorize("hasAuthority('notificacoes:view')")
+    @DeleteMapping("/preferencias/{categoria}")
+    public ResponseEntity<?> reativar(@PathVariable String categoria) {
+        notificacaoService.reativarCategoria(getTenantId(), getUserId(), categoria);
+        return ResponseEntity.ok(Map.of("categoria", categoria, "silenciada", false));
     }
 }
