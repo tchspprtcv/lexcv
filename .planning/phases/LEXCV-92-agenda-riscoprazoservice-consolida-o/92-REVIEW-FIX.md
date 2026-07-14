@@ -1,24 +1,82 @@
 ---
 phase: LEXCV-92-agenda-riscoprazoservice-consolida-o
-fixed_at: 2026-07-13T23:45:43Z
+fixed_at: 2026-07-13T23:06:25Z
 review_path: .planning/phases/LEXCV-92-agenda-riscoprazoservice-consolida-o/92-REVIEW.md
-iteration: 1
-findings_in_scope: 9
-fixed: 8
-skipped: 1
-status: partial
+iteration: 2
+findings_in_scope: 2
+fixed: 2
+skipped: 0
+status: all_fixed
 ---
 
 # Phase LEXCV-92: Code Review Fix Report
 
-**Fixed at:** 2026-07-13T23:45:43Z
+**Fixed at:** 2026-07-13T23:06:25Z
 **Source review:** .planning/phases/LEXCV-92-agenda-riscoprazoservice-consolida-o/92-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope (Critical + Warning; `fix_scope: critical_warning`): 9
-- Fixed: 8
-- Skipped: 1
+- Findings in scope this iteration (2 new WARNINGs surfaced by the iteration-1 re-review; `fix_scope: critical_warning`): 2
+- Fixed: 2
+- Skipped: 0
+
+This iteration addresses the 2 new WARNING findings the re-review surfaced after iteration 1's
+8 fixes landed (the re-review independently re-verified all 8 as correctly applied, with no
+regressions). The 1 Critical carried forward from iteration 1 (CR-03 in the original numbering,
+re-surfaced as CR-01 in the re-review's renumbering — the `dataInicio`/`dataFim` risco
+divergence) remains deliberately unfixed; see "Skipped Issues" below.
+
+## Fixed Issues (iteration 2)
+
+### WR-01 (iteration 2): `updateEvento` can set but never clear recurrence fields
+
+**Files modified:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java`
+**Commit:** `9c60373`
+**Applied fix:** Same architectural gap class as iteration 1's WR-05 (`processoId`/`tipo`/
+`descricao`) — the partial-update whitelist's `if (x != null)` pattern can set
+`recurrenceRule`/`recurrenceEndDate`/`recurrenceExceptions` but can never null them out, since
+binding the raw entity can't distinguish "field omitted" from "field explicitly cleared". Rather
+than rewrite the update DTO to a PATCH-style nullable-wrapper contract (a larger, riskier change
+than this phase warrants), documented this as an accepted product constraint inline: to stop a
+recurring series today, delete and recreate it as one-off. Consistent with the WR-05 precedent
+from iteration 1.
+
+### WR-02 (iteration 2): Drag-and-drop reschedule leaves the eventos detail cache stale
+
+**Files modified:** `web/src/app/(dashboard)/agenda/page.tsx`
+**Commit:** `a14f0aa`
+**Applied fix:** The drag-and-drop mutation's `onSuccess` only invalidated the `["eventos","list"]`
+query, so the moved event's `["eventos","detail",id]` cache entry kept its pre-move
+`dataInicio`/`dataFim` until its own 15s `staleTime` lapsed — an already-open detail view would
+show stale data right after a reschedule. Fixed by writing the mutation response into the detail
+cache via `queryClient.setQueryData(["eventos","detail",updated.id], updated)`, mirroring the
+cache-sync pattern `useUpdateEvento` already uses elsewhere.
+
+Both fixes were verified: the backend change with an offline Maven compile
+(`mvn -q -o compile`, zero errors), the frontend change with a full-project
+`tsc --noEmit -p tsconfig.json` run (zero new errors — the only pre-existing
+errors are unrelated `vitest` module-resolution failures in `*.test.ts`
+files, present before and after this change).
+
+## Skipped Issues (iteration 2)
+
+### CR-01 (re-review renumbering): Risco computed from `dataInicio` in the agenda list but from `dataFim` in the dashboard KPIs
+
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2489` (vs. `:3133`)
+**Reason:** Same finding as iteration 1's CR-03 (see "Iteration 1" section below for full
+reasoning) — the re-review re-surfaced it under new numbering because the fix report's prior
+deferral doesn't close it in the reviewer's eyes. Deliberately left unfixed again: this is a
+cross-cutting product/semantics decision explicitly recorded in `92-CONTEXT.md`'s Deferred Ideas
+as a Phase 97 audit candidate, and that deferral was already accepted by the plan-checker as an
+authorized scope decision, not scope creep. No code changes made.
+
+---
+
+## Iteration 1 (prior fix pass — carried forward for context)
+
+**Fixed at:** 2026-07-13T23:45:43Z
+**Findings in scope:** 9 (Critical + Warning; `fix_scope: critical_warning`)
+**Fixed:** 8 / **Skipped:** 1
 
 All backend edits were verified with an offline Maven compile
 (`mvn -q -o compile`, zero errors) after each change. Both frontend
@@ -27,8 +85,6 @@ run (zero new errors — the only pre-existing errors are unrelated
 `vitest` module-resolution failures in `*.test.ts` files, present before
 and after these changes). Every fix is committed individually on top of
 the phase branch; see commit hashes below.
-
-## Fixed Issues
 
 ### CR-02: `createEvento` does not verify `processoId` belongs to the caller's tenant
 
@@ -146,6 +202,6 @@ No code changes were made for this finding. Recommend carrying it forward verbat
 
 ---
 
-_Fixed: 2026-07-13T23:45:43Z_
+_Fixed: 2026-07-13T23:06:25Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
