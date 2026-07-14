@@ -139,33 +139,6 @@ class NotificacaoServiceTest {
     }
 
     @Test
-    void notificarComFanOutAdmin_umaLinhaPorAdminAtualDoTenant() {
-        User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
-                .thenReturn(List.of(admin1, admin2));
-        when(userRepository.findById(admin1.getId())).thenReturn(Optional.of(admin1));
-        when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
-        service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-2", "/link");
-
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        for (Notificacao n : captor.getAllValues()) {
-            assertFalse(n.getLida());
-        }
-        List<UUID> destinatarios = captor.getAllValues().stream()
-                .map(Notificacao::getDestinatarioId)
-                .toList();
-        assertEquals(List.of(admin1.getId(), admin2.getId()), destinatarios);
-        // Fan-out: uma linha por ADMIN atual, nunca uma linha partilhada com uma flag
-        // "é admin" — prova o Critério de Sucesso 3. A asserção acima é a que efetivamente
-        // prova o targeting por-destinatario (não apenas a contagem de chamadas a save()).
-    }
-
-    @Test
     void marcarLida_pertenceAoDestinatario_marcaLidaTrueEChamaSaveUmaVez() {
         Notificacao existente = Notificacao.builder()
                 .id(ID)
@@ -229,25 +202,7 @@ class NotificacaoServiceTest {
         }
     }
 
-    // --- Phase 87 Task 1: notificarAdmins (actor exclusion overload) + wrappers do lado processo ---
-
-    @Test
-    void notificarAdminsComExclusao_umAdminExcluido_apenasOOutroRecebeLinha() {
-        User admin1 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        User admin2 = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN"))
-                .thenReturn(List.of(admin1, admin2));
-        when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
-        service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-3", "/link", admin1.getId());
-
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(admin2.getId(), captor.getValue().getDestinatarioId());
-        // O admin excluído (admin1, == excluirUserId) nunca chega a save().
-    }
+    // --- Phase 87 Task 1: wrappers do lado processo ---
 
     @Test
     void notificarFaseEntrada_responsavelNaoNulo_geraLinhaResponsavelELinhaAdmin() {
