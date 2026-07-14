@@ -1,68 +1,81 @@
 ---
 phase: LEXCV-95-notf-25-notificar-toda-a-equipa-do-processo
-reviewed: 2026-07-14T00:00:00Z
+reviewed: 2026-07-14T16:13:12Z
 depth: standard
-files_reviewed: 2
+files_reviewed: 3
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/services/NotificacaoService.java
   - backend/src/main/java/com/lexcv/controllers/ResourceController.java
+  - backend/src/test/java/com/lexcv/controllers/ResourceControllerUploadDocumentoTest.java
 findings:
   critical: 0
-  warning: 3
-  info: 0
-  total: 3
+  warning: 1
+  info: 1
+  total: 2
 status: issues_found
 ---
 
 # Phase LEXCV-95: Code Review Report
 
-**Reviewed:** 2026-07-14T00:00:00Z
+**Reviewed:** 2026-07-14T16:13:12Z
 **Depth:** standard
-**Files Reviewed:** 2
+**Files Reviewed:** 3
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the NOTF-25 "notify the entire process team" expansion: `NotificacaoService.resolverEquipaCliente` (new), the `criarComFanOutAdmin` 11-arg overload with a `destinatariosSecundarios` tier (new), the corresponding rewiring of `notificarFaseEntrada`/`notificarProcessoAtribuido` to accept `clienteId`, and the three `ResourceController` call sites that were updated (`createProcesso`, `atribuirResponsavel`, `createProcessoFase`, and the `uploadDocumento` processo branch).
+This is a re-review of the NOTF-25 "notify the entire process team" phase after the iteration-1 fix pass (commits `e513e5f`, `5205398`, `690f55d`) closed the three Warnings from the prior review (`95-REVIEW.md` / `95-REVIEW-FIX.md`): the `uploadDocumento` cliente-only branch now delegates to `resolverEquipaCliente` instead of hand-rolling the query, `resolverEquipaCliente`'s declared return type was narrowed to `LinkedHashSet<UUID>` to make the documented insertion-order contract compiler-enforced, and a new controller-level test (`ResourceControllerUploadDocumentoTest`) was added.
 
-Traced the merge/dedup logic in `criarComFanOutAdmin` (primários ∪ secundários ∪ ADMIN fan-out, all folded into one `LinkedHashSet` before the write loop) against all three call sites and confirmed: no double-write is possible when a user is simultaneously primary/secondary/ADMIN (`Set` dedup), `equipa.remove(responsavelId)` in `notificarProcessoAtribuido` correctly prevents the newly-assigned responsible from receiving the "informativo" 3rd-person message instead of the 2nd-person one, tenant scoping in `resolverEquipaCliente` is enforced at the join-table level (`(clienteId, tenantId)` pair, never `clienteId` alone), and `excluirUserId` filtering is applied uniformly across primary/secondary/admin tiers. Compiled the backend and ran `NotificacaoServiceTest` (35/35 passing) to confirm no regression at the unit level.
+Verified all three fixes against the actual diff (`git diff 7fd8bb0..690f55d`) rather than trusting the fix report's prose: the cliente-only branch (`ResourceController.java:2781`) now reads `new ArrayList<>(notificacaoService.resolverEquipaCliente(tenantId, saved.getClienteId()))`, `resolverEquipaCliente`'s signature is `public LinkedHashSet<UUID> resolverEquipaCliente(...)`, and the new test exists and exercises the processo-branch dedup/team-assembly path. Compiled the backend offline and ran both `NotificacaoServiceTest` (35/35 passing) and `ResourceControllerUploadDocumentoTest` (1/1 passing) — no regression.
 
-No Critical/Blocker-level defect was found — no injection, no tenant-isolation bypass, no null-pointer crash, no observable double-notification. The three findings below are Warnings: two are quality/maintainability gaps (an unmigrated duplicate of the exact logic `resolverEquipaCliente` was introduced to consolidate, and a wiring change with no automated test coverage), and one is an API-contract fragility (an ordering guarantee relied upon by callers/tests that the declared return type does not encode).
+Re-traced the full NOTF-25 surface against `95-CONTEXT.md`'s decisions: `notificarFaseEntrada` and `notificarProcessoAtribuido` (via the `criarComFanOutAdmin` 11-arg overload) now include the client's team, `notificarParecerAtribuido` is confirmed untouched (still the individual-only 10-arg call, matching the explicit "PARECER_ATRIBUIDO mantém-se individual" decision), and no other call site of `notificarDocumentoNovo`/`notificarFaseEntrada`/`notificarProcessoAtribuido` was missed. Tenant scoping in `resolverEquipaCliente` remains enforced at the join-table level (`(clienteId, tenantId)` pair) on every call path checked.
+
+No Critical/Blocker-level defect was found in this iteration. Two residual issues remain, both introduced or left behind by the iteration-1 fix pass itself: the WR-01 fix migrated the `uploadDocumento` cliente-only branch's logic but did not extend the new WR-02 test to cover it, leaving that branch's controller-level wiring untested; and the WR-03 fix (narrowing the return type away from `Set<UUID>`) left a now-dead `import java.util.Set;` behind in `NotificacaoService.java`.
 
 ## Warnings
 
-### WR-01: uploadDocumento's cliente-only branch still hand-rolls team resolution that resolverEquipaCliente exists to consolidate
+### WR-01: uploadDocumento's cliente-only branch (migrated by the WR-01 fix) still has no controller-level test coverage
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2780-2785`
-**Issue:** `NotificacaoService.resolverEquipaCliente` (`backend/src/main/java/com/lexcv/services/NotificacaoService.java:135-157`) is documented, in the method's own comment block, as the single source of truth for this exact query: "não deve existir uma segunda resolução de equipa inline noutro sítio (Pitfall 3)". Plan 95-02 rewired the `uploadDocumento` *processo* branch (line 2768) through the new helper, but the sibling *cliente-only* branch (no `processoId`, only `clienteId`) a few lines below was left as its original inline implementation, calling `clienteAdvogadoRepository.findByClienteIdAndTenantId` / `clienteAdministrativoRepository.findByClienteIdAndTenantId` directly and appending into a plain `ArrayList` (lines 2781-2785) instead of delegating to `resolverEquipaCliente(tenantId, saved.getClienteId())`. Functionally the two implementations currently compute the same set (the raw `ArrayList` can contain a transient duplicate if a user is both `ClienteAdvogado` and `ClienteAdministrativo` for the same cliente, but that's absorbed by the `LinkedHashSet` dedup inside `criarComFanOutAdmin`, so there's no user-visible bug today). The risk is drift: any future change to team-resolution semantics (a third link type, an `ativo`/deactivated-user filter analogous to the ADMIN fan-out's `AndAtivoTrue`, an exclusion rule, etc.) only needs to touch `resolverEquipaCliente` to be correct everywhere — except here, where it will silently continue using the stale logic.
-**Fix:**
+**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2780-2789`
+**Issue:** The prior review's WR-01 fix (commit `e513e5f`) correctly migrated the cliente-only branch of `uploadDocumento` from a hand-rolled inline query to `notificacaoService.resolverEquipaCliente(tenantId, saved.getClienteId())`, changing the actual code path exercised when a document is uploaded with `clienteId` but no `processoId`. The prior review's WR-02 fix (commit `690f55d`) then added `ResourceControllerUploadDocumentoTest`, but that new test class contains exactly one test method, `uploadDocumento_comProcessoId_notificaEquipaDoClienteMaisResponsavel`, which only exercises the **processo** branch (`saved.getProcessoId() != null`, lines 2764-2779). The cliente-only branch that WR-01 itself modified (lines 2780-2789) is still not exercised by any controller-level test — it is only indirectly covered by `NotificacaoServiceTest`'s isolated tests of `resolverEquipaCliente` and `criarComFanOutAdmin`, which do not prove the controller correctly wires `saved.getClienteId()` into the call (e.g., a future edit that accidentally passes `processoId`'s cliente instead of `saved.getClienteId()`, or drops the `dests` assembly entirely, would not be caught). This is the same class of gap the original WR-02 finding described, just for the sibling branch that a fix commit modified without matching test coverage.
+**Fix:** Add a second `@Test` method to `ResourceControllerUploadDocumentoTest` mirroring the existing one but calling `controller.uploadDocumento(file, null, CLIENTE_ID, null, null, null)` (no `processoId`), asserting that `notificacaoRepository.inserirSeNaoDuplicado` is invoked once per team member (advogado + administrativo) resolved via `resolverEquipaCliente(tenantId, CLIENTE_ID)`, e.g.:
 ```java
-} else if (saved.getClienteId() != null) {
-    List<UUID> dests = new ArrayList<>(notificacaoService.resolverEquipaCliente(tenantId, saved.getClienteId()));
-    try {
-        notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
-                saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
-    } catch (IllegalArgumentException ex) {
-        log.warn("DOCUMENTO_NOVO: falha ao notificar (destinatário possivelmente órfão) documento={}",
-                saved.getId(), ex);
-    }
+@Test
+void uploadDocumento_comClienteIdSemProcesso_notificaEquipaDoCliente() throws Exception {
+    // ... same auth/file/storage stubbing as the existing test ...
+    when(clienteAdvogadoRepository.findByClienteIdAndTenantId(CLIENTE_ID, TENANT_ID))
+            .thenReturn(List.of(ClienteAdvogado.builder()
+                    .clienteId(CLIENTE_ID).tenantId(TENANT_ID).userId(ADVOGADO_EQUIPA).build()));
+    when(clienteAdministrativoRepository.findByClienteIdAndTenantId(CLIENTE_ID, TENANT_ID))
+            .thenReturn(List.of(ClienteAdministrativo.builder()
+                    .clienteId(CLIENTE_ID).tenantId(TENANT_ID).userId(ADMINISTRATIVO_EQUIPA).build()));
+    // ... userRepository.findById stubs for both team members, no processoRepository stub needed ...
+
+    ResponseEntity<?> response = controller.uploadDocumento(file, null, CLIENTE_ID, null, null, null);
+
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
+    verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 }
 ```
 
-### WR-02: New uploadDocumento team-notification wiring has no automated test coverage
+## Info
 
-**File:** `backend/src/main/java/com/lexcv/controllers/ResourceController.java:2764-2775`
-**Issue:** Plan 95-02's actual code change — building `dests` from `resolverEquipaCliente(tenantId, proc.getClienteId())` plus `proc.getResponsavelId()` and passing it into `notificarDocumentoNovo` — lives entirely in `ResourceController`, but there is no controller/integration-level test that exercises `POST /api/v1/documentos/upload` with a `processoId` and asserts the resulting notification set includes the client's team. `NotificacaoServiceTest` thoroughly covers `resolverEquipaCliente` and `criarComFanOutAdmin` in isolation (mocked repositories), and `notificarDocumentoNovo` itself is tested with a hand-built `destinatarios` collection — but the integration point that actually assembles that collection from `proc.getClienteId()` in the controller is untested. A regression here (e.g., someone "simplifies" the `dests.addAll(...)` call, or an NPE guard around `proc` gets removed) would not be caught by the existing suite.
-**Fix:** Add a `ResourceController`-level (MockMvc or `@SpringBootTest`) test for `uploadDocumento` that creates a processo with a clienteId that has both a `ClienteAdvogado` and a `ClienteAdministrativo` link, uploads a document against that `processoId`, and asserts (via `NotificacaoRepository`) that notification rows exist for both linked users plus the responsável — mirroring the pattern already used for `notificarFaseEntrada_equipaDoCliente_todaEquipaMaisResponsavelMaisAdmin` in `NotificacaoServiceTest.java:403`.
+### IN-01: Unused `import java.util.Set;` left behind by the WR-03 fix
 
-### WR-03: resolverEquipaCliente's declared return type doesn't encode the ordering guarantee its callers depend on
-
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:145`
-**Issue:** The method is documented as returning "a união (deduplicada, ordem de inserção preservada: advogados antes de administrativos)" and is declared `public Set<UUID> resolverEquipaCliente(...)`. The plain `java.util.Set` interface makes no ordering guarantee — the deterministic advogados-before-administrativos order that the comment promises, that `notificarFaseEntrada`/`notificarProcessoAtribuido` re-wrap into `LinkedHashSet`s to preserve, and that `NotificacaoServiceTest` (e.g. `notificarFaseEntrada_equipaDoCliente_todaEquipaMaisResponsavelMaisAdmin`, line 403) asserts on, is only true because of the concrete implementation type (`LinkedHashSet`) chosen inside the method body. A future maintainer refactoring the method internals (e.g. to a `HashSet`, or to a stream `.collect(Collectors.toSet())`) would still satisfy the compiler and the current unit tests could start failing nondeterministically (order-dependent assertions on a now-unordered `Set`) without any signal at the type level that the contract was broken.
-**Fix:** Either narrow the declared return type to `LinkedHashSet<UUID>` (making the ordering contract explicit and compiler-checked), or explicitly document on the public signature (Javadoc, not just an inline comment) that callers must not rely on iteration order and adjust the test assertions to be order-independent (`assertThat(...).containsExactlyInAnyOrder(...)`) if determinism was never actually meant to be a supported contract.
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:24`
+**Issue:** The original NOTF-25 implementation declared `resolverEquipaCliente` as returning `Set<UUID>`, which needed `import java.util.Set;`. The WR-03 fix (commit `5205398`) narrowed the declared return type to `LinkedHashSet<UUID>` to make the ordering guarantee compiler-checked, but did not remove the now-unused `import java.util.Set;` at line 24. Grepping the file confirms `Set` no longer appears in any executable code — only in this import and in three unrelated Portuguese comments ("Set deduplica por construção..."). This doesn't break the build (Java only warns, doesn't error, on unused imports, and this project has no checkstyle/unused-import enforcement), but it's dead code that a linter or a future `mvn -o compile -Xlint` pass would flag.
+**Fix:**
+```diff
+ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Optional;
+-import java.util.Set;
+ import java.util.UUID;
+```
 
 ---
 
-_Reviewed: 2026-07-14T00:00:00Z_
+_Reviewed: 2026-07-14T16:13:12Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
