@@ -142,7 +142,12 @@ public class NotificacaoService {
     // equipa a resolver). Público porque o plano 95-02 (ResourceController, ramo processo de
     // uploadDocumento) reutiliza esta MESMA implementação -- não deve existir uma segunda
     // resolução de equipa inline noutro sítio (Pitfall 3).
-    public Set<UUID> resolverEquipaCliente(UUID tenantId, UUID clienteId) {
+    // WR-03 (Phase 95 code review): declared return type narrowed from Set<UUID> to
+    // LinkedHashSet<UUID> so the "advogados antes de administrativos" insertion-order guarantee
+    // documented above is enforced by the compiler, not just by the concrete type chosen inside
+    // the method body -- a future refactor to HashSet/Collectors.toSet() would now fail to
+    // compile instead of silently breaking order-dependent callers/tests.
+    public LinkedHashSet<UUID> resolverEquipaCliente(UUID tenantId, UUID clienteId) {
         if (clienteId == null) {
             return new LinkedHashSet<>();
         }
