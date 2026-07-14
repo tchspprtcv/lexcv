@@ -322,7 +322,8 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   1. Um utilizador de teste que é simultaneamente responsável/membro de equipa de um processo e ADMIN do mesmo tenant recebe a notificação corretamente, sem exceção nem 500, quando um gatilho dispara para ambos os papéis
   2. `notificarFaseEntrada`, `notificarDocumentoNovo`, `notificarProcessoAtribuido` e `notificarParecerAtribuido` deduplicam o conjunto de destinatários antes de persistir, nunca tentando duas escritas para a mesma tupla `(tenant, destinatario, entidade, categoria)`
   3. A operação de negócio que disparou a notificação (upload de documento, atribuição, etc.) nunca é revertida nem falha com 500 por causa deste cenário
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 94-01-PLAN.md — Fundir destinatário primário + fan-out ADMIN num único LinkedHashSet deduplicado nos 4 métodos notificar* (helper criarComFanOutAdmin) + backstop DataIntegrityViolationException; testes de colisão primário==ADMIN por gatilho
 
 #### Phase 95: NOTF-25 — Notificar Toda a Equipa do Processo
 
@@ -419,7 +420,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 3/3 | Complete    | 2026-07-13 |
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 2/2 | Complete    | 2026-07-13 |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 4/4 | Complete    | 2026-07-14 |
-| 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
+| 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/1 | Planned | - |
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/TBD | Not started | - |
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/TBD | Not started | - |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 0/TBD | Not started | - |
