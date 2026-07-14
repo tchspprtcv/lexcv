@@ -9,6 +9,7 @@ import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -306,12 +307,22 @@ public class NotificacaoService {
         if (!resolvida.isSilenciavel()) {
             throw new IllegalArgumentException("categoria não silenciável: " + categoria);
         }
-        if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-            notificacaoPreferenciaRepository.save(NotificacaoPreferencia.builder()
-                    .tenantId(tenantId)
-                    .userId(userId)
-                    .categoria(categoria)
-                    .build());
+        try {
+            if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
+                notificacaoPreferenciaRepository.save(NotificacaoPreferencia.builder()
+                        .tenantId(tenantId)
+                        .userId(userId)
+                        .categoria(categoria)
+                        .build());
+            }
+        } catch (DataIntegrityViolationException ex) {
+            // Perdeu a corrida para outro pedido concorrente para a mesma
+            // (tenant, user, categoria) -- a linha existe de qualquer forma, pelo
+            // que este continua a ser um resultado "silenciado" bem-sucedido
+            // (mantém a idempotência documentada acima em vez de deixar a
+            // exceção cair para o handler genérico e devolver 500).
+            log.debug("silenciarCategoria: insert concorrente para {}/{}/{}, a tratar como sucesso",
+                    tenantId, userId, categoria);
         }
     }
 
