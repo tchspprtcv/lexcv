@@ -310,7 +310,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 - [x] 93-01-PLAN.md — Fundação de dados: entidade NotificacaoPreferencia (join tenant+user+categoria) + repositório dual-scoped + enum CategoriaNotificacao (PRAZO_VENCIDO não-silenciável) + migração manual
 - [x] 93-02-PLAN.md — Mute guard dentro de NotificacaoService.criar() (choke point único, job diário coberto por construção) + métodos silenciar/reativar/listar + testes Mockito
 - [x] 93-03-PLAN.md — Endpoints GET/PUT/DELETE /notificacoes/preferencias (dual-scoped, PRAZO_VENCIDO rejeitado com 400)
-- [ ] 93-04-PLAN.md — Frontend: hook + tab de preferências em /settings (reutiliza NOTIFICACAO_CATEGORIA_OPTIONS, omite PRAZO_VENCIDO) + checkpoint humano
+- [x] 93-04-PLAN.md — Frontend: hook + tab de preferências em /settings (reutiliza NOTIFICACAO_CATEGORIA_OPTIONS, omite PRAZO_VENCIDO) + checkpoint humano
 **UI hint**: yes
 
 #### Phase 94: NOTF-27 — Corrigir Colisão de Dedup ADMIN
@@ -418,7 +418,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 90. SpotBugs/SAST — Commit e Verificação | v2.11 | 1/1 | Complete    | 2026-07-13 |
 | 91. Infraestrutura de Testes de Integração (Testcontainers) | v2.11 | 3/3 | Complete    | 2026-07-13 |
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 2/2 | Complete    | 2026-07-13 |
-| 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 3/4 | In Progress|  |
+| 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 4/4 | Complete   | 2026-07-14 |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 0/TBD | Not started | - |
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/TBD | Not started | - |
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/TBD | Not started | - |
