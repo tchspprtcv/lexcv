@@ -1,7 +1,10 @@
 package com.lexcv.services;
 
+import com.lexcv.models.CategoriaNotificacao;
 import com.lexcv.models.Notificacao;
+import com.lexcv.models.NotificacaoPreferencia;
 import com.lexcv.models.User;
+import com.lexcv.repositories.NotificacaoPreferenciaRepository;
 import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ public class NotificacaoService {
 
     private final NotificacaoRepository notificacaoRepository;
     private final UserRepository userRepository;
+    private final NotificacaoPreferenciaRepository notificacaoPreferenciaRepository;
 
     // ÚNICO ponto de escrita de CRIAÇÃO de Notificacao em todo o código — nenhuma outra classe
     // deve chamar notificacaoRepository.save(...)/saveAll(...) diretamente para criar uma linha.
@@ -30,8 +34,14 @@ public class NotificacaoService {
     // de uma notificação nascer.
     private static final int MAX_VARCHAR_LENGTH = 255;
 
-    public Notificacao criar(UUID tenantId, UUID destinatarioId, String categoria, String titulo,
-                              String mensagem, String entidadeTipo, String entidadeId, String linkUrl) {
+    // NOTF-24: retorno Optional<Notificacao> -- "silenciado" é um terceiro resultado (validação
+    // passou, nada persistido) e nunca deve ser conflacionado com o path de exceção (destinatário
+    // órfão/inválido) nem com um null. Facto verificado (grep de todo o backend): nenhum caller lê
+    // o valor de retorno de criar() -- os 5 métodos notificar*, o AlertasDiariosJob e os testes
+    // existentes chamam-no como statement, logo esta mudança de assinatura é segura e contida a
+    // este ficheiro.
+    public Optional<Notificacao> criar(UUID tenantId, UUID destinatarioId, String categoria, String titulo,
+                                        String mensagem, String entidadeTipo, String entidadeId, String linkUrl) {
         if (tenantId == null || destinatarioId == null) {
             throw new IllegalArgumentException("tenantId e destinatarioId são obrigatórios");
         }
@@ -52,6 +62,20 @@ public class NotificacaoService {
         requireMaxLength("entidadeId", entidadeId, MAX_VARCHAR_LENGTH);
         requireMaxLength("linkUrl", linkUrl, MAX_VARCHAR_LENGTH);
 
+        // NOTF-24: único guard de silenciamento de todo o subsistema, colocado AQUI -- o choke
+        // point que TANTO os 5 métodos notificar* COMO o AlertasDiariosJob.notificar() (que chama
+        // criar() diretamente, sem passar por nenhum notificar*) atravessam. Um guard colocado em
+        // qualquer outro sítio deixaria o job diário escapar ao silenciamento (Pitfall 1).
+        // isSilenciavelCategoria(...) primeiro garante curto-circuito: PRAZO_VENCIDO nunca sequer
+        // consulta a preferência e é sempre entregue (Critério de Sucesso 2, defense-in-depth).
+        if (CategoriaNotificacao.isSilenciavelCategoria(categoria)
+                && notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
+                        tenantId, destinatarioId, categoria)) {
+            log.debug("{}: categoria silenciada pelo destinatário {}, notificação não persistida",
+                    categoria, destinatarioId);
+            return Optional.empty();
+        }
+
         Notificacao n = Notificacao.builder()
                 .tenantId(tenantId)
                 .destinatarioId(destinatarioId)
@@ -62,7 +86,7 @@ public class NotificacaoService {
                 .entidadeId(entidadeId)
                 .linkUrl(linkUrl)
                 .build();
-        return notificacaoRepository.save(n);
+        return Optional.of(notificacaoRepository.save(n));
     }
 
     private static void requireNonBlank(String fieldName, String value) {
@@ -260,5 +284,42 @@ public class NotificacaoService {
         naoLidas.forEach(n -> n.setLida(true));
         notificacaoRepository.saveAll(naoLidas);
         return naoLidas.size();
+    }
+
+    // NOTF-24: leitura das categorias silenciadas do próprio user -- alimenta o GET de
+    // preferências (Plan 93-03). Escopado por tenant+user, nunca por user sozinho (Pitfall 10).
+    public List<String> listarCategoriasSilenciadas(UUID tenantId, UUID userId) {
+        return notificacaoPreferenciaRepository.findByTenantIdAndUserId(tenantId, userId).stream()
+                .map(NotificacaoPreferencia::getCategoria)
+                .toList();
+    }
+
+    // NOTF-24: silenciar uma categoria para o próprio user. Valida via CategoriaNotificacao --
+    // rejeita categoria desconhecida E PRAZO_VENCIDO (a única categoria não-silenciável), mesmo
+    // que o guard de criar() já a proteja por construção (defesa em profundidade explícita aqui).
+    // Idempotente: uma segunda chamada para a mesma (tenant, user, categoria) não cria uma segunda
+    // linha, respeitando a constraint única uk_notificacao_preferencia.
+    @Transactional
+    public void silenciarCategoria(UUID tenantId, UUID userId, String categoria) {
+        CategoriaNotificacao resolvida = CategoriaNotificacao.fromString(categoria)
+                .orElseThrow(() -> new IllegalArgumentException("categoria desconhecida: " + categoria));
+        if (!resolvida.isSilenciavel()) {
+            throw new IllegalArgumentException("categoria não silenciável: " + categoria);
+        }
+        if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
+            notificacaoPreferenciaRepository.save(NotificacaoPreferencia.builder()
+                    .tenantId(tenantId)
+                    .userId(userId)
+                    .categoria(categoria)
+                    .build());
+        }
+    }
+
+    // NOTF-24: reativar (deixar de silenciar) uma categoria -- remove a linha de preferência se
+    // existir. Idempotente: nenhum erro se a linha já não existir. @Transactional é obrigatório
+    // para o delete derivado (mesma convenção do resto do repositório).
+    @Transactional
+    public void reativarCategoria(UUID tenantId, UUID userId, String categoria) {
+        notificacaoPreferenciaRepository.deleteByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria);
     }
 }
