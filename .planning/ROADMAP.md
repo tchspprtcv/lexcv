@@ -429,7 +429,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 1/1 | Complete    | 2026-07-14 |
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 2/2 | Complete    | 2026-07-14 |
-| 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 4/4 | Complete   | 2026-07-14 |
+| 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.11 roadmap created 2026-07-12 (8 phases, 90–97, 15/15 requirements mapped). Run `/gsd:plan-phase 90` to start planning (Phases 90, 91, 92 are mutually parallelizable; Phases 93→94→95→96 are a hard sequential chain; Phase 97 runs last).

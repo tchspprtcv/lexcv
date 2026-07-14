@@ -26,7 +26,7 @@ Requisitos desta milestone (v2.11 — Auditoria Técnica e Notificações Avanç
 
 - [x] **NOTF-24**: Utilizador pode silenciar categorias de notificação específicas para si próprio, exceto categorias críticas não-silenciáveis (mínimo: `PRAZO_VENCIDO`)
 - [x] **NOTF-25**: Notificações de eventos do processo (fase, documento, atribuição) chegam a toda a equipa (advogados/administrativos do cliente), não só ao responsável único (`responsavelId`)
-- [ ] **NOTF-26**: Utilizador pode adiar (snooze) um lembrete de prazo por um período pré-definido, reaparecendo automaticamente depois do período
+- [x] **NOTF-26**: Utilizador pode adiar (snooze) um lembrete de prazo por um período pré-definido, reaparecendo automaticamente depois do período
 - [x] **NOTF-27**: Corrigir bug pré-existente — notificar um destinatário que é simultaneamente membro de equipa e ADMIN não deve falhar (500) por colisão do constraint `uk_notificacao_dedup`
 
 ### AUD
@@ -64,7 +64,7 @@ Nenhum item novo diferido nesta milestone — os únicos candidatos v2 conhecido
 | NOTF-24 | Phase 93 | Complete |
 | NOTF-27 | Phase 94 | Complete |
 | NOTF-25 | Phase 95 | Complete |
-| NOTF-26 | Phase 96 | Pending |
+| NOTF-26 | Phase 96 | Complete |
 | AUD-01 | Phase 97 | Pending |
 | AUD-02 | Phase 97 | Pending |
 | AUD-03 | Phase 97 | Pending |
