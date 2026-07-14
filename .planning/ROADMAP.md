@@ -351,7 +351,11 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   2. A notificação adiada desaparece do contador/badge do sino e da lista de não lidas durante o período de snooze, mas continua visível/pesquisável na página `/notificacoes`
   3. Ao expirar o período de snooze, a notificação reaparece automaticamente como não lida, sem intervenção do utilizador
   4. Correr o job diário durante o período de snooze não recria nem duplica a notificação adiada — a idempotência por categoria do job permanece intacta
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+- [ ] 96-01-PLAN.md — Backend: coluna `Notificacao.snoozedUntil` + migração manual + predicado de visibilidade nas queries de contador/mark-all-read + `NotificacaoService.snooze` + `PATCH /notificacoes/{id}/snooze` (presets 1/3/7, PRAZO_VENCIDO bloqueado via isSilenciavel) + testes Mockito
+- [ ] 96-02-PLAN.md — Backend IT (Testcontainers): `NotificacaoRepositoryIT` prova que um item adiado para o futuro sai do contador/mark-all-read e reaparece quando `snoozedUntil <= now` (Critérios 2 e 3)
+- [ ] 96-03-PLAN.md — Frontend: tipo `snoozedUntil` + hook `useSnoozeNotificacao` + controlo `Popover`+`RadioGroup` (1/3/7 dias) no sino e em `/notificacoes` (filtro de apresentação no sino; badge "Adiado até" no histórico)
+- [ ] 96-04-PLAN.md — Checkpoint humano end-to-end (controlo de snooze, badge cai, item sai do sino mas fica no histórico, PRAZO_VENCIDO sem snooze)
 **UI hint**: yes
 
 #### Phase 97: Auditoria de Milestone — Dívida Técnica e UAT Pendente
@@ -425,7 +429,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 1/1 | Complete    | 2026-07-14 |
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 2/2 | Complete    | 2026-07-14 |
-| 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/TBD | Not started | - |
+| 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/4 | Not started | - |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.11 roadmap created 2026-07-12 (8 phases, 90–97, 15/15 requirements mapped). Run `/gsd:plan-phase 90` to start planning (Phases 90, 91, 92 are mutually parallelizable; Phases 93→94→95→96 are a hard sequential chain; Phase 97 runs last).
