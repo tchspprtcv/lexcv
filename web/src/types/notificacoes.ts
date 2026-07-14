@@ -35,3 +35,7 @@ export interface NotificacoesPageResponse {
   page: number;
   size: number;
 }
+
+export interface NotificacaoPreferenciasResponse {
+  silenciadas: NotificacaoCategoria[];
+}
