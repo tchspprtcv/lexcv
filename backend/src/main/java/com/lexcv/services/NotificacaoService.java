@@ -9,6 +9,7 @@ import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +17,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -102,62 +102,70 @@ public class NotificacaoService {
         }
     }
 
-    // Fan-out: uma linha independente por cada ADMIN atual do tenant, cada uma com o seu próprio
-    // estado "lida" — nunca uma linha partilhada com uma flag "é admin". Package-private porque
-    // só é chamado a partir deste serviço (e do teste, no mesmo pacote); a Phase 87 acrescentará
-    // os métodos públicos notificarFaseEntrada/notificarDocumentoNovo/etc. que reutilizam este
-    // helper — não são adicionados agora (gatilhos reais são fora do âmbito desta fase).
-    @Transactional
-    void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
-                          String entidadeTipo, String entidadeId, String linkUrl) {
-        notificarAdmins(tenantId, categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl, null);
-    }
-
-    // Overload com exclusão de ator (Phase 87) — usado por DOCUMENTO_NOVO e PARECER_ATRIBUIDO para
-    // que o autor da própria ação não seja notificado da sua ação, mesmo quando ele próprio é ADMIN.
-    // O notificarAdmins de 7 args (acima) delega aqui com excluirUserId=null, preservando o
-    // comportamento pré-existente (Phase 86) para FASE_ENTRADA/PROCESSO_ATRIBUIDO, que não excluem ator.
-    @Transactional
-    void notificarAdmins(UUID tenantId, String categoria, String titulo, String mensagem,
-                          String entidadeTipo, String entidadeId, String linkUrl, UUID excluirUserId) {
-        for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
-            if (excluirUserId != null && excluirUserId.equals(admin.getId())) {
-                continue;
+    // NOTF-27 (Phase 94): helper único que funde destinatário(s) primário(s) + fan-out ADMIN num
+    // único LinkedHashSet<UUID> deduplicado ANTES do loop de criação, para que criar() seja
+    // chamado no máximo uma vez por pessoa por evento -- mesmo quando o primário também é ADMIN
+    // do mesmo tenant. Antes deste helper, os 4 métodos notificar* faziam uma chamada a criar()
+    // para o primário e uma chamada independente e não coordenada a notificarAdmins() para o
+    // fan-out; quando o primário também era ADMIN, ambas tentavam persistir uma linha para o
+    // mesmo tuplo (tenant, destinatario, entidade_tipo, entidade_id, categoria), colidindo com a
+    // constraint única uk_notificacao_dedup (Phase 88) e lançando uma DataIntegrityViolationException
+    // não apanhada, revertendo a transação de negócio já comprometida do controller chamador.
+    // excluirUserId (ator) é removido de AMBOS os conjuntos antes do merge -- preserva o
+    // comportamento pré-existente de DOCUMENTO_NOVO/PARECER_ATRIBUIDO (o autor nunca é notificado
+    // da sua própria ação, mesmo sendo ADMIN).
+    private void criarComFanOutAdmin(UUID tenantId, String categoria, String titulo, String entidadeTipo,
+                                      String entidadeId, String linkUrl, Collection<UUID> destinatariosPrimarios,
+                                      String mensagemPrimario, String mensagemAdmin, UUID excluirUserId) {
+        LinkedHashSet<UUID> primarios = new LinkedHashSet<>();
+        for (UUID dest : destinatariosPrimarios) {
+            if (dest != null && !dest.equals(excluirUserId)) {
+                primarios.add(dest);
             }
-            // CR-01 (Phase 87 code review, iteration 2): isolate each admin so one
-            // stale/orphaned admin reference can never prevent the rest of the ADMIN
-            // fan-out from being notified.
+        }
+        LinkedHashSet<UUID> todos = new LinkedHashSet<>(primarios);
+        for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
+            if (!admin.getId().equals(excluirUserId)) {
+                // Set deduplica por construção: um admin que já é primário não é
+                // re-adicionado -- é aqui que a colisão de uk_notificacao_dedup deixa de
+                // ser possível, em vez de ser "corrigida" depois de já ter acontecido.
+                todos.add(admin.getId());
+            }
+        }
+        for (UUID dest : todos) {
+            String mensagem = primarios.contains(dest) ? mensagemPrimario : mensagemAdmin;
             try {
-                criar(tenantId, admin.getId(), categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
+                // CR-01 (Phase 87 code review, iteration 2): isolate each destinatario so one
+                // stale/orphaned reference can never prevent the remaining destinatarios (in
+                // iteration order) from being notified.
+                criar(tenantId, dest, categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
             } catch (IllegalArgumentException ex) {
-                log.warn("{}: admin {} inválido/órfão, notificação ADMIN ignorada para este destinatário",
-                        categoria, admin.getId(), ex);
+                log.warn("{}: destinatario {} inválido/órfão, notificação ignorada para este destinatário",
+                        categoria, dest, ex);
+            } catch (DataIntegrityViolationException ex) {
+                // Backstop (Phase 94, NOTF-27): espelha o padrão já usado por
+                // AlertasDiariosJob.notificar() contra a mesma constraint uk_notificacao_dedup
+                // numa corrida check-then-act. O LinkedHashSet acima já elimina a colisão
+                // determinística por construção -- este catch é defesa em profundidade contra
+                // uma corrida concorrente residual, nunca deve propagar para fora deste método
+                // nem reverter a transação de negócio chamadora.
+                log.warn("{}: notificação duplicada rejeitada pelo índice único da BD para destinatario {}",
+                        categoria, dest, ex);
             }
         }
     }
 
     // NOTF-15: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a exige aqui).
-    // responsavelId é nullable (Processo ainda pode não ter responsável atribuído) — null-guard
-    // evita que criar() lance IllegalArgumentException e rebente a transação do controller pai.
+    // responsavelId é nullable (Processo ainda pode não ter responsável atribuído) — filtrado pelo
+    // helper (destinatariosPrimarios vazio) em vez de um null-guard local.
     public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID responsavelId,
                                       String numeroProcesso, String nomeFase, String linkUrl) {
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Nova fase";
         String mensagem = "O processo " + numeroTexto + " entrou na fase " + nomeFase;
-        if (responsavelId != null) {
-            // CR-01 (Phase 87 code review, iteration 2): isolate the primary recipient so a
-            // stale/orphaned responsavelId can never prevent the unconditional ADMIN fan-out
-            // below from running -- previously this exception propagated out of the method,
-            // silently skipping notificarAdmins(...) entirely.
-            try {
-                criar(tenantId, responsavelId, "FASE_ENTRADA", titulo, mensagem, "processo",
-                        processoId.toString(), linkUrl);
-            } catch (IllegalArgumentException ex) {
-                log.warn("FASE_ENTRADA: responsavelId {} inválido/órfão, notificação primária ignorada",
-                        responsavelId, ex);
-            }
-        }
-        notificarAdmins(tenantId, "FASE_ENTRADA", titulo, mensagem, "processo", processoId.toString(), linkUrl);
+        List<UUID> primarios = responsavelId != null ? List.of(responsavelId) : List.of();
+        criarComFanOutAdmin(tenantId, "FASE_ENTRADA", titulo, "processo", processoId.toString(), linkUrl,
+                primarios, mensagem, mensagem, null);
     }
 
     // NOTF-18: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a exige aqui).
@@ -179,82 +187,36 @@ public class NotificacaoService {
         String titulo = "Processo atribuído";
         String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
         String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
-        // CR-02 (Phase 87 code review, iteration 3): isolate the primary recipient, same
-        // pattern as notificarFaseEntrada/notificarDocumentoNovo/notificarAdmins. Both call
-        // sites (ResourceController.atribuirResponsavel) run inside an already-open
-        // @Transactional method, right after their own tenant-membership validation of
-        // responsavelId -- under READ_COMMITTED, a concurrent delete/deactivation of that
-        // exact user can still become visible to criar()'s re-validation query before this
-        // transaction commits. Uncaught, that IllegalArgumentException would roll back the
-        // whole enclosing transaction, undoing an already-persisted processo reassignment.
-        try {
-            criar(tenantId, responsavelId, "PROCESSO_ATRIBUIDO", titulo, mensagemDest, "processo",
-                    processoId.toString(), linkUrl);
-        } catch (IllegalArgumentException ex) {
-            log.warn("PROCESSO_ATRIBUIDO: responsavelId {} inválido/órfão, notificação primária ignorada",
-                    responsavelId, ex);
-        }
-        notificarAdmins(tenantId, "PROCESSO_ATRIBUIDO", titulo, mensagemAdmin, "processo",
-                processoId.toString(), linkUrl);
+        criarComFanOutAdmin(tenantId, "PROCESSO_ATRIBUIDO", titulo, "processo", processoId.toString(), linkUrl,
+                List.of(responsavelId), mensagemDest, mensagemAdmin, null);
     }
 
     // NOTF-16: novo documento em processo/cliente. Ator (quem fez o upload) é sempre excluído do
-    // primário E do fan-out ADMIN. Destinatários deduplicados via LinkedHashSet (ex.: o mesmo user
-    // é ao mesmo tempo advogado e administrativo de um cliente) — preserva ordem de inserção para
-    // tornar a asserção de teste determinística. Mensagem única em 3ª pessoa serve responsável e
-    // admins igualmente (não há distinção 2ª/3ª pessoa aqui, ao contrário de PROCESSO_ATRIBUIDO).
-    //
-    // Nota de design: NÃO há dedup entre o destinatário primário e o fan-out ADMIN — se um membro
-    // da equipa também for ADMIN recebe 2 linhas. Comportamento preservado de notificarAdmins
-    // (Phase 86), não "corrigido" aqui.
+    // primário E do fan-out ADMIN (via excluirUserId no helper). Destinatários deduplicados pelo
+    // LinkedHashSet do helper (ex.: o mesmo user é ao mesmo tempo advogado e administrativo de um
+    // cliente) — preserva ordem de inserção para tornar a asserção de teste determinística.
+    // Mensagem única em 3ª pessoa serve responsável e admins igualmente (não há distinção
+    // 2ª/3ª pessoa aqui, ao contrário de PROCESSO_ATRIBUIDO).
     public void notificarDocumentoNovo(UUID tenantId, String documentoId, Collection<UUID> destinatarios,
                                         String nomeDocumento, String linkUrl, UUID atorId) {
         String titulo = "Novo documento";
         String mensagem = "Foi adicionado o documento \"" + nomeDocumento + "\".";
-        Set<UUID> destinatariosUnicos = new LinkedHashSet<>(destinatarios == null ? List.of() : destinatarios);
-        for (UUID dest : destinatariosUnicos) {
-            if (dest != null && !dest.equals(atorId)) {
-                // CR-01 (Phase 87 code review, iteration 2): isolate each destinatario so one
-                // stale/orphaned reference can never prevent the remaining destinatarios (in
-                // iteration order) or the unconditional ADMIN fan-out below from being notified.
-                try {
-                    criar(tenantId, dest, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl);
-                } catch (IllegalArgumentException ex) {
-                    log.warn("DOCUMENTO_NOVO: destinatario {} inválido/órfão, ignorado", dest, ex);
-                }
-            }
-        }
-        notificarAdmins(tenantId, "DOCUMENTO_NOVO", titulo, mensagem, "documento", documentoId, linkUrl, atorId);
+        criarComFanOutAdmin(tenantId, "DOCUMENTO_NOVO", titulo, "documento", documentoId, linkUrl,
+                destinatarios == null ? List.of() : destinatarios, mensagem, mensagem, atorId);
     }
 
     // NOTF-19: parecer atribuído a um advogado (criação com advogado já definido, ou reatribuição
-    // posterior). Ator (quem atribuiu) é sempre excluído do primário E do fan-out ADMIN — cobre o
-    // caso de auto-atribuição, em que o próprio advogado é quem executa a ação.
-    //
-    // Mesma nota de design de notificarDocumentoNovo: sem dedup entre primário e fan-out ADMIN.
+    // posterior). Ator (quem atribuiu) é sempre excluído do primário E do fan-out ADMIN (via
+    // excluirUserId no helper) — cobre o caso de auto-atribuição, em que o próprio advogado é
+    // quem executa a ação.
     public void notificarParecerAtribuido(UUID tenantId, String solicitacaoId, UUID advogadoId,
                                            String linkUrl, UUID atorId) {
         String titulo = "Parecer atribuído";
         String mensagemDest = "Foi-lhe atribuído um parecer jurídico.";
         String mensagemAdmin = "Um parecer jurídico foi atribuído a um advogado.";
-        // CR-02 (Phase 87 code review, iteration 3): isolate the primary recipient -- same
-        // reasoning as notificarProcessoAtribuido above. Both ParecerController.createSolicitacao
-        // and .atribuirAdvogado run this inside an already-open @Transactional method, right
-        // after validateAdvogado(...) confirms tenant membership; a concurrent deactivation/
-        // deletion of that same advogado can still make criar()'s own re-validation fail before
-        // this transaction commits, and an uncaught IllegalArgumentException here would roll
-        // back the already-persisted parecer creation/reassignment.
-        if (advogadoId != null && !advogadoId.equals(atorId)) {
-            try {
-                criar(tenantId, advogadoId, "PARECER_ATRIBUIDO", titulo, mensagemDest, "parecer_solicitacao",
-                        solicitacaoId, linkUrl);
-            } catch (IllegalArgumentException ex) {
-                log.warn("PARECER_ATRIBUIDO: advogadoId {} inválido/órfão, notificação primária ignorada",
-                        advogadoId, ex);
-            }
-        }
-        notificarAdmins(tenantId, "PARECER_ATRIBUIDO", titulo, mensagemAdmin, "parecer_solicitacao",
-                solicitacaoId, linkUrl, atorId);
+        List<UUID> primarios = advogadoId != null ? List.of(advogadoId) : List.of();
+        criarComFanOutAdmin(tenantId, "PARECER_ATRIBUIDO", titulo, "parecer_solicitacao", solicitacaoId, linkUrl,
+                primarios, mensagemDest, mensagemAdmin, atorId);
     }
 
     // Mesmo ponto de escrita que criar(...), agora para MUTAÇÃO de estado — nenhuma outra classe
