@@ -1,7 +1,9 @@
 package com.lexcv.services;
 
 import com.lexcv.models.Notificacao;
+import com.lexcv.models.NotificacaoPreferencia;
 import com.lexcv.models.User;
+import com.lexcv.repositories.NotificacaoPreferenciaRepository;
 import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,9 @@ class NotificacaoServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificacaoPreferenciaRepository notificacaoPreferenciaRepository;
+
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID DESTINATARIO_A = UUID.randomUUID();
     private static final UUID DESTINATARIO_B = UUID.randomUUID();
@@ -45,7 +50,7 @@ class NotificacaoServiceTest {
 
     @Test
     void criar_doisDestinatariosDistintos_geramLinhasIndependentesComEstadoLidaProprio() {
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
         when(userRepository.findById(DESTINATARIO_B))
@@ -68,7 +73,7 @@ class NotificacaoServiceTest {
     void criar_destinatarioDeOutroTenant_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(UUID.randomUUID()).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link"));
@@ -81,7 +86,7 @@ class NotificacaoServiceTest {
     void criar_tituloExcede255Caracteres_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "x".repeat(256), "m", "processo", "id-1", "/link"));
@@ -93,7 +98,7 @@ class NotificacaoServiceTest {
     void criar_camposComTamanhoExcedido_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "x".repeat(256), "t", "m", "processo", "id-1", "/link"));
@@ -114,7 +119,7 @@ class NotificacaoServiceTest {
     void criar_camposObrigatoriosEmBranco_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, null, "t", "m", "processo", "id-1", "/link"));
@@ -142,7 +147,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-2", "/link");
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -176,7 +181,7 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(existente));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         Optional<Notificacao> resultado = service.marcarLida(TENANT_ID, DESTINATARIO_A, ID);
 
         assertTrue(resultado.isPresent());
@@ -189,7 +194,7 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(ID, TENANT_ID, DESTINATARIO_A))
                 .thenReturn(Optional.empty());
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         Optional<Notificacao> resultado = service.marcarLida(TENANT_ID, DESTINATARIO_A, ID);
 
         assertTrue(resultado.isEmpty());
@@ -211,7 +216,7 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(TENANT_ID, DESTINATARIO_A))
                 .thenReturn(List.of(n1, n2));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         int count = service.marcarTodasLidas(TENANT_ID, DESTINATARIO_A);
 
         assertEquals(2, count);
@@ -234,7 +239,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin2.getId())).thenReturn(Optional.of(admin2));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarAdmins(TENANT_ID, "DOCUMENTO_NOVO", "t", "m", "documento", "id-3", "/link", admin1.getId());
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -254,7 +259,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
                 "/processos/" + processoId + "?tab=fases");
 
@@ -276,7 +281,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
@@ -295,7 +300,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -322,7 +327,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0003", "/link"));
@@ -347,7 +352,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-1", List.of(userX, ATOR), "contrato.pdf", "/link", ATOR);
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -366,7 +371,7 @@ class NotificacaoServiceTest {
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of());
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-2", List.of(userX, userX), "contrato.pdf", "/link", ATOR);
 
         verify(notificacaoRepository, times(1)).save(any());
@@ -382,7 +387,7 @@ class NotificacaoServiceTest {
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-3", List.of(userX), "contrato.pdf", "/link", ATOR);
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -401,7 +406,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-1", advogadoId, "/link", ATOR);
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -427,7 +432,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarParecerAtribuido(TENANT_ID, "sol-3", advogadoId, "/link", ATOR));
@@ -445,7 +450,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-2", ATOR, "/link", ATOR);
 
         ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
@@ -453,5 +458,124 @@ class NotificacaoServiceTest {
         assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
         // Auto-atribuição: o próprio advogado (== ator) é excluído do destinatário primário;
         // só o ADMIN (que não é o ator) recebe linha.
+    }
+
+    // --- Plan 93-02: mute guard em criar() + métodos de preferência (NOTF-24) ---
+
+    @Test
+    void criar_categoriaSilenciada_naoPersisteEDevolveOptionalVazio() {
+        // Este é EXATAMENTE o path que AlertasDiariosJob.notificar() percorre: uma chamada
+        // direta a criar(...), sem passar por nenhum dos 5 métodos notificar*. Provar que o
+        // guard aqui bloqueia a persistência prova, por construção, o Critério de Sucesso 3
+        // (o job diário respeita o silenciamento sem qualquer alteração própria).
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
+                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(true);
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m",
+                "processo", "id-1", "/link");
+
+        assertTrue(resultado.isEmpty());
+        verify(notificacaoRepository, never()).save(any());
+    }
+
+    @Test
+    void criar_categoriaSemPreferencia_persisteEDevolveOptionalPresente() {
+        // Comportamento default-on preservado: ausência de linha de preferência == entregar.
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
+                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(false);
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m",
+                "processo", "id-1", "/link");
+
+        assertTrue(resultado.isPresent());
+        verify(notificacaoRepository, times(1)).save(any());
+    }
+
+    @Test
+    void criar_prazoVencidoComPreferenciaDeSilenciamento_aindaPersiste() {
+        // Critério de Sucesso 2: PRAZO_VENCIDO é sempre entregue. isSilenciavelCategoria(...)
+        // retorna false para PRAZO_VENCIDO, logo o guard nunca sequer consulta a preferência --
+        // não é necessário stubar existsBy... para provar isto (short-circuit).
+        when(userRepository.findById(DESTINATARIO_A))
+                .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
+        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO", "t", "m",
+                "processo", "id-1", "/link");
+
+        assertTrue(resultado.isPresent());
+        verify(notificacaoRepository, times(1)).save(any());
+        verify(notificacaoPreferenciaRepository, never()).existsByTenantIdAndUserIdAndCategoria(any(), any(), any());
+    }
+
+    @Test
+    void silenciarCategoria_prazoVencido_lancaIllegalArgumentException() {
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO"));
+        verify(notificacaoPreferenciaRepository, never()).save(any());
+    }
+
+    @Test
+    void silenciarCategoria_categoriaDesconhecida_lancaIllegalArgumentException() {
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "categoria_inexistente"));
+        verify(notificacaoPreferenciaRepository, never()).save(any());
+    }
+
+    @Test
+    void silenciarCategoria_categoriaValidaAindaNaoSilenciada_persisteUmaLinha() {
+        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
+                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(false);
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
+
+        verify(notificacaoPreferenciaRepository, times(1)).save(any());
+    }
+
+    @Test
+    void silenciarCategoria_jaSilenciada_naoPersisteSegundaLinha() {
+        // Idempotência: respeita a constraint única uk_notificacao_preferencia.
+        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
+                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(true);
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
+
+        verify(notificacaoPreferenciaRepository, never()).save(any());
+    }
+
+    @Test
+    void reativarCategoria_chamaDeleteDerivado() {
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        service.reativarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
+
+        verify(notificacaoPreferenciaRepository, times(1))
+                .deleteByTenantIdAndUserIdAndCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
+    }
+
+    @Test
+    void listarCategoriasSilenciadas_devolveCategoriasDoUser() {
+        NotificacaoPreferencia pref = NotificacaoPreferencia.builder()
+                .tenantId(TENANT_ID).userId(DESTINATARIO_A).categoria("DOCUMENTO_NOVO").build();
+        when(notificacaoPreferenciaRepository.findByTenantIdAndUserId(TENANT_ID, DESTINATARIO_A))
+                .thenReturn(List.of(pref));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        List<String> categorias = service.listarCategoriasSilenciadas(TENANT_ID, DESTINATARIO_A);
+
+        assertTrue(categorias.contains("DOCUMENTO_NOVO"));
     }
 }
