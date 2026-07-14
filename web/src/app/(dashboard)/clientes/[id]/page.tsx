@@ -61,7 +61,11 @@ import {
   useDownloadDocumento,
   useUploadDocumentoComProgresso,
 } from "@/hooks/use-documentos";
-import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
+import {
+  getDocumentoTipoLabel,
+  getDocumentoTipoOptions,
+  toDocumentoTipo,
+} from "@/lib/cliente-documento-tipo";
 import { buildClienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteContacto } from "@/types/clientes-contactos";
 import type { ClienteNota } from "@/types/clientes-notas";
@@ -673,7 +677,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       <dd className="col-span-2">{cliente.data.nif ?? "—"}</dd>
 
                       <dt className="text-neutral-500 dark:text-neutral-400">Tipo de Documento</dt>
-                      <dd className="col-span-2">{cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "—"}</dd>
+                      <dd className="col-span-2">{getDocumentoTipoLabel(cliente.data.documento_tipo ?? cliente.data.documentoTipo) ?? "—"}</dd>
 
                       <dt className="text-neutral-500 dark:text-neutral-400">Número do Documento</dt>
                       <dd className="col-span-2">{cliente.data.documento_numero ?? cliente.data.documentoNumero ?? "—"}</dd>
