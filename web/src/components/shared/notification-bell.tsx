@@ -4,6 +4,7 @@ import { Bell, Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { NotificacaoSnoozeControl } from "@/components/shared/notificacao-snooze-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,6 +54,13 @@ export function NotificationBell() {
   const list = useNotificacoes({ size: 10 }, { poll: true });
   const marcarLida = useMarcarNotificacaoLida();
   const marcarTodas = useMarcarTodasNotificacoesLidas();
+
+  // Display-only filter: hide currently-snoozed items from the bell preview
+  // without altering the useNotificacoes call/query (the history page keeps
+  // showing every item, snoozed or not — locked decision in 96-CONTEXT.md).
+  const visibleNotificacoes = (list.data?.content ?? []).filter(
+    (n) => !(n.snoozedUntil && new Date(n.snoozedUntil) > new Date()),
+  );
 
   const handleMarcarTodas = async () => {
     try {
@@ -105,39 +113,39 @@ export function NotificationBell() {
           <p className="px-4 py-6 text-sm text-red-600 text-center">
             Não foi possível carregar as notificações. Verifique a ligação e tente novamente.
           </p>
-        ) : !list.data?.content.length ? (
+        ) : !visibleNotificacoes.length ? (
           <p className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400 text-center">
             Sem notificações por agora.
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-            {list.data!.content.slice(0, 10).map((n) => (
+            {visibleNotificacoes.slice(0, 10).map((n) => (
               <li
                 key={n.id}
                 className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
               >
-                {isInternalLinkUrl(n.linkUrl) ? (
-                  <Link
-                    href={n.linkUrl}
-                    className="block"
-                    onClick={() => {
-                      marcarLida.mutate(n.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <NotificacaoConteudo n={n} />
-                  </Link>
-                ) : (
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    {isInternalLinkUrl(n.linkUrl) ? (
+                      <Link
+                        href={n.linkUrl}
+                        onClick={() => {
+                          marcarLida.mutate(n.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <NotificacaoConteudo n={n} />
+                      </Link>
+                    ) : (
                       <NotificacaoConteudo n={n} />
-                    </div>
-                    {!n.lida && (
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 flex items-center gap-1">
+                    {!isInternalLinkUrl(n.linkUrl) && !n.lida && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="flex-shrink-0"
                         aria-label="Marcar como lida"
                         disabled={marcarLida.isPending && marcarLida.variables === n.id}
                         onClick={() => marcarLida.mutate(n.id)}
@@ -145,8 +153,9 @@ export function NotificationBell() {
                         <Check />
                       </Button>
                     )}
+                    <NotificacaoSnoozeControl notificacao={n} />
                   </div>
-                )}
+                </div>
               </li>
             ))}
           </ul>
