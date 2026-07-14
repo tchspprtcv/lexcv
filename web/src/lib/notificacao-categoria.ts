@@ -56,6 +56,36 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
 ).map((value) => ({ value, label: categoriaToLabel(value) }));
 
 /**
+ * Categorias que o utilizador NAO pode silenciar (NOTF-24).
+ *
+ * MANTER EM SINCRONIA com `CategoriaNotificacao.java` no backend --
+ * `PRAZO_VENCIDO` e a unica categoria marcada como `silenciavel(false)` la.
+ * O backend continua a ser a fonte de verdade e a validar/rejeitar (400) no
+ * PUT /notificacoes/preferencias/{categoria}; esta constante existe apenas
+ * para centralizar a duplicacao inevitavel do lado do frontend (a
+ * alternativa correta a prazo e o GET /notificacoes/preferencias passar a
+ * devolver a lista de categorias silenciaveis, tornando este array
+ * desnecessario).
+ */
+export const NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS: readonly NotificacaoCategoria[] = [
+  "PRAZO_VENCIDO",
+];
+
+/**
+ * Fonte unica de verdade (do lado do frontend) para as opcoes de categoria
+ * apresentadas no toggle de preferencias de notificacao -- deriva de
+ * NOTIFICACAO_CATEGORIA_OPTIONS excluindo
+ * NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS, em vez de um filtro inline com um
+ * literal de categoria embutido no componente.
+ */
+export const NOTIFICACAO_CATEGORIA_SILENCIAVEIS_OPTIONS: {
+  value: NotificacaoCategoria;
+  label: string;
+}[] = NOTIFICACAO_CATEGORIA_OPTIONS.filter(
+  (o) => !NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS.includes(o.value),
+);
+
+/**
  * Fonte unica de verdade para a verificacao de seguranca de `linkUrl`: aceita
  * apenas caminhos internos relativos ("/processos/123"). Em vez de enumerar
  * caracteres/posicoes de bypass conhecidos — abordagem que ja falhou duas

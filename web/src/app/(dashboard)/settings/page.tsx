@@ -31,7 +31,7 @@ import {
   useSilenciarCategoria,
 } from "@/hooks/use-notificacao-preferencias";
 import { toast } from "@/hooks/use-toast";
-import { NOTIFICACAO_CATEGORIA_OPTIONS } from "@/lib/notificacao-categoria";
+import { NOTIFICACAO_CATEGORIA_SILENCIAVEIS_OPTIONS } from "@/lib/notificacao-categoria";
 import { UserProfileForm } from "@/components/profile/user-profile-form";
 import { UserPasswordForm } from "@/components/profile/user-password-form";
 import { Button } from "@/components/ui/button";
@@ -872,9 +872,7 @@ function NotificationPreferencesTab() {
   }
 
   const silenciadas = data?.silenciadas ?? [];
-  const categoriasSilenciaveis = NOTIFICACAO_CATEGORIA_OPTIONS.filter(
-    (o) => o.value !== "PRAZO_VENCIDO",
-  );
+  const categoriasSilenciaveis = NOTIFICACAO_CATEGORIA_SILENCIAVEIS_OPTIONS;
 
   const handleToggle = async (categoria: NotificacaoCategoria, entregar: boolean) => {
     try {
