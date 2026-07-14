@@ -1,193 +1,137 @@
 ---
 phase: LEXCV-94-notf-27-corrigir-colis-o-de-dedup-admin
-fixed_at: 2026-07-14T13:35:00Z
+fixed_at: 2026-07-14T16:15:00Z
 review_path: .planning/phases/LEXCV-94-notf-27-corrigir-colis-o-de-dedup-admin/94-REVIEW.md
-iteration: 1
-findings_in_scope: 3
-fixed: 3
+iteration: 2
+findings_in_scope: 2
+fixed: 2
 skipped: 0
 status: all_fixed
 ---
 
 # Phase LEXCV-94: Code Review Fix Report
 
-**Fixed at:** 2026-07-14T13:35:00Z
+**Fixed at:** 2026-07-14T16:15:00Z
 **Source review:** .planning/phases/LEXCV-94-notf-27-corrigir-colis-o-de-dedup-admin/94-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope: 3 (CR-01, WR-01, WR-02 — `fix_scope: critical_warning`, so IN-01..IN-04 excluded)
-- Fixed: 3
+- Findings in scope: 2 (CR-01, WR-01 — `fix_scope: critical_warning`; IN-01..IN-05 remain excluded)
+- Fixed: 2
 - Skipped: 0
 
-## Important deviation from the spawning task's suggested CR-01 fix
-
-The spawning task's instructions suggested a minimal fix for CR-01: change
-`notificacaoRepository.save(n)` to `notificacaoRepository.saveAndFlush(n)` inside `criar()`,
-citing Phase 93's `NotificacaoPreferencia` race condition as "the exact same bug class already
-found and fixed." Investigation before implementing showed this citation actually points at the
-**superseded, intermediate** fix from that history, not the final one:
-
-- Phase 93 iteration 2 (commit `ae35bbb`) applied exactly this pattern
-  (`saveAndFlush()` + `catch(DataIntegrityViolationException)`) to `silenciarCategoria()`.
-- Phase 93 iteration 3's own re-review then escalated that fix to **Critical** (`CR-01`) and
-  replaced it entirely (commit `c3cab8a`) with a native `INSERT ... ON CONFLICT DO NOTHING`
-  upsert, because `saveAndFlush()` + local catch does **not** protect the caller's transaction
-  against real PostgreSQL: Postgres aborts the *entire* transaction the instant any statement
-  violates a constraint, and catching the translated exception locally cannot "un-abort" it — the
-  interceptor's subsequent implicit `COMMIT` either fails outright or is silently treated as a
-  rollback, hiding the failure. This is documented at length in
-  `.planning/phases/LEXCV-93-notf-24-prefer-ncias-de-notifica-o-por-utilizador/93-REVIEW-FIX.md`
-  (iteration 3 section).
-
-Applying only `saveAndFlush()` to this phase's `criar()` would have reproduced the exact defect
-Phase 93 already found and escalated — for a bug the current review explicitly rates Critical.
-
-A second, independent problem makes even the `@Transactional(propagation = REQUIRES_NEW)`
-variant the 94-REVIEW.md itself proposes for `criar()` non-functional on the call paths CR-01
-actually cites (`ResourceController.atribuirResponsavel`,
-`ParecerController.createSolicitacao`/`atribuirAdvogado`): `criarComFanOutAdmin()` invokes
-`criar(...)` via **self-invocation** (`this.criar(...)` from another method of the same class).
-Spring's default proxy-based AOP does not intercept self-invocation, so a `@Transactional`
-annotation on `criar()` would be inert on exactly the call path this fix needs to protect —
-only external calls (e.g. `AlertasDiariosJob` calling the injected `NotificacaoService` bean)
-would actually get a new physical transaction from that annotation.
-
-**Fix actually applied:** the atomic `ON CONFLICT DO NOTHING` native upsert (the "alternatively"
-option in 94-REVIEW.md's own CR-01 Fix section), mirroring the current, reviewer-approved,
-already-shipped `silenciarCategoria()`/`upsertSilenciar` implementation. This sidesteps both
-problems at once: no Spring transaction-boundary trickery is needed (works identically regardless
-of self-invocation or ambient-transaction state), and no exception is ever raised on the
-"duplicate" path, so there is nothing for the caller's transaction to abort on.
+This is the second fix pass for this phase. Iteration 1 (see commits `f839243`/`a34b5b1`/`7fd8bb0`,
+documented in the iteration-1 section of git history for this file) replaced
+`NotificacaoRepository`'s `save()`/`saveAndFlush()` call with the atomic
+`inserirSeNaoDuplicado(...)` native upsert to fix a transaction-poisoning race. The re-review found
+that fix itself introduced a new, more severe regression — the subject of this iteration's CR-01
+below.
 
 ## Fixed Issues
 
-### CR-01: `DataIntegrityViolationException` backstop does not protect the caller's transaction when `criarComFanOutAdmin` runs inside an ambient `@Transactional` context
+### CR-01: `inserirSeNaoDuplicado` has no active transaction on most real call paths — throws `TransactionRequiredException` at runtime
 
 **Files modified:**
 - `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java`
-- `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
-- `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java`
+- `backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java`
 
-**Commit:** f839243
+**Commit:** `6ac8725`
 
-**Applied fix:** Added `NotificacaoRepository.inserirSeNaoDuplicado(...)`, a `@Modifying
-@Query(nativeQuery = true)` method executing `INSERT INTO t_notificacao (...) VALUES (...) ON
-CONFLICT (tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria) DO NOTHING`,
-returning the number of rows actually inserted (0 = duplicate skipped, 1 = inserted) — mirroring
-`NotificacaoPreferenciaRepository.upsertSilenciar` exactly. `id` and `created_at` are generated in
-Java (`UUID.randomUUID()` / `LocalDateTime.now()`) rather than via `gen_random_uuid()`/`now()` in
-SQL, so the in-memory `Notificacao` returned to the caller on the success path is byte-for-byte
-consistent with what was persisted, with no SELECT-after-INSERT round trip.
+**Applied fix:** Added `@Transactional` (from `org.springframework.transaction.annotation`) directly
+on `NotificacaoRepository.inserirSeNaoDuplicado(...)`, exactly as 94-REVIEW.md's Fix section
+specified — not on `NotificacaoService.criar()`/`criarComFanOutAdmin()`. The review's rationale
+for this placement was verified against the current code and confirmed still applicable:
+`criarComFanOutAdmin()` calls `criar(...)` via self-invocation (`this.criar(...)` within the same
+class), which bypasses Spring's proxy-based `@Transactional` advice on the service entirely, so
+annotating `criar()` would have been inert on that call path. A repository interface method, in
+contrast, always goes through Spring Data JPA's own dedicated proxy regardless of how the caller
+reached it, so `@Transactional` here takes effect uniformly. Default propagation (`REQUIRED`) joins
+an already-open ambient transaction where one exists (`atribuirResponsavel`, `ParecerController`)
+and opens its own short-lived transaction otherwise (`createProcesso`, `createProcessoFase`,
+`uploadDocumento`, the entirety of `AlertasDiariosJob`), which was the actual gap: none of those
+four call sites had any ambient transaction, so every one of them would throw
+`TransactionRequiredException` at runtime before this fix.
 
-Rewrote `NotificacaoService.criar()`'s final persistence step to call `inserirSeNaoDuplicado(...)`
-instead of `notificacaoRepository.save(n)`; on 0 rows affected it logs a warning and returns
-`Optional.empty()` (the same "nothing persisted" contract already used for the silenced-category
-path), never throwing. Removed the now-dead `catch (DataIntegrityViolationException ex)` block
-from `criarComFanOutAdmin()` (unreachable since `criar()` can no longer throw that exception on
-this path) and the now-unused `org.springframework.dao.DataIntegrityViolationException` import.
+Added two new tests to `NotificacaoRepositoryIT` (the existing Testcontainers-backed integration
+test class for this repository) that specifically prove the fix rather than just re-exercising
+the query's SQL behavior:
+- `inserirSeNaoDuplicado_semTransacaoAmbienteDoChamador_insereComSucesso`
+- `inserirSeNaoDuplicado_semTransacaoAmbienteDoChamador_duplicadoDevolveZeroLinhas`
 
-Updated `NotificacaoServiceTest`: every test exercising `criar()` (directly or via a `notificar*`
-wrapper) now stubs/verifies `inserirSeNaoDuplicado(...)` instead of `save(...)`, using
-`ArgumentCaptor<UUID>`/`ArgumentCaptor<String>` on the specific positional parameters
-(`destinatarioId`, `categoria`, `entidadeTipo`, `mensagem`) each test needs, since the method no
-longer takes a single `Notificacao` object. `marcarLida()`/`marcarTodasLidas()` tests are
-untouched (those still use `save()`/`saveAll()`, an unrelated code path). Replaced
-`notificarDocumentoNovo_saveLancaDataIntegrityViolation_naoPropagaEContinuaFanOut` (which
-simulated the old, now-impossible exception path) with
-`notificarDocumentoNovo_inserirSeNaoDuplicadoRetorna0_naoPropagaEContinuaFanOut`, which stubs the
-first `inserirSeNaoDuplicado` call to return `0` (duplicate) and the second to return `1`
-(inserted), proving the fan-out continues past a duplicate without throwing.
+Both are annotated `@Transactional(propagation = Propagation.NOT_SUPPORTED)` at the method level.
+This is necessary because `@DataJpaTest` wraps every test method in its own ambient transaction by
+default (rolled back afterwards) — which would silently mask a missing `@Transactional` on the
+repository method itself, since every *other* test in this class already runs inside that ambient
+ambient transaction and would pass regardless of whether this fix is present.
+`Propagation.NOT_SUPPORTED` suspends that ambient test transaction for just these two methods,
+mirroring the real call paths that have no ambient transaction of their own (`AlertasDiariosJob`,
+`createProcesso`/`createProcessoFase`/`uploadDocumento`). Without the `@Transactional` fix on the
+repository method, both new tests would fail with `TransactionRequiredException` instead of
+asserting successfully; because `Propagation.NOT_SUPPORTED` suspends the test's own transaction
+rather than rolling it back, both tests explicitly `deleteById(...)` the row(s) they insert to avoid
+leaving residue in the Testcontainers Postgres instance shared by the rest of the class.
 
-**Verification performed:** `mvn -o compile` and `mvn -o test-compile` both succeeded (exit 0).
+**Verification performed:** `mvn -o compile` and `mvn -o test-compile` both succeeded (exit 0) for
+the whole backend module, confirming the annotation change and the new IT test compile cleanly.
 `mvn -o test -Dtest=NotificacaoServiceTest,AlertasDiariosJobTest`: 40/0/0/0 (Tests run/Failures/
-Errors/Skipped). Full `mvn -o test` for the whole backend module (all three `*Test.java` classes —
-`NotificacaoServiceTest`, `AlertasDiariosJobTest`, `RiscoPrazoServiceTest`; no Docker/Testcontainers
-available in this sandbox, so `*IT.java` integration tests were not exercised, consistent with the
-same limitation documented by both the Phase 93 iteration-2 fixer and iteration-3 reviewer):
-55/0/0/0, BUILD SUCCESS.
+Errors/Skipped) — the existing Mockito-based unit suites, which mock the repository entirely and
+therefore cannot exercise this transaction-boundary bug either way, are unaffected. Full `mvn -o
+test` for the whole backend module (Surefire-bound `*Test.java` only: `NotificacaoServiceTest`,
+`AlertasDiariosJobTest`, `RiscoPrazoServiceTest`): 55/0/0/0, BUILD SUCCESS.
 
-**Human verification recommended:** this is a logic/runtime-semantics fix (an atomic SQL-level
-constraint-handling change), and none of the Testcontainers-backed `NotificacaoRepositoryIT`/
-`NotificacaoPreferenciaRepositoryIT` suites could run in this sandbox (no Docker daemon reachable).
-Recommend adding (or extending an existing) integration test exercising
-`NotificacaoRepository.inserirSeNaoDuplicado` directly against real PostgreSQL with two concurrent
-inserts for the same dedup tuple — mirroring
-`NotificacaoPreferenciaRepositoryIT#upsertSilenciar_duasTransacoesConcorrentes_...` — before this
-lands in an environment where a genuine concurrent double-insert can occur, to get an actual
-green/red signal for the "0 rows on conflict, no exception" claim under real concurrent load.
+**Limitation — the new IT tests could not be executed in this sandbox:** no Docker daemon is
+reachable here (`docker version` fails with "failed to connect to the docker API"), so
+`NotificacaoRepositoryIT` (a `@Testcontainers`/`@DataJpaTest` suite requiring a real Postgres
+container) — including the two new tests added for this fix — could not actually be run, only
+compiled. This is the same limitation the iteration-1 fixer and this iteration's reviewer both
+independently hit and documented. The fix and the two new tests were verified by static
+inspection against Spring's documented `@Transactional(propagation = NOT_SUPPORTED)` test-method
+behavior (Spring Framework reference docs, Testing chapter: a method-level `@Transactional` with
+`NOT_SUPPORTED` propagation suspends/skips the ambient test-managed transaction for that specific
+test method) and against the JPA specification requirement that `@Modifying` queries need an
+active transaction. **Recommend running the full `NotificacaoRepositoryIT` suite (including the two
+new tests) against real PostgreSQL via Testcontainers in an environment with Docker available
+before this phase is considered fully verified** — this is the strongest possible confirmation
+short of a production/staging smoke test that the fix actually eliminates the
+`TransactionRequiredException` on the real call paths CR-01 traced through.
 
-### WR-01: Event-level validation failures are misreported as "destinatario inválido/órfão" and silently drop the notification for every recipient
+### WR-01: `AlertasDiariosJob.notificar()`'s `catch (DataIntegrityViolationException ex)` is now dead code, masking that the exception path it defends against can no longer occur
 
-**Files modified:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
+**Files modified:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java`
 
-**Commit:** a34b5b1
+**Commit:** `9572030`
 
-**Applied fix:** Added the five event-level validation calls
-(`requireNonBlank`/`requireMaxLength` for `categoria`, `titulo`, `entidadeTipo`, `entidadeId`,
-`linkUrl`) to the very top of `criarComFanOutAdmin`, before the per-destinatario loop, exactly as
-94-REVIEW.md's Fix section proposed. A violation now throws `IllegalArgumentException` once,
-immediately, before any destinatario is touched — instead of being caught identically on every
-loop iteration and logged as a misleading "destinatario inválido/órfão" for every recipient. The
-per-destinatario validation inside `criar()` (lines 53-63, unchanged) remains as defense-in-depth;
-this is intentionally redundant for the shared fields, since `criar()` is still the single choke
-point for all callers (including `AlertasDiariosJob`, which never goes through
-`criarComFanOutAdmin`). `dest`/`mensagem` (the fields that legitimately vary per iteration) are
-deliberately NOT part of this upfront check.
+**Applied fix:** Chose the "remove the dead block" option (rather than "leave it as a documented
+harmless backstop") from 94-REVIEW.md's Fix section, for the same reason the review itself flagged
+as the actual risk: a comment describing an exception-handling race that can no longer occur is more
+likely to mislead the next person investigating a duplicate-notification incident into thinking this
+path is exercised and tested, than a removed block is to be missed. Removed the
+`catch (DataIntegrityViolationException ex)` block and its log statement from `notificar(...)`, and
+removed the now-unused `org.springframework.dao.DataIntegrityViolationException` import (verified via
+grep that no other reference to that type remains in the file). Replaced the removed block with an
+inline comment on the remaining `try` explaining the history (the backstop used to exist for a
+check-then-act race against `uk_notificacao_dedup`, but since iteration 1's CR-01 fix,
+`NotificacaoService.criar()` reports a dedup hit via a `0`-rows-affected / `Optional.empty()` return
+instead of an exception, so there is no longer any exception for this method to catch on that path).
 
-**Verification performed:** `mvn -o test-compile` succeeded. `mvn -o test
--Dtest=NotificacaoServiceTest,AlertasDiariosJobTest`: 40/0/0/0 — all existing tests (including the
-four `criar_*_lancaIllegalArgumentException` tests that exercise these exact fields, just through
-`criar()` directly rather than `criarComFanOutAdmin`) continued to pass unchanged, confirming the
-earlier validation point produces identical externally-observable behavior for all current
-callers. No new test was added for the "shared field invalid, caught once instead of N times"
-distinction itself, since asserting *how many times* a log line fires is brittle; the existing
-`assertThrows(IllegalArgumentException.class, ...)` coverage already proves the validation fires.
-
-### WR-02: ADMIN fan-out notifies deactivated admin accounts indefinitely
-
-**Files modified:**
-- `backend/src/main/java/com/lexcv/repositories/UserRepository.java`
-- `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
-- `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java`
-
-**Commit:** 7fd8bb0
-
-**Applied fix:** Added `UserRepository.findByTenantIdAndRoleNameAndAtivoTrue(tenantId, roleName)`,
-a JPQL query identical to the existing `findByTenantIdAndRoleName` plus `AND u.ativo = true` —
-added as a **new**, separate method rather than editing `findByTenantIdAndRoleName` in place, so
-`AlertasDiariosJob.safeAdmins()` (the daily job's own ADMIN fan-out, which shares the same
-underlying query and has the same latent gap) is left untouched, since it was not part of this
-review's scope. `NotificacaoService.criarComFanOutAdmin` now calls the new
-`findByTenantIdAndRoleNameAndAtivoTrue` instead, so a deactivated ADMIN account no longer
-accumulates `FASE_ENTRADA`/`PROCESSO_ATRIBUIDO`/`DOCUMENTO_NOVO`/`PARECER_ATRIBUIDO` notification
-rows it can never read or dismiss — mirroring the `ativo` check
-`ResourceController.atribuirResponsavel` already applies before assigning a responsible party.
-
-Updated `NotificacaoServiceTest`: all 15 stubs of the ADMIN fan-out query were renamed from
-`findByTenantIdAndRoleName` to `findByTenantIdAndRoleNameAndAtivoTrue` (production code no longer
-calls the old method at all from this class, so leaving any old-name stub in place would trip
-Mockito's `STRICT_STUBS` `UnnecessaryStubbingException`). `AlertasDiariosJobTest`'s stubs of the
-old method were left unchanged, matching the untouched production behavior there.
-
-**Verification performed:** `mvn -o test-compile` succeeded. `mvn -o test
--Dtest=NotificacaoServiceTest,AlertasDiariosJobTest`: 40/0/0/0. Full `mvn -o test` (whole backend
-module, all three `*Test.java` classes): 55/0/0/0, BUILD SUCCESS — confirming `AlertasDiariosJob`'s
-own ADMIN fan-out (still using the un-renamed `findByTenantIdAndRoleName`) is unaffected. No new
-test was added specifically asserting that a deactivated admin is excluded (would require a
-`User.builder().ativo(false)` fixture plus a query-level assertion that a mocked repository can't
-meaningfully provide, since the `ativo = true` filter lives in the JPQL `WHERE` clause itself, not
-in Java branching); this guarantee is provable only against a real database and is a reasonable
-candidate for a future `UserRepositoryIT`/`NotificacaoRepositoryIT` addition.
+**Verification performed:** Grepped the modified file and its paired test (`AlertasDiariosJobTest`)
+to confirm no remaining reference to `DataIntegrityViolationException` anywhere (import or catch
+clause) and that no existing test asserted on that removed catch branch (none did — WR-01's own
+review text already noted the branch was unreachable and therefore untested). `mvn -o test-compile`
+succeeded. `mvn -o test -Dtest=NotificacaoServiceTest,AlertasDiariosJobTest`: 40/0/0/0. Full `mvn -o
+test` (whole backend module, all three `*Test.java` classes): 55/0/0/0, BUILD SUCCESS — confirming
+the import/catch removal did not affect any of `AlertasDiariosJobTest`'s existing 9 tests, including
+the ones exercising per-admin/per-tenant/per-entidade failure isolation in the same method's
+surrounding try/catch layers.
 
 ## Skipped Issues
 
-None — all three in-scope findings (CR-01, WR-01, WR-02) were fixed. IN-01 through IN-04 were out
-of scope for this pass (`fix_scope: critical_warning`) and are unchanged; see 94-REVIEW.md for
-their descriptions if a future `--all`-scope pass wants to pick them up.
+None — both in-scope findings (CR-01, WR-01) were fixed. IN-01 through IN-05 remain out of scope for
+this `critical_warning`-only pass and are unchanged from 94-REVIEW.md; see that file for their
+descriptions if a future `--all`-scope pass wants to pick them up.
 
 ---
 
-_Fixed: 2026-07-14T13:35:00Z_
+_Fixed: 2026-07-14T16:15:00Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
