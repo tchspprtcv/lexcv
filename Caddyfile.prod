@@ -1,4 +1,4 @@
-{$DOMAIN_NAME} {
+{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {
     handle /api/* {
         reverse_proxy backend:8080
     }
