@@ -129,6 +129,20 @@ Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.pl
 
 *(Full v2.8/v2.9 deferred-items detail trimmed here per STATE.md size constraint — see `.planning/milestones/v2.8-MILESTONE-AUDIT.md` and `.planning/milestones/v2.9-MILESTONE-AUDIT.md`.)*
 
+### Items acknowledged and deferred at milestone v2.11 close (2026-07-14)
+
+Pre-close `audit-open` scan found 11 open items across 5 phases, all `human_needed`/`partial` — none are BLOCKER-level (see `.planning/v2.11-MILESTONE-AUDIT.md` for full detail). Acknowledged and deferred rather than blocking close:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap / verification_gap | Phase 91 (Testcontainers) — 2 pending scenarios (`91-HUMAN-UAT.md`) | human_needed — Docker Desktop 4.80/Testcontainers 1.20.4 npipe incompatibility, confirmed independently multiple times; not a code defect, will pass in CI |
+| uat_gap / verification_gap | Phase 92 (Agenda↔RiscoPrazoService) — 2 pending scenarios (`92-HUMAN-UAT.md`) | mostly closed — AGD-35's risco field was confirmed live this session; residual items are minor visual confirmations |
+| uat_gap / verification_gap | Phase 93 (NOTF-24 preferências) — 5 pending scenarios (`93-HUMAN-UAT.md`) | mostly closed — the mute toggle itself was confirmed live end-to-end this session; residual items are secondary scenarios |
+| uat_gap / verification_gap | Phase 96 (NOTF-26 snooze) — 2 pending scenarios (`96-HUMAN-UAT.md`) | mostly closed — the full snooze flow (presets, badge drop, history, bell-hide) was confirmed live end-to-end this session; residual items are edge cases (PRAZO_VENCIDO block, cross-user 404) not reproducible with current test data |
+| uat_gap / verification_gap | Phase 97 (milestone audit) — 3 pending scenarios (`97-HUMAN-UAT.md`) | print-preview layout, cross-surface bell timing, RBAC second-user walkthrough — see Phase 97 rows above; zero functional risk per code-level evidence |
+
+Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-UAT.md` itself already closed with 0 pending).
+
 ## Session Continuity
 
 Last session: 2026-07-14T20:38:30.000Z
