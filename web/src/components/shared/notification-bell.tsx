@@ -123,7 +123,7 @@ export function NotificationBell() {
           </p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800 max-h-72 overflow-y-auto">
-            {visibleNotificacoes.slice(0, 10).map((n) => (
+            {visibleNotificacoes.map((n) => (
               <li
                 key={n.id}
                 className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
