@@ -17,7 +17,6 @@ import com.lexcv.services.NotificacaoService;
 import com.lexcv.services.RiscoPrazoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -314,18 +313,22 @@ public class AlertasDiariosJob {
             return;
         }
         try {
+            // WR-01 (Phase 94 code review, iteration 2): a catch(DataIntegrityViolationException)
+            // backstop for uk_notificacao_dedup used to live here (Phase 88 code review), for the
+            // check-then-act race window between the existence-check above and this call under
+            // concurrent execution. Since CR-01 (Phase 94 code review), NotificacaoService.criar()
+            // no longer surfaces that race as an exception at all -- it delegates to
+            // NotificacaoRepository.inserirSeNaoDuplicado's atomic native
+            // "INSERT ... ON CONFLICT DO NOTHING", which returns 0 affected rows (and an empty
+            // Optional from criar()) on a duplicate hit, never throwing
+            // DataIntegrityViolationException. The catch block was removed rather than kept as a
+            // dead backstop specifically because leaving it risked re-misleading the next reader
+            // into believing this race is still handled here, when in fact it's handled entirely
+            // at the SQL level now.
             notificacaoService.criar(tenantId, destinatarioId, categoria, titulo, mensagem, entidadeTipo,
                     entidadeId, linkUrl);
         } catch (IllegalArgumentException ex) {
             log.warn("{}: destinatario {} inválido/órfão, notificação ignorada para este destinatário",
-                    categoria, destinatarioId, ex);
-        } catch (DataIntegrityViolationException ex) {
-            // WR-01 (Phase 88 code review): backstop for uk_notificacao_dedup (migration
-            // 88-add-notificacao-dedup-unique-constraint.sql). The existence-check above is a
-            // check-then-act race under concurrent execution; if the DB-level unique index still
-            // rejects a duplicate insert, fail closed here instead of throwing out of this
-            // per-entidade try/catch.
-            log.warn("{}: notificação duplicada rejeitada pelo índice único da BD para destinatario {}, ignorada",
                     categoria, destinatarioId, ex);
         }
     }
