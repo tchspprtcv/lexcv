@@ -101,7 +101,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- `MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT) — explicitly owned by v2.11's AUD-04 (Phase 97), which must resolve or document a workaround.
+- ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
 
 ## Deferred Items
 
