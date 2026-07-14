@@ -64,9 +64,14 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
         method: "PUT",
         body: JSON.stringify({ dataInicio, dataFim }),
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       setOptimisticOverrides(new Map());
       queryClient.invalidateQueries({ queryKey: ["eventos", "list"] });
+      // WR-02 (92-REVIEW.md, iteration 2): mirror useUpdateEvento's cache-sync behavior — without
+      // this, the moved event's ["eventos", "detail", id] cache entry keeps its pre-move
+      // dataInicio/dataFim until its own 15s staleTime lapses, so an open detail view can show
+      // stale data right after a drag-and-drop reschedule.
+      queryClient.setQueryData(["eventos", "detail", updated.id], updated);
       toast.success("Evento reagendado com sucesso.");
     },
     onError: (error: unknown) => {
