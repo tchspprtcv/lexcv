@@ -133,27 +133,33 @@ class NotificacaoPreferenciaRepositoryIT {
     }
 
     /**
-     * Prova principal do fix de WR-01 (iteração 2): duas transações concorrentes, cada uma
-     * independentemente comprometida, tentam silenciar a MESMA (tenant, user, categoria) em
-     * simultâneo, replicando exatamente a sequência de
-     * {@code NotificacaoService.silenciarCategoria()} -- {@code existsBy...} seguido de
-     * {@code saveAndFlush(...)} dentro de um try/catch(DataIntegrityViolationException).
+     * Prova principal do fix de CR-01 (iteração 3): duas transações concorrentes, cada uma
+     * independentemente comprometida, chamam o upsert nativo atómico
+     * {@code NotificacaoPreferenciaRepository.upsertSilenciar(...)} para a MESMA
+     * (tenant, user, categoria) em simultâneo -- exatamente a chamada que
+     * {@code NotificacaoService.silenciarCategoria()} agora faz.
+     *
+     * Esta prova substitui a da iteração 2 (replicar {@code existsBy...} seguido de
+     * {@code saveAndFlush(...)} dentro de um try/catch(DataIntegrityViolationException)), que a
+     * re-review de iteração 3 identificou como não funcionando contra PostgreSQL real: o Postgres
+     * aborta a transação INTEIRA assim que qualquer instrução viola uma constraint, pelo que
+     * apanhar a exceção traduzida localmente não impede o COMMIT implícito subsequente (a cargo do
+     * {@code @Transactional} do próprio método) de falhar -- ou de ser silenciosamente tratado
+     * como rollback -- contra uma transação já envenenada pelo servidor. Com
+     * {@code INSERT ... ON CONFLICT DO NOTHING}, a transação perdedora nunca sequer levanta uma
+     * violação de constraint ao nível do SQL -- não há exceção alguma para apanhar, nem transação
+     * para envenenar.
      *
      * {@code @Transactional(propagation = NOT_SUPPORTED)} desliga o embrulho automático de
      * transação (rollback-only) que o {@code @DataJpaTest} aplicaria por omissão a este método de
      * teste -- a prova exige duas transações reais e independentemente comprometidas.
      *
-     * Com {@code saveAndFlush} (o fix), nenhum {@code futureX.get(...)} deve lançar
-     * {@code ExecutionException}: a transação perdedora apanha a
-     * {@code DataIntegrityViolationException} DENTRO do try/catch e trata-a como sucesso
-     * idempotente, exatamente como a transação vencedora. Antes do fix (com um {@code save()}
-     * simples), a exceção só surgiria no commit -- fora do try/catch -- e escaparia como
-     * {@code ExecutionException} aqui, tal como escaparia para {@code GlobalExceptionHandler} em
-     * produção.
+     * Nenhum {@code futureX.get(...)} deve lançar {@code ExecutionException}: ambas as transações
+     * completam (commit) sem exceção, e apenas uma linha de preferência sobrevive.
      */
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void silenciarCategoria_duasTransacoesConcorrentes_perdedoraApanhaExcecaoSemEscaparDoCatch()
+    void upsertSilenciar_duasTransacoesConcorrentes_nenhumaLancaExcecaoEUmaUnicaLinhaPersiste()
             throws InterruptedException, ExecutionException, TimeoutException {
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         UUID tenantId = UUID.randomUUID();
@@ -168,18 +174,7 @@ class NotificacaoPreferenciaRepositoryIT {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(e);
             }
-            try {
-                if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-                    notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
-                            .tenantId(tenantId)
-                            .userId(userId)
-                            .categoria(categoria)
-                            .build());
-                }
-            } catch (DataIntegrityViolationException ex) {
-                // Réplica exata do catch de NotificacaoService.silenciarCategoria(): perdeu a
-                // corrida, trata como sucesso idempotente -- nunca deve escapar do Runnable.
-            }
+            notificacaoPreferenciaRepository.upsertSilenciar(tenantId, userId, categoria);
         });
 
         ExecutorService executor = Executors.newFixedThreadPool(2);

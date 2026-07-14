@@ -9,7 +9,6 @@ import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -307,29 +306,21 @@ public class NotificacaoService {
         if (!resolvida.isSilenciavel()) {
             throw new IllegalArgumentException("categoria não silenciável: " + categoria);
         }
-        try {
-            if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-                // saveAndFlush (não save) é essencial aqui: o id usa GenerationType.UUID
-                // (gerador em memória, sem round-trip à BD), pelo que um save() simples só
-                // faz entityManager.persist() -- o INSERT real (e a violação da constraint
-                // única) só aconteceria no commit da transação envolvente, fora do alcance
-                // deste try/catch. O flush síncrono garante que a violação é lançada e
-                // apanhada aqui dentro.
-                notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
-                        .tenantId(tenantId)
-                        .userId(userId)
-                        .categoria(categoria)
-                        .build());
-            }
-        } catch (DataIntegrityViolationException ex) {
-            // Perdeu a corrida para outro pedido concorrente para a mesma
-            // (tenant, user, categoria) -- a linha existe de qualquer forma, pelo
-            // que este continua a ser um resultado "silenciado" bem-sucedido
-            // (mantém a idempotência documentada acima em vez de deixar a
-            // exceção cair para o handler genérico e devolver 500).
-            log.debug("silenciarCategoria: insert concorrente para {}/{}/{}, a tratar como sucesso",
-                    tenantId, userId, categoria);
-        }
+        // CR-01 (Phase 93 code review, iteration 3): upsert nativo atómico em vez de
+        // existsBy...+saveAndFlush(...) dentro de um try/catch(DataIntegrityViolationException).
+        // Esse padrão não funciona contra PostgreSQL real: o Postgres aborta a transação
+        // INTEIRA assim que qualquer instrução viola uma constraint -- e este método é ele
+        // próprio a fronteira @Transactional mais externa, pelo que apanhar a exceção
+        // traduzida aqui dentro não "desaborta" a transação subjacente. Quando o método
+        // retornasse normalmente, o COMMIT implícito do TransactionInterceptor seria feito
+        // sobre uma transação já envenenada -- ou lança (relocando o sintoma original para o
+        // commit) ou é silenciosamente tratado como ROLLBACK pelo driver, escondendo a falha
+        // do chamador. O INSERT ... ON CONFLICT DO NOTHING elimina o problema por completo:
+        // no caminho "já silenciada", nenhuma violação de constraint -- e portanto nenhuma
+        // exceção -- é alguma vez lançada ao nível do SQL. Esta única chamada também
+        // substitui o antigo pré-check existsBy...: o upsert atómico É o próprio check de
+        // idempotência.
+        notificacaoPreferenciaRepository.upsertSilenciar(tenantId, userId, categoria);
     }
 
     // NOTF-24: reativar (deixar de silenciar) uma categoria -- remove a linha de preferência se

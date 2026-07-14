@@ -522,7 +522,9 @@ class NotificacaoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO"));
-        verify(notificacaoPreferenciaRepository, never()).save(any());
+        // CR-01 (iteração 3): upsertSilenciar (não mais save/saveAndFlush) é o método de
+        // persistência que a validação deve impedir de ser chamado.
+        verify(notificacaoPreferenciaRepository, never()).upsertSilenciar(any(), any(), any());
     }
 
     @Test
@@ -531,32 +533,31 @@ class NotificacaoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "categoria_inexistente"));
-        verify(notificacaoPreferenciaRepository, never()).save(any());
+        verify(notificacaoPreferenciaRepository, never()).upsertSilenciar(any(), any(), any());
     }
 
     @Test
-    void silenciarCategoria_categoriaValidaAindaNaoSilenciada_persisteUmaLinha() {
-        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
-                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(false);
-
+    void silenciarCategoria_categoriaValida_delegaIdempotenciaAoUpsertAtomicoSemPreCheckExistsBy() {
+        // CR-01 (Phase 93 code review, iteration 3): existsBy...+saveAndFlush(...) dentro de
+        // um try/catch(DataIntegrityViolationException) foi substituído por um único upsert
+        // nativo atómico (INSERT ... ON CONFLICT DO NOTHING) -- ver
+        // NotificacaoPreferenciaRepository.upsertSilenciar. Esse padrão anterior não
+        // sobrevive a uma transação real no PostgreSQL: apanhar a exceção traduzida
+        // localmente não impede o commit implícito subsequente de falhar (ou de ser tratado
+        // como rollback silencioso) contra uma transação já abortada pelo servidor. Com o
+        // upsert atómico, silenciarCategoria() já não faz nenhum pré-check existsBy... --
+        // a query nativa É o próprio check de idempotência, tanto para a primeira chamada
+        // como para chamadas repetidas -- pelo que um repositório mockado já não consegue
+        // (nem deve tentar) provar "não persiste segunda linha": essa garantia agora vive
+        // inteiramente na query nativa e está coberta contra PostgreSQL real em
+        // NotificacaoPreferenciaRepositoryIT#upsertSilenciar_duasTransacoesConcorrentes_....
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
 
-        // WR-01 (iteração 2): saveAndFlush (não save) -- ver NotificacaoPreferenciaRepositoryIT
-        // para a prova de concorrência real que só saveAndFlush consegue satisfazer.
-        verify(notificacaoPreferenciaRepository, times(1)).saveAndFlush(any());
-    }
-
-    @Test
-    void silenciarCategoria_jaSilenciada_naoPersisteSegundaLinha() {
-        // Idempotência: respeita a constraint única uk_notificacao_preferencia.
-        when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
-                TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(true);
-
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
-        service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
-
-        verify(notificacaoPreferenciaRepository, never()).saveAndFlush(any());
+        verify(notificacaoPreferenciaRepository, times(1))
+                .upsertSilenciar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
+        verify(notificacaoPreferenciaRepository, never())
+                .existsByTenantIdAndUserIdAndCategoria(any(), any(), any());
     }
 
     @Test
