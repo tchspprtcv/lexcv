@@ -1,8 +1,12 @@
 package com.lexcv.services;
 
+import com.lexcv.models.ClienteAdministrativo;
+import com.lexcv.models.ClienteAdvogado;
 import com.lexcv.models.Notificacao;
 import com.lexcv.models.NotificacaoPreferencia;
 import com.lexcv.models.User;
+import com.lexcv.repositories.ClienteAdministrativoRepository;
+import com.lexcv.repositories.ClienteAdvogadoRepository;
 import com.lexcv.repositories.NotificacaoPreferenciaRepository;
 import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
@@ -14,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,6 +59,12 @@ class NotificacaoServiceTest {
     @Mock
     private NotificacaoPreferenciaRepository notificacaoPreferenciaRepository;
 
+    @Mock
+    private ClienteAdvogadoRepository clienteAdvogadoRepository;
+
+    @Mock
+    private ClienteAdministrativoRepository clienteAdministrativoRepository;
+
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID DESTINATARIO_A = UUID.randomUUID();
     private static final UUID DESTINATARIO_B = UUID.randomUUID();
@@ -61,7 +72,8 @@ class NotificacaoServiceTest {
 
     @Test
     void criar_doisDestinatariosDistintos_geramLinhasIndependentesComEstadoLidaProprio() {
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
         when(userRepository.findById(DESTINATARIO_B))
@@ -86,7 +98,8 @@ class NotificacaoServiceTest {
     void criar_destinatarioDeOutroTenant_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(UUID.randomUUID()).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link"));
@@ -99,7 +112,8 @@ class NotificacaoServiceTest {
     void criar_tituloExcede255Caracteres_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "x".repeat(256), "m", "processo", "id-1", "/link"));
@@ -111,7 +125,8 @@ class NotificacaoServiceTest {
     void criar_camposComTamanhoExcedido_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "x".repeat(256), "t", "m", "processo", "id-1", "/link"));
@@ -132,7 +147,8 @@ class NotificacaoServiceTest {
     void criar_camposObrigatoriosEmBranco_lancaIllegalArgumentException() {
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, null, "t", "m", "processo", "id-1", "/link"));
@@ -167,7 +183,8 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(existente));
         when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         Optional<Notificacao> resultado = service.marcarLida(TENANT_ID, DESTINATARIO_A, ID);
 
         assertTrue(resultado.isPresent());
@@ -180,7 +197,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(ID, TENANT_ID, DESTINATARIO_A))
                 .thenReturn(Optional.empty());
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         Optional<Notificacao> resultado = service.marcarLida(TENANT_ID, DESTINATARIO_A, ID);
 
         assertTrue(resultado.isEmpty());
@@ -202,7 +220,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(TENANT_ID, DESTINATARIO_A))
                 .thenReturn(List.of(n1, n2));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         int count = service.marcarTodasLidas(TENANT_ID, DESTINATARIO_A);
 
         assertEquals(2, count);
@@ -212,6 +231,48 @@ class NotificacaoServiceTest {
         for (Notificacao n : captor.getValue()) {
             assertTrue(n.getLida());
         }
+    }
+
+    // --- Plan 95-01 Task 1: resolverEquipaCliente (NOTF-25) ---
+
+    @Test
+    void resolverEquipaCliente_uniaoAdvogadosEAdministrativos_dedupTenantScoped() {
+        UUID clienteId = UUID.randomUUID();
+        UUID advogadoSo = UUID.randomUUID();
+        UUID compartilhado = UUID.randomUUID();
+        UUID administrativoSo = UUID.randomUUID();
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of(
+                ClienteAdvogado.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(advogadoSo).build(),
+                ClienteAdvogado.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(compartilhado).build()));
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of(
+                ClienteAdministrativo.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(compartilhado).build(),
+                ClienteAdministrativo.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(administrativoSo).build()));
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+        Set<UUID> equipa = service.resolverEquipaCliente(TENANT_ID, clienteId);
+
+        assertEquals(Set.of(advogadoSo, compartilhado, administrativoSo), equipa);
+        assertEquals(3, equipa.size());
+        verify(clienteAdvogadoRepository, times(1)).findByClienteIdAndTenantId(clienteId, TENANT_ID);
+        verify(clienteAdministrativoRepository, times(1)).findByClienteIdAndTenantId(clienteId, TENANT_ID);
+        // Prova a assinatura (clienteId, TENANT_ID) -- nunca clienteId sozinho (Pitfall 10) -- e
+        // o dedup: "compartilhado" aparece nos dois repositórios mas só uma vez no conjunto
+        // resultante.
+    }
+
+    @Test
+    void resolverEquipaCliente_clienteIdNulo_devolveVazio() {
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+
+        Set<UUID> equipa = service.resolverEquipaCliente(TENANT_ID, null);
+
+        assertTrue(equipa.isEmpty());
+        verify(clienteAdvogadoRepository, never()).findByClienteIdAndTenantId(any(), any());
+        verify(clienteAdministrativoRepository, never()).findByClienteIdAndTenantId(any(), any());
+        // Nenhuma chamada a repositório quando clienteId é null -- processo ainda sem cliente
+        // definido não tem equipa a resolver.
     }
 
     // --- Phase 87 Task 1: wrappers do lado processo ---
@@ -228,7 +289,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
                 "/processos/" + processoId + "?tab=fases");
 
@@ -255,7 +317,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
@@ -275,7 +338,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -308,7 +372,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0003", "/link"));
@@ -335,7 +400,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-1", List.of(userX, ATOR), "contrato.pdf", "/link", ATOR);
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -356,7 +422,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-2", List.of(userX, userX), "contrato.pdf", "/link", ATOR);
 
         verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
@@ -373,7 +440,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-3", List.of(userX), "contrato.pdf", "/link", ATOR);
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -394,7 +462,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-1", advogadoId, "/link", ATOR);
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -426,7 +495,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarParecerAtribuido(TENANT_ID, "sol-3", advogadoId, "/link", ATOR));
@@ -446,7 +516,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-2", ATOR, "/link", ATOR);
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -470,7 +541,8 @@ class NotificacaoServiceTest {
         when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
                 TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(true);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m",
                 "processo", "id-1", "/link");
 
@@ -488,7 +560,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m",
                 "processo", "id-1", "/link");
 
@@ -506,7 +579,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO", "t", "m",
                 "processo", "id-1", "/link");
 
@@ -517,7 +591,8 @@ class NotificacaoServiceTest {
 
     @Test
     void silenciarCategoria_prazoVencido_lancaIllegalArgumentException() {
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO"));
@@ -528,7 +603,8 @@ class NotificacaoServiceTest {
 
     @Test
     void silenciarCategoria_categoriaDesconhecida_lancaIllegalArgumentException() {
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "categoria_inexistente"));
@@ -550,7 +626,8 @@ class NotificacaoServiceTest {
         // (nem deve tentar) provar "não persiste segunda linha": essa garantia agora vive
         // inteiramente na query nativa e está coberta contra PostgreSQL real em
         // NotificacaoPreferenciaRepositoryIT#upsertSilenciar_duasTransacoesConcorrentes_....
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
 
         verify(notificacaoPreferenciaRepository, times(1))
@@ -561,7 +638,8 @@ class NotificacaoServiceTest {
 
     @Test
     void reativarCategoria_chamaDeleteDerivado() {
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         service.reativarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
 
         verify(notificacaoPreferenciaRepository, times(1))
@@ -575,7 +653,8 @@ class NotificacaoServiceTest {
         when(notificacaoPreferenciaRepository.findByTenantIdAndUserId(TENANT_ID, DESTINATARIO_A))
                 .thenReturn(List.of(pref));
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
         List<String> categorias = service.listarCategoriasSilenciadas(TENANT_ID, DESTINATARIO_A);
 
         assertTrue(categorias.contains("DOCUMENTO_NOVO"));
@@ -593,7 +672,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0004", "Instrução", "/link"));
@@ -616,7 +696,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0005", "/link"));
@@ -639,7 +720,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarDocumentoNovo(TENANT_ID, "doc-4", List.of(userX), "contrato.pdf", "/link", ATOR));
@@ -660,7 +742,8 @@ class NotificacaoServiceTest {
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarParecerAtribuido(TENANT_ID, "sol-4", advogadoId, "/link", ATOR));
@@ -695,7 +778,8 @@ class NotificacaoServiceTest {
                 .thenReturn(0)
                 .thenReturn(1);
 
-        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarDocumentoNovo(TENANT_ID, "doc-5", List.of(userX), "contrato.pdf", "/link", ATOR));
