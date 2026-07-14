@@ -1,5 +1,6 @@
 package com.lexcv.models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -59,6 +60,21 @@ public class Notificacao {
     // oculta das superfícies de não-lidas (badge/marcar-todas) até este instante. Mesma
     // mutabilidade (campo @Setter) de `lida`, sem entrar em uk_notificacao_dedup nem em qualquer
     // outra unique constraint -- ver backend/migrations/96-add-notificacao-snoozed-until.sql.
+    //
+    // WR-02 (Phase 96 code review): @JsonFormat com sufixo 'Z' literal explícito. Todo o resto
+    // do codebase usa LocalDateTime naive sem qualquer configuração Jackson de fuso horário (grep
+    // de backend/src/main/resources não encontra nenhuma), o que é inofensivo enquanto o valor só
+    // alimenta formatação de rótulo (ex.: createdAt em notification-bell.tsx, só usado com
+    // toLocaleDateString). snoozedUntil é diferente: o frontend faz `new Date(snoozedUntil) >
+    // new Date()` para DECIDIR visibilidade (notification-bell.tsx, notificacoes/page.tsx), e
+    // `new Date("...sem Z")` é interpretado pelo motor JS como hora LOCAL DO BROWSER, não do
+    // servidor -- um mismatch de fuso horário entre o container (que corre em UTC, ver
+    // AlertasDiariosJob.FUSO_CABO_VERDE) e o browser do utilizador desalinhava silenciosamente o
+    // predicado de "ainda adiado?". Anexar 'Z' torna explícito que o instante já é UTC (verdade,
+    // dado que o container roda em UTC), sem exigir a migração mais ampla do tipo da coluna para
+    // Instant/OffsetDateTime. Convenção para novos campos time-sensíveis que GATEIAM
+    // comportamento (não apenas formatam um rótulo): aplicar o mesmo @JsonFormat aqui.
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
     @Setter
     @Column(name = "snoozed_until")
     private LocalDateTime snoozedUntil;
