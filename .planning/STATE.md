@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.11
 milestone_name: Auditoria Técnica e Notificações Avançadas
-status: ready_to_plan
-stopped_at: Phase 96 complete (4/4) — ready to discuss Phase 97
-last_updated: 2026-07-14T17:57:17.539Z
-last_activity: 2026-07-14 -- Phase 96 execution started
+status: ready_to_close
+stopped_at: Phase 97 complete (4/4) — all 8 phases of v2.11 executed; AUD-01 through AUD-05 closed; ready for milestone close-out
+last_updated: "2026-07-14T20:38:30.000Z"
+last_activity: 2026-07-14
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 17
-  completed_plans: 17
-  percent: 75
+  completed_phases: 8
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 ## Current Position
 
 Phase: 97
-Plan: Not started
-Status: Ready to plan
+Plan: 04 of 4 (complete)
+Status: All plans complete — ready for milestone close-out
 Last activity: 2026-07-14
 
-Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
+Progress: [██████████] 100% (8/8 phases da milestone v2.11)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 64
+- Total plans completed: 68
 - Average duration: —
 - Total execution time: —
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 | 94 | 1 | - | - |
 | 95 | 2 | - | - |
 | 96 | 4 | - | - |
+| 97 | 4 | ~128 min | ~32 min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 
@@ -127,10 +128,11 @@ Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.pl
 
 ## Session Continuity
 
-Last session: 2026-07-12T15:10:00.000Z
-Stopped at: ROADMAP.md and REQUIREMENTS.md traceability written for v2.11 (8 phases, 15/15 requirements, no orphans)
+Last session: 2026-07-14T20:38:30.000Z
+Stopped at: Phase 97 Plan 04 (milestone close-out) complete — fresh code audit (AUD-05) clean, MINIO_ENDPOINT blocker resolved and documented (AUD-04), wave-1 outcomes (AUD-01/02/03) consolidated into STATE.md/PROJECT.md with stale Phase 86/87 attributions corrected. All 15/15 v2.11 requirements Complete.
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 90` to start planning (Phases 90, 91, 92 have zero file overlap and are mutually parallelizable; Phases 93→94→95→96 are a hard sequential chain on `NotificacaoService.java`; Phase 97 runs last).
+- Milestone v2.11 (Auditoria Técnica e Notificações Avançadas) has all 8 phases executed and all 15/15 requirements Complete. Run the milestone close-out flow (e.g. `/gsd:complete-milestone` or equivalent) to move Active→Validated in PROJECT.md, update the "Current State"/"Shipped" line, and finalize ROADMAP.md's phase-completion tables — deliberately left untouched by Phase 97's plans per their own scope boundary.
+- Genuinely open items carried into the next milestone/session (see STATE.md Pending Todos/Deferred Items for full detail): Phase 81/82 migration-script review against a `ddl-auto=validate` prod-like DB; Phase 85's ALTA+null-`dataFim` KPI product decision; Phase 86 RBAC Settings-screen visual confirmation; the `ParecerController` partial-update data-loss bug's missing test coverage; a handful of NEEDS-HUMAN-VISUAL confirmations (zero functional risk); the `notificarDocumentoNovo` deep-link cosmetic item.
