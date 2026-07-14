@@ -9,10 +9,10 @@ import com.lexcv.repositories.NotificacaoRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -76,7 +76,26 @@ public class NotificacaoService {
             return Optional.empty();
         }
 
+        // CR-01 (Phase 94 code review): atomic ON CONFLICT DO NOTHING upsert instead of
+        // save()/saveAndFlush() -- mirrors silenciarCategoria()'s NotificacaoPreferenciaRepository
+        // .upsertSilenciar() precedent (Phase 93 CR-01, same underlying bug class). id and
+        // createdAt are generated here (client-side), not by the database, so the in-memory
+        // Notificacao returned to the caller on the success path matches exactly what was
+        // persisted -- no SELECT-after-INSERT round trip needed. See
+        // NotificacaoRepository.inserirSeNaoDuplicado's Javadoc for the full trace of why
+        // save()/saveAndFlush() + catch(DataIntegrityViolationException) cannot actually protect
+        // the caller's ambient transaction on this method's real call paths.
+        UUID id = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+        int linhasInseridas = notificacaoRepository.inserirSeNaoDuplicado(id, tenantId, destinatarioId, categoria,
+                entidadeTipo, entidadeId, titulo, mensagem, linkUrl, createdAt);
+        if (linhasInseridas == 0) {
+            log.warn("{}: notificação duplicada ignorada pelo índice único da BD para destinatario {}",
+                    categoria, destinatarioId);
+            return Optional.empty();
+        }
         Notificacao n = Notificacao.builder()
+                .id(id)
                 .tenantId(tenantId)
                 .destinatarioId(destinatarioId)
                 .categoria(categoria)
@@ -85,8 +104,10 @@ public class NotificacaoService {
                 .entidadeTipo(entidadeTipo)
                 .entidadeId(entidadeId)
                 .linkUrl(linkUrl)
+                .lida(false)
+                .createdAt(createdAt)
                 .build();
-        return Optional.of(notificacaoRepository.save(n));
+        return Optional.of(n);
     }
 
     private static void requireNonBlank(String fieldName, String value) {
@@ -109,8 +130,10 @@ public class NotificacaoService {
     // para o primário e uma chamada independente e não coordenada a notificarAdmins() para o
     // fan-out; quando o primário também era ADMIN, ambas tentavam persistir uma linha para o
     // mesmo tuplo (tenant, destinatario, entidade_tipo, entidade_id, categoria), colidindo com a
-    // constraint única uk_notificacao_dedup (Phase 88) e lançando uma DataIntegrityViolationException
-    // não apanhada, revertendo a transação de negócio já comprometida do controller chamador.
+    // constraint única uk_notificacao_dedup (Phase 88). Desde o CR-01 do code review da Phase 94,
+    // criar() já não pode lançar DataIntegrityViolationException nesse caminho -- ver
+    // NotificacaoRepository.inserirSeNaoDuplicado -- pelo que este método já não precisa de
+    // apanhar essa exceção como backstop.
     // excluirUserId (ator) é removido de AMBOS os conjuntos antes do merge -- preserva o
     // comportamento pré-existente de DOCUMENTO_NOVO/PARECER_ATRIBUIDO (o autor nunca é notificado
     // da sua própria ação, mesmo sendo ADMIN).
@@ -141,15 +164,6 @@ public class NotificacaoService {
                 criar(tenantId, dest, categoria, titulo, mensagem, entidadeTipo, entidadeId, linkUrl);
             } catch (IllegalArgumentException ex) {
                 log.warn("{}: destinatario {} inválido/órfão, notificação ignorada para este destinatário",
-                        categoria, dest, ex);
-            } catch (DataIntegrityViolationException ex) {
-                // Backstop (Phase 94, NOTF-27): espelha o padrão já usado por
-                // AlertasDiariosJob.notificar() contra a mesma constraint uk_notificacao_dedup
-                // numa corrida check-then-act. O LinkedHashSet acima já elimina a colisão
-                // determinística por construção -- este catch é defesa em profundidade contra
-                // uma corrida concorrente residual, nunca deve propagar para fora deste método
-                // nem reverter a transação de negócio chamadora.
-                log.warn("{}: notificação duplicada rejeitada pelo índice único da BD para destinatario {}",
                         categoria, dest, ex);
             }
         }

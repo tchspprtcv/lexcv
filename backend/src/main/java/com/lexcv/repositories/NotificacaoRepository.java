@@ -4,9 +4,11 @@ import com.lexcv.models.Notificacao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,4 +57,37 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> 
     // (tenant, recipient, entity, categoria) tuple.
     boolean existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria(
             UUID tenantId, UUID destinatarioId, String entidadeTipo, String entidadeId, String categoria);
+
+    // CR-01 (Phase 94 code review): atomic native upsert backing NotificacaoService.criar(),
+    // mirroring NotificacaoPreferenciaRepository.upsertSilenciar (Phase 93 CR-01, same bug
+    // class). A plain save()/saveAndFlush() + catch(DataIntegrityViolationException) does NOT
+    // protect the caller's ambient @Transactional business transaction here: Postgres aborts
+    // the ENTIRE transaction the instant any statement violates a constraint, and this method
+    // is invoked from NotificacaoService.criarComFanOutAdmin() via self-invocation
+    // (this.criar(...) within the same class) -- which bypasses Spring's proxy-based
+    // @Transactional/propagation advice entirely, so neither a try/catch nor a
+    // @Transactional(REQUIRES_NEW) annotation on criar() actually isolates a failure from the
+    // ambient transaction on the real call paths this guards (ResourceController
+    // .atribuirResponsavel, ParecerController.createSolicitacao/atribuirAdvogado). ON CONFLICT
+    // DO NOTHING sidesteps the problem at the SQL level instead: on the "duplicate" path, no
+    // constraint violation -- and therefore no exception -- is ever raised, so there is nothing
+    // for the ambient transaction to abort on. The id and created_at are generated in Java
+    // (NotificacaoService.criar()), not via gen_random_uuid()/now() in SQL, so the entity
+    // returned to the caller on the success path is byte-for-byte consistent with what was
+    // persisted. Returns the number of rows actually inserted (0 = skipped as a duplicate of
+    // uk_notificacao_dedup, 1 = inserted) so criar() can report back through its existing
+    // Optional<Notificacao> contract without an extra SELECT-after-INSERT round trip.
+    @Modifying
+    @Query(value = """
+            INSERT INTO t_notificacao (id, tenant_id, destinatario_id, categoria, entidade_tipo, entidade_id,
+                                        titulo, mensagem, link_url, lida, created_at)
+            VALUES (:id, :tenantId, :destinatarioId, :categoria, :entidadeTipo, :entidadeId,
+                    :titulo, :mensagem, :linkUrl, false, :createdAt)
+            ON CONFLICT (tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria) DO NOTHING
+            """, nativeQuery = true)
+    int inserirSeNaoDuplicado(@Param("id") UUID id, @Param("tenantId") UUID tenantId,
+                               @Param("destinatarioId") UUID destinatarioId, @Param("categoria") String categoria,
+                               @Param("entidadeTipo") String entidadeTipo, @Param("entidadeId") String entidadeId,
+                               @Param("titulo") String titulo, @Param("mensagem") String mensagem,
+                               @Param("linkUrl") String linkUrl, @Param("createdAt") LocalDateTime createdAt);
 }

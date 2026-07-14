@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +30,13 @@ import static org.mockito.Mockito.*;
  * ADMIN atual do tenant no fan-out (Critério de Sucesso 3) — mais o contrato de mutação de
  * estado lido/não-lido escopado por tenant+destinatario de que o NotificacaoController
  * (Plan 86-03) depende.
+ *
+ * CR-01 (Phase 94 code review): criar()'s persistence mechanism changed from
+ * notificacaoRepository.save(...) to the atomic notificacaoRepository.inserirSeNaoDuplicado(...)
+ * upsert (ON CONFLICT DO NOTHING) -- every test below that exercises criar() (directly or via a
+ * notificar* wrapper) stubs/verifies inserirSeNaoDuplicado(...) instead of save(...). Tests that
+ * exercise marcarLida()/marcarTodasLidas() are unaffected (those still use save()/saveAll()) and
+ * are unchanged.
  */
 @ExtendWith(MockitoExtension.class)
 class NotificacaoServiceTest {
@@ -56,16 +62,18 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
         when(userRepository.findById(DESTINATARIO_B))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_B).tenantId(TENANT_ID).build()));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link");
         service.criar(TENANT_ID, DESTINATARIO_B, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link");
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        List<Notificacao> saved = captor.getAllValues();
-        assertEquals(DESTINATARIO_A, saved.get(0).getDestinatarioId());
-        assertEquals(DESTINATARIO_B, saved.get(1).getDestinatarioId());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        List<UUID> destinatarios = destinatarioCaptor.getAllValues();
+        assertEquals(DESTINATARIO_A, destinatarios.get(0));
+        assertEquals(DESTINATARIO_B, destinatarios.get(1));
         // Linhas independentes, nunca uma linha partilhada — prova o Critério de Sucesso 2
         // no lado da escrita.
     }
@@ -78,7 +86,7 @@ class NotificacaoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "/link"));
-        verify(notificacaoRepository, never()).save(any());
+        verify(notificacaoRepository, never()).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Prova o exato cenário IDOR-adjacent que o filtro .filter(u -> tenantId.equals(...))
         // existe para bloquear — fecha o gap apontado pelo WR-01 da iteração 2.
     }
@@ -91,7 +99,7 @@ class NotificacaoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "x".repeat(256), "m", "processo", "id-1", "/link"));
-        verify(notificacaoRepository, never()).save(any());
+        verify(notificacaoRepository, never()).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Prova o requireMaxLength(...) contra o VARCHAR(255) de "titulo".
     }
 
@@ -109,7 +117,7 @@ class NotificacaoServiceTest {
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "x".repeat(256), "/link"));
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", "id-1", "x".repeat(256)));
-        verify(notificacaoRepository, never()).save(any());
+        verify(notificacaoRepository, never()).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Prova requireMaxLength(...) para os quatro campos ainda não cobertos (categoria,
         // entidadeTipo, entidadeId, linkUrl) — "titulo" já está coberto pelo teste anterior.
         // Mesma razão do teste de requireNonBlank: uma remoção silenciosa de uma destas
@@ -132,7 +140,7 @@ class NotificacaoServiceTest {
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", null, "id-1", "/link"));
         assertThrows(IllegalArgumentException.class, () ->
                 service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m", "processo", " ", "/link"));
-        verify(notificacaoRepository, never()).save(any());
+        verify(notificacaoRepository, never()).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Prova, campo a campo, que os cinco requireNonBlank(...) em criar() (categoria, titulo,
         // mensagem, entidadeTipo, entidadeId) estão todos realmente ligados — uma futura remoção
         // "silenciosa" de qualquer uma destas chamadas passaria a falhar aqui.
@@ -213,19 +221,24 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
                 "/processos/" + processoId + "?tab=fases");
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
-        assertEquals(List.of(responsavelId, admin.getId()), destinatarios);
-        for (Notificacao n : captor.getAllValues()) {
-            assertEquals("FASE_ENTRADA", n.getCategoria());
-            assertEquals("processo", n.getEntidadeTipo());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> categoriaCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> entidadeTipoCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                categoriaCaptor.capture(), entidadeTipoCaptor.capture(), any(), any(), any(), any(), any());
+        assertEquals(List.of(responsavelId, admin.getId()), destinatarioCaptor.getAllValues());
+        for (String categoria : categoriaCaptor.getAllValues()) {
+            assertEquals("FASE_ENTRADA", categoria);
+        }
+        for (String entidadeTipo : entidadeTipoCaptor.getAllValues()) {
+            assertEquals("processo", entidadeTipo);
         }
     }
 
@@ -235,13 +248,14 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
-        verify(notificacaoRepository, times(1)).save(any());
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Null-guard: responsavelId nulo nunca chama criar() para o responsável, mas ADMIN é sempre notificado.
     }
 
@@ -254,18 +268,24 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        List<Notificacao> saved = captor.getAllValues();
-        assertEquals(responsavelId, saved.get(0).getDestinatarioId());
-        assertTrue(saved.get(0).getMensagem().startsWith("Foi-lhe atribuído o processo "));
-        assertEquals(admin.getId(), saved.get(1).getDestinatarioId());
-        assertEquals("PROCESSO_ATRIBUIDO", saved.get(1).getCategoria());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> categoriaCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                categoriaCaptor.capture(), any(), any(), any(), mensagemCaptor.capture(), any(), any());
+        List<UUID> destinatarios = destinatarioCaptor.getAllValues();
+        List<String> mensagens = mensagemCaptor.getAllValues();
+        List<String> categorias = categoriaCaptor.getAllValues();
+        assertEquals(responsavelId, destinatarios.get(0));
+        assertTrue(mensagens.get(0).startsWith("Foi-lhe atribuído o processo "));
+        assertEquals(admin.getId(), destinatarios.get(1));
+        assertEquals("PROCESSO_ATRIBUIDO", categorias.get(1));
     }
 
     @Test
@@ -281,17 +301,19 @@ class NotificacaoServiceTest {
         when(userRepository.findById(responsavelId)).thenReturn(Optional.empty());
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0003", "/link"));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
-        // O responsavelId órfão nunca chega a save(), mas o fan-out ADMIN ainda ocorre.
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(admin.getId(), destinatarioCaptor.getValue());
+        // O responsavelId órfão nunca chega a inserirSeNaoDuplicado, mas o fan-out ADMIN ainda ocorre.
     }
 
     // --- Phase 87 Task 2: wrappers com exclusão de ator (DOCUMENTO_NOVO, PARECER_ATRIBUIDO) ---
@@ -306,17 +328,19 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-1", List.of(userX, ATOR), "contrato.pdf", "/link", ATOR);
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        List<UUID> destinatarios = destinatarioCaptor.getAllValues();
         assertEquals(List.of(userX, admin.getId()), destinatarios);
         assertFalse(destinatarios.contains(ATOR));
-        // O ator (userX duplicado com ele mesmo na lista de destinatários) nunca chega a save().
+        // O ator (userX duplicado com ele mesmo na lista de destinatários) nunca chega a inserirSeNaoDuplicado.
     }
 
     @Test
@@ -325,12 +349,13 @@ class NotificacaoServiceTest {
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of());
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-2", List.of(userX, userX), "contrato.pdf", "/link", ATOR);
 
-        verify(notificacaoRepository, times(1)).save(any());
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Dedup por Set: destinatário duplicado gera uma só linha.
     }
 
@@ -341,15 +366,17 @@ class NotificacaoServiceTest {
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarDocumentoNovo(TENANT_ID, "doc-3", List.of(userX), "contrato.pdf", "/link", ATOR);
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(userX, captor.getValue().getDestinatarioId());
-        // O ADMIN que também é o ator é excluído do fan-out (nunca recebe findById nem save).
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(userX, destinatarioCaptor.getValue());
+        // O ADMIN que também é o ator é excluído do fan-out (nunca recebe findById nem inserirSeNaoDuplicado).
     }
 
     @Test
@@ -360,18 +387,24 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(advogadoId).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-1", advogadoId, "/link", ATOR);
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(2)).save(captor.capture());
-        List<UUID> destinatarios = captor.getAllValues().stream().map(Notificacao::getDestinatarioId).toList();
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> categoriaCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> entidadeTipoCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                categoriaCaptor.capture(), entidadeTipoCaptor.capture(), any(), any(), any(), any(), any());
+        List<UUID> destinatarios = destinatarioCaptor.getAllValues();
         assertEquals(List.of(advogadoId, admin.getId()), destinatarios);
-        for (Notificacao n : captor.getAllValues()) {
-            assertEquals("PARECER_ATRIBUIDO", n.getCategoria());
-            assertEquals("parecer_solicitacao", n.getEntidadeTipo());
+        for (String categoria : categoriaCaptor.getAllValues()) {
+            assertEquals("PARECER_ATRIBUIDO", categoria);
+        }
+        for (String entidadeTipo : entidadeTipoCaptor.getAllValues()) {
+            assertEquals("parecer_solicitacao", entidadeTipo);
         }
     }
 
@@ -386,17 +419,19 @@ class NotificacaoServiceTest {
         when(userRepository.findById(advogadoId)).thenReturn(Optional.empty());
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarParecerAtribuido(TENANT_ID, "sol-3", advogadoId, "/link", ATOR));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
-        // O advogadoId órfão nunca chega a save(), mas o fan-out ADMIN ainda ocorre.
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(admin.getId(), destinatarioCaptor.getValue());
+        // O advogadoId órfão nunca chega a inserirSeNaoDuplicado, mas o fan-out ADMIN ainda ocorre.
     }
 
     @Test
@@ -404,14 +439,16 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.notificarParecerAtribuido(TENANT_ID, "sol-2", ATOR, "/link", ATOR);
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(admin.getId(), captor.getValue().getDestinatarioId());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(admin.getId(), destinatarioCaptor.getValue());
         // Auto-atribuição: o próprio advogado (== ator) é excluído do destinatário primário;
         // só o ADMIN (que não é o ator) recebe linha.
     }
@@ -434,7 +471,7 @@ class NotificacaoServiceTest {
                 "processo", "id-1", "/link");
 
         assertTrue(resultado.isEmpty());
-        verify(notificacaoRepository, never()).save(any());
+        verify(notificacaoRepository, never()).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -444,14 +481,15 @@ class NotificacaoServiceTest {
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
         when(notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(
                 TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA")).thenReturn(false);
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA", "t", "m",
                 "processo", "id-1", "/link");
 
         assertTrue(resultado.isPresent());
-        verify(notificacaoRepository, times(1)).save(any());
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -461,14 +499,15 @@ class NotificacaoServiceTest {
         // não é necessário stubar existsBy... para provar isto (short-circuit).
         when(userRepository.findById(DESTINATARIO_A))
                 .thenReturn(Optional.of(User.builder().id(DESTINATARIO_A).tenantId(TENANT_ID).build()));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         Optional<Notificacao> resultado = service.criar(TENANT_ID, DESTINATARIO_A, "PRAZO_VENCIDO", "t", "m",
                 "processo", "id-1", "/link");
 
         assertTrue(resultado.isPresent());
-        verify(notificacaoRepository, times(1)).save(any());
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(notificacaoPreferenciaRepository, never()).existsByTenantIdAndUserIdAndCategoria(any(), any(), any());
     }
 
@@ -547,16 +586,18 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0004", "Instrução", "/link"));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(responsavelId, captor.getValue().getDestinatarioId());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(responsavelId, destinatarioCaptor.getValue());
         // O responsável também é ADMIN do mesmo tenant: apenas UMA linha é persistida (dedup),
         // nunca uma colisão de uk_notificacao_dedup — prova o Critério de Sucesso 1 (NOTF-27).
     }
@@ -568,17 +609,20 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0005", "/link"));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(responsavelId, captor.getValue().getDestinatarioId());
-        assertTrue(captor.getValue().getMensagem().startsWith("Foi-lhe atribuído o processo "));
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), mensagemCaptor.capture(), any(), any());
+        assertEquals(responsavelId, destinatarioCaptor.getValue());
+        assertTrue(mensagemCaptor.getValue().startsWith("Foi-lhe atribuído o processo "));
         // A 2ª pessoa vence sobre a 3ª quando o primário também é admin — apenas uma linha.
     }
 
@@ -588,16 +632,18 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(userX).tenantId(TENANT_ID).build();
         when(userRepository.findById(userX)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarDocumentoNovo(TENANT_ID, "doc-4", List.of(userX), "contrato.pdf", "/link", ATOR));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(userX, captor.getValue().getDestinatarioId());
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(userX, destinatarioCaptor.getValue());
         // O destinatário também é ADMIN do mesmo tenant: apenas uma linha, sem colisão.
     }
 
@@ -607,39 +653,52 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(advogadoId).tenantId(TENANT_ID).build();
         when(userRepository.findById(advogadoId)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarParecerAtribuido(TENANT_ID, "sol-4", advogadoId, "/link", ATOR));
 
-        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
-        verify(notificacaoRepository, times(1)).save(captor.capture());
-        assertEquals(advogadoId, captor.getValue().getDestinatarioId());
-        assertTrue(captor.getValue().getMensagem().startsWith("Foi-lhe atribuído um parecer"));
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), mensagemCaptor.capture(), any(), any());
+        assertEquals(advogadoId, destinatarioCaptor.getValue());
+        assertTrue(mensagemCaptor.getValue().startsWith("Foi-lhe atribuído um parecer"));
         // O advogado também é ADMIN do mesmo tenant: apenas uma linha, mensagem em 2ª pessoa.
     }
 
     @Test
-    void notificarDocumentoNovo_saveLancaDataIntegrityViolation_naoPropagaEContinuaFanOut() {
+    void notificarDocumentoNovo_inserirSeNaoDuplicadoRetorna0_naoPropagaEContinuaFanOut() {
+        // CR-01 (Phase 94 code review): substitui o antigo teste
+        // notificarDocumentoNovo_saveLancaDataIntegrityViolation_naoPropagaEContinuaFanOut, que
+        // simulava a colisão de uk_notificacao_dedup como uma DataIntegrityViolationException
+        // lançada por save(). Essa simulação já não corresponde à implementação real: criar()
+        // agora usa um upsert nativo ON CONFLICT DO NOTHING (inserirSeNaoDuplicado), que nunca
+        // lança exceção no caminho de duplicado -- reporta o "não inseriu" através do valor de
+        // retorno (0 linhas afetadas), não de uma exceção. Este teste propaga uma linha
+        // de "duplicado" e outra de "inserido com sucesso" sem que a primeira interrompa o
+        // fan-out para a segunda.
         UUID userX = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
-        when(notificacaoRepository.save(any()))
-                .thenThrow(new DataIntegrityViolationException("dup"))
-                .thenAnswer(inv -> inv.getArgument(0));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(0)
+                .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
 
         assertDoesNotThrow(() ->
                 service.notificarDocumentoNovo(TENANT_ID, "doc-5", List.of(userX), "contrato.pdf", "/link", ATOR));
 
-        verify(notificacaoRepository, times(2)).save(any());
-        // A primeira save() colide com uk_notificacao_dedup (simulado) e é engolida pelo backstop;
-        // a segunda (fan-out ADMIN) ainda persiste — nada propaga para fora do método.
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        // A primeira chamada colide com uk_notificacao_dedup (simulado via retorno 0, "duplicado")
+        // e criar() devolve Optional.empty() sem lançar nada; a segunda (fan-out ADMIN) ainda
+        // persiste (retorno 1) — nada propaga para fora do método.
     }
 }
