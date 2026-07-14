@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getDocumentoTipoOptions, toDocumentoTipo } from "./cliente-documento-tipo";
+import {
+  getDocumentoTipoLabel,
+  getDocumentoTipoOptions,
+  toDocumentoTipo,
+} from "./cliente-documento-tipo";
 
 describe("getDocumentoTipoOptions", () => {
   it("returns CNI, BI, Passaporte for PARTICULAR in that order", () => {
@@ -34,5 +38,30 @@ describe("toDocumentoTipo", () => {
 
   it("rejects an undefined value", () => {
     expect(toDocumentoTipo(undefined, "PARTICULAR")).toBeUndefined();
+  });
+});
+
+describe("getDocumentoTipoLabel", () => {
+  it("translates REG_COMERCIAL to Registo Comercial", () => {
+    expect(getDocumentoTipoLabel("REG_COMERCIAL")).toBe("Registo Comercial");
+  });
+
+  it("translates PASSAPORTE to Passaporte", () => {
+    expect(getDocumentoTipoLabel("PASSAPORTE")).toBe("Passaporte");
+  });
+
+  it("translates BI and CNI to themselves", () => {
+    expect(getDocumentoTipoLabel("BI")).toBe("BI");
+    expect(getDocumentoTipoLabel("CNI")).toBe("CNI");
+  });
+
+  it("returns undefined for null, undefined and empty string", () => {
+    expect(getDocumentoTipoLabel(null)).toBeUndefined();
+    expect(getDocumentoTipoLabel(undefined)).toBeUndefined();
+    expect(getDocumentoTipoLabel("")).toBeUndefined();
+  });
+
+  it("returns an unknown/legacy value verbatim instead of hiding it", () => {
+    expect(getDocumentoTipoLabel("LEGACY_UNKNOWN")).toBe("LEGACY_UNKNOWN");
   });
 });

@@ -13,6 +13,7 @@ import {
 } from "@/hooks/use-clientes";
 import { useMe } from "@/hooks/use-me";
 import { usePermissions } from "@/hooks/use-permissions";
+import { getDocumentoTipoLabel } from "@/lib/cliente-documento-tipo";
 import type { Cliente } from "@/types/clientes";
 
 type PageProps = {
@@ -181,7 +182,7 @@ function Ficha({
       <Field label="Nome" value={fmt(cliente.nome)} />
       <Field label="Tipo" value={fmt(cliente.tipo)} />
       <Field label="BI/Pass. Nº" value={fmt(cliente.documento_numero ?? cliente.documentoNumero)} />
-      <Field label="Tipo Doc." value={fmt(cliente.documento_tipo ?? cliente.documentoTipo)} />
+      <Field label="Tipo Doc." value={fmt(getDocumentoTipoLabel(cliente.documento_tipo ?? cliente.documentoTipo))} />
       {isEmpresa ? (
         <>
           <Field label="NIF" value={fmt(cliente.nif)} />
