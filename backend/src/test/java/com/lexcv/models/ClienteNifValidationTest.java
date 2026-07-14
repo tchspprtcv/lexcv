@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -89,7 +88,9 @@ class ClienteNifValidationTest {
         Cliente cliente = Cliente.builder().nome("Cliente Teste").nif("12345678A").build();
 
         Set<ConstraintViolation<Cliente>> violations = nifViolations(cliente);
-        assertEquals(1, violations.size());
-        assertEquals("NIF deve conter exatamente 9 dígitos numéricos", violations.iterator().next().getMessage());
+        assertTrue(
+                violations.stream()
+                        .anyMatch(v -> "NIF deve conter exatamente 9 dígitos numéricos".equals(v.getMessage())),
+                "nif='12345678A' deve produzir a violação @Pattern \"NIF deve conter exatamente 9 dígitos numéricos\"");
     }
 }

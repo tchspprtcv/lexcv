@@ -53,7 +53,9 @@ export function getDocumentoTipoLabel(
   value: string | null | undefined,
 ): string | undefined {
   if (!value) return undefined;
-  return DOCUMENTO_TIPO_LABELS[value as DocumentoTipo] ?? value;
+  return Object.prototype.hasOwnProperty.call(DOCUMENTO_TIPO_LABELS, value)
+    ? DOCUMENTO_TIPO_LABELS[value as DocumentoTipo]
+    : value;
 }
 
 /**
