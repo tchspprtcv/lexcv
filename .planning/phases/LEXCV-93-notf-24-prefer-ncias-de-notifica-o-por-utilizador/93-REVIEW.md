@@ -1,74 +1,67 @@
 ---
 phase: LEXCV-93-notf-24-preferencias-de-notificacao-por-utilizador
-reviewed: 2026-07-14T15:00:00Z
+reviewed: 2026-07-14T16:30:00Z
 depth: standard
-files_reviewed: 10
+files_reviewed: 8
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/models/NotificacaoPreferencia.java
   - backend/src/main/java/com/lexcv/models/CategoriaNotificacao.java
   - backend/src/main/java/com/lexcv/repositories/NotificacaoPreferenciaRepository.java
   - backend/src/main/java/com/lexcv/services/NotificacaoService.java
   - backend/src/main/java/com/lexcv/controllers/NotificacaoController.java
-  - backend/migrations/93-create-notificacao-preferencia-table.sql
-  - web/src/types/notificacoes.ts
+  - backend/src/test/java/com/lexcv/repositories/NotificacaoPreferenciaRepositoryIT.java
   - web/src/lib/notificacao-categoria.ts
-  - web/src/hooks/use-notificacao-preferencias.ts
   - web/src/app/(dashboard)/settings/page.tsx
 findings:
-  critical: 0
-  warning: 1
+  critical: 1
+  warning: 0
   info: 3
   total: 4
 status: issues_found
 ---
 
-# Phase LEXCV-93: Code Review Report (re-review)
+# Phase LEXCV-93: Code Review Report (re-review, iteration 3)
 
-**Reviewed:** 2026-07-14T15:00:00Z
+**Reviewed:** 2026-07-14T16:30:00Z
 **Depth:** standard
-**Files Reviewed:** 10
+**Files Reviewed:** 8
 **Status:** issues_found
 
 ## Summary
 
-This is a re-review of the NOTF-24 "per-user notification category preferences" feature after the
-93-REVIEW-FIX.md iteration that claimed to resolve WR-01/WR-02/WR-03 from the prior review. I
-independently re-verified the code (not the fix report's claims) against the actual runtime
-semantics of the stack in use (Spring Data JPA / Hibernate 6 / PostgreSQL, Spring Boot 3.4.1).
+This is a third-pass re-review of NOTF-24, performed after 93-REVIEW-FIX.md's iteration-2 fix for
+WR-01 (`silenciarCategoria()`'s concurrency race). I independently re-verified the applied fix
+against actual Hibernate/Spring/PostgreSQL transaction semantics rather than accepting the fix
+report's own "manually traced" verification, because the fix report explicitly admits its new
+`NotificacaoPreferenciaRepositoryIT` concurrency test was **never executed against a real database**
+(Docker was unreachable in that sandbox). I attempted to start Docker locally to get an empirical
+answer before writing this report; `docker version` succeeds but `docker ps`/Testcontainers cannot
+reach the daemon in this environment either (`Docker Desktop.exe`'s backend process exits
+immediately), so I could not run the new IT test to get a definitive pass/fail signal, and neither
+could the fix's author. Given that, my finding below is a reasoned technical objection, not an
+empirically-confirmed test failure — the fix report's own text already flags that it needs to be
+run with Docker before merging, and I could not discharge that recommendation either. I am
+escalating it to Critical because the change ships a supposedly-fixed concurrency guard whose core
+correctness claim remains completely unverified by any test that actually exercises a real
+transaction commit, and because the specific pattern used (catch a flush-time constraint violation
+inline, then let the same `@Transactional` method's implicit commit proceed) is a well-documented
+Hibernate/Spring anti-pattern independent of this specific defect's history.
 
-WR-02 (frontend/backend silenciável-list duplication) and WR-03 (missing error state in the
-settings preferences tab) are genuinely fixed — confirmed by direct inspection of
-`web/src/lib/notificacao-categoria.ts` and the `NotificationPreferencesTab` component in
-`web/src/app/(dashboard)/settings/page.tsx`.
+Tenant/user dual-scoping is still correct everywhere (`criar()`'s mute guard,
+`NotificacaoController`'s self-service `getTenantId()`/`getUserId()` derivation, the repository's
+dual-scoped methods, and the new `NotificacaoPreferenciaRepositoryIT` assertions covering
+cross-tenant/cross-user isolation). No SQL injection, hardcoded secrets, or authorization bypass was
+found. `CategoriaNotificacao` stays perfectly in sync with the frontend's `NotificacaoCategoria`
+union and `NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS`. The two previously-reported Info items
+(asymmetric `reativar` validation, `:view`-scoped mutating endpoints) remain open and are re-listed
+below for completeness, plus one new Info item (an entity/migration nullability mismatch on
+`created_at`).
 
-WR-01 is **not actually fixed**, despite 93-REVIEW-FIX.md marking it "Fixed" and citing a passing
-unit test. The applied `try { ... } catch (DataIntegrityViolationException e)` wraps a plain
-`repository.save(...)` call, but Spring Data JPA does not flush a newly persisted entity to the
-database synchronously inside `save()` — for an ID strategy that doesn't require a DB round-trip to
-obtain the identifier (`GenerationType.UUID`, as used here), the actual `INSERT` is deferred until
-the surrounding `@Transactional` method returns and Spring's transaction interceptor commits the
-transaction. That means the real unique-constraint violation from a genuine concurrent race is
-thrown *after* `silenciarCategoria()`'s try/catch has already exited normally, so it still escapes to
-`GlobalExceptionHandler`'s generic `Exception` handler and still produces a raw HTTP 500 leaking the
-exception class name/message to the client — the exact defect the original WR-01 described. The
-regression is invisible in the current test suite because the only test exercising this path
-(`NotificacaoServiceTest`) mocks the repository and has `save(any())` throw synchronously, which
-does not reflect how a real `EntityManager`/Postgres round-trip behaves; there is no
-`@DataJpaTest` + Testcontainers integration test for `NotificacaoPreferenciaRepository` (the
-codebase already has this exact infrastructure, demonstrated by `NotificacaoRepositoryIT`, but it
-was not applied here).
+## Critical Issues
 
-Tenant/user dual-scoping remains correct throughout, the mute guard is still the single choke point
-in `criar()`, and no SQL injection, hardcoded secrets, or authorization bypass was found. Two
-previously-reported Info items (asymmetric `reativar` validation, `:view`-scoped mutating endpoints)
-remain open — the fix report explicitly deferred them as Info-tier, so they are re-listed here for
-completeness rather than as new findings.
+### CR-01: `silenciarCategoria()`'s `saveAndFlush` + inline catch does not actually neutralize the concurrency race — it only moves the risk, and the claim that it does was never verified against a real database
 
-## Warnings
-
-### WR-01: The "fix" for the `silenciarCategoria()` concurrency race does not work — the exception it tries to catch is thrown after the method has already returned
-
-**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:303-327`
+**File:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java:303-333`
 **Issue:**
 ```java
 @Transactional
@@ -76,109 +69,160 @@ public void silenciarCategoria(UUID tenantId, UUID userId, String categoria) {
     ...
     try {
         if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-            notificacaoPreferenciaRepository.save(NotificacaoPreferencia.builder()
+            notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
                     .tenantId(tenantId)
                     .userId(userId)
                     .categoria(categoria)
                     .build());
         }
     } catch (DataIntegrityViolationException ex) {
-        log.debug(...);
+        log.debug("silenciarCategoria: insert concorrente para {}/{}/{}, a tratar como sucesso", ...);
     }
 }
 ```
-`NotificacaoPreferencia.id` uses `@GeneratedValue(strategy = GenerationType.UUID)`, an in-memory ID
-generator that does **not** require an immediate DB round-trip (unlike `IDENTITY`). Spring Data
-JPA's `SimpleJpaRepository.save()` for a new entity just calls `entityManager.persist(...)` — it does
-not call `flush()`. With Hibernate's default `FlushModeType.AUTO` and no subsequent query in this
-method to trigger an auto-flush, the actual `INSERT` statement (and therefore any
-`uk_notificacao_preferencia` unique-constraint violation from a genuine concurrent request) is
-deferred until the enclosing `@Transactional` boundary commits — which happens in Spring's
-`TransactionInterceptor`, **after** `silenciarCategoria()` (including its try/catch) has already
-returned control to the caller. So on an actual two-tabs/double-click race:
-1. Both requests pass the `existsBy...` check (READ_COMMITTED, neither sees the other's uncommitted row).
-2. Both call `.save(...)`, which just registers the pending insert in-memory — no exception yet, so the try/catch sees nothing to catch, and both methods return normally.
-3. At commit time, one of the two physical `INSERT`s violates the unique index. That failure surfaces from `JpaTransactionManager`'s commit path, entirely outside the method body that contains the try/catch.
-4. The resulting `DataIntegrityViolationException` (or a `TransactionSystemException` wrapping it, depending on translation path) propagates uncaught to `NotificacaoController.silenciar()`, which only catches `IllegalArgumentException`, and falls through to `GlobalExceptionHandler.handleAllExceptions` (`backend/src/main/java/com/lexcv/config/GlobalExceptionHandler.java:42-49`) — an HTTP 500 with `error: ex.getClass().getSimpleName()` and the raw exception message, surfaced verbatim to the user via `apiFetch`'s automatic error toast.
+The iteration-2 fix correctly diagnosed that `save()` defers the physical `INSERT` to commit time
+(because `NotificacaoPreferencia.id` uses `GenerationType.UUID`), and switched to `saveAndFlush()` so
+the `INSERT` — and therefore the unique-constraint violation on a genuine concurrent race — happens
+synchronously, inside the try block. That half of the diagnosis is correct.
 
-This is precisely the outcome the original WR-01 finding described, and 93-REVIEW-FIX.md's "Fixed"
-verification (`mvn -o compile` + a Mockito unit test whose stub makes `save(any())` throw
-synchronously) cannot detect it, because a mocked repository does not reproduce Hibernate's
-deferred-flush timing. No repository-level or `@DataJpaTest` integration test exists for
-`NotificacaoPreferenciaRepository` to exercise this with a real Postgres transaction (contrast with
-`backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java`, which already
-establishes the Testcontainers pattern this table needs but never got).
-**Fix:** Force the flush to happen inside the try block, so the constraint violation is thrown while
-still inside the guarded region:
+What the fix does **not** account for: once that `INSERT` fails inside a PostgreSQL transaction,
+PostgreSQL marks the *entire* transaction as aborted (`current transaction is aborted, commands
+ignored until end of transaction block`). Catching the translated `DataIntegrityViolationException`
+in Java only stops the exception from propagating out of this method — it does nothing to un-poison
+the underlying database transaction. `silenciarCategoria()` is itself the `@Transactional` boundary
+(there is no ambient transaction from the controller), so when the method returns normally, Spring's
+`TransactionInterceptor` immediately attempts to commit that same poisoned transaction. Depending on
+exactly how the pgjdbc driver and Spring's exception translation react to a `COMMIT` issued against
+an already-aborted PostgreSQL transaction, this either:
+1. throws (a `TransactionSystemException` or similar) from the interceptor's commit call —
+   propagating uncaught to `NotificacaoController.silenciar()` (which only catches
+   `IllegalArgumentException`) and falling through to `GlobalExceptionHandler.handleAllExceptions`,
+   i.e. exactly the original WR-01 symptom (HTTP 500 leaking the exception class/message), just
+   relocated from "flush time" to "commit time"; or
+2. succeeds silently, because PostgreSQL treats `COMMIT` on an aborted transaction as an implicit
+   `ROLLBACK` without raising a server-side error — in which case the losing request's own database
+   work (nothing else here, but a latent risk if this method ever grows a second write) is discarded
+   without the caller ever being told, while the HTTP response still reports `200 {"silenciada":
+   true}`.
+
+This is not a novel theory — it is the exact, widely-documented Hibernate/Spring pitfall (e.g. Vlad
+Mihalcea's "How to catch and handle a `ConstraintViolationException`") that recovering from a
+constraint violation requires either isolating the risky write in its own
+`@Transactional(propagation = REQUIRES_NEW)` transaction (so only that inner transaction is poisoned
+and rolled back, leaving the caller's transaction healthy to commit) or avoiding the exception
+entirely with an atomic upsert. Catching the exception inline, in the same transactional method that
+must still commit afterward, does not achieve either.
+
+Crucially, **this was never actually tested**: 93-REVIEW-FIX.md states the new
+`NotificacaoPreferenciaRepositoryIT.silenciarCategoria_duasTransacoesConcorrentes_...` test "was not
+run in this sandbox because the local Docker Desktop daemon was not reachable" and recommends running
+it before merging. I attempted to do so for this re-review and hit the same wall (`docker ps` /
+Testcontainers cannot reach the daemon here either — `Docker Desktop.exe`'s backend process exits
+immediately after launch in this environment). So the central claim of the fix — "no exception
+escapes the try/catch under real concurrent load" — is shipped entirely unverified, on both the
+producing and reviewing sides, for a fix whose entire purpose was to close a previously-shipped,
+review-caught concurrency defect.
+**Fix:** Replace the check-then-insert with a single atomic upsert, which sidesteps the whole
+transaction-poisoning question because no exception is ever thrown on the expected "already exists"
+path:
 ```java
-try {
-    if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-        notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
-                .tenantId(tenantId)
-                .userId(userId)
-                .categoria(categoria)
-                .build());
+// NotificacaoPreferenciaRepository
+@Modifying
+@Query(value = """
+        INSERT INTO t_notificacao_preferencia (id, tenant_id, user_id, categoria, created_at)
+        VALUES (gen_random_uuid(), :tenantId, :userId, :categoria, now())
+        ON CONFLICT (tenant_id, user_id, categoria) DO NOTHING
+        """, nativeQuery = true)
+void upsertSilenciar(@Param("tenantId") UUID tenantId, @Param("userId") UUID userId,
+                      @Param("categoria") String categoria);
+
+// NotificacaoService.silenciarCategoria
+@Transactional
+public void silenciarCategoria(UUID tenantId, UUID userId, String categoria) {
+    CategoriaNotificacao resolvida = CategoriaNotificacao.fromString(categoria)
+            .orElseThrow(() -> new IllegalArgumentException("categoria desconhecida: " + categoria));
+    if (!resolvida.isSilenciavel()) {
+        throw new IllegalArgumentException("categoria não silenciável: " + categoria);
     }
-} catch (DataIntegrityViolationException ex) {
-    log.debug("silenciarCategoria: concurrent insert for {}/{}/{}, treating as success",
-            tenantId, userId, categoria);
+    notificacaoPreferenciaRepository.upsertSilenciar(tenantId, userId, categoria);
 }
 ```
-`saveAndFlush` is already available on `JpaRepository` (no repository interface change needed) and
-guarantees the `INSERT` — and thus any unique-constraint violation — executes synchronously where the
-catch block can actually observe it. Alternatively, replace the check-then-act pair with a single
-native `INSERT ... ON CONFLICT (tenant_id, user_id, categoria) DO NOTHING` query, which is atomic at
-the database level and removes the race entirely. Either way, add a `@DataJpaTest` +
-Testcontainers-backed integration test (mirroring `NotificacaoRepositoryIT`) that actually issues two
-concurrent inserts for the same `(tenant, user, categoria)` and asserts no exception escapes — the
-current mocked unit tests cannot validate this fix.
+If a native upsert is undesirable, the alternative is to isolate the write in its own transaction —
+but this requires the isolated method to live on a *different* Spring bean (or be invoked through a
+self-injected proxy), because a plain `this.`-style call to a `@Transactional(REQUIRES_NEW)` method
+from within the same class bypasses the proxy and silently keeps running under the outer
+`REQUIRED` propagation, which would reintroduce this exact bug:
+```java
+// In a separate bean/collaborator, NOT the same class as silenciarCategoria's direct self-call
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void inserirPreferenciaIsolada(UUID tenantId, UUID userId, String categoria) {
+    try {
+        notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
+                .tenantId(tenantId).userId(userId).categoria(categoria).build());
+    } catch (DataIntegrityViolationException ex) {
+        log.debug("concurrent insert, treating as success");
+    }
+}
+```
+Either way, before merging: get Docker/Testcontainers working in a CI or local environment and
+actually run `NotificacaoPreferenciaRepositoryIT` (all four tests, especially the concurrency one)
+against real PostgreSQL. A compile-only check and manual trace of expected Postgres locking behavior
+(as 93-REVIEW-FIX.md did) is not sufficient evidence that this fix works, given the fix is
+specifically about a runtime timing/transaction-semantics defect that unit/mock tests and pure
+reasoning have already been shown (twice) not to catch reliably in this codebase.
 
 ## Info
 
 ### IN-01: `reativar` endpoint still does not validate `categoria`, unlike `silenciar` (carried over, unresolved)
 
 **File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:138-143`
-**Issue:** Unchanged since the prior review. `reativar()` calls `reativarCategoria()`, which goes
+**Issue:** Unchanged since the prior two reviews. `reativar()` calls `reativarCategoria()`, which goes
 straight to a derived delete with no validation via `CategoriaNotificacao.fromString(...)`, unlike
 `silenciar()`. `DELETE /notificacoes/preferencias/TYPO_CATEGORY` still returns `200` with
-`"silenciada": false` for any nonexistent string. Still harmless (no row can exist to delete), but
-the asymmetric validation contract between two sibling endpoints remains and silently swallows
-client-side typos.
+`"silenciada": false` for any nonexistent string. Still harmless (no row can exist to delete for a
+bogus category), but the asymmetric validation contract between two sibling endpoints remains and
+silently swallows client-side typos.
 **Fix:** Validate via `CategoriaNotificacao.fromString(categoria)` in `reativarCategoria()` (or the
 controller) and return 400 for unknown values, mirroring `silenciar`'s contract.
 
 ### IN-02: Mutating preference endpoints still gated by `notificacoes:view`, not an edit/manage scope (carried over, unresolved)
 
 **File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:115-143`
-**Issue:** Unchanged since the prior review. `listarPreferencias` (GET), `silenciar` (PUT) and
+**Issue:** Unchanged since the prior two reviews. `listarPreferencias` (GET), `silenciar` (PUT) and
 `reativar` (DELETE) are all still gated on `hasAuthority('notificacoes:view')`, not an edit/manage
-scope, per the `scope:action` convention documented in `CLAUDE.md`. As before, this mirrors the
-pre-existing `marcarLida`/`marcarTodasLidas` precedent and every seeded role currently has
-`notificacoes:view`, so there is no active privilege-escalation path — flagging for awareness only,
-in case a future read-only/reporting role is introduced with `notificacoes:view` but not intended to
-mutate its own preferences.
+scope, per the `scope:action` convention documented in `CLAUDE.md`. This mirrors the pre-existing
+`marcarLida`/`marcarTodasLidas` precedent and every seeded role currently has `notificacoes:view`, so
+there is no active privilege-escalation path today — flagged for awareness only, in case a future
+read-only/reporting role is introduced with `notificacoes:view` but not intended to mutate its own
+preferences.
 **Fix:** Consider a dedicated `notificacoes:edit` scope for the mutating endpoints in a follow-up, or
 explicitly document that notification self-service actions are intentionally `:view`-scoped because
 they only ever touch the caller's own data.
 
-### IN-03: No dedicated test coverage exists for `NotificacaoPreferenciaRepository` against a real database
+### IN-03: `NotificacaoPreferencia.createdAt` is not marked `nullable = false`, unlike the manual production migration's `NOT NULL` column
 
-**File:** `backend/src/main/java/com/lexcv/repositories/NotificacaoPreferenciaRepository.java`
-**Issue:** All current coverage of this repository is indirect, through `NotificacaoServiceTest`'s
-Mockito stubs. There is no `@DataJpaTest` (Testcontainers-backed, per the established
-`NotificacaoRepositoryIT` pattern) verifying that `uk_notificacao_preferencia` actually rejects a
-duplicate `(tenant_id, user_id, categoria)` insert at the database level, that
-`deleteByTenantIdAndUserIdAndCategoria` is scoped correctly across tenants/users, or that
-`existsByTenantIdAndUserIdAndCategoria` behaves as expected against real Postgres. This gap is
-directly related to WR-01 above — a real integration test would have caught (and would have
-prevented re-introducing) that defect.
-**Fix:** Add a `NotificacaoPreferenciaRepositoryIT` mirroring `NotificacaoRepositoryIT`'s
-`@DataJpaTest` + `@ServiceConnection` Testcontainers setup, covering at minimum: unique-constraint
-enforcement on duplicate insert, tenant/user-scoped `existsBy...`/`findBy...`/`deleteBy...`
-correctness, and (once WR-01 is properly fixed) the concurrent-insert-race behavior.
+**File:** `backend/src/main/java/com/lexcv/models/NotificacaoPreferencia.java:40-41`
+**Issue:** `tenantId` and `userId` both declare `@Column(nullable = false)`, matching
+`backend/migrations/93-create-notificacao-preferencia-table.sql`'s `NOT NULL` columns exactly. `createdAt`
+does not:
+```java
+@Column(name = "created_at", updatable = false)
+private LocalDateTime createdAt;
+```
+while the manual migration declares `created_at TIMESTAMP NOT NULL`. In practice `@PrePersist`
+always sets this field, so no row is ever inserted with a null value at runtime. But in a fresh dev
+environment (`ddl-auto=update`, no manual migration run), Hibernate would auto-create this column as
+nullable, diverging from the hand-written prod migration script for the same table — a latent
+schema-drift source between dev and prod for this specific table.
+**Fix:** Add `nullable = false` for consistency and to keep Hibernate's own DDL generation (dev) in
+lockstep with the manually-maintained production migration:
+```java
+@Column(name = "created_at", nullable = false, updatable = false)
+private LocalDateTime createdAt;
+```
 
 ---
 
-_Reviewed: 2026-07-14T15:00:00Z_
+_Reviewed: 2026-07-14T16:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
