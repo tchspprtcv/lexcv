@@ -167,7 +167,12 @@ public class NotificacaoService {
             }
         }
         LinkedHashSet<UUID> todos = new LinkedHashSet<>(primarios);
-        for (User admin : userRepository.findByTenantIdAndRoleName(tenantId, "ADMIN")) {
+        // WR-02 (Phase 94 code review): AndAtivoTrue exclui admins desativados do fan-out --
+        // mirrors the `ativo` check ResourceController.atribuirResponsavel already applies
+        // before assigning a responsible party. Without this, a deactivated ADMIN account would
+        // keep accumulating notification rows indefinitely, with nobody able to ever read/dismiss
+        // them.
+        for (User admin : userRepository.findByTenantIdAndRoleNameAndAtivoTrue(tenantId, "ADMIN")) {
             if (!admin.getId().equals(excluirUserId)) {
                 // Set deduplica por construção: um admin que já é primário não é
                 // re-adicionado -- é aqui que a colisão de uk_notificacao_dedup deixa de

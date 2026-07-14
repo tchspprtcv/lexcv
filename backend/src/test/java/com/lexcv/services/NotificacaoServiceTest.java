@@ -37,6 +37,10 @@ import static org.mockito.Mockito.*;
  * notificar* wrapper) stubs/verifies inserirSeNaoDuplicado(...) instead of save(...). Tests that
  * exercise marcarLida()/marcarTodasLidas() are unaffected (those still use save()/saveAll()) and
  * are unchanged.
+ *
+ * WR-02 (Phase 94 code review): the ADMIN fan-out query was renamed from
+ * findByTenantIdAndRoleName to findByTenantIdAndRoleNameAndAtivoTrue so deactivated admins are
+ * excluded -- every stub of the ADMIN fan-out below uses the new method name.
  */
 @ExtendWith(MockitoExtension.class)
 class NotificacaoServiceTest {
@@ -219,7 +223,7 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId))
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -246,7 +250,7 @@ class NotificacaoServiceTest {
     void notificarFaseEntrada_responsavelNulo_geraApenasLinhaAdminSemExcecao() {
         UUID processoId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -266,7 +270,7 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId))
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -299,7 +303,7 @@ class NotificacaoServiceTest {
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.empty());
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -326,7 +330,7 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -348,7 +352,7 @@ class NotificacaoServiceTest {
         UUID userX = UUID.randomUUID();
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of());
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -365,7 +369,7 @@ class NotificacaoServiceTest {
         UUID userX = UUID.randomUUID();
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -385,7 +389,7 @@ class NotificacaoServiceTest {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(advogadoId))
                 .thenReturn(Optional.of(User.builder().id(advogadoId).tenantId(TENANT_ID).build()));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -417,7 +421,7 @@ class NotificacaoServiceTest {
         UUID advogadoId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(advogadoId)).thenReturn(Optional.empty());
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -437,7 +441,7 @@ class NotificacaoServiceTest {
     @Test
     void notificarParecerAtribuido_advogadoIgualAoAtor_geraApenasLinhaAdmin() {
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
@@ -585,7 +589,7 @@ class NotificacaoServiceTest {
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -608,7 +612,7 @@ class NotificacaoServiceTest {
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -631,7 +635,7 @@ class NotificacaoServiceTest {
         UUID userX = UUID.randomUUID();
         User admin = User.builder().id(userX).tenantId(TENANT_ID).build();
         when(userRepository.findById(userX)).thenReturn(Optional.of(admin));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -652,7 +656,7 @@ class NotificacaoServiceTest {
         UUID advogadoId = UUID.randomUUID();
         User admin = User.builder().id(advogadoId).tenantId(TENANT_ID).build();
         when(userRepository.findById(advogadoId)).thenReturn(Optional.of(admin));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -686,7 +690,7 @@ class NotificacaoServiceTest {
         when(userRepository.findById(userX))
                 .thenReturn(Optional.of(User.builder().id(userX).tenantId(TENANT_ID).build()));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
-        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(0)
                 .thenReturn(1);
