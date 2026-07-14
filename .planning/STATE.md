@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.11
 milestone_name: Auditoria Técnica e Notificações Avançadas
-status: ready_to_plan
-stopped_at: Phase 92 complete (2/2) — ready to discuss Phase 93
-last_updated: 2026-07-13T23:04:18.543Z
-last_activity: 2026-07-13 -- Phase 92 execution started
+status: executing
+stopped_at: ROADMAP.md and REQUIREMENTS.md traceability written for v2.11 (8 phases, 15/15 requirements, no orphans)
+last_updated: "2026-07-14T10:24:51.730Z"
+last_activity: 2026-07-14 -- Phase 93 execution started
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 6
+  completed_phases: 3
+  total_plans: 10
   completed_plans: 6
-  percent: 25
+  percent: 38
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-12)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 93 — notf 24 — preferências de notificação por utilizador
+**Current focus:** Phase 93 — NOTF-24 — Preferências de Notificação por Utilizador
 
 ## Current Position
 
-Phase: 93
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-13
+Phase: 93 (NOTF-24 — Preferências de Notificação por Utilizador) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 93
+Last activity: 2026-07-14 -- Phase 93 execution started
 
 Progress: [░░░░░░░░░░] 0% (0/8 phases da milestone v2.11)
 
