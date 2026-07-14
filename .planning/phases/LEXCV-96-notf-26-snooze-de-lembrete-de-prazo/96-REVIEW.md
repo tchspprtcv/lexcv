@@ -1,6 +1,6 @@
 ---
 phase: LEXCV-96-notf-26-snooze-de-lembrete-de-prazo
-reviewed: 2026-07-14T18:09:41Z
+reviewed: 2026-07-14T18:30:00Z
 depth: standard
 files_reviewed: 9
 files_reviewed_list:
@@ -15,156 +15,177 @@ files_reviewed_list:
   - web/src/app/(dashboard)/notificacoes/page.tsx
 findings:
   critical: 0
-  warning: 2
-  info: 2
-  total: 4
+  warning: 1
+  info: 4
+  total: 5
 status: issues_found
 ---
 
 # Phase LEXCV-96: Code Review Report
 
-**Reviewed:** 2026-07-14T18:09:41Z
+**Reviewed:** 2026-07-14T18:30:00Z
 **Depth:** standard
 **Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the NOTF-26 snooze feature: the new `Notificacao.snoozedUntil` column, the
-`NotificacaoRepository` visibility-predicate queries, `NotificacaoService.snooze()`,
-the `PATCH /notificacoes/{id}/snooze` endpoint, and the frontend snooze control wired
-into the bell dropdown and the `/notificacoes` history page.
+This is a re-review of the NOTF-26 snooze feature after the fixer applied both
+warnings from the prior review iteration (commits `626279e` WR-01 and `5bdecf1`
+WR-02, per `96-REVIEW-FIX.md`). Both fixes were independently verified against the
+current file state and are correct:
 
-The backend implementation is solid: tenant/destinatario scoping is consistently
-derived from the JWT (never the request), the 1/3/7-day preset validation happens
-before any repository access, the `PRAZO_VENCIDO` non-adiável guard is reused
-correctly and is well-documented (including its own known future-risk caveat), and
-the two visibility-predicate query rewrites (`countByTenantIdAndDestinatarioIdAndLidaFalse`,
-`findByTenantIdAndDestinatarioIdAndLidaFalse`) are exercised by dedicated integration
-tests that prove both the "hidden while snoozed" and "reappears once the snooze
-lapses" behaviors against real Postgres. No SQL/command injection, no
-authentication/authorization gaps, and no new IDOR surface were found — the snooze
-endpoint mirrors the existing `marcarLida` 404-via-`Optional.empty()` contract
-exactly.
+- `notification-bell.tsx` now fetches `size: 20` and slices the filtered list to 10
+  (`useNotificacoes({ size: 20 }, ...)` + `.slice(0, 10)` at the `visibleNotificacoes`
+  definition), reducing the previous badge/dropdown contradiction from "guaranteed at
+  10 snoozed items" to "only if 11+ of the 20 most recent are currently snoozed."
+- `Notificacao.snoozedUntil` now carries `@JsonFormat(pattern =
+  "yyyy-MM-dd'T'HH:mm:ss'Z'")`, so `new Date(n.snoozedUntil)` on the client resolves
+  to the same UTC instant the server computed, fixing the timezone-naive
+  cross-boundary comparison used to gate visibility in both `notification-bell.tsx`
+  and `notificacoes/page.tsx`.
 
-Two frontend-side issues stood out under closer tracing of the new client-side
-snooze-visibility filtering logic (`notification-bell.tsx`, `notificacoes/page.tsx`):
-one around the interaction between the bell's fixed page size and its new
-client-side snooze filter, and one around timezone-naive datetime comparisons for
-the newly time-sensitive `snoozedUntil` field. Neither is a data-loss or security
-risk, but both can produce user-visible incorrect state and are worth fixing.
-Two lower-severity quality/test-coverage gaps are also noted.
+No new critical issues were found: tenant/destinatario scoping is still consistently
+derived from the JWT, the preset validation (1/3/7) still happens before any
+repository write, and the `PRAZO_VENCIDO` non-adiável guard is unchanged and
+correctly reused. No SQL/command injection, no auth bypass, no new IDOR surface.
+
+One new warning surfaced on closer tracing of the new `PATCH /notificacoes/{id}/snooze`
+endpoint's request-body handling: a literal-`null` JSON body causes an unhandled
+`NullPointerException` rather than the intended 400. Four lower-severity items round
+out the report: a residual (much less likely, but not eliminated) instance of the
+same class of bug the WR-01 fix addressed, a small piece of now-dead code left over
+from that fix, and the two previously-reported, still-unaddressed `IN-01`/`IN-02`
+items (out of scope for the prior auto-fix, which was limited to
+critical+warning-tier findings) confirmed still present in the current code.
 
 ## Warnings
 
-### WR-01: Bell dropdown can misreport "no notifications" when snoozed items dominate the fetched page
+### WR-01: `PATCH /notificacoes/{id}/snooze` throws an unhandled NullPointerException on a null JSON body instead of returning 400
 
-**File:** `web/src/components/shared/notification-bell.tsx:54,61-63,116,122`
-**Issue:** The bell preview fetches a fixed `size: 10` most-recent notifications
-(`useNotificacoes({ size: 10 }, { poll: true })`, unfiltered by `lida`), then applies
-a **client-side** filter to hide currently-snoozed items:
-```tsx
-const visibleNotificacoes = (list.data?.content ?? []).filter(
-  (n) => !(n.snoozedUntil && new Date(n.snoozedUntil) > new Date()),
-);
+**File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:157-161`
+**Issue:** The handler reads the preset directly off the deserialized body:
+```java
+public ResponseEntity<?> snooze(@PathVariable UUID id, @RequestBody Map<String, Integer> body) {
+    Integer dias = body.get("dias");
+    if (dias == null) { ... }
 ```
-Because the snooze filter is applied *after* a fixed-size backend fetch (unlike the
-badge/unread-count queries, which apply the same predicate server-side before
-limiting), any of the 10 most-recent notifications that happen to be currently
-snoozed are simply dropped from the list — the dropdown never backfills from
-older, non-snoozed notifications beyond position 10. In the worst case (e.g. the
-10 most recent notifications are all currently snoozed, but older non-snoozed/unread
-notifications exist beyond that window), `visibleNotificacoes` is empty and the
-dropdown renders "Sem notificações por agora." while `useNotificacoesUnreadCount()`
-(which *does* apply the predicate server-side) simultaneously shows a non-zero
-badge count — a directly observable contradiction to the user (badge says "3
-unread", dropdown says "no notifications").
-**Fix:** Apply the same snooze-visibility predicate server-side for this surface
-(e.g. an optional `ocultarAdiadas`/`snoozed`-aware query param on `GET
-/notificacoes` used only by the bell, mirroring `countByTenantIdAndDestinatarioIdAndLidaFalse`),
-or at minimum over-fetch a larger page (e.g. `size: 20`) and slice to 10 after
-filtering so a handful of currently-snoozed items in the fetched window don't
-starve the visible list:
+`body` itself is never null-checked. A request whose JSON payload is the literal
+`null` (a valid JSON document, `Content-Type: application/json`) deserializes via
+Jackson to a `null` `Map` reference; Spring passes that `null` straight into the
+method parameter (this differs from an *absent* body, which Spring's own
+`@RequestBody`-required check rejects earlier with a clean 400). `body.get("dias")`
+then throws a `NullPointerException`. This is not caught anywhere in the call chain:
+`backend/src/main/java/com/lexcv/config/GlobalExceptionHandler.java` has a catch-all
+`@ExceptionHandler(Exception.class)` that runs ahead of Spring's own default
+`HttpMessageNotReadableException` → 400 mapping (Spring resolves `@ControllerAdvice`
+`@ExceptionHandler` methods before `DefaultHandlerExceptionResolver`), so the NPE is
+turned into a `500` response whose body echoes the raw exception class/message
+(`{"error":"NullPointerException","message":"Cannot invoke \"java.util.Map.get(Object)\" because \"body\" is null"}`)
+back to the client via `apiFetch`'s `json.message || json.error` fallback — an
+authenticated but otherwise well-behaved-looking request produces an internal-error
+response with an implementation-detail message instead of the intended validation
+error. This specific manifestation is new code introduced by this phase (the
+sibling `silenciar`/`marcarLida` endpoints don't take a body at all); the underlying
+"generic `Exception.class` handler shadows Spring's built-in `400` mapping" behavior
+in `GlobalExceptionHandler` is pre-existing and out of this review's file scope, but
+this endpoint is the concrete place a defensive null-check would close the gap.
+**Fix:**
+```java
+Integer dias = body != null ? body.get("dias") : null;
+if (dias == null) {
+    return ResponseEntity.badRequest().body(Map.of("message", "dias é obrigatório"));
+}
+```
+or switch the parameter to a small typed DTO (see IN-02) which sidesteps the raw
+`Map` null-dereference entirely.
+
+## Info
+
+### IN-01: WR-01 fix reduces, but does not eliminate, the bell dropdown/badge contradiction
+
+**File:** `web/src/components/shared/notification-bell.tsx:58,65-67`
+**Issue:** The applied fix (`size: 20` + `.slice(0, 10)` after filtering) makes the
+scenario from the previous review's WR-01 much less likely but not impossible: if
+11 or more of the 20 most-recently-fetched notifications are currently snoozed, the
+post-filter list can still shrink below what's needed to fill the visible 10-item
+window (in the extreme, all 20 snoozed → `visibleNotificacoes` is still empty),
+while `useNotificacoesUnreadCount()` (server-side filtered) can simultaneously
+report a non-zero count. This was the explicitly-accepted tradeoff documented in
+`96-REVIEW-FIX.md` ("minimal fix... consistent with this codebase's existing
+patterns" vs. the larger server-side-filter alternative), so this is not a new
+regression, just a residual risk worth tracking rather than considering fully
+closed.
+**Fix:** If this edge case is hit in practice, the full fix from the original
+review still applies: add a server-side `snoozed`/`ocultarAdiadas`-aware query
+option to `GET /notificacoes` (mirroring
+`countByTenantIdAndDestinatarioIdAndLidaFalse`'s predicate) so the bell's fetch
+and the badge's count are computed with the exact same filter, eliminating the
+possibility of disagreement regardless of how many items in a fixed-size window
+happen to be snoozed.
+
+### IN-02: Leftover redundant `.slice(0, 10)` in the bell dropdown render
+
+**File:** `web/src/components/shared/notification-bell.tsx:65-67,126`
+**Issue:** The WR-01 fix moved the `.slice(0, 10)` into the `visibleNotificacoes`
+definition:
 ```tsx
-const list = useNotificacoes({ size: 20 }, { poll: true });
-// ...
 const visibleNotificacoes = (list.data?.content ?? [])
   .filter((n) => !(n.snoozedUntil && new Date(n.snoozedUntil) > new Date()))
   .slice(0, 10);
 ```
+but the render code still re-slices the already-≤10-item array:
+```tsx
+{visibleNotificacoes.slice(0, 10).map((n) => (
+```
+This second `.slice(0, 10)` is now a no-op (dead code) — harmless functionally, but
+it's leftover from before the fix and obscures that `visibleNotificacoes` is
+already the final, bounded list.
+**Fix:**
+```tsx
+{visibleNotificacoes.map((n) => (
+```
 
-### WR-02: Timezone-naive `LocalDateTime` used for cross-boundary snooze-active comparisons
-
-**File:** `backend/src/main/java/com/lexcv/models/Notificacao.java:62-64`,
-`web/src/components/shared/notification-bell.tsx:61-63`,
-`web/src/app/(dashboard)/notificacoes/page.tsx:270`
-**Issue:** `snoozedUntil` is a plain `LocalDateTime` (no zone/offset). The backend
-has no Jackson time-zone/`OffsetDateTime` configuration (`grep` of
-`backend/src/main/resources` found no `jackson`/`time-zone` settings), so it
-serializes as an ISO string with no `Z`/offset suffix (e.g.
-`"2026-07-21T10:15:30"`). On the frontend, `new Date("2026-07-21T10:15:30")` is
-parsed by the JS engine as **local browser time**, not as the server's local
-time. If the backend host and the browser are in different time zones (a real
-possibility for a legal-practice SaaS with API host and end users potentially in
-different regions/VMs), the client-side "is this still snoozed?" checks —
-`new Date(n.snoozedUntil) > new Date()` in `notification-bell.tsx` and
-`new Date(snoozedUntil as string) > new Date()` in `notificacoes/page.tsx` — can
-be off by the client/server offset, causing a still-active snooze to be shown as
-expired (reappearing in the bell preview early) or an already-expired snooze to
-keep showing the "Adiado até" badge/hidden state longer than intended. This
-mirrors a pre-existing convention already used for `createdAt`, but this phase is
-the first to make a *naive local-time comparison functionally gate visibility*
-rather than just format a display label, so the blast radius of the existing
-convention is now larger.
-**Fix:** Serialize timestamps with an explicit zone (switch to `Instant`/
-`OffsetDateTime` for `snoozedUntil`/`createdAt`, or enable
-`spring.jackson.serialization.WRITE_DATES_WITH_ZONE_ID`/adopt UTC-suffixed
-strings), so `new Date(...)` on the client resolves to the same instant the
-server computed. Short of a broader migration, at minimum document the
-assumption that server and client must share a timezone, and prefer comparing via
-a value fetched fresh from the server (e.g. rely on the server-computed
-`unread-count`/list filtering rather than re-deriving "is snoozed" purely
-client-side) wherever the comparison result gates behavior rather than just
-formatting a label.
-
-## Info
-
-### IN-01: New snooze endpoint has no controller-level test coverage
+### IN-03: Snooze endpoint still has no controller-level test coverage
 
 **File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:156-171`
-**Issue:** `NotificacaoServiceTest` thoroughly covers `NotificacaoService.snooze()`
-(valid preset, invalid preset, wrong-owner, `PRAZO_VENCIDO`), but there is no test
-file for `NotificacaoController` at all (`grep` across
-`backend/src/test/java/com/lexcv/controllers` found zero matches for
-`notificacoes`/`NotificacaoController`). This is a pre-existing gap for the whole
-controller, not introduced by this phase, but it means the controller-specific
-logic added here — the `dias == null` → 400 short-circuit, and the
-`catch (IllegalArgumentException) → 400` / `Optional.empty() → 404` HTTP mapping —
-is exercised nowhere at the HTTP layer.
-**Fix:** Add a `@WebMvcTest`/`MockMvc` (or slice) test class for
-`NotificacaoController` covering at least: missing `dias` body key → 400, invalid
-preset (e.g. `2`) → 400 with the service's message, unknown/foreign notification id
-→ 404, and the happy path → 200 with the updated `snoozedUntil` in the response
-body.
+**Issue:** Confirmed still true on re-review: `NotificacaoServiceTest` thoroughly
+covers `NotificacaoService.snooze()` (valid preset, invalid preset, wrong-owner,
+`PRAZO_VENCIDO`), and `NotificacaoRepositoryIT` covers the visibility-predicate
+queries against real Postgres, but there is still no test file for
+`NotificacaoController` at all (`backend/src/test/java/com/lexcv/controllers`
+has no `NotificacaoController`/`notificacoes` match). The controller-specific logic
+added in this phase — the `dias == null` → 400 short-circuit, the
+`catch (IllegalArgumentException) → 400` / `Optional.empty() → 404` HTTP mapping,
+and (per WR-01 above) the null-body edge case — remain untested at the HTTP layer.
+This was flagged as out-of-scope info in the prior review iteration and was
+correctly not touched by the auto-fix (`fix_scope: critical_warning`); still valid
+today.
+**Fix:** Add a `@WebMvcTest`/`MockMvc` test class for `NotificacaoController`
+covering: missing `dias` key → 400, `null` body → 400 (once WR-01 above is fixed),
+invalid preset → 400, unknown/foreign id → 404, and the happy path → 200 with
+`snoozedUntil` populated in the response.
 
-### IN-02: Snooze request body is an untyped `Map<String, Integer>`
+### IN-04: Snooze request body is still an untyped `Map<String, Integer>`
 
 **File:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java:157-161`
-**Issue:** `@RequestBody Map<String, Integer> body` accepts any JSON object and
-relies on a runtime `body.get("dias")` lookup. A key typo from a future caller
-(e.g. `"Dias"`, `"days"`) silently falls through to the generic "dias é
-obrigatório" 400 rather than a `@Valid`-driven, schema-checked error, and there is
-no compile-time contract for API consumers to reference. This matches the
-codebase's existing convention of loosely-typed `Map<String, Object>`/`Map<String,
-String>` request bodies elsewhere (`ResourceController`, `AdminController`), so
-it's a continuation of an established (if debatable) pattern rather than a new
-regression.
-**Fix:** Introduce a small `record SnoozeRequest(Integer dias) {}` DTO for this
-endpoint (and consider doing the same incrementally for sibling endpoints) to get
-compiler-checked field names and a self-documenting request shape.
+**Issue:** Confirmed still true on re-review: `@RequestBody Map<String, Integer>
+body` accepts any JSON object shape and relies on a runtime `body.get("dias")`
+lookup, with no compile-time contract for API consumers and (per WR-01 above) no
+null-safety on `body` itself. Matches the codebase's existing convention of
+loosely-typed request-body maps elsewhere (`ResourceController`), so this is a
+continuation of an established pattern, not a new regression — but a typed DTO
+would resolve both this and WR-01 in one change.
+**Fix:** Introduce `record SnoozeRequest(Integer dias) {}` and change the handler
+signature to `@RequestBody SnoozeRequest body`; `body.dias()` is then still
+nullable (so the existing `dias == null` → 400 check is preserved) but `body`
+itself can only be null in the same "literal JSON null" edge case, which is easy
+to guard once in one place, or eliminated by adding `@Valid` + `@NotNull` on the
+record component to let Spring's existing `MethodArgumentNotValidException` handler
+(already wired in `GlobalExceptionHandler`) produce the 400 automatically.
 
 ---
 
-_Reviewed: 2026-07-14T18:09:41Z_
+_Reviewed: 2026-07-14T18:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

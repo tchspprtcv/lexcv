@@ -1,67 +1,70 @@
 ---
 phase: LEXCV-96-notf-26-snooze-de-lembrete-de-prazo
-fixed_at: 2026-07-14T18:16:34Z
+fixed_at: 2026-07-14T18:28:34Z
 review_path: .planning/phases/LEXCV-96-notf-26-snooze-de-lembrete-de-prazo/96-REVIEW.md
-iteration: 1
-findings_in_scope: 2
-fixed: 2
+iteration: 2
+findings_in_scope: 1
+fixed: 1
 skipped: 0
 status: all_fixed
 ---
 
 # Phase LEXCV-96: Code Review Fix Report
 
-**Fixed at:** 2026-07-14T18:16:34Z
+**Fixed at:** 2026-07-14T18:28:34Z
 **Source review:** .planning/phases/LEXCV-96-notf-26-snooze-de-lembrete-de-prazo/96-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope: 2 (fix_scope: critical_warning — CR-*/BL-* + WR-*; IN-01/IN-02 out of scope)
-- Fixed: 2
+- Findings in scope: 1 (fix_scope: critical_warning — 0 critical, 1 warning; IN-01/IN-03/IN-04 out of scope)
+- Fixed: 1
 - Skipped: 0
+- Bonus (out-of-scope, applied anyway): IN-02 — trivial one-line dead-code cleanup directly adjacent to the WR-01 fix, applied at the reviewer's/orchestrator's explicit invitation even though it is Info-tier and outside `critical_warning` scope.
 
 ## Fixed Issues
 
-### WR-01: Bell dropdown can misreport "no notifications" when snoozed items dominate the fetched page
+### WR-01: `PATCH /notificacoes/{id}/snooze` throws an unhandled NullPointerException on a null JSON body instead of returning 400
+
+**Files modified:** `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java`
+**Commit:** 46c801a
+**Applied fix:** Re-read the handler and confirmed it matched the review's description exactly:
+`Integer dias = body.get("dias");` dereferenced `body` with no null check, so a literal JSON
+`null` request body (which Jackson deserializes to a `null` `Map` reference, distinct from an
+*absent* body which Spring's own `@RequestBody`-required check already rejects) would throw an
+NPE that `GlobalExceptionHandler`'s catch-all turns into a leaky 500. Applied the review's
+suggested fix verbatim (the minimal null-guard, not the alternative typed-DTO refactor from
+IN-04, which is a larger change out of scope for this warning): changed the line to
+`Integer dias = body != null ? body.get("dias") : null;`, so a null body now falls through the
+existing `dias == null` check and returns the intended `400 {"message": "dias é obrigatório"}`
+instead of a 500. Verified by re-reading the modified method in full (lines 156-171) — the
+surrounding try/catch, `IllegalArgumentException` → 400, and `Optional.empty()` → 404 mapping are
+unchanged. No Java syntax checker is available for single-file compilation in this project
+without a full Maven build (not in the verification_strategy tool table), so verification relied
+on Tier 1 (re-read) only, per the "Other: skip to Tier 1" rule.
+
+## Bonus Fix (out of critical_warning scope, applied anyway)
+
+### IN-02: Leftover redundant `.slice(0, 10)` in the bell dropdown render
 
 **Files modified:** `web/src/components/shared/notification-bell.tsx`
-**Commit:** 626279e
-**Applied fix:** Bumped the bell dropdown's `useNotificacoes` fetch size from `10` to `20`, and
-changed the client-side snooze-visibility filter to `.slice(0, 10)` after filtering rather than
-before. This matches the review's suggested minimal fix (over-fetch and slice) rather than the
-larger alternative (a new server-side `snoozed`-aware query param), since it resolves the
-observable badge/dropdown contradiction with a one-line change consistent with this codebase's
-existing patterns. Verified via `npx tsc --noEmit` on the file (no errors) and a full re-read of
-the surrounding component.
-
-### WR-02: Timezone-naive `LocalDateTime` used for cross-boundary snooze-active comparisons
-
-**Files modified:** `backend/src/main/java/com/lexcv/models/Notificacao.java`
-**Commit:** 5bdecf1
-**Applied fix:** Checked the project's existing convention first (per the review's own
-instruction) — grepped for `@JsonFormat`/Jackson timezone config project-wide and found none;
-every `LocalDateTime` field (including `createdAt`) is serialized naive with no zone/offset. Since
-no established convention exists, applied the review's suggested smallest fix: annotated
-`snoozedUntil` with `@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")` so the wire format carries
-an explicit (literal) UTC `Z` suffix. This is truthful because the codebase already documents
-elsewhere (`AlertasDiariosJob`'s `FUSO_CABO_VERDE` comment) that the container always runs in
-UTC, so `LocalDateTime.now()` on the server is already a UTC instant in practice — the fix simply
-makes that fact explicit in the JSON the frontend parses, so `new Date(snoozedUntil)` on the
-client now resolves to the same instant the server computed, regardless of the browser's local
-timezone. Scoped to `snoozedUntil` only (not `createdAt`), matching the review's own distinction:
-`createdAt` is only ever used to format a display label (`toLocaleDateString`), never to gate
-visibility, so its naive-local-time serialization is unchanged and out of scope. No frontend
-changes were needed — `new Date("...Z")` already parses correctly as UTC in both
-`notification-bell.tsx` and `notificacoes/page.tsx`. Documented the new convention inline as a
-comment on the field for future time-sensitive fields that gate behavior. Verified via a full
-re-read of the file and a full `mvn -o compile` of the backend module (no errors).
+**Commit:** ba1ebcc
+**Applied fix:** Confirmed `visibleNotificacoes` (defined a few lines above) already ends in
+`.slice(0, 10)` after the snooze-visibility filter, making the render-time
+`visibleNotificacoes.slice(0, 10).map(...)` a no-op re-slice of an already-bounded array. Removed
+the redundant second `.slice(0, 10)` so the render now reads `visibleNotificacoes.map((n) => (`.
+Purely cosmetic/dead-code removal — no behavior change. `npx tsc --noEmit` is unavailable in this
+worktree (TypeScript is not resolvable via `npx` without a `node_modules` install, which isn't
+present in the ephemeral fix worktree), so verification fell back to Tier 1 (full re-read of the
+surrounding render block, lines 118-132) confirming the JSX structure and closing tags are
+intact.
 
 ## Skipped Issues
 
-None — both in-scope findings were fixed.
+None — the single in-scope finding (WR-01) was fixed, and the optional bonus item (IN-02) was
+also applied successfully.
 
 ---
 
-_Fixed: 2026-07-14T18:16:34Z_
+_Fixed: 2026-07-14T18:28:34Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
