@@ -170,4 +170,75 @@ class ResourceControllerUploadDocumentoTest {
         // ao helper de resolução de equipa, sem depender apenas da cobertura isolada de
         // NotificacaoServiceTest sobre resolverEquipaCliente/criarComFanOutAdmin.
     }
+
+    /**
+     * WR-01 (Phase 95 code review, iteration 2): the iteration-1 WR-01 fix migrated this
+     * cliente-only branch (no {@code processoId}, only {@code clienteId}) from a hand-rolled
+     * inline query to {@code resolverEquipaCliente(tenantId, saved.getClienteId())}, but the
+     * iteration-1 WR-02 fix only added coverage for the sibling processo branch above. This test
+     * closes that gap: it proves the controller correctly wires {@code saved.getClienteId()} into
+     * {@code resolverEquipaCliente} for the cliente-only path too.
+     */
+    @Test
+    void uploadDocumento_comClienteIdSemProcesso_notificaEquipaDoCliente() throws Exception {
+        UserPrincipal ator = UserPrincipal.builder().userId(ATOR_ID).tenantId(TENANT_ID).build();
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(ator, null, List.of()));
+
+        when(clienteRepository.findById(CLIENTE_ID))
+                .thenReturn(Optional.of(Cliente.builder().id(CLIENTE_ID).tenantId(TENANT_ID).build()));
+
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(CLIENTE_ID, TENANT_ID)).thenReturn(List.of(
+                ClienteAdvogado.builder().clienteId(CLIENTE_ID).tenantId(TENANT_ID).userId(ADVOGADO_EQUIPA).build()));
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(CLIENTE_ID, TENANT_ID)).thenReturn(List.of(
+                ClienteAdministrativo.builder().clienteId(CLIENTE_ID).tenantId(TENANT_ID).userId(ADMINISTRATIVO_EQUIPA).build()));
+
+        when(userRepository.findById(ADVOGADO_EQUIPA))
+                .thenReturn(Optional.of(User.builder().id(ADVOGADO_EQUIPA).tenantId(TENANT_ID).build()));
+        when(userRepository.findById(ADMINISTRATIVO_EQUIPA))
+                .thenReturn(Optional.of(User.builder().id(ADMINISTRATIVO_EQUIPA).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of());
+
+        when(notificacaoRepository.inserirSeNaoDuplicado(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("contrato.pdf");
+        when(file.getInputStream()).thenAnswer(inv -> new ByteArrayInputStream(new byte[] {1, 2, 3}));
+        when(file.getContentType()).thenReturn("application/pdf");
+        when(file.getSize()).thenReturn(3L);
+
+        when(storageService.upload(any(), any(), any(), any(InputStream.class), any(), anyLong()))
+                .thenReturn("object-key");
+        when(documentoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificacaoService notificacaoService = new NotificacaoService(notificacaoRepository, userRepository,
+                notificacaoPreferenciaRepository, clienteAdvogadoRepository, clienteAdministrativoRepository);
+
+        ResourceController controller = new ResourceController(
+                clienteRepository, clienteContactoRepository, clienteNotaRepository, contaCorrenteRepository,
+                processoRepository, parteRepository, faseProcessualRepository, processoFaseRepository,
+                eventoRepository, documentoRepository, movimentacaoRepository, honorarioRepository,
+                pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
+                auditLogRepository, storageService, riscoPrazoService, notificacaoService,
+                clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository);
+
+        ResponseEntity<?> response = controller.uploadDocumento(file, null, CLIENTE_ID, null, null, null);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(2)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(Set.of(ADVOGADO_EQUIPA, ADMINISTRATIVO_EQUIPA), Set.copyOf(destinatarioCaptor.getAllValues()));
+        assertEquals(2, destinatarioCaptor.getAllValues().size());
+        // A equipa do cliente (advogado + administrativo, via resolverEquipaCliente) recebe
+        // exatamente uma notificação cada -- prova que a montagem de `dests` no ramo cliente-only
+        // de uploadDocumento (ResourceController, migrado pelo fix WR-01 da iteração 1) está
+        // corretamente ligada a resolverEquipaCliente(tenantId, saved.getClienteId()), sem
+        // depender apenas da cobertura isolada de NotificacaoServiceTest sobre
+        // resolverEquipaCliente.
+    }
 }
