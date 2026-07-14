@@ -2778,11 +2778,7 @@ public class ResourceController {
                                 saved.getId(), ex);
                     }
                 } else if (saved.getClienteId() != null) {
-                    List<UUID> dests = new ArrayList<>();
-                    clienteAdvogadoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
-                            .forEach(a -> dests.add(a.getUserId()));
-                    clienteAdministrativoRepository.findByClienteIdAndTenantId(saved.getClienteId(), tenantId)
-                            .forEach(a -> dests.add(a.getUserId()));
+                    List<UUID> dests = new ArrayList<>(notificacaoService.resolverEquipaCliente(tenantId, saved.getClienteId()));
                     try {
                         notificacaoService.notificarDocumentoNovo(tenantId, saved.getId().toString(), dests,
                                 saved.getNome(), "/clientes/" + saved.getClienteId(), atorId);
