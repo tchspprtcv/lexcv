@@ -336,7 +336,10 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
   3. Um membro de equipa que também é ADMIN não gera duplicado nem falha (herdado da correção da Phase 94), e um membro de equipa que silenciou a categoria não recebe a notificação (herdado da Phase 93)
   4. Existe uma decisão explícita registada sobre se as categorias do job diário (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) também recebem esta expansão de equipa nesta milestone, ou ficam deliberadamente fora de âmbito
   5. Notificação de parecer atribuído permanece individual (advogado atribuído), não afetada por esta expansão, salvo decisão explícita em contrário
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+- [ ] 95-01-PLAN.md — NotificacaoService: resolverEquipaCliente (tenant-scoped, junction repos) + criarComFanOutAdmin secundarios overload + team-expanded notificarFaseEntrada/notificarProcessoAtribuido (2ª/3ª pessoa) — TDD
+- [ ] 95-02-PLAN.md — Wiring dos 4 call sites em ResourceController (clienteId/equipa) + decisões de âmbito registadas em PROJECT.md (job diário fora de âmbito; parecer individual)
+
 
 #### Phase 96: NOTF-26 — Snooze de Lembrete de Prazo
 
@@ -421,7 +424,7 @@ A pesquisa desta milestone identificou 3 tracks de trabalho sem sobreposição d
 | 92. Agenda ↔ RiscoPrazoService — Consolidação | v2.11 | 2/2 | Complete    | 2026-07-13 |
 | 93. NOTF-24 — Preferências de Notificação por Utilizador | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 94. NOTF-27 — Corrigir Colisão de Dedup ADMIN | v2.11 | 1/1 | Complete    | 2026-07-14 |
-| 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/TBD | Not started | - |
+| 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 0/2 | Not started | - |
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 0/TBD | Not started | - |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 0/TBD | Not started | - |
 
