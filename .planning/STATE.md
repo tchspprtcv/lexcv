@@ -89,6 +89,7 @@ Recent decisions affecting current work:
 - (v2.11 roadmap) SpotBugs/SAST (Phase 90), Testcontainers infra (Phase 91), and Agenda/RiscoPrazoService consolidation (Phase 92) have zero file overlap with each other or with the notification chain — explicitly marked mutually parallelizable, not sequential filler.
 - (v2.11 roadmap) Cross-cutting milestone audit (AUD-01 to AUD-05) placed last (Phase 97), depending on all other 7 phases — matches the established v2.7/v2.9/v2.10 pattern of auditing the milestone's final integration shape rather than mid-stream.
 - (v2.11 TEST-03) CI (`deploy.yml`) gains a `test` job (`mvn verify` + `mvn spotbugs:check`) gating `build-and-push` via `needs: test` — closes the requirement's "decision registered + implemented" clause (Phase 91); OWASP `dependency-check:check` deliberately deferred (out of scope, NVD download cost).
+- (v2.11 Phase 97, milestone close-out) AUD-01 through AUD-05 all closed: tenant isolation COVERED (97-01), UAT consolidated in `97-UAT.md` (97-03/AUD-02), DocumentoTipo/NIF debt closed (97-02/AUD-03), MINIO_ENDPOINT blocker RESOLVED (97-04/AUD-04), fresh code audit clean with zero new findings (97-04/AUD-05) — see PROJECT.md Key Decisions for full detail. 15/15 v2.11 requirements now Complete.
 
 ### Pending Todos
 
