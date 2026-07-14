@@ -255,23 +255,31 @@ public class NotificacaoService {
         }
     }
 
-    // NOTF-15: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a exige aqui).
-    // responsavelId é nullable (Processo ainda pode não ter responsável atribuído) — filtrado pelo
-    // helper (destinatariosPrimarios vazio) em vez de um null-guard local.
-    public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID responsavelId,
+    // NOTF-15/NOTF-25: entrada de nova fase no processo. Sem exclusão de ator (CONTEXT.md não a
+    // exige aqui). primarios = equipa do cliente do processo (resolverEquipaCliente) ∪
+    // responsavelId (nullable -- Processo ainda pode não ter responsável atribuído). Fase entrada
+    // não tem distinção 2ª/3ª pessoa (CONTEXT.md), logo a mesma mensagem serve o(s) primário(s) e
+    // o fan-out ADMIN -- mantém-se a forma de 10 argumentos do helper.
+    public void notificarFaseEntrada(UUID tenantId, UUID processoId, UUID clienteId, UUID responsavelId,
                                       String numeroProcesso, String nomeFase, String linkUrl) {
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Nova fase";
         String mensagem = "O processo " + numeroTexto + " entrou na fase " + nomeFase;
-        List<UUID> primarios = responsavelId != null ? List.of(responsavelId) : List.of();
+        LinkedHashSet<UUID> primarios = new LinkedHashSet<>(resolverEquipaCliente(tenantId, clienteId));
+        if (responsavelId != null) {
+            primarios.add(responsavelId);
+        }
         criarComFanOutAdmin(tenantId, "FASE_ENTRADA", titulo, "processo", processoId.toString(), linkUrl,
                 primarios, mensagem, mensagem, null);
     }
 
-    // NOTF-18: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a exige aqui).
-    // Mensagem do destinatário em 2ª pessoa (texto travado por CONTEXT.md); mensagem do ADMIN em
-    // 3ª pessoa, sem nome do ator.
-    public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID responsavelId,
+    // NOTF-18/NOTF-25: processo atribuído/reatribuído. Sem exclusão de ator (CONTEXT.md não a
+    // exige aqui). Mensagem do responsável em 2ª pessoa (texto travado por CONTEXT.md); resto da
+    // equipa do cliente + ADMIN recebem a mensagem informativa em 3ª pessoa, sem nome do ator --
+    // usa a sobrecarga de 11 argumentos do helper (destinatariosSecundarios = equipa menos o
+    // responsável, para que um responsável também presente na equipa não seja escrito duas vezes
+    // nem "perca" a mensagem em 2ª pessoa para a informativa).
+    public void notificarProcessoAtribuido(UUID tenantId, UUID processoId, UUID clienteId, UUID responsavelId,
                                             String numeroProcesso, String linkUrl) {
         // WR-02 (Phase 87 code review): self-defending null-guard. Unlike
         // notificarFaseEntrada (where the ADMIN fan-out is unconditionally correct
@@ -286,9 +294,11 @@ public class NotificacaoService {
         String numeroTexto = numeroProcesso != null ? numeroProcesso : "(sem número)";
         String titulo = "Processo atribuído";
         String mensagemDest = "Foi-lhe atribuído o processo " + numeroTexto + ".";
-        String mensagemAdmin = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+        String mensagemInformativo = "O processo " + numeroTexto + " foi atribuído a um novo responsável.";
+        LinkedHashSet<UUID> equipa = new LinkedHashSet<>(resolverEquipaCliente(tenantId, clienteId));
+        equipa.remove(responsavelId);
         criarComFanOutAdmin(tenantId, "PROCESSO_ATRIBUIDO", titulo, "processo", processoId.toString(), linkUrl,
-                List.of(responsavelId), mensagemDest, mensagemAdmin, null);
+                List.of(responsavelId), equipa, mensagemDest, mensagemInformativo, null);
     }
 
     // NOTF-16: novo documento em processo/cliente. Ator (quem fez o upload) é sempre excluído do

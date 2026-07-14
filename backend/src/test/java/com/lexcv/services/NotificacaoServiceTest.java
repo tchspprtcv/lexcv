@@ -280,18 +280,21 @@ class NotificacaoServiceTest {
     @Test
     void notificarFaseEntrada_responsavelNaoNulo_geraLinhaResponsavelELinhaAdmin() {
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId))
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
-        service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0001", "Instrução",
+        service.notificarFaseEntrada(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0001", "Instrução",
                 "/processos/" + processoId + "?tab=fases");
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -311,9 +314,12 @@ class NotificacaoServiceTest {
     @Test
     void notificarFaseEntrada_responsavelNulo_geraApenasLinhaAdminSemExcecao() {
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -321,7 +327,7 @@ class NotificacaoServiceTest {
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
-                service.notificarFaseEntrada(TENANT_ID, processoId, null, "PROC-0001", "Instrução", "/link"));
+                service.notificarFaseEntrada(TENANT_ID, processoId, clienteId, null, "PROC-0001", "Instrução", "/link"));
         verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         // Null-guard: responsavelId nulo nunca chama criar() para o responsável, mas ADMIN é sempre notificado.
     }
@@ -329,18 +335,21 @@ class NotificacaoServiceTest {
     @Test
     void notificarProcessoAtribuido_responsavelNaoNulo_geraLinhaResponsavelComMensagemAtribuidaELinhaAdmin() {
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId))
                 .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
-        service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0002", "/link");
+        service.notificarProcessoAtribuido(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0002", "/link");
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
         ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
@@ -364,11 +373,14 @@ class NotificacaoServiceTest {
         // @Transactional controller method -- mirrors notificarFaseEntrada_responsavelNulo_...
         // but for an *invalid* (non-null) recipient rather than a null one.
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.empty());
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
         when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -376,13 +388,94 @@ class NotificacaoServiceTest {
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
-                service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0003", "/link"));
+                service.notificarProcessoAtribuido(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0003", "/link"));
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
                 any(), any(), any(), any(), any(), any(), any());
         assertEquals(admin.getId(), destinatarioCaptor.getValue());
         // O responsavelId órfão nunca chega a inserirSeNaoDuplicado, mas o fan-out ADMIN ainda ocorre.
+    }
+
+    // --- Plan 95-01 Task 2: equipa do cliente (NOTF-25) ---
+
+    @Test
+    void notificarFaseEntrada_equipaDoCliente_todaEquipaMaisResponsavelMaisAdmin() {
+        UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        UUID advogadoEquipa = UUID.randomUUID();
+        UUID administrativoEquipa = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findById(advogadoEquipa))
+                .thenReturn(Optional.of(User.builder().id(advogadoEquipa).tenantId(TENANT_ID).build()));
+        when(userRepository.findById(administrativoEquipa))
+                .thenReturn(Optional.of(User.builder().id(administrativoEquipa).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of(
+                ClienteAdvogado.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(advogadoEquipa).build()));
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of(
+                ClienteAdministrativo.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(administrativoEquipa).build()));
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+        service.notificarFaseEntrada(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0006", "Instrução", "/link");
+
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(notificacaoRepository, times(4)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), any(), any(), any());
+        assertEquals(Set.of(advogadoEquipa, administrativoEquipa, responsavelId, admin.getId()),
+                Set.copyOf(destinatarioCaptor.getAllValues()));
+        assertEquals(4, destinatarioCaptor.getAllValues().size());
+        // Toda a equipa do cliente (advogado + administrativo) + responsável + admin recebem
+        // exatamente uma linha cada, todas com a mesma mensagem -- prova que FASE_ENTRADA já não
+        // notifica apenas o responsável (Critério de Sucesso 1, NOTF-25).
+    }
+
+    @Test
+    void notificarProcessoAtribuido_equipa_responsavel2aPessoaEquipa3aPessoa() {
+        UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        UUID membroEquipa = UUID.randomUUID();
+        User admin = User.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        when(userRepository.findById(responsavelId))
+                .thenReturn(Optional.of(User.builder().id(responsavelId).tenantId(TENANT_ID).build()));
+        when(userRepository.findById(membroEquipa))
+                .thenReturn(Optional.of(User.builder().id(membroEquipa).tenantId(TENANT_ID).build()));
+        when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of(
+                ClienteAdvogado.builder().clienteId(clienteId).tenantId(TENANT_ID).userId(membroEquipa).build()));
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(1);
+
+        NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,
+                clienteAdvogadoRepository, clienteAdministrativoRepository);
+        service.notificarProcessoAtribuido(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0007", "/link");
+
+        ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoRepository, times(3)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
+                any(), any(), any(), any(), mensagemCaptor.capture(), any(), any());
+        List<UUID> destinatarios = destinatarioCaptor.getAllValues();
+        List<String> mensagens = mensagemCaptor.getAllValues();
+        int indiceResponsavel = destinatarios.indexOf(responsavelId);
+        int indiceMembroEquipa = destinatarios.indexOf(membroEquipa);
+        int indiceAdmin = destinatarios.indexOf(admin.getId());
+        assertTrue(indiceResponsavel >= 0 && indiceMembroEquipa >= 0 && indiceAdmin >= 0);
+        assertTrue(mensagens.get(indiceResponsavel).startsWith("Foi-lhe atribuído"));
+        assertTrue(mensagens.get(indiceMembroEquipa).startsWith("O processo"));
+        assertTrue(mensagens.get(indiceAdmin).startsWith("O processo"));
+        // O responsável recebe a mensagem em 2ª pessoa; o resto da equipa e o ADMIN recebem a
+        // mesma mensagem informativa em 3ª pessoa -- prova o split 2ª/3ª pessoa (Critério de
+        // Sucesso 2, NOTF-25).
     }
 
     // --- Phase 87 Task 2: wrappers com exclusão de ator (DOCUMENTO_NOVO, PARECER_ATRIBUIDO) ---
@@ -665,10 +758,13 @@ class NotificacaoServiceTest {
     @Test
     void notificarFaseEntrada_responsavelTambemAdmin_umaUnicaLinhaSemExcecao() {
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -676,7 +772,7 @@ class NotificacaoServiceTest {
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
-                service.notificarFaseEntrada(TENANT_ID, processoId, responsavelId, "PROC-0004", "Instrução", "/link"));
+                service.notificarFaseEntrada(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0004", "Instrução", "/link"));
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(notificacaoRepository, times(1)).inserirSeNaoDuplicado(any(), any(), destinatarioCaptor.capture(),
@@ -689,10 +785,13 @@ class NotificacaoServiceTest {
     @Test
     void notificarProcessoAtribuido_responsavelTambemAdmin_umaUnicaLinha2aPessoaSemExcecao() {
         UUID processoId = UUID.randomUUID();
+        UUID clienteId = UUID.randomUUID();
         UUID responsavelId = UUID.randomUUID();
         User admin = User.builder().id(responsavelId).tenantId(TENANT_ID).build();
         when(userRepository.findById(responsavelId)).thenReturn(Optional.of(admin));
         when(userRepository.findByTenantIdAndRoleNameAndAtivoTrue(TENANT_ID, "ADMIN")).thenReturn(List.of(admin));
+        when(clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
+        when(clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, TENANT_ID)).thenReturn(List.of());
         when(notificacaoRepository.inserirSeNaoDuplicado(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(1);
 
@@ -700,7 +799,7 @@ class NotificacaoServiceTest {
                 clienteAdvogadoRepository, clienteAdministrativoRepository);
 
         assertDoesNotThrow(() ->
-                service.notificarProcessoAtribuido(TENANT_ID, processoId, responsavelId, "PROC-0005", "/link"));
+                service.notificarProcessoAtribuido(TENANT_ID, processoId, clienteId, responsavelId, "PROC-0005", "/link"));
 
         ArgumentCaptor<UUID> destinatarioCaptor = ArgumentCaptor.forClass(UUID.class);
         ArgumentCaptor<String> mensagemCaptor = ArgumentCaptor.forClass(String.class);
