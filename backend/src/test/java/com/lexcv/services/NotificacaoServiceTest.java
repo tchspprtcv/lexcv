@@ -542,7 +542,9 @@ class NotificacaoServiceTest {
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
 
-        verify(notificacaoPreferenciaRepository, times(1)).save(any());
+        // WR-01 (iteração 2): saveAndFlush (não save) -- ver NotificacaoPreferenciaRepositoryIT
+        // para a prova de concorrência real que só saveAndFlush consegue satisfazer.
+        verify(notificacaoPreferenciaRepository, times(1)).saveAndFlush(any());
     }
 
     @Test
@@ -554,7 +556,7 @@ class NotificacaoServiceTest {
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository);
         service.silenciarCategoria(TENANT_ID, DESTINATARIO_A, "FASE_ENTRADA");
 
-        verify(notificacaoPreferenciaRepository, never()).save(any());
+        verify(notificacaoPreferenciaRepository, never()).saveAndFlush(any());
     }
 
     @Test

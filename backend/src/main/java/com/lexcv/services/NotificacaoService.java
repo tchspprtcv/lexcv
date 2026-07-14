@@ -309,7 +309,13 @@ public class NotificacaoService {
         }
         try {
             if (!notificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)) {
-                notificacaoPreferenciaRepository.save(NotificacaoPreferencia.builder()
+                // saveAndFlush (não save) é essencial aqui: o id usa GenerationType.UUID
+                // (gerador em memória, sem round-trip à BD), pelo que um save() simples só
+                // faz entityManager.persist() -- o INSERT real (e a violação da constraint
+                // única) só aconteceria no commit da transação envolvente, fora do alcance
+                // deste try/catch. O flush síncrono garante que a violação é lançada e
+                // apanhada aqui dentro.
+                notificacaoPreferenciaRepository.saveAndFlush(NotificacaoPreferencia.builder()
                         .tenantId(tenantId)
                         .userId(userId)
                         .categoria(categoria)
