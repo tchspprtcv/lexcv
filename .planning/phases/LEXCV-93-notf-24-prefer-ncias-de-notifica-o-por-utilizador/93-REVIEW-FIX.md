@@ -1,77 +1,118 @@
 ---
 phase: LEXCV-93-notf-24-preferencias-de-notificacao-por-utilizador
-fixed_at: 2026-07-14T11:33:12Z
+fixed_at: 2026-07-14T11:51:34Z
 review_path: .planning/phases/LEXCV-93-notf-24-prefer-ncias-de-notifica-o-por-utilizador/93-REVIEW.md
-iteration: 1
-findings_in_scope: 3
-fixed: 3
+iteration: 2
+findings_in_scope: 1
+fixed: 1
 skipped: 0
 status: all_fixed
 ---
 
 # Phase LEXCV-93: Code Review Fix Report
 
-**Fixed at:** 2026-07-14T11:33:12Z
+**Fixed at:** 2026-07-14T11:51:34Z
 **Source review:** .planning/phases/LEXCV-93-notf-24-prefer-ncias-de-notifica-o-por-utilizador/93-REVIEW.md
-**Iteration:** 1
+**Iteration:** 2
 
 **Summary:**
-- Findings in scope: 3 (fix_scope: critical_warning — WR-01, WR-02, WR-03; IN-01 and IN-02 excluded as Info-tier)
-- Fixed: 3
+- Findings in scope (this iteration): 1 (fix_scope: critical_warning — WR-01 re-opened; IN-01/IN-02/IN-03 excluded as Info-tier, though the WR-01 fix's added test also closes IN-03's coverage gap)
+- Fixed: 1
 - Skipped: 0
 
-## Fixed Issues
+This is a re-review fix pass. The 2026-07-14 re-review found that the iteration-1 fix for WR-01
+did not actually work: it caught `DataIntegrityViolationException` around a plain `repository.save(...)`
+call, but `NotificacaoPreferencia.id` uses `GenerationType.UUID` (an in-memory ID generator), so
+Spring Data's `save()` only calls `entityManager.persist()` — the real `INSERT` (and any
+unique-constraint violation) is deferred until the surrounding `@Transactional` method's transaction
+commits, which happens *after* the try/catch has already exited. The exception therefore still
+escaped to `GlobalExceptionHandler`'s generic handler as a raw HTTP 500 on a genuine concurrent race.
+WR-02 and WR-03 (also from the iteration-1 report, and independently reverified by iteration-2's
+reviewer as "genuinely fixed") are unaffected by this pass and are carried forward below for history.
 
-### WR-01: `silenciarCategoria()` is not actually idempotent under concurrent requests, and the resulting exception is unhandled
+## Fixed Issues (Iteration 2)
 
-**Files modified:** `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
-**Commit:** 726d9a9
-**Applied fix:** Wrapped the check-then-act insert in a try/catch for `DataIntegrityViolationException`
-(imported from `org.springframework.dao`). On the unique-constraint race between two concurrent
-requests for the same `(tenant, user, categoria)`, the second request now logs a debug message and
-returns normally instead of letting the exception fall through to `GlobalExceptionHandler`'s
-catch-all (which previously returned a raw HTTP 500 leaking exception/constraint detail). The row
-existing either way means the category is muted, so treating the race as a successful no-op
-correctly restores the documented idempotency contract. Verified via `mvn -o compile` in the
-backend module (0 errors).
+### WR-01: The "fix" for the `silenciarCategoria()` concurrency race did not work — the exception it tried to catch was thrown after the method had already returned
 
-### WR-02: "Which categories can be silenced" is duplicated between backend and frontend with no shared source of truth
+**Files modified:**
+- `backend/src/main/java/com/lexcv/services/NotificacaoService.java`
+- `backend/src/test/java/com/lexcv/services/NotificacaoServiceTest.java`
+- `backend/src/test/java/com/lexcv/repositories/NotificacaoPreferenciaRepositoryIT.java` (new)
+
+**Commit:** ae35bbb
+
+**Applied fix:** Changed `notificacaoPreferenciaRepository.save(...)` to
+`notificacaoPreferenciaRepository.saveAndFlush(...)` inside `silenciarCategoria()`'s guarded
+try/catch block. `saveAndFlush` forces Hibernate to issue the actual `INSERT` (and therefore any
+`uk_notificacao_preferencia` unique-constraint violation) synchronously, inside the try/catch's
+dynamic scope, rather than deferring it to the enclosing transaction's commit — which is what made
+the iteration-1 fix ineffective. Added an explanatory comment at the call site documenting exactly
+why `saveAndFlush` (not `save`) is required here, referencing the `GenerationType.UUID` root cause.
+
+Updated `NotificacaoServiceTest`'s two mock-based assertions
+(`silenciarCategoria_categoriaValidaAindaNaoSilenciada_persisteUmaLinha` and
+`silenciarCategoria_jaSilenciada_naoPersisteSegundaLinha`) to verify `saveAndFlush(any())` instead of
+`save(any())`, since the mocked repository call changed. All 29 tests in `NotificacaoServiceTest`
+pass (`mvn -o -Dtest=NotificacaoServiceTest test`, surefire report: 29 run / 0 failures / 0 errors).
+
+Added `NotificacaoPreferenciaRepositoryIT`, a new `@DataJpaTest` + Testcontainers (`postgres:16-alpine`)
+integration test mirroring the established `NotificacaoRepositoryIT` / `ParecerVersaoConcorrenciaIT`
+pattern (`@AutoConfigureTestDatabase(replace = Replace.NONE)` + `@ServiceConnection`). It covers:
+- Unique-constraint enforcement: a duplicate `(tenant_id, user_id, categoria)` `saveAndFlush` throws
+  `DataIntegrityViolationException` against a real Postgres instance.
+- Tenant/user-scoped correctness of `existsByTenantIdAndUserIdAndCategoria`,
+  `findByTenantIdAndUserId`, and `deleteByTenantIdAndUserIdAndCategoria` (no cross-tenant/cross-user
+  leakage).
+- The concurrent-race scenario itself: two independently-committed transactions (via
+  `TransactionTemplate`, `@Transactional(propagation = NOT_SUPPORTED)` on the test method to disable
+  `@DataJpaTest`'s default rollback wrapping, released simultaneously via a `CountDownLatch`) both
+  run the exact `existsBy... → saveAndFlush → catch(DataIntegrityViolationException)` sequence that
+  `silenciarCategoria()` executes. Asserts that neither `Future.get(...)` throws
+  `ExecutionException` (i.e. the losing transaction's constraint violation is caught inside its own
+  try/catch, never escaping) and that exactly one row ends up persisted. This test would have failed
+  before the fix (with a plain `save()`, the violation surfaces at `TransactionTemplate`'s commit,
+  outside the callback's try/catch, exactly mirroring how it would surface at
+  `TransactionInterceptor`'s commit in production) and passes after it — closing the IN-03 coverage
+  gap (no dedicated real-database test existed for this repository) at the same time.
+
+This new integration test requires a running Docker daemon (Testcontainers) to execute; it was not
+run in this sandbox because the local Docker Desktop daemon was not reachable
+(`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`). It was,
+however, verified to compile cleanly together with the rest of the module
+(`mvn -o -DskipTests test-compile`, exit code 0), and its logic was manually traced against
+Postgres's `READ COMMITTED` unique-index-conflict blocking behavior (the second concurrent `INSERT`
+blocks on the first transaction's uncommitted index entry, then raises the violation once the first
+commits) to confirm it exercises the intended race. **Recommend running this test with Docker
+available before merging**, to get an actual green/red signal rather than a compile-only check.
+
+## Skipped Issues (Iteration 2)
+
+None — the single in-scope finding was fixed.
+
+## Carried Forward From Iteration 1 (for history — not re-verified this pass)
+
+The iteration-2 re-review independently reconfirmed WR-02 and WR-03 below as genuinely fixed by
+direct code inspection; they required no further action this pass.
+
+### WR-02: "Which categories can be silenced" was duplicated between backend and frontend with no shared source of truth
 
 **Files modified:** `web/src/lib/notificacao-categoria.ts`, `web/src/app/(dashboard)/settings/page.tsx`
 **Commit:** 0f5df1d
-**Applied fix:** Chose the smallest-correct-fix option noted in the review (centralize, don't change
-the API contract). Added `NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS` (a named, commented constant
-listing `PRAZO_VENCIDO`) and `NOTIFICACAO_CATEGORIA_SILENCIAVEIS_OPTIONS` (derived from
-`NOTIFICACAO_CATEGORIA_OPTIONS` by excluding that constant) to `notificacao-categoria.ts`, with an
-explicit comment that the list must be kept in sync with `CategoriaNotificacao.java` and that the
-real long-term fix is having `GET /notificacoes/preferencias` return the silenciável set. Updated
-`NotificationPreferencesTab` in `settings/page.tsx` to consume the new derived constant instead of
-an inline `.filter((o) => o.value !== "PRAZO_VENCIDO")` literal buried in the component. Confirmed
-`NOTIFICACAO_CATEGORIA_OPTIONS` (unfiltered) is still exported/used unchanged by
-`web/src/app/(dashboard)/notificacoes/page.tsx`. Verified via scoped `tsc --noEmit` (no errors in
-either modified file; only 3 pre-existing, unrelated `vitest` type-resolution errors in `*.test.ts`
-files, present before this fix too).
+**Applied fix (iteration 1):** Centralized the silenciável-category exclusion list into
+`NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS` / `NOTIFICACAO_CATEGORIA_SILENCIAVEIS_OPTIONS` in
+`notificacao-categoria.ts`, consumed by `NotificationPreferencesTab` instead of an inline filter
+literal. Re-verified fixed by the iteration-2 reviewer.
 
-### WR-03: `NotificationPreferencesTab` has no error state for the preferences fetch — silently defaults every category to "delivered" on failure
+### WR-03: `NotificationPreferencesTab` had no error state for the preferences fetch
 
 **Files modified:** `web/src/app/(dashboard)/settings/page.tsx`
 **Commit:** bae3de3
-**Applied fix:** Destructured `isError` and `refetch` from `useNotificacaoPreferencias()` (in
-addition to the existing `data`/`isLoading`) and added an `isError` branch, rendered after the
-`isLoading` branch, that shows an `AlertCircle` icon, a clear Portuguese error message ("Não foi
-possível carregar as preferências de notificação."), and an outline "Tentar novamente" button
-wired to `refetch()`. This replaces the previous silent fallback where a failed fetch left `data`
-undefined, `silenciadas` defaulted to `[]`, and every category rendered as "A ENTREGAR" with no
-indication anything had gone wrong. Added `AlertCircle` to the existing `lucide-react` import;
-reused the already-imported `Button` component. Verified via scoped `tsc --noEmit` (no errors in
-the modified file; same 3 pre-existing unrelated `vitest` errors as the WR-02 baseline).
-
-## Skipped Issues
-
-None — all in-scope findings were fixed.
+**Applied fix (iteration 1):** Added an `isError` branch (with retry via `refetch()`) to
+`NotificationPreferencesTab`, replacing the previous silent fallback to an all-categories-delivered
+default on fetch failure. Re-verified fixed by the iteration-2 reviewer.
 
 ---
 
-_Fixed: 2026-07-14T11:33:12Z_
+_Fixed: 2026-07-14T11:51:34Z_
 _Fixer: Claude (gsd-code-fixer)_
-_Iteration: 1_
+_Iteration: 2_
