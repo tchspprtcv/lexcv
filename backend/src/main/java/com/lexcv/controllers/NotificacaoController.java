@@ -19,10 +19,12 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -89,7 +91,10 @@ public class NotificacaoController {
     @PreAuthorize("hasAuthority('notificacoes:view')")
     @GetMapping("/unread-count")
     public ResponseEntity<?> contarNaoLidas() {
-        long count = notificacaoRepository.countByTenantIdAndDestinatarioIdAndLidaFalse(getTenantId(), getUserId());
+        // NOTF-26: agora é passado explicitamente para que o predicado de snoozedUntil da
+        // query oculte uma linha atualmente adiada do badge até o snooze expirar.
+        long count = notificacaoRepository.countByTenantIdAndDestinatarioIdAndLidaFalse(
+                getTenantId(), getUserId(), LocalDateTime.now());
         return ResponseEntity.ok(Map.of("count", count));
     }
 
@@ -140,5 +145,28 @@ public class NotificacaoController {
     public ResponseEntity<?> reativar(@PathVariable String categoria) {
         notificacaoService.reativarCategoria(getTenantId(), getUserId(), categoria);
         return ResponseEntity.ok(Map.of("categoria", categoria, "silenciada", false));
+    }
+
+    // NOTF-26: adiar (snooze) um lembrete por um preset fixo de dias (1/3/7 -- validado no
+    // serviço). tenant e destinatario vêm SEMPRE do JWT (getTenantId()/getUserId()), nunca do
+    // pedido — mesma fronteira de isolamento por-destinatário de marcarLida. IllegalArgumentException
+    // (preset inválido OU categoria PRAZO_VENCIDO) -> 400; Optional vazio (linha não pertence ao
+    // destinatário ou não existe) -> 404, mirroring marcarLida/silenciar.
+    @PreAuthorize("hasAuthority('notificacoes:view')")
+    @PatchMapping("/{id}/snooze")
+    public ResponseEntity<?> snooze(@PathVariable UUID id, @RequestBody Map<String, Integer> body) {
+        Integer dias = body.get("dias");
+        if (dias == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "dias é obrigatório"));
+        }
+        try {
+            Notificacao n = notificacaoService.snooze(getTenantId(), getUserId(), id, dias).orElse(null);
+            if (n == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Notificação não encontrada"));
+            }
+            return ResponseEntity.ok(n);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 }

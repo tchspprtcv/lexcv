@@ -41,12 +41,28 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> 
                                         @Param("lida") Boolean lida,
                                         Pageable pageable);
 
-    // Feeds the unread-count endpoint (bell badge).
-    long countByTenantIdAndDestinatarioIdAndLidaFalse(UUID tenantId, UUID destinatarioId);
+    // Feeds the unread-count endpoint (bell badge). NOTF-26: converted from a derived query to
+    // explicit JPQL to add the snoozedUntil visibility predicate -- a currently-snoozed row (n.
+    // snoozedUntil in the future) is hidden from the badge count until it lapses; a never-snoozed
+    // row (n.snoozedUntil IS NULL) or one whose snooze already expired (<= agora) counts as before.
+    @Query("SELECT COUNT(n) FROM Notificacao n WHERE n.tenantId = :tenantId " +
+            "AND n.destinatarioId = :destinatarioId AND n.lida = false " +
+            "AND (n.snoozedUntil IS NULL OR n.snoozedUntil <= :agora)")
+    long countByTenantIdAndDestinatarioIdAndLidaFalse(@Param("tenantId") UUID tenantId,
+                                                       @Param("destinatarioId") UUID destinatarioId,
+                                                       @Param("agora") LocalDateTime agora);
 
     // Feeds the "mark all read" load-mutate-saveAll path — no @Modifying bulk update
-    // (the codebase has zero @Modifying queries, keep it that way).
-    List<Notificacao> findByTenantIdAndDestinatarioIdAndLidaFalse(UUID tenantId, UUID destinatarioId);
+    // (the codebase has zero @Modifying queries, keep it that way). NOTF-26: converted from a
+    // derived query to explicit JPQL to add the same snoozedUntil visibility predicate as the
+    // count above -- a currently-snoozed row is EXCLUDED from this load, so marcarTodasLidas()
+    // never marks it lida=true, which is what lets it reappear unread once the snooze expires.
+    @Query("SELECT n FROM Notificacao n WHERE n.tenantId = :tenantId " +
+            "AND n.destinatarioId = :destinatarioId AND n.lida = false " +
+            "AND (n.snoozedUntil IS NULL OR n.snoozedUntil <= :agora)")
+    List<Notificacao> findByTenantIdAndDestinatarioIdAndLidaFalse(@Param("tenantId") UUID tenantId,
+                                                                   @Param("destinatarioId") UUID destinatarioId,
+                                                                   @Param("agora") LocalDateTime agora);
 
     // Feeds single mark-read: empty for a row owned by a different destinatario in the same
     // tenant is what lets the controller answer 404 (not 403) without leaking existence across
