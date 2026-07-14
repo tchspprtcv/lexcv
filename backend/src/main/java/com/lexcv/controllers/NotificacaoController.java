@@ -155,7 +155,7 @@ public class NotificacaoController {
     @PreAuthorize("hasAuthority('notificacoes:view')")
     @PatchMapping("/{id}/snooze")
     public ResponseEntity<?> snooze(@PathVariable UUID id, @RequestBody Map<String, Integer> body) {
-        Integer dias = body.get("dias");
+        Integer dias = body != null ? body.get("dias") : null;
         if (dias == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "dias é obrigatório"));
         }
