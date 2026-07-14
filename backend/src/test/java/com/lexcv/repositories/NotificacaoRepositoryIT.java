@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -171,5 +173,63 @@ class NotificacaoRepositoryIT {
                 .setParameter("createdAt", createdAt)
                 .setParameter("id", id)
                 .executeUpdate();
+    }
+
+    /**
+     * CR-01 (Phase 94 code review, iteration 2): {@code inserirSeNaoDuplicado} is a
+     * {@code @Modifying} native query -- the JPA spec requires an active transaction for
+     * {@code Query.executeUpdate()}, or it throws {@code TransactionRequiredException}.
+     * {@code @DataJpaTest} wraps every test method in its own ambient transaction by default
+     * (rolled back afterwards), which would mask a missing {@code @Transactional} on the
+     * repository method itself: every other test in this class runs inside that ambient
+     * transaction and would pass regardless of whether the fix is present. This test explicitly
+     * disables that ambient transaction via {@code propagation = Propagation.NOT_SUPPORTED},
+     * mirroring the real call paths that have NO ambient transaction of their own
+     * (the entirety of {@code AlertasDiariosJob}, {@code ResourceController.createProcesso}/
+     * {@code createProcessoFase}/{@code uploadDocumento}) -- proving {@code inserirSeNaoDuplicado}
+     * supplies its own transaction rather than depending on one from the caller. Without the
+     * {@code @Transactional} fix on the repository method, this test fails with
+     * {@code TransactionRequiredException} instead of asserting successfully.
+     */
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void inserirSeNaoDuplicado_semTransacaoAmbienteDoChamador_insereComSucesso() {
+        UUID tenantId = UUID.randomUUID();
+        UUID destinatarioId = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        int linhasInseridas = notificacaoRepository.inserirSeNaoDuplicado(id, tenantId, destinatarioId,
+                "FASE_ENTRADA", "processo", "id-sem-tx-ambiente", "Título", "Mensagem", "/link", createdAt);
+
+        assertEquals(1, linhasInseridas);
+        // Sem transação de teste a fazer rollback automático (NOT_SUPPORTED suspendeu-a) --
+        // limpar explicitamente para não deixar a linha residual no contentor Postgres partilhado
+        // pelos restantes testes desta classe.
+        notificacaoRepository.deleteById(id);
+    }
+
+    /**
+     * Complementa o teste acima provando o segundo ramo do contrato (ON CONFLICT DO NOTHING)
+     * sob as mesmas condições de ausência de transação ambiente: uma segunda chamada para o
+     * mesmo tuplo de dedup devolve 0 linhas inseridas, nunca lança exceção.
+     */
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void inserirSeNaoDuplicado_semTransacaoAmbienteDoChamador_duplicadoDevolveZeroLinhas() {
+        UUID tenantId = UUID.randomUUID();
+        UUID destinatarioId = UUID.randomUUID();
+        UUID primeiroId = UUID.randomUUID();
+        UUID segundoId = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        int primeiraInsercao = notificacaoRepository.inserirSeNaoDuplicado(primeiroId, tenantId, destinatarioId,
+                "FASE_ENTRADA", "processo", "id-sem-tx-dup", "Título", "Mensagem", "/link", createdAt);
+        int segundaInsercao = notificacaoRepository.inserirSeNaoDuplicado(segundoId, tenantId, destinatarioId,
+                "FASE_ENTRADA", "processo", "id-sem-tx-dup", "Título", "Mensagem", "/link", createdAt);
+
+        assertEquals(1, primeiraInsercao);
+        assertEquals(0, segundaInsercao);
+        notificacaoRepository.deleteById(primeiroId);
     }
 }

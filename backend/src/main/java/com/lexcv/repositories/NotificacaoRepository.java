@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -77,7 +78,25 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, UUID> 
     // persisted. Returns the number of rows actually inserted (0 = skipped as a duplicate of
     // uk_notificacao_dedup, 1 = inserted) so criar() can report back through its existing
     // Optional<Notificacao> contract without an extra SELECT-after-INSERT round trip.
+    //
+    // CR-01 (Phase 94 code review, iteration 2): @Transactional added directly on THIS
+    // repository method -- @Modifying queries are required by the JPA spec to run inside an
+    // active transaction (Query.executeUpdate() throws TransactionRequiredException
+    // otherwise), and Spring Data JPA does not synthesize a fallback transaction for a custom
+    // @Query method with no @Transactional anywhere on its declaration. Most real callers
+    // (ResourceController.createProcesso/createProcessoFase/uploadDocumento, the entirety of
+    // AlertasDiariosJob) have NO ambient transaction, so without this annotation every one of
+    // those call paths threw TransactionRequiredException at runtime. The annotation is placed
+    // here -- not on NotificacaoService.criar()/criarComFanOutAdmin() -- specifically because
+    // criarComFanOutAdmin() invokes criar() via self-invocation (this.criar(...) within the
+    // same class), which bypasses Spring's proxy-based @Transactional advice entirely; a
+    // repository method call, in contrast, always goes through Spring Data's own dedicated
+    // proxy, so @Transactional here takes effect regardless of how the caller reached this
+    // method. Default propagation (REQUIRED) joins an already-open ambient transaction where
+    // one exists (atribuirResponsavel, ParecerController) and opens its own short-lived one
+    // otherwise (createProcesso, createProcessoFase, uploadDocumento, AlertasDiariosJob).
     @Modifying
+    @Transactional
     @Query(value = """
             INSERT INTO t_notificacao (id, tenant_id, destinatario_id, categoria, entidade_tipo, entidade_id,
                                         titulo, mensagem, link_url, lida, created_at)
