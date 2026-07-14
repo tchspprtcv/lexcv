@@ -1,30 +1,37 @@
 "use client";
 
 import * as React from "react";
-import { 
-  User, 
-  Lock, 
-  Users, 
-  Sliders, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Check, 
-  X, 
-  Loader2, 
-  UserCheck, 
-  UserMinus, 
+import {
+  User,
+  Lock,
+  Users,
+  Sliders,
+  Plus,
+  Trash2,
+  Edit,
+  Check,
+  X,
+  Loader2,
+  UserCheck,
+  UserMinus,
   ShieldAlert,
-  Save
+  Save,
+  Bell
 } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
-import { 
-  useAdminUsers, 
+import {
+  useAdminUsers,
   useAdminRbac
 } from "@/hooks/use-admin";
+import {
+  useNotificacaoPreferencias,
+  useReativarCategoria,
+  useSilenciarCategoria,
+} from "@/hooks/use-notificacao-preferencias";
 import { toast } from "@/hooks/use-toast";
+import { NOTIFICACAO_CATEGORIA_OPTIONS } from "@/lib/notificacao-categoria";
 import { UserProfileForm } from "@/components/profile/user-profile-form";
 import { UserPasswordForm } from "@/components/profile/user-password-form";
 import { Button } from "@/components/ui/button";
@@ -33,8 +40,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { MockUser, MockRole, MockPermission } from "@/server/mock-db";
+import type { NotificacaoCategoria } from "@/types/notificacoes";
 
-type TabId = "profile" | "security" | "users" | "rbac";
+type TabId = "profile" | "security" | "users" | "rbac" | "notificacoes";
 
 export default function SettingsPage() {
   const { data: me, can } = usePermissions();
@@ -110,6 +118,20 @@ export default function SettingsPage() {
             Controlo de Acesso (RBAC)
           </button>
         )}
+
+        {can.view("notificacoes") && (
+          <button
+            onClick={() => setActiveTab("notificacoes")}
+            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
+              activeTab === "notificacoes"
+                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            Notificações
+          </button>
+        )}
       </div>
 
       {/* Tab Panels */}
@@ -135,6 +157,12 @@ export default function SettingsPage() {
         {activeTab === "rbac" && hasRbacManage && (
           <div className="animate-in fade-in duration-200">
             <RbacTab />
+          </div>
+        )}
+
+        {activeTab === "notificacoes" && can.view("notificacoes") && (
+          <div className="animate-in fade-in duration-200">
+            <NotificationPreferencesTab />
           </div>
         )}
       </div>
@@ -821,6 +849,103 @@ function RbacTab() {
               })}
             </tbody>
           </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ==========================================
+// NOTIFICATION PREFERENCES TAB SUB-COMPONENT
+// ==========================================
+function NotificationPreferencesTab() {
+  const { data, isLoading } = useNotificacaoPreferencias();
+  const silenciar = useSilenciarCategoria();
+  const reativar = useReativarCategoria();
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  const silenciadas = data?.silenciadas ?? [];
+  const categoriasSilenciaveis = NOTIFICACAO_CATEGORIA_OPTIONS.filter(
+    (o) => o.value !== "PRAZO_VENCIDO",
+  );
+
+  const handleToggle = async (categoria: NotificacaoCategoria, entregar: boolean) => {
+    try {
+      if (entregar) {
+        await reativar.mutateAsync(categoria);
+        toast.success("Categoria reativada. Voltará a receber estas notificações.");
+      } else {
+        await silenciar.mutateAsync(categoria);
+        toast.success("Categoria silenciada. Deixa de receber estas notificações.");
+      }
+    } catch {
+      // Erro já reportado pelo toast automático do apiFetch (exceto 401/403).
+    }
+  };
+
+  return (
+    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-none lg:rounded-xl">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold flex items-center gap-2">
+          <Bell className="h-5 w-5 text-blue-500" />
+          Preferências de Notificação
+        </CardTitle>
+        <CardDescription>
+          Escolha que categorias de notificação pretende receber. O silenciamento aplica-se apenas
+          a si — não afeta outros utilizadores do escritório.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 text-slate-700 dark:text-slate-300 text-xs border border-blue-500/10 rounded-md flex items-start gap-2.5">
+          <ShieldAlert className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
+          <div>
+            A categoria crítica <strong>&quot;Prazo vencido&quot;</strong> é sempre entregue e por
+            isso não aparece nesta lista.
+          </div>
+        </div>
+
+        <div className="divide-y divide-slate-200 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-md">
+          {categoriasSilenciaveis.map((o) => {
+            const checked = !silenciadas.includes(o.value);
+            const isPending =
+              (silenciar.isPending && silenciar.variables === o.value) ||
+              (reativar.isPending && reativar.variables === o.value);
+
+            return (
+              <div
+                key={o.value}
+                className="flex items-center justify-between p-3 bg-white/50 dark:bg-transparent"
+              >
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {o.label}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-semibold ${
+                      checked ? "text-emerald-500" : "text-slate-500"
+                    }`}
+                  >
+                    {checked ? "A ENTREGAR" : "SILENCIADA"}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={isPending}
+                    onChange={(e) => handleToggle(o.value, e.target.checked)}
+                    aria-label={`Alternar entrega de notificações de ${o.label}`}
+                    className="w-10 h-5 bg-slate-200 rounded-full appearance-none cursor-pointer relative checked:bg-emerald-500 transition-colors after:content-[''] after:w-4 after:h-4 after:bg-white after:rounded-full after:absolute after:top-0.5 after:left-0.5 checked:after:translate-x-5 after:transition-transform disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
