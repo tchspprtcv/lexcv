@@ -217,7 +217,9 @@ class NotificacaoServiceTest {
                 .id(UUID.randomUUID()).tenantId(TENANT_ID).destinatarioId(DESTINATARIO_A)
                 .categoria("DOCUMENTO_NOVO").titulo("t2").mensagem("m2")
                 .entidadeTipo("documento").entidadeId("id-2").lida(false).build();
-        when(notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(TENANT_ID, DESTINATARIO_A))
+        // NOTF-26: assinatura ganhou o parâmetro `agora` (predicado de visibilidade de
+        // snooze) -- any() porque este teste não exercita snooze, só o find-mutate-saveAll.
+        when(notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(eq(TENANT_ID), eq(DESTINATARIO_A), any()))
                 .thenReturn(List.of(n1, n2));
 
         NotificacaoService service = new NotificacaoService(notificacaoRepository, userRepository, notificacaoPreferenciaRepository,

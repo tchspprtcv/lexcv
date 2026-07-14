@@ -356,7 +356,11 @@ public class NotificacaoService {
     // atualizadas.
     @Transactional
     public int marcarTodasLidas(UUID tenantId, UUID destinatarioId) {
-        List<Notificacao> naoLidas = notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(tenantId, destinatarioId);
+        // NOTF-26: passa LocalDateTime.now() para o predicado de visibilidade de snooze --
+        // uma linha atualmente adiada NÃO é carregada aqui, logo nunca é marcada lida=true,
+        // preservando a garantia de que reaparece não-lida quando o snooze expirar.
+        List<Notificacao> naoLidas = notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(
+                tenantId, destinatarioId, LocalDateTime.now());
         naoLidas.forEach(n -> n.setLida(true));
         notificacaoRepository.saveAll(naoLidas);
         return naoLidas.size();

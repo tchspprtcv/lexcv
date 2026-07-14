@@ -55,6 +55,14 @@ public class Notificacao {
     @Builder.Default
     private Boolean lida = false;
 
+    // NOTF-26: toggle de visibilidade ortogonal a `lida` -- nula = nunca adiada; preenchida =
+    // oculta das superfícies de não-lidas (badge/marcar-todas) até este instante. Mesma
+    // mutabilidade (campo @Setter) de `lida`, sem entrar em uk_notificacao_dedup nem em qualquer
+    // outra unique constraint -- ver backend/migrations/96-add-notificacao-snoozed-until.sql.
+    @Setter
+    @Column(name = "snoozed_until")
+    private LocalDateTime snoozedUntil;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

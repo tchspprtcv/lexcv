@@ -1,0 +1,26 @@
+-- Phase 96 (NOTF-26): add snoozed_until column to t_notificacao
+--
+-- IMPORTANT: This is a REQUIRED manual production migration script. It MUST be run
+-- manually (e.g. via psql or DBeaver) against the database BEFORE or DURING deploying
+-- the code change that adds the `snoozedUntil` field to the `Notificacao` entity
+-- (backend/src/main/java/com/lexcv/models/Notificacao.java).
+--
+-- Why: `application-prod.yml` sets `ddl-auto: validate` in production (dev/CI use
+-- `ddl-auto: update`, which auto-adds this column locally from the entity mapping).
+-- `ddl-auto=validate` never creates or alters schema — it only checks the existing
+-- schema is compatible at startup. Without this script, the application will fail to
+-- start in production (schema validation error: missing column `snoozed_until` on
+-- table `t_notificacao`).
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase --
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (staging/prod)
+-- before that environment picks up the deploy that introduces `snoozedUntil`.
+--
+-- Semantics: NULL = never snoozed (default, no explicit default clause needed).
+-- A non-null value in the future hides the row from the unread badge/mark-all-read
+-- surfaces until that instant; the row itself is never mutated/recreated by
+-- AlertasDiariosJob (its existence-check ignores this column) and remains visible,
+-- unfiltered, in the /notificacoes history endpoint.
+
+ALTER TABLE t_notificacao ADD COLUMN snoozed_until TIMESTAMP;
