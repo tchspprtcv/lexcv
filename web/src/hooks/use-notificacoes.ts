@@ -77,3 +77,18 @@ export function useMarcarTodasNotificacoesLidas() {
     },
   });
 }
+
+export function useSnoozeNotificacao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, dias }: { id: string; dias: 1 | 3 | 7 }) =>
+      apiFetch<Notificacao>(`/notificacoes/${encodeURIComponent(id)}/snooze`, {
+        method: "PATCH",
+        body: JSON.stringify({ dias }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
+    },
+  });
+}

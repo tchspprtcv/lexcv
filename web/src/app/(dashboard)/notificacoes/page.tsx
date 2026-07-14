@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { NotificacaoSnoozeControl } from "@/components/shared/notificacao-snooze-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -264,8 +265,9 @@ function NotificacaoRow({
   onMarcarLida: (id: string) => void;
   isMarking: boolean;
 }) {
-  const { id, categoria, titulo, mensagem, linkUrl, lida, createdAt } = notificacao;
+  const { id, categoria, titulo, mensagem, linkUrl, lida, createdAt, snoozedUntil } = notificacao;
   const isInternalLink = isInternalLinkUrl(linkUrl);
+  const isSnoozed = Boolean(snoozedUntil) && new Date(snoozedUntil as string) > new Date();
   const titleClassName = lida
     ? "text-sm font-normal text-slate-900 dark:text-slate-100"
     : "text-sm font-semibold text-slate-900 dark:text-slate-100";
@@ -293,6 +295,15 @@ function NotificacaoRow({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant={categoriaToBadgeVariant(categoria)}>{categoriaToLabel(categoria)}</Badge>
+          {isSnoozed && (
+            <Badge variant="gray">
+              Adiado até{" "}
+              {new Date(snoozedUntil as string).toLocaleDateString("pt-CV", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </Badge>
+          )}
           {!lida && (
             <Button
               type="button"
@@ -307,6 +318,7 @@ function NotificacaoRow({
               <Check className="h-4 w-4" />
             </Button>
           )}
+          <NotificacaoSnoozeControl notificacao={notificacao} />
         </div>
       </div>
       <p className="text-sm text-slate-600 dark:text-slate-300">{mensagem}</p>
