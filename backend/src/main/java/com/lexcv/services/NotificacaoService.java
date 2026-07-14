@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -409,5 +410,41 @@ public class NotificacaoService {
     @Transactional
     public void reativarCategoria(UUID tenantId, UUID userId, String categoria) {
         notificacaoPreferenciaRepository.deleteByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria);
+    }
+
+    // NOTF-26: presets fixos de snooze (96-CONTEXT.md, decisão trancada) -- 1/3/7 dias, sem
+    // date picker livre. Qualquer outro valor é rejeitado em snooze() antes de tocar no
+    // repositório.
+    private static final Set<Integer> SNOOZE_PRESETS_DIAS = Set.of(1, 3, 7);
+
+    // NOTF-26: mesma forma find-then-mutate-then-save de marcarLida (linha ~344) -- Optional
+    // vazio (nunca save) quando a linha não pertence a (tenant, destinatario), o que permite ao
+    // NotificacaoController responder 404 sem leak de existência através da fronteira de
+    // destinatário. Ortogonal a `lida`: snooze nunca lê/escreve esse campo, e nunca alarga o
+    // tuplo de uk_notificacao_dedup (a linha adiada continua a ser exatamente a mesma linha).
+    @Transactional
+    public Optional<Notificacao> snooze(UUID tenantId, UUID destinatarioId, UUID id, int dias) {
+        if (!SNOOZE_PRESETS_DIAS.contains(dias)) {
+            throw new IllegalArgumentException("duração de snooze inválida: " + dias);
+        }
+        Notificacao n = notificacaoRepository.findByIdAndTenantIdAndDestinatarioId(id, tenantId, destinatarioId)
+                .orElse(null);
+        if (n == null) {
+            return Optional.empty();
+        }
+        // NOTF-26 (96-CONTEXT.md locked decision): reutiliza isSilenciavelCategoria (NOTF-24) em
+        // vez de um segundo mecanismo de exceção paralelo. (a) Justificação: silenciável ==
+        // adiável coincide HOJE apenas porque PRAZO_VENCIDO é a única categoria não-silenciável,
+        // e é igualmente não-adiável pela mesma razão de segurança jurídica -- um prazo já
+        // vencido nunca pode desaparecer da vista do utilizador, nem por silenciamento nem por
+        // snooze. (b) Risco a prazo: se uma futura categoria for marcada não-silenciável por um
+        // motivo NÃO relacionado com esta semântica, tornar-se-ia silenciosamente também
+        // não-adiável através deste flag partilhado -- se/quando isso acontecer, esta reutilização
+        // deve ser revista e separada num flag `isAdiavelCategoria` dedicado.
+        if (!CategoriaNotificacao.isSilenciavelCategoria(n.getCategoria())) {
+            throw new IllegalArgumentException("categoria não adiável: " + n.getCategoria());
+        }
+        n.setSnoozedUntil(LocalDateTime.now().plusDays(dias));
+        return Optional.of(notificacaoRepository.save(n));
     }
 }
