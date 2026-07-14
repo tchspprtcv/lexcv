@@ -72,6 +72,27 @@ class NotificacaoRepositoryIT {
         return notificacaoRepository.save(notificacao);
     }
 
+    /**
+     * NOTF-26: variante de {@link #persistir} que também define {@code snoozedUntil} no momento
+     * da persistência (via o builder), para os testes de visibilidade de snooze abaixo. Um
+     * {@code snoozedUntil} nulo é equivalente a nunca ter sido adiada.
+     */
+    private Notificacao persistirComSnooze(UUID tenantId, UUID destinatarioId, String categoria, String entidadeId,
+                                            boolean lida, LocalDateTime snoozedUntil) {
+        Notificacao notificacao = Notificacao.builder()
+                .tenantId(tenantId)
+                .destinatarioId(destinatarioId)
+                .categoria(categoria)
+                .entidadeTipo("processo")
+                .entidadeId(entidadeId)
+                .titulo("Título " + entidadeId)
+                .mensagem("Mensagem " + entidadeId)
+                .lida(lida)
+                .snoozedUntil(snoozedUntil)
+                .build();
+        return notificacaoRepository.save(notificacao);
+    }
+
     @Test
     void buscarPorFiltros_escopaPorTenantEDestinatario_nuncaVazaOutroTenantOuOutroDestinatario() {
         UUID tenantA = UUID.randomUUID();
@@ -231,5 +252,51 @@ class NotificacaoRepositoryIT {
         assertEquals(1, primeiraInsercao);
         assertEquals(0, segundaInsercao);
         notificacaoRepository.deleteById(primeiroId);
+    }
+
+    /**
+     * NOTF-26 (Plan 96-02): prova, contra Postgres real, que
+     * {@code countByTenantIdAndDestinatarioIdAndLidaFalse} (fonte do contador/badge do sino)
+     * esconde uma linha adiada para o futuro e continua a contar tanto a linha nunca adiada
+     * (snoozedUntil nulo) como a linha cujo snooze já expirou (snoozedUntil no passado) --
+     * provando simultaneamente o critério 2 (desaparece enquanto adiada) e o critério 3
+     * (reaparece automaticamente uma vez ultrapassado o snoozedUntil, sem qualquer intervenção
+     * do job diário) numa única asserção.
+     */
+    @Test
+    void countByTenantIdAndDestinatarioIdAndLidaFalse_escondeAdiadaNoFuturo_contaNuncaAdiadaEAdiadaJaExpirada() {
+        UUID tenantId = UUID.randomUUID();
+        UUID destinatarioId = UUID.randomUUID();
+        LocalDateTime agora = LocalDateTime.now();
+
+        persistirComSnooze(tenantId, destinatarioId, "FASE_ENTRADA", "id-snooze-nula", false, null);
+        persistirComSnooze(tenantId, destinatarioId, "FASE_ENTRADA", "id-snooze-futuro", false, agora.plusDays(3));
+        persistirComSnooze(tenantId, destinatarioId, "FASE_ENTRADA", "id-snooze-passado", false, agora.minusHours(1));
+
+        long naoLidas = notificacaoRepository.countByTenantIdAndDestinatarioIdAndLidaFalse(tenantId, destinatarioId, agora);
+
+        assertEquals(2, naoLidas);
+    }
+
+    /**
+     * NOTF-26 (Plan 96-02): prova que {@code findByTenantIdAndDestinatarioIdAndLidaFalse} (a
+     * origem de dados de {@code marcarTodasLidas}) também exclui uma linha adiada para o futuro
+     * -- garantindo que "marcar todas como lidas" nunca marca essa linha como lida, o que é o
+     * que permite que ela reapareça como não lida assim que o snooze expirar (critério 3, lado
+     * da escrita).
+     */
+    @Test
+    void findByTenantIdAndDestinatarioIdAndLidaFalse_escondeAdiadaNoFuturo_devolveApenasNuncaAdiada() {
+        UUID tenantId = UUID.randomUUID();
+        UUID destinatarioId = UUID.randomUUID();
+        LocalDateTime agora = LocalDateTime.now();
+
+        Notificacao nuncaAdiada = persistirComSnooze(tenantId, destinatarioId, "FASE_ENTRADA", "id-marcar-nula", false, null);
+        persistirComSnooze(tenantId, destinatarioId, "FASE_ENTRADA", "id-marcar-futuro", false, agora.plusDays(3));
+
+        List<Notificacao> naoLidas = notificacaoRepository.findByTenantIdAndDestinatarioIdAndLidaFalse(tenantId, destinatarioId, agora);
+
+        assertEquals(1, naoLidas.size());
+        assertEquals(nuncaAdiada.getId(), naoLidas.get(0).getId());
     }
 }
