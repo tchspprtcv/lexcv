@@ -39,6 +39,10 @@ services:
 
   caddy:
     restart: unless-stopped
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      CADDY_MINIO_USER: ${CADDY_MINIO_USER}
+      CADDY_MINIO_PASSWORD_HASH: ${CADDY_MINIO_PASSWORD_HASH}
     volumes:
       - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
