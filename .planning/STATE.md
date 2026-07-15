@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: executing
-stopped_at: Phase 101 UI-SPEC approved
-last_updated: "2026-07-15T21:10:09.426Z"
-last_activity: 2026-07-15 -- Phase 101 planning complete
+stopped_at: Completed 101-02-PLAN.md
+last_updated: "2026-07-15T21:44:30.943Z"
+last_activity: 2026-07-15
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 ## Current Position
 
 Phase: 101 of 110 (Fundação — CLI Init e Design Tokens)
-Plan: — (not yet planned)
+Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-07-15 -- Phase 101 planning complete
+Last activity: 2026-07-15
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Last activity: 2026-07-15 -- Phase 101 planning complete
 | 95 | 2 | - | - |
 | 96 | 4 | - | - |
 | 97 | 4 | ~128 min | ~32 min |
+| 101 P02 | 1 | 20min | 20min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - (v2.13 roadmap) Foundation (Phase 101) and Design System Reconciliation (Phase 102) are a hard sequential gate before any module phase — the research's strongest ordering constraint, since a half-migrated visually-inconsistent app is itself a flagged UX pitfall, not just a nice-to-have sequencing preference.
 - (v2.13 roadmap) DTB-02 (DataTable adoption on Clientes/Processos/Pareceres/Financeiro/Documentos lists) is owned entirely by Phase 104, not split or duplicated into Phase 105 — Phase 105's CLP-01/02 only cover the ficha/detail pages (different files from the list pages DTB-02 touches), so the two phases don't collide despite both touching "Clientes"/"Processos" module surfaces.
 - (v2.13 roadmap) Phases 106–109 (Agenda, Documentos+Financeiro, Pareceres, Notificações/Settings/Setup) and Phase 110 (`webpage/`) are marked explicitly parallelizable — each only requires Phase 102 (or Phase 101 for 110) to be done, zero mutual file overlap or dependency between them; their numeric order reflects descending primitive-novelty/risk per research, not a blocking chain.
+- [Phase 101]: (v2.13, Phase 101 Plan 02) shadcn CLI 4.13.0 requires an explicit -p <preset> flag (nova|vega|maia|lyra|mira|luma|sera|rhea) alongside -b <base> for non-interactive init; -y alone does not skip the interactive preset picker. Used -p vega (resolves to style radix-vega, matching 101-UI-SPEC.md's documented new-york-legacy resolution).
+- [Phase 101]: (v2.13, Phase 101 Plan 02) Human visual sign-off caught a CSS cascade tie-break bug: shadcn init's token merge left .dark declared BEFORE :root in globals.css, so same-specificity source-order tie-break silently favored the light theme's values whenever .dark was active. Fixed by reordering (:root first); not visible today since no component yet consumes bg-background/bg-card/bg-popover (Phase 102), but would have broken dark mode across every reconciled component. Future shadcn init/add runs on this repo must verify :root precedes .dark before sign-off.
 
 ### Pending Todos
 
@@ -155,9 +158,9 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-15T20:14:54.022Z
-Stopped at: Phase 101 UI-SPEC approved
-Resume file: .planning/phases/LEXCV-101-funda-o-cli-init-e-design-tokens/101-UI-SPEC.md
+Last session: 2026-07-15T21:44:30.908Z
+Stopped at: Completed 101-02-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

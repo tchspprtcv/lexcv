@@ -9,7 +9,7 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Fundação — CLI e Design Tokens
 
-- [ ] **FND-01**: `web/` tem `components.json` formalmente inicializado via `shadcn init -b radix` (mantém paridade de composição `asChild` com os 9 pacotes `@radix-ui/react-*` já em uso)
+- [x] **FND-01**: `web/` tem `components.json` formalmente inicializado via `shadcn init -b radix` (mantém paridade de composição `asChild` com os 9 pacotes `@radix-ui/react-*` já em uso)
 - [ ] **FND-02**: `webpage/` tem `components.json` inicializado com as respostas copiadas manualmente do `web/` (sem re-executar o wizard independentemente, evitando divergência entre as duas apps — não são workspace members reais)
 - [ ] **FND-03**: `globals.css` de ambas as apps tem o conjunto completo de tokens semânticos do shadcn (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) mesclado aditivamente, com `--background`/`--foreground` restaurados aos valores hex já validados e `--radius`/`--primary` definidos deliberadamente para a identidade institucional (não deixados no default do CLI)
 - [ ] **FND-04**: Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) adicionados via CLI em `web/`
@@ -102,7 +102,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 101 | Pending |
+| FND-01 | Phase 101 | Complete |
 | FND-02 | Phase 101 | Pending |
 | FND-03 | Phase 101 | Pending |
 | FND-04 | Phase 101 | Pending |

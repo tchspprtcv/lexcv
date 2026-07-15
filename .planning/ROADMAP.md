@@ -299,8 +299,8 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   4. Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) existem em `web/src/components/ui/` e importam/compilam sem erro; `react-day-picker` está fixado em `9.14.0` (não `@latest`) logo após `add calendar`; existe uma decisão explícita e aplicada de identidade de pacote Radix (`shadcn migrate radix` corrido, ou estado de ponte documentado), sem estado dual silencioso entre componentes antigos e novos.
   5. `tailwindcss-animate` foi removido e substituído por `tw-animate-css`; `<Toaster />` do `sonner` está montado na raiz de `web/` (e `webpage/` se aplicável), `toast.tsx`/`toaster.tsx`/`@radix-ui/react-toast` foram removidos por completo, e as chamadas `toast.success()`/`toast.error()` já existentes continuam a funcionar sem alteração de call-site.
 **Plans**: 5 plans (4 waves)
-- [ ] 101-01-PLAN.md — Package legitimacy gate (blocking-human) for all net-new phase packages
-- [ ] 101-02-PLAN.md — web/: shadcn init -b radix, semantic tokens in globals.css, tw-animate-css swap
+- [x] 101-01-PLAN.md — Package legitimacy gate (blocking-human) for all net-new phase packages
+- [x] 101-02-PLAN.md — web/: shadcn init -b radix, semantic tokens in globals.css, tw-animate-css swap
 - [ ] 101-03-PLAN.md — web/: add the ~16 missing primitives + pin react-day-picker@9.14.0
 - [ ] 101-04-PLAN.md — webpage/: mirror components.json + token block + tw-animate-css (FND-08 n/a)
 - [ ] 101-05-PLAN.md — web/: Sonner adoption (contract preserved) + shadcn migrate radix
@@ -471,7 +471,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
-| 101. Fundação — CLI Init e Design Tokens | v2.13 | 0/5 | Not started | - |
+| 101. Fundação — CLI Init e Design Tokens | v2.13 | 2/5 | In Progress|  |
 | 102. Reconciliação do Design System | v2.13 | 0/TBD | Not started | - |
 | 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
