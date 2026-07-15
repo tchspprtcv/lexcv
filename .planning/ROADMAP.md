@@ -298,7 +298,12 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   3. `globals.css` de ambas as apps contém o conjunto completo de tokens semânticos shadcn (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) mesclados aditivamente — confirmado que existe exatamente um bloco `:root`/`.dark` (não dois, silenciosamente sobrepostos) — com `--background`/`--foreground` restaurados aos valores hex já validados e `--radius`/`--primary` definidos deliberadamente para a identidade institucional, nunca deixados no default do CLI.
   4. Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) existem em `web/src/components/ui/` e importam/compilam sem erro; `react-day-picker` está fixado em `9.14.0` (não `@latest`) logo após `add calendar`; existe uma decisão explícita e aplicada de identidade de pacote Radix (`shadcn migrate radix` corrido, ou estado de ponte documentado), sem estado dual silencioso entre componentes antigos e novos.
   5. `tailwindcss-animate` foi removido e substituído por `tw-animate-css`; `<Toaster />` do `sonner` está montado na raiz de `web/` (e `webpage/` se aplicável), `toast.tsx`/`toaster.tsx`/`@radix-ui/react-toast` foram removidos por completo, e as chamadas `toast.success()`/`toast.error()` já existentes continuam a funcionar sem alteração de call-site.
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+- [ ] 101-01-PLAN.md — Package legitimacy gate (blocking-human) for all net-new phase packages
+- [ ] 101-02-PLAN.md — web/: shadcn init -b radix, semantic tokens in globals.css, tw-animate-css swap
+- [ ] 101-03-PLAN.md — web/: add the ~16 missing primitives + pin react-day-picker@9.14.0
+- [ ] 101-04-PLAN.md — webpage/: mirror components.json + token block + tw-animate-css (FND-08 n/a)
+- [ ] 101-05-PLAN.md — web/: Sonner adoption (contract preserved) + shadcn migrate radix
 
 *Nota para planeamento:* nomes de flags/presets da CLI shadcn estão em mudança ativa (confirmada pelo menos uma renomeação nos últimos 8 meses) — re-verificar com `npx shadcn@latest init --help`/`--dry-run` no momento real de execução, em vez de confiar cegamente na sintaxe exata desta pesquisa.
 
@@ -466,7 +471,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
-| 101. Fundação — CLI Init e Design Tokens | v2.13 | 0/TBD | Not started | - |
+| 101. Fundação — CLI Init e Design Tokens | v2.13 | 0/5 | Not started | - |
 | 102. Reconciliação do Design System | v2.13 | 0/TBD | Not started | - |
 | 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
@@ -477,4 +482,4 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Roadmap v2.13 (Refactor UI/UX shadcn/ui) criado — 10 fases (101–110), 33/33 requisitos mapeados, 0 órfãos. Run `/gsd:plan-phase 101` to start planning Phase 101 (Fundação — CLI Init e Design Tokens).
+**Next:** Phase 101 (Fundação — CLI Init e Design Tokens) planeada — 5 planos em 4 waves (101-01 gate → 101-02 → {101-03, 101-04} → 101-05), FND-01..FND-08 cobertos. Run `/gsd:execute-phase 101` to build.
