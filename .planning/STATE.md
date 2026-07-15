@@ -4,8 +4,8 @@ milestone: v2.12
 milestone_name: Landing Page
 status: executing
 stopped_at: "v2.12 roadmap created — 3 phases (98–100) derived from 16/16 requirements, ROADMAP.md/REQUIREMENTS.md written and cross-checked for 100% coverage. Phases 98/99 marked mutually parallelizable; Phase 100 depends on both. No phase planning (`/gsd:plan-phase`) has run yet."
-last_updated: "2026-07-15T14:11:11.211Z"
-last_activity: 2026-07-15 -- Phase 100 planning complete
+last_updated: "2026-07-15T14:11:42.818Z"
+last_activity: 2026-07-15 -- Phase 100 execution started
 progress:
   total_phases: 3
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 99 — webpage-nova-app-next-js-de-landing
+**Current focus:** Phase 100 — infraestrutura-routing-e-deployment
 
 ## Current Position
 
-Phase: 99 (webpage-nova-app-next-js-de-landing) — EXECUTING
+Phase: 100 (infraestrutura-routing-e-deployment) — EXECUTING
 Plan: 1 of 4
-Status: Ready to execute
-Last activity: 2026-07-15 -- Phase 100 planning complete
+Status: Executing Phase 100
+Last activity: 2026-07-15 -- Phase 100 execution started
 
 ## Performance Metrics
 
