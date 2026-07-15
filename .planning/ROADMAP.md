@@ -15,6 +15,7 @@
 - ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
 - ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
 - ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
+- 🚧 **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (roadmap criado, planeamento pendente)
 
 ## Phases
 
@@ -280,6 +281,128 @@ See archive: [milestones/v2.12-ROADMAP.md](milestones/v2.12-ROADMAP.md) · [mile
 
 </details>
 
+### 🚧 v2.13 Refactor UI/UX (shadcn/ui) (Phases 101–110) — Em Curso
+
+**Milestone Goal:** Auditar e refatorar visualmente toda a plataforma (app interna `web/` + landing `webpage/`) seguindo estritamente os padrões oficiais do shadcn/ui, preservando a identidade institucional já validada (sidebar/topbar/cores alinhadas ao Figma desde a v1.1), com fundação de design system formalizada primeiro.
+
+A pesquisa de arquitetura desta milestone confirma que este não é um adoption greenfield mas um retrofit sobre 15 primitivos hand-rolled (Radix por baixo, nunca passados pela CLI) acumulados desde a v1.1, com drift não documentado (variante `gray` do badge, literais `neutral-*`/`slate-*` em vez de tokens semânticos). A ordenação das 10 fases segue rigorosamente a recomendação da pesquisa: Fundação (101) e Reconciliação (102) têm de terminar ambas antes de qualquer fase de módulo — o estado "app visivelmente meio-migrada" é o próprio pitfall identificado a evitar; o padrão DataTable (104) é construído uma única vez, como fase própria, em vez de ser reinventado 5 vezes por módulo; Clientes e Processos (105) são combinados numa só fase porque partilham deliberadamente o mesmo padrão de botões-toggle e a sua migração para `Tabs` tem de ser entregue em conjunto, nunca isoladamente, sob pena de uma janela de inconsistência visível; as restantes fases de módulo (106–109) e o refinamento da `webpage/` (110) não têm dependências mútuas entre si — todas dependem apenas de 101/102 estarem concluídas — pelo que podem ser executadas em paralelo, com a ordem 106→109 refletindo apenas risco/novidade de primitivos decrescente, não uma cadeia de bloqueio real.
+
+#### Phase 101: Fundação — CLI Init e Design Tokens
+
+**Goal**: `web/` e `webpage/` têm uma fundação de design system corretamente inicializada (scaffolded pela CLI oficial, base Radix, tokenizada, com todos os primitivos que as fases seguintes vão precisar) sem que nenhuma página visível mude ainda.
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: FND-01, FND-02, FND-03, FND-04, FND-05, FND-06, FND-07, FND-08
+**Success Criteria** (what must be TRUE):
+  1. `web/components.json` existe, gerado por `shadcn init -b radix` (nunca o default Base UI introduzido este mês), com aliases/estilo consistentes, e os 9 pacotes `@radix-ui/react-*`/`radix-ui` já em uso continuam a compor via `asChild` sem quebrar nenhum ficheiro existente.
+  2. `webpage/components.json` existe com as mesmas respostas de configuração copiadas manualmente do `web/` — nunca gerado por um `init` independente nessa app, para as duas não divergirem sem um workspace partilhado a mantê-las sincronizadas.
+  3. `globals.css` de ambas as apps contém o conjunto completo de tokens semânticos shadcn (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) mesclados aditivamente — confirmado que existe exatamente um bloco `:root`/`.dark` (não dois, silenciosamente sobrepostos) — com `--background`/`--foreground` restaurados aos valores hex já validados e `--radius`/`--primary` definidos deliberadamente para a identidade institucional, nunca deixados no default do CLI.
+  4. Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) existem em `web/src/components/ui/` e importam/compilam sem erro; `react-day-picker` está fixado em `9.14.0` (não `@latest`) logo após `add calendar`; existe uma decisão explícita e aplicada de identidade de pacote Radix (`shadcn migrate radix` corrido, ou estado de ponte documentado), sem estado dual silencioso entre componentes antigos e novos.
+  5. `tailwindcss-animate` foi removido e substituído por `tw-animate-css`; `<Toaster />` do `sonner` está montado na raiz de `web/` (e `webpage/` se aplicável), `toast.tsx`/`toaster.tsx`/`@radix-ui/react-toast` foram removidos por completo, e as chamadas `toast.success()`/`toast.error()` já existentes continuam a funcionar sem alteração de call-site.
+**Plans**: TBD
+
+*Nota para planeamento:* nomes de flags/presets da CLI shadcn estão em mudança ativa (confirmada pelo menos uma renomeação nos últimos 8 meses) — re-verificar com `npx shadcn@latest init --help`/`--dry-run` no momento real de execução, em vez de confiar cegamente na sintaxe exata desta pesquisa.
+
+#### Phase 102: Reconciliação do Design System
+
+**Goal**: Os 14 componentes hand-rolled existentes estão reconciliados com o registo oficial sem perder nenhuma variante/prop customizada, e nenhum dos 38 ficheiros consumidores existentes quebra.
+**Depends on**: Phase 101
+**Requirements**: DSR-01, DSR-02, DSR-03
+**Success Criteria** (what must be TRUE):
+  1. Cada um dos 14 componentes (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`) foi reconciliado individualmente via `add <component> --diff` — nunca overwrite cego de uma vez só — com as variantes/props customizadas preservadas (ex.: variante `gray` do badge, tratamento de `showCloseButton` do dialog).
+  2. `pnpm build`/typecheck de `web/` passa sem erros novos, confirmando que as 93 ocorrências de import destes 14 componentes (38 ficheiros) continuam a compilar e a passar typecheck depois da reconciliação.
+  3. Botões icon-only em toda a app (ícones da sidebar colapsada, ações de linha icon-only) mostram um `Tooltip` ao passar o rato/foco, com um único `TooltipProvider` montado na raiz da app.
+**Plans**: TBD
+
+#### Phase 103: Módulo Dashboard
+
+**Goal**: Os estados de loading e vazio do Dashboard usam os primitivos oficiais `Skeleton`/`Empty` em vez de texto ad hoc — o módulo com menor necessidade de primitivos novos, servindo para validar visualmente a nova camada de tokens antes dos módulos mais profundos a adotarem.
+**Depends on**: Phase 102
+**Requirements**: DASH-01, DASH-02
+**Success Criteria** (what must be TRUE):
+  1. Os KPI cards e a secção "Atividade Recente" do Dashboard mostram placeholders `Skeleton` enquanto os dados carregam, substituindo por completo o texto "A carregar...".
+  2. Qualquer secção do Dashboard sem dados (ex.: sem atividade recente) mostra o componente `Empty` em vez de uma mensagem ad hoc.
+**Plans**: TBD
+
+#### Phase 104: Padrão DataTable Partilhado
+
+**Goal**: Existe um único padrão DataTable reutilizável, construído sobre o `Table` já reconciliado, adotado pelas 5 listas que precisam dele sem duplicar os filtros já servidos pelo backend via TanStack Query.
+**Depends on**: Phase 102 (paralelizável com a Phase 103 — ambas dependem apenas da reconciliação do `Table`, sem dependência mútua entre si)
+**Requirements**: DTB-01, DTB-02, DTB-03
+**Success Criteria** (what must be TRUE):
+  1. `@tanstack/react-table` está adicionado como dependência e existe um padrão partilhado único (`columns.tsx` + `data-table.tsx` + toolbar de filtro + `DataTablePagination`/`DataTableViewOptions`) construído uma vez sobre o `Table` existente, nunca reinventado por módulo.
+  2. As listas desktop (ramo `hidden md:block`) de Clientes, Processos, Pareceres, Financeiro e Documentos usam o padrão DataTable partilhado (ordenação por coluna, toolbar de filtro), continuando a usar exatamente os mesmos filtros server-side já servidos via TanStack Query — sem duplicar filtragem client-side.
+  3. `/notificacoes` e qualquer outra lista paginada no servidor usa o componente oficial `Pagination` em vez de um pager customizado.
+**Plans**: TBD
+
+*Nota para planeamento:* é uma receita de composição, não um componente instalável — integrar com os filtros TanStack Query já existentes (sem duplicar) precisa de verificação no momento da implementação, por cada ecrã, dado o shape de filtro real de cada um.
+
+#### Phase 105: Módulos Clientes + Processos (combinados)
+
+**Goal**: A Ficha de Cliente e a Ficha de Processo usam `Tabs` reais e acessíveis em vez de botões-toggle manuais, e os seus formulários/listagens usam `Select`/`Avatar`/`Breadcrumb` oficiais — entregues em conjunto, nunca isoladamente, para nunca deixar as duas fichas visivelmente inconsistentes entre si.
+**Depends on**: Phase 101, Phase 104 (precisa dos primitivos Tabs/Select/Avatar/Breadcrumb da Fundação; sequenciada depois do padrão DataTable por recomendação da pesquisa — não por dependência de ficheiros, já que a migração de listas [DTB-02] e a migração das fichas [CLP-01/02] tocam páginas distintas — apenas para evitar ter a lista e a ficha do mesmo módulo em fluxo de migração simultaneamente)
+**Requirements**: CLP-01, CLP-02, CLP-03, CLP-04, CLP-05
+**Success Criteria** (what must be TRUE):
+  1. Os 7 separadores da Ficha de Cliente estão implementados com `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` (semântica real `role="tablist"`/`aria-selected`, fechando o gap de acessibilidade do padrão de botões-toggle atual), preservando a contagem de separadores condicional por RBAC e o `overflow-x-auto` em mobile.
+  2. A Ficha de Processo (Partes/Fases/Decisões/Factos/Testemunhas/Documentos) usa o mesmo padrão `Tabs`, entregue na mesma fase que a Ficha de Cliente — nunca isoladamente.
+  3. Todos os `<select className={selectClassName}>` nativos em formulários de Clientes/Processos foram substituídos por `NativeSelect`/`Select`.
+  4. `Avatar` é usado para representar advogados/administrativos/testemunhas em listagens e pickers de ambos os módulos.
+  5. Os cabeçalhos das fichas de Cliente e Processo usam `Breadcrumb` em vez do `<div>`+`Link`+"/" atual.
+**Plans**: TBD
+
+*Nota para planeamento:* o comportamento de overflow dos separadores condicionados por RBAC precisa de verificação funcional real contra as 4 roles (ADMIN/ADVOGADO/TECNICO/ASSISTENTE) em larguras de mobile reais — não é uma tarefa de "consultar a documentação", é uma tarefa de "testar contra a matriz RBAC real desta app".
+
+#### Phase 106: Módulo Agenda
+
+**Goal**: Os inputs de data dos formulários de Agenda usam o `Calendar` oficial e os filtros usam `Select`, sem alterar a vista de calendário mensal existente.
+**Depends on**: Phase 102 (só precisa dos primitivos Calendar/Select da Fundação e da reconciliação de base; independente do padrão DataTable e da fase Clientes+Processos — paralelizável com as Phases 103–105 e 107–109 assim que a Phase 102 estiver concluída)
+**Requirements**: AGD-36, AGD-37
+**Success Criteria** (what must be TRUE):
+  1. Os inputs de data dos formulários de criar/editar prazo usam o `Calendar` (shadcn/react-day-picker), sem alterar a vista de calendário mensal já existente.
+  2. Os filtros de categoria/status da Agenda usam `Select`.
+**Plans**: TBD
+
+#### Phase 107: Módulos Documentos + Financeiro
+
+**Goal**: O upload de documentos usa `Progress` oficial e os formulários de tipo/honorário/pagamento usam `Select`.
+**Depends on**: Phase 102 (só precisa dos primitivos Progress/Select da Fundação; paralelizável com as restantes fases de módulo assim que a Phase 102 estiver concluída)
+**Requirements**: DOF-01, DOF-02
+**Success Criteria** (what must be TRUE):
+  1. O upload de documentos usa o componente oficial `Progress` em vez da UI de progresso customizada existente.
+  2. Os formulários de tipo de documento/honorário/pagamento usam `Select`.
+**Plans**: TBD
+
+#### Phase 108: Módulo Pareceres
+
+**Goal**: Os formulários de Pareceres usam `Select`, a timeline usa `Tooltip` e o histórico de versionamento colapsa versões antigas via `Accordion`.
+**Depends on**: Phase 102 (só precisa dos primitivos Select/Tooltip/Accordion da Fundação; paralelizável com as restantes fases de módulo assim que a Phase 102 estiver concluída)
+**Requirements**: PARC-18, PARC-19, PARC-20
+**Success Criteria** (what must be TRUE):
+  1. Os campos de formulário de Pareceres usam `Select`.
+  2. Os eventos da timeline de Pareceres mostram um `Tooltip`.
+  3. O histórico de versionamento usa `Accordion` para colapsar versões antigas.
+**Plans**: TBD
+
+#### Phase 109: Notificações / Settings / Setup Wizard
+
+**Goal**: O novo menu de utilizador da topbar, o contador do sino e o wizard de setup usam primitivos oficiais, sem tocar no `Popover` do sino que já está correto.
+**Depends on**: Phase 102 (só precisa dos primitivos DropdownMenu/Badge/Progress da Fundação; menor superfície de todas as fases de módulo, mantida por último na narrativa por ser a mais aditiva/segura — paralelizável com as restantes fases de módulo assim que a Phase 102 estiver concluída)
+**Requirements**: NTF-28, NTF-29, NTF-30
+**Success Criteria** (what must be TRUE):
+  1. O novo menu de utilizador na topbar usa `DropdownMenu` (o `Popover` do sino de notificações mantém-se inalterado — nunca convertido para `DropdownMenu`, um anti-padrão de acessibilidade conhecido para listas com múltiplos controlos).
+  2. O contador de não-lidas do sino usa o componente oficial `Badge` em vez do `<span>` manual.
+  3. O wizard `/setup` mostra um indicador de progresso linear baseado em `Progress` (sem Stepper de terceiros).
+**Plans**: TBD
+
+#### Phase 110: Refinamento da Landing (webpage/)
+
+**Goal**: A landing pública tem navegação mobile funcional e as secções Hero/Contacto seguem a composição `Card`/`Badge` já idiomática do `TrustSection`.
+**Depends on**: Phase 101 (o `components.json` da `webpage/` é copiado manualmente durante a Fundação; zero dependência de qualquer fase de módulo do `web/` — pode correr em paralelo com qualquer uma das Phases 103–109 assim que a Phase 101 estiver concluída)
+**Requirements**: LDG-17, LDG-18
+**Success Criteria** (what must be TRUE):
+  1. O `SiteHeader` mostra navegação mobile funcional via o `Sheet` reutilizado (atualmente zero navegação em mobile — um gap funcional real, não cosmético).
+  2. As secções Hero e Contacto estão recompostas com `Card`/`Badge`, replicando o padrão já idiomático do `TrustSection`.
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -343,5 +466,15 @@ See archive: [milestones/v2.12-ROADMAP.md](milestones/v2.12-ROADMAP.md) · [mile
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
+| 101. Fundação — CLI Init e Design Tokens | v2.13 | 0/TBD | Not started | - |
+| 102. Reconciliação do Design System | v2.13 | 0/TBD | Not started | - |
+| 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
+| 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
+| 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
+| 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
+| 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
+| 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
+| 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
+| 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Milestone v2.12 (Landing Page) shipped 2026-07-15 — all 3 phases complete, 16/16 requirements satisfied. Run `/gsd:new-milestone` to start the next milestone.
+**Next:** Roadmap v2.13 (Refactor UI/UX shadcn/ui) criado — 10 fases (101–110), 33/33 requisitos mapeados, 0 órfãos. Run `/gsd:plan-phase 101` to start planning Phase 101 (Fundação — CLI Init e Design Tokens).

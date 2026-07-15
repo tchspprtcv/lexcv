@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: planning
-last_updated: "2026-07-15T18:29:46.983Z"
+status: roadmapped
+last_updated: "2026-07-15T19:15:00.000Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 0
+  total_phases: 10
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.12 shipped — awaiting next milestone
+**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) — ROADMAP.md criado (10 fases, 101–110), a aguardar planeamento da Phase 101
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-15 — Milestone v2.13 started
+Phase: 101 of 110 (Fundação — CLI Init e Design Tokens)
+Plan: — (not yet planned)
+Status: Roadmap created — ready to plan Phase 101
+Last activity: 2026-07-15 — ROADMAP.md criado com 10 fases (101–110) a partir de 33 requisitos v1; REQUIREMENTS.md traceability atualizado (33/33 mapeados); STATE.md inicializado para v2.13
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Last activity: 2026-07-15 — Milestone v2.13 started
 - v2.10 roadmap created 2026-07-08: 5 phases (85–89) derived from 16 requirements (NOTF-08 to NOTF-23), continuing phase numbering from v2.9 (last phase: 84). See PROJECT.md Key Decisions / prior STATE.md history for full v2.9/v2.10 rationale (trimmed here per size constraint).
 - v2.11 roadmap created 2026-07-12: 8 phases (90–97) derived from 15 requirements (SAST-01, TEST-01/02/03, AGD-34/35, NOTF-24/25/26/27, AUD-01 to AUD-05), continuing phase numbering from v2.10 (last phase: 89). Structure follows research's file-collision analysis: (90) SpotBugs/SAST commit+verify — already ~90% done uncommitted in working tree, zero dependency, highest risk of being lost if not landed first; (91) Testcontainers integration-test infra (native query + concurrency lock risks) — independent track, no file overlap with anything else; (92) Agenda↔RiscoPrazoService consolidation — frontend-mostly, independent, closes the "5th divergent prazo crítico implementation" debt explicitly deferred at v2.10 close. Phases 90/91/92 are mutually parallelizable (zero file overlap). Phases 93–96 are a hard sequential chain — all collide on `NotificacaoService.java` and its test file regardless of logical independence: (93) NOTF-24 mute preferences goes first (smallest, most self-contained insertion at the `criar()` choke point, so team fan-out later inherits the mute gate for free); (94) NOTF-27 dedup/ADMIN-collision fix — a pre-existing bug from Phase 88 (v2.10) that NOTF-25 would turn from latent into near-certain, so it must land before the fan-out widens; (95) NOTF-25 team fan-out (depends on 93+94); (96) NOTF-26 snooze, most additive, last in the chain. (97) Cross-cutting milestone audit (AUD-01 to AUD-05) runs last, depending on all 7 other phases, matching the v2.7/v2.9/v2.10 established retrospective pattern of auditing at milestone close. 100% requirement coverage (15/15), no orphans.
 - v2.12 roadmap created 2026-07-15: 3 phases (98–100) derived from 16 requirements (LP-01 to LP-16), continuing phase numbering from v2.11 (last phase: 97). Structure follows research (`.planning/research/SUMMARY.md`)'s explicit build-order recommendation almost verbatim: (98) Backend Public Branding Endpoint (LP-01, LP-02) — fully isolated, zero dependency on `webpage/`, curl-testable against the existing dev backend; (99) `webpage/` Landing App (LP-03 to LP-12) — the largest phase, covers nearly the full v1 feature list, buildable in parallel using a hardcoded branding stub since the only real blocking dependency (`/api/v1/setup/status`) already exists today; (100) Infra Wiring & Deployment (LP-13 to LP-16) — deliberately last, depends on both 98 and 99 producing real artifacts (an actual endpoint response shape, a buildable `webpage` Docker image), and touches the exact area (`docker-compose.hostinger.yml`'s inline Caddy heredoc, plus `Caddyfile`/`Caddyfile.prod`) that produced 4 consecutive production bug-fix commits (`67e2120`, `534fa92`, `ba67f4e`, `1482f47`) immediately preceding this research — its own success criteria require a full `docker compose up` verification, not isolated `pnpm dev`/`mvn test` checks. Phases 98 and 99 are explicitly marked mutually parallelizable in ROADMAP.md (zero mutual dependency); Phase 100 depends on both. 100% requirement coverage (16/16), no orphans.
+- v2.13 roadmap created 2026-07-15: 10 phases (101–110) derived from 33 requirements (FND-01 to FND-08, DSR-01 to DSR-03, DASH-01/02, DTB-01 to DTB-03, CLP-01 to CLP-05, AGD-36/37, DOF-01/02, PARC-18 to PARC-20, NTF-28 to NTF-30, LDG-17/18), continuing phase numbering from v2.12 (last phase: 100). Structure follows research (`.planning/research/SUMMARY.md`)'s 10-phase recommendation closely, adapted to the exact requirement IDs: (101) Foundation — CLI init (`-b radix`), design tokens, ~15 missing primitives, dependency swaps (Sonner/tw-animate-css/react-day-picker pin) — gates everything else, first phase of the milestone; (102) Design System Reconciliation — the 14 pre-existing hand-rolled components diffed/reconciled component-by-component, must complete before any module phase to avoid a visibly half-migrated app; (103) Dashboard — lowest primitive need, validates the new token layer at low risk; (104) Shared DataTable Pattern — built once as its own phase (never per-module) and reused by Clientes/Processos/Pareceres/Financeiro/Documentos lists (DTB-02 lives here, not duplicated in Phase 105); (105) Clientes + Processos combined — both fichas share the same toggle-button-to-Tabs migration by deliberate prior consistency decision, shipped together to avoid a visible inconsistency window; (106–109) Agenda / Documentos+Financeiro / Pareceres / Notificações-Settings-Setup — each only depends on Phase 102, explicitly mutually parallelizable, ordered narratively by descending primitive novelty/risk, not by a real blocking chain; (110) `webpage/` Landing Refinement — depends only on Phase 101 (its own hand-copied `components.json`), zero dependency on any `web/` module phase, explicitly parallelizable with any of 103–109. 100% requirement coverage (33/33), no orphans.
 
 ### Decisions
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - (v2.12 roadmap) `webpage/`'s own setup-status gate (Phase 99) must contain zero authentication branch — never port `web/`'s `useMe()`/auth-redirect logic, which would defeat the entire purpose of a public landing page by auto-redirecting every anonymous visitor to `/login`.
 - (v2.12 roadmap) The "Entrar" CTA and any other webpage→web cross-zone link must be a plain `<a>` tag, never `next/link`/`<Link>` — `/login` doesn't exist in `webpage/`'s own route table, so client-side navigation would 404; this only surfaces once both apps run together behind Caddy (Phase 100), never in isolated `pnpm dev` (Phase 99).
 - (v2.12 roadmap) Phase 100's verification must include a full `docker compose up` smoke test, not just isolated `pnpm dev`/`mvn test` checks — this exact area (`docker-compose.hostinger.yml`'s inline Caddy config) produced 4 consecutive production bug-fix commits immediately preceding this milestone's research.
+- (v2.13 roadmap) Foundation (Phase 101) and Design System Reconciliation (Phase 102) are a hard sequential gate before any module phase — the research's strongest ordering constraint, since a half-migrated visually-inconsistent app is itself a flagged UX pitfall, not just a nice-to-have sequencing preference.
+- (v2.13 roadmap) DTB-02 (DataTable adoption on Clientes/Processos/Pareceres/Financeiro/Documentos lists) is owned entirely by Phase 104, not split or duplicated into Phase 105 — Phase 105's CLP-01/02 only cover the ficha/detail pages (different files from the list pages DTB-02 touches), so the two phases don't collide despite both touching "Clientes"/"Processos" module surfaces.
+- (v2.13 roadmap) Phases 106–109 (Agenda, Documentos+Financeiro, Pareceres, Notificações/Settings/Setup) and Phase 110 (`webpage/`) are marked explicitly parallelizable — each only requires Phase 102 (or Phase 101 for 110) to be done, zero mutual file overlap or dependency between them; their numeric order reflects descending primitive-novelty/risk per research, not a blocking chain.
 
 ### Pending Todos
 
@@ -150,11 +154,11 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-15T18:05:40.633Z
-Stopped at: v2.12 (Landing Page) shipped — all 3 phases (98, 99, 100) planned, executed, code-reviewed, and verified; milestone audit passed (tech_debt, 0 blockers, 16/16 requirements); milestone archived to `.planning/milestones/v2.12-*`. Two real runtime bugs (relative-URL fetch disabling the `/setup` gate; missing `@Transactional` on a `@Lob` read) and one pre-existing prod-deploy bug (Caddy env passthrough in `docker-compose.prod.yml`) were found and fixed live during execution, not deferred. One evidence-backed deferral remains (Hostinger MinIO console routing — both candidate fixes proven to reintroduce already-fixed bugs this session).
+Last session: 2026-07-15T19:15:00.000Z
+Stopped at: v2.13 (Refactor UI/UX shadcn/ui) ROADMAP.md created — 10 phases (101–110) derived from 33 v1 requirements (FND, DSR, DASH, DTB, CLP, AGD, DOF, PARC, NTF, LDG), 100% coverage, no orphans. Foundation (101) and Reconciliation (102) sequenced first as a hard gate before any module phase; DataTable (104) isolated as its own phase; Clientes+Processos (105) combined by deliberate Tabs-consistency decision; Agenda/Documentos+Financeiro/Pareceres/Notificações-Settings-Setup (106–109) and `webpage/` (110) marked mutually parallelizable once Phase 102 (or 101 for 110) is done. No phase has been planned or executed yet.
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
-- Optional follow-up (non-blocking, not part of v2.12): redesign MinIO credential delivery for the Hostinger Caddy config, or accept SSH-tunnel-only console access as the permanent posture (see v2.12-MILESTONE-AUDIT.md Tech Debt table)
+- Review and approve ROADMAP.md (10 phases, 101–110) and the updated REQUIREMENTS.md traceability table
+- Start planning with /gsd:plan-phase 101 (Fundação — CLI Init e Design Tokens; flagged for research-phase given recent churn in shadcn CLI flag/preset names — re-verify with `npx shadcn@latest init --help`/`--dry-run` at execution time)

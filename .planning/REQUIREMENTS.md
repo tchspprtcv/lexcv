@@ -102,22 +102,59 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 a FND-08 | TBD | Pending |
-| DSR-01 a DSR-03 | TBD | Pending |
-| DASH-01, DASH-02 | TBD | Pending |
-| DTB-01 a DTB-03 | TBD | Pending |
-| CLP-01 a CLP-05 | TBD | Pending |
-| AGD-36, AGD-37 | TBD | Pending |
-| DOF-01, DOF-02 | TBD | Pending |
-| PARC-18 a PARC-20 | TBD | Pending |
-| NTF-28 a NTF-30 | TBD | Pending |
-| LDG-17, LDG-18 | TBD | Pending |
+| FND-01 | Phase 101 | Pending |
+| FND-02 | Phase 101 | Pending |
+| FND-03 | Phase 101 | Pending |
+| FND-04 | Phase 101 | Pending |
+| FND-05 | Phase 101 | Pending |
+| FND-06 | Phase 101 | Pending |
+| FND-07 | Phase 101 | Pending |
+| FND-08 | Phase 101 | Pending |
+| DSR-01 | Phase 102 | Pending |
+| DSR-02 | Phase 102 | Pending |
+| DSR-03 | Phase 102 | Pending |
+| DASH-01 | Phase 103 | Pending |
+| DASH-02 | Phase 103 | Pending |
+| DTB-01 | Phase 104 | Pending |
+| DTB-02 | Phase 104 | Pending |
+| DTB-03 | Phase 104 | Pending |
+| CLP-01 | Phase 105 | Pending |
+| CLP-02 | Phase 105 | Pending |
+| CLP-03 | Phase 105 | Pending |
+| CLP-04 | Phase 105 | Pending |
+| CLP-05 | Phase 105 | Pending |
+| AGD-36 | Phase 106 | Pending |
+| AGD-37 | Phase 106 | Pending |
+| DOF-01 | Phase 107 | Pending |
+| DOF-02 | Phase 107 | Pending |
+| PARC-18 | Phase 108 | Pending |
+| PARC-19 | Phase 108 | Pending |
+| PARC-20 | Phase 108 | Pending |
+| NTF-28 | Phase 109 | Pending |
+| NTF-29 | Phase 109 | Pending |
+| NTF-30 | Phase 109 | Pending |
+| LDG-17 | Phase 110 | Pending |
+| LDG-18 | Phase 110 | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapeados para fases: 0 (a preencher pelo roadmapper)
-- Não mapeados: 33 ⚠️ (esperado antes da criação do roadmap)
+- Mapped to phases: 33 (100%)
+- Unmapped: 0
+
+**Phase summary:**
+- Phase 101 (Fundação — CLI Init e Design Tokens): FND-01 to FND-08 — first phase, gates everything else
+- Phase 102 (Reconciliação do Design System): DSR-01 to DSR-03 — depends on Phase 101; gates every module phase below
+- Phase 103 (Módulo Dashboard): DASH-01, DASH-02 — depends on Phase 102; parallelizable with Phase 104
+- Phase 104 (Padrão DataTable Partilhado): DTB-01 to DTB-03 — depends on Phase 102; parallelizable with Phase 103
+- Phase 105 (Módulos Clientes + Processos): CLP-01 to CLP-05 — depends on Phase 101 and Phase 104 (sequencing, not file dependency)
+- Phase 106 (Módulo Agenda): AGD-36, AGD-37 — depends on Phase 102; parallelizable with Phases 103, 105, 107, 108, 109
+- Phase 107 (Módulos Documentos + Financeiro): DOF-01, DOF-02 — depends on Phase 102; parallelizable with Phases 103, 105, 106, 108, 109
+- Phase 108 (Módulo Pareceres): PARC-18 to PARC-20 — depends on Phase 102; parallelizable with Phases 103, 105, 106, 107, 109
+- Phase 109 (Notificações / Settings / Setup Wizard): NTF-28 to NTF-30 — depends on Phase 102; parallelizable with Phases 103, 105, 106, 107, 108
+- Phase 110 (Refinamento da Landing webpage/): LDG-17, LDG-18 — depends on Phase 101 only; parallelizable with any of Phases 103–109
+
+Roadmap: 10 fases (101–110), continuando a numeração de fases da v2.12 (última fase: 100). Ver `.planning/ROADMAP.md` para Goal/Depends on/Success Criteria completos de cada fase.
 
 ---
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-15 after initial definition*
+*Last updated: 2026-07-15 after roadmap creation (100% coverage, 10 phases: 101-110)*
