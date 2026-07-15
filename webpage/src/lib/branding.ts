@@ -1,10 +1,7 @@
 import type { BrandingResponse } from "@/types/branding";
+import { getBackendOrigin } from "@/lib/backend-origin";
 
-const backendOrigin = process.env.BACKEND_API_ORIGIN;
-
-if (!backendOrigin) {
-  throw new Error("BACKEND_API_ORIGIN is required");
-}
+const backendOrigin = getBackendOrigin();
 
 const FALLBACK: BrandingResponse = { nome: "LexCV", logoDataUrl: null };
 

@@ -1,10 +1,7 @@
 import type { SetupStatusResponse } from "@/types/setup";
+import { getBackendOrigin } from "@/lib/backend-origin";
 
-const backendOrigin = process.env.BACKEND_API_ORIGIN;
-
-if (!backendOrigin) {
-  throw new Error("BACKEND_API_ORIGIN is required");
-}
+const backendOrigin = getBackendOrigin();
 
 const setupStatusUrl = `${backendOrigin}/api/v1/setup/status`;
 
