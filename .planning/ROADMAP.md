@@ -319,7 +319,7 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 - [x] 100-01-PLAN.md — webpage image: `webpage/Dockerfile` (multi-stage, `output: standalone`, mirror `web/Dockerfile`) + `.dockerignore` + CI 3rd build-push step in `deploy.yml` (LP-15, LP-16)
 - [x] 100-02-PLAN.md — Dev+prod routing & compose: `@webpage` block in `Caddyfile`/`Caddyfile.prod` + `webpage` service in `docker-compose.yml` (build ./webpage, port 3004) & `docker-compose.prod.yml` override + caddy `depends_on` (LP-14, LP-15)
 - [x] 100-03-PLAN.md — Hostinger routing & compose (danger zone): internal-only `webpage` service + `@webpage` inside the caddy entrypoint heredoc with ZERO `$` (the `67e2120`/`534fa92` footgun) + caddy `depends_on`, verified via static `docker compose config` only — no live VPS deploy (LP-14, LP-15)
-- [ ] 100-04-PLAN.md — Live `docker compose up` verification: route matrix (`/`→webpage, `/login`+`/dashboard`+`/setup`→web, `/api/*`→backend), asset non-collision (LP-13), and no-hairpin internal-network smoke test (criterion #5) (LP-13)
+- [x] 100-04-PLAN.md — Live `docker compose up` verification: route matrix (`/`→webpage, `/login`+`/dashboard`+`/setup`→web, `/api/*`→backend), asset non-collision (LP-13), and no-hairpin internal-network smoke test (criterion #5) (LP-13)
 
 ## Progress
 
@@ -383,6 +383,6 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
-| 100. Infraestrutura — Routing e Deployment | v2.12 | 3/4 | In Progress|  |
+| 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
 
 **Next:** Phase 100 (4 plans, 3 waves) planned 2026-07-15. Phases 98 and 99 are complete. Run `/gsd:execute-phase 100`. Wave 1: 100-01 (webpage image + CI). Wave 2: 100-02 + 100-03 (dev/prod and hostinger routing/compose wiring — parallel, disjoint files). Wave 3: 100-04 (live `docker compose up` verification).
