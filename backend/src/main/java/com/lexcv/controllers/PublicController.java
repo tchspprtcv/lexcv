@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +29,12 @@ public class PublicController {
     private final TenantRepository tenantRepository;
 
     @GetMapping("/branding")
+    @Transactional(readOnly = true)
+    // Sem esta anotação, a leitura de Tenant.logoDataUrl (@Lob) falha em runtime com
+    // "Large Objects may not be used in auto-commit mode" (PostgreSQL exige que o streaming
+    // de Large Objects ocorra dentro de uma transação explícita) — só descoberto pela
+    // verificação ao vivo da Phase 100 (100-04) contra uma tenant real com logo persistido;
+    // não reproduzível com uma tenant sem logoDataUrl, daí ter escapado à Phase 98.
     public ResponseEntity<?> getBranding() {
         // WR-01 (Phase 98 code review): a suposição de "tenant singleton" só se mantém porque
         // SetupService.initializeSystem() e DatabaseSeeder impedem, de forma independente e não
