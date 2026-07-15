@@ -10,13 +10,13 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 ### Fundação — CLI e Design Tokens
 
 - [x] **FND-01**: `web/` tem `components.json` formalmente inicializado via `shadcn init -b radix` (mantém paridade de composição `asChild` com os 9 pacotes `@radix-ui/react-*` já em uso)
-- [ ] **FND-02**: `webpage/` tem `components.json` inicializado com as respostas copiadas manualmente do `web/` (sem re-executar o wizard independentemente, evitando divergência entre as duas apps — não são workspace members reais)
-- [ ] **FND-03**: `globals.css` de ambas as apps tem o conjunto completo de tokens semânticos do shadcn (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) mesclado aditivamente, com `--background`/`--foreground` restaurados aos valores hex já validados e `--radius`/`--primary` definidos deliberadamente para a identidade institucional (não deixados no default do CLI)
-- [ ] **FND-04**: Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) adicionados via CLI em `web/`
-- [ ] **FND-05**: Pacotes Radix unificados — `shadcn migrate radix` corrido para que componentes existentes e novos usem o mesmo pacote `radix-ui`, sem estado de ponte dual
-- [ ] **FND-06**: `react-day-picker` fixado em `9.14.0` (não `@latest`) imediatamente após `add calendar`, devido a bug conhecido não resolvido na v10
-- [ ] **FND-07**: `tailwindcss-animate` (depreciado) substituído por `tw-animate-css`
-- [ ] **FND-08**: Sonner adotado como substituto do `Toast` depreciado — `<Toaster />` do `sonner` montado na raiz de `web/` (e `webpage/` se aplicável), `toast.tsx`/`toaster.tsx`/`@radix-ui/react-toast` removidos, chamadas `toast.success()`/`toast.error()` existentes preservadas sem alteração de call-site
+- [x] **FND-02**: `webpage/` tem `components.json` inicializado com as respostas copiadas manualmente do `web/` (sem re-executar o wizard independentemente, evitando divergência entre as duas apps — não são workspace members reais)
+- [x] **FND-03**: `globals.css` de ambas as apps tem o conjunto completo de tokens semânticos do shadcn (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) mesclado aditivamente, com `--background`/`--foreground` restaurados aos valores hex já validados e `--radius`/`--primary` definidos deliberadamente para a identidade institucional (não deixados no default do CLI)
+- [x] **FND-04**: Os ~15 primitivos em falta (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty) adicionados via CLI em `web/`
+- [x] **FND-05**: Pacotes Radix unificados — `shadcn migrate radix` corrido para que componentes existentes e novos usem o mesmo pacote `radix-ui`, sem estado de ponte dual
+- [x] **FND-06**: `react-day-picker` fixado em `9.14.0` (não `@latest`) imediatamente após `add calendar`, devido a bug conhecido não resolvido na v10
+- [x] **FND-07**: `tailwindcss-animate` (depreciado) substituído por `tw-animate-css`
+- [x] **FND-08**: Sonner adotado como substituto do `Toast` depreciado — `<Toaster />` do `sonner` montado na raiz de `web/` (e `webpage/` se aplicável), `toast.tsx`/`toaster.tsx`/`@radix-ui/react-toast` removidos, chamadas `toast.success()`/`toast.error()` existentes preservadas sem alteração de call-site
 
 ### Reconciliação do Design System
 
@@ -103,13 +103,13 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FND-01 | Phase 101 | Complete |
-| FND-02 | Phase 101 | Pending |
-| FND-03 | Phase 101 | Pending |
-| FND-04 | Phase 101 | Pending |
-| FND-05 | Phase 101 | Pending |
-| FND-06 | Phase 101 | Pending |
-| FND-07 | Phase 101 | Pending |
-| FND-08 | Phase 101 | Pending |
+| FND-02 | Phase 101 | Complete |
+| FND-03 | Phase 101 | Complete |
+| FND-04 | Phase 101 | Complete |
+| FND-05 | Phase 101 | Complete |
+| FND-06 | Phase 101 | Complete |
+| FND-07 | Phase 101 | Complete |
+| FND-08 | Phase 101 | Complete |
 | DSR-01 | Phase 102 | Pending |
 | DSR-02 | Phase 102 | Pending |
 | DSR-03 | Phase 102 | Pending |

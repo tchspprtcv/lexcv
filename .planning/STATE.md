@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: executing
-stopped_at: Completed 101-02-PLAN.md
-last_updated: "2026-07-15T21:44:30.943Z"
+stopped_at: Completed 101-05-PLAN.md (Phase 101 fully complete, 5/5 plans)
+last_updated: "2026-07-15T22:51:57.431Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 2
-  percent: 0
+  completed_plans: 5
+  percent: 10
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 ## Current Position
 
 Phase: 101 of 110 (Fundação — CLI Init e Design Tokens)
-Plan: 3 of 5
-Status: Ready to execute
+Plan: 5 of 5
+Status: Phase 101 complete (5/5 plans) — ready to plan Phase 102
 Last activity: 2026-07-15
 
 ## Performance Metrics
@@ -68,6 +68,7 @@ Last activity: 2026-07-15
 | 96 | 4 | - | - |
 | 97 | 4 | ~128 min | ~32 min |
 | 101 P02 | 1 | 20min | 20min |
+| 101 P05 | 1 | 25min | 25min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - (v2.13 roadmap) Phases 106–109 (Agenda, Documentos+Financeiro, Pareceres, Notificações/Settings/Setup) and Phase 110 (`webpage/`) are marked explicitly parallelizable — each only requires Phase 102 (or Phase 101 for 110) to be done, zero mutual file overlap or dependency between them; their numeric order reflects descending primitive-novelty/risk per research, not a blocking chain.
 - [Phase 101]: (v2.13, Phase 101 Plan 02) shadcn CLI 4.13.0 requires an explicit -p <preset> flag (nova|vega|maia|lyra|mira|luma|sera|rhea) alongside -b <base> for non-interactive init; -y alone does not skip the interactive preset picker. Used -p vega (resolves to style radix-vega, matching 101-UI-SPEC.md's documented new-york-legacy resolution).
 - [Phase 101]: (v2.13, Phase 101 Plan 02) Human visual sign-off caught a CSS cascade tie-break bug: shadcn init's token merge left .dark declared BEFORE :root in globals.css, so same-specificity source-order tie-break silently favored the light theme's values whenever .dark was active. Fixed by reordering (:root first); not visible today since no component yet consumes bg-background/bg-card/bg-popover (Phase 102), but would have broken dark mode across every reconciled component. Future shadcn init/add runs on this repo must verify :root precedes .dark before sign-off.
+- [Phase 101]: (v2.13, Phase 101 Plan 05) shadcn migrate radix -y run non-interactively to unify all 8 remaining hand-rolled Radix-backed components onto the radix-ui package; 7 dead scoped @radix-ui/react-* deps pruned, closing FND-05's dual-tree bridge state.
+- [Phase 101]: (v2.13, Phase 101 Plan 05) Sonner adopted behind an unchanged toast.success("Sucesso")/toast.error("Erro") contract (richColors green/red) — toast.tsx/toaster.tsx/@radix-ui/react-toast fully removed; all ~26 existing call sites compile/render unchanged, closing FND-08. Phase 101 (all 5 plans) now complete — 8/8 FND requirements satisfied.
 
 ### Pending Todos
 
@@ -158,8 +161,8 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-15T21:44:30.908Z
-Stopped at: Completed 101-02-PLAN.md
+Last session: 2026-07-15T22:51:57.344Z
+Stopped at: Completed 101-05-PLAN.md (Phase 101 fully complete, 5/5 plans)
 Resume file: None
 
 ## Operator Next Steps

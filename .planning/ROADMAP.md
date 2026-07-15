@@ -303,7 +303,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 - [x] 101-02-PLAN.md — web/: shadcn init -b radix, semantic tokens in globals.css, tw-animate-css swap
 - [x] 101-03-PLAN.md — web/: add the ~16 missing primitives + pin react-day-picker@9.14.0
 - [x] 101-04-PLAN.md — webpage/: mirror components.json + token block + tw-animate-css (FND-08 n/a)
-- [ ] 101-05-PLAN.md — web/: Sonner adoption (contract preserved) + shadcn migrate radix
+- [x] 101-05-PLAN.md — web/: Sonner adoption (contract preserved) + shadcn migrate radix
 
 *Nota para planeamento:* nomes de flags/presets da CLI shadcn estão em mudança ativa (confirmada pelo menos uma renomeação nos últimos 8 meses) — re-verificar com `npx shadcn@latest init --help`/`--dry-run` no momento real de execução, em vez de confiar cegamente na sintaxe exata desta pesquisa.
 
@@ -471,7 +471,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
-| 101. Fundação — CLI Init e Design Tokens | v2.13 | 4/5 | In Progress|  |
+| 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete   | 2026-07-15 |
 | 102. Reconciliação do Design System | v2.13 | 0/TBD | Not started | - |
 | 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
