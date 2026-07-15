@@ -1,34 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.11
-milestone_name: Auditoria Técnica e Notificações Avançadas
-status: Awaiting next milestone
-stopped_at: Phase 97 Plan 04 (milestone close-out) complete — fresh code audit (AUD-05) clean, MINIO_ENDPOINT blocker resolved and documented (AUD-04), wave-1 outcomes (AUD-01/02/03) consolidated into STATE.md/PROJECT.md with stale Phase 86/87 attributions corrected. All 15/15 v2.11 requirements Complete.
-last_updated: "2026-07-14T21:27:48.786Z"
-last_activity: 2026-07-14 — Milestone v2.11 completed and archived
+milestone: v2.12
+milestone_name: Landing Page
+status: planning
+last_updated: "2026-07-15T00:58:05.234Z"
+last_activity: 2026-07-15
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 21
-  completed_plans: 21
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-12)
+See: .planning/PROJECT.md (updated 2026-07-14)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone complete
+**Current focus:** Milestone v2.12 (Landing Page) — definição de requisitos/roadmap
 
 ## Current Position
 
-Phase: Milestone v2.11 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-14 — Milestone v2.11 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-15 — Milestone v2.12 started
 
 ## Performance Metrics
 

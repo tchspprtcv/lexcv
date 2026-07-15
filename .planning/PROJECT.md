@@ -8,6 +8,20 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.12 Landing Page
+
+**Goal:** Criar uma landing page moderna, profissional e informativa como ponto de entrada real da aplicação (rota `/`), como uma nova app Next.js standalone (`webpage/`), personalizada com o nome/logo da tenant já capturados no wizard `/setup`.
+
+**Target features:**
+- Nova app Next.js `webpage/` (sibling de `backend/`/`web/` na raiz do monorepo), com o seu próprio Dockerfile/container/porta
+- Caddy roteia `/` para `webpage/`; tudo o resto (`/login`, `/dashboard`, `/setup`, `/api/*`) continua a ir para `web/`/`backend/` inalterado
+- Ao carregar, verifica `/api/v1/setup/status`: se não inicializado → redireciona para `/setup` (preserva o comportamento atual do `web/`); se inicializado → mostra a landing personalizada
+- Novo endpoint público no backend (`GET /api/v1/public/...`) que devolve apenas `nome` + `logoDataUrl` da tenant — nunca NIF/email/telefone
+- Secções: Hero + proposta de valor · Funcionalidades/Módulos (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) · Prova social/confiança institucional (multi-tenant, isolamento de dados, ecossistema NOSi/Cabo Verde) · Contacto/Pedir demonstração
+- CTA principal: "Entrar" → `/login`
+- Reutiliza shadcn/ui + Tailwind + dark/light mode já usados em `web/`
+- **Fora de âmbito (decisão explícita):** onboarding self-service multi-institituição, slug/subdomínio por tenant — este deployment continua a servir uma única instituição (o wizard `/setup` mantém-se singleton, como hoje)
+
 ## Requirements
 
 ### Validated
@@ -79,7 +93,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — milestone v2.11 concluída em 2026-07-14. Próxima milestone por definir via `/gsd:new-milestone`.)
+- Milestone v2.12 (Landing Page) em definição (`/gsd-new-milestone`, 2026-07-14) — nova app `webpage/` standalone, landing personalizada com dados da tenant, endpoint público de branding. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
 
 ### Out of Scope
 
@@ -203,7 +217,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.11 concluída e arquivada (2026-07-14). Aguardando definição da próxima milestone via `/gsd:new-milestone`.
+**Current focus:** Milestone v2.12 (Landing Page) em definição de requisitos/roadmap — nova app `webpage/` standalone servindo a landing pública em `/`, personalizada com dados da tenant.
 
 ## Evolution
 
@@ -223,4 +237,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-14 — milestone v2.11 (Auditoria Técnica e Notificações Avançadas) shipped and archived*
+*Last updated: 2026-07-14 — milestone v2.12 (Landing Page) started*
