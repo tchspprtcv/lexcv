@@ -1,0 +1,7 @@
+# electron-to-chromium (browserslist/caniuse-lite compat-data, no install
+# scripts) is excluded from pnpm's minimumReleaseAge supply-chain guard: it
+# published earlier today and is already pinned in the reviewed, frozen
+# pnpm-lock.yaml from Phase 99. Scoped to this single package, not a blanket
+# disable. User-authorized 2026-07-15 (Phase 100, 100-01).
+minimumReleaseAgeExclude:
+  - electron-to-chromium
