@@ -284,7 +284,7 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
   3. O endpoint resolve a tenant de forma determinística (ex.: `TenantRepository.findFirstByOrderByCreatedAtAsc()`), sem depender de `SecurityContextHolder`/JWT (não existe chamador autenticado), com um comportamento sensato (404 ou corpo vazio, nunca uma exceção 500) quando ainda não existe nenhuma tenant (sistema não inicializado)
   4. Todos os endpoints e scopes `@PreAuthorize` já existentes permanecem inalterados — esta fase adiciona apenas um novo controller/DTO isolado, sem tocar em `AuthController`/`UserPrincipal`/segurança existente
 **Plans**: 1 plan
-- [ ] 98-01-PLAN.md — PublicController + DTO TenantPublicInfoResponse + TenantRepository.findFirstByOrderByCreatedAtAsc + entrada exact-literal na allowlist do SecurityConfig (LP-01, LP-02)
+- [x] 98-01-PLAN.md — PublicController + DTO TenantPublicInfoResponse + TenantRepository.findFirstByOrderByCreatedAtAsc + entrada exact-literal na allowlist do SecurityConfig (LP-01, LP-02)
 
 #### Phase 99: webpage/ — Nova App Next.js de Landing
 
@@ -373,7 +373,7 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 2/2 | Complete    | 2026-07-14 |
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 4/4 | Complete    | 2026-07-14 |
-| 98. Backend — Endpoint Público de Branding | v2.12 | 0/1 | Planned | - |
+| 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 0/TBD | Not started | - |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 0/TBD | Not started | - |
 
