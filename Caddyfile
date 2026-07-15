@@ -2,6 +2,14 @@
     handle /api/* {
         reverse_proxy backend:8080
     }
+
+    @webpage {
+        path / /landing-static/*
+    }
+    handle @webpage {
+        reverse_proxy webpage:3000
+    }
+
     handle {
         reverse_proxy frontend:3000
     }
