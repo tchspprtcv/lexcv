@@ -1,12 +1,26 @@
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ContactSection } from "@/components/contact-section";
+import { FeaturesSection } from "@/components/features-section";
+import { HeroSection } from "@/components/hero-section";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import { TrustSection } from "@/components/trust-section";
+import { fetchBranding } from "@/lib/branding";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const branding = await fetchBranding();
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <ThemeToggle />
-      <p className="text-base text-slate-500 dark:text-slate-400">
-        LexCV — landing em construção (placeholder, substituído no plano 99-04)
-      </p>
-    </main>
+    <>
+      <SiteHeader branding={branding} />
+      <main>
+        <HeroSection branding={branding} />
+        <FeaturesSection />
+        <TrustSection />
+        <ContactSection />
+      </main>
+      <SiteFooter branding={branding} />
+    </>
   );
 }
