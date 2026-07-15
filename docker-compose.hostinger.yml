@@ -104,7 +104,7 @@ services:
       - sh
       - -c
       - |
-        echo '{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {
+        echo 'alcv.tech, www.alcv.tech {
             handle /api/* {
                 reverse_proxy backend:8080
             }
@@ -112,8 +112,6 @@ services:
                 reverse_proxy frontend:3000
             }
         }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-    environment:
-      DOMAIN_NAME: ${DOMAIN_NAME}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
