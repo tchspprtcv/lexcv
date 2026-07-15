@@ -3,7 +3,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ${REGISTRY:-ghcr.io/lexcv}/backend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/tchspprtcv/lexcv}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
@@ -12,7 +12,7 @@ services:
           memory: 512M
 
   frontend:
-    image: ${REGISTRY:-ghcr.io/lexcv}/frontend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/tchspprtcv/lexcv}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
@@ -21,7 +21,7 @@ services:
           memory: 256M
 
   webpage:
-    image: ${REGISTRY:-ghcr.io/lexcv}/webpage:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/tchspprtcv/lexcv}/webpage:${IMAGE_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
