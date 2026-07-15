@@ -1,6 +1,6 @@
 ---
 phase: LEXCV-101-funda-o-cli-init-e-design-tokens
-reviewed: 2026-07-15T00:00:00Z
+reviewed: 2026-07-16T00:00:00Z
 depth: standard
 files_reviewed: 34
 files_reviewed_list:
@@ -40,103 +40,85 @@ files_reviewed_list:
   - webpage/src/app/globals.css
 findings:
   critical: 0
-  warning: 3
-  info: 5
-  total: 8
+  warning: 0
+  info: 6
+  total: 6
 status: issues_found
 ---
 
-# Phase LEXCV-101: Code Review Report
+# Phase LEXCV-101: Code Review Report (Re-review after fix pass)
 
-**Reviewed:** 2026-07-15T00:00:00Z
+**Reviewed:** 2026-07-16T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 34
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the shadcn/ui CLI initialization (`-b radix`) in `web/` and `webpage/`, the new semantic design tokens in both `globals.css` files, the 17 newly-added shadcn primitives, the unified `radix-ui` import migration across 8 previously hand-rolled components, and the Toast → Sonner swap (`use-toast.ts`, `sonner.tsx`, deletion of `toast.tsx`/`toaster.tsx`).
+This is a re-review of the same 34-file scope after `101-REVIEW-FIX.md` iteration 1, which addressed 2 of the 3 Warnings from the prior review (`WR-01`, `WR-03`) and deliberately skipped one (`WR-02`). All 5 prior Info-level findings were out of the fix pass's declared scope and were left untouched. This pass re-verifies the two fixes end-to-end (not just re-reading the diff), re-validates the WR-02 skip rationale against the actual roadmap text, and re-scans the full file set for anything the fix pass itself might have introduced.
 
-**CSS cascade fix verification (explicitly requested):** Confirmed by reading actual declaration order (not just diffing hex strings) in both files. In `web/src/app/globals.css`, `:root { ... }` is declared at lines 51-84 and `.dark { ... }` at lines 86-118 — `:root` now precedes `.dark`. Same order in `webpage/src/app/globals.css` (`:root` at 50-83, `.dark` at 85-117). Because `:root` and `.dark` have identical specificity (0-1-0) and both match `<html class="dark">` simultaneously, source order is the tie-breaker; with `.dark` now declared *after* `:root`, `.dark`'s values correctly win when dark mode is active, and `:root` alone applies when it isn't (since `.dark` doesn't match at all in that case). Cross-checked with `providers.tsx` (`next-themes` with `attribute="class"`) and confirmed no other `:root`/`.dark` blocks exist anywhere else in the repo that could reintroduce the same class of bug. **The fix is correct and complete in both files.**
+**WR-01 (`empty.tsx`) — verified FIXED.** `EmptyDescription` now renders a `<p>` (`empty.tsx:73`), matching its declared `React.ComponentProps<"p">` type and no longer diverging from its own type contract. Confirmed there are zero existing consumers of `EmptyDescription` anywhere in `web/src` (repo-wide grep), so this is a pure type/implementation correction with no call-site regression risk. Commit `70a68d0` touches only this one file/line, as claimed.
 
-No critical/security issues were found (no secrets, no `eval`/`innerHTML`/dangerous-function usage, no empty catch blocks, no leftover imports of the deleted `toast.tsx`/`toaster.tsx`, no residual direct `@radix-ui/*` imports left over from the migration in `web/src`). The `toast.success()`/`toast.error()` call-site contract is preserved correctly — verified against all 147 call sites across 27 files; none pass an options shape incompatible with sonner's `ExternalToast`.
+**WR-03 (`calendar.tsx`) — verified FIXED as a mitigation (root cause intentionally left in place, correctly).** The `ButtonWithRef` unsafe cast (`calendar.tsx:51-53`) is unchanged, and per the fix report this was deliberate: `button.tsx` is one of the exact 14 components named in `ROADMAP.md:316` ("Phase 102: Reconciliação do Design System" — `button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`), confirmed by direct read of the roadmap. Editing `button.tsx` now (e.g., adding `React.forwardRef`) would front-run that phase's planned reconciliation work. Instead, a second `useEffect` (`calendar.tsx:243-253`) was added to `CalendarDayButton` that `console.warn`s in dev mode if `ref.current` is still `null` after mount — converting a previously silent regression mode into a loud one. Traced the underlying assumption itself (not just accepted the comment): `button.tsx:39` (`export function Button({ className, variant, size, asChild, ...props }: ButtonProps)`) does not destructure `ref`, so under React 19's ref-as-prop model, `ref` remains in `...props` and is spread onto `<Comp {...props} />` (`button.tsx:42-46`), where `Comp` is either the host `"button"` or `SlotPrimitive.Slot` — both accept the ref correctly. Confirmed the installed React version is `19.2.4` (`web/package.json:23,25`), so the assumption the code and comment rely on is currently true, not just "plausible." Commit `97e1fbd` touches only this one file, as claimed.
 
-The issues found are all Warning/Info-level: a couple of genuine implementation-vs-intent mismatches in newly added files, an unfinished/partial migration of some legacy primitives to the new semantic tokens (acknowledged in-code as explicitly out of scope for this phase, but still worth tracking), and some minor dead-code/consistency nits.
+**WR-02 — re-assessed, deliberate-skip rationale CONFIRMED to hold.** Re-read `ROADMAP.md` directly (not just trusted the fix report's citation): line 310-317 defines Phase 102 with the goal "Os 14 componentes hand-rolled existentes estão reconciliados com o registo oficial..." and explicitly lists `button`, `dialog`, `alert-dialog`, `sheet`, `popover`, `radio-group`, `switch` among its 14 named components — i.e. all 7 files WR-02 flagged. Independently re-ran `git diff 525eac9..HEAD` against all 7 files: each still shows only the 1-2 line Radix-import-path change (`button.tsx` is 2 lines: import + `Comp` assignment; the other 6 are 1 line each), confirming no re-skin occurred during or after the fix pass and the two disconnected color systems (hardcoded neutral/slate palette + `dark:bg-[#020617]` magic hex vs. the new semantic tokens) still exist exactly as originally described. The skip is correctly justified: this is a named, sequenced follow-up phase (not an ad-hoc TODO), and re-skinning these files now would risk conflicting edits when Phase 102 executes its own planned migration. No further action needed in this phase.
 
-## Warnings
+**New verification performed this pass (not present in the original review):** ran `npx tsc --noEmit` and `eslint` directly against all 34 in-scope files rather than relying on manual reading alone (the fix report itself notes `node_modules`/`tsc` were unavailable in the fixer's isolated worktree, so this closes that verification gap). `tsc` reports only the 3 pre-existing, already-documented `vitest`-resolution errors in unrelated test files (tracked in `deferred-items.md`, not part of this phase's scope) — no new type errors from either fix. `eslint` reports exactly one warning across the entire 34-file set, and it is new, introduced by the WR-03 fix itself (see IN-06 below).
 
-### WR-01: `EmptyDescription` is typed as a paragraph but renders a `<div>`
-
-**File:** `web/src/components/ui/empty.tsx:71-82`
-**Issue:** `EmptyDescription` is declared as `React.ComponentProps<"p">` (i.e. it advertises paragraph semantics/props) but its implementation renders a `<div>`, unlike every sibling in this file (`EmptyTitle`, `EmptyContent`, `EmptyHeader` are consistently typed *and* rendered as `<div>`). This is very likely a copy-paste artifact from `EmptyContent`. Not a crash, but it's a real type/implementation mismatch: any consumer relying on the declared type for a text/description block gets a `<div>` instead of a `<p>`, which affects default semantics/style inheritance (`text-sm/relaxed` etc. still work, but accessibility tooling and any global `p { ... }` selectors elsewhere in the app will not apply here as expected).
-**Fix:**
-```tsx
-function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
-  return (
-    <p
-      data-slot="empty-description"
-      className={cn(
-        "text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-```
-
-### WR-02: Half-migrated design tokens leave two disconnected color systems
-
-**File:** `web/src/components/ui/alert-dialog.tsx:39`, `web/src/components/ui/dialog.tsx:41`, `web/src/components/ui/sheet.tsx:55`, `web/src/components/ui/popover.tsx:22`, `web/src/components/ui/switch.tsx:16`, `web/src/components/ui/radio-group.tsx:29`, `web/src/components/ui/button.tsx:12-17`
-**Issue:** These 7 files were touched in this phase *only* to swap the import (`@radix-ui/react-*` → the unified `radix-ui` package); their Tailwind classes were left untouched (confirmed via `git diff 525eac9..HEAD` — each file has a 1-2 line diff, import-only). They still hardcode the old Tailwind neutral/slate palette and even a magic hex literal (`dark:bg-[#020617]` in both `dialog.tsx` and `alert-dialog.tsx`, which duplicates — without referencing — the new `--background` dark-mode token defined in `globals.css`). Meanwhile every other primitive touched/added in this same "design tokens" phase (`accordion.tsx`, `command.tsx`, `dropdown-menu.tsx`, `select.tsx`, `tabs.tsx`, `tooltip.tsx`, `navigation-menu.tsx`, etc.) consistently uses the new semantic tokens (`bg-popover`, `text-popover-foreground`, `bg-muted`, `ring-foreground/10`, etc.). Net effect: the app now has two parallel, disconnected color systems. If/when the design tokens are retuned (e.g. `--popover` or `--background` dark values change), `Dialog`/`AlertDialog`/`Sheet`/`Popover`/`Switch`/`RadioGroup`/`Button` will silently *not* follow, producing visual drift and inconsistent theming with zero compile-time signal. This is explicitly flagged as intentionally out-of-scope for Phase 101 in the `calendar.tsx` comment, but it is a real, provable follow-up risk that should be tracked rather than forgotten.
-**Fix:** Track as an explicit follow-up item (it may already be in `deferred-items.md` — please confirm) to re-skin these 7 components onto the semantic tokens, e.g. replace `bg-white ... dark:bg-[#020617]` with `bg-popover text-popover-foreground`, `border-neutral-300 ... dark:border-neutral-700` with `border-input`, etc., matching the pattern already used in `select.tsx`/`dropdown-menu.tsx`.
-
-### WR-03: Unsafe double type-cast to attach a ref to a non-forwardRef `Button`
-
-**File:** `web/src/components/ui/calendar.tsx:47-53, 238`
-**Issue:**
-```ts
-const ButtonWithRef = Button as unknown as React.ForwardRefExoticComponent<
-  ButtonProps & React.RefAttributes<HTMLButtonElement>
->
-```
-`Button` (`button.tsx:39`) is a plain function component that does not destructure or explicitly type a `ref` prop; the cast forces TypeScript to treat it as if it were built with `React.forwardRef`, which it is not. The code comment explains this relies on React 19's "ref-as-prop" behavior forwarding `ref` through `{...props}` to the host `<button>`/`Slot` element regardless — which is plausible, but it is an *undocumented, implicit* runtime assumption hidden behind an `as unknown as` cast, i.e. exactly the "defeats type safety" pattern this review is asked to flag. If `Button` is ever refactored to explicitly destructure/allowlist its props (a very natural refactor, e.g. to add prop validation or default values), `ref` would silently stop reaching the host element, breaking the calendar's roving-tabindex keyboard focus management (`CalendarDayButton`'s `useEffect` that calls `ref.current?.focus()`) with no type error to catch the regression — only a runtime a11y/UX bug discovered later.
-**Fix:** Either give `Button` (`button.tsx`) an explicit `React.forwardRef` signature so the ref path is statically verified, or, if `button.tsx` must stay untouched per phase scope, isolate the assumption behind a narrower, explicitly-commented helper and add a runtime dev-mode warning (or a unit/interaction test asserting focus moves to the day button) so a future `Button` refactor that breaks ref passthrough is caught by tests rather than silently.
+No critical or security issues found. No Warnings remain open (0 outstanding — 2 fixed, 1 correctly deferred to a named future phase). 6 Info-level items remain, 5 carried over unchanged from the prior review (untouched by design, out of fix-pass scope) plus 1 new item this pass caught in the fix itself.
 
 ## Info
 
-### IN-01: Dead `cn-toast` class name in Sonner Toaster config
+### IN-01: New — Unnecessary `eslint-disable` directive introduced by the WR-03 fix
 
-**File:** `web/src/components/ui/sonner.tsx:40-44`
-**Issue:** `toastOptions.classNames.toast: "cn-toast"` applies a CSS class that is not defined anywhere in the repo (confirmed via repo-wide search — the only occurrence of `cn-toast` is this one line). It is a no-op today.
+**File:** `web/src/components/ui/calendar.tsx:252`
+**Issue:** The new mount-effect added to fix WR-03 carries `// eslint-disable-next-line react-hooks/exhaustive-deps` above its empty `[]` dependency array. Running `eslint` directly on this file (not just reading it) shows this directive is a no-op: `react-hooks/exhaustive-deps` does not flag this effect at all, because the only value read inside it is `ref` — a `useRef` return value, which `eslint-plugin-react-hooks` already recognizes as referentially stable and exempts from the dependency requirement. Result: `Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')`. This is the only lint warning anywhere across all 34 files reviewed in this phase (verified by running eslint against the full in-scope file list) — i.e. a warning that did not exist before this fix pass and was introduced by it. Harmless today (doesn't fail the `lint` script, which has no `--max-warnings` gate), but it is dead suppression code and would mask a real future exhaustive-deps violation on this same effect if one were ever introduced, since the disable comment would silently continue to apply.
+**Fix:** Remove the now-unnecessary directive; the effect is already lint-clean without it:
+```tsx
+React.useEffect(() => {
+  if (process.env.NODE_ENV !== "production" && ref.current === null) {
+    console.warn(
+      "[Calendar] CalendarDayButton did not receive a DOM ref from Button. " +
+        "Button (button.tsx) may no longer forward `ref` through its props " +
+        "spread to the host element -- roving-tabindex keyboard focus in " +
+        "the calendar will silently stop working. See 101-REVIEW.md WR-03."
+    )
+  }
+}, [])
+```
+
+### IN-02: Carried over — Dead `cn-toast` class name in Sonner Toaster config
+
+**File:** `web/src/components/ui/sonner.tsx:42`
+**Issue:** Unchanged since the prior review. `toastOptions.classNames.toast: "cn-toast"` applies a CSS class not defined anywhere in the repo (confirmed again via repo-wide search this pass). Still a no-op. Correctly out of fix-pass scope (Info-level, not selected for this iteration).
 **Fix:** Either remove the dead `classNames` override, or add the intended `.cn-toast` rule to `globals.css` if custom styling was actually meant to land here.
 
-### IN-02: `useToast()` hook and bare `toast()` wrapper are unused dead code
+### IN-03: Carried over — `useToast()` hook and bare `toast()` wrapper are unused dead code
 
 **File:** `web/src/hooks/use-toast.ts:19-21, 40-45`
-**Issue:** Across all 27 files that import from `@/hooks/use-toast`, every call site uses `toast.success(...)` or `toast.error(...)`; the bare `toast(message, options)` function and the `useToast()` hook have zero call sites in the codebase. This is intentional per the in-file comment (kept as a forward-compatibility shim), so this is a low-priority note rather than a defect, but it's worth flagging explicitly since "unused export" is otherwise a code-quality signal reviewers should not silently pass over.
-**Fix:** No action required if the compatibility-shim rationale is accepted; consider a one-line note in `101-PATTERNS.md`/`deferred-items.md` cross-referencing this so a future contributor doesn't independently "clean up" what looks like dead code.
+**Issue:** Unchanged since the prior review; file was not touched by the fix pass. Every real call site still uses `toast.success(...)`/`toast.error(...)`; `useToast()` and the bare `toast(message, options)` wrapper remain zero-call-site, intentional forward-compatibility shims per the in-file comment.
+**Fix:** No action required if the compatibility-shim rationale is accepted; consider cross-referencing in `101-PATTERNS.md`/`deferred-items.md` so it isn't mistaken for accidental dead code later.
 
-### IN-03: Inconsistent `Slot` primitive aliasing style
+### IN-04: Carried over — Inconsistent `Slot` primitive aliasing style
 
-**File:** `web/src/components/ui/breadcrumb.tsx:4, 48`, `web/src/components/ui/button.tsx:1, 40`
-**Issue:** `breadcrumb.tsx` does `import { Slot } from "radix-ui"` then uses `Slot.Root`, while `button.tsx` does `import { Slot as SlotPrimitive } from "radix-ui"` then uses `SlotPrimitive.Slot`. Both resolve to the exact same component (`@radix-ui/react-slot` exports `Slot` and `Root` as aliases of one another), so this is functionally harmless, but it's an avoidable inconsistency introduced by the same migration pass, and it diverges from the `XPrimitive.Root` convention used everywhere else in the migrated files (`AlertDialogPrimitive.Root`, `DialogPrimitive.Root`, etc.).
+**File:** `web/src/components/ui/breadcrumb.tsx:2, 48`, `web/src/components/ui/button.tsx:2, 40`
+**Issue:** Unchanged since the prior review (re-confirmed this pass: `breadcrumb.tsx` still does `import { Slot } from "radix-ui"` / `Slot.Root`, while `button.tsx` still does `import { Slot as SlotPrimitive } from "radix-ui"` / `SlotPrimitive.Slot`). Functionally identical (both resolve to the same underlying component), but an avoidable inconsistency from the same migration pass.
 **Fix:** Standardize on one alias/property pair (e.g. `SlotPrimitive` + `.Root`) across both files.
 
-### IN-04: `buttonVariants` CVA config duplicated verbatim between `button.tsx` and `calendar.tsx`
+### IN-05: Carried over — `buttonVariants` CVA config duplicated verbatim between `button.tsx` and `calendar.tsx`
 
 **File:** `web/src/components/ui/calendar.tsx:21-45`, `web/src/components/ui/button.tsx:7-31`
-**Issue:** `calendar.tsx` copy-pastes the entire `buttonVariants` CVA definition from `button.tsx` (byte-for-byte identical Tailwind class strings) because `button.tsx` doesn't export its internal `buttonVariants`. This is already called out in an in-file comment as a "documented, bounded duplication," so it's not a surprise to the next reader, but it is still a maintenance liability — any future restyle of `Button` (`button.tsx`) will not propagate to the calendar nav/day buttons unless someone remembers to update this second copy.
-**Fix:** Export `buttonVariants` from `button.tsx` and import it in `calendar.tsx` instead of duplicating the CVA config, once `button.tsx` is back in scope for editing.
+**Issue:** Unchanged since the prior review; `button.tsx` was not edited in this fix pass (confirmed: `button.tsx`'s only diff since the original review is the 2-line Radix-import change tied to the deferred WR-02 item, not the WR-03 fix). The byte-for-byte duplicated CVA config remains, still documented in-code as a bounded, intentional duplication pending Phase 102.
+**Fix:** Export `buttonVariants` from `button.tsx` and import it in `calendar.tsx` instead of duplicating the CVA config, once `button.tsx` is back in scope for editing (Phase 102).
 
-### IN-05: `shadcn` CLI package declared under `dependencies` instead of `devDependencies`
+### IN-06: Carried over — `shadcn` CLI package declared under `dependencies` instead of `devDependencies`
 
 **File:** `web/package.json:27` (inside the `dependencies` block, lines 12-32)
-**Issue:** `"shadcn": "^4.13.0"` is a CLI/build-time tool (used to scaffold components and via the `@import "shadcn/tailwind.css"` build-time CSS import) — its sibling build tools `tailwindcss` and `@tailwindcss/postcss` are correctly placed under `devDependencies` (lines 33-42), but `shadcn` is not. This unnecessarily ships a CLI package (and its transitive dependency tree) into production installs in any deployment pipeline that runs `pnpm install --prod`.
+**Issue:** Unchanged since the prior review (re-confirmed this pass by re-reading `package.json`). `"shadcn": "^4.13.0"` is still listed under `dependencies` rather than `devDependencies`, alongside its build-tool siblings `tailwindcss`/`@tailwindcss/postcss`, which are correctly under `devDependencies`.
 **Fix:** Move `"shadcn": "^4.13.0"` from `dependencies` to `devDependencies` in `web/package.json`.
 
 ---
 
-_Reviewed: 2026-07-15T00:00:00Z_
+_Reviewed: 2026-07-16T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
