@@ -1,5 +1,15 @@
 # Milestones
 
+## v2.11 Auditoria Técnica e Notificações Avançadas (Shipped: 2026-07-14)
+
+**Phases completed:** 8 phases, 21 plans, 39 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v2.10 Notificações e Alertas (Shipped: 2026-07-10)
 
 **Phases completed:** 5 phases, 14 plans, 29 tasks

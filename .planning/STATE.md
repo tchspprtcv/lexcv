@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.11
 milestone_name: Auditoria Técnica e Notificações Avançadas
-status: milestone_complete
-stopped_at: Milestone complete (Phase 97 was final phase)
-last_updated: 2026-07-14T20:54:50.983Z
-last_activity: 2026-07-14
+status: Awaiting next milestone
+stopped_at: Phase 97 Plan 04 (milestone close-out) complete — fresh code audit (AUD-05) clean, MINIO_ENDPOINT blocker resolved and documented (AUD-04), wave-1 outcomes (AUD-01/02/03) consolidated into STATE.md/PROJECT.md with stale Phase 86/87 attributions corrected. All 15/15 v2.11 requirements Complete.
+last_updated: "2026-07-14T21:27:48.786Z"
+last_activity: 2026-07-14 — Milestone v2.11 completed and archived
 progress:
   total_phases: 8
   completed_phases: 8
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-12)
 
 ## Current Position
 
-Phase: 97
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-14
-
-Progress: [██████████] 100% (8/8 phases da milestone v2.11)
+Phase: Milestone v2.11 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-14 — Milestone v2.11 completed and archived
 
 ## Performance Metrics
 
@@ -151,5 +149,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Milestone v2.11 (Auditoria Técnica e Notificações Avançadas) has all 8 phases executed and all 15/15 requirements Complete. Run the milestone close-out flow (e.g. `/gsd:complete-milestone` or equivalent) to move Active→Validated in PROJECT.md, update the "Current State"/"Shipped" line, and finalize ROADMAP.md's phase-completion tables — deliberately left untouched by Phase 97's plans per their own scope boundary.
-- Genuinely open items carried into the next milestone/session (see STATE.md Pending Todos/Deferred Items for full detail): Phase 81/82 migration-script review against a `ddl-auto=validate` prod-like DB; Phase 85's ALTA+null-`dataFim` KPI product decision; Phase 86 RBAC Settings-screen visual confirmation; the `ParecerController` partial-update data-loss bug's missing test coverage; a handful of NEEDS-HUMAN-VISUAL confirmations (zero functional risk); the `notificarDocumentoNovo` deep-link cosmetic item.
+- Start the next milestone with /gsd-new-milestone

@@ -8,20 +8,6 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone: v2.11 Auditoria Técnica e Notificações Avançadas
-
-**Goal:** Fechar a dívida técnica acumulada do projeto (infraestrutura de testes, inconsistências de lógica de prazo crítico, UAT ao vivo pendente, SAST) e expandir o sistema de notificações com preferências, alcance de equipa e snooze.
-
-**Target features:**
-- Infraestrutura de testes de integração no backend (H2/Testcontainers), priorizando as áreas de maior risco já identificadas (query nativa da Phase 86, lock de concorrência da Phase 87)
-- Unificação de `agenda/page.tsx` com `RiscoPrazoService` (remoção da 5ª implementação divergente de "prazo crítico")
-- Fecho de UAT/verificação ao vivo pendente em 10 fases (75, 76, 79, 81, 82, 84, 85, 86, 87, 89), incluindo resolver/contornar o bloqueio ambiental `MINIO_ENDPOINT`
-- Correção do SpotBugs/SAST contra bytecode JDK 23
-- Fecho de dívidas menores conhecidas (labels de enum não traduzidas, testes de validação de NIF ausentes) + nova auditoria ao código para gaps ainda não documentadas
-- NOTF-24: preferências de notificação por utilizador (silenciar categorias)
-- NOTF-25: notificar toda a equipa do processo, não só o responsável único
-- NOTF-26: snooze de lembrete de prazo
-
 ## Requirements
 
 ### Validated
@@ -82,10 +68,18 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Alerta de parecer atribuído — v2.10 (Phase 87)
 - ✓ Alerta de prazos de processos e calendário crítico + prazos de honorários, via job diário `@Scheduled` (`AlertasDiariosJob`, cron 06:00 `Atlantic/Cape_Verde`, idempotência edge-triggered por `categoria`) — v2.10 (Phase 88)
 - ✓ Sino reescrito para consumir `Notificacao` persistida (contador com polling 30s + refocus, dropdown de 10 com clique fundido marcar+navegar, marcar-todas) e página dedicada `/notificacoes` (filtros categoria + lida/não-lida, paginação real, acesso só via link do sino) — v2.10 (Phase 89)
+- ✓ SpotBugs/FindSecBugs a correr limpo contra bytecode JDK 23 (versões atualizadas, exclusões e correções defensivas comprometidas) — v2.11 (Phase 90)
+- ✓ Infraestrutura de testes de integração Testcontainers+PostgreSQL (primeira vez neste backend), cobrindo a query nativa de `Notificacao` e o lock de concorrência de `numeroVersao`, com gate de CI (`deploy.yml` job `test`) | v2.11 (Phase 91)
+- ✓ Agenda consolidada com `RiscoPrazoService` para Prazos e Eventos — fim da 5ª implementação divergente de "prazo crítico" (endpoint `/eventos/upcoming` órfão removido) — v2.11 (Phase 92)
+- ✓ Preferências de notificação por utilizador (silenciar categorias, `PRAZO_VENCIDO` sempre entregue, job diário respeita o silenciamento) — v2.11 (Phase 93)
+- ✓ Correção de bug pré-existente: destinatário simultaneamente membro de equipa e ADMIN já não colide na constraint de dedup — v2.11 (Phase 94)
+- ✓ Notificações de processo (fase/documento/atribuição) alcançam toda a equipa de advogados/administrativos do cliente, não só o responsável único — v2.11 (Phase 95)
+- ✓ Snooze de lembrete de prazo (presets 1/3/7 dias, reaparece automaticamente, sem duplicação pelo job diário) — v2.11 (Phase 96)
+- ✓ Auditoria final de milestone: isolamento de tenant confirmado nas 3 novas superfícies de notificação; UAT ao vivo fechado para 8 fases históricas (~40 cenários); labels `DocumentoTipo` traduzidas + testes de NIF adicionados; bloqueio ambiental `MINIO_ENDPOINT` genuinamente resolvido pela primeira vez neste projeto; 1 gap de integração residual (divergência `dataInicio`/`dataFim` em `isEventoCritico`) encontrado e corrigido no próprio fecho — v2.11 (Phase 97)
 
 ### Active
 
-- Milestone v2.11 em definição (`/gsd-new-milestone`, 2026-07-12) — auditoria/fecho de dívida técnica (infra de testes, Agenda/RiscoPrazoService, UAT pendente, SAST) + NOTF-24/25/26. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
+(Nenhum requisito ativo — milestone v2.11 concluída em 2026-07-14. Próxima milestone por definir via `/gsd:new-milestone`.)
 
 ### Out of Scope
 
@@ -93,12 +87,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Regras de negócio avançadas (cálculo de honorários, prazos jurídicos, workflows) — responsabilidade do backend
 - Contabilidade completa/ERP — fora do MVP
 - Mobile app nativo — Web/PWA primeiro; desktop via Tauri numa fase posterior
-- Notificações push / email externas — mantém-se in-app apenas (decisão confirmada na v2.10)
+- Notificações push / email externas — mantém-se in-app apenas (decisão confirmada na v2.10, reconfirmada na v2.11)
 - Recorrência infinita (sem data de fim) — requer paginação especial, adiado
 - Editar todas as instâncias futuras de uma série — apenas "esta instância" ou "toda a série"
-- Notificar toda a equipa de advogados/administrativos de um processo ao reatribuir o responsável — v2.10 cobre apenas o campo `responsavelId` único, não a equipa alargada
-- Preferências de notificação por utilizador (silenciar categorias) — todas as categorias são sempre entregues na v2.10
 - Novo campo de data de vencimento em `Honorario` — alerta de prazo de honorário usa dias sem pagamento total desde `dataAcordo` em vez de uma data explícita
+- Expansão do fan-out de equipa (NOTF-25) às categorias do job diário (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) — deliberadamente fora de âmbito da v2.11, `AlertasDiariosJob` mantém-se `responsavelId`-only; candidato de âmbito futuro
+- Matriz de preferências categoria×canal (NOTF-24) — prematuro com um único canal de entrega (in-app); só revisitar se email/push for adicionado
 
 ## Context
 
@@ -106,9 +100,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Contrato e convenções REST para o mock: `.trae/documents/API-Design.md` (base `/api/v1`)
 - Modelo relacional (fonte de verdade para entidades): `.trae/documents/ERD.sql`
 - Backend alvo: Spring Boot (frontend deve permanecer “passivo”, apenas apresentar dados e executar ações)
-- Estado pós-v2.10 (2026-07-10): sistema de notificações persistido e completo — entidade `Notificacao` (Phase 86), 4 alertas disparados por evento (Phase 87), job diário `@Scheduled`/cross-tenant (Phase 88, primeiro deste tipo no projeto), sino reescrito + página `/notificacoes` (Phase 89). "Prazo crítico" consolidado numa única fonte partilhada (`RiscoPrazoService`, Phase 85) consumida por dashboard, backend de eventos/prazos e o job diário — mas o `web/src/app/(dashboard)/agenda/page.tsx` (frontend) ainda calcula o seu próprio veredito client-side, independentemente, uma dívida técnica pré-existente não coberta por nenhuma fase 85-89 (deliberadamente fora de âmbito, ver `85-CONTEXT.md`). Continua sem WebSocket/SSE em todo o projeto — notificações usam polling (30s) via TanStack Query.
+- Estado pós-v2.11 (2026-07-14): sistema de notificações agora cobre preferências por utilizador (mute por categoria, Phase 93), alcance de equipa (fase/documento/atribuição chegam a toda a equipa do cliente, Phase 95) e snooze de lembretes de prazo (Phase 96), sobre a fundação persistida da v2.10. `web/src/app/(dashboard)/agenda/page.tsx` já não calcula o seu próprio veredito de "prazo crítico" — consome o campo `risco` do backend para Prazos e Eventos (Phase 92), fechando a última implementação divergente (incluindo uma última divergência residual, `isEventoCritico`'s uso de `dataFim` em vez de `dataInicio`, encontrada e corrigida no fecho da própria milestone). Backend passou a ter, pela primeira vez, testes de integração reais contra PostgreSQL via Testcontainers (Phase 91), com gate de CI. SpotBugs/FindSecBugs corre limpo contra JDK 23 (Phase 90). Continua sem WebSocket/SSE em todo o projeto — notificações usam polling (30s) via TanStack Query.
 - ~~Bloqueio ambiental recorrente conhecido: `MINIO_ENDPOINT` não é substituído a partir de `backend/.env` nesta sessão/ambiente, impedindo o arranque completo do contexto Spring~~ — **RESOLVIDO (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` local passou a fornecer `MINIO_ENDPOINT`/credenciais reais contra um container `lexcv_minio` a correr, o contexto Spring arranca por completo (`MinioConfig.s3Client()` já não lança a exceção `IllegalArgumentException` de carácter ilegal), e `backend/.env.example` já documenta todas as variáveis `MINIO_*` necessárias para qualquer ambiente futuro. Resolução de ambiente/configuração, não uma correção de código — nunca foi um bug de código; ver `.planning/milestones/v2.10-MILESTONE-AUDIT.md` para o histórico do bloqueio.
-- Limitação de infraestrutura pré-existente, projeto inteiro: nenhum H2/Testcontainers existe neste backend — impediu a verificação ao vivo da native query da Phase 86 (`buscarPorFiltros`) e do lock de concorrência da Phase 87 (`numeroVersao`). Candidato a uma fase dedicada de infraestrutura de testes numa milestone futura.
+- ~~Limitação de infraestrutura pré-existente, projeto inteiro: nenhum H2/Testcontainers existe neste backend~~ — **RESOLVIDO (v2.11 Phase 91, TEST-01/02/03):** Testcontainers PostgreSQL real + gate de CI (`deploy.yml` job `test`) agora cobrem a native query `buscarPorFiltros` (`NotificacaoRepositoryIT`) e o lock de concorrência `numeroVersao` (`ParecerVersaoConcorrenciaIT`). Execução local nesta sessão ficou bloqueada por uma incompatibilidade Docker Desktop 4.80/Testcontainers 1.20.4 (npipe) — confirmada independentemente, não um defeito de código; deverá passar em CI (`ubuntu-latest`).
 
 ## Constraints
 
@@ -188,11 +182,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.10 (2026-07-10) — Notificações e Alertas. Sistema de notificações persistido construído do zero: `RiscoPrazoService` consolida 4 implementações inconsistentes de "prazo crítico" (Phase 85); entidade `Notificacao` + API completa com targeting estrito por entidade+ADMIN (Phase 86); 4 alertas disparados por evento — fase, documento, atribuição de processo (com novo fluxo de reatribuição), parecer (Phase 87); primeiro job `@Scheduled`/cross-tenant do projeto, verificação diária de prazos/eventos/honorários com isolamento de falha em 4 camadas e idempotência edge-triggered (Phase 88); sino reescrito + página `/notificacoes` dedicada, consumindo tudo o que as fases anteriores construíram (Phase 89). 16/16 requisitos satisfeitos, 0 gaps de integração cross-phase encontrados pela auditoria de milestone (apenas 2 avisos não-bloqueantes). Dívida técnica não-bloqueante aceite: 4 das 5 fases têm UAT ao vivo pendente, na quase totalidade por um único bloqueio ambiental recorrente (`MINIO_ENDPOINT`) e pela ausência pré-existente de infraestrutura H2/Testcontainers neste backend — não defeitos de código. Ver `.planning/milestones/v2.10-MILESTONE-AUDIT.md`.
+**Shipped:** v2.11 (2026-07-14) — Auditoria Técnica e Notificações Avançadas. Fechou a dívida técnica acumulada e expandiu o sistema de notificações: SpotBugs/FindSecBugs corrigido contra JDK 23 (Phase 90); primeira infraestrutura de testes de integração real (Testcontainers+PostgreSQL) do projeto, com gate de CI (Phase 91); Agenda consolidada com `RiscoPrazoService` para Prazos e Eventos, fechando a 5ª implementação divergente de "prazo crítico" (Phase 92); preferências de notificação por utilizador (Phase 93); correção de um bug pré-existente de colisão de dedup ADMIN (Phase 94); notificações de processo alargadas a toda a equipa do cliente (Phase 95); snooze de lembrete de prazo (Phase 96); auditoria final de milestone — isolamento de tenant confirmado, UAT ao vivo fechado para 8 fases históricas (~40 cenários), labels `DocumentoTipo` traduzidas + testes de NIF, e o bloqueio ambiental `MINIO_ENDPOINT` genuinamente resolvido pela primeira vez neste projeto (Phase 97). 15/15 requisitos satisfeitos. Auditoria de milestone encontrou e fechou na mesma sessão 1 gap de integração residual (`isEventoCritico` divergindo em `dataInicio`/`dataFim`, deferido pela Phase 92 e nunca apanhado pelo âmbito da Phase 97 até a própria auditoria de fecho). Status: `tech_debt` — sem bloqueios; dívida residual é sobretudo verificação ao vivo (itens NEEDS-HUMAN-VISUAL de baixo risco) e 2 decisões de produto genuínas transportadas de milestones anteriores. Ver `.planning/milestones/v2.11-MILESTONE-AUDIT.md`.
 
 <details>
-<summary>Histórico anterior (v1.0–v2.9)</summary>
+<summary>Histórico anterior (v1.0–v2.10)</summary>
 
+**v2.10** (2026-07-10) — Notificações e Alertas. Sistema de notificações persistido construído do zero: `RiscoPrazoService` consolida 4 implementações inconsistentes de "prazo crítico" (Phase 85); entidade `Notificacao` + API completa com targeting estrito por entidade+ADMIN (Phase 86); 4 alertas disparados por evento — fase, documento, atribuição de processo (com novo fluxo de reatribuição), parecer (Phase 87); primeiro job `@Scheduled`/cross-tenant do projeto, verificação diária de prazos/eventos/honorários com isolamento de falha em 4 camadas e idempotência edge-triggered (Phase 88); sino reescrito + página `/notificacoes` dedicada, consumindo tudo o que as fases anteriores construíram (Phase 89). 16/16 requisitos satisfeitos, 0 gaps de integração cross-phase encontrados pela auditoria de milestone (apenas 2 avisos não-bloqueantes). Ver `.planning/milestones/v2.10-MILESTONE-AUDIT.md`.
 **v2.9** (2026-07-08) — Melhoria Módulo Processos. Módulo de processos aprofundado com dados jurídicos estruturados: Juízo/Origem no card Dados, sub-secções Decisões/Factos/Testemunhas (entidades próprias com verificação dupla de posse), aba Documentos dedicada, criação automática e idempotente de Honorário na formalização (`valorTotal` sempre em branco), Termo de Honorários imprimível com bloqueio quando o valor ainda não foi preenchido, e Partes/Fases refatoradas para o mesmo padrão visual das abas novas. Auditoria de milestone encontrou e fechou na mesma sessão 2 bugs de integração cross-phase (filtros `processo_id` ignorados pelo backend em `/honorarios` e `/documentos`). 17/17 requisitos satisfeitos.
 **v2.8** (2026-07-06) — Refatoração Ficha de Cliente. Ficha de cliente unificada e reestruturada em 7 separadores; enum `documento_tipo` restrito por tipo de cliente; "Documentos Entregues" passa a upload real.
 **v2.7** (2026-07-02) — Melhoria Gestão de Clientes. Simplificação e aplanamento do modelo de identificação de clientes, NIF obrigatório validado em ambas as camadas.
@@ -208,7 +203,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.11 (Auditoria Técnica e Notificações Avançadas) em definição de requisitos/roadmap — auditoria e fecho de dívida técnica (infra de testes, Agenda/RiscoPrazoService, UAT ao vivo pendente, SAST) combinada com NOTF-24/25/26.
+**Current focus:** Milestone v2.11 concluída e arquivada (2026-07-14). Aguardando definição da próxima milestone via `/gsd:new-milestone`.
 
 ## Evolution
 
@@ -228,4 +223,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-12 — milestone v2.11 (Auditoria Técnica e Notificações Avançadas) started*
+*Last updated: 2026-07-14 — milestone v2.11 (Auditoria Técnica e Notificações Avançadas) shipped and archived*
