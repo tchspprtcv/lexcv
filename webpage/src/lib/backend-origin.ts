@@ -2,10 +2,15 @@
  * Fail-fast validation/normalization for BACKEND_API_ORIGIN, shared by
  * lib/setup.ts and lib/branding.ts.
  *
- * Evaluated once at module load (each caller assigns the result to a
- * top-level const, outside any try/catch and outside the async fetch
- * functions), so a misconfigured origin is a loud startup failure instead
- * of a silent runtime no-op — see 99-REVIEW.md WR-01: an unnormalized
+ * Callers MUST invoke this from inside the body of the async function that
+ * consumes the result (fetchSetupStatus()/fetchBranding()) — never assign
+ * the result to a module-scope const. Calling it at module load throws
+ * during static `import` resolution, outside every fail-open try/catch in
+ * proxy.ts/branding.ts, turning a recoverable config error into a full
+ * outage of the public site (see 99-REVIEW.md CR-01, iteration 3 — a
+ * regression this exact module-scope pattern introduced).
+ *
+ * The validation itself exists per 99-REVIEW.md WR-01: an unnormalized
  * trailing slash produces a double-slash path (`http://host//api/v1/...`)
  * that never matches the backend's route, and a missing scheme (e.g.
  * "localhost:8080") parses "successfully" via `new URL()` with a bogus

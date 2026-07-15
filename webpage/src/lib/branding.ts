@@ -1,12 +1,14 @@
 import type { BrandingResponse } from "@/types/branding";
 import { getBackendOrigin } from "@/lib/backend-origin";
 
-const backendOrigin = getBackendOrigin();
-
 const FALLBACK: BrandingResponse = { nome: "LexCV", logoDataUrl: null };
 
 export async function fetchBranding(): Promise<BrandingResponse> {
   try {
+    // Called here (inside the try), not at module scope, so a misconfigured
+    // origin fails open through this same catch instead of crashing module
+    // import — see 99-REVIEW.md CR-01.
+    const backendOrigin = getBackendOrigin();
     const response = await fetch(`${backendOrigin}/api/v1/public/branding`, {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
