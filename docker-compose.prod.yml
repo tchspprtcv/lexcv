@@ -20,6 +20,15 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  webpage:
+    image: ${REGISTRY:-ghcr.io/lexcv}/webpage:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
   minio:
     restart: unless-stopped
     deploy:

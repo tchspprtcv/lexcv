@@ -8,6 +8,14 @@
         }
         reverse_proxy minio:9001
     }
+
+    @webpage {
+        path / /landing-static/*
+    }
+    handle @webpage {
+        reverse_proxy webpage:3000
+    }
+
     handle {
         reverse_proxy frontend:3000
     }
