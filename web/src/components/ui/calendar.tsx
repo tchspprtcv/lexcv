@@ -234,6 +234,24 @@ function CalendarDayButton({
     if (modifiers.focused) ref.current?.focus()
   }, [modifiers.focused])
 
+  // Dev-mode safety net for the `ButtonWithRef` cast above (see review
+  // WR-03): refs attach during React's commit phase, before effects run,
+  // so if `ref.current` is still null once this mount effect fires, the
+  // `Button` component stopped forwarding `ref` through its props spread.
+  // Warn loudly here instead of letting roving-tabindex keyboard focus
+  // silently break the next time button.tsx is refactored.
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== "production" && ref.current === null) {
+      console.warn(
+        "[Calendar] CalendarDayButton did not receive a DOM ref from Button. " +
+          "Button (button.tsx) may no longer forward `ref` through its props " +
+          "spread to the host element -- roving-tabindex keyboard focus in " +
+          "the calendar will silently stop working. See 101-REVIEW.md WR-03."
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <ButtonWithRef
       ref={ref}
