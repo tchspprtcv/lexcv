@@ -1,194 +1,188 @@
-# Feature Research: Notification Preferences, Team Targeting & Snooze (NOTF-24/25/26)
+# Feature Research
 
-**Domain:** In-app notification system extensions for multi-tenant legal practice management (LexCV v2.11) — per-user category muting, case-team-wide alert fan-out, deadline-reminder snooze
-**Researched:** 2026-07-12
-**Confidence:** MEDIUM-HIGH (codebase-grounded dependency claims are HIGH confidence — verified directly against the shipped v2.10 `Notificacao`/`NotificacaoService`/`AlertasDiariosJob` code; cross-product UX pattern claims are MEDIUM confidence, cross-verified across 2+ independent sources each; no Context7 coverage exists for this domain, so all ecosystem claims come from WebSearch and are flagged accordingly)
+**Domain:** Institutional B2B landing page for a single-tenant legal-tech deployment (Cape Verde legal practice management platform)
+**Researched:** 2026-07-15
+**Confidence:** MEDIUM (generic B2B SaaS/legal-tech landing page patterns are well-documented and cross-verified; Cape Verde/NOSi-specific market data is sparse — codebase constraints are HIGH confidence, sourced directly from `Tenant.java`, `SetupInitializeRequest.java`, and `SecurityConfig.java`)
 
-> Supersedes the v2.10-dated `FEATURES.md` previously at this path (that research answered "should a notification system exist at all" for v2.10; this one answers three specific extension questions for v2.11 against the system v2.10 actually shipped). Per the milestone brief, this file does **not** re-research the existing notification plumbing — it treats `Notificacao`, `NotificacaoService`, `NotificacaoController`, and `AlertasDiariosJob` as fixed and researches only how NOTF-24/25/26 attach to them.
+> Supersedes the v2.11-dated `FEATURES.md` previously at this path (that research covered NOTF-24/25/26 notification extensions; this one is scoped entirely to the new v2.12 Landing Page milestone).
 
-## Context Recap — What v2.10 Actually Shipped (verified in code, not inferred)
+## Framing: this is NOT a typical multi-tenant SaaS marketing site
 
-- `Notificacao` (`backend/src/main/java/com/lexcv/models/Notificacao.java`) is a flat, per-recipient row: `tenantId`, `destinatarioId`, `categoria` (free-form string, 9 known values in use), `entidadeTipo`/`entidadeId`, `titulo`/`mensagem`/`linkUrl`, `lida` (boolean), `createdAt`. No existing column expresses "muted," "team," or "snoozed" — all three are net-new concerns.
-- The 9 live `categoria` values: `FASE_ENTRADA`, `DOCUMENTO_NOVO`, `PROCESSO_ATRIBUIDO`, `PARECER_ATRIBUIDO` (event-triggered, Phase 87) and `PRAZO_PROXIMO`, `PRAZO_VENCIDO`, `EVENTO_PROXIMO`, `EVENTO_VENCIDO`, `HONORARIO_ATRASADO` (daily-job-generated, Phase 88).
-- `NotificacaoService.criar(...)` is the **single write choke point** for row creation across the whole subsystem (event triggers in `ResourceController`/`ParecerController` and the daily job in `AlertasDiariosJob` both funnel through it). Any new gating logic (mute check, team resolution) is cheapest to add here or immediately around it, not duplicated at each of the ~9 call sites.
-- `AlertasDiariosJob` is already idempotent **per (tenantId, destinatarioId, entidadeTipo, entidadeId, categoria) tuple**, enforced by both an application-level `existsBy...` check and a DB unique constraint (`uk_notificacao_dedup`). This is the single most important fact for NOTF-26: **the job already never recreates a row for a categoria that has already fired for that entity+recipient.** A `PRAZO_PROXIMO` notification for a given prazo/recipient is created at most once, ever, regardless of how many days the job runs while it stays at that risk tier. "Snooze causing the item to reappear on the very next job run" is therefore not a job-side problem in this codebase — it is entirely a **read-side** problem (the row is still unread, so it still shows in the bell/list). This materially narrows the design space for NOTF-26 (see below).
-- Targeting today is asymmetric in a way directly relevant to NOTF-25: a **cliente**-linked `DOCUMENTO_NOVO` already fans out to the *whole* client team (`ClienteAdvogado` + `ClienteAdministrativo`, deduplicated via `LinkedHashSet`) plus ADMIN. A **processo**-linked `DOCUMENTO_NOVO` — and `FASE_ENTRADA`, and `PROCESSO_ATRIBUIDO` — notify only `Processo.responsavelId` (a single `UUID` field) plus ADMIN. `Processo` has no `equipa`/team relation of its own; it only carries `clienteId`. `ParecerSolicitacao.processoId` is **nullable** (a parecer can be linked to a cliente only) — this matters directly for scoping NOTF-25 below.
-- No per-user preference concept exists anywhere in the backend today (no `NotificacaoPreferencia`-equivalent table, no settings endpoint). `PROJECT.md`'s v2.10 Out-of-Scope entry ("todas as categorias são sempre entregues") is the thing NOTF-24 explicitly reverses.
-- Delivery is polling-only (TanStack Query, 30s) — no push/email/SMS channel exists, which simplifies NOTF-24 considerably versus generic multi-channel preference-center literature (see Anti-Features).
+Almost all "B2B SaaS landing page" research (Clio, MyCase, PracticePanther, generic SaaS growth blogs) assumes a marketing site that serves **prospects across many potential customers**, backed by a shared database of named clients, testimonials, logos, and self-serve signup/pricing. LexCV's v2.12 landing page is architecturally different and closer to a **branded splash/entry portal for one already-provisioned institution** — the same pattern used by:
 
----
+- **Auth0/Okta Universal Login branding** — a tenant's login page shows only that org's logo/name, pulled from a small branding record (logo + display name), never cross-tenant data. (MEDIUM confidence, verified via Auth0/Okta developer docs)
+- **Zendesk Guide / Freshdesk support portals** — publicly reachable, personalized per-organization, but not a comparison/marketing hub across all customers of the underlying platform.
 
-## NOTF-24 — Per-User Notification Preferences (mute categories)
+This distinction is the single most important input for scoping: **the codebase has no field, table, or endpoint for "other institutions using LexCV," named customer logos, or testimonials** — and the deployment model (one tenant per deployment, `/setup` singleton) means such data structurally cannot exist without new cross-deployment infrastructure that is explicitly out of scope. Every "social proof" recommendation below is scoped around this constraint.
 
-### How this typically works elsewhere
+## Feature Landscape
 
-Every mature multi-category notification product surveyed (GitHub, Jira, Asana, Slack, and the generic SaaS notification-preference literature) converges on the same shape: a **per-user, per-category on/off setting**, defaulting to "on," presented as a flat settings list rather than buried in the notification stream itself. The one recurring, cross-source caveat is that **safety-critical or legally-significant categories are marked non-negotiable** — shown in the preference UI (for transparency) but not toggleable — precisely so a user cannot silently opt out of something whose absence causes real harm (security alerts in generic SaaS; by direct domain analogy here, an overdue-deadline alert in a legal practice tool). Multi-channel products (email/push/SMS/in-app) use a category×channel matrix; LexCV has exactly one channel today, so the matrix pattern is not applicable — a flat per-category toggle list is the correct scope.
+### Table Stakes (Users Expect These)
 
-### Category breakdown
+Features expected of any professional institutional/B2B product page. Missing these makes the deployment look unfinished or untrustworthy to an institutional buyer.
 
-| Aspect | Table Stakes | Differentiator | Anti-Feature |
-|---|---|---|---|
-| Per-category on/off toggle, defaulting to "on" (opt-out model) | Yes — universal in every product surveyed once a system has >3 categories; users expect it once the app has enough notification volume to be annoying (LOW-MEDIUM complexity: one new join-style table + one settings endpoint + one settings-page section) | | |
-| Non-mutable "cannot silence" categories for the highest-severity tier (`PRAZO_VENCIDO`, `HONORARIO_ATRASADO`) | | Differentiator specific to a legal-deadline domain — general SaaS guidance says "security/legal notices should not be opt-outable"; LexCV's direct analogue is an *already-breached* deadline. Missed-deadline is literature's most-cited cause of legal malpractice claims, which raises the stakes of a silent full mute above typical SaaS annoyance-reduction | |
-| Category×channel preference matrix | | | Anti-feature **right now**: this is the standard generic pattern, but LexCV has one delivery channel (in-app polling). Building a matrix UI for a single column is premature complexity with no present payoff — revisit only if/when email/push is ever added (currently explicitly Out of Scope in `PROJECT.md`) |
-| Preference change taking effect immediately for future notifications, not retroactive to already-created rows | Yes — matches how every reviewed product treats mute (stops future noise, doesn't rewrite history) | | |
-| Admin-level override of another user's personal preference | | | Anti-feature: requirement is explicit ("não global, não por tenant") — an ADMIN "unmute for everyone" or "force-mute a user" control would violate the stated per-user scope and reintroduce exactly the broadcast-creep pattern v2.10 deliberately avoided |
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Personalized hero (tenant `nome` + `logoDataUrl`) | Confirms "this deployment is ours" for the institution's staff/stakeholders; core requirement of the milestone | MEDIUM | **New backend work required**: `GET /api/v1/public/...` doesn't exist yet. Must be added to `SecurityConfig`'s `permitAll()` list alongside the existing `/api/v1/setup/status` pattern. Must return **only** `nome` + `logoDataUrl` — `Tenant.java` also has `nif`, `email`, `telefone`, `tipoEntidade` columns that must be explicitly excluded (confirmed via direct read of the entity; a naive `TenantResponse` DTO reuse would leak them) |
+| Setup-status gate (`/api/v1/setup/status` → redirect to `/setup` if uninitialized) | Preserves existing first-run behavior; a landing page must never show "personalized" content for a tenant that doesn't exist yet | LOW | Endpoint already public (`SecurityConfig` line 56-58) and already consumed by this exact pattern in `web/`'s `proxy.ts`. Pure port of existing logic into the new `webpage/` app |
+| Benefit-driven headline + sub-headline (value proposition) | First 5 seconds decide whether an institutional visitor keeps reading; HIGH confidence from cross-verified SaaS research | LOW | Static copy, no data dependency. Target headline ≤8 words per convergent industry guidance |
+| Módulos/Funcionalidades overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) | Confirmed content section; institutional buyers scan for "does it cover our actual workflow" before anything else | LOW | Purely static marketing copy describing already-shipped modules — zero new backend dependency. Risk is only content accuracy (must reflect real capability, not aspirational features) |
+| Primary CTA "Entrar" → `/login`, repeated top + bottom | Single, unambiguous CTA outperforms multi-CTA pages in every SaaS CRO source found (13.5% vs 10.5% conversion for single vs 5+ CTAs) | LOW | `/login` route already exists and is unaffected by this milestone |
+| Contact / "Pedir demonstração" section with a real reachable channel | Confirmed content section; the only lead-gen surface for institutions who don't yet have this deployment | MEDIUM | **Cannot source contact info from `Tenant.email`/`Tenant.telefone`** — those fields exist in the DB but (a) the milestone explicitly forbids exposing them via the public endpoint, and (b) the current `/setup` wizard (`SetupInitializeRequest`) never even populates them, so they may be null for every existing deployment. This section needs a **static, hardcoded contact channel in the `webpage/` app's own config** (e.g. a product-level email/mailto, or an external form embed) — not tenant-sourced data. Building a persisted "lead capture" endpoint is new backend scope (see Anti-Features) |
+| Responsive/mobile-first layout | Legal-tech landing pages skew heavily mobile — one industry source found 88% of legal landing-page traffic is mobile (MEDIUM confidence, single-source, consumer-facing law-firm context but directionally consistent with LexCV's own mobile-first history in v2.3) | LOW-MEDIUM | `web/` already has a full mobile design system (drawer nav, bottom-sheets, touch targets) to reference for consistent patterns, though `webpage/` is a simpler single-page layout |
+| Dark/light mode | Explicit milestone requirement ("Reutiliza... dark/light mode já usados em `web/`") | LOW | `web/src/components/theme-toggle.tsx` and `web/src/app/providers.tsx` already implement this — direct port |
+| Basic SEO meta (title, description, favicon) | Table stakes for any public page; institutional stakeholders/search engines need a coherent identity | LOW-MEDIUM | Favicon/OG image ideally uses tenant logo dynamically — bumps this from LOW to LOW-MEDIUM (see dynamic OG image differentiator below for the harder version) |
 
-### Dependencies on the existing architecture
+### Differentiators (Competitive Advantage)
 
-- **New entity, not a column on `User`:** a `NotificacaoPreferencia`-style row per `(tenantId, userId, categoria)` mirrors the existing join-table convention already used for `ClienteAdvogado`/`ClienteAdministrativo` (unique constraint on the triple; absence of a row = "not muted," matching the opt-out default). This is lower-risk than a single JSON/CSV column on `User` given the project's established preference for typed join tables over JSON blobs for anything queried (see `PROJECT.md` Key Decisions: the `dados_tipo` JSON-column approach was explicitly reverted in v2.7 for exactly this reason).
-- **Enforcement point — recommend creation-time, not read-time only:** check the preference inside (or immediately around) `NotificacaoService.criar(...)` before inserting a row, mirroring the per-recipient try/catch isolation pattern already established there (CR-01/CR-02 review comments: one bad recipient must never block the rest of a fan-out). This avoids ever persisting a row that will never be shown, keeps `unread-count` accurate without an extra join, and — because a fan-out loop (team, ADMIN) already calls `criar()` once per recipient — a mute check here naturally applies per-recipient with zero extra plumbing.
-- **Interaction with `AlertasDiariosJob`'s idempotency tuple:** if a category is muted at the moment the job would have created a row, no row is created, so nothing is "skipped" that could later resurface stale — the tuple simply doesn't exist yet. If the user un-mutes later, the next daily run creates it fresh (max 1-day latency), correctly. For the four **event-triggered** categories (one-shot: `FASE_ENTRADA`, `DOCUMENTO_NOVO`, `PROCESSO_ATRIBUIDO`, `PARECER_ATRIBUIDO`), muting at trigger time means that specific occurrence is permanently missed if unmuted later — this is expected mute semantics, not a bug, but worth stating explicitly since it differs from the job-driven categories' behavior.
-- **Interacts with NOTF-25:** once processo-linked triggers fan out to a team (not just `responsavelId`), the mute check must run **per destination user inside the fan-out loop**, not once for the whole notification — otherwise one muted team member would suppress the notification for the rest of the team. The existing per-recipient isolation pattern already used for orphaned-user handling is the same shape needed here.
-- **RBAC:** this is inherently self-scoped (a user can only read/write their own preferences), so it does not need a new `scope:action` permission pair — it can piggyback on the existing `notificacoes:view` authority already required for all `/notificacoes/*` endpoints, the same way profile self-service typically needs no additional grant beyond "authenticated."
+Features that set LexCV's landing page apart from generic legal-tech marketing pages — all achievable with **zero new data model changes**, by reframing verified architecture facts as trust copy rather than fabricating customer proof.
 
----
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Multi-tenant data isolation as trust messaging ("os seus dados nunca se misturam com os de outra instituição") | Directly addresses the #1 enterprise security objection ("can I trust this with our data") — research confirms security-first messaging is the standard substitute for testimonials on new products (MEDIUM confidence, cross-verified across SaaS trust-signal sources) | LOW | **This is a real, verifiable architectural fact** — every domain entity carries `tenant_id`, unique constraints are per-tenant (per `CLAUDE.md`). Copy can honestly assert this without fabrication, unlike a generic SaaS bolting on a compliance badge it doesn't actually have |
+| Cabo Verde / NOSi ecosystem framing ("desenhado para a realidade jurídica cabo-verdiana", institutional/e-gov alignment) | Localization/institutional-fit signal matters more than generic feature lists for public-sector-adjacent buyers; NOSi is Cape Verde's e-government operational nucleus (public verified fact) and legal Portuguese domain language is already a hard project constraint | LOW | Confirmed: NOSi ("Núcleo Operacional da Sociedade de Informação") is a real Cape Verde EPE government agency driving e-government/digital transformation (HIGH confidence, official/gov.cv sources) — framing LexCV as part of that digital-governance push is credible, not aspirational marketing |
+| Curated real-UI screenshots/mockups (Dashboard, Ficha Cliente, Agenda) instead of generic stock illustrations | High-performing B2B SaaS heroes use actual product screenshots over abstract illustrations (MEDIUM confidence, cross-verified) | MEDIUM | Needs redacted/demo seed data (via existing `DatabaseSeeder`) to avoid ever screenshotting real tenant data; some design/curation effort but no new engineering |
+| RBAC + audit-trail messaging ("cada ação é registada, permissões por função") | Institutional legal buyers (compliance-conscious) respond to governance/audit framing more than generic "powerful features" copy | LOW | Backed by real `@PreAuthorize` scope-based RBAC and existing audit patterns already shipped (Parecer versioning audit, Phase 90 SAST hardening) — again, honest reuse of shipped capability as copy, not new engineering |
+| Dynamic OG/share image personalized with tenant name+logo | Differentiates the deployment when its link is shared (WhatsApp/email/LinkedIn preview) — an institution sharing "olha a nossa plataforma" gets a branded card, not a generic one | MEDIUM-HIGH | Requires Next.js dynamic image generation (`next/og` / `ImageResponse`) consuming the same public branding endpoint — real engineering effort, reasonable to defer to v1.x |
 
-## NOTF-25 — Notify the Full Process Team, Not Just `responsavelId`
+### Anti-Features (Commonly Requested, Often Problematic)
 
-### How this typically works elsewhere
+Patterns that appear in nearly every generic "SaaS landing page best practices" search result but are actively wrong for this milestone's constraints — flagged explicitly because the quality gate requires it.
 
-Legal-specific practice-management products (Clio is the most directly comparable, MEDIUM confidence from vendor help-center docs) model exactly this distinction: a single **Responsible Attorney** (the equivalent of `responsavelId`) plus a separate, multi-valued **Responsible Staff** field for "any individual also responsible for matter-related tasks other than the responsible attorney" — i.e., matters commonly have one accountable owner and a broader working team, and case-management tooling treats these as two different concepts, not one. General task/PM tooling (Jira "watchers," GitHub "subscribers") reaches the same shape from a different angle: an assignee (primary responsibility, gets the strongest notification language) plus a broader set of people who get informed of activity without being the accountable owner. The common thread across both domains: **team-wide notification is additive to, not a replacement for, the primary-assignee notification** — the primary recipient still gets distinguishable ("you were assigned") messaging, while the rest of the team gets FYI-level ("the matter was...") messaging, exactly mirroring the 2nd-person/3rd-person split LexCV's `NotificacaoService` already uses between the primary recipient and the ADMIN fan-out.
-
-### Category breakdown
-
-| Aspect | Table Stakes | Differentiator | Anti-Feature |
-|---|---|---|---|
-| Notifying more than the single assignee on a shared matter/case | Yes, once a firm has more than one person working a case — Clio's Responsible Attorney + Responsible Staff split and every general-PM assignee+watchers pattern surveyed treat single-assignee-only as an incomplete/legacy model | | |
-| Reusing an *existing* team concept instead of inventing a parallel one | | Differentiator for LexCV specifically: `ClienteAdvogado`/`ClienteAdministrativo` already exist, are already the "equipa" notified for cliente-linked documents, and every `Processo` already has exactly one `clienteId`. Treating "the process team" = "the client's assigned team" reuses proven infrastructure at near-zero schema cost instead of building a parallel `ProcessoEquipa` join table for a concept the data model already expresses one level up | |
-| A brand-new `ProcessoEquipa` join table, independent of the client's team | | | Anti-feature (over-engineering for this milestone): duplicates `ClienteAdvogado`/`ClienteAdministrativo` semantics one entity down, doubles the maintenance surface (two places to add/remove a team member), and the milestone's own framing question ("or a new explicit team concept") is answerable today by observing the data model already has the relationship needed — Processo→Cliente→team — without a new table. Revisit only if a firm's real workflow genuinely needs a different team per processo than the client's overall team (not evidenced by anything in `PROJECT.md`) |
-| Applying the expansion uniformly to all 4 event triggers without checking each one's semantics | | | Anti-feature: `PARECER_ATRIBUIDO` is a poor fit — `ParecerSolicitacao.processoId` is nullable (a parecer can exist with only a `clienteId`, no processo at all), and a parecer's advogado assignment is domain-modeled as an individual professional-responsibility act, not a case-team broadcast (this mirrors why Clio's Responsible Attorney and general "assignee" notifications stay individual even in team-based tools — accountability language needs one clear owner). Recommend leaving `PARECER_ATRIBUIDO` as-is (individual advogado + ADMIN) and scoping the team expansion to `FASE_ENTRADA`, `DOCUMENTO_NOVO` (processo branch), and `PROCESSO_ATRIBUIDO` |
-| Preserving the existing 2nd-person/3rd-person message-copy split for the primary responsável when adding team fan-out | Yes — matches the Clio/Jira "assignee is more strongly addressed than watchers" convention and matches LexCV's own existing precedent (destinatário vs. ADMIN message copy already differ in `notificarProcessoAtribuido`) | | |
-
-### Dependencies on the existing architecture
-
-- **No new entity required** if the "reuse client team" recommendation is adopted: resolve `Processo.clienteId` → `ClienteAdvogadoRepository.findByClienteIdAndTenantId` + `ClienteAdministrativoRepository.findByClienteIdAndTenantId`, exactly the lookup pattern already written and battle-tested in `ResourceController`'s cliente-branch of `DOCUMENTO_NOVO` (lines ~2611-2623). This is a copy-and-adapt of existing code into the three chosen event triggers, not new design.
-- **Retroactivity is automatic, not a migration concern:** because team membership is resolved live at notification-creation time (via `clienteId` lookup) rather than snapshotted onto the `Processo` row, every existing processo automatically gets the expanded targeting the moment the code ships — no backfill needed. Processos whose client currently has zero linked advogados/administrativos degrade gracefully to today's exact behavior (responsável + ADMIN only), so there is no regression risk for the (likely common, early-tenant) case of an empty team.
-- **Dedup is a solved pattern:** reuse the `LinkedHashSet<UUID>` dedup already in `notificarDocumentoNovo` so a responsável who is *also* a `ClienteAdvogado` for the same client, or a user who is both advogado and administrativo, gets exactly one row per notification event, not two or three.
-- **Extends `NotificacaoService.notificarFaseEntrada`, `notificarDocumentoNovo` (processo branch, currently in `ResourceController`), and `notificarProcessoAtribuido`** — each needs its single-`responsavelId` path widened to "responsável (2nd-person copy) + rest of team (3rd-person copy) + ADMIN (3rd-person copy, existing)," with the existing per-recipient try/catch isolation preserved for every new recipient added.
-- **Open question worth flagging for roadmap, not resolved by the literal wording of NOTF-25:** the milestone question scopes this to "the 4 existing event triggers," which are the Phase 87 set. The daily-job categories (`PRAZO_PROXIMO`/`VENCIDO`, `EVENTO_PROXIMO`/`VENCIDO`, `HONORARIO_ATRASADO` — Phase 88) currently have the *same* single-`responsavelId` limitation and would become inconsistent with the newly-expanded event triggers if left alone. Recommend the roadmap explicitly decide whether Phase-88 categories get the same team expansion in this milestone or are deliberately deferred — leaving it undecided by omission risks the same kind of "5th inconsistent implementation" pattern this project has already had to consolidate once (`RiscoPrazoService`, Phase 85).
-
----
-
-## NOTF-26 — Snoozing a Deadline Reminder
-
-### How this typically works elsewhere
-
-Two distinct, well-precedented models exist across the products surveyed, and they answer "what does snooze mean" differently:
-
-1. **Consumer reminder/task apps (Todoist, Any.do, Due — MEDIUM confidence, direct vendor docs):** snooze = pick a concrete resurfacing point (preset intervals like 15 min/1 hour/tomorrow, or an explicit date/time) and the reminder simply stops showing until then, reappearing automatically and unconditionally at that point. Several of these apps explicitly warn against a "snooze forever" affordance — every preset has a concrete resurfacing time, never an open-ended dismiss.
-2. **Compliance/legal-deadline tooling (IntelligentContract — MEDIUM confidence, single vendor source but the closest direct domain analogue found, a contract-compliance-deadline alerting product): per-user configurable "snooze length" (default 3 days) that **overrides the standard reminder frequency once**, after which the alert reverts to the normal recurring cadence if still unresolved. Critically, the source is explicit that snoozing is a **temporary suppression of re-*notification*, never a way to make the underlying deadline stop being tracked** — the alert always eventually comes back if the deadline itself is still open.
-
-Both models converge on the same underlying principle directly relevant to LexCV: **snooze must have a concrete, bounded resurfacing point, and must never silently and permanently suppress an item that is still substantively open** (still-unpaid honorário, still-unmet prazo). Neither model treats snooze as equivalent to "mark as read" — a still-open, snoozed item that quietly counted as "read" would misrepresent the user's actual attention state to anyone reviewing the account later (a second reviewer, an ADMIN, an audit trail), which is a specifically bad property for a domain where missed deadlines are a malpractice exposure.
-
-### Category breakdown
-
-| Aspect | Table Stakes | Differentiator | Anti-Feature |
-|---|---|---|---|
-| Snooze = hide until a concrete future date/time, then reappear automatically as unread | Yes across every reminder-app precedent found — snooze without a bounded resurfacing point isn't snooze, it's dismiss-in-disguise | | |
-| Snooze that cannot suppress a *worse* subsequent alert for the same underlying deadline (escalation breaks through) | | Differentiator, and specifically the safest design for this domain: because `AlertasDiariosJob` already creates a **new row per categoria transition** (a `PRAZO_PROXIMO` row and a later `PRAZO_VENCIDO` row for the same prazo are two different rows, two different categoria values), scoping snooze to the individual notification row rather than to "this prazo, permanently" means a snooze of today's "approaching" notice cannot, even accidentally, hide tomorrow's "overdue" notice — they are different rows with independent snooze state | |
-| Snooze presets (+1 dia / +3 dias / +7 dias / data específica) rather than snooze-until-forever | Yes — matches Todoist/Any.do/Due preset patterns and IntelligentContract's per-user configurable length; "no expiry" option is explicitly the thing to avoid, not the thing to add | | |
-| Snooze silently setting `lida = true` as a side effect | | | Anti-feature: conflates two independent signals ("I looked at this" vs. "hide this for now") — a snoozed-but-never-actually-read item that shows as read would understate real outstanding risk to anyone else reviewing the account (ADMIN fan-out recipients, a future audit). Keep `lida` and `snoozedUntil` orthogonal columns/state |
-| A visible "snoozed" filter/tab on `/notificacoes` so deferred items aren't invisible forever | | Differentiator (small effort, meaningfully closes the loop) — mirrors Gmail's "Snoozed" folder and GitHub's "snoozed" issue list; without it, a user has no way to see what they've deferred except waiting for it to resurface |
-
-### Dependencies on the existing architecture, and the concrete answer to "how do other systems avoid it reappearing on the very next job run"
-
-- **This is not a job-side problem in LexCV, and does not need to be.** `AlertasDiariosJob` is already edge-triggered/idempotent per `(tenant, destinatario, entidadeTipo, entidadeId, categoria)` (Phase 88, DB-backed by `uk_notificacao_dedup`). It will never re-create a second `PRAZO_PROXIMO` row for the same prazo+recipient while the risk stays at that tier — that dedup already exists and needs no change for NOTF-26. The entire "avoid reappearing" concern is a **read-side filtering problem**: an unread row that's still unread will keep showing in the bell/list regardless of the job, simply because nothing has changed its visibility state. Snooze's job is exclusively to add a visibility filter, not to touch the job's creation logic.
-- **Recommended shape: add `snoozedUntil` (nullable `LocalDateTime`) directly to `Notificacao`,** not a separate table — it is per-instance ephemeral state on a single row, structurally unlike NOTF-24's per-user-per-category preference (a standing rule) and unlike `lida` (permanent, one-way). A nullable column with a straightforward `WHERE snoozedUntil IS NULL OR snoozedUntil <= NOW()` predicate is the lowest-complexity correct implementation.
-- **Three existing read paths need this predicate added, and each needs independent thought about "should mark-all-read reach into snoozed items?":**
-  - `NotificacaoRepository.buscarPorFiltros` (feeds `/notificacoes` page + bell dropdown, per `useNotificacoes(filters, { poll })`) — needs the visibility predicate, plus (per the differentiator above) an explicit way to *opt into* seeing snoozed items via a filter value, rather than only ever hiding them.
-  - `countByTenantIdAndDestinatarioIdAndLidaFalse` (bell badge) — must exclude snoozed-but-unread rows, or the badge count would contradict what the dropdown actually shows, reintroducing exactly the kind of surface-inconsistency Phase 89's shared `useNotificacoes` hook was built to prevent.
-  - `findByTenantIdAndDestinatarioIdAndLidaFalse` (feeds "mark all as read") — needs an explicit decision: should "mark all as read" reach into currently-snoozed rows and silently mark them read too? Recommend **no** — marking a snoozed item read defeats the purpose of having snoozed it in the first place (see the `lida`/`snoozedUntil` orthogonality anti-feature above); scope "mark all read" to only the currently-visible (non-snoozed) unread set.
-- **New endpoint(s):** `PATCH /notificacoes/{id}/snooze` (body: target datetime or a preset key) and an unsnooze path (either the same endpoint with `null`, or a `DELETE`) — same dual tenant+destinatario scoping already established in `NotificacaoController` (the codebase's first per-recipient-private resource; every new mutation on it must keep both scoping dimensions to avoid the exact IDOR-adjacent risk `NotificacaoController`'s own header comment already calls out).
-- **No interaction with NOTF-24's mute:** a muted category never creates a row to begin with, so there is nothing to snooze; a snoozed row belongs to a category the user has *not* muted (they still want to see it — just not right now). The two features are orthogonal and can be built independently.
-
----
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|------------------|-------------|
+| Customer logo wall / "trusted by N institutions" | Standard SaaS trust-signal advice (appears in every source found) | **Structurally impossible to source honestly.** This deployment is single-tenant — it has no knowledge of other LexCV deployments, and no central registry/table of "which institutions use LexCV" exists anywhere in the stack. Any such claim would be fabricated | Use the architecture-based trust messaging (data isolation, RBAC, audit) documented above — verifiable claims about *this product*, not unverifiable claims about *other customers* |
+| Customer testimonials carousel | Same standard SaaS advice; explicitly flagged as a trap in this research's quality gate | No testimonials table/data exists anywhere in the schema (checked `Tenant.java` and full ERD context) — would require new data capture (consent, sourcing, a testimonials model) entirely out of this milestone's scope | Institutional-confidence copy grounded in real shipped capability (multi-tenant isolation, RBAC, audit trail) instead of quotes |
+| Persisted "solicitar demonstração" lead-capture backend (name/email/message stored + admin-visible list) | Feels like the "proper" way to implement a confirmed "Contacto/Pedir demonstração" section | New backend scope: no `LeadRequest`/`DemoRequest` entity, controller, or admin UI exists today. Building one (with its own RBAC, persistence, spam protection) is a meaningfully sized feature, not a landing-page detail | A static `mailto:` link or an embed of an external form service (e.g. Formspree-style) satisfies the confirmed content section with zero new backend surface. Only build persistence if the business explicitly wants a CRM-like pipeline later |
+| Public pricing page / pricing calculator | Reflexive B2B SaaS pattern (most-cited "best practice" in this research) | Milestone explicitly has no self-serve signup and no public pricing model — provisioning is manual, per-institution, off-platform (sales/procurement conversation). A pricing page would misrepresent the actual buying motion | "Contacto/Pedir demonstração" IS the correct CTA for a sales-led, manually-provisioned institutional product — no pricing page needed |
+| Self-serve signup/trial CTA ("Começar grátis", "Criar conta") | Default CTA pattern for consumer-ish SaaS | **Explicitly out of scope per milestone** ("onboarding self-service multi-institituição... fora de âmbito") — the `/setup` wizard is a singleton, run once by whoever provisions the deployment, not a public registration flow | "Entrar" (existing tenant staff login) is the only authenticated CTA; "Pedir demonstração" is the only prospect-facing CTA |
+| Blog / CMS-backed content section | Common SaaS growth-marketing addition | No CMS in the stack (`web/` has none either); adds a real content-ops dependency (writing, publishing cadence) disproportionate to "a landing page for one institution's own deployment" | Static, versioned marketing copy in the `webpage/` app itself, updated via normal deploys |
+| Live chat widget | Common SaaS conversion tactic | Third-party script dependency (privacy/cookie implications, extra vendor), no equivalent pattern exists anywhere else in this codebase | The static contact/demo section already covers the "how do I reach someone" need |
+| Multi-language toggle (PT/EN) | Common for "reach a wider market" instinct | The entire product's domain language is Portuguese by explicit project convention (`CLAUDE.md`); the target audience is Cape Verdean law firms/institutions. Adding i18n here would be inconsistent with the rest of the app and out of scope | Portuguese-only, matching the rest of LexCV |
+| Interactive product tour / live sandbox demo embedded in the landing page | Appears in "high-converting SaaS page" research as a differentiator | Heavyweight engineering (would need a demo tenant environment, safe sandbox data, isolation from the real backend) — disproportionate for a landing page whose real job is "confirm this is our platform + point staff to login" | Curated screenshots (see Differentiators) achieve most of the same "show, don't tell" value at a fraction of the cost |
+| "Compare us vs. competitors" page | Standard competitive-positioning SaaS pattern | No named public competitor exists in the Cape Verde legal-tech market to research or reference (search returned no evidence of local competing products), and comparison framing is inconsistent with an institutional-trust, non-adversarial tone | Focus copy entirely on capability + local/ecosystem fit instead of relative positioning |
+| Cookie-consent banner / analytics tracking scripts | Often bundled by default with any new marketing page | No analytics/tracking infrastructure exists anywhere else in the app today (privacy-conscious posture is implicit throughout `CLAUDE.md`'s security constraints); adding third-party analytics introduces a compliance surface (consent banner, cookie policy) not requested by the milestone | Ship without analytics for v1; if conversion tracking is wanted later, treat it as its own scoped decision (privacy-respecting, e.g. server-side/first-party only) |
 
 ## Feature Dependencies
 
 ```
-NOTF-24 (per-user category mute)
-    reads/gates ──> NotificacaoService.criar(...)  [existing single write choke point]
-    interacts with ──> NOTF-25's fan-out loop (mute must be checked per-recipient inside
-                        the team fan-out, not once per event)
-    orthogonal to ──> NOTF-26 (mute prevents row creation; snooze hides an already-created row —
-                        no row exists to snooze once muted)
+Personalized Hero (nome + logo)
+    └──requires──> Public Tenant Branding Endpoint (GET /api/v1/public/...)
+                       └──requires──> Tenant already provisioned via /setup (existing, singleton)
+                       └──requires──> SecurityConfig permitAll() entry (new, mirrors existing /setup/status pattern)
 
-NOTF-25 (team-wide targeting)
-    requires ──> decision: reuse ClienteAdvogado/ClienteAdministrativo via Processo.clienteId
-                 (recommended, zero new entities) vs. new ProcessoEquipa table (higher cost, not
-                 evidenced as necessary)
-    extends ──> notificarFaseEntrada, notificarDocumentoNovo (processo branch),
-                notificarProcessoAtribuido
-    excludes ──> notificarParecerAtribuido (ParecerSolicitacao.processoId nullable; individual-
-                 assignment semantics, not case-team semantics)
-    open question ──> should Phase-88 daily-job categories (PRAZO_*/EVENTO_*/HONORARIO_ATRASADO)
-                       get the same team expansion for consistency? Not required by NOTF-25's
-                       literal scope but flagged as a gap the roadmap should decide explicitly
+Setup-Status Redirect Gate
+    └──requires──> GET /api/v1/setup/status (existing, already public — zero new backend work)
 
-NOTF-26 (snooze)
-    requires ──> new nullable Notificacao.snoozedUntil column
-    requires ──> visibility predicate added to 3 existing read paths (list, unread-count,
-                 mark-all-read exclusion)
-    relies on ──> AlertasDiariosJob's EXISTING per-categoria idempotency (Phase 88) — no change
-                  needed there; this is what makes "escalation breaks through snooze" free
-    conflicts with ──> treating snooze as lida=true (breaks the honest-unread-signal property)
+Dynamic OG/share image (tenant-branded)
+    └──requires──> Public Tenant Branding Endpoint (same one as Hero — no separate endpoint needed)
+
+Contact / Pedir Demonstração section
+    └──requires──> Static contact config in webpage/ app (NEW, app-level constant/env — NOT sourced from Tenant.email/telefone)
+    └──conflicts with──> Sourcing contact info from Tenant table (forbidden: milestone explicitly excludes email/telefone from the public response; also unreliable since /setup never populates them)
+
+Dark/Light mode toggle
+    └──requires──> Port of web/src/components/theme-toggle.tsx + providers.tsx pattern (existing, low-risk reuse)
+
+"Prova social / confiança institucional" section
+    └──requires──> Architecture facts already shipped (tenant_id isolation, RBAC, audit) — NO new data
+    └──conflicts with──> Customer logos / testimonials (structurally unavailable — see Anti-Features)
+
+Persisted "solicitar demonstração" lead capture (deferred/future)
+    └──requires──> NEW backend entity + controller + admin visibility (not part of this milestone's confirmed scope)
 ```
+
+### Dependency Notes
+
+- **Personalized Hero requires the Public Tenant Branding Endpoint:** this is the one genuinely new piece of backend work in the whole feature set. It must be scoped tightly (nome + logoDataUrl only) — the entity already carries fields (`nif`, `email`, `telefone`, `tipoEntidade`) that a careless DTO reuse would leak.
+- **Contact section conflicts with sourcing from Tenant data:** this is the most important negative dependency in this research. The natural-looking shortcut ("just expose tenant email/telefone too") is explicitly forbidden by the milestone and also unreliable, since the current `/setup` flow (`SetupInitializeRequest`) never captures those fields in the first place.
+- **Prova social conflicts with customer logos/testimonials:** flagged per the quality gate — this is exactly the "don't recommend a testimonials carousel sourced from a table that doesn't exist" trap, made explicit and structural (not just "not built yet" but "cannot exist under the current single-tenant-per-deployment model without new cross-deployment infrastructure").
+- **Dynamic OG image enhances Personalized Hero:** reuses the same endpoint, so it's a natural v1.x add-on rather than a new dependency chain.
 
 ## MVP Definition
 
-### Launch With (v2.11)
+### Launch With (v1)
 
-- [ ] NOTF-24: new `NotificacaoPreferencia`-style table (tenant, user, categoria, muted), checked inside `NotificacaoService.criar(...)`, exposed via a flat settings-page toggle list (no channel matrix — only one channel exists)
-- [ ] NOTF-24: at least one category kept non-mutable (recommend `PRAZO_VENCIDO` at minimum, arguably `HONORARIO_ATRASADO` too) — decide explicitly rather than making every category equally mutable by default
-- [ ] NOTF-25: extend `FASE_ENTRADA`, `DOCUMENTO_NOVO` (processo branch), `PROCESSO_ATRIBUIDO` to fan out to the processo's client team (`ClienteAdvogado`+`ClienteAdministrativo` via `clienteId`), preserving the existing 2nd-person/3rd-person message-copy split for the responsável vs. the rest of the team
-- [ ] NOTF-26: `snoozedUntil` column + snooze/unsnooze endpoint + visibility filtering in the 3 affected read paths + preset snooze durations in the UI, with mark-all-read explicitly excluding snoozed rows
+Minimum viable landing page — validates "this deployment has a real public front door personalized to its institution."
 
-### Add After Validation (v2.11.x)
+- [ ] Setup-status gate/redirect (port of existing `web/` `proxy.ts` logic) — without this, an uninitialized deployment would show a broken/generic page
+- [ ] Public Tenant Branding Endpoint (`nome` + `logoDataUrl` only) — the one required new backend surface
+- [ ] Personalized Hero + value proposition headline — the actual milestone goal
+- [ ] Funcionalidades/Módulos overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) — confirmed content section, zero data dependency
+- [ ] Prova social/confiança institucional section using architecture-based trust copy (isolamento de dados, RBAC, ecossistema NOSi/Cabo Verde) — confirmed content section, no fabricated proof
+- [ ] Contacto/Pedir demonstração with a static contact channel (mailto or external form embed) — confirmed content section, explicitly NOT sourced from Tenant.email/telefone
+- [ ] Primary CTA "Entrar" → `/login`, placed top and bottom
+- [ ] Responsive layout + dark/light mode (ported from `web/`)
+- [ ] Basic SEO meta (title/description/favicon)
 
-- [ ] A "Snoozed" filter/tab on `/notificacoes` to review deferred items (not strictly required for MVP correctness, but closes the UX loop reviewed products all provide)
-- [ ] Roadmap decision + implementation on whether Phase-88 daily-job categories also get NOTF-25's team expansion
+### Add After Validation (v1.x)
 
-### Future Consideration (post-v2.11)
+- [ ] Dynamic OG/share image with tenant branding — add once the base personalization endpoint is proven stable
+- [ ] Curated real-UI screenshots (from seeded/demo data) replacing placeholder illustrations in the hero/features sections
+- [ ] Lightweight, privacy-respecting analytics (if the institution wants to measure "Pedir demonstração" conversion) — only if explicitly requested, given no analytics infra exists today
 
-- [ ] Category×channel preference matrix — defer until a second delivery channel (email/push) is actually built; premature today
-- [ ] Per-processo team distinct from the client's team (only worth it if a real workflow surfaces where these genuinely diverge — not evidenced today)
+### Future Consideration (v2+)
+
+- [ ] Persisted "solicitar demonstração" lead-capture backend + admin visibility — only if the product's distribution model shifts from "manual procurement" to something needing a tracked pipeline
+- [ ] Multi-institution case studies/comparison content — only viable if LexCV is ever deployed to multiple named, consenting Cape Verde institutions and a means to reference them (with permission) is established; currently structurally impossible given single-tenant-per-deployment isolation
+- [ ] i18n — only if the product ever targets non-Portuguese-speaking markets, which would be a major strategic shift inconsistent with the entire existing domain-language convention
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---|---|---|---|
-| NOTF-24 core (mute toggle, opt-out default) | HIGH | LOW-MEDIUM | P1 |
-| NOTF-24 non-mutable critical categories | MEDIUM (risk mitigation, not asked-for by users) | LOW | P1 |
-| NOTF-25 team fan-out (3 of 4 triggers) | HIGH | LOW-MEDIUM (mostly copy-adapt of existing cliente-branch code) | P1 |
-| NOTF-25 extension to Phase-88 job categories | MEDIUM | MEDIUM | P2 |
-| NOTF-26 core snooze (bounded resurfacing) | HIGH | MEDIUM (schema + 3 read-path changes) | P1 |
-| NOTF-26 "Snoozed" filter/tab | MEDIUM | LOW | P2 |
-| Category×channel preference matrix | LOW today (single channel) | HIGH | P3 |
-| New `ProcessoEquipa` entity | LOW (no evidenced need beyond reusing client team) | HIGH | P3 (avoid unless proven necessary) |
+|---------|------------|---------------------|----------|
+| Setup-status redirect gate | HIGH | LOW | P1 |
+| Public Tenant Branding Endpoint | HIGH | MEDIUM | P1 |
+| Personalized Hero | HIGH | LOW (once endpoint exists) | P1 |
+| Módulos/Funcionalidades overview | HIGH | LOW | P1 |
+| Prova social (architecture-based trust copy) | MEDIUM-HIGH | LOW | P1 |
+| Contacto/Pedir demonstração (static) | MEDIUM | LOW-MEDIUM | P1 |
+| CTA "Entrar" | HIGH | LOW | P1 |
+| Dark/light mode | MEDIUM | LOW | P1 |
+| Responsive layout | HIGH | LOW-MEDIUM | P1 |
+| Basic SEO meta | MEDIUM | LOW | P1 |
+| Curated UI screenshots | MEDIUM | MEDIUM | P2 |
+| Dynamic OG image | LOW-MEDIUM | MEDIUM-HIGH | P2 |
+| Analytics (privacy-respecting) | LOW | MEDIUM | P3 |
+| Persisted demo-request capture | LOW (at current scale — single institution) | HIGH | P3 |
+| Customer logos / testimonials | N/A | N/A | Rejected (structurally unavailable, see Anti-Features) |
+| Pricing page / self-serve signup | N/A | N/A | Rejected (explicitly out of scope) |
 
-## Competitor / Ecosystem Feature Analysis
+**Priority key:**
+- P1: Must have for launch
+- P2: Should have, add when possible
+- P3: Nice to have, future consideration
 
-| Feature | Clio (legal, direct comparable) | Generic PM tools (Jira/Asana/GitHub) | Reminder apps (Todoist/Any.do/Due) | LexCV Approach |
-|---|---|---|---|---|
-| Team vs. single owner | Responsible Attorney (single) + Responsible Staff (multi) | Assignee (single) + Watchers/Subscribers (multi) | N/A (mostly single-user tools) | Responsável (single, existing) + client team via `ClienteAdvogado`/`ClienteAdministrativo` (multi, reused not rebuilt) |
-| Notification muting | Not clearly documented per-category in help center | Per-project/per-type mute (Jira notification schemes, Asana Do Not Disturb) | Category-level reminder toggles | Per-category, per-user, opt-out default, with select categories locked "always on" |
-| Deferring a reminder | N/A (no direct evidence found) | GitHub "snooze" issue notifications; Jira has no first-class snooze | Preset-interval snooze (15 min/1h/tomorrow), or vendor-configurable snooze length (IntelligentContract, compliance-deadline analog) | Row-level `snoozedUntil` with presets, escalation (worse categoria) always breaks through |
+## Competitor Feature Analysis
+
+Note: "competitors" here are the closest available reference points — global legal practice-management SaaS marketing sites — since no Cape Verde-specific competitor was found in research. LexCV's actual positioning (single-tenant institutional deployment, sales-led) differs structurally from all of them.
+
+| Feature | Clio / MyCase / PracticePanther (multi-tenant SaaS) | LexCV `webpage/` (single-tenant institutional) | Our Approach |
+|---------|--------------------------------------------------------|--------------------------------------------------|--------------|
+| Hero personalization | Generic, same for every visitor (the vendor's own brand) | Personalized per-deployment with the institution's own name/logo | Lean into this as the differentiator — "this is YOUR platform," not a generic vendor pitch |
+| Pricing | Public pricing tiers/calculator, self-serve trial CTA | None — no self-serve model exists | Replace with "Pedir demonstração" as the sole conversion path |
+| Social proof | Named customer logos, review-site badges (G2/Capterra), testimonials | Cannot use named external customers (single-tenant, no cross-deployment registry) | Substitute architecture/security trust messaging (data isolation, RBAC, audit) — honest and verifiable |
+| Feature showcase | Broad feature comparison tables against competitors | Module overview reflecting only this product's actually-shipped capability | Straightforward "o que a plataforma faz" without competitive framing (no local competitor to reference) |
+| Language/localization | English-first, sometimes localized | Portuguese-only, Cape Verde legal domain vocabulary throughout | Full alignment with existing product convention — no i18n |
+| CTA structure | Multiple CTAs (trial, demo, pricing, contact sales) | Single primary CTA ("Entrar") + single secondary CTA ("Pedir demonstração") | Matches the single/dual-CTA pattern research shows converts best, and matches the actual (narrow) set of real user intents for this deployment |
 
 ## Sources
 
-- [Clio Help Center — Create Matters](https://help.clio.com/hc/en-us/articles/9285959663131-Create-Matters) — Responsible Attorney/Responsible Staff team model (MEDIUM confidence, vendor docs)
-- [Atlassian — Using watchers and @mentions effectively](https://www.atlassian.com/blog/jira-software/using-watchers-and-mentions-effectively) — assignee vs. watcher notification distinction (MEDIUM confidence)
-- [Atlassian — Manage your Jira personal settings](https://support.atlassian.com/jira-software-cloud/docs/manage-your-jira-personal-settings/) — per-user notification configuration (MEDIUM confidence)
-- [Asana Help Center — Notification settings](https://help.asana.com/s/article/notification-settings) — Do Not Disturb / mute pattern (MEDIUM confidence)
-- [SuprSend — Notification Preference Center: UX Patterns, GDPR, and Code](https://www.suprsend.com/post/notification-preference-center) — category structure, opt-in/opt-out defaults, non-mutable critical categories (MEDIUM confidence, cross-verified against Smashing Magazine below)
-- [SuprSend — The Ultimate Guide to Perfecting Notification Preferences](https://www.suprsend.com/post/the-ultimate-guide-to-perfecting-notification-preferences-putting-your-users-in-control) — granular preference rationale (MEDIUM confidence)
-- [Smashing Magazine — Design Guidelines For Better Notifications UX (2025)](https://www.smashingmagazine.com/2025/07/design-guidelines-better-notifications-ux/) — snooze/mute best practices, non-opt-outable critical alerts (MEDIUM confidence)
-- [IntelligentContract — Alert Behaviour](https://support.intelligentcontract.com/support/solutions/articles/22000267553-alert-behaviour) — closest direct domain analog (compliance/contract-deadline alerting): per-user configurable snooze length overriding recurring reminder frequency (MEDIUM confidence, single vendor source)
-- [Todoist — Introduction to reminders](https://www.todoist.com/help/articles/introduction-to-reminders-9PezfU) — snooze interval presets (MEDIUM confidence)
-- [Any.do Help Center — Notifications & Reminders Overview](https://support.any.do/en/articles/12812921-notifications-reminders-overview) / [Board Due Dates, Reminders, and Recurring Tasks](https://support.any.do/en/articles/8635318-board-due-dates-reminders-and-recurring-tasks) — snooze-from-notification pattern (MEDIUM confidence)
-- Direct codebase inspection (HIGH confidence): `backend/src/main/java/com/lexcv/models/Notificacao.java`, `NotificacaoService.java`, `NotificacaoController.java`, `NotificacaoRepository.java`, `jobs/AlertasDiariosJob.java`, `models/Processo.java`, `models/ClienteAdvogado.java`, `controllers/ResourceController.java` (documento-upload notification branch), `models/ParecerSolicitacao.java`, `.planning/PROJECT.md`
+- [Best Practices for Designing B2B SaaS Landing Pages – 2026 (Genesys Growth)](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages) — MEDIUM confidence
+- [18 B2B SaaS Landing Page Best Practices That Convert (SaaS Hero)](https://www.saashero.net/design/saas-landing-page-best-practices/) — MEDIUM confidence
+- [Data-Driven B2B SaaS Landing Page CTA Best Practices (SaaS Hero)](https://www.saashero.net/design/b2b-saas-landing-cta-practices/) — MEDIUM confidence (single-CTA conversion stat)
+- [26 SaaS landing pages: examples, trends and best practices (Unbounce)](https://unbounce.com/conversion-rate-optimization/the-state-of-saas-landing-pages/) — MEDIUM confidence
+- [How to Create a Lawyer Landing Page That Actually Converts (Clio)](https://www.clio.com/blog/lawyer-landing-page/) — MEDIUM confidence (consumer-facing law-firm context, directionally useful for mobile-traffic stat)
+- [21 Best Law Firm Landing Page Examples & Inspirations (Landingi)](https://landingi.com/landing-page/law-firm-examples/) — LOW-MEDIUM confidence
+- [Best Legal Practice Management Software 2026 (PracticePanther)](https://www.practicepanther.com/blog/best-legal-practice-management-software/) — MEDIUM confidence (module/feature framing reference)
+- [Customize Universal Login Page Templates (Auth0 Docs)](https://auth0.com/docs/customize/login-pages/universal-login/customize-templates) — HIGH confidence, official docs
+- [Brands | Okta Developer](https://developer.okta.com/docs/concepts/brands/) — HIGH confidence, official docs
+- [Landing Page Trust Signals: 10 Proven B2B SaaS Tactics (SaaS Hero)](https://www.saashero.net/design/landing-page-design-trust-signals/) — MEDIUM confidence
+- [The role of security badges on SaaS landing page effectiveness (Markettailor)](https://www.markettailor.io/blog/role-of-security-badges-on-saas-landing-page) — MEDIUM confidence (substitute-for-testimonials framing for new products)
+- [NOSi | Núcleo Operacional Para a Sociedade de Informação EPE](https://www.nosi.cv/en/) — HIGH confidence, official Cape Verde government-agency source
+- [Núcleo Operacional da Sociedade de Informação — Governo de Cabo Verde](https://www.governo.cv/nucleo-operacional-da-sociedade-de-informacao-tem-novo-conselho-de-administracao/) — HIGH confidence, official source
+- Direct codebase inspection: `backend/src/main/java/com/lexcv/models/Tenant.java`, `backend/src/main/java/com/lexcv/dtos/SetupInitializeRequest.java`, `backend/src/main/java/com/lexcv/config/SecurityConfig.java`, `web/src/app/setup/page.tsx`, `web/src/components/theme-toggle.tsx`, `web/src/app/providers.tsx`, `.planning/PROJECT.md` (v2.12 milestone section) — HIGH confidence, ground truth
 
 ---
-*Feature research for: LexCV v2.11 — NOTF-24/25/26 notification system extensions*
-*Researched: 2026-07-12*
+*Feature research for: institutional B2B legal-tech landing page, single-tenant deployment personalization*
+*Researched: 2026-07-15*

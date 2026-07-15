@@ -1,314 +1,521 @@
-# Architecture Research — v2.11 Auditoria Técnica e Notificações Avançadas
+# Architecture Research
 
-**Domain:** Integration architecture for NOTF-24/25/26 into the existing `Notificacao`/`NotificacaoService`/`AlertasDiariosJob` subsystem (v2.10), plus Agenda/`RiscoPrazoService` unification and a minimal Testcontainers/H2 test-infrastructure slice for this specific Spring Boot 3.4.1 / Java 23 backend.
-**Researched:** 2026-07-12
-**Confidence:** HIGH for all file/line-level facts (read directly from the repo); MEDIUM for product-shape recommendations that depend on an unstated business decision (flagged explicitly below); HIGH for the Testcontainers pattern (corroborated by docs.spring.io + independent guides).
+**Domain:** Standalone marketing/landing Next.js app added to an existing multi-container monorepo (Caddy + Spring Boot + Next.js), single fixed domain, path-based routing
+**Researched:** 2026-07-15
+**Confidence:** HIGH (grounded in actual repo files + official Next.js "Multi-Zones" docs matching the exact installed Next version + official Caddy docs + this repo's own recent commit history for Compose-specific gotchas)
 
-This is not a greenfield domain survey — v2.10 already built the entire notification subsystem (superseding the prior v2.10-era research file that used to live at this path). This document answers exactly how three new requirements (NOTF-24/25/26) and one test-infra gap graft onto that existing code, file by file.
+## Standard Architecture
 
----
+### System Overview
 
-## 1. Existing subsystem — the four choke points that matter
-
-| Component | File | Role |
-|---|---|---|
-| `Notificacao` | `backend/src/main/java/com/lexcv/models/Notificacao.java` | Immutable-after-creation row except `lida` (only field with a `@Setter`). Composite unique constraint `uk_notificacao_dedup` on `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria)`. |
-| `NotificacaoService.criar(...)` | `backend/src/main/java/com/lexcv/services/NotificacaoService.java:33` | **"ÚNICO ponto de escrita de CRIAÇÃO de Notificacao em todo o código"** (comment at line 27) — every trigger, every fan-out, and the daily job all funnel through this one method. |
-| `NotificacaoRepository` | `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java` | `buscarPorFiltros` (native query + `Pageable`, first of its kind in this backend), `existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria` (the dedup check used by the daily job). |
-| `AlertasDiariosJob.notificar(...)` | `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:307` | The job's own choke point — checks `existsBy...` then delegates to `NotificacaoService.criar`. Never calls `notificacaoRepository.save` directly. |
-
-Every one of NOTF-24/25/26 is best understood as "what do we insert at or near `criar(...)`," not as three independent features.
-
-`NotificacaoServiceTest.java` currently has **20 direct call sites** of `new NotificacaoService(notificacaoRepository, userRepository)` (verified via grep). Any new `final` constructor dependency added to `NotificacaoService` for any of the three requirements breaks compilation at all 20 sites simultaneously — a mechanical, non-optional edit that must land in the same change as the constructor edit. This is the single biggest shared-file risk in this milestone.
-
----
-
-## 2. NOTF-24 — per-user notification category preferences
-
-### Where the preferences table lives
-
-New entity `NotificacaoPreferencia` (new file, mirrors the `ClienteAdvogado`/`ClienteAdministrativo` shape — `UUID` id, no soft-delete, `@PrePersist createdAt`):
+Today (verified from `Caddyfile.prod`, `docker-compose.hostinger.yml`, `docker-compose.yml`):
 
 ```
-t_notificacao_preferencia
-  id            UUID PK
-  tenant_id     UUID NOT NULL
-  user_id       UUID NOT NULL
-  categoria     VARCHAR NOT NULL
-  created_at    TIMESTAMP
-  UNIQUE (tenant_id, user_id, categoria)
+                         Caddy (:80/:443, single fixed domain)
+                    ┌─────────────┴─────────────┐
+              handle /api/*                  handle {} (catch-all)
+                    │                              │
+                    ▼                              ▼
+            backend:8080                    frontend:3000  (web/, Next 16)
+        (Spring Boot, JWT-gated              /login, /dashboard, /setup,
+         except permitAll list)              /, /_next/*, everything else
 ```
 
-**Design choice: presence of a row = muted, absence = delivered (default-on).** This avoids seeding 9 rows per user at account creation and matches the v2.10 decision that "todas as categorias são sempre entregues" was the *default*, not a hardcoded guarantee — NOTF-24 only needs to represent the *exceptions*. A `NotificacaoPreferenciaRepository.existsByTenantIdAndUserIdAndCategoria(tenantId, userId, categoria)` boolean is the entire read contract `criar()` needs.
+Target (this milestone) — insert ONE new mutually-exclusive `handle` branch, matched ONLY on the exact root path `/` plus a dedicated asset-prefix path, everything else falls through unchanged to the existing catch-all:
 
-### How `NotificacaoService`'s recipient-resolution step consults it
+```
+                         Caddy (:80/:443, single fixed domain)
+                    ┌─────────────┬───────────────────────────┬─────────────┐
+              handle /api/*   handle @webpage              handle {}   (unchanged)
+                    │          (path / OR /landing-static/*)     │
+                    ▼                    ▼                       ▼
+            backend:8080          webpage:3000              frontend:3000
+        (+ new permitAll      (NEW app, Next 16,          (web/, unchanged:
+         endpoint for           serves ONLY "/",           /login, /dashboard,
+         tenant branding)       its own _next assets        /setup, its own
+                                under /landing-static/*)    /_next/*, etc.)
+```
 
-Insert the mute-check **inside `criar()`**, immediately after the existing `destinatarioId`-belongs-to-tenant validation (line ~41) and before persistence — not in each of the four `notificarX` trigger methods, and not in `AlertasDiariosJob`. Because `criar()` is the sole write path, this one change automatically gates:
-- All 4 event-triggered alerts (`notificarFaseEntrada`, `notificarProcessoAtribuido`, `notificarDocumentoNovo`, `notificarParecerAtribuido`)
-- The `notificarAdmins` fan-out (an ADMIN who mutes `DOCUMENTO_NOVO` stops receiving it via fan-out too — this is intentional: muting is a personal delivery preference, orthogonal to the NOTF-14 targeting/no-mass-broadcast rule, which governs *who is eligible*, not *whether an eligible recipient wants it*)
-- `AlertasDiariosJob`, for free, with zero changes to the job itself
+This is Next.js's own documented **Multi-Zones** pattern (confirmed against `nextjs.org/docs/pages/guides/multi-zones`, doc version 16.2.10 — matches this repo's installed `next@16.2.6` in `web/package.json`): "A zone is a normal Next.js application where you also configure an `assetPrefix` to avoid conflicts with pages and static files in other zones... The default application handling all paths not routed to another more specific zone does not need an `assetPrefix`." That means **`web/` needs zero changes** for this to work — only the new, more-specific `webpage/` zone needs an `assetPrefix`.
 
-`criar()` currently returns `Notificacao` (non-`Optional`); none of the 8 call sites use the return value for anything except the test file's `ArgumentCaptor` assertions. Recommend changing the return type to `Optional<Notificacao>` (empty when muted) rather than silently returning `null`, and updating the ~20 test call sites' assertions accordingly.
+### Component Responsibilities
 
-**Mockito-safety note:** a new `NotificacaoPreferenciaRepository` mock, when unstubbed, returns `false` from `existsBy...` by default (Mockito's default for a primitive `boolean`) — meaning all 20 existing `NotificacaoServiceTest` cases keep passing unmodified for their actual assertions once the constructor call is mechanically updated, because "not stubbed" reads as "not muted," which is the existing default-on behavior. This is a real, low-risk migration path, not just a hope.
+| Component | Responsibility | Typical Implementation |
+|-----------|-----------------|-------------------------|
+| `webpage/` (NEW) | Renders the public landing page at `/` only; SSR for SEO; checks setup status server-side and hard-redirects to `/setup` when uninitialized | Next.js 16 App Router, `output: 'standalone'`, `assetPrefix: '/landing-static'`, its own `proxy.ts` |
+| `PublicController` (NEW, backend) | Exposes only `nome` + `logoDataUrl` for the singleton tenant, unauthenticated | Small dedicated `@RestController` under `/api/v1/public`, mirrors `SetupController`'s "narrow, dedicated, public" shape |
+| Caddy (`Caddyfile`/`Caddyfile.prod`/hostinger entrypoint) | Routes `/api/*` → backend, exact `/` + `/landing-static/*` → webpage, everything else → frontend | 3rd mutually-exclusive `handle` block using a named matcher with two `path` patterns |
+| `docker-compose.*` | Adds `webpage` as a 4th application service (peer of `backend`/`frontend`), on the same `lexcv_net` network | New service block per file, mirrors `frontend`'s shape |
+| `.github/workflows/deploy.yml` | Builds/pushes a 3rd image (`webpage`) alongside `backend`/`frontend` | New `docker/build-push-action@v6` step, `context: ./webpage` |
 
-### Category enum gap this surfaces
+## Recommended Project Structure
 
-The backend has **no canonical enum** for `categoria` — every trigger hardcodes its own string literal (`"FASE_ENTRADA"`, `"DOCUMENTO_NOVO"`, etc.), 9 values total. The frontend, by contrast, already has the canonical list as a union type: `web/src/types/notificacoes.ts:1-10` (`NotificacaoCategoria`). Recommend a small `CategoriaNotificacao` Java enum (same 9 values, `.name()` used for storage) used **only** to validate incoming preference-toggle requests — do not retrofit the 9 existing hardcoded string call sites to use it. This matches the project's established "surgical over global" precedent (e.g. the `@JsonProperty`-per-field decision in Key Decisions) and keeps NOTF-24's blast radius to one new file plus the preference endpoints.
+```
+webpage/
+├── Dockerfile              # 3-stage pnpm build, copy of web/Dockerfile pattern
+├── package.json             # Next 16 + React 19 + Tailwind v4 + shadcn primitives (copy pnpm versions from web/package.json — no CLI needed, no components.json exists in web/ either; primitives were hand-ported there too)
+├── next.config.ts           # output: standalone; assetPrefix: '/landing-static'; SAME rewrites()+headers() shape as web/next.config.ts
+├── proxy.ts                 # Next 16 middleware-equivalent — ONLY the "not initialized -> redirect /setup" branch (no /setup-path branch needed, webpage never serves /setup)
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx        # copy web/src/app/layout.tsx shape (fonts, Providers if needed, globals.css)
+│   │   ├── globals.css       # copy web/src/app/globals.css (same Tailwind v4 @theme tokens, dark mode via .dark class)
+│   │   └── page.tsx          # Server Component: fetch branding server-side, render Hero/Módulos/Prova social/Contacto sections, "Entrar" CTA as plain <a href="/login">
+│   ├── components/
+│   │   ├── ui/                # ONLY the shadcn primitives actually needed (button, card) — hand-copy from web/src/components/ui/, don't re-run a CLI
+│   │   └── landing/            # new: hero-section.tsx, features-section.tsx, trust-section.tsx, contact-section.tsx
+│   └── lib/
+│       ├── setup.ts           # duplicate of web/src/lib/setup.ts (fetchSetupStatus) — same contract, same public endpoint
+│       └── branding.ts         # new: fetchTenantBranding() calling the new public endpoint
+└── public/
+    └── favicon.ico, og-image.png, etc. (see Known Limitation below re: Caddy catch-all)
+```
 
-### New endpoints (add to `NotificacaoController`, not `ResourceController`)
+### Structure Rationale
 
-`NotificacaoController.java` is already the dual tenant+user-scoped controller (its own doc comment explains why it was extracted). Preferences are inherently "my own settings," so they belong here:
-- `GET /api/v1/notificacoes/preferencias` — list muted categories for the caller (`getTenantId()`/`getUserId()`, same pattern as every other method in this file)
-- `PUT /api/v1/notificacoes/preferencias/{categoria}` / `DELETE .../{categoria}` — toggle mute for one category, validated against `CategoriaNotificacao`
+- **No client-side TanStack Query needed for branding:** unlike `web/` (an authenticated, highly interactive dashboard app where TanStack Query's cache/refetch/mutation model earns its keep), `webpage/` is a mostly-static marketing page. Fetching tenant branding in a Server Component (`async function Home()`, plain `fetch()`) is simpler, SSR's the tenant name/logo for SEO/social previews, and avoids introducing a `Providers`/`QueryClientProvider` wrapper for a single GET with no mutations.
+- **`proxy.ts` only, no client-side `useEffect` check:** `web/src/app/page.tsx` today does BOTH a server-side check (`web/proxy.ts`) AND a client-side check (`useEffect` + `fetchSetupStatus()` in `page.tsx`) as defense-in-depth, because `web/page.tsx` also has to route already-authenticated users to `/dashboard` vs `/login` (an auth concern `webpage/` doesn't have). `webpage/` only needs the setup-status gate, which `proxy.ts` already covers as a real HTTP redirect — no client-side duplicate check needed.
+- **Hand-copy shadcn primitives, don't invoke a CLI:** confirmed `web/` has no `components.json` and one primitive (`sheet.tsx`) was hand-written to match `dialog.tsx`'s pattern because `npx shadcn` requires an interactive prompt this environment doesn't support (see PROJECT.md Key Decisions). Same constraint applies to `webpage/`.
 
-RBAC: reuse `notificacoes:view` (self-service, not administrative — never accept a `userId` from the request body, always derive from the JWT, matching `getUserId()` everywhere else in this file).
+## Architectural Patterns
 
-### Frontend
+### Pattern 1: Next.js Multi-Zones via `assetPrefix` + Caddy path matcher (not `handle_path` stripping)
 
-New `web/src/hooks/use-notificacao-preferencias.ts` (same TanStack Query shape as `use-notificacoes.ts`). UI: a new section on the existing `/settings` page (`web/src/app/(dashboard)/settings/page.tsx`) — the 9 categories are already enumerable client-side via `NotificacaoCategoria`.
+**What:** Give the new, path-specific zone (`webpage`) an `assetPrefix` so its `/_next/static/*` chunk requests are namespaced under a prefix (`/landing-static`) that cannot collide with `web/`'s own unprefixed `/_next/*` requests on the same domain. Route the FULL path (including the prefix) to the `webpage` container unmodified — do **not** strip the prefix with `handle_path`, because Next.js itself (confirmed Next 15+, this repo is on Next 16.2.6) natively serves assets at `{assetPrefix}/_next/...` without any additional rewrite. The official Next.js docs explicitly note: *"In versions older than Next.js 15, you may also need an additional rewrite to handle the static assets. This is no longer necessary in Next.js 15."*
 
----
+**When to use:** Any time two or more independently-built Next.js apps must be reverse-proxied under the same domain with path-based routing (this is literally Next's documented use case for it).
 
-## 3. NOTF-25 — notify the full process team, not just `responsavelId`
+**Trade-offs:** One extra Caddy `handle` branch and one extra Next.js config line (`assetPrefix`) — negligible cost. The one thing to get right: only the **non-default** zone needs `assetPrefix` (the existing `web/`/`frontend` catch-all needs zero changes).
 
-### What "team" resolves to today, and why that matters
+**Example — `webpage/next.config.ts` (new file):**
+```typescript
+import type { NextConfig } from "next";
 
-There is **no processo-level team table**. Team membership exists only at the **cliente** level via `ClienteAdvogado`/`ClienteAdministrativo` (`backend/src/main/java/com/lexcv/models/ClienteAdvogado.java`, `ClienteAdministrativo.java` — both `(tenant_id, cliente_id, user_id)`-unique join tables).
+const backendOrigin = process.env.BACKEND_API_ORIGIN;
+if (!backendOrigin) {
+  throw new Error("BACKEND_API_ORIGIN is required");
+}
 
-Critically, **this pattern is already half-implemented** for one of the four triggers. `ResourceController.java:2600-2624` (the upload handler behind `notificarDocumentoNovo`) branches on where the uploaded `Documento` attaches:
-- `saved.getProcessoId() != null` → `dests = List.of(processo.getResponsavelId())` (single recipient, or empty) — **this is the exact gap NOTF-25 closes**
-- `saved.getClienteId() != null` → `dests` built from `clienteAdvogadoRepository.findByClienteIdAndTenantId(...)` + `clienteAdministrativoRepository.findByClienteIdAndTenantId(...)` — **this is already "full team," just not for processos**
+const nextConfig: NextConfig = {
+  output: "standalone",
+  assetPrefix: "/landing-static",
+  async rewrites() {
+    // Only exercised in local dev when running `pnpm dev` directly (no Caddy in front).
+    // In prod, Caddy's /api/* block reaches backend first and this never fires.
+    return [
+      { source: "/api/v1/:path*", destination: `${backendOrigin}/api/v1/:path*` },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';" },
+        ],
+      },
+    ];
+  },
+};
 
-### Recommendation: reuse `ClienteAdvogado`/`ClienteAdministrativo` transitively via `Processo.clienteId`, not a new join table
+export default nextConfig;
+```
 
-`Processo` already carries `clienteId` (`backend/src/main/java/com/lexcv/models/Processo.java:24`). Define "processo team" = `{responsavelId}` ∪ the processo's cliente's `ClienteAdvogado` + `ClienteAdministrativo` members. This requires **zero new tables/migrations** and mirrors the exact code already sitting 20 lines away in `ResourceController`. This is the recommended MVP path for this milestone: lowest risk, no new UI for team management, consistent with the project's repeated "reuse existing pattern over introducing a new one" decisions (see PROJECT.md Key Decisions rows on `ClienteAdvogado`/`ClienteAdministrativo` and on pareceres reusing existing UI patterns).
+**Caddy side (all 3 files — exact diffs below in Integration Points).**
 
-**Open question requirements must resolve, not research:** if the actual product intent is that a processo's working team can genuinely diverge from the client's overall team (e.g. a specialist added to one matter only), the correct design is a new `t_processo_equipe (tenant_id, processo_id, user_id)` join table plus UI to manage it on the ficha do processo — a materially larger scope (new entity, repository, endpoints, "Equipa" UI section). Given "equipa do processo" is the literal wording of NOTF-25, flag this explicitly for the roadmap/requirements step rather than assuming the cheaper reading. The rest of this section assumes the cheaper (cliente-transitive) reading, since it is very likely what fits in one milestone alongside NOTF-24/26 and the tech-debt backlog.
+### Pattern 2: Dedicated narrow public controller (mirrors `SetupController` precedent)
 
-### Centralize resolution in `NotificacaoService`, not per-controller
+**What:** A new, small, single-purpose `@RestController` whose entire surface is public by construction, rather than adding a public method to the ~1000-line `ResourceController` (which is entirely `authenticated()`-gated by default) or to `AuthController`. This repo already has exactly this precedent: `SetupController` (`/api/v1/setup/*`) is a tiny dedicated controller kept separate from everything else specifically so its `permitAll()` surface is easy to audit in one file.
 
-Add one new helper to `NotificacaoService` (new dependencies: `ClienteAdvogadoRepository`, `ClienteAdministrativoRepository` — both already exist, currently only wired into `ResourceController`):
+**When to use:** Any time you add an unauthenticated endpoint to a backend where authentication is the default posture — isolate it so the security review only has to look at one small file, not scroll a 1000-line controller looking for a stray missing `@PreAuthorize`.
 
+**Example — new `backend/src/main/java/com/lexcv/dtos/PublicTenantBrandingResponse.java`:**
 ```java
-Set<UUID> resolverEquipaProcesso(UUID tenantId, UUID clienteId, UUID responsavelId) {
-    Set<UUID> equipa = new LinkedHashSet<>();
-    if (responsavelId != null) equipa.add(responsavelId);
-    clienteAdvogadoRepository.findByClienteIdAndTenantId(clienteId, tenantId).forEach(a -> equipa.add(a.getUserId()));
-    clienteAdministrativoRepository.findByClienteIdAndTenantId(clienteId, tenantId).forEach(a -> equipa.add(a.getUserId()));
-    return equipa;
+package com.lexcv.dtos;
+
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class PublicTenantBrandingResponse {
+    private final String nome;
+    private final String logoDataUrl;
+    // Deliberately NOTHING else: Tenant.nif / tipoEntidade / email / telefone
+    // must never reach this DTO. Adding a field here == adding an authorization gap.
 }
 ```
 
-Doing this **inside** `NotificacaoService` rather than re-deriving the union at each of the 4 call sites is a direct, deliberate application of the lesson this very milestone is trying to close for `RiscoPrazoService` (Phase 85: "consolidate one shared source instead of a Nth divergent copy"). Don't let NOTF-25 create a second, uncoordinated team-resolution implementation.
-
-Callers already have the `Processo` object loaded at every relevant site (`ResourceController.java:988` `createProcesso`, `~1055` `atribuirResponsavel`, `1703-1724` `createProcessoFase`, `2601` documento upload) — pass `processo.getClienteId()` through rather than adding a `ProcessoRepository` dependency to `NotificacaoService` to re-fetch it. This keeps `NotificacaoService`'s collaborator count minimal, at the cost of two extra parameters on 3 method signatures — a deliberate, worthwhile trade.
-
-### Per-trigger impact
-
-| Trigger | Change |
-|---|---|
-| `notificarFaseEntrada` | Single `responsavelId` param → resolve team, notify each (same per-recipient try/catch isolation pattern already used by `notificarAdmins`/`notificarDocumentoNovo`) |
-| `notificarProcessoAtribuido` | **Message-shape nuance:** keep the 2ª-pessoa message ("Foi-lhe atribuído...") for `responsavelId` only; team members other than the newly-assigned responsável need a 3ª-pessoa variant analogous to the ADMIN message — this is not a mechanical find-and-replace, it changes the method's branching |
-| `notificarDocumentoNovo` (processo branch) | Change `ResourceController.java:2601-2606` from `dests = List.of(resp)` to the same team-resolution call already used 10 lines below for the cliente branch — this collapses two near-duplicate branches into one shared helper call |
-| `notificarParecerAtribuido` | **Recommend leaving as single-`advogadoId` recipient.** A `ParecerSolicitacao` (`backend/src/main/java/com/lexcv/models/ParecerSolicitacao.java`) always has a `clienteId` but "atribuído a um advogado" is semantically a single-person assignment — broadcasting it to the whole cliente team would contradict the meaning of "atribuição." Flag for requirements confirmation; do not silently fold this trigger into NOTF-25's scope. |
-
-`AlertasDiariosJob`'s three `processar*` methods also currently notify only `processo.getResponsavelId()` + admins for prazos/eventos/honorários — the question scopes NOTF-25 to "the 4 existing triggers" (Phase 87), so treat the daily job as **out of scope** for this requirement unless the roadmap says otherwise. It is a cheap follow-on later since the helper will already live in `NotificacaoService`, which the job already depends on.
-
----
-
-## 4. NOTF-26 — snooze a deadline reminder
-
-### The dedup risk, resolved without touching `uk_notificacao_dedup`
-
-The question's concern is real: `uk_notificacao_dedup` is `(tenant_id, destinatario_id, entidade_tipo, entidade_id, categoria)` with no time dimension. If snooze were modeled as "hide the row, then let `AlertasDiariosJob` re-create it later," the job's own `existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria` check (`AlertasDiariosJob.java:312`) would find the original row still exists and **permanently refuse** to create a new one — the reminder would never resurface. Widening the dedup key (e.g. adding a date/cycle column) would also defeat Phase 88's entire edge-triggered design, turning a "once per risk-level-crossing" alert into a recurring daily one for every unresolved prazo — a much bigger, unwanted behavior change.
-
-**Recommendation: dedup needs no new dimension.** Model snooze as a visibility toggle on the *same, already-existing* row, not as a request to re-create it:
-
-- Add `snoozedUntil` (nullable `LocalDateTime`, `@Setter`-only — same mutability pattern already used for `lida`) directly to `Notificacao.java`. New manual migration script following the existing `NN-*.sql` convention (e.g. `backend/migrations/<phase>-add-notificacao-snoozed-until.sql`), same as the `uk_notificacao_dedup` and `Honorario`/`Facto` unique-constraint precedents (`ddl-auto=validate` in prod never creates this from the annotation alone).
-- New `NotificacaoService.snooze(tenantId, destinatarioId, id, until)` — same find-then-mutate-then-save shape as `marcarLida` (`NotificacaoService.java:244`), same 404-via-empty-`Optional` contract, same choke-point discipline ("nenhuma outra classe deve chamar `notificacaoRepository.save(...)`").
-- New endpoint `PATCH /api/v1/notificacoes/{id}/snooze` in `NotificacaoController`, mirroring `marcarLida`'s dual tenant+destinatario scoping exactly.
-- **Bell/unread queries change; the `/notificacoes` history page does not.** `NotificacaoRepository.countByTenantIdAndDestinatarioIdAndLidaFalse` and `findByTenantIdAndDestinatarioIdAndLidaFalse` (feeding the badge count and "mark all read") need an added `AND (snoozed_until IS NULL OR snoozed_until <= :now)` predicate so a currently-snoozed item is invisible to the noisy "unread" surface. The full-history `buscarPorFiltros` query (native query behind `/notificacoes`) should **not** change — it is explicitly a browsable audit view; a snoozed item should still be findable there (optionally with a "Adiado até DD/MM" badge), it just shouldn't drive the bell badge or appear in the dropdown while deferred.
-- Once `snoozedUntil` elapses, **the same row reappears** in the unread queries automatically — no job involvement, no new row, no dedup interaction at all. This is the key simplification: snooze and the daily job's idempotency are made orthogonal by construction, rather than reconciled.
-
-### Escalation interacts correctly, by construction
-
-If a snoozed `PRAZO_PROXIMO` prazo crosses into `PRAZO_VENCIDO` while still snoozed, that is a **different `categoria` value**, hence a different dedup tuple — `AlertasDiariosJob` will correctly create a brand-new, fully active (non-snoozed) `PRAZO_VENCIDO` row regardless of the earlier snooze. Escalation to a worse risk band is never silently suppressed by an earlier snooze on the milder band. Verify this exact interaction with a test once Testcontainers infra exists (Section 6) — it is a natural, non-obvious case worth asserting explicitly, not just reasoning about.
-
-### Domain-specific product-safety recommendation
-
-This is a *legal deadline* reminder in a Cape Verde legal-practice product — snoozing a "prazo fatal" into oblivion has real consequences. Recommend: (a) a fixed, server-validated set of snooze durations (e.g. 1/3/7 dias) rather than a free-form date picker, and (b) capping `snoozedUntil` so it can never be pushed past the underlying `Prazo.dataLimite` itself, and/or disallowing snooze entirely on `PRAZO_VENCIDO` (already-overdue) — these are product decisions to confirm during requirements, not something research should silently assume, but they should be explicitly asked rather than left implicit.
-
-### Scope of what's snoozable
-
-NOTF-26's own name ("lembrete de **prazo**") argues for restricting the snooze *action* server-side to `categoria ∈ {PRAZO_PROXIMO, PRAZO_VENCIDO}` at first (reject others with 400), while keeping the `snoozedUntil` column generic on the entity so extending to `EVENTO_*`/`HONORARIO_ATRASADO` later is a one-line validation change, not a schema change.
-
----
-
-## 5. Shared-file collision map across NOTF-24/25/26
-
-All three requirements converge on the same small set of files. This is the most important build-order constraint in this milestone:
-
-| File | NOTF-24 | NOTF-25 | NOTF-26 |
-|---|---|---|---|
-| `NotificacaoService.java` | new mute-check in `criar()`, new constructor dep | new `resolverEquipaProcesso`, signature changes on 3 trigger methods, new constructor deps | new `snooze()` method |
-| `NotificacaoServiceTest.java` | all ~20 constructor calls | all ~20 constructor calls (again) | none required, but likely gains new cases |
-| `NotificacaoRepository.java` | none | none | new/modified unread-count and unread-list queries |
-| `NotificacaoController.java` | new preferences endpoints | none | new snooze endpoint |
-| `ResourceController.java` | none | edits at lines ~990, ~1055, ~1724, ~2601-2624 | none |
-
-**Do not execute NOTF-24/25/26 as parallel phases.** They are logically independent features but mechanically collide on `NotificacaoService.java` (and its test file) every time. Sequence them.
-
-**Recommended internal order: NOTF-24 → NOTF-25 → NOTF-26.**
-- NOTF-24 first because its change to `criar()` is the smallest, most self-contained insertion (one guard clause) — good foundation, lowest risk to land first.
-- NOTF-25 second, specifically *after* NOTF-24, so every new team-member recipient NOTF-25 fans out to automatically inherits the mute-preference gate for free (both funnel through the same `criar()`). Reversing the order still works, but doing 24 first means NOTF-25's own tests don't need to separately re-verify preference interaction — it was already proven correct one layer down.
-- NOTF-26 last: almost entirely additive (new column, new endpoint, new query predicates), least likely to conflict with the other two's core logic changes, and is naturally "the last-mile UX layer" on top of an already-correct notification stream.
-
----
-
-## 6. Agenda ↔ `RiscoPrazoService` unification
-
-### The endpoint already exists — no new backend endpoint needed for prazos
-
-`useAllPrazos()` (`web/src/hooks/use-processos.ts:728`) already calls `GET /prazos`, and that endpoint (`ResourceController.java:1528` `listAllPrazos`) **already returns a backend-computed `risco` field** via `riscoPrazoService.computeRisco(...)` (line 1533) — the exact same `RiscoPrazoService` (Phase 85) consumed by the dashboard and `AlertasDiariosJob`. This is the "prazo-listing endpoint already used elsewhere" the question asks about, and it is sufficient as-is for prazos.
-
-### Where the divergence actually lives in `agenda/page.tsx`
-
-Reading the file directly (`web/src/app/(dashboard)/agenda/page.tsx`), the "5th divergent implementation" is not a recomputation of the risk formula itself — it's that the page **silently drops the `risco` field it already receives**, then substitutes a cruder proxy:
-
-1. `allUnifiedEvents` (line 95-106) maps each `Prazo` into the unified calendar-event shape but only copies `id, tenantId, processoId, titulo, descricao, dataInicio, dataFim, prioridade, concluido, isPrazo` — `p.risco` (present on the `Prazo` type, `web/src/types/processos.ts:267`) is never carried over.
-2. `weekStats.urgentes` (line 166) computes "Urgentes" as `active.filter(e => e.prioridade === "ALTA").length` — a static priority check with **no date-proximity component at all**, diverging from `RiscoPrazoService.computeRisco`'s actual threshold logic (≤7 dias for ALTA, ≤3 dias otherwise, `VENCIDO` if already past). An ALTA-priority prazo 60 days out currently counts as "urgente" here; a MEDIA-priority prazo due tomorrow does not.
-3. `getCategoria(e)` (line 568) categorizes by `tipo`/title-text matching only (PRAZO/AUDIENCIA/DILIGENCIA/REUNIAO) — this is a different, legitimate concept (event *type*, not risk) and does not need to change.
-
-### The one real gap: `GET /eventos` has no `risco` field at all
-
-Prazos carry `risco` end-to-end already; **eventos never have**. `ResourceController.listEventos` (`ResourceController.java:2231`) returns raw `Evento` rows with no risk field — unlike `GET /eventos/upcoming` (line 2358) and the dashboard KPI code, which already call `riscoPrazoService.computeRiscoEvento(...)` inline. `web/src/types/eventos.ts`'s `Evento` interface has no `risco` field to match.
-
-### Minimal refactor path
-
-1. **Backend, 1-line-per-call addition, no new endpoint:** extend `listEventos` to add `"risco", riscoPrazoService.computeRiscoEvento(e.getDataInicio(), e.getPrioridade())` to each returned `Evento`, mirroring the identical one-liner already present in `getUpcomingEventos` and the dashboard KPI path. This is strictly additive (new JSON field), so it cannot break the (nonexistent) other consumers of `GET /eventos`'s current shape.
-2. **Frontend types:** add `risco?: PrazoRisco` to `Evento` (`web/src/types/eventos.ts`) and confirm it's already present on `Prazo` (`web/src/types/processos.ts:267` — it is).
-3. **`agenda/page.tsx`:** in the `allUnifiedEvents` mapping, stop dropping `p.risco`/`e.risco` — carry it through into the unified shape.
-4. Replace `weekStats.urgentes`'s `prioridade === "ALTA"` check with `risco === "proximo" || risco === "vencido"` (or `risco === "vencido"` only, depending on the desired "Urgentes" definition — a product call, not an architecture one).
-5. Reuse the existing `prazosRiscoToVariant`/`prazosRiscoToLabel` helpers (`web/src/lib/prazos.ts`, already used on the processo-detail and processos-list pages) to render a risk-colored badge on calendar day pills — do not invent a second color-mapping.
-
-### Sequencing note vs. NOTF-25
-
-Step 1 above edits `ResourceController.listEventos` — a **different method** in the same file NOTF-25 also edits (`createProcesso`, `atribuirResponsavel`, `createProcessoFase`, the documento-upload handler). Different methods, same ~2900-line file: low conflict probability, but do not run these two phases as literally-concurrent edits; sequence them (either order is fine — there's no logical dependency, only a shared-file caution).
-
----
-
-## 7. Minimal Testcontainers/H2 setup for this backend
-
-### Current state (verified from `backend/pom.xml`)
-
-Zero test-database dependencies exist. `spring-boot-starter-parent:3.4.1` is the parent POM, which transitively manages Testcontainers BOM versions — no explicit Testcontainers version needs pinning. The three existing backend tests (`RiscoPrazoServiceTest`, `NotificacaoServiceTest`, `AlertasDiariosJobTest`) are pure Mockito/JUnit5 unit tests with zero Spring context and zero database — this pattern continues to be correct and should **not** be replaced wholesale; Testcontainers is additive, for the two specifically-flagged risk areas only.
-
-### Dependencies to add (test scope, no version needed — managed by the parent BOM)
-
-```xml
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-testcontainers</artifactId>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.testcontainers</groupId>
-  <artifactId>junit-jupiter</artifactId>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.testcontainers</groupId>
-  <artifactId>postgresql</artifactId>
-  <scope>test</scope>
-</dependency>
-```
-
-Use image `postgres:16-alpine` — the exact image already pinned in `docker-compose.yml` for dev/prod, so behavior parity with the real deployment target is guaranteed, not assumed.
-
-### Why `@DataJpaTest` sidesteps the `MINIO_ENDPOINT` blocker entirely — no workaround needed
-
-The recurring `MINIO_ENDPOINT` failure (documented in `.planning/milestones/v2.10-MILESTONE-AUDIT.md` and PROJECT.md Context) happens because `MinioConfig.s3Client()`/`s3Presigner()` (`backend/src/main/java/com/lexcv/config/MinioConfig.java`) are `@Configuration`-scoped beans that eagerly resolve `${MINIO_ENDPOINT}` via `MinioProperties`, and `application.yml` declares every property as a required env var with no default. This only breaks a **full** `@SpringBootTest` context (the kind that would exercise `SetupController`/full HTTP round-trips).
-
-`@DataJpaTest` does not load arbitrary `@Configuration` classes — it slices the context to JPA infrastructure (entities, repositories, a `JpaTransactionManager`) and explicitly excludes regular `@Configuration` beans like `MinioConfig`, `SecurityConfig`, `JwtProvider`, etc. Since `MinioProperties`/`JwtProperties`/`CorsProperties` beans are simply never instantiated in this slice, their unresolved placeholders never get evaluated, and the `MINIO_ENDPOINT` blocker cannot occur. **No exclusion annotation, no mock bean, no profile trick is needed** — using the narrowest correct test slice is the workaround, by construction.
-
-This also means: use `@DataJpaTest`, not `@SpringBootTest`, for both flagged risk areas. Neither `NotificacaoRepository.buscarPorFiltros` nor the `ParecerSolicitacao`/`ParecerVersao` locking behavior requires HTTP, `@PreAuthorize`, or MinIO — they are pure repository/transaction-manager concerns.
-
-### Pattern A — `NotificacaoRepository.buscarPorFiltros` (Phase 86 risk)
-
+**Example — new `backend/src/main/java/com/lexcv/controllers/PublicController.java`:**
 ```java
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Testcontainers
-class NotificacaoRepositoryIT {
+package com.lexcv.controllers;
 
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+import com.lexcv.dtos.PublicTenantBrandingResponse;
+import com.lexcv.models.Tenant;
+import com.lexcv.repositories.TenantRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-    @Autowired NotificacaoRepository notificacaoRepository;
+@RestController
+@RequestMapping("/api/v1/public")
+@RequiredArgsConstructor
+public class PublicController {
+    private final TenantRepository tenantRepository;
 
-    @Test
-    void buscarPorFiltros_combinaTenantDestinatarioCategoriaLida_comPageable() {
-        // persist a few Notificacao rows via notificacaoRepository.save(...),
-        // then assert buscarPorFiltros(tenantId, destinatarioId, categoria, lida, PageRequest.of(0, 10))
-        // returns the right page/content/totalElements against a REAL Postgres -- this is the
-        // exact nativeQuery+Pageable combination that has never executed against Postgres before.
+    @GetMapping("/branding")
+    public ResponseEntity<PublicTenantBrandingResponse> getBranding() {
+        return tenantRepository.findFirstByOrderByCreatedAtAsc()
+                .map(t -> ResponseEntity.ok(
+                        PublicTenantBrandingResponse.builder()
+                                .nome(t.getNome())
+                                .logoDataUrl(t.getLogoDataUrl())
+                                .build()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
 ```
 
-`@AutoConfigureTestDatabase(replace = Replace.NONE)` is required alongside `@ServiceConnection` — `@DataJpaTest` defaults to swapping in an embedded database, which would silently override the Testcontainers-provided Postgres connection if not disabled.
-
-### Pattern B — `numeroVersao` PESSIMISTIC_WRITE lock (Phase 87 risk)
-
-This is a genuine concurrency test, not just a repository query test — it needs two **independently-committing** transactions racing on `ParecerSolicitacaoRepository.findByIdForUpdate` (`backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java:22`). A non-obvious but important gotcha: `@DataJpaTest` wraps each test method in a single transaction that rolls back at the end by default — a genuine 2-thread lock test needs that implicit wrapping turned **off** for the specific test method (`@Transactional(propagation = Propagation.NOT_SUPPORTED)` on the test method), then two real, separate transactions driven manually via an injected `PlatformTransactionManager`/`TransactionTemplate` on two threads (`ExecutorService` + `CountDownLatch` to sequence "thread A holds the lock" → "thread B blocks" → "thread B proceeds only after A commits"), asserting the two resulting `numeroVersao` values are sequential (e.g. 1 and 2, never a duplicate 1 and 1). This is the DB-level guarantee `WR-04` in `ParecerController.java:472` relies on and that a JVM-only `synchronized` block could never prove.
-
-### Net effect on the pending UAT/verification gaps
-
-Writing these two tests is not separate from the "10 phases with pending UAT" tech-debt item — it **is** how Phase 86's and Phase 87's specific `human_needed` verification gaps (STATE.md Deferred Items table) get closed. The other 8 pending UAT items (75, 76, 79, 81, 82, 84, 85, 89) are live-browser/HTTP walkthroughs, unrelated to Testcontainers, and mostly blocked by the separate `MINIO_ENDPOINT` env-resolution issue in full-context/live runs — a different problem from the one this section solves, requiring an actual working `backend/.env` (or a documented local MinIO/docker-compose workaround), not a test-slice choice.
-
----
-
-## 8. Recommended build order for the whole milestone
-
-```
-Track 1 (infra/tooling, no feature-file overlap with Track 2/3):
-  1. Resolve/document the MINIO_ENDPOINT blocker (unblocks live UAT for 87/89 later)
-  2. SpotBugs/SAST vs JDK 23 bytecode fix (backend/spotbugs-exclude.xml already touched, untracked)
-  3. Testcontainers/H2 infra + Pattern A (Notificacao native query) + Pattern B (numeroVersao lock)
-     -> closes Phase 86 + Phase 87 verification gaps as a side effect
-
-Track 2 (frontend-only, fully independent of Track 3):
-  4. Agenda <-> RiscoPrazoService unification (agenda/page.tsx + Evento.risco enrichment)
-
-Track 3 (notification features, MUST be sequential -- shared NotificacaoService.java):
-  5. NOTF-24 (preferences)
-  6. NOTF-25 (process team)      -- after 24, so new recipients inherit the mute gate for free
-  7. NOTF-26 (snooze)            -- after 25, smallest remaining blast radius
-
-Track 4 (housekeeping, best done last so the audit sees final state):
-  8. Minor debt closure (enum label translations, NIF validation tests) + fresh gap audit
-  9. Remaining live/manual UAT closure (75, 76, 79, 81, 82, 84, 85, 89) once MINIO_ENDPOINT (step 1)
-     and all code changes above have landed
+**One-line addition to `backend/src/main/java/com/lexcv/repositories/TenantRepository.java`** (currently `public interface TenantRepository extends JpaRepository<Tenant, UUID> {}` — an empty marker interface):
+```java
+public interface TenantRepository extends JpaRepository<Tenant, UUID> {
+    Optional<Tenant> findFirstByOrderByCreatedAtAsc();
+}
 ```
 
-**Do not attempt these in the same phase / concurrently:**
-- NOTF-24, NOTF-25, NOTF-26 with each other (Section 5 — all three edit `NotificacaoService.java` and its test file).
-- NOTF-25 with the Agenda unification's `GET /eventos` change, if both touch `ResourceController.java` in the same execution window (different methods, low but non-zero collision risk — sequence rather than parallelize).
-- Any live/manual UAT closure work before step 3 (Testcontainers) exists, for the two phases (86, 87) whose gaps are specifically test-infrastructure-shaped, not browser-shaped — attempting those live/manually first duplicates effort that automated tests will supersede.
-- The final housekeeping audit (step 8) before Track 3 lands — an audit run mid-milestone would not see NOTF-24/25/26's final integration shape and would need to be redone, repeating the exact "audit runs at milestone close" pattern already established in this project's v2.7/v2.9/v2.10 retrospectives.
+This is safe because the system is structurally single-tenant per install: `SetupService.initializeSystem()` is gated by the `SystemSetting.SINGLETON_ID` row (can only run once) and is the ONLY code path that creates a `Tenant` row — confirmed by grep, `AdminController` has no tenant-creation endpoint. There will only ever be zero or one `Tenant` rows in this deployment model (matches PROJECT.md's explicit v2.12 scope note: "este deployment continua a servir uma única instituição").
 
-Track 1 and Track 2 have no file overlap with each other or with Track 3, and can run in either order or in parallel with each other; Track 3's internal order is a hard constraint, not a suggestion.
+**Endpoint naming:** recommend `/api/v1/public/branding` over `/api/v1/public/tenant`. The name itself is a guardrail — "tenant" invites someone later to add more `Tenant` fields "since it's the tenant endpoint anyway"; "branding" scopes the endpoint's contract to exactly what it's for.
 
----
+**One-line addition to `SecurityConfig.securityFilterChain()`'s existing `permitAll()` list** (exact current list quoted from the file):
+```java
+.requestMatchers(
+    "/api/v1/auth/login",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/logout",
+    "/api/v1/setup/status",
+    "/api/v1/setup/initialize",
+    "/api/v1/public/branding"          // NEW
+).permitAll()
+```
+Use the exact literal path, not a `/api/v1/public/**` wildcard — this repo's existing convention lists every public path explicitly (5 exact strings today, zero wildcards), and a wildcard would silently permit any future `/public/*` endpoint without a deliberate `SecurityConfig` review.
+
+### Pattern 3: Cross-zone navigation must be hard, not soft
+
+**What:** Next.js's own Multi-Zones docs are explicit: *"Links to paths in a different zone should use an `a` tag instead of the Next.js `<Link>` component... Next.js will try to prefetch and soft navigate to any relative path in `<Link>`, which will not work across zones."* `/login`, `/dashboard`, `/setup` all live in `web/`'s route manifest, not `webpage/`'s. `webpage/`'s router has zero knowledge of those paths.
+
+**When to use:** Every outbound link/redirect FROM `webpage/` TO `web/` (the "Entrar" CTA, and the setup-status redirect).
+
+**Trade-offs:** A full page reload instead of a soft client transition — irrelevant here since these are zone boundary crossings anyway (full asset reload is unavoidable regardless of `<a>` vs `<Link>`; using `<Link>` would just 404 first).
+
+**Example — the CTA:**
+```tsx
+{/* NOT <Link href="/login"> — that's a different zone, soft-nav 404s */}
+<a href="/login" className="...">Entrar</a>
+```
+
+**Example — `webpage/proxy.ts` (new file, adapted from `web/proxy.ts`'s already-proven pattern, dropped down to only the branch `webpage` needs):**
+```typescript
+import { NextResponse, type NextRequest } from "next/server";
+import { fetchSetupStatus } from "./src/lib/setup";
+
+export async function proxy(request: NextRequest) {
+  try {
+    const status = await fetchSetupStatus();
+    if (!status.initialized) {
+      return NextResponse.redirect(new URL("/setup", request.url));
+    }
+  } catch {
+    return NextResponse.next();
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: "/",
+};
+```
+This redirect is a real HTTP 302 (not a client script), so it correctly crosses from the `webpage` zone into the `web` zone — the browser re-requests `/setup` fresh, and Caddy's catch-all routes that fresh request to `frontend:3000` as it does today. No `<Link>`/soft-nav problem exists here because `NextResponse.redirect` never was a soft navigation to begin with.
+
+### Pattern 4: Server Component data fetch, no client Query for a public GET
+
+**What:** `webpage/src/app/page.tsx` as an `async` Server Component calling `fetchTenantBranding()` directly (plain `fetch`, same relative-URL-resolves-via-request-origin behavior already proven by `web/proxy.ts`'s `fetchSetupStatus()` in production today).
+
+**When to use:** Read-only, unauthenticated, low-frequency data with no client-side interactivity requirement (exactly this case). Reserve TanStack Query for `web/`'s authenticated, mutation-heavy screens where it's already standard.
+
+**Trade-offs:** No client-side refetch/cache — irrelevant for a page whose branding only changes once, at initial `/setup`, and is expected to be effectively static afterward. If the tenant name/logo can change post-setup in some future milestone, this page will just need a revalidation strategy then (`revalidate` / `dynamic = "force-dynamic"`) — not needed for this milestone's scope.
+
+## Data Flow
+
+### Request Flow (production, all 3 apps live)
+
+```
+Browser → https://alcv.tech/
+    ↓
+Caddy: matches @webpage (path == "/") → reverse_proxy webpage:3000
+    ↓
+webpage's proxy.ts: fetch(relative "/api/v1/setup/status")
+    → resolves against request origin → https://alcv.tech/api/v1/setup/status
+    → Caddy: matches /api/* → reverse_proxy backend:8080 (SetupController, already permitAll)
+    ↓
+  initialized == false → NextResponse.redirect("/setup")
+    → Browser re-requests https://alcv.tech/setup (full reload)
+    → Caddy catch-all (unchanged) → frontend:3000 → web/'s existing /setup wizard
+  initialized == true → webpage/page.tsx Server Component renders:
+    → fetch(relative "/api/v1/public/branding")
+    → Caddy /api/* → backend:8080 → NEW PublicController (permitAll) → {nome, logoDataUrl}
+    → landing page renders Hero/Módulos/Prova social/Contacto + "Entrar" <a href="/login">
+```
+
+### Static asset flow (why `assetPrefix` matters)
+
+```
+webpage's HTML references: /landing-static/_next/static/chunks/<hash>.js
+    ↓
+Caddy: matches @webpage (path starts with "/landing-static/") → reverse_proxy webpage:3000
+    ↓
+webpage's own Next.js server (assetPrefix registered) serves it natively — no stripping needed
+
+web/'s (frontend) HTML references: /_next/static/chunks/<hash>.js  (unprefixed, unchanged)
+    ↓
+Caddy catch-all (unchanged) → frontend:3000 → serves as it always has
+```
+These two asset namespaces (`/landing-static/_next/*` vs `/_next/*`) never collide — that is the entire point of `assetPrefix` on the non-default zone.
+
+## Scaling Considerations
+
+| Concern | At current scale (single institution) | If ever multi-tenant/self-service | Notes |
+|---------|------------------------------------------|--------------------------------------|-------|
+| Traffic | Trivial — a marketing page for one institution's own staff/prospects, not internet-scale | N/A — explicitly out of scope per PROJECT.md ("onboarding self-service multi-institituição... fora de âmbito") | Don't over-build caching/CDN for this milestone |
+| Branding data freshness | Fetched per-request server-side; fine at this volume | Would need per-tenant routing (subdomain/slug) — explicitly deferred | No action needed now |
+| Container footprint | `webpage` should get the smallest resource limits of the 3 app containers (it's the lightest workload) — mirror `frontend`'s `cpus: '0.5'`, `memory: 256M` in `docker-compose.prod.yml`/hostinger, or even less | N/A | Matches existing `frontend` limits already in `docker-compose.prod.yml` |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Exposing more than `nome`+`logoDataUrl` on the public DTO
+
+**What people do:** Add `@Data`/`@Builder` directly on the JPA `Tenant` entity to a `ResponseEntity<Tenant>`, or add "just one more field" (e.g. `email` for a "contact us" mailto link) to the public DTO later.
+**Why it's wrong:** `Tenant` also carries `nif`, `tipoEntidade`, `email`, `telefone` — PII/business data this milestone explicitly forbids exposing unauthenticated. Serializing the entity directly (or growing the DTO ad hoc) is exactly how that leaks.
+**Instead:** Keep `PublicTenantBrandingResponse` a hand-built, two-field DTO (Pattern 2 above) and treat any future field addition as a deliberate, reviewed decision, not a convenience shortcut.
+
+### Anti-Pattern 2: `handle_path` stripping the asset prefix before proxying
+
+**What people do:** Assume the reverse proxy must strip the `/landing-static` prefix (like a classic "mount path" reverse-proxy setup) before forwarding to the Next.js app, e.g. `handle_path /landing-static/* { reverse_proxy webpage:3000 }`.
+**Why it's wrong:** Next.js 15+'s own multi-zone docs show the recommended top-level router forwards the FULL prefixed path unmodified to the zone (`destination: ${BLOG_DOMAIN}/blog-static/:path+`) — the zone's own server expects and serves requests AT that prefixed path, because `assetPrefix` registration makes Next's router accept it there. Stripping the prefix would make `webpage`'s Next server receive `/_next/static/...` (unprefixed) while its manifest expects `/landing-static/_next/static/...` — a 404.
+**Instead:** Use a plain `handle` (or a named matcher combining `path / /landing-static/*`), not `handle_path`, for the webpage branch.
+
+### Anti-Pattern 3: `{$VAR}`/`${VAR}` templating inside a Docker Compose `entrypoint: |` heredoc
+
+**What people do:** Try to keep the Hostinger Caddy config parametrized via Caddy-native `{$DOMAIN_NAME}` syntax embedded inside the `entrypoint: sh -c "echo '...' > Caddyfile"` string in `docker-compose.hostinger.yml`.
+**Why it's wrong:** **This already bit this exact repo twice**, in the two commits immediately preceding this research (`67e2120`, `534fa92`). Docker Compose performs its own `$VAR`/`${VAR}` interpolation across the ENTIRE compose file's string values — including inside an embedded heredoc meant for Caddy — BEFORE Caddy ever sees it. Verified via `git show 67e2120`: `echo '{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {'` had to become the hardcoded literal `echo 'alcv.tech, www.alcv.tech {'`. Verified via `git show 534fa92`: `{$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}` inside the same heredoc was removed entirely because the bcrypt hash's own literal `$` characters got mangled once Compose (and then the shell) tried to interpolate through them, crashing Caddy on startup.
+**Instead:** In `docker-compose.hostinger.yml` specifically, any new Caddy config text added inside that `entrypoint` block must use plain hardcoded values (matching the `alcv.tech` domain literal already there) and must contain **zero** `$` characters. `Caddyfile.prod` (a real mounted file, NOT embedded in Compose YAML) is unaffected by this bug and can safely keep using native `{$DOMAIN_NAME}` templating — the two files must be treated differently, and this repo already has both variants live today.
+
+### Anti-Pattern 4: `useRouter().push()`/`<Link>` for the setup-status redirect inside `webpage/`
+
+**What people do:** Copy `web/src/app/page.tsx`'s client-side `useEffect` + `useRouter().replace("/setup")` pattern verbatim into `webpage/`.
+**Why it's wrong:** That pattern works in `web/` because `/setup` is part of `web/`'s own route manifest — a soft client navigation there is a same-zone transition. Inside `webpage/`, `/setup` does not exist in the build, so a soft navigation attempt would produce a client-side 404 before ever reaching Caddy/`web/`.
+**Instead:** Do the check server-side in `webpage/proxy.ts` (Pattern 3) — an actual HTTP redirect, not a client route change, so it correctly re-enters through Caddy and lands in the `web/` zone.
+
+### Anti-Pattern 5: Wildcarding the new `permitAll()` entry
+
+**What people do:** Add `/api/v1/public/**` to `SecurityConfig`'s matcher list "to save having to edit this again for future public endpoints."
+**Why it's wrong:** Every other entry in this list (`/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/setup/status`, `/api/v1/setup/initialize`) is an exact literal path — the existing convention is "list what's public, explicitly, one at a time," which makes the whole authorization surface auditable by reading one `.requestMatchers(...)` call. A wildcard breaks that invariant for anyone who adds a `/public/whatever` endpoint later without re-reading `SecurityConfig`.
+**Instead:** Add the exact literal `"/api/v1/public/branding"`.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|----------------------|-------|
+| GHCR (`ghcr.io/tchspprtcv/lexcv`) | New 3rd image `webpage`, pushed by `.github/workflows/deploy.yml`'s existing `build-and-push` job | Add a 3rd `docker/build-push-action@v6` step, `context: ./webpage`, `tags: ${{ env.REGISTRY }}/webpage:latest` + sha tag, `cache-from/to: type=gha,scope=webpage` — exact mirror of the existing `frontend` step (lines 97-110 of `deploy.yml`) |
+
+### Internal Boundaries (exact current syntax → exact new syntax)
+
+**1. `Caddyfile` (dev, plain, unparametrized — read today verbatim):**
+```caddyfile
+:80 {
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+    handle {
+        reverse_proxy frontend:3000
+    }
+}
+```
+→ becomes:
+```caddyfile
+:80 {
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+
+    @webpage {
+        path / /landing-static/*
+    }
+    handle @webpage {
+        reverse_proxy webpage:3000
+    }
+
+    handle {
+        reverse_proxy frontend:3000
+    }
+}
+```
+
+**2. `Caddyfile.prod` (real mounted file, uses Caddy-native `{$DOMAIN_NAME}` — safe to keep):**
+```caddyfile
+{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+    handle_path /minio-console* {
+        basicauth {
+            {$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}
+        }
+        reverse_proxy minio:9001
+    }
+    handle {
+        reverse_proxy frontend:3000
+    }
+}
+```
+→ insert the same `@webpage` block used above, between the `/minio-console*` block and the catch-all.
+
+**3. `docker-compose.hostinger.yml` (embedded heredoc, hardcoded literal domain since commit `67e2120` — must add ZERO new `$` characters, per Anti-Pattern 3):**
+```yaml
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo 'alcv.tech, www.alcv.tech {
+            handle /api/* {
+                reverse_proxy backend:8080
+            }
+            handle {
+                reverse_proxy frontend:3000
+            }
+        }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+```
+→ becomes (note: also update this service's `depends_on` list to include `webpage`):
+```yaml
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo 'alcv.tech, www.alcv.tech {
+            handle /api/* {
+                reverse_proxy backend:8080
+            }
+            @webpage {
+                path / /landing-static/*
+            }
+            handle @webpage {
+                reverse_proxy webpage:3000
+            }
+            handle {
+                reverse_proxy frontend:3000
+            }
+        }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      - frontend
+      - backend
+      - webpage
+```
+
+**4. New `webpage` service, all 3 compose files (mirrors `frontend`'s existing shape):**
+
+`docker-compose.yml` (base/dev — add after the `frontend` block):
+```yaml
+  webpage:
+    build:
+      context: ./webpage
+      dockerfile: Dockerfile
+    container_name: lexcv_webpage
+    depends_on:
+      - backend
+    environment:
+      BACKEND_API_ORIGIN: http://backend:8080
+      NEXT_PUBLIC_API_BASE_PATH: /api/v1
+    networks:
+      - lexcv_net
+    ports:
+      - "3004:3000"
+```
+Also add `webpage` to Caddy's `depends_on: [frontend, backend]` → `[frontend, backend, webpage]` in this file too.
+
+`docker-compose.prod.yml` (override — add alongside the existing `frontend:` override):
+```yaml
+  webpage:
+    image: ${REGISTRY:-ghcr.io/lexcv}/webpage:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+```
+
+`docker-compose.hostinger.yml` (self-contained — add a full block mirroring the existing `frontend:` block):
+```yaml
+  webpage:
+    image: ghcr.io/tchspprtcv/lexcv/webpage:latest
+    container_name: lexcv_webpage
+    depends_on:
+      - backend
+    environment:
+      BACKEND_API_ORIGIN: http://backend:8080
+      NEXT_PUBLIC_API_BASE_PATH: /api/v1
+    networks:
+      - lexcv_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    restart: unless-stopped
+```
+
+**5. New backend endpoint (`SecurityConfig` + `TenantRepository` + `PublicController` + `PublicTenantBrandingResponse`)** — see Pattern 2 above for exact code.
+
+## Recommended Build Order
+
+The two biggest pieces — the backend endpoint and the `webpage` app — have **no hard dependency on each other** and should be built in parallel; only the infra wiring is strictly sequential and comes last.
+
+1. **Backend endpoint first (or in parallel), fully isolated:** `TenantRepository.findFirstByOrderByCreatedAtAsc()` + `PublicTenantBrandingResponse` + `PublicController` + the one-line `SecurityConfig` permitAll addition. Zero dependency on `webpage/`. Verifiable standalone with `curl http://localhost:8089/api/v1/public/branding` against the existing dev `docker-compose.yml` backend (port `8089` already mapped) — no new infra needed to test this in isolation.
+
+2. **`webpage/` scaffold + setup-status gate, in parallel with (1):** This does NOT need the new backend endpoint at all — it reuses `/api/v1/setup/status`, which is **already public today** (`SetupController`, already in `permitAll()`). Scaffold `webpage/` (layout, globals.css, `proxy.ts`, landing sections), and for the branding fetch, use a hardcoded stub (`{ nome: "LexCV", logoDataUrl: null }`) so UI work is never blocked on the backend piece. `webpage/` can be run standalone via `pnpm dev` (needs only its own `next.config.ts` rewrite + a `BACKEND_API_ORIGIN` pointing at a running backend, or none at all if the setup-status check is temporarily mocked too) — **no Caddy, no Docker, no compose changes needed yet** to build and visually iterate on this app.
+
+3. **Wire (1) into (2):** once the endpoint lands, swap the stub in `webpage/src/lib/branding.ts` for a real `fetch` call. Small, low-risk integration step.
+
+4. **`webpage/Dockerfile`:** copy `web/Dockerfile`'s exact 3-stage shape (deps → build → standalone runner), adjusting only package name/paths. Can be written and `docker build`-tested standalone before touching any compose file.
+
+5. **Compose wiring (all 3 files) + Caddy routing (all 3 files):** only makes sense once (4) produces a working image/buildable context — this is where `webpage` becomes reachable end-to-end for the first time (`docker compose up` locally, verify `http://localhost/` hits `webpage` and `http://localhost/login` still hits `frontend`).
+
+6. **CI/CD (`deploy.yml`):** add the 3rd build-push step last — it only matters once `webpage/Dockerfile` exists and the compose files reference the `ghcr.io/.../webpage` image tag, otherwise CI would be building an image nothing yet consumes.
+
+**Why this order:** it maximizes parallelizable work (steps 1 and 2 have zero mutual dependency thanks to the pre-existing public `/setup/status` endpoint and a mockable branding payload) and defers all infra/deployment risk (Caddy's known Compose brace-expansion footgun, new container wiring, CI changes) to the end, where it can be validated against two already-complete, independently-tested pieces rather than debugged blind.
+
+## Known Limitation (flag, not a blocker)
+
+`webpage/public/*` static files (`favicon.ico`, `robots.txt`, `sitemap.xml`, OG images) are NOT reachable through Caddy's catch-all default today, because that catch-all (unchanged) still routes unprefixed root-level static paths to `frontend:3000`, which will serve `web/`'s own `public/*` files instead. This only matters if the landing page needs its own distinct favicon/OG image/robots.txt from `web/`'s. If so, add explicit exact-path `handle` branches for those specific files to the `@webpage` matcher (e.g. `path / /favicon.ico /robots.txt /landing-static/*`) — deliberately not included in the default recommendation above to keep the routing change minimal and match the milestone's stated scope (no SEO/self-service requirements called out in PROJECT.md).
 
 ## Sources
 
-- Direct repository reads (all file:line references above verified against the actual working tree, 2026-07-12): `Notificacao.java`, `NotificacaoService.java`, `NotificacaoRepository.java`, `NotificacaoController.java`, `AlertasDiariosJob.java`, `RiscoPrazoService.java`, `Processo.java`, `Prazo.java`, `ClienteAdvogado.java`, `ClienteAdministrativo.java`, `ParecerVersao.java`, `ParecerSolicitacao.java`, `ParecerSolicitacaoRepository.java`, `ParecerVersaoRepository.java`, `ParecerController.java`, `ResourceController.java`, `backend/pom.xml`, `backend/src/main/resources/application.yml`, `docker-compose.yml`, `web/src/app/(dashboard)/agenda/page.tsx`, `web/src/hooks/use-processos.ts`, `web/src/hooks/use-eventos.ts`, `web/src/hooks/use-notificacoes.ts`, `web/src/types/{eventos,processos,notificacoes}.ts`, `web/src/lib/prazos.ts`, `.planning/PROJECT.md`, `.planning/STATE.md`.
-- [Testcontainers :: Spring Boot (docs.spring.io)](https://docs.spring.io/spring-boot/reference/testing/testcontainers.html) — confirms `spring-boot-testcontainers`/`junit-jupiter`/`postgresql` dependency set and that versions are managed by `spring-boot-starter-parent`. HIGH confidence.
-- [Integration tests with Testcontainers and Spring Boot 3.1+ (Medium, Aleksander Kołata)](https://medium.com/@aleksanderkolata/integration-tests-with-testcontainers-and-spring-boot-3-1-39103ff95bd7) and [Everything about testcontainers on Spring Boot 3.1 (Rabobank tech blog)](https://rabobank.jobs/en/techblog/everything-about-testcontainers-on-spring-boot-3-1/) — corroborate the `@ServiceConnection` + `@AutoConfigureTestDatabase(Replace.NONE)` combination for `@DataJpaTest`. MEDIUM-HIGH confidence (community sources, consistent with official docs).
+- `Caddyfile`, `Caddyfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.hostinger.yml` — read directly from this repo (2026-07-15)
+- `backend/src/main/java/com/lexcv/config/SecurityConfig.java`, `Tenant.java`, `SetupController.java`, `SetupService.java`, `TenantRepository.java`, `UserResponse.java`, `AuthController.java`, `AdminController.java` — read directly from this repo
+- `web/src/app/page.tsx`, `web/proxy.ts`, `web/src/lib/setup.ts`, `web/src/lib/api.ts`, `web/next.config.ts`, `web/Dockerfile`, `web/src/app/layout.tsx`, `web/src/app/providers.tsx`, `web/src/app/globals.css`, `web/src/components/shared/dashboard-shell.tsx`, `web/package.json` — read directly from this repo
+- `.github/workflows/deploy.yml` — read directly from this repo
+- This repo's own git history: commits `67e2120` ("fix: hardcode alcv.tech in Caddy entrypoint - avoid Docker Compose brace expansion bug") and `534fa92` ("fix: remove MinIO basicauth from Caddy - fix crash due to bcrypt hash dollar signs"), inspected via `git show` — HIGH confidence, first-party evidence, not inferred
+- [Next.js — Guides: Multi-Zones](https://nextjs.org/docs/pages/guides/multi-zones) — official docs, fetched version 16.2.10, matches installed `next@16.2.6` in `web/package.json`. HIGH confidence: `assetPrefix` behavior, "no rewrite needed since Next 15", `<a>` vs `<Link>` cross-zone requirement, "default zone needs no assetPrefix"
+- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/assetPrefix.md` and `basePath.md` — local, version-matched docs bundled with the installed Next package (per this repo's `web/AGENTS.md` warning to prefer these over training data)
+- [Caddy — `handle` directive docs](https://caddyserver.com/docs/caddyfile/directives/handle) — official docs, fetched directly. HIGH confidence: mutual exclusivity of sequential `handle` blocks, `handle_path` strips the matched prefix (confirms why NOT to use it here), `handle_path` sorts at the same priority as a `handle` with a path matcher
+- WebSearch: "Caddy multiple Next.js apps same domain path routing assetPrefix" — MEDIUM confidence, used only to corroborate/triangulate the Multi-Zones approach against real-world community write-ups (Caddy Community forum, dev.to); the Next.js official docs fetch above is the primary/authoritative source, this was cross-verification only
 
 ---
-*Architecture research for: LexCV v2.11 (Auditoria Técnica e Notificações Avançadas)*
-*Researched: 2026-07-12*
+*Architecture research for: standalone Next.js landing page app integration into existing Caddy/Compose/Spring Boot monorepo*
+*Researched: 2026-07-15*

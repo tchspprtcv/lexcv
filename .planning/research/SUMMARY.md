@@ -1,169 +1,164 @@
 # Project Research Summary
 
-**Project:** LexCV — v2.11 "Auditoria Técnica e Notificações Avançadas"
-**Domain:** Tech-debt closure + notification-system extension on an existing multi-tenant Spring Boot 3.4.1 / Java 23 + Next.js 16 legal-practice management platform
-**Researched:** 2026-07-12
+**Project:** LexCV — v2.12 Landing Page (`webpage/`)
+**Domain:** Standalone public marketing/landing Next.js app added to an existing secured multi-tenant monorepo (Next.js dashboard `web/` + Spring Boot `backend/` + Caddy reverse proxy), single fixed domain, path-based routing
+**Researched:** 2026-07-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone is not greenfield feature work — it is a retrofit milestone on a mature, already-shipped codebase (v2.10's `Notificacao`/`NotificacaoService`/`AlertasDiariosJob` subsystem, Phase 85's `RiscoPrazoService`, and a backend that has never had integration tests or a working SAST pipeline). All four research tracks converge on the same conclusion: **almost nothing needs to be invented — everything needs to be extended, consolidated, or committed.** No new runtime dependency is required for the three notification features (NOTF-24/25/26); the frontend already has every UI primitive needed (`Switch`, `RadioGroup`, `Popover`), and the backend pattern (a single `NotificacaoService.criar()` write choke point) already exists and just needs new logic threaded through it. The one genuinely new dependency is test-scoped: Testcontainers' PostgreSQL module (version 1.20.4, inherited from the parent BOM — explicitly do not pin the newly-released 2.0.x line, which renamed artifacts and breaks Spring Boot 3.4.x's `@ServiceConnection`). Separately, the SpotBugs/FindSecBugs-on-JDK-23 fix is already ~90% done, uncommitted, in the working tree — this milestone's SAST job is to verify and commit it, not re-engineer it.
+This milestone adds a third application (`webpage/`) to an already-running two-app-plus-backend system: a public, unauthenticated marketing/landing page personalized with the deployment's own tenant name and logo. It is **not** a typical multi-tenant SaaS marketing site with customer logos, testimonials, pricing, or self-serve signup — LexCV's deployment model is one institution per install, so all "social proof" must come from honest, verifiable architecture facts (multi-tenant data isolation, RBAC, audit trail, Cape Verde/NOSi ecosystem fit) rather than fabricated cross-customer claims. The recommended approach is a fully independent Next.js 16.2.6 app (exact version match with `web/`, no shared workspace tooling), built using Next.js's official **Multi-Zones** pattern (`assetPrefix` + Caddy path-based `handle` routing) to coexist with `web/` under one domain, backed by exactly one new narrow backend endpoint (`GET /api/v1/public/branding`) that returns only `nome` + `logoDataUrl`.
 
-The recommended approach is architecture-led: because `NotificacaoService.criar()` is the sole write path for every notification (event-triggered and daily-job-generated alike), NOTF-24 (mute), NOTF-25 (team fan-out), and NOTF-26 (snooze) should be built **sequentially, not in parallel** — all three mechanically collide on the same file (`NotificacaoService.java`) and its 20-call-site test file. The recommended internal order is NOTF-24 → NOTF-25 → NOTF-26, so each new team-fan-out recipient automatically inherits the mute gate for free, and snooze — the most additive, lowest-risk feature — lands last. Testing infrastructure (Testcontainers, not H2, for the two Postgres-dialect-sensitive risk areas: a native query and a concurrency lock) and the SpotBugs commit are independent tracks with no file overlap and can run in parallel with the notification work or before it.
+The stack, feature scope, and architecture are all grounded directly in this repo's own pinned versions and existing patterns (copied shadcn primitives, `SetupController`-style narrow public controllers, `web/Dockerfile`'s 3-stage build), which is why confidence is high across the board except for Cape-Verde-market-specific feature framing (no local competitor data exists, so that guidance is directional). The single biggest risk category is **integration/cross-cutting infrastructure, not the landing page's own code**: this repo has three independently-drifting Caddy configuration sources (`Caddyfile`, `Caddyfile.prod`, and an inline heredoc embedded in `docker-compose.hostinger.yml` — the last of which is confirmed, via git history, to be the actual live production path), and the four commits immediately preceding this research were all bug fixes to that exact inline config. A second major risk is naive reuse of `web/`'s existing `page.tsx`/`proxy.ts` logic, which was written for a pure "where do I route you" gateway and would silently redirect every anonymous visitor straight to `/login` — defeating the entire point of a public landing page — if copied wholesale. A third is leaking `Tenant` PII (`nif`, `email`, `telefone`) through the new public endpoint by taking an entity-pass-through shortcut instead of the narrow explicit-copy DTO pattern this codebase already uses elsewhere (`AuthController.getMe()`).
 
-The key risks are integration risks, not technology risks, and PITFALLS.md surfaces one that is unusually consequential: a **pre-existing, currently-live bug** where `uk_notificacao_dedup` (added Phase 88) will throw an uncaught `DataIntegrityViolationException` whenever a fan-out recipient is also an ADMIN (a Phase 87 comment explicitly assumed double-delivery was safe, before the Phase 88 constraint existed). This bug gets strictly worse as NOTF-25 widens fan-out from one recipient to a full team, and must be fixed as a standalone discovered-gap item before/alongside NOTF-25, not deferred. Other high-value risks: a mute check placed anywhere except inside `criar()` will be silently bypassable by the daily job; snooze naively implemented as "hide the row" will be resurrected by the job's idempotency check the very next morning; and any new query/table introduced by these features must carry an explicit `tenant_id` filter, not rely on `user_id`/`cliente_id` alone (this project has a documented history of exactly this class of leakage bug).
+Mitigation is well-understood and low-cost for all three risk categories: (1) update all three Caddy config sources together in the same change and verify through a full `docker compose up`, never `pnpm dev` alone; (2) build `webpage/`'s setup-status gate as a standalone server-side redirect with zero authentication branching, and use plain `<a>` tags (never `next/link`) for any cross-app navigation such as the "Entrar" CTA; (3) hand-build a two-field `TenantPublicInfoResponse` DTO with explicit getter-to-setter copying and an exact-literal (never wildcarded) `SecurityConfig` allowlist entry. None of this requires new tooling, a CMS, or a monorepo build system — everything reuses proven, already-shipped patterns from `web/` and `backend/`.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new frontend dependency is needed — `@radix-ui/react-switch`, `-radio-group`, and `-popover` are already installed and wrapped in `web/src/components/ui/*`, covering every UI need for mute toggles, team-fan-out (no UI needed), and fixed-duration snooze presets. On the backend, the only new dependency set is test-scoped: Testcontainers' PostgreSQL module + JUnit-Jupiter integration + the `spring-boot-testcontainers` starter, all with **no explicit `<version>` tag** so they resolve to the parent-managed 1.20.4 (do not manually import the newly-released Testcontainers 2.0.x BOM — it renamed artifacts/relocated classes and is not what Spring Boot 3.4.x's `@ServiceConnection` auto-configuration expects; see `spring-projects/spring-boot#47639`). SpotBugs (4.10.2.0) and FindSecBugs (1.14.0) are already the current-latest versions and already bumped, uncommitted, in `backend/pom.xml`.
+Next.js 16.2.6 (exact pin matching `web/package.json`) + React 19.2.4 + TypeScript `^5` + Tailwind CSS v4 (CSS-first, no `tailwind.config.ts`) form the core, chosen specifically to avoid tracking two different sets of Next.js 16 quirks in one repo. The linchpin technology is **Next.js Multi-Zones** (built into Next core since v15, `assetPrefix` config) — the officially documented, Vercel-maintained pattern for exactly this milestone's topology (multiple independently-deployed Next.js apps under one domain). Supporting UI libraries (`@radix-ui/react-slot`, `class-variance-authority`, `clsx`+`tailwind-merge`, `lucide-react`, `next-themes`) are hand-copied file-by-file from `web/src/components/ui/` and `web/src/lib/`, matching this repo's existing convention of no `components.json`/no shadcn CLI usage.
 
 **Core technologies:**
-- Testcontainers `postgresql` module (1.20.4, inherited) — spins up a real disposable `postgres:16-alpine` container (matching prod/dev exactly) for the two Postgres-dialect-sensitive risk areas
-- `spring-boot-testcontainers` starter + `@ServiceConnection` — auto-wires the container into Spring's `DataSource`, no manual `@DynamicPropertySource`
-- `@DataJpaTest` (not `@SpringBootTest`) — sidesteps the `MINIO_ENDPOINT`-required-env-var wall entirely by construction, since it never instantiates `MinioConfig`/`SecurityConfig`
-- Existing `@radix-ui/react-switch`/`-radio-group`/`-popover` — zero new frontend libraries for NOTF-24/25/26
+- Next.js 16.2.6 (exact) — App Router server + static rendering — matches `web/`'s exact pin, avoids two divergent sets of Next.js 16 training-data-breaking gotchas in one repo
+- React/React DOM 19.2.4 (exact) — required peer, matches `web/`'s pin
+- Tailwind CSS v4 (`^4` + `@tailwindcss/postcss ^4`) — CSS-first config via `@theme` in `globals.css`, no separate config file, matches `web/`
+- Next.js Multi-Zones (`assetPrefix`, built-in) — prevents `webpage/`'s `_next/static/*` requests colliding with `web/`'s under the same domain; **not optional**, confirmed against the bundled Next 16.2.6 docs in this repo
+- `next-themes` — dark/light mode toggle, explicit milestone requirement, direct port of `web/src/app/providers.tsx`
+
+**Explicitly avoid:** `output: 'export'` (breaks the setup-status redirect and dynamic fetch this app needs), `@tanstack/react-query`/`react-hook-form`/`zod` (no client-managed state or forms in scope), `npx shadcn init` (no `components.json` exists anywhere in this repo), and skipping `assetPrefix` (silently serves `web/`'s JS/CSS to the landing page in production while looking fine in local dev).
 
 ### Expected Features
 
-**Must have (table stakes) — NOTF-24/25/26 MVP:**
-- Per-user, per-category mute toggle defaulting to "on" (opt-out model) — universal pattern once a system has >3 categories (LexCV has 9)
-- Notify more than the single assignee on a shared processo (assignee + team, not assignee-only) — the Clio "Responsible Attorney + Responsible Staff" and Jira/GitHub "assignee + watchers" patterns both treat single-assignee-only as an incomplete model
-- Snooze = hide until a concrete, bounded future date/time, then reappear automatically as unread — every reminder-app precedent treats an unbounded "snooze forever" as an anti-pattern, not a feature
+LexCV's landing page is architecturally closer to an Auth0/Okta-style branded single-tenant entry portal than a typical multi-customer SaaS marketing site — the codebase has no field, table, or endpoint for "other institutions using LexCV," so every social-proof recommendation is scoped around that structural constraint.
 
-**Should have (competitive/safety differentiators):**
-- At least one non-mutable "cannot silence" category (`PRAZO_VENCIDO` at minimum) — general SaaS guidance says legally-significant alerts should not be fully opt-outable, and this domain's direct analogue is an already-breached deadline
-- Escalation (a worse categoria, e.g. `PRAZO_VENCIDO` after a snoozed `PRAZO_PROXIMO`) must always break through snooze — achieved for free here because the job creates a new row per categoria transition
-- A "Snoozed" filter/tab on `/notificacoes` so deferred items aren't invisible forever
+**Must have (table stakes, P1):**
+- Setup-status gate (port of existing public `/api/v1/setup/status` check) — prevents showing "personalized" content for an uninitialized tenant
+- Public Tenant Branding Endpoint (`nome` + `logoDataUrl` only) — the one genuinely new backend surface
+- Personalized Hero + benefit-driven headline
+- Módulos/Funcionalidades overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) — static copy, zero backend dependency
+- Prova social/confiança institucional using architecture-based trust copy (data isolation, RBAC, audit, NOSi/Cabo Verde ecosystem framing) — not fabricated customer proof
+- Contacto/Pedir demonstração with a static contact channel (mailto or external form embed) — explicitly NOT sourced from `Tenant.email`/`telefone`
+- Primary CTA "Entrar" → `/login`, top and bottom
+- Responsive layout + dark/light mode (ported from `web/`)
+- Basic SEO meta (title/description/favicon)
 
-**Defer (v2+):**
-- Category×channel preference matrix — premature with a single delivery channel (in-app polling only); revisit only if email/push is ever added
-- A brand-new `ProcessoEquipa` join table independent of the client's team — no evidence a processo's team ever needs to diverge from its client's team; reuse `ClienteAdvogado`/`ClienteAdministrativo` transitively via `Processo.clienteId` instead
-- Extending NOTF-25's team fan-out to the Phase-88 daily-job categories (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) — flagged as an explicit roadmap decision, not silently included or silently dropped
+**Should have / add after validation (P2):**
+- Dynamic OG/share image personalized with tenant branding (reuses the same endpoint)
+- Curated real-UI screenshots from seeded/demo data replacing placeholder illustrations
+
+**Defer / anti-features (rejected or v2+):**
+- Customer logo wall, testimonials carousel — structurally impossible to source honestly (no cross-deployment registry exists)
+- Persisted "solicitar demonstração" lead-capture backend — meaningful new scope (entity, controller, RBAC, spam protection), not a landing-page detail
+- Public pricing page, self-serve signup/trial — explicitly out of scope; provisioning is manual/sales-led
+- Blog/CMS, live chat widget, multi-language toggle, interactive product-tour sandbox, competitor comparison page, analytics/cookie-consent — all rejected as disproportionate to or inconsistent with this milestone's actual scope
 
 ### Architecture Approach
 
-Every one of NOTF-24/25/26 is best understood as "what gets inserted at or near `NotificacaoService.criar()`," the single, deliberately-documented write choke point for the entire notification subsystem — not as three independent features. This centralization is what makes NOTF-24's mute check automatically apply to all 4 event triggers and the daily job with one guard clause, and it is exactly what NOTF-25's team-resolution helper (`resolverEquipaProcesso`) must also route through rather than being duplicated at 4-5 call sites.
+`webpage/` is added as a fully independent Next.js app (own `package.json`/`pnpm-lock.yaml`, no monorepo tooling) that shares only the backend and domain with `web/`. It reaches the outside world exclusively through Caddy's path-based routing, using Next.js's own documented Multi-Zones pattern: `webpage/` gets a unique `assetPrefix` (`/landing-static`) so its static chunks never collide with `web/`'s unprefixed `/_next/*`; `web/` itself needs zero changes since the default/catch-all zone requires no `assetPrefix`. On the backend, one new narrow `PublicController` (mirroring the existing `SetupController` precedent of a small, easy-to-audit, single-purpose public controller) exposes `nome`+`logoDataUrl` for the singleton tenant row, added to `SecurityConfig`'s existing exact-literal `permitAll()` allowlist.
 
 **Major components:**
-1. `NotificacaoService.criar(...)` — sole write path; hosts the new mute-check guard (NOTF-24) and is the natural home for `resolverEquipaProcesso` (NOTF-25) and `snooze()` (NOTF-26)
-2. `NotificacaoPreferencia` (new entity) — `(tenant_id, user_id, categoria)` unique join table; presence of a row = muted, absence = default-on delivery, mirroring the `ClienteAdvogado`/`ClienteAdministrativo` join-table convention
-3. Team resolution via `Processo.clienteId` → `ClienteAdvogadoRepository`/`ClienteAdministrativoRepository` — zero new tables; reuses the exact lookup already proven correct for cliente-linked document uploads
-4. `Notificacao.snoozedUntil` (new nullable column) — a visibility toggle on the existing row, deliberately orthogonal to `lida` and to `AlertasDiariosJob`'s per-categoria dedup, so escalation and un-snoozing both work by construction with no job changes
-5. Testcontainers `@DataJpaTest` slices — narrow, MinIO/security-bean-free repository/lock verification for the native-query and concurrency-lock risk areas, not full-context `@SpringBootTest`
+1. `webpage/` (new Next.js 16 app) — renders the public landing page at `/` only, SSR for SEO, server-side setup-status redirect gate via its own `proxy.ts`
+2. `PublicController` + `TenantPublicInfoResponse` DTO (new, backend) — exposes exactly two fields, unauthenticated, via explicit getter-to-setter copy (never entity pass-through)
+3. Caddy (`Caddyfile` / `Caddyfile.prod` / `docker-compose.hostinger.yml` inline heredoc) — routes `/api/*` → backend, exact `/` + `/landing-static/*` → `webpage`, everything else (unchanged catch-all) → `frontend`
+4. `docker-compose.*` (3 files) + `.github/workflows/deploy.yml` — adds `webpage` as a 4th service/3rd built-and-pushed image, mirroring `frontend`'s existing shape
+
+The recommended build order (from Architecture research) is: (1) backend endpoint fully isolated and curl-testable, (2) `webpage/` scaffold in parallel using a hardcoded branding stub — neither depends on the other, (3) wire the real endpoint into the stub, (4) `webpage/Dockerfile`, (5) Caddy + compose wiring across all three config sources together, (6) CI/CD build-push step last.
 
 ### Critical Pitfalls
 
-1. **Mute check placed anywhere except inside `criar()`** — the daily job calls `criar()` directly, bypassing all 4 trigger methods; a check added only to the trigger methods silently misses 5 of 9 categories. Fix: guard clause inside `criar()` itself, and audit all ~9 existing callers for how they handle the new "muted, no-op" return outcome.
-2. **Team fan-out will trip `uk_notificacao_dedup` — a bug that already exists today, independent of NOTF-25** — Phase 87's "no dedup between primary recipient and ADMIN fan-out" comment predates Phase 88's unique constraint; any team member who is also ADMIN will now cause an uncaught `DataIntegrityViolationException` that 500s and rolls back an already-succeeded business action (document upload, parecer attribution). Must be fixed (merge recipient sets into one `LinkedHashSet` before looping) as a standalone discovered-gap item, and gets strictly worse as NOTF-25 widens the recipient pool.
-3. **Snooze naively implemented as "hide/delete the row"** — `AlertasDiariosJob`'s idempotency check only knows "exists / doesn't exist" per `(tenant, destinatario, entidadeTipo, entidadeId, categoria)`; hiding the row makes the job recreate it the very next run. Fix: add `snoozedUntil` state to the same row and extend only the *unread-count/badge* queries with a time predicate — leave the dedup tuple and the job's creation logic untouched.
-4. **`@SpringBootTest`/H2 will produce false confidence or hit the same `MINIO_ENDPOINT` wall already blocking live UAT** — use `@DataJpaTest` (excludes MinIO/security beans entirely) with a real `postgres:16-alpine` Testcontainer (not H2) specifically for the native query and the concurrency-lock test; H2's Postgres-compatibility mode has known gaps for native SQL and cannot reproduce true MVCC locking semantics.
-5. **Multi-tenant leakage concentrated in 3 new surfaces** — the mute-preferences table, `Processo→Cliente` team resolution, and any new lookup inside `AlertasDiariosJob` (which runs with no security context and threads `tenantId` explicitly as a parameter by deliberate design). Every new query must filter by `tenant_id` explicitly, never by `user_id`/`cliente_id` alone, and any job-side helper must never call `getTenantId()`/`SecurityContextHolder`.
+1. **Copying `web/`'s `page.tsx`/auth-check logic wholesale auto-redirects every anonymous visitor to `/login`** before the landing content ever renders — `webpage/`'s setup-status check must contain only the "not initialized → `/setup`" branch, never a `useMe()`/authentication branch.
+2. **`next/link`/`<Link>` used for the "Entrar" CTA breaks in production** because `/login` doesn't exist in `webpage/`'s own route table — it only works via Caddy routing to a sibling app. Use a plain `<a href="/login">` for every webpage→web cross-zone link; this only surfaces once both apps run behind Caddy together, not in isolated `pnpm dev`.
+3. **The new public endpoint leaks `nif`/`email`/`telefone`** if built via entity pass-through or a convenience DTO shortcut — `Tenant.java` has no field-level `@JsonIgnore`. Use a hand-built two-field DTO with explicit getter-to-setter copying, exactly like `AuthController.getMe()` already does.
+4. **`webpage/` and `web/` collide on `/_next/*` and `/favicon.ico`** under one Caddy origin unless `webpage/` gets a unique `assetPrefix` and Caddy's `handle` blocks route the prefixed/exact-root paths to `webpage` *before* the existing catch-all — this only breaks in production behind Caddy, never in standalone dev.
+5. **Caddy routing change applied to only 1 of 3 independently-drifted config sources** — `Caddyfile`, `Caddyfile.prod`, and an inline heredoc in `docker-compose.hostinger.yml` (confirmed by git history to be the actual live production path) must all be updated together, or the live deployment silently keeps the old routing with no error at all.
+
+Additional flagged risk: adding the new `permitAll()` entry as a wildcard (`/api/v1/public/**`) instead of the codebase's established exact-literal-string convention would silently pre-authorize any future endpoint added under that prefix without a fresh security review.
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure groups by shared-file collision risk and dependency order, not just by feature name. Two tracks (infra/tooling and frontend-only agenda consolidation) have zero file overlap with the notification track and can run in parallel with it; the notification track itself is a hard sequential chain.
+Based on combined research, three phases emerge cleanly — and are already named consistently across the Pitfalls research's "Phase to address" column (`backend-endpoint phase`, `webpage-app phase`, `infra-wiring phase`), which is a strong signal this is the natural grouping.
 
-### Phase 1: SpotBugs/SAST Commit + Verification
-**Rationale:** Already ~90% done, uncommitted, in the working tree (version bumps + exclusion file + real source fixes for EI_EXPOSE_REP/mass-assignment already applied). Zero dependency on any other phase; highest risk of being accidentally lost or redone from scratch if not landed first.
-**Delivers:** Committed `backend/pom.xml` version bumps, `backend/spotbugs-exclude.xml`, and the already-applied `UserPrincipal`/`ConflictCheckResponse`/`WorkflowResponse`/`ResourceController` defensive-copy fixes; a clean `mvn spotbugs:check` run.
-**Addresses:** SAST/JDK-23 tech-debt item from PROJECT.md scope.
-**Avoids:** Pitfall 8 (uncommitted work treated as "still broken" and redone or lost).
+### Phase 1: Backend Public Branding Endpoint
+**Rationale:** Fully isolated with zero dependency on the `webpage/` app (per Architecture's recommended build order); can be built first or in parallel, and is independently curl-testable against the existing dev `docker-compose.yml` backend with no new infra.
+**Delivers:** `TenantPublicInfoResponse` DTO (exactly `nome` + `logoDataUrl`), `TenantRepository.findFirstByOrderByCreatedAtAsc()`, new `PublicController` (`GET /api/v1/public/branding`), one exact-literal `SecurityConfig` `permitAll()` addition.
+**Addresses:** Public Tenant Branding Endpoint (P1, FEATURES.md).
+**Avoids:** Tenant entity/PII leak (Pitfall 3), wildcard `permitAll()` matcher (Pitfall 6), nondeterministic singleton-tenant lookup (Technical Debt table).
 
-### Phase 2: Backend Integration-Test Infrastructure (Testcontainers)
-**Rationale:** Independent of the notification track (different files); unblocks closure of Phase 86/87's pending UAT gaps as a side effect. Should land before or alongside the notification track so NOTF-25's dedup-collision fix (Phase 4 below) and NOTF-26's job-interaction behavior can be verified with real Postgres semantics rather than asserted by inspection alone.
-**Delivers:** `@DataJpaTest` + `@Testcontainers` + `@ServiceConnection` slice tests for `NotificacaoRepository.buscarPorFiltros` (native query) and the `ParecerVersao.numeroVersao` concurrency lock; a decision on whether CI (`deploy.yml`) is updated to actually run `mvn test`/`spotbugs:check`.
-**Uses:** Testcontainers `postgresql` (1.20.4, inherited), `spring-boot-testcontainers`, `postgres:16-alpine` image (matches prod).
-**Avoids:** Pitfalls 5, 6, 7 (env-var wall, H2 false confidence, CI never running tests).
+### Phase 2: `webpage/` Landing App
+**Rationale:** Can proceed in parallel with Phase 1 using a hardcoded branding stub — the biggest phase, covering nearly the entire v1 feature set; UI work is never blocked on the backend piece.
+**Delivers:** `webpage/` Next.js 16.2.6 app scaffold (Dockerfile mirroring `web/Dockerfile`'s 3-stage build, `next.config.ts` with `assetPrefix: '/landing-static'`, `proxy.ts` with setup-status-only gate), ported layout/globals.css/dark-light mode, Hero/Módulos/Prova social/Contacto sections, "Entrar" CTA as a plain `<a>`, matching security headers (CSP/HSTS/X-Frame-Options), and final integration swapping the branding stub for the real Phase 1 endpoint.
+**Addresses:** Setup-status gate, Personalized Hero, Módulos overview, Prova social (architecture-based trust copy), Contacto (static contact channel), CTA, responsive layout, dark/light mode, basic SEO meta — the full P1 MVP list from FEATURES.md.
+**Avoids:** Auto-redirect of anonymous visitors to `/login` (Pitfall 1), broken CTA via `next/link` across zones (Pitfall 2), client-gated spinner harming SEO/LCP (UX Pitfalls), CSP/security-header omission on the most internet-exposed page in the domain.
 
-### Phase 3: Agenda ↔ RiscoPrazoService Consolidation
-**Rationale:** Frontend-mostly, fully independent of the notification track (Phase 85 explicitly scoped this out of the prior milestone). Lower complexity for Prazos (pure plumbing — `risco` already computed backend-side, just dropped in `agenda/page.tsx`'s mapping); real backend decision needed for Eventos (`GET /eventos` has no `risco` field at all, unlike `/eventos/upcoming`).
-**Delivers:** `allUnifiedEvents` threads `risco` through instead of recomputing a date-blind `prioridade === "ALTA"` proxy; an explicit decision + implementation for whether `GET /eventos` gains a `risco` field or the frontend mirrors the threshold table with a parity test against `RiscoPrazoServiceTest`.
-**Addresses:** "5th divergent implementation of prazo crítico" tech-debt item from PROJECT.md scope.
-**Avoids:** Pitfall 9 (declaring victory on Prazos while silently leaving Eventos unaddressed).
-
-### Phase 4: NOTF-25-adjacent Discovered-Gap Fix — Dedup Constraint vs. ADMIN Double-Delivery
-**Rationale:** This is a **pre-existing, currently-live bug**, not new NOTF-25 scope — but NOTF-25 makes it strictly worse (more recipients per event → higher chance of an ADMIN collision) and NOTF-25 cannot be safely built on top of the current fan-out code without it. Sequencing this immediately before NOTF-25 (same phase or the phase directly preceding it) matches this project's established precedent of fixing cross-phase integration gaps immediately rather than deferring.
-**Delivers:** Merged/deduped recipient sets in `notificarDocumentoNovo`/`notificarParecerAtribuido` before looping; a `DataIntegrityViolationException` backstop matching the pattern already used in `AlertasDiariosJob`; a test proving "team member who is also ADMIN" no longer 500s.
-**Avoids:** Pitfall 2 (the single highest-severity finding in PITFALLS.md).
-
-### Phase 5: NOTF-24 — Per-User Notification Category Preferences
-**Rationale:** Must come first among the three notification features — its change to `criar()` is the smallest, most self-contained insertion (one guard clause), and doing it first means NOTF-25's team fan-out automatically inherits the mute gate for free rather than needing separate re-verification.
-**Delivers:** New `NotificacaoPreferencia` entity/table, mute-check inside `criar()`, `GET/PUT/DELETE /notificacoes/preferencias/{categoria}` endpoints on `NotificacaoController`, a settings-page toggle list reusing the existing `NOTIFICACAO_CATEGORIA_OPTIONS` labels, at least one non-mutable critical category.
-**Implements:** The `NotificacaoPreferencia` component from Architecture Approach above.
-**Avoids:** Pitfall 1 (mute check bypassable if placed anywhere but `criar()`).
-
-### Phase 6: NOTF-25 — Notify the Full Process Team
-**Rationale:** Second in the notification chain, after NOTF-24 and after Phase 4's dedup fix. Reuses `ClienteAdvogado`/`ClienteAdministrativo` transitively via `Processo.clienteId` — zero new tables, mirrors the exact pattern already sitting 20 lines away in `ResourceController` for cliente-linked documents.
-**Delivers:** `resolverEquipaProcesso` helper in `NotificacaoService`; team fan-out extended to `notificarFaseEntrada`, `notificarDocumentoNovo` (processo branch), `notificarProcessoAtribuido` (with 2nd-person copy preserved for the responsável, 3rd-person for the rest of the team); `notificarParecerAtribuido` explicitly left as individual-assignment (flagged for requirements confirmation, not silently folded in); an explicit roadmap decision on whether Phase-88 daily-job categories get the same expansion.
-**Addresses:** NOTF-25 from PROJECT.md target features.
-**Avoids:** Pitfall 3 (inconsistent team-resolution call sites) and Pitfall 10 (tenant-leakage via unverified `Cliente` ownership at the join step).
-
-### Phase 7: NOTF-26 — Snooze a Deadline Reminder
-**Rationale:** Last in the notification chain — almost entirely additive (new column, new endpoint, new query predicates), least likely to conflict with the other two features' core logic changes.
-**Delivers:** `Notificacao.snoozedUntil` (nullable, manual migration script), `NotificacaoService.snooze(...)` mirroring `marcarLida`'s shape, `PATCH /notificacoes/{id}/snooze` endpoint, updated unread-count/list/mark-all-read predicates (leaving the full-history `/notificacoes` view unfiltered so snoozed items remain browsable), fixed-duration presets (1/3/7 dias) in the UI via existing `Popover`+`RadioGroup` primitives, a product decision on whether snooze is disallowed on already-overdue `PRAZO_VENCIDO` items.
-**Addresses:** NOTF-26 from PROJECT.md target features.
-**Avoids:** Pitfall 4 (snooze resurrected by the job's idempotency check the next morning).
-
-### Phase 8: Cross-Cutting Audit + Minor Debt Closure + Remaining UAT
-**Rationale:** Best done last so the audit sees the milestone's final integration shape (matches this project's established v2.7/v2.9/v2.10 retrospective pattern of auditing at milestone close, not mid-stream).
-**Delivers:** Fresh gap audit across all NOTF-24/25/26 surfaces for tenant-isolation checklist items; minor debt closure (enum label translations, NIF validation tests); resolution/workaround for the `MINIO_ENDPOINT` blocker; closure of the remaining live/manual UAT items (75, 76, 79, 81, 82, 84, 85, 89) now that Testcontainers has already closed the test-infrastructure-shaped gaps for 86/87.
+### Phase 3: Infra Wiring & Deployment
+**Rationale:** Only makes sense once Phase 2 produces a working, buildable Docker image (per Architecture's build order) — this is where the highest-risk, highest-coordination-cost work (three drifting Caddy config sources, new container wiring, CI/CD) is deliberately deferred to the end, validated against two already-complete, independently-tested pieces rather than debugged blind.
+**Delivers:** `assetPrefix`-aware Caddy `handle` blocks added to **all three** config sources (`Caddyfile`, `Caddyfile.prod`, the inline heredoc in `docker-compose.hostinger.yml`) in correct pre-catch-all order; new `webpage` service added to all three `docker-compose*.yml` files (mirroring `frontend`'s resource limits); a third `docker/build-push-action@v6` step in `.github/workflows/deploy.yml`.
+**Uses:** Caddy 2 (existing), GitHub Actions (existing), Next.js Multi-Zones `assetPrefix` mechanism (Stack/Architecture).
+**Implements:** Caddy routing component + `docker-compose.*`/CI-CD component (Architecture's Component Responsibilities).
 
 ### Phase Ordering Rationale
 
-- Track 1 (SpotBugs, Testcontainers) and Track 2 (Agenda consolidation) have zero file overlap with the notification track or each other — safe to run in parallel with, or before, Track 3.
-- Track 3 (NOTF-24/25/26) is a **hard sequential constraint**, not a suggestion: all three mechanically collide on `NotificacaoService.java` and its ~20-call-site test file, regardless of their logical independence.
-- The dedup-collision fix (Phase 4) must land before NOTF-25 specifically, because NOTF-25 is what turns a latent, low-probability bug into a near-certain one as team sizes grow.
-- The final audit (Phase 8) must come after everything else, per this project's own established retrospective pattern — an audit run mid-milestone would need to be redone once Track 3 lands.
+- Phases 1 and 2 have zero mutual dependency (thanks to a mockable branding payload and the pre-existing public `/setup/status` endpoint), so they can be built in parallel or in either order — this maximizes early velocity.
+- Phase 3 must come last because it depends on real, working artifacts from both prior phases (an actual endpoint response shape to verify against, and a buildable `webpage` Docker image) and because it touches the exact area (`docker-compose.hostinger.yml`'s inline Caddy config) that has already caused four consecutive bug-fix commits in this repo's recent history — deferring it avoids debugging infra and application logic simultaneously.
+- This ordering directly avoids the "looks done but isn't" trap identified in Pitfalls research: testing `webpage/` only via `pnpm dev` (Phases 1-2) proves nothing about the cross-app collision/CTA/Caddy-drift risks that only surface once everything runs together behind Caddy (Phase 3) — so Phase 3's own verification step must explicitly include a full `docker compose up` test, not a repeat of Phase 2's isolated dev testing.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 4/6 (dedup fix + NOTF-25):** the "open question" of whether Phase-88 daily-job categories also get team expansion is explicitly unresolved by research and needs a requirements-level decision, not further research — flag for `/gsd:plan-phase` to surface as a decision point.
-- **Phase 6 (NOTF-25):** whether "team" means the literal wording "equipa do processo" (potentially a new `t_processo_equipe` table) or the cheaper "client's team, transitively" reading — research recommends the cheaper reading but flags it as a product decision, not a closed question.
-- **Phase 7 (NOTF-26):** snooze-duration caps relative to `Prazo.dataLimite` and whether `PRAZO_VENCIDO` is snoozable at all are explicit product-safety decisions research could not resolve unilaterally.
+Needs deeper attention during planning:
+- **Phase 3 (infra-wiring):** The three-source Caddy config drift has already caused real production bugs in this exact repo (commits `67e2120`, `534fa92`, `ba67f4e`, `1482f47`) — planning for this phase should explicitly re-read those commits and plan a side-by-side diff/verification step across all three files, plus a full `docker compose up` smoke test (not just `pnpm dev`), before considering it done.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (SpotBugs):** verification + commit of already-completed work, not new research.
-- **Phase 2 (Testcontainers):** well-documented official Spring Boot pattern (`@ServiceConnection`, `@DataJpaTest`), directly corroborated against docs.spring.io.
-- **Phase 3 (Agenda consolidation, Prazos half):** pure plumbing, data already computed backend-side.
-- **Phase 5 (NOTF-24):** established join-table + choke-point pattern already used repeatedly in this codebase.
+Standard patterns, well-documented (skip additional research-phase):
+- **Phase 1 (backend-endpoint):** Strong existing precedent in this exact codebase (`AuthController.getMe()`'s explicit-copy pattern, `SetupController`'s narrow-public-controller shape, `UserSummaryResponse`'s narrow-DTO doc comment) — implementation guidance is already concrete and code-ready in ARCHITECTURE.md/PITFALLS.md.
+- **Phase 2 (webpage-app):** Grounded directly in official Next.js 16 Multi-Zones docs (bundled in this repo's own `node_modules`, matching the installed version) plus a working `web/` app to copy patterns from — low ambiguity.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Versions verified directly against the fetched `spring-boot-dependencies-3.4.1.pom` from Maven Central and this repo's own uncommitted `pom.xml`/`spotbugs-exclude.xml` state — not training-data guesses |
-| Features | MEDIUM-HIGH | Codebase-grounded dependency claims are HIGH confidence (read directly from shipped v2.10 code); cross-product UX pattern claims (Clio, Jira, Todoist, IntelligentContract) are MEDIUM confidence, each cross-verified across 2+ independent sources but with no Context7 coverage for this niche domain |
-| Architecture | HIGH for file/line-level facts (read directly from the repo); MEDIUM for product-shape recommendations that depend on an unstated business decision (explicitly flagged, e.g. NOTF-25's team-scope reading) |
-| Pitfalls | HIGH | All findings grounded in direct reads of current repository code plus the uncommitted working-tree diff; not third-party ecosystem research |
+| Stack | HIGH | Grounded in this repo's actual pinned versions (`web/package.json`, configs) plus Next.js 16.2.6's own bundled docs — the exact version installed in this repo, not an assumed/newer version |
+| Features | MEDIUM | Generic B2B SaaS/legal-tech landing-page patterns are well-documented and cross-verified across multiple sources; Cape Verde/NOSi-specific market data is sparse (no local competitor found). Codebase constraints (what data structurally can/cannot be shown) are HIGH confidence, sourced directly from `Tenant.java`, `SetupInitializeRequest.java`, `SecurityConfig.java` |
+| Architecture | HIGH | Grounded in actual repo files, official Next.js Multi-Zones docs matching the exact installed version, official Caddy `handle` docs, and this repo's own recent commit history for Compose-specific gotchas |
+| Pitfalls | HIGH | Grounded directly in project source files, git history, and official Next.js 16 docs; one item (server-side hairpin fetch risk) flagged MEDIUM pending a live-deploy smoke test |
 
-**Overall confidence:** HIGH
+**Overall confidence:** HIGH (Features section carries a MEDIUM sub-rating due to sparse Cape-Verde-specific market data, but this does not affect the structural/codebase-constraint findings, which are HIGH and are what actually drive scope decisions)
 
 ### Gaps to Address
 
-- Whether NOTF-25's "equipa do processo" means the client's transitive team (research's recommended, cheaper reading) or a genuinely new per-processo team concept — must be confirmed during requirements/phase planning, not assumed.
-- Whether Phase-88 daily-job categories (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) receive the same team-fan-out expansion as the 4 event-triggered categories in this milestone, or are deliberately deferred — currently undecided by omission.
-- Whether CI (`deploy.yml`) gets a `mvn test`/`spotbugs:check` step added in this milestone, or whether tests remain a deliberate local-only/manual gate — needs an explicit recorded decision either way (Pitfall 7).
-- Snooze safety bounds (max duration, interaction with already-overdue `PRAZO_VENCIDO`) — a product/UX decision research flagged but did not resolve.
-- Whether a full HTTP-level RBAC/tenant round-trip test is ever needed for these features (would require a dedicated stub property source to avoid the `MINIO_ENDPOINT` wall) — not needed for this milestone's two named risk areas, but worth deciding explicitly if a future phase wants broader coverage.
+- **Cape Verde/NOSi market specifics are directional, not validated:** No local competitor was found in research, so positioning/copy framing (NOSi ecosystem alignment, institutional trust messaging) is a reasonable inference rather than confirmed market research. Validate messaging with actual institutional stakeholders during content review, not just this research.
+- **Server-side "hairpin" fetch risk in `proxy.ts` is unverified:** A server-side relative-URL `fetch()` inside a container may resolve against the public domain (routing back out through Caddy) rather than the internal Docker network, unlike a browser-side fetch. `web/` already does this successfully, but PITFALLS.md flags this as needing an explicit staging/VPS deploy test before assuming it's risk-free for `webpage/` too — address this as a verification step in Phase 3, not an assumption in Phase 2.
+- **Whether `webpage/` needs its own distinct favicon/OG image/robots.txt is unresolved:** Architecture research flags this as a "Known Limitation, not a blocker" — `webpage/public/*` files are not reachable through Caddy's default catch-all today. PROJECT.md doesn't call out explicit SEO requirements, so this needs a scope decision during phase planning (add extra Caddy `handle` branches, or accept `web/`'s favicon/OG image for now).
+- **Exact contact channel for "Contacto/Pedir demonstração" needs a business decision:** Research confirms it must be a static, hardcoded value in `webpage/`'s own config (not sourced from `Tenant.email`/`telefone`), but which channel (mailto vs. external form embed) is a content/business decision, not a technical one — flag for the requirements/planning step.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `spring-boot-dependencies-3.4.1.pom` (fetched directly from Maven Central) — verified `testcontainers.version=1.20.4`, `junit-jupiter.version=5.11.4`, `mockito.version=5.14.2`, `assertj.version=3.26.3`
-- `https://docs.spring.io/spring-boot/3.4/reference/testing/testcontainers.html` — official `@ServiceConnection`/`spring-boot-testcontainers` pattern
-- Direct repository inspection — `NotificacaoService.java`, `Notificacao.java`, `AlertasDiariosJob.java`, `RiscoPrazoService.java`, `ResourceController.java`, `NotificacaoController.java`, `Processo.java`, `ClienteAdvogado.java`/`ClienteAdministrativo.java`, `ParecerSolicitacao.java`/`ParecerVersao.java`, `backend/pom.xml` (+ uncommitted diff), `backend/spotbugs-exclude.xml`, `web/package.json`, `web/src/components/ui/*`, `agenda/page.tsx`, `docker-compose.yml`, `.github/workflows/deploy.yml`, `.planning/PROJECT.md`, `.planning/STATE.md`
+- `web/node_modules/next/dist/docs/01-app/02-guides/multi-zones.md` — Next.js 16.2.6's own bundled Multi-Zones guide (assetPrefix, routing, cross-zone linking, "no rewrite needed since Next 15")
+- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/output.md`, `assetPrefix.md`, `basePath.md` — version-matched Next.js config docs bundled with this repo's install
+- `web/node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md` — official Next.js 16 CSP guide
+- [Caddy — `handle` directive docs](https://caddyserver.com/docs/caddyfile/directives/handle) — official docs, mutual exclusivity and `handle_path` behavior
+- [Next.js — Guides: Multi-Zones](https://nextjs.org/docs/pages/guides/multi-zones) — official docs, version 16.2.10 (matches installed `next@16.2.6`)
+- Direct repo inspection: `web/package.json`, `web/next.config.ts`, `web/Dockerfile`, `web/tsconfig.json`, `web/postcss.config.mjs`, `web/src/app/globals.css`/`providers.tsx`/`layout.tsx`/`page.tsx`, `web/proxy.ts`, `web/src/lib/setup.ts`/`api.ts`/`utils.ts`, `web/src/components/ui/button.tsx`/`card.tsx`, `web/src/components/theme-toggle.tsx`
+- Backend repo inspection: `backend/src/main/java/com/lexcv/models/Tenant.java`, `config/SecurityConfig.java`, `controllers/SetupController.java`, `controllers/AuthController.java`, `services/SetupService.java`, `repositories/TenantRepository.java`, `dtos/UserResponse.java`/`UserSummaryResponse.java`/`SetupInitializeRequest.java`
+- Infra inspection: `Caddyfile`, `Caddyfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.hostinger.yml`, `.github/workflows/deploy.yml`
+- Git history: commits `67e2120`, `534fa92`, `ba67f4e`, `1482f47` (inspected via `git show`) — confirms `docker-compose.hostinger.yml` as the live, recently-fragile Caddy config path
+- [Customize Universal Login Page Templates (Auth0 Docs)](https://auth0.com/docs/customize/login-pages/universal-login/customize-templates); [Brands | Okta Developer](https://developer.okta.com/docs/concepts/brands/) — official docs, tenant-branding-portal precedent
+- [NOSi | Núcleo Operacional Para a Sociedade de Informação EPE](https://www.nosi.cv/en/); [Governo de Cabo Verde — NOSi](https://www.governo.cv/nucleo-operacional-da-sociedade-de-informacao-tem-novo-conselho-de-administracao/) — official Cape Verde government sources
+- `.planning/PROJECT.md` (v2.12 Landing Page milestone section) — project's own scope/constraints source of truth
 
 ### Secondary (MEDIUM confidence)
-- `https://github.com/spring-projects/spring-boot/issues/47639` — Testcontainers 2.0.x rename breaks `@ServiceConnection`
-- Context7 `/testcontainers/testcontainers-java` — corroborates the 2.0.x artifact rename
-- Clio Help Center, Atlassian (Jira watchers), Asana Help Center, SuprSend, Smashing Magazine, IntelligentContract, Todoist, Any.do — cross-product notification-preference/team-targeting/snooze UX patterns, each cross-verified across 2+ sources
+- [Best Practices for Designing B2B SaaS Landing Pages (Genesys Growth)](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages)
+- [18 B2B SaaS Landing Page Best Practices That Convert (SaaS Hero)](https://www.saashero.net/design/saas-landing-page-best-practices/) and companion CTA/trust-signal articles from the same source
+- [26 SaaS landing pages: examples, trends and best practices (Unbounce)](https://unbounce.com/conversion-rate-optimization/the-state-of-saas-landing-pages/)
+- [How to Create a Lawyer Landing Page That Actually Converts (Clio)](https://www.clio.com/blog/lawyer-landing-page/) — mobile-traffic stat, consumer-facing context
+- [Best Legal Practice Management Software 2026 (PracticePanther)](https://www.practicepanther.com/blog/best-legal-practice-management-software/)
+- [The role of security badges on SaaS landing page effectiveness (Markettailor)](https://www.markettailor.io/blog/role-of-security-badges-on-saas-landing-page) — substitute-for-testimonials framing
+- WebSearch: "Caddy multiple Next.js apps same domain path routing assetPrefix" — cross-verification only, Next.js official docs remain primary source
+- WebSearch: "Next.js latest release version July 2026" — informational footnote (patch-version currency), does not change exact-match stack recommendation
 
 ### Tertiary (LOW confidence)
-- None identified — all claims in this milestone's research were either codebase-verified (HIGH) or cross-checked across multiple independent secondary sources (MEDIUM)
+- [21 Best Law Firm Landing Page Examples & Inspirations (Landingi)](https://landingi.com/landing-page/law-firm-examples/) — directional inspiration only, needs validation against actual institutional stakeholder feedback
 
 ---
-*Research completed: 2026-07-12*
+*Research completed: 2026-07-15*
 *Ready for roadmap: yes*
