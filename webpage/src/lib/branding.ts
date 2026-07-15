@@ -12,6 +12,7 @@ export async function fetchBranding(): Promise<BrandingResponse> {
   try {
     const response = await fetch(`${backendOrigin}/api/v1/public/branding`, {
       cache: "no-store",
+      signal: AbortSignal.timeout(3000),
       headers: { Accept: "application/json" },
     });
     // 404 (sistema não inicializado — o proxy já terá redirecionado) ou qualquer !ok → fail open

@@ -12,6 +12,7 @@ export async function fetchSetupStatus(init?: RequestInit): Promise<SetupStatusR
   const response = await fetch(setupStatusUrl, {
     ...init,
     cache: "no-store",
+    signal: init?.signal ?? AbortSignal.timeout(3000),
     headers: {
       Accept: "application/json",
       ...(init?.headers ?? {}),
