@@ -88,6 +88,21 @@ services:
     ports:
       - "3003:3000"
 
+  webpage:
+    build:
+      context: ./webpage
+      dockerfile: Dockerfile
+    container_name: lexcv_webpage
+    depends_on:
+      - backend
+    environment:
+      BACKEND_API_ORIGIN: http://backend:8080
+      NEXT_PUBLIC_API_BASE_PATH: /api/v1
+    networks:
+      - lexcv_net
+    ports:
+      - "3004:3000"
+
   caddy:
     image: caddy:2-alpine
     container_name: lexcv_caddy
@@ -101,6 +116,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - webpage
     networks:
       - lexcv_net
 
