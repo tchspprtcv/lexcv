@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.12
 milestone_name: Landing Page
 status: planning
-last_updated: "2026-07-15T00:58:05.234Z"
+last_updated: "2026-07-15T09:00:00.000Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-14)
+See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.12 (Landing Page) — definição de requisitos/roadmap
+**Current focus:** Milestone v2.12 (Landing Page) — roadmap criado (Phases 98–100, 16/16 requisitos mapeados), aguardando `/gsd:plan-phase`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 98 (Backend — Endpoint Público de Branding) — not yet planned; 99 (webpage/ — Nova App Next.js de Landing) also available next (mutually parallelizable with 98)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-15 — Milestone v2.12 started
+Status: Roadmap created, ready for phase planning
+Last activity: 2026-07-15 — Milestone v2.12 roadmap created (3 phases, 98–100), REQUIREMENTS.md traceability updated to 16/16 mapped
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Last activity: 2026-07-15 — Milestone v2.12 started
 
 - v2.10 roadmap created 2026-07-08: 5 phases (85–89) derived from 16 requirements (NOTF-08 to NOTF-23), continuing phase numbering from v2.9 (last phase: 84). See PROJECT.md Key Decisions / prior STATE.md history for full v2.9/v2.10 rationale (trimmed here per size constraint).
 - v2.11 roadmap created 2026-07-12: 8 phases (90–97) derived from 15 requirements (SAST-01, TEST-01/02/03, AGD-34/35, NOTF-24/25/26/27, AUD-01 to AUD-05), continuing phase numbering from v2.10 (last phase: 89). Structure follows research's file-collision analysis: (90) SpotBugs/SAST commit+verify — already ~90% done uncommitted in working tree, zero dependency, highest risk of being lost if not landed first; (91) Testcontainers integration-test infra (native query + concurrency lock risks) — independent track, no file overlap with anything else; (92) Agenda↔RiscoPrazoService consolidation — frontend-mostly, independent, closes the "5th divergent prazo crítico implementation" debt explicitly deferred at v2.10 close. Phases 90/91/92 are mutually parallelizable (zero file overlap). Phases 93–96 are a hard sequential chain — all collide on `NotificacaoService.java` and its test file regardless of logical independence: (93) NOTF-24 mute preferences goes first (smallest, most self-contained insertion at the `criar()` choke point, so team fan-out later inherits the mute gate for free); (94) NOTF-27 dedup/ADMIN-collision fix — a pre-existing bug from Phase 88 (v2.10) that NOTF-25 would turn from latent into near-certain, so it must land before the fan-out widens; (95) NOTF-25 team fan-out (depends on 93+94); (96) NOTF-26 snooze, most additive, last in the chain. (97) Cross-cutting milestone audit (AUD-01 to AUD-05) runs last, depending on all 7 other phases, matching the v2.7/v2.9/v2.10 established retrospective pattern of auditing at milestone close. 100% requirement coverage (15/15), no orphans.
+- v2.12 roadmap created 2026-07-15: 3 phases (98–100) derived from 16 requirements (LP-01 to LP-16), continuing phase numbering from v2.11 (last phase: 97). Structure follows research (`.planning/research/SUMMARY.md`)'s explicit build-order recommendation almost verbatim: (98) Backend Public Branding Endpoint (LP-01, LP-02) — fully isolated, zero dependency on `webpage/`, curl-testable against the existing dev backend; (99) `webpage/` Landing App (LP-03 to LP-12) — the largest phase, covers nearly the full v1 feature list, buildable in parallel using a hardcoded branding stub since the only real blocking dependency (`/api/v1/setup/status`) already exists today; (100) Infra Wiring & Deployment (LP-13 to LP-16) — deliberately last, depends on both 98 and 99 producing real artifacts (an actual endpoint response shape, a buildable `webpage` Docker image), and touches the exact area (`docker-compose.hostinger.yml`'s inline Caddy heredoc, plus `Caddyfile`/`Caddyfile.prod`) that produced 4 consecutive production bug-fix commits (`67e2120`, `534fa92`, `ba67f4e`, `1482f47`) immediately preceding this research — its own success criteria require a full `docker compose up` verification, not isolated `pnpm dev`/`mvn test` checks. Phases 98 and 99 are explicitly marked mutually parallelizable in ROADMAP.md (zero mutual dependency); Phase 100 depends on both. 100% requirement coverage (16/16), no orphans.
 
 ### Decisions
 
@@ -87,6 +88,10 @@ Recent decisions affecting current work:
 - (v2.11 roadmap) Cross-cutting milestone audit (AUD-01 to AUD-05) placed last (Phase 97), depending on all other 7 phases — matches the established v2.7/v2.9/v2.10 pattern of auditing the milestone's final integration shape rather than mid-stream.
 - (v2.11 TEST-03) CI (`deploy.yml`) gains a `test` job (`mvn verify` + `mvn spotbugs:check`) gating `build-and-push` via `needs: test` — closes the requirement's "decision registered + implemented" clause (Phase 91); OWASP `dependency-check:check` deliberately deferred (out of scope, NVD download cost).
 - (v2.11 Phase 97, milestone close-out) AUD-01 through AUD-05 all closed: tenant isolation COVERED (97-01), UAT consolidated in `97-UAT.md` (97-03/AUD-02), DocumentoTipo/NIF debt closed (97-02/AUD-03), MINIO_ENDPOINT blocker RESOLVED (97-04/AUD-04), fresh code audit clean with zero new findings (97-04/AUD-05) — see PROJECT.md Key Decisions for full detail. 15/15 v2.11 requirements now Complete.
+- (v2.12 roadmap) Phases 98 (backend endpoint) and 99 (`webpage/` app) are explicitly mutually parallelizable — zero shared files, `webpage/` consumes a hardcoded branding stub until Phase 98's real endpoint lands. Phase 100 (Caddy/compose/CI wiring) hard-depends on both, deliberately deferred to last given this exact infra area's recent 4-commit bug-fix history.
+- (v2.12 roadmap) `webpage/`'s own setup-status gate (Phase 99) must contain zero authentication branch — never port `web/`'s `useMe()`/auth-redirect logic, which would defeat the entire purpose of a public landing page by auto-redirecting every anonymous visitor to `/login`.
+- (v2.12 roadmap) The "Entrar" CTA and any other webpage→web cross-zone link must be a plain `<a>` tag, never `next/link`/`<Link>` — `/login` doesn't exist in `webpage/`'s own route table, so client-side navigation would 404; this only surfaces once both apps run together behind Caddy (Phase 100), never in isolated `pnpm dev` (Phase 99).
+- (v2.12 roadmap) Phase 100's verification must include a full `docker compose up` smoke test, not just isolated `pnpm dev`/`mvn test` checks — this exact area (`docker-compose.hostinger.yml`'s inline Caddy config) produced 4 consecutive production bug-fix commits immediately preceding this milestone's research.
 
 ### Pending Todos
 
@@ -102,10 +107,13 @@ Recent decisions affecting current work:
 - ~~`web/src/app/(dashboard)/agenda/page.tsx` independently recomputes its own "prazo crítico" verdict instead of using `RiscoPrazoService`~~ — CLOSED by v2.11 Phase 92 (AGD-34/AGD-35): Agenda now consumes the backend-computed `risco` field for both Prazos and Eventos; the orphaned `/eventos/upcoming` endpoint and its frontend hook/types were removed.
 - ~~AUD-01 tenant-isolation cross-cutting audit~~ — CLOSED by v2.11 Phase 97-01: all three newest notification data surfaces (Phase 93 preferences, Phase 95 team resolution, Phase 96 snooze) traced end-to-end and confirmed tenant-scoped; zero gaps found, zero fixes needed (verdict: COVERED, not FIXED).
 - ~~AUD-05 fresh code-discovery audit~~ — CLOSED by v2.11 Phase 97-04 Task 1: bounded fresh pass over `NotificacaoService.java`, `NotificacaoController.java`, `AlertasDiariosJob.java`, and the notification/preference/snooze web hooks + adjacent components (bell, snooze control, settings tab) found zero new gaps — all 8 `NotificacaoController` endpoints confirmed to carry `@PreAuthorize`, zero real `TODO`/`FIXME`/`XXX` markers (one substring false-positive on "TODOS" checked and dismissed), zero dead-code references anywhere to the removed `/eventos/upcoming` endpoint, `AlertasDiariosJob`'s 4-layer error isolation (job/tenant/category/entity, all catching `Throwable`) confirmed intact. Clean result — no FIX-NOW or RECORD-AS-DEBT findings; see `97-04-SUMMARY.md` for the enumerated coverage.
+- (v2.12) Contact channel for LP-10 ("Contacto/Pedir demonstração") needs a concrete value at plan time — REQUIREMENTS.md/research flag it as a static `mailto:` link, but the exact address is a content decision not yet made; Phase 99 planning should confirm this with the user rather than inventing a placeholder that ships to production.
+- (v2.12) Whether `webpage/` needs its own favicon/OG-image/robots.txt is explicitly out of scope for this milestone (see REQUIREMENTS.md Out of Scope) — Phase 99/100 must not silently add extra Caddy routing branches for this; it inherits `web/`'s static files via the existing catch-all.
 
 ### Blockers/Concerns
 
 - ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
+- (v2.12, flagged by research, unverified) Server-side "hairpin" fetch risk: a relative-URL `fetch()` inside the `webpage` container calling `/api/v1/setup/status` may resolve against the public domain (routing back out through Caddy) instead of the internal Docker network. `web/` already does this successfully today, but this needs an explicit `docker compose up`/staging verification for `webpage/` too — tracked as an explicit Phase 100 success criterion, not assumed risk-free.
 
 ## Deferred Items
 
@@ -142,10 +150,11 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-14T20:38:30.000Z
-Stopped at: Phase 97 Plan 04 (milestone close-out) complete — fresh code audit (AUD-05) clean, MINIO_ENDPOINT blocker resolved and documented (AUD-04), wave-1 outcomes (AUD-01/02/03) consolidated into STATE.md/PROJECT.md with stale Phase 86/87 attributions corrected. All 15/15 v2.11 requirements Complete.
+Last session: 2026-07-15T09:00:00.000Z
+Stopped at: v2.12 roadmap created — 3 phases (98–100) derived from 16/16 requirements, ROADMAP.md/REQUIREMENTS.md written and cross-checked for 100% coverage. Phases 98/99 marked mutually parallelizable; Phase 100 depends on both. No phase planning (`/gsd:plan-phase`) has run yet.
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd:plan-phase 98` (Backend — Endpoint Público de Branding) and/or `/gsd:plan-phase 99` (webpage/ — Nova App Next.js de Landing) — both are independent and can be planned/executed in either order or in parallel.
+- Run `/gsd:plan-phase 100` (Infraestrutura — Routing e Deployment) only after both Phase 98 and Phase 99 are complete.

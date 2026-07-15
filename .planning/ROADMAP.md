@@ -14,6 +14,7 @@
 - ✅ **v2.9 Melhoria Módulo Processos** — Phases 80–84 (complete 2026-07-08)
 - ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
 - ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
+- 🚧 **v2.12 Landing Page** — Phases 98–100 (in progress)
 
 ## Phases
 
@@ -266,6 +267,51 @@ See archive: [milestones/v2.11-ROADMAP.md](milestones/v2.11-ROADMAP.md) · [mile
 
 </details>
 
+### 🚧 v2.12 Landing Page (Phases 98–100) — Em Curso
+
+**Milestone Goal:** Criar uma landing page moderna, profissional e informativa como ponto de entrada real da aplicação (rota `/`), como uma nova app Next.js standalone (`webpage/`), personalizada com o nome/logo da tenant já capturados no wizard `/setup`.
+
+A pesquisa de arquitetura desta milestone identificou duas fases mutuamente paralelizáveis e sem dependência entre si: o endpoint público de branding no backend (Phase 98) e a app `webpage/` completa (Phase 99) — esta última pode ser construída em paralelo usando um payload de branding fixo/stub, uma vez que o único bloqueio real (`/api/v1/setup/status`) já existe hoje. A Phase 100 (routing e deployment) só faz sentido depois de ambas produzirem artefactos reais — um shape de resposta de endpoint verdadeiro e uma imagem Docker `webpage` funcional — e toca exatamente a área (`Caddyfile`, `Caddyfile.prod`, e o heredoc inline em `docker-compose.hostinger.yml`) que já causou 4 commits de correção de bugs em produção nesta mesma sessão (`67e2120`, `534fa92`, `ba67f4e`, `1482f47`); por isso inclui explicitamente um passo de verificação `docker compose up` completo, nunca apenas checks isolados de `pnpm dev`/`mvn test`.
+
+#### Phase 98: Backend — Endpoint Público de Branding
+
+**Goal**: Existe um endpoint público e não-autenticado que devolve exclusivamente o nome e logo da tenant, através de um DTO explícito de cópia campo-a-campo (nunca a entidade `Tenant`), registado na allowlist de segurança como entrada exact-literal.
+**Depends on**: Nothing (primeira fase da milestone; paralelizável com Phase 99 — a `webpage/` pode consumir um payload de branding stub até este endpoint estar pronto)
+**Requirements**: LP-01, LP-02
+**Success Criteria** (what must be TRUE):
+  1. `curl -s http://localhost:8080/api/v1/public/branding` (sem qualquer cookie/header de autenticação) devolve `200 OK` com um corpo JSON contendo exclusivamente as chaves `nome` e `logoDataUrl` — nunca `nif`, `email`, `telefone` ou qualquer outro campo de `Tenant` — porque a resposta é construída por um `TenantPublicInfoResponse` novo, com cópia explícita getter-para-setter (o mesmo padrão já usado por `AuthController.getMe()`), nunca por serialização direta da entidade
+  2. `SecurityConfig`'s `permitAll()` ganha exatamente uma nova entrada literal para esta rota (ex.: `"/api/v1/public/branding"`) — nunca um wildcard tipo `/api/v1/public/**` — para que nenhum endpoint futuro sob esse prefixo fique pré-autorizado silenciosamente
+  3. O endpoint resolve a tenant de forma determinística (ex.: `TenantRepository.findFirstByOrderByCreatedAtAsc()`), sem depender de `SecurityContextHolder`/JWT (não existe chamador autenticado), com um comportamento sensato (404 ou corpo vazio, nunca uma exceção 500) quando ainda não existe nenhuma tenant (sistema não inicializado)
+  4. Todos os endpoints e scopes `@PreAuthorize` já existentes permanecem inalterados — esta fase adiciona apenas um novo controller/DTO isolado, sem tocar em `AuthController`/`UserPrincipal`/segurança existente
+**Plans**: TBD
+
+#### Phase 99: webpage/ — Nova App Next.js de Landing
+
+**Goal**: Existe uma nova aplicação Next.js 16 standalone `webpage/`, estruturalmente pronta para coexistir com `web/` sob o mesmo domínio via Multi-Zones (`assetPrefix` próprio), que serve a landing page completa e personalizada — verificada isoladamente nesta fase via `pnpm dev`/build próprios (a integração real com Caddy/routing fica para a Phase 100).
+**Depends on**: Nothing (primeira fase da milestone; paralelizável com Phase 98 — usa um payload de branding stub/hardcoded se necessário até o endpoint real da Phase 98 estar disponível)
+**Requirements**: LP-03, LP-04, LP-05, LP-06, LP-07, LP-08, LP-09, LP-10, LP-11, LP-12
+**Success Criteria** (what must be TRUE):
+  1. Visitar `/` no servidor de dev standalone da `webpage/` mostra sempre a landing completa, quer o visitante esteja autenticado quer não — o gate de setup-status (`proxy.ts` próprio, NUNCA copiado literalmente de `web/`'s `page.tsx`/`proxy.ts`) contém apenas o ramo "não inicializado → redireciona para `/setup`", zero ramo de `useMe()`/autenticação (copiar a lógica de `web/` na íntegra auto-redirecionaria todo o visitante anónimo para `/login` antes da landing sequer renderizar)
+  2. Quando o sistema está inicializado, a landing mostra as secções Hero (título+subtítulo+proposta de valor), Módulos/Funcionalidades (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações), Prova Social/Confiança Institucional (apenas afirmações verificáveis — isolamento multi-tenant, RBAC, auditoria, ecossistema NOSi/Cabo Verde — nunca testemunhos/logótipos fabricados) e Contacto/Pedir Demonstração (link `mailto:` fixo, nunca sourced de `Tenant.email`/`telefone`), com o nome+logo da tenant (via endpoint da Phase 98, ou um stub fixo se construída em paralelo antes deste estar pronto) exibidos no Hero
+  3. O CTA principal "Entrar" é um `<a href="/login">` simples — NUNCA `next/link`/`<Link>`, que resultaria em 404 em produção porque `/login` não existe na própria tabela de rotas de `webpage/` (só funciona por routing cross-zone via Caddy, verificado na Phase 100; este bug só surge atrás do Caddy, nunca em `pnpm dev` isolado) — visível no topo e no fundo da página
+  4. A página é responsiva e suporta dark/light mode via um `next-themes` provider portado, reutilizando componentes shadcn/ui e convenções Tailwind copiados manualmente de `web/` (sem `npx shadcn init` — este repositório não tem `components.json` — e sem novas dependências de UI)
+  5. `next.config.ts` define `assetPrefix` próprio (ex.: `/landing-static`) e `output: 'standalone'`, para que os chunks `_next/static/*` da `webpage/` sejam estruturalmente distintos dos de `web/` — confirmado inspecionando os URLs de asset do build; a ausência de colisão em runtime sob o mesmo domínio Caddy é verificada apenas na Phase 100
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 100: Infraestrutura — Routing e Deployment
+
+**Goal**: O container `webpage` está corretamente encaminhado em todos os ambientes (dev, prod, Hostinger), servido em `/`, enquanto todas as rotas existentes continuam a chegar a `web/`/`backend` inalteradas — verificado com um `docker compose up` completo, não apenas checks isolados de `pnpm dev`/`mvn test`.
+**Depends on**: Phase 98, Phase 99 (precisa de um shape de resposta real do endpoint e de uma imagem Docker `webpage` funcional para verificar contra artefactos reais, não simulados)
+**Requirements**: LP-13, LP-14, LP-15, LP-16
+**Success Criteria** (what must be TRUE):
+  1. Correr `docker compose up` (compose de dev) arranca um novo serviço `webpage` a par de `postgres`/`backend`/`frontend`, construído a partir do seu próprio Dockerfile multi-stage (`output: standalone`, espelhando o padrão de `web/Dockerfile`); visitar `/` através do Caddy mostra a landing, enquanto `/login`, `/dashboard`, `/setup` e `/api/*` continuam a resolver para `web/`/`backend` exatamente como antes
+  2. As 3 fontes de configuração do Caddy — `Caddyfile`, `Caddyfile.prod`, e o heredoc inline em `docker-compose.hostinger.yml` (confirmado por histórico git como o caminho de produção real, e a área exata por trás dos commits `67e2120`/`534fa92`/`ba67f4e`/`1482f47`) — são atualizadas de forma consistente e simultânea, com blocos `handle` equivalentes para a raiz exata `/` e para o `assetPrefix` da `webpage`, ordenados antes do catch-all existente
+  3. Os chunks `_next/static/*` da `webpage` (sob o seu `assetPrefix`) e os de `web/` nunca colidem quando pedidos através da mesma origem Caddy — verificado ao vivo contra o stack `docker compose up` a correr, nunca apenas assumido a partir de servidores de dev isolados
+  4. `.github/workflows/deploy.yml` constrói e publica um 3º artefacto (`webpage`), a par dos passos `docker/build-push-action@v6` já existentes para `backend`/`web`, seguindo a mesma convenção de tagging/registo (GHCR)
+  5. Um smoke test `docker compose up` completo confirma explicitamente que o fetch server-side de setup-status dentro do container `webpage` resolve corretamente contra a rede Docker interna, em vez de fazer "hairpin" para fora através do domínio público/Caddy (risco sinalizado como não verificado pela pesquisa) — documentado como passa/falha, nunca ignorado ou assumido
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -326,5 +372,8 @@ See archive: [milestones/v2.11-ROADMAP.md](milestones/v2.11-ROADMAP.md) · [mile
 | 95. NOTF-25 — Notificar Toda a Equipa do Processo | v2.11 | 2/2 | Complete    | 2026-07-14 |
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 4/4 | Complete    | 2026-07-14 |
+| 98. Backend — Endpoint Público de Branding | v2.12 | 0/TBD | Not started | - |
+| 99. webpage/ — Nova App Next.js de Landing | v2.12 | 0/TBD | Not started | - |
+| 100. Infraestrutura — Routing e Deployment | v2.12 | 0/TBD | Not started | - |
 
-**Next:** Milestone v2.11 shipped and archived 2026-07-14 (8 phases, 21 plans, 15/15 requirements). Run `/gsd:new-milestone` to start defining the next milestone.
+**Next:** Milestone v2.12 roadmap created 2026-07-15 (3 phases, 98–100, 16/16 requirements mapped). Run `/gsd:plan-phase 98` or `/gsd:plan-phase 99` to start planning (Phases 98 and 99 are mutually parallelizable; Phase 100 depends on both and must come last).

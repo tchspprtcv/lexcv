@@ -49,32 +49,35 @@ Nenhum item diferido nesta milestone — os candidatos P2 identificados na pesqu
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LP-01 | TBD | Pending |
-| LP-02 | TBD | Pending |
-| LP-03 | TBD | Pending |
-| LP-04 | TBD | Pending |
-| LP-05 | TBD | Pending |
-| LP-06 | TBD | Pending |
-| LP-07 | TBD | Pending |
-| LP-08 | TBD | Pending |
-| LP-09 | TBD | Pending |
-| LP-10 | TBD | Pending |
-| LP-11 | TBD | Pending |
-| LP-12 | TBD | Pending |
-| LP-13 | TBD | Pending |
-| LP-14 | TBD | Pending |
-| LP-15 | TBD | Pending |
-| LP-16 | TBD | Pending |
+| LP-01 | Phase 98 | Pending |
+| LP-02 | Phase 98 | Pending |
+| LP-03 | Phase 99 | Pending |
+| LP-04 | Phase 99 | Pending |
+| LP-05 | Phase 99 | Pending |
+| LP-06 | Phase 99 | Pending |
+| LP-07 | Phase 99 | Pending |
+| LP-08 | Phase 99 | Pending |
+| LP-09 | Phase 99 | Pending |
+| LP-10 | Phase 99 | Pending |
+| LP-11 | Phase 99 | Pending |
+| LP-12 | Phase 99 | Pending |
+| LP-13 | Phase 100 | Pending |
+| LP-14 | Phase 100 | Pending |
+| LP-15 | Phase 100 | Pending |
+| LP-16 | Phase 100 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 16 ⚠️ (expected — roadmapper fills this in next)
+- Mapped to phases: 16 (100%)
+- Unmapped: 0
+
+**Phase summary:**
+- Phase 98 (Backend — Endpoint Público de Branding): LP-01, LP-02 — parallelizable with Phase 99
+- Phase 99 (webpage/ — Nova App Next.js de Landing): LP-03 to LP-12 — parallelizable with Phase 98
+- Phase 100 (Infraestrutura — Routing e Deployment): LP-13 to LP-16 — depends on Phase 98 and Phase 99
 
 ---
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-15 after initial definition*
+*Last updated: 2026-07-15 after roadmap creation (100% coverage, 3 phases: 98-100)*
