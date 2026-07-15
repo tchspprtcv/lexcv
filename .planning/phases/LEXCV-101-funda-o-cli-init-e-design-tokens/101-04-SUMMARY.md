@@ -12,7 +12,7 @@ provides:
   - "webpage/components.json — exact field-for-field mirror of web/components.json (never re-wizarded)"
   - "webpage/src/app/globals.css — same merged semantic token set as web/, single :root (declared first) + single .dark block, restored --background/--foreground, deliberate --radius:0rem and --primary blue"
   - "webpage/ animate plugin swapped from tailwindcss-animate to tw-animate-css@1.4.0 (exact pin, matches 101-01 legitimacy gate)"
-  - "FND-08 webpage/ clause resolved as not-applicable (zero toast/Toaster/sonner usage confirmed by grep)"
+  - "FND-08 webpage/ clause resolved as not-applicable (zero toast/Toaster/sonner usage confirmed by grep) — FND-08 overall remains Pending until 101-05 completes web/'s Sonner adoption"
 affects: [102]
 
 # Tech tracking
@@ -34,28 +34,26 @@ key-decisions:
 
 patterns-established: []
 
-requirements-completed: []
+requirements-completed: [FND-02, FND-03, FND-07]
 
 # Metrics
-duration: "~15min (Tasks 1-2 automated); Task 3 (blocking human-verify checkpoint) not yet resolved"
-completed: "2026-07-15 (PARTIAL — see Status below)"
+duration: "~20min (Tasks 1-2 automated + Task 3 human visual sign-off)"
+completed: "2026-07-15"
 ---
 
-# Phase 101 Plan 04: webpage/ Design Tokens Mirror Summary — CHECKPOINT PENDING
+# Phase 101 Plan 04: webpage/ Design Tokens Mirror Summary
 
-**webpage/components.json and globals.css now byte/field-for-field mirror web/'s resolved shadcn foundation (single correctly-ordered :root/.dark, restored institutional colors, tw-animate-css swap), `pnpm build` passes clean — but the plan's mandatory human visual sign-off (Task 3) has NOT yet been performed, so this plan is NOT complete.**
+**webpage/components.json and globals.css now byte/field-for-field mirror web/'s resolved shadcn foundation (single correctly-ordered :root/.dark, restored institutional colors, tw-animate-css swap), `pnpm build` passes clean, and a human has visually confirmed light+dark parity with web/ live at http://localhost:3001 — plan complete.**
 
-## Status: 2/3 tasks complete — BLOCKED on Task 3 (`checkpoint:human-verify`, `gate="blocking"`)
+## Status: 3/3 tasks complete — APPROVED
 
-This plan's frontmatter (`autonomous: false`) and Task 3's `gate="blocking"` mean the plan cannot be considered done until a human visually confirms webpage/'s light+dark themes match `101-UI-SPEC.md`'s Color values / Figma reference AND read identically to `web/` side-by-side (no Pitfall-5 cross-app drift). Per the executor's standard checkpoint protocol, execution STOPS here — this SUMMARY documents the current state for the orchestrator/continuation agent, it does not claim the plan finished.
-
-**A `pnpm dev` server for webpage/ is running in the background on `http://localhost:3001`** (started as the "automation before verification" step) — confirmed responding `HTTP 200`. Whoever performs the Task 3 sign-off can visit this URL directly; `web/` (the dashboard, for side-by-side comparison) is not started by this executor — it belongs to the parallel 101-03 plan's worktree.
+Task 3's blocking human-verify checkpoint was resolved with an "approved" verdict (see Task Commits / Decisions Made below for the verbatim verification). FND-02 is fully satisfied by this plan alone. FND-03 and FND-07 each required both apps' halves — 101-02 already closed `web/`'s half, and this plan closes `webpage/`'s half, so **both are now fully complete**. FND-08's `webpage/` clause ("e webpage/ se aplicável") is resolved as not-applicable, but FND-08 as a whole requirement remains **Pending** — the `web/` half (mounting sonner's `<Toaster />`, removing `toast.tsx`/`toaster.tsx`) is 101-05's scope (wave 4, not yet executed).
 
 ## Performance
 
-- **Duration:** ~15 min for Tasks 1-2 (2 commits)
+- **Duration:** ~20 min total (2 automated tasks + 1 human visual sign-off round-trip)
 - **Started:** 2026-07-15 (session start)
-- **Tasks:** 2 of 3 complete (`type="auto"` × 2 done; `type="checkpoint:human-verify"` × 1 pending)
+- **Tasks:** 3 of 3 complete
 - **Files modified:** 4 (`webpage/components.json` created; `webpage/src/app/globals.css`, `webpage/package.json`, `webpage/pnpm-lock.yaml` modified)
 
 ## Accomplishments
@@ -65,17 +63,17 @@ This plan's frontmatter (`autonomous: false`) and Task 3's `gate="blocking"` mea
 - `tailwindcss-animate` removed from both `globals.css` and `package.json`; `tw-animate-css@1.4.0` (exact pin) installed and imported via `@import "tw-animate-css"`
 - Confirmed via grep that `webpage/src` has zero `toast`/`Toaster`/`sonner` occurrences — FND-08's webpage clause correctly resolved as **not applicable** (no `<Toaster />` mounted, none needed)
 - `pnpm build` passes clean in `webpage/` (PITFALLS.md Pitfall 1's explicit build-gate mitigation, applied per-app since no root workspace/build_command exists to catch this automatically)
-- Dev server started (`http://localhost:3001`, confirmed HTTP 200) in preparation for the pending Task 3 human visual sign-off
+- Dev server started (`http://localhost:3001`, confirmed HTTP 200) for the Task 3 human visual sign-off; human confirmed light+dark parity live, then the server was stopped
 
 ## Task Commits
 
-Each completed task was committed atomically:
+Each task was committed atomically:
 
 1. **Task 1: Create webpage/components.json by mirroring web/'s resolved config** - `2ece3a1` (feat)
 2. **Task 2: Mirror the token block into webpage/globals.css + animate swap; confirm no Toaster needed; prove the build** - `86cf4d5` (feat)
-3. **Task 3: Human visual sign-off** - NOT STARTED (blocking checkpoint; dev server prepared, awaiting human verdict)
+3. **Task 3: Human visual sign-off** - APPROVED (checkpoint; no code changes, verdict recorded in this SUMMARY — see Decisions Made)
 
-**Plan metadata:** this SUMMARY commit (below) — STATE.md/ROADMAP.md/REQUIREMENTS.md updates deliberately NOT made by this executor (orchestrator-owned, per parallel-execution instructions)
+**Plan metadata:** this SUMMARY commit (below) — STATE.md/ROADMAP.md/REQUIREMENTS.md updates deliberately NOT made by this executor (orchestrator-owned, per parallel-execution instructions — see Next Phase Readiness)
 
 ## Files Created/Modified
 
@@ -91,34 +89,30 @@ Each completed task was committed atomically:
 - **`@import "shadcn/tailwind.css"` deliberately NOT mirrored:** 101-02 kept this import in `web/` as a legitimate, then-unanticipated CLI-generated addition providing accordion keyframes/`data-state` custom variants for the ~15 new primitives 101-03 adds to `web/` only. `webpage/` is explicitly out of scope for FND-04 (new primitives) and FND-05 (radix migration) this phase — it gets no new primitives, and the `shadcn` npm package that provides this CSS file is not (and should not be) a `webpage/` dependency. Adding the import without the package would break `webpage/`'s build for zero benefit.
 - **`:root` before `.dark` verified immediately, not deferred:** 101-02-SUMMARY.md's "Next Phase Readiness" section explicitly flagged this ordering as "the single most important thing for 101-04 to get right the first time." Verified via `grep -n '^:root\|^\.dark' webpage/src/app/globals.css` immediately after writing the file (`:root` at line 51, `.dark` at line 86 — same line numbers as `web/`'s post-fix file) — the bug was not reintroduced.
 - **Dev server started proactively:** since Task 3 is a blocking human-verify checkpoint and this executor cannot itself render/visually inspect a browser page, started `pnpm dev` (port 3001, confirmed `HTTP 200`) as the "automation before verification" step so whoever performs the sign-off has zero setup friction.
+- **Task 3 verdict — APPROVED (verbatim):** "Verifiquei ao vivo em http://localhost:3001 (light e dark via o theme toggle do topbar): light → --background #f8fafc, --foreground #020617, --primary #2563eb; dark → --background #020617, --foreground #f8fafc, --primary #3b82f6. Valores idênticos aos confirmados em web/. Cantos sem arredondamento visíveis." Both LIGHT and DARK themes match `101-UI-SPEC.md`'s Color section values exactly, and read identically to `web/` — no Pitfall-5 cross-app drift. After the verdict, the dev server (PID bound to port 3001) was stopped.
 
 ## Deviations from Plan
 
-None - Tasks 1 and 2 executed exactly as written; no auto-fixes needed, no blocking issues encountered, no architectural questions arose (this plan being a hand-copy of already-settled 101-02 decisions left little room for divergence).
+None - all 3 tasks executed exactly as written; no auto-fixes needed, no blocking issues encountered, no architectural questions arose (this plan being a hand-copy of already-settled 101-02 decisions left little room for divergence), and the human visual sign-off passed on the first attempt (no discrepancy to fix, unlike 101-02's cascade-order round-trip).
 
 ## Issues Encountered
 
-None for Tasks 1-2. Task 3 has not been attempted — no browser-automation/computer-use tool was invoked in this session to perform the visual comparison, consistent with the checkpoint's explicit requirement for a HUMAN verdict (this is a blocking gate, not something this executor should auto-approve or attempt to substitute its own judgment for).
+None. Task 3's human visual sign-off passed on the first attempt.
 
 ## User Setup Required
 
-None - no external service configuration required. A human (or a continuation agent with browser/computer-use tooling) needs to:
-1. Visit `http://localhost:3001` (already running) and confirm LIGHT theme: background `#f8fafc`, foreground `#020617`, sharp corners.
-2. Toggle DARK mode and confirm: background `#020617`, foreground `#f8fafc`, institutional `--primary` blue on accent surfaces only.
-3. Compare side-by-side with `web/` (the dashboard, run separately — not started by this executor) in the same mode.
-4. Compare both against the Figma reference.
-5. Record "approved" or describe the discrepancy so Task 2 can be corrected.
+None - no external service configuration required. The Task 3 human visual sign-off is complete (see Decisions Made).
 
 ## Next Phase Readiness
 
-- **This plan (101-04) is NOT ready to be marked complete.** Task 3's blocking human-verify checkpoint must be resolved (approved or discrepancy-fixed-and-reverified) before FND-02/FND-03(webpage half)/FND-07(webpage half)/FND-08(webpage clause) can be marked complete in REQUIREMENTS.md.
-- Per this plan's parallel-execution instructions, STATE.md/ROADMAP.md/REQUIREMENTS.md are NOT updated by this executor — the orchestrator owns those writes after all wave-3 worktree agents complete (and, for this specific plan, after the checkpoint is separately resolved).
-- Phase 102 (module-by-module primitive reconciliation) depends on both `web/`'s and `webpage/`'s foundations being fully signed off — this plan's incomplete status should be tracked as a blocker for that dependency until Task 3 resolves.
-- `webpage/`'s `pnpm dev` server is left running in the background on port 3001 for the checkpoint verifier's convenience; it should be stopped once verification completes.
+- **This plan (101-04) is complete.** FND-02 and (now that both apps' halves exist) FND-03 and FND-07 are fully satisfied — `webpage/` now mirrors `web/`'s design foundation with zero visible page change, no config/token drift, and a human-confirmed light+dark match. FND-08's `webpage/` clause is resolved (not-applicable), but FND-08 overall stays Pending until 101-05 completes `web/`'s Sonner adoption.
+- Per this plan's parallel-execution instructions, STATE.md/ROADMAP.md/REQUIREMENTS.md are deliberately NOT updated by this executor — the orchestrator owns those writes after all wave-3 worktree agents (101-03, 101-04) complete and are merged. This SUMMARY's `requirements-completed` frontmatter field lists `[FND-02, FND-03, FND-07]` for the orchestrator to action centrally in REQUIREMENTS.md (FND-08 intentionally excluded — still Pending on 101-05).
+- Phase 102 (module-by-module primitive reconciliation) depends on both `web/`'s and `webpage/`'s foundations being fully signed off — `webpage/`'s half is now done; readiness also depends on 101-03's parallel completion (and, for FND-08 specifically, on 101-05).
+- `webpage/`'s `pnpm dev` server (port 3001) has been stopped now that verification is complete.
 
 ---
 *Phase: 101-funda-o-cli-init-e-design-tokens*
-*Completed: PARTIAL — 2026-07-15 (Tasks 1-2 only; Task 3 checkpoint pending)*
+*Completed: 2026-07-15*
 
 ## Self-Check: PASSED
 
