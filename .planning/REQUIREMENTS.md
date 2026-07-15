@@ -27,7 +27,7 @@ Requisitos desta milestone (v2.12 — Landing Page). Cada um mapeia para exatame
 
 ### Infraestrutura (Routing e Deployment)
 
-- [ ] **LP-13**: A app `webpage/` usa o padrão Next.js Multi-Zones (`assetPrefix` próprio) para que os seus assets `_next/static/*` nunca colidam com os de `web/` sob o mesmo domínio
+- [x] **LP-13**: A app `webpage/` usa o padrão Next.js Multi-Zones (`assetPrefix` próprio) para que os seus assets `_next/static/*` nunca colidam com os de `web/` sob o mesmo domínio
 - [ ] **LP-14**: O Caddy roteia `/` (e o `assetPrefix` da webpage) para o novo container `webpage`; todas as outras rotas (`/login`, `/dashboard`, `/setup`, `/api/*`) continuam a ir para `web/`/`backend/` inalteradas — atualizado consistentemente nas 3 fontes de configuração existentes (`Caddyfile`, `Caddyfile.prod`, o heredoc inline em `docker-compose.hostinger.yml`)
 - [ ] **LP-15**: Existe um novo serviço `webpage` nos 3 ficheiros docker-compose (dev/prod/hostinger), com um Dockerfile próprio (build multi-stage, `output: standalone`, mesmo padrão de `web/Dockerfile`)
 - [ ] **LP-16**: O pipeline de CI/CD (`deploy.yml`) constrói e publica a imagem `webpage` como um 3º artefacto, ao lado de `backend`/`web`
@@ -63,7 +63,7 @@ Nenhum item diferido nesta milestone — os candidatos P2 identificados na pesqu
 | LP-10 | Phase 99 | Pending |
 | LP-11 | Phase 99 | Pending |
 | LP-12 | Phase 99 | Pending |
-| LP-13 | Phase 100 | Pending |
+| LP-13 | Phase 100 | Complete |
 | LP-14 | Phase 100 | Pending |
 | LP-15 | Phase 100 | Pending |
 | LP-16 | Phase 100 | Pending |
