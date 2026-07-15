@@ -301,7 +301,7 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 - [x] 99-01-PLAN.md — Scaffold, config & theme shell: app standalone `webpage/` (package.json subconjunto pinado de web/, next.config assetPrefix `/landing-static` + standalone, providers theme-only, layout, Button/Card/ThemeToggle/cn byte-for-byte) + page placeholder (LP-03, LP-12)
 - [x] 99-02-PLAN.md — Setup gate, branding fetch & brand mark: `proxy.ts` só com o ramo não-inicializado→/setup (zero autenticação), `fetchBranding()` server-to-server fail-open, `BrandMark` com fallback Building2 (LP-04, LP-05, LP-06)
 - [x] 99-03-PLAN.md — Header, Hero & Footer: chrome sticky + Hero (H1 Display, eyebrow, subtítulo) + footer, com o CTA "Entrar" como `<a href="/login">` no topo e no fundo (LP-07, LP-11)
-- [ ] 99-04-PLAN.md — Content sections & assembly: Funcionalidades (6 módulos), Confiança (4 cards), Contacto (mailto), e `page.tsx` (Server Component async, fetchBranding + composição) (LP-06, LP-08, LP-09, LP-10)
+- [x] 99-04-PLAN.md — Content sections & assembly: Funcionalidades (6 módulos), Confiança (4 cards), Contacto (mailto), e `page.tsx` (Server Component async, fetchBranding + composição) (LP-06, LP-08, LP-09, LP-10)
 **UI hint**: yes
 
 #### Phase 100: Infraestrutura — Routing e Deployment
@@ -378,7 +378,7 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 | 96. NOTF-26 — Snooze de Lembrete de Prazo | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
-| 99. webpage/ — Nova App Next.js de Landing | v2.12 | 3/4 | In Progress|  |
+| 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 0/TBD | Not started | - |
 
 **Next:** Phases 98 (1 plan) and 99 (4 plans, 4 waves) both planned 2026-07-15. Run `/gsd:execute-phase 98` and/or `/gsd:execute-phase 99` (independent — either order or parallel). Phase 100 (routing & deployment) depends on both 98 and 99 being complete.

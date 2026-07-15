@@ -13,6 +13,12 @@
       "runtimeExecutable": "mvn",
       "runtimeArgs": ["-f", "backend/pom.xml", "spring-boot:run"],
       "port": 8080
+    },
+    {
+      "name": "webpage",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "webpage", "dev", "-p", "3001"],
+      "port": 3001
     }
   ]
 }
