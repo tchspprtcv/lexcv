@@ -90,10 +90,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Endpoint público não-autenticado `GET /api/v1/public/branding` (`{nome, logoDataUrl}` via DTO explícito, allowlist exact-literal) — v2.12 (Phase 98)
 - ✓ Nova app Next.js 16 standalone `webpage/` servindo a landing page pública em `/` (Hero, Funcionalidades, Confiança Institucional, Contacto, dark/light mode, gate de setup sem acoplamento de autenticação, fetch de branding server-to-server) — v2.12 (Phase 99)
 - ✓ Routing e deployment de `webpage/` em dev/prod/Hostinger via Next.js Multi-Zones (`assetPrefix`), 3 fontes de configuração Caddy consistentes, novo artefacto `webpage` no pipeline CI/CD, verificado com `docker compose up` completo — v2.12 (Phase 100)
+- ✓ Fundação shadcn/ui — `components.json` inicializado via `shadcn init -b radix` em `web/` e `webpage/` (base Radix explícita, não o novo default Base UI), tokens semânticos consolidados em ambos os `globals.css` (identidade institucional preservada: `--radius: 0rem`, `--primary` azul, bg/fg restaurados), 16 primitivos novos adicionados (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty), `react-day-picker` fixado em 9.14.0, pacotes Radix unificados via `shadcn migrate radix`, Sonner a substituir o Toast depreciado (contrato `toast.success()`/`toast.error()` preservado) — v2.13 (Phase 101)
 
 ### Active
 
-- Milestone v2.13 (Refactor UI/UX shadcn/ui) em definição (`/gsd-new-milestone`, 2026-07-15) — fundação shadcn CLI + refactor por módulo do `web/` + refinamento da `webpage/`, preservando identidade visual institucional. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
+- Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma (`/gsd-autonomous`, 2026-07-15) — Fase 101 (Fundação) completa, 8/8 requisitos FND satisfeitos. Próxima: Fase 102 (Reconciliação do Design System).
 
 ### Out of Scope
 
@@ -199,6 +200,9 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | (v2.12, Phase 100) As 3 fontes de configuração Caddy (`Caddyfile`, `Caddyfile.prod`, heredoc em `docker-compose.hostinger.yml`) tratadas como independentes, nunca DRY — o heredoc do Hostinger usa apenas literais hardcoded, zero caracteres `$` | Esta área já causou 4 commits de correção de bugs em produção na mesma sessão (Docker Compose interpola `$VAR` em todo o YAML, incluindo dentro do heredoc, antes do Caddy o ver) | ✓ Good |
 | (v2.12, Phase 100) `docker-compose.hostinger.yml`'s MinIO console route (`/minio-console*`) não foi replicada do `Caddyfile.prod` — deixada deliberadamente em aberto | Ambas as correções óbvias (montar `Caddyfile.prod` como ficheiro; adicionar o hash bcrypt literal no heredoc) já tinham sido tentadas e revertidas nesta mesma sessão; um hash bcrypt não pode satisfazer a regra "zero `$`" do heredoc por construção | Deferred (ver v2.12-MILESTONE-AUDIT.md) |
 | (v2.12, Phase 100, orquestrador) `webpage/pnpm-workspace.yaml` com `minimumReleaseAgeExclude` escopado a um único pacote (`electron-to-chromium`), não um `minimumReleaseAge: 0` global | Autorização explícita do utilizador foi para uma exceção estreita; pnpm 11+ moveu esta config de `.npmrc` (agora só auth/registry) para `pnpm-workspace.yaml` | ✓ Good |
+| (v2.13, Phase 101) `shadcn init -b radix` explícito em ambas as apps, nunca o novo default Base UI (mudou em jul/2026) | Preservar 100% paridade de composição `asChild` com os 9 pacotes `@radix-ui/react-*` já em uso; usar o default teria dividido o código em dois ecossistemas de primitivos incompatíveis | ✓ Good |
+| (v2.13, Phase 101) Verificação humana ao vivo (browser + getComputedStyle) encontrou um bug real de cascata CSS: `.dark {}` declarado antes de `:root {}` em `globals.css` — como ambos têm a mesma especificidade quando `.dark` está ativo no `<html>`, `:root` (last-declared) ganhava o empate e sobrepunha-se silenciosamente aos valores do tema escuro | O bug não era visível em nenhuma página no momento (nenhum componente reconciliado usa ainda os tokens semânticos — isso é a Phase 102), mas teria corrompido todo o dark mode assim que a reconciliação avançasse; corrigido reordenando `:root` antes de `.dark` em `web/` e replicado corretamente à primeira em `webpage/` | ✓ Good (apanhado só por inspeção viva no browser, não por grep de contagem de blocos) |
+| (v2.13, Phase 101) Instalações via `isolation="worktree"` não propagam `node_modules` ao checkout principal — `pnpm install` tem de correr explicitamente no checkout principal após o merge de cada worktree, antes do build pós-merge | Descoberto ao correr o gate de build pós-merge da Wave 3 (101-03+101-04): `pnpm build` falhou com "Cannot find module 'react-day-picker'" apesar do `package.json`/lockfile já estarem corretos após o merge | ✓ Good (lição a aplicar em todas as futuras waves paralelas com worktrees) |
 
 ## Current State
 
@@ -224,7 +228,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) em definição de requisitos/roadmap.
+**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma — Phase 101 (Fundação) completa; Phase 102 (Reconciliação do Design System) a seguir.
 
 ## Evolution
 
@@ -244,4 +248,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 — milestone v2.13 (Refactor UI/UX shadcn/ui) started*
+*Last updated: 2026-07-15 — Phase 101 (Fundação) da v2.13 completa*
