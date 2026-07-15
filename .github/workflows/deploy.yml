@@ -109,4 +109,18 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+      - name: Build and push webpage image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./webpage
+          platforms: linux/amd64
+          push: ${{ github.ref == 'refs/heads/master' }}
+          tags: |
+            ${{ env.REGISTRY }}/webpage:latest
+            ${{ env.REGISTRY }}/webpage:${{ env.IMAGE_TAG }}
+          # No build-args: webpage is force-dynamic (page.tsx) and reads no env at build time,
+          # unlike the frontend step. Server-side fetches resolve BACKEND_API_ORIGIN at request time.
+          cache-from: type=gha,scope=webpage
+          cache-to: type=gha,mode=max,scope=webpage
+
 
