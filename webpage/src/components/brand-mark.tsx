@@ -11,7 +11,8 @@ export function BrandMark({
   className?: string;
 }) {
   const { nome, logoDataUrl } = branding;
-  const hasLogo = typeof logoDataUrl === "string" && logoDataUrl.startsWith("data:image/");
+  const hasLogo =
+    typeof logoDataUrl === "string" && /^data:image\/(png|jpe?g|gif|webp);base64,/.test(logoDataUrl);
 
   return (
     <span
