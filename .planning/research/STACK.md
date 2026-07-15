@@ -1,8 +1,12 @@
-# Stack Research
+# Stack Research: shadcn/ui CLI Adoption
 
-**Domain:** Second standalone Next.js app (public marketing/landing page) sharing a domain, backend, and Docker/Caddy topology with an existing Next.js app
+**Domain:** Formal shadcn/ui CLI adoption in an existing two-app Next.js 16 / Tailwind v4 codebase (LexCV `web/` + `webpage/`)
 **Researched:** 2026-07-15
-**Confidence:** HIGH (grounded in this repo's actual pinned versions + Next.js 16.2.6's own bundled docs, which is the exact version installed in `web/node_modules`)
+**Confidence:** HIGH (verified against ui.shadcn.com official docs/changelogs, npm registry, and GitHub issues — this area changed significantly in the last 8 months and training data alone would have been wrong on several points below)
+
+## Critical timing note
+
+**shadcn's CLI defaults changed *this month* (July 2026).** As of the `2026-07-base-ui-default` changelog, `pnpm dlx shadcn@latest init` now defaults new projects to **Base UI** primitives instead of Radix. This repo already has 9 `@radix-ui/react-*` runtime dependencies and every hand-rolled `web/src/components/ui/*` primitive is built on Radix's `asChild`/`Slot` composition pattern (verified in `button.tsx`). Running plain `init` today would silently start scaffolding Base UI components (different composition API — render props, no `asChild`, no `data-[state=...]` selectors) next to the existing Radix ones. **This is the single highest-risk gotcha for this milestone** and must be called out explicitly, not left to CLI defaults.
 
 ## Recommended Stack
 
@@ -10,117 +14,170 @@
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Next.js | `16.2.6` (exact, no `^`) | App Router server + static rendering for `webpage/` | Match `web/package.json`'s exact pin. `web/AGENTS.md` already flags this major version as having training-data-breaking changes (`proxy.ts` replacing `middleware.ts`, etc.) — running two *different* Next.js versions in the same repo means tracking two sets of those gotchas independently. One pinned version, one set of quirks, already verified working in this repo. |
-| React / React DOM | `19.2.4` (exact, no `^`) | UI runtime | Required peer for Next 16.2.6; match `web/`'s exact pin for the same reason as above. |
-| TypeScript | `^5` | Type safety | Match `web/`'s devDependency; `strict: true` in `tsconfig.json` is the established convention. |
-| Tailwind CSS | `^4` + `@tailwindcss/postcss ^4` | Styling | Match `web/`. Tailwind v4 is CSS-first (`@import "tailwindcss"` + `@theme` block in `globals.css`) — **no `tailwind.config.ts` file needed**, confirmed by `web/src/app/globals.css` having no companion config file. |
-| **Next.js Multi-Zones** (`assetPrefix` config, built into Next.js core since v15) | n/a (built-in) | Prevents `webpage/`'s `_next/static/*` asset requests from colliding with `web/`'s, when both are reverse-proxied under the same domain | This is the officially documented, Vercel-maintained pattern for "multiple independently-deployed Next.js apps under one domain" — exactly this milestone's topology. Verified directly against the bundled docs at `web/node_modules/next/dist/docs/01-app/02-guides/multi-zones.md` (Next 16.2.6, the version actually installed in this repo). **This is not optional** — without it, the landing page's own JS/CSS chunks will be silently routed to the wrong container by Caddy's catch-all `handle {}` block (see Stack Patterns / Version Compatibility below for the concrete config). |
+| `shadcn` (CLI package) | `4.13.0` (current on npm, `@latest` tag) | Official scaffolding CLI (`init`/`add`/`diff`) | This is the actual product being adopted this milestone. Note: the CLI package is published as `shadcn`, **not** `shadcn-ui` (that name is deprecated/legacy, matches project's stated exclusion of unverified "skills" tooling) |
+| `-b radix` flag on `init` | n/a | Forces Radix-based primitives instead of the new Base UI default | Matches 9 existing `@radix-ui/react-*` deps and every hand-rolled component's `asChild` pattern already in use across ~15 modules. Radix is explicitly stated as "not being deprecated" — every future shadcn component ships for both libraries |
+| Tailwind CSS v4 | `^4` (already installed) | CSS-first theming, no `tailwind.config.ts` | Already in place in both apps via `@tailwindcss/postcss`; shadcn's `init` fully supports v4 today and, per `components.json` schema, expects `tailwind.config` to be **left blank** for v4 projects |
+| `tw-animate-css` | `1.4.0` | CSS-first replacement for the `tailwindcss-animate` plugin | Official shadcn docs: "shadcn/ui has deprecated `tailwindcss-animate` in favor of `tw-animate-css`... new projects have `tw-animate-css` installed by default." Pure `@import`, no JS plugin loader needed — fits Tailwind v4's CSS-first model exactly |
 
-### Supporting Libraries
+### Supporting Libraries (component-by-component, for the 15 missing primitives)
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `@radix-ui/react-slot` | `^1.2.3` | Powers `Button`'s `asChild` prop | Only if the "Entrar" CTA renders as `<Button asChild><Link href="/login">…</Link></Button>` (recommended — same pattern already used in `web/`). |
-| `class-variance-authority` | `^0.7.1` | Variant styling for `Button`/`Badge` | Copy alongside the `button.tsx`/`badge.tsx` files from `web/src/components/ui/`. |
-| `clsx` + `tailwind-merge` | `^2.1.1` / `^3.3.1` | `cn()` utility (`web/src/lib/utils.ts`) | Copy `utils.ts` verbatim — every shadcn-style primitive depends on it. |
-| `lucide-react` | `^0.543.0` | Icons for feature/module cards, trust badges | Same icon set as `web/`, avoids a second icon library shipping duplicate SVGs. |
-| `next-themes` | `^0.4.6` | Dark/light mode toggle | Required per milestone scope ("reutiliza… dark/light mode já usados em `web/`"). Copy the `Providers` pattern from `web/src/app/providers.tsx`, but **drop the `QueryClientProvider` wrapper** (see "What NOT to Use"). |
-| `tailwindcss-animate` | `^1.0.7` | Radix animation utility classes (`data-[state=open]:animate-in`, etc.) | **Only** if a Dialog/Sheet/Accordion is added later (e.g., a demo-video modal or FAQ accordion). Not needed for the four sections currently scoped (Hero, Módulos, Prova social, Contacto) — skip at v1, add if/when such a component is introduced. |
-| `sharp` | latest matching Next 16 peer range | Production image optimization for `next/image` in self-hosted (non-Vercel) deployments | Add explicitly if the hero/module sections use `next/image` for local static assets. Next.js's official guidance is to install `sharp` yourself for self-hosted image optimization — Vercel's own CDN handles it automatically, but Caddy/Docker self-hosting does not. **Do not** use `next/image` for the tenant `logoDataUrl` (see "What NOT to Use"). |
+| `@radix-ui/react-select` | `2.3.3` | Select primitive | `shadcn add select` |
+| `@radix-ui/react-tabs` | `1.1.17` | Tabs primitive | `shadcn add tabs` — note: project has a deliberate decision to keep the client-detail page on hand-rolled toggle buttons, not `Tabs` (see PROJECT.md Key Decisions); only add where a *new* tabbed UI is genuinely wanted |
+| `@radix-ui/react-dropdown-menu` | `2.1.20` | DropdownMenu primitive | `shadcn add dropdown-menu` |
+| `@radix-ui/react-tooltip` | `1.2.12` | Tooltip primitive | `shadcn add tooltip` |
+| `@radix-ui/react-checkbox` | `1.3.7` | Checkbox primitive | `shadcn add checkbox` |
+| `@radix-ui/react-avatar` | `1.2.2` | Avatar primitive | `shadcn add avatar` |
+| `@radix-ui/react-separator` | `1.1.11` | Separator primitive | `shadcn add separator` |
+| `@radix-ui/react-progress` | `1.1.12` | Progress primitive | `shadcn add progress` |
+| `@radix-ui/react-accordion` | `1.2.16` | Accordion primitive | `shadcn add accordion` |
+| `@radix-ui/react-navigation-menu` | `1.2.18` | NavigationMenu primitive | `shadcn add navigation-menu` — likely only needed in `webpage/` (landing nav), `web/` already has a bespoke sidebar/topbar (explicitly preserved, out of scope for redesign) |
+| `cmdk` | `1.1.1` | Command palette primitive (no Radix equivalent) | `shadcn add command` |
+| `react-day-picker` | **pin to `9.14.0`, NOT `@latest`** | Calendar primitive | See "What NOT to Use" below — the registry currently requests `@latest`, which resolves to a broken v10 |
+| `date-fns` | `4.4.0` | Date formatting for Calendar | Installed automatically alongside `react-day-picker` by `shadcn add calendar` |
+| Skeleton, Breadcrumb | n/a (no new dependency) | Pure Tailwind/`Slot`-based components | Both ship as plain `.tsx` files with zero extra npm packages — `shadcn add skeleton breadcrumb` just drops files using deps you already have (`@radix-ui/react-slot`, `cva`, `cn`) |
+| Form (react-hook-form integration) | n/a (no *new* dependency — you already have `react-hook-form ^7.62.0`, `@hookform/resolvers ^5.2.2`, `zod ^4.1.5`) | Accessible field wiring around your existing RHF+Zod stack | `shadcn add form` — note current shadcn docs describe **zod v3** in their Form examples (`docs/forms/react-hook-form`); this repo is on `zod ^4.1.5`. Verify the generated `zodResolver` call compiles against Zod 4's API before wiring it into real forms (Zod 4 changed some error-map internals) |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| pnpm (via `corepack enable && corepack prepare pnpm@latest --activate`) | Package manager | Identical to `web/Dockerfile` stage 1 — `webpage/` gets its **own** `pnpm-lock.yaml`, not a shared one (see Alternatives Considered). |
-| Docker multi-stage build (`node:22-alpine`: `deps` → `builder` → `runner`) | Container image | Copy `web/Dockerfile` verbatim into `webpage/Dockerfile`, only changing build ARG defaults if needed. Confirmed working pattern (`output: 'standalone'` + non-root `appuser` + `node server.js` entrypoint). |
-| GitHub Actions (`docker/build-push-action@v6`) | CI image build/push to GHCR | Add a third `Build and push webpage image` step in `.github/workflows/deploy.yml`, alongside the existing backend/frontend steps; add a `pnpm-cache` step keyed on `hashFiles('webpage/pnpm-lock.yaml')`. |
-| Caddy 2 (`caddy:2-alpine`, already in the compose topology) | Reverse proxy / automatic HTTPS | No new tool — but the **routing rules** need concrete changes in 3 separate files (see Stack Patterns by Variant). |
-| ESLint (`^9` + `eslint-config-next: 16.2.6`) | Lint | Match `web/`'s exact `eslint-config-next` pin (must equal the `next` version). |
+| `pnpm dlx shadcn@latest init -b radix` | One-time formal adoption per app | Run once in `web/`, once in `webpage/` (two independent pnpm projects — see Monorepo Decision below). Non-interactive equivalent: add `-y` (accept defaults) or answer prompts explicitly for style/base-color |
+| `pnpm dlx shadcn@latest add <component> --diff` | Preview before touching existing files | Use this **every time** before adding a component whose name collides with an existing hand-rolled file (button, card, dialog, alert-dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast) |
+| `pnpm dlx shadcn@latest add <component> --dry-run` | Preview file list/deps without writing anything | Cheaper first pass than `--diff` when you just want to see what would be touched |
 
 ## Installation
 
 ```bash
-# From webpage/ (new sibling directory to backend/ and web/)
-corepack enable
-corepack prepare pnpm@latest --activate
+# In web/ (existing 14 hand-rolled primitives + Radix deps already present)
+cd web
+pnpm dlx shadcn@latest init -b radix
 
-# Core
-pnpm add next@16.2.6 react@19.2.4 react-dom@19.2.4 next-themes@^0.4.6 \
-  @radix-ui/react-slot@^1.2.3 class-variance-authority@^0.7.1 \
-  clsx@^2.1.1 tailwind-merge@^3.3.1 lucide-react@^0.543.0
+# In webpage/ (only button.tsx/card.tsx hand-rolled so far)
+cd ../webpage
+pnpm dlx shadcn@latest init -b radix
 
-# Dev dependencies
-pnpm add -D typescript@^5 @types/node@^20 @types/react@^19 @types/react-dom@^19 \
-  eslint@^9 eslint-config-next@16.2.6 tailwindcss@^4 @tailwindcss/postcss@^4
+# Then, per app, add only the NEW primitives (do not touch existing hand-rolled files yet — see Migration Risk)
+pnpm dlx shadcn@latest add select tabs dropdown-menu command tooltip checkbox avatar separator progress accordion breadcrumb skeleton form
 
-# Only if a future interactive component (Dialog/Accordion) is added:
-# pnpm add tailwindcss-animate@^1.0.7 @radix-ui/react-accordion@<matching-radix-minor>
+# Calendar needs a version pin BEFORE/AFTER add (registry currently requests react-day-picker@latest, which is broken — see below)
+pnpm dlx shadcn@latest add calendar
+pnpm add react-day-picker@9.14.0   # re-pin immediately after, per-app
 
-# Only if next/image is used for hero/static assets (self-hosted optimization):
-# pnpm add sharp
+# Animation plugin swap (do in both apps' package.json + globals.css)
+pnpm remove tailwindcss-animate
+pnpm add tw-animate-css
+# globals.css: replace `@plugin "tailwindcss-animate";` with `@import "tw-animate-css";`
+
+# webpage/ only — will pull in the Radix deps web/ already has, on first add
+pnpm dlx shadcn@latest add button card   # --diff first, since hand-rolled versions already exist
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| Fully independent `webpage/package.json` + own `pnpm-lock.yaml`/`node_modules` | pnpm workspaces / Turborepo / Nx monorepo tooling | Only if a **third** frontend app appears, or if `web/` and `webpage/` need to share a non-trivial amount of *runtime* code (not just a handful of UI primitive files). This repo has **zero** JS workspace tooling today (no root `package.json`, no `pnpm-workspace.yaml` — confirmed by directory scan) and both `web/`'s CI cache key and Docker build `context` are already keyed on `web/` being a standalone project root. Introducing a workspace tool now would force a lockfile/CI/Docker-context migration for `web/` too, for a benefit (deduping ~5 small `.tsx` files) that doesn't justify the blast radius. Precedent in this repo already favors copy-paste over sharing: `sheet.tsx` was hand-written rather than pulled via the shadcn CLI (Key Decisions log, v2.3). |
-| Next.js Multi-Zones via **Caddy path routing** (`handle /` + `handle /landing-static/*` → `webpage`, catch-all → `frontend`) | Next.js Multi-Zones via **`rewrites()` in one of the Next apps** (the doc's other supported option) | Only if Caddy were removed from the stack. Since Caddy already terminates TLS and does path-based routing for `/api/*` and `/minio-console*`, adding two more `handle` blocks is strictly less new surface area than adding a rewrite proxy hop inside `web/`'s own `next.config.ts` (which would also require `web/` to know about `webpage/`'s existence — an unwanted coupling). |
-| Server Component `fetch()` for the tenant branding endpoint (no client library) | `@tanstack/react-query` (already used in `web/`) | Only if the landing page needs **client-side** re-fetching/polling of branding data after initial load (it doesn't — logo/name changes are rare admin actions, not something a visitor's browser needs to observe live). A landing page's core value (fast TTFB, good SEO) is better served by zero extra client JS. |
-| Plain `<img>` (or `next/image` with `unoptimized`) for `logoDataUrl` | `next/image` default optimizer | `logoDataUrl` is a base64 `data:` URI (per the new public endpoint's contract) — Next's built-in image optimizer is designed for remote/local file URLs, not embedded data URIs; forcing it through the optimizer adds no benefit and has known rough edges with `data:` sources. |
-| Hardcoded JSX sections (Hero/Módulos/Prova social/Contacto) | Headless CMS (Contentful, Sanity, Storyblok) | Only if non-technical staff need to edit landing copy without a deploy. Out of scope per milestone ("no new CMS/framework") — the page personalizes only two dynamic fields (tenant name + logo) via the existing narrow backend endpoint; everything else is static marketing copy that changes at the same cadence as code. |
+| `init -b radix` | `init` (Base UI, new July-2026 default) | Only for a brand-new app with zero existing Radix investment. Migrating this repo's 15 modules to Base UI's render-prop composition (no `asChild`, `checked` strict-boolean Checkbox, array-only `ToggleGroup` value, Floating UI instead of Radix's `data-[state]` selectors) is a large, unrequested architectural change — explicitly not what this milestone asked for |
+| Per-app `components.json` (one in `web/`, one in `webpage/`) | Shared internal `packages/ui` workspace package (shadcn's official monorepo pattern, ui.shadcn.com/docs/monorepo) | Only if the repo is *actually* restructured into a real pnpm workspace first (root `pnpm-workspace.yaml` + `apps/`/`packages/` layout). Verified: this repo has **no root `pnpm-workspace.yaml` and no root `package.json`** — `web/` and `webpage/` are two fully independent pnpm projects (separate lockfiles, `webpage/pnpm-workspace.yaml` is scoped only to itself for an unrelated supply-chain reason) that happen to live in one git repo, not a technical monorepo. Retrofitting real workspace tooling is a legitimate future option (would remove component/token duplication permanently) but is a separate, larger infrastructure decision outside "formally adopt the CLI" |
+| `pnpm dlx shadcn@latest` (official CLI, run per-app) | `pnpm dlx skills add shadcn/ui` (shadcn's own new skill-based migration/adoption tool, mentioned in the 2026-07 changelog) | Never for this milestone — PROJECT.md explicitly excludes "instalação de skills/pacotes externos não verificados" as an out-of-scope decision. Do not use it even though shadcn's own docs now suggest it |
+| `--diff` review before `add` | Blind `add --overwrite` | Never on the 14 already-hand-rolled `web/src/components/ui/*` files without reading the diff first — see Migration Risk below |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `output: 'export'` (fully static export) | Static export disables `proxy.ts` (Next 16's middleware-equivalent) and dynamic per-request `fetch()` — both of which this app needs (setup-status redirect gate + tenant branding fetch). | `output: 'standalone'`, identical to `web/next.config.ts`. Keeps the same Docker 3-stage pattern working unmodified. |
-| `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers` in `webpage/` | The current scope has no client-managed form state or client-refetched data — the CTA is a plain link to `/login`, and branding is a one-shot Server Component fetch. Adding these ships client JS bytes for zero behavioral benefit and duplicates a dependency tree already present in `web/`. | Native `fetch()` inside an `async` Server Component for the branding call; plain `<a>`/`next/link` for CTAs. Re-introduce RHF+Zod later, matching `web/`'s exact versions, **only if** a real "Pedir demonstração" lead-capture form is built (currently out of scope — the section is informational/CTA-only per `PROJECT.md`). |
-| `npx shadcn init` / a `components.json` config | `web/` has **no** `components.json` — every shadcn-style primitive there was hand-written/copied (explicit Key Decision: `sheet.tsx` was manually authored "sem CLI interativo"). Running the CLI in `webpage/` would introduce a config file and tooling convention that doesn't exist anywhere else in this repo. | Copy the specific `.tsx` files needed (`button.tsx`, `card.tsx`, `badge.tsx`, `utils.ts`) from `web/src/components/ui/` and `web/src/lib/` directly into `webpage/`. |
-| A brand-new/second monorepo tool, CMS, or component library | Explicitly out of scope for this milestone; also unjustified at 2-frontend-app scale (see Alternatives Considered). | Independent app + manual file copy, as above. |
-| Skipping `assetPrefix` on `webpage/next.config.ts` | Without it, `webpage/`'s own `_next/static/*` chunk requests fall through to Caddy's default catch-all block (currently `reverse_proxy frontend:3000`), which serves `web/`'s JS/CSS instead of `webpage/`'s — landing page renders with **no working styles/scripts** in production while looking fine in local dev (single-container testing hides the collision). | Set `assetPrefix: '/landing-static'` (or similar) in `webpage/next.config.ts`, and add a matching `handle /landing-static/* { reverse_proxy webpage:3000 }` block to **all three** Caddy config locations (see Version Compatibility). |
-| Assuming one Caddyfile edit is sufficient | This repo currently has **three** places Caddy routing is defined: `Caddyfile` (local dev), `Caddyfile.prod` (referenced by `docker-compose.prod.yml` as a mounted volume), and an **inline heredoc Caddyfile** embedded directly in `docker-compose.hostinger.yml`'s `caddy` service `entrypoint` (added in commit `67e2120` specifically to dodge a Compose brace-expansion bug — this is the one actually driving the live `alcv.tech` deployment). Editing only `Caddyfile.prod` would silently not affect production. | Update all three in the same change: `Caddyfile`, `Caddyfile.prod`, and the inline `command`/`entrypoint` string in `docker-compose.hostinger.yml`. |
+|-------|-----|--------------|
+| Plain `pnpm dlx shadcn@latest init` (no `-b` flag) | Defaults to Base UI as of the 2026-07 changelog — would scaffold a second, incompatible primitive library alongside your 9 existing `@radix-ui/*` packages | `init -b radix` |
+| `tailwindcss-animate` (currently installed, loaded via `@plugin "tailwindcss-animate"` in `globals.css`) | Officially deprecated by shadcn in favor of a CSS-first package; it still technically works today (Tailwind v4's `@plugin` directive can load legacy JS-config plugins), but every new shadcn component generated from here on assumes `tw-animate-css`'s animation utility names/keyframes are present | `tw-animate-css` via `@import "tw-animate-css";` in `globals.css` |
+| `react-day-picker@latest` (what the shadcn `calendar` registry item currently pins to `@latest`) | v10.0.0 was released with breaking changes to the `classNames`/`table` type shape; confirmed **open, unresolved GitHub issue** shadcn-ui/ui#10914 ("calendar component build failure with react-day-picker v10+"), opened June 2026 | Pin to `react-day-picker@9.14.0` (last stable v9.x) immediately after running `shadcn add calendar`, in both `web/` and `webpage/` if either needs it |
+| `pnpm dlx skills add shadcn/ui` | Explicitly out of scope per this milestone's PROJECT.md ("Fora de âmbito... instalação de skills/pacotes externos não verificados") — this is shadcn's own new AI-agent migration skill, not the CLI itself | `pnpm dlx shadcn@latest init` / `add` only |
+| Running `add button card dialog alert-dialog input label popover radio-group sheet switch table textarea toast` with `--overwrite` as a first step | These 14 files already carry custom styling/props battle-tested across ~15 modules (e.g. `button.tsx`'s hardcoded `neutral-900`/`neutral-50` palette, not shadcn's semantic `bg-primary` tokens). A silent overwrite would revert real, in-production visual identity that PROJECT.md explicitly says must be preserved | Run `add <name> --diff` first (or `--dry-run`), review manually, and hand-merge only what's genuinely missing (e.g. new variant, better a11y attribute) — treat the CLI output as a reference diff, not a source of truth to blindly apply |
+| Assuming `shadcn diff <component>` exists as a standalone top-level command (older docs/training data pattern) | Confirmed: in the current CLI (v4.x), diffing is a flag on `add` (`add <component> --diff`), not a separate top-level `diff` subcommand | `shadcn add <component> --diff` |
 
 ## Stack Patterns by Variant
 
-**If reusing `web/`'s shadcn/ui primitives (Button, Card, Badge):**
-- Copy the `.tsx` files directly (not via CLI); copy `cn()` from `web/src/lib/utils.ts`.
-- Because this repo's own convention is manual authorship over CLI-managed component libraries (no `components.json` exists anywhere).
+**If adding a component that already exists hand-rolled (button, card, dialog, alert-dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast):**
+- Run `add <name> --diff` first, read the output
+- The CLI's own non-interactive behavior: files with **identical** content are auto-skipped ("Skipped N files... use --overwrite to overwrite"); files that **differ** prompt "The file xxx already exists. Would you like to overwrite?" unless `-o/--overwrite` (force yes) or a skip flag is passed
+- Because your hand-rolled files intentionally deviate from upstream (custom color literals, `sheet.tsx` built manually per your own Key Decisions log — "CLI `npx shadcn` exige setup interativo; seguiu padrão de dialog.tsx"), treat every prompt as "no" by default and hand-port only specific missing pieces (e.g., a new size variant) into the existing file
 
-**If serving `webpage/` at bare `/` on the same domain as `web/`'s existing routes:**
-- Set `assetPrefix: '/landing-static'` in `webpage/next.config.ts` (Next.js 15+ requires no additional manual rewrite for this — Next serves the prefixed asset path automatically).
-- Add two Caddy `handle` blocks *before* the existing catch-all, in this order: `handle /api/*` (unchanged) → `handle /landing-static/* { reverse_proxy webpage:3000 }` → `handle / { reverse_proxy webpage:3000 }` (exact-match, not a prefix — Caddy path matchers without a trailing `*` match the literal path only) → `handle { reverse_proxy frontend:3000 }` (unchanged catch-all, now only reached for everything else: `/login`, `/dashboard`, `/setup`, etc.).
-- Consider also routing `/favicon.ico`, `/robots.txt`, `/sitemap.xml` (Next.js file-convention routes, zero extra deps — `robots.ts`/`sitemap.ts` in `webpage/src/app/`) to `webpage:3000` so crawlers hitting the bare domain get the marketing site's SEO files rather than the dashboard app's.
-- Because Caddy's `handle` directive performs mutually-exclusive, first-match routing — omitting this ordering/asset rule means the two independently-built Next.js apps' `_next/static/*` paths collide under one catch-all.
+**If adding a genuinely new component (Select, Tabs, DropdownMenu, Command, Tooltip, Form, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu):**
+- Safe to `add` directly, no existing file to collide with
+- Immediately re-pin `react-day-picker` after `add calendar` (see above)
+- For `add form`, double check the generated code's Zod usage against your `zod ^4.1.5` (docs currently describe zod v3 patterns)
 
-**If the branding endpoint or setup-status check needs calling from `webpage/`'s `proxy.ts` (Edge middleware) *and* from a Server Component:**
-- Reuse the exact `BACKEND_API_ORIGIN` (Docker build ARG/ENV) + `NEXT_PUBLIC_API_BASE_PATH=/api/v1` (rewrite target) pair already used in `web/next.config.ts` and `web/Dockerfile`, so `webpage/next.config.ts` needs the identical `rewrites()` block proxying `/api/v1/:path*` to the same `backend:8080` container.
-- Because `web/src/lib/setup.ts`'s `fetchSetupStatus()` already proves this exact pattern (relative `fetch("/api/v1/setup/status")` resolved through the Next rewrite, called from both `proxy.ts` and elsewhere) works correctly in this Next.js version/deployment — no need to invent a different mechanism for the second app.
+**If working in `webpage/` (only `button.tsx`/`card.tsx` hand-rolled so far):**
+- Same `-b radix` init is still correct — `webpage/` already depends on `@radix-ui/react-slot`, `class-variance-authority`, `tailwindcss-animate`, matching `web/`'s conventions, just fewer components deep
+- Both apps' `tsconfig.json` already use `@/*` → `./src/*` and both have `src/components/ui/*` + `src/lib/utils.ts` in the same relative locations — the shadcn Next.js default aliases (see below) will resolve correctly in **both** apps with zero remapping
+- `webpage`'s own `pnpm-workspace.yaml` (added in Phase 100 for a `minimumReleaseAgeExclude` scoping reason) is **not** a shadcn monorepo workspace — it's an unrelated pnpm supply-chain config local to that single package. Don't conflate the two when deciding aliasing
 
-**If a real "Pedir demonstração" lead-capture form is added later (currently out of scope):**
-- Add `react-hook-form@^7.62.0`, `zod@^4.1.5`, `@hookform/resolvers@^5.2.2` — matching `web/`'s exact versions — plus a new narrow `POST /api/v1/public/...` backend endpoint (rate-limited, since it would be unauthenticated).
-- Because introducing a second, differently-versioned copy of the same form-handling stack across two apps in one repo is exactly the kind of divergence this research recommends avoiding elsewhere.
+**If later deciding to de-duplicate `web/` and `webpage/` component trees:**
+- That requires first creating a real root `pnpm-workspace.yaml` + moving both apps under e.g. `apps/`, then following ui.shadcn.com/docs/monorepo's `packages/ui` pattern with matching `style`/`iconLibrary`/`baseColor` in both `components.json` files
+- Treat as a separate future milestone, not part of "formally adopt the CLI"
+
+## `components.json` — expected shape for this repo (per app)
+
+Because Tailwind v4 is already in place (no `tailwind.config.ts` in either app) and both apps' `tsconfig.json` already define `"@/*": ["./src/*"]`, the CLI-generated file should look like this in **both** `web/` and `webpage/` — no alias customization needed to match existing conventions:
+
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+Notes:
+- `"style": "new-york"` is the correct choice to visually match the existing hand-rolled `button.tsx` (rounded-md, `h-9`/`px-4`, `gap-2`, focus-visible ring) — this legacy value still resolves internally to `radix-vega` (see Version Compatibility)
+- `"baseColor": "neutral"` matches the literal `neutral-900`/`neutral-50`/`neutral-100` classes already hardcoded throughout `button.tsx` and the other 13 primitives
+- `"cssVariables": true` is the shadcn default and is **recommended**, but flag this as an integration item: today's `globals.css` only defines `--background`/`--foreground` (mapped via `@theme inline`), not the full shadcn semantic token set (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`, etc.). `init` will add the missing tokens to `globals.css`; the *existing* 14 hand-rolled components will keep using their hardcoded `neutral-*` literals until each is deliberately migrated to the new semantic classes during the module-by-module visual audit — the two systems can coexist visually (since `neutral` base color ≈ the same literal palette) but should not be treated as already unified
+- `webpage/` has no `hooks/` directory yet — that's fine, the CLI only creates the folder when a component that needs it (e.g., a future `use-mobile` hook) is actually added
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `next@16.2.6` | `react@19.2.4`, `react-dom@19.2.4` | Exact triplet already validated in `web/package.json`; do not mix with a different Next 16.x patch in the same repo (see Core Technologies rationale). |
-| `next@16.2.6` (Multi-Zones `assetPrefix`) | Caddy `2-alpine` `handle` path matching | Confirmed via `web/node_modules/next/dist/docs/01-app/02-guides/multi-zones.md`: "In versions older than Next.js 15, you may also need an additional rewrite to handle the static assets. This is no longer necessary in Next.js 15." — i.e., no extra `rewrites()` needed inside `webpage/next.config.ts` itself beyond the existing `/api/v1/*` proxy rule; only the Caddy-side `handle` block is required. |
-| `eslint-config-next` | must equal installed `next` version | Match `16.2.6` exactly, same as `web/package.json`. |
-| `tailwindcss@^4` | `@tailwindcss/postcss@^4` | Both required together (v4's PostCSS-plugin split); no `tailwind.config.ts` file needed — configuration lives in `globals.css` via `@theme`. |
-| Current npm-published Next.js (informational only) | — | As of this research (mid-July 2026), Next.js `16.2.10` is the latest stable/LTS patch (released 2026-07-01), one minor security release ahead of this repo's pinned `16.2.6`, with another security release reportedly expected 2026-07-20. **Recommendation:** do not bump `webpage/` ahead of `web/` — if/when a patch bump happens, bump both apps together in a dedicated maintenance change, not as part of this landing-page milestone, to avoid two different Next.js patch behaviors in one repo. |
+|-----------|------------------|-------|
+| `shadcn@4.13.0` (CLI) | Tailwind v4, Next.js 16, React 19 | Confirmed current; CLI auto-detects Tailwind v4 and leaves `tailwind.config` blank in generated `components.json` |
+| `components.json` `tailwind.config` field | Tailwind v4 projects | Per official schema/docs: **leave blank** for v4 (no `tailwind.config.ts` needed — this repo already has none, only `@tailwindcss/postcss` + CSS-first `globals.css`, which is exactly what the CLI expects) |
+| `components.json` `style` field | `"new-york"` (legacy) resolves to `"radix-vega"` internally | The style taxonomy changed to `{library}-{style}` (e.g. `radix-vega`, `base-vega`, `radix-nova`...) as of the Dec-2025 `shadcn create` release; old `new-york`/`default`/`new-york-v4` values still resolve correctly for backward compat, so explicitly requesting `new-york` during `init` is fine |
+| `react-day-picker@10.x` | shadcn `calendar` registry item | **Currently broken** (open issue #10914) — do not let `pnpm add` resolve to `^10` for this package until upstream fixes are confirmed |
+| `zod@4.1.5` (already installed) | shadcn's `Form` component docs | Docs currently show `zod` v3 idioms; test the generated `zodResolver`/schema wiring against v4 before shipping a real form |
+| `tw-animate-css@1.4.0` | Tailwind v4 `@import` (no plugin config) | Drop-in for `@plugin "tailwindcss-animate"` — same animate-in/out class vocabulary (`accordion-down`, etc.), pure CSS, no JS plugin system dependency |
+| Existing `tsconfig.json` `@/*` → `./src/*` in both apps | shadcn Next.js App Router defaults | Already an exact match — no alias remapping needed. Default `components.json` aliases (`@/components`, `@/lib/utils`, `@/components/ui`, `@/lib`, `@/hooks`) will resolve correctly against both apps' existing folder layout with zero changes |
 
 ## Sources
 
-- `web/node_modules/next/dist/docs/01-app/02-guides/multi-zones.md` — Next.js 16.2.6's own bundled Multi-Zones guide (assetPrefix mechanism, routing via rewrites vs. proxy, "no rewrite needed since Next 15" caveat). HIGH confidence — read directly from the version installed in this repo.
-- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/output.md` — `output: 'standalone'` behavior and monorepo tracing-root caveats (`outputFileTracingRoot`), used to justify the independent-app recommendation. HIGH confidence.
-- `web/package.json`, `web/next.config.ts`, `web/Dockerfile`, `web/tsconfig.json`, `web/postcss.config.mjs`, `web/src/app/globals.css`, `web/src/app/providers.tsx`, `web/src/app/layout.tsx`, `web/proxy.ts`, `web/src/lib/setup.ts`, `web/src/lib/api.ts`, `web/src/lib/utils.ts`, `web/src/components/ui/button.tsx`, `web/src/components/ui/card.tsx` — read directly from this repo to ground every version/pattern recommendation in what is actually pinned/used today, not assumed. HIGH confidence.
-- `Caddyfile`, `Caddyfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.hostinger.yml`, `.github/workflows/deploy.yml` — read directly to map the exact 3-location Caddy config duplication and the CI/CD build-and-push pattern to extend. HIGH confidence.
-- `.planning/PROJECT.md` (Current Milestone: v2.12 Landing Page section) — scope, constraints, and explicit out-of-scope items for this milestone. HIGH confidence (project's own source of truth).
-- WebSearch: "Next.js latest release version July 2026" — used only to flag that `16.2.10` (2026-07-01) is ahead of this repo's pinned `16.2.6`, and that a security release was reportedly expected 2026-07-20. MEDIUM confidence (WebSearch aggregator results, not Next.js's own release notes page directly fetched) — informational footnote only, does not change the exact-match recommendation.
+- https://ui.shadcn.com/docs/tailwind-v4 — Tailwind v4 init behavior, `@theme inline` pattern, migration notes (HIGH confidence, official docs)
+- https://ui.shadcn.com/docs/monorepo — official monorepo guidance, `packages/ui` pattern, per-workspace `components.json` requirement (HIGH confidence, official docs)
+- https://ui.shadcn.com/docs/components-json — full field reference for `components.json` (HIGH confidence, official docs)
+- https://ui.shadcn.com/docs/cli — CLI flags for `init`/`add`, `--overwrite`/`--diff`/`--dry-run` behavior (HIGH confidence, official docs)
+- https://ui.shadcn.com/schema.json — raw JSON Schema for `components.json`, confirms `style` enum values (`default`, `new-york`, `radix-vega`...`base-rhea`) (HIGH confidence, primary source)
+- https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default — Base UI becoming default, `-b radix` opt-out flag, "no migration required" confirmation (HIGH confidence, official changelog, dated this month)
+- https://ui.shadcn.com/docs/changelog/2025-12-shadcn-create — style-preset taxonomy (Vega/Nova/Maia/Lyra/Mira) introduction (MEDIUM-HIGH, official changelog + corroborated by WebSearch)
+- https://github.com/shadcn-ui/ui/discussions/9562 — Radix→Base UI migration guide, breaking-change inventory (MEDIUM, community discussion, cross-checked against official changelog's "no forced migration" stance)
+- https://ui.shadcn.com/docs/forms/react-hook-form — Form + RHF + Zod integration pattern (MEDIUM, docs show zod v3 idiom, flagged as a compatibility check item against this repo's zod v4)
+- https://ui.shadcn.com/docs/components/command — `cmdk` dependency confirmation (MEDIUM, version not stated on page, cross-checked via npm)
+- https://ui.shadcn.com/r/styles/new-york/calendar.json — registry manifest confirming `react-day-picker@latest` + `date-fns` deps and `button` registry dependency (HIGH confidence, primary source)
+- npm registry (`npm view <pkg> version`) — current versions for all `@radix-ui/react-*`, `cmdk`, `react-day-picker`, `date-fns`, `tailwindcss-animate`, `tw-animate-css`, `shadcn` (HIGH confidence, primary source, checked live)
+- https://github.com/shadcn-ui/ui/issues/10914 — open bug, `react-day-picker@10.0.1` build failure in Calendar component (HIGH confidence for "issue exists and is open", primary source; MEDIUM confidence on exact resolution status since not confirmed closed)
+- https://github.com/shadcn-ui/ui/discussions/7739 — `add` command overwrite/skip/prompt behavior details (MEDIUM, community discussion corroborating official `--overwrite`/`-y` flag docs)
+- Repo inspection: `web/package.json`, `webpage/package.json`, `web/src/app/globals.css`, `web/src/components/ui/button.tsx`, `web/src/lib/utils.ts`, `web/tsconfig.json`, `webpage/tsconfig.json`, `webpage/src/lib/utils.ts`, absence of root `pnpm-workspace.yaml`/`package.json`, presence of independent `web/pnpm-lock.yaml` + `webpage/pnpm-lock.yaml` (HIGH confidence, direct file reads)
 
 ---
-*Stack research for: standalone Next.js marketing/landing page app sharing a backend, domain, and Docker/Caddy topology with an existing Next.js app*
+*Stack research for: shadcn/ui CLI formal adoption, LexCV v2.13 milestone*
 *Researched: 2026-07-15*

@@ -1,163 +1,198 @@
 # Project Research Summary
 
-**Project:** LexCV — v2.12 Landing Page (`webpage/`)
-**Domain:** Standalone public marketing/landing Next.js app added to an existing secured multi-tenant monorepo (Next.js dashboard `web/` + Spring Boot `backend/` + Caddy reverse proxy), single fixed domain, path-based routing
+**Project:** LexCV — v2.13 Refactor UI/UX (shadcn/ui)
+**Domain:** Formal shadcn/ui CLI adoption + design-system reconciliation on an existing production multi-tenant legal practice management platform (two Next.js 16 / Tailwind v4 apps: dashboard `web/` + landing `webpage/`) that already hand-rolled 15 shadcn-lookalike components on top of Radix
 **Researched:** 2026-07-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone adds a third application (`webpage/`) to an already-running two-app-plus-backend system: a public, unauthenticated marketing/landing page personalized with the deployment's own tenant name and logo. It is **not** a typical multi-tenant SaaS marketing site with customer logos, testimonials, pricing, or self-serve signup — LexCV's deployment model is one institution per install, so all "social proof" must come from honest, verifiable architecture facts (multi-tenant data isolation, RBAC, audit trail, Cape Verde/NOSi ecosystem fit) rather than fabricated cross-customer claims. The recommended approach is a fully independent Next.js 16.2.6 app (exact version match with `web/`, no shared workspace tooling), built using Next.js's official **Multi-Zones** pattern (`assetPrefix` + Caddy path-based `handle` routing) to coexist with `web/` under one domain, backed by exactly one new narrow backend endpoint (`GET /api/v1/public/branding`) that returns only `nome` + `logoDataUrl`.
+This milestone is not a greenfield shadcn adoption — it is a **retrofit** onto a codebase that has spent five prior milestones (v1.1–v2.10) hand-building 15 Radix-based primitives (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `toast`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`, `toaster`) that visually resemble shadcn/ui but were never scaffolded by its CLI and have accumulated undocumented drift (a project-specific `badge` `gray` variant, hardcoded `rounded-none`/`neutral-*`/`slate-*` literals instead of semantic tokens, an institutional blue accent that exists nowhere as a token). The single highest-leverage — and highest-risk — decision is how the CLI is initialized: **shadcn's `init` defaulted to Base UI primitives instead of Radix this very month (July 2026)**, so `init` must be run with the explicit `-b radix` (or `--base radix`) flag in both apps, or every newly-scaffolded component (Tabs, Select, DropdownMenu, Command, Checkbox, etc. — 15 primitives PROJECT.md lists as missing) would compose via Base UI's `render` prop instead of the `asChild`/`Slot` pattern used pervasively today, splitting the codebase into two incompatible component ecosystems.
 
-The stack, feature scope, and architecture are all grounded directly in this repo's own pinned versions and existing patterns (copied shadcn primitives, `SetupController`-style narrow public controllers, `web/Dockerfile`'s 3-stage build), which is why confidence is high across the board except for Cape-Verde-market-specific feature framing (no local competitor data exists, so that guidance is directional). The single biggest risk category is **integration/cross-cutting infrastructure, not the landing page's own code**: this repo has three independently-drifting Caddy configuration sources (`Caddyfile`, `Caddyfile.prod`, and an inline heredoc embedded in `docker-compose.hostinger.yml` — the last of which is confirmed, via git history, to be the actual live production path), and the four commits immediately preceding this research were all bug fixes to that exact inline config. A second major risk is naive reuse of `web/`'s existing `page.tsx`/`proxy.ts` logic, which was written for a pure "where do I route you" gateway and would silently redirect every anonymous visitor straight to `/login` — defeating the entire point of a public landing page — if copied wholesale. A third is leaking `Tenant` PII (`nif`, `email`, `telefone`) through the new public endpoint by taking an entity-pass-through shortcut instead of the narrow explicit-copy DTO pattern this codebase already uses elsewhere (`AuthController.getMe()`).
+The recommended approach is a strict **foundation-first sequence**: (1) run `shadcn init -b radix` in `web/` first, resolve style/token/radius decisions there, then hand-copy the resolved `components.json` and merged `globals.css` tokens into `webpage/` rather than re-running the wizard independently (the two apps have no shared workspace to keep them in sync automatically); (2) consolidate a full semantic token set in `globals.css` (today only `--background`/`--foreground` exist) while explicitly restoring the two already-shipped hex values and setting `--radius: 0` and the institutional blue as `--primary`, since CLI defaults are rounded and neutral; (3) decide and execute a Radix-package-identity strategy (unified `radix-ui` package vs. the 15 existing files' scoped `@radix-ui/react-*` imports — a February 2026 breaking change) rather than leaving a silent dual dependency tree; (4) add the ~15 missing primitives (Select, Tabs, DropdownMenu, Command, Tooltip, Form, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, plus `Empty`, a good fit found this session) net-new, with zero collision risk; (5) reconcile the 15 pre-existing hand-rolled files one at a time via `add <name> --diff` (never blind `--overwrite`), preserving custom variants and institutional styling; (6) only then roll out per-module visual work (Dashboard → Clientes+Processos combined Tabs migration → Agenda → Documentos/Financeiro → Pareceres → Notificações/Settings/Setup → `webpage/` refinement), each module reusing a single shared DataTable pattern (`@tanstack/react-table`, a genuinely new dependency) rather than five independent builds.
 
-Mitigation is well-understood and low-cost for all three risk categories: (1) update all three Caddy config sources together in the same change and verify through a full `docker compose up`, never `pnpm dev` alone; (2) build `webpage/`'s setup-status gate as a standalone server-side redirect with zero authentication branching, and use plain `<a>` tags (never `next/link`) for any cross-app navigation such as the "Entrar" CTA; (3) hand-build a two-field `TenantPublicInfoResponse` DTO with explicit getter-to-setter copying and an exact-literal (never wildcarded) `SecurityConfig` allowlist entry. None of this requires new tooling, a CMS, or a monorepo build system — everything reuses proven, already-shipped patterns from `web/` and `backend/`.
+The main risks, all well-understood with low-cost mitigations: silent CSS theme corruption from `init` appending a second `:root`/`.dark` block that overrides institutional colors without looking like it in a naive diff; blind component overwrites destroying the `gray` badge variant and other undocumented custom behavior with no automated visual-regression tests to catch it; losing the project's own already-shipped, non-shadcn-standard UX investments (the 7-tab RBAC-conditional overflow-scroll pattern on Clientes/Processos fichas, the dual card+table responsive list pattern used on all 7 list-bearing modules, the already-correct `Popover`-based notification bell) by following generic library docs literally instead of re-implementing the same behavior on new primitives; and scope creep from features that look like "just add the CLI component" but actually require new backend data or out-of-scope dependencies (Recharts charts needing time-series KPI data that doesn't exist yet, third-party Stepper/blocks marketplaces explicitly excluded by PROJECT.md). None of this requires new tooling beyond the official CLI and `@tanstack/react-table`/`sonner`; the milestone is explicitly **not** a structural redesign, and the biggest work is disciplined reconciliation and sequencing, not net-new architecture.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Next.js 16.2.6 (exact pin matching `web/package.json`) + React 19.2.4 + TypeScript `^5` + Tailwind CSS v4 (CSS-first, no `tailwind.config.ts`) form the core, chosen specifically to avoid tracking two different sets of Next.js 16 quirks in one repo. The linchpin technology is **Next.js Multi-Zones** (built into Next core since v15, `assetPrefix` config) — the officially documented, Vercel-maintained pattern for exactly this milestone's topology (multiple independently-deployed Next.js apps under one domain). Supporting UI libraries (`@radix-ui/react-slot`, `class-variance-authority`, `clsx`+`tailwind-merge`, `lucide-react`, `next-themes`) are hand-copied file-by-file from `web/src/components/ui/` and `web/src/lib/`, matching this repo's existing convention of no `components.json`/no shadcn CLI usage.
+The core adoption is the `shadcn` CLI package itself (v4.13.0, published as `shadcn` not the deprecated `shadcn-ui`), run with `-b radix` to keep 100% composition parity with the 9 `@radix-ui/react-*` packages and the pervasive `asChild` pattern already in both apps. Tailwind v4 is already correctly in place (CSS-first, no `tailwind.config.ts`) in both apps and needs no change beyond token consolidation. `tw-animate-css` replaces the deprecated `tailwindcss-animate` plugin. For the 15 missing primitives, each `shadcn add <component>` pulls in its own small Radix package (`-select`, `-tabs`, `-dropdown-menu`, `-tooltip`, `-checkbox`, `-avatar`, `-separator`, `-accordion`, `-navigation-menu`) plus `cmdk` (Command) and `react-day-picker` (Calendar — **must be re-pinned to `9.14.0` immediately after `add calendar`**, since the registry currently resolves to a broken v10 with an open, unresolved upstream issue). `@tanstack/react-table` is a genuinely new dependency required only for the DataTable pattern (not an installable shadcn component, a copy-paste recipe). `sonner` replaces the deprecated `Toast`/`@radix-ui/react-toast`.
 
 **Core technologies:**
-- Next.js 16.2.6 (exact) — App Router server + static rendering — matches `web/`'s exact pin, avoids two divergent sets of Next.js 16 training-data-breaking gotchas in one repo
-- React/React DOM 19.2.4 (exact) — required peer, matches `web/`'s pin
-- Tailwind CSS v4 (`^4` + `@tailwindcss/postcss ^4`) — CSS-first config via `@theme` in `globals.css`, no separate config file, matches `web/`
-- Next.js Multi-Zones (`assetPrefix`, built-in) — prevents `webpage/`'s `_next/static/*` requests colliding with `web/`'s under the same domain; **not optional**, confirmed against the bundled Next 16.2.6 docs in this repo
-- `next-themes` — dark/light mode toggle, explicit milestone requirement, direct port of `web/src/app/providers.tsx`
+- `shadcn` CLI `4.13.0` with `-b radix` flag — official scaffolding, forced onto Radix to match all 15 existing hand-rolled primitives (default changed to Base UI this month; getting this wrong splits the codebase into two composition idioms)
+- Tailwind CSS v4 (already installed, `^4`) — CSS-first theming; `components.json`'s `tailwind.config` field must stay empty string, no `tailwind.config.js`/`.ts` should ever be created
+- `tw-animate-css@1.4.0` — CSS-first, drop-in replacement for the deprecated `tailwindcss-animate` JS plugin
+- `@tanstack/react-table` (new dep) — required only for the shared DataTable pattern, not a CLI-installable component
+- `sonner` (new dep, replaces `@radix-ui/react-toast`) — official toast successor; near-zero call-site diff since the app's own `toast.success()`/`toast.error()` wrapper already mirrors Sonner's API
+- `react-day-picker` pinned to `9.14.0` (not `@latest`) — the `calendar` registry item currently requests a broken v10
 
-**Explicitly avoid:** `output: 'export'` (breaks the setup-status redirect and dynamic fetch this app needs), `@tanstack/react-query`/`react-hook-form`/`zod` (no client-managed state or forms in scope), `npx shadcn init` (no `components.json` exists anywhere in this repo), and skipping `assetPrefix` (silently serves `web/`'s JS/CSS to the landing page in production while looking fine in local dev).
+**Explicitly avoid:** plain `init` (no `-b` flag, defaults to Base UI), `pnpm dlx skills add shadcn/ui` (explicitly out of scope per PROJECT.md — unverified external tooling), blind `add --overwrite` on any of the 15 existing files, `react-day-picker@latest`, and creating any `tailwind.config.js`/`.ts` file.
 
 ### Expected Features
 
-LexCV's landing page is architecturally closer to an Auth0/Okta-style branded single-tenant entry portal than a typical multi-customer SaaS marketing site — the codebase has no field, table, or endpoint for "other institutions using LexCV," so every social-proof recommendation is scoped around that structural constraint.
-
 **Must have (table stakes, P1):**
-- Setup-status gate (port of existing public `/api/v1/setup/status` check) — prevents showing "personalized" content for an uninitialized tenant
-- Public Tenant Branding Endpoint (`nome` + `logoDataUrl` only) — the one genuinely new backend surface
-- Personalized Hero + benefit-driven headline
-- Módulos/Funcionalidades overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) — static copy, zero backend dependency
-- Prova social/confiança institucional using architecture-based trust copy (data isolation, RBAC, audit, NOSi/Cabo Verde ecosystem framing) — not fabricated customer proof
-- Contacto/Pedir demonstração with a static contact channel (mailto or external form embed) — explicitly NOT sourced from `Tenant.email`/`telefone`
-- Primary CTA "Entrar" → `/login`, top and bottom
-- Responsive layout + dark/light mode (ported from `web/`)
-- Basic SEO meta (title/description/favicon)
+- CLI init with `-b radix` + all ~15 missing primitives added (Select, Tabs, DropdownMenu, Command, Tooltip, Form, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, `Empty`) — unblocks everything else
+- Shared DataTable pattern (`@tanstack/react-table` + existing `Table` primitive), built once and reused across Clientes/Processos/Pareceres/Financeiro/Documentos lists — sort, filter toolbar, official `Pagination`
+- Clientes ficha + Processos ficha migrated together (single combined item, not two) from manual toggle-button tabs to real `Tabs` — this is a genuine, verifiable accessibility gap (no `role="tablist"`/`aria-selected` today), not a style preference
+- `NativeSelect`/`Select` swap for every raw `<select className={selectClassName}>` across Clientes/Processos/Setup forms
+- `Skeleton` loading states + `Empty` zero-result states standardized across list/tab screens (replacing bare `"A carregar..."` text and ad hoc `"Nenhum ... registado."` messages)
+- Official `Pagination` component for `/notificacoes` and any other server-paginated list
+- Sonner swap for deprecated Toast, sequenced as its own small foundation item
+- `webpage/` mobile navigation (currently **zero nav on mobile** — a real functional gap, not cosmetic), reusing the existing hand-rolled `Sheet`
 
-**Should have / add after validation (P2):**
-- Dynamic OG/share image personalized with tenant branding (reuses the same endpoint)
-- Curated real-UI screenshots from seeded/demo data replacing placeholder illustrations
+**Should have (differentiators, P2, optional):**
+- `Breadcrumb`, `Tooltip`, `Avatar` cosmetic swaps for hand-built equivalents (breadcrumb `<div>` + literal `/`, icon-only buttons, plain-text person rows)
+- `webpage/` Hero/Contact restructured around `Card`/`Badge` composition to match the already-idiomatic `TrustSection`
+- `ScrollArea` in the notification bell list; `Combobox` for the tipo-de-documento free-text field
 
-**Defer / anti-features (rejected or v2+):**
-- Customer logo wall, testimonials carousel — structurally impossible to source honestly (no cross-deployment registry exists)
-- Persisted "solicitar demonstração" lead-capture backend — meaningful new scope (entity, controller, RBAC, spam protection), not a landing-page detail
-- Public pricing page, self-serve signup/trial — explicitly out of scope; provisioning is manual/sales-led
-- Blog/CMS, live chat widget, multi-language toggle, interactive product-tour sandbox, competitor comparison page, analytics/cookie-consent — all rejected as disproportionate to or inconsistent with this milestone's actual scope
+**Defer (explicitly out of this milestone):**
+- Recharts-backed `Chart` for Dashboard trend visualization — blocked on a backend time-series KPI endpoint that doesn't exist; conflicts with "visual-only" framing
+- Real trend-delta computation for KPI badges (currently hardcoded `+12%` etc.) — business-logic work, not visual refactor
+- `NavigationMenu` mega-menu for `webpage/` — only worth it if nav grows beyond 3 flat anchor links
+- Bulk row-selection/actions on any DataTable — no bulk actions exist in the product today, don't invent UI for a non-existent capability
+- Any third-party "shadcn blocks"/Stepper marketplace — no official Stepper exists and none is needed; PROJECT.md explicitly excludes unverified external packages
 
 ### Architecture Approach
 
-`webpage/` is added as a fully independent Next.js app (own `package.json`/`pnpm-lock.yaml`, no monorepo tooling) that shares only the backend and domain with `web/`. It reaches the outside world exclusively through Caddy's path-based routing, using Next.js's own documented Multi-Zones pattern: `webpage/` gets a unique `assetPrefix` (`/landing-static`) so its static chunks never collide with `web/`'s unprefixed `/_next/*`; `web/` itself needs zero changes since the default/catch-all zone requires no `assetPrefix`. On the backend, one new narrow `PublicController` (mirroring the existing `SetupController` precedent of a small, easy-to-audit, single-purpose public controller) exposes `nome`+`logoDataUrl` for the singleton tenant row, added to `SecurityConfig`'s existing exact-literal `permitAll()` allowlist.
+`web/` and `webpage/` are two fully independent Next.js apps (separate lockfiles, separate Docker build contexts, no root `pnpm-workspace.yaml`) — not true pnpm workspace members despite milestone framing suggesting otherwise. The recommended structure keeps **two independent `components.json`** (one per app), explicitly rejecting shadcn's official `packages/ui` monorepo pattern for this milestone: the prerequisite work (root workspace, merged lockfiles, rewritten Docker build contexts touching the CI pipeline just stabilized in the prior v2.12/Phase 100 milestone) far outweighs the sharing benefit, since `webpage/` only has 2 hand-rolled files today and needs almost none of the 15 new primitives targeted at `web/`. `globals.css` changes are additive (the CLI's CSS updater merges token declarations by name, doesn't truncate), but the two pre-existing tokens (`--background`/`--foreground`) will have their values silently overwritten by the CLI's default `baseColor` unless restored immediately post-init.
 
 **Major components:**
-1. `webpage/` (new Next.js 16 app) — renders the public landing page at `/` only, SSR for SEO, server-side setup-status redirect gate via its own `proxy.ts`
-2. `PublicController` + `TenantPublicInfoResponse` DTO (new, backend) — exposes exactly two fields, unauthenticated, via explicit getter-to-setter copy (never entity pass-through)
-3. Caddy (`Caddyfile` / `Caddyfile.prod` / `docker-compose.hostinger.yml` inline heredoc) — routes `/api/*` → backend, exact `/` + `/landing-static/*` → `webpage`, everything else (unchanged catch-all) → `frontend`
-4. `docker-compose.*` (3 files) + `.github/workflows/deploy.yml` — adds `webpage` as a 4th service/3rd built-and-pushed image, mirroring `frontend`'s existing shape
-
-The recommended build order (from Architecture research) is: (1) backend endpoint fully isolated and curl-testable, (2) `webpage/` scaffold in parallel using a hardcoded branding stub — neither depends on the other, (3) wire the real endpoint into the stub, (4) `webpage/Dockerfile`, (5) Caddy + compose wiring across all three config sources together, (6) CI/CD build-push step last.
+1. `components.json` (new, per app) — CLI configuration; must specify `-b radix`, `"style": "new-york"`, `"baseColor": "neutral"`, empty `tailwind.config`, and identical `aliases` in both apps
+2. `globals.css` (modified, per app) — gains the full shadcn semantic token set (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`) merged additively; `--background`/`--foreground` restored to shipped hex, `--radius` set to `0` and `--primary` set to the institutional blue deliberately, not left at CLI defaults
+3. `components/ui/*` (14 existing files unchanged pending reconciliation + ~15 new CLI-scaffolded files) — one-directional import boundary: `components/shared/*` imports from `ui/*`, never the reverse
+4. `components/shared/*` (e.g. `dashboard-shell.tsx`) — highest hardcoded-color risk surface (`bg-slate-950`, `text-blue-400` literals); deliberately left untouched by the Foundation phase, normalized only when a module phase explicitly touches that file
 
 ### Critical Pitfalls
 
-1. **Copying `web/`'s `page.tsx`/auth-check logic wholesale auto-redirects every anonymous visitor to `/login`** before the landing content ever renders — `webpage/`'s setup-status check must contain only the "not initialized → `/setup`" branch, never a `useMe()`/authentication branch.
-2. **`next/link`/`<Link>` used for the "Entrar" CTA breaks in production** because `/login` doesn't exist in `webpage/`'s own route table — it only works via Caddy routing to a sibling app. Use a plain `<a href="/login">` for every webpage→web cross-zone link; this only surfaces once both apps run behind Caddy together, not in isolated `pnpm dev`.
-3. **The new public endpoint leaks `nif`/`email`/`telefone`** if built via entity pass-through or a convenience DTO shortcut — `Tenant.java` has no field-level `@JsonIgnore`. Use a hand-built two-field DTO with explicit getter-to-setter copying, exactly like `AuthController.getMe()` already does.
-4. **`webpage/` and `web/` collide on `/_next/*` and `/favicon.ico`** under one Caddy origin unless `webpage/` gets a unique `assetPrefix` and Caddy's `handle` blocks route the prefixed/exact-root paths to `webpage` *before* the existing catch-all — this only breaks in production behind Caddy, never in standalone dev.
-5. **Caddy routing change applied to only 1 of 3 independently-drifted config sources** — `Caddyfile`, `Caddyfile.prod`, and an inline heredoc in `docker-compose.hostinger.yml` (confirmed by git history to be the actual live production path) must all be updated together, or the live deployment silently keeps the old routing with no error at all.
-
-Additional flagged risk: adding the new `permitAll()` entry as a wildcard (`/api/v1/public/**`) instead of the codebase's established exact-literal-string convention would silently pre-authorize any future endpoint added under that prefix without a fresh security review.
+1. **`shadcn init` silently corrupts the theme by appending a second `:root`/`.dark` block** that overrides institutional colors via CSS cascade while looking like a pure addition in `git diff` — mitigate with `--dry-run` first, then manually verify exactly one `:root`/`.dark` block exists and restore/verify hex values against Figma before merging.
+2. **Blind `add --overwrite` wipes undocumented custom variants and props** (the `gray` badge variant used in 3 files, `dialog.tsx`'s missing `showCloseButton` handling) across 93 import occurrences in 38 files — always `add <component> --diff` first, reconcile component-by-component in small reviewable diffs, never all 15 at once.
+3. **Radix package identity split** — CLI-generated components since Feb 2026 import from the unified `radix-ui` package while all 15 existing hand-rolled files import scoped `@radix-ui/react-*` packages — decide explicitly (run `shadcn migrate radix` now vs. tracked bridge state) in the foundation phase, don't let it linger past milestone close.
+4. **Two independent `init` runs drift apart** — `web/` and `webpage/` have no shared config to inherit from; sequence `web/` first, then hand-copy its resolved answers into `webpage/` rather than re-running the wizard independently.
+5. **Module-specific UX regressions from following generic docs literally**: migrating the 7-tab ficha to `Tabs` without re-adding `overflow-x-auto` (breaks at RBAC roles with fewer visible tabs, untestable with ADMIN-only QA); consolidating the dual card+table responsive pattern (7 modules) into one scrollable table "to reduce duplication" (a project-specific decision, not a shadcn convention); converting the already-correct `Popover`-based notification bell to `DropdownMenu` (a known a11y anti-pattern for multi-control list items).
 
 ## Implications for Roadmap
 
-Based on combined research, three phases emerge cleanly — and are already named consistently across the Pitfalls research's "Phase to address" column (`backend-endpoint phase`, `webpage-app phase`, `infra-wiring phase`), which is a strong signal this is the natural grouping.
+Based on combined research, suggested phase structure:
 
-### Phase 1: Backend Public Branding Endpoint
-**Rationale:** Fully isolated with zero dependency on the `webpage/` app (per Architecture's recommended build order); can be built first or in parallel, and is independently curl-testable against the existing dev `docker-compose.yml` backend with no new infra.
-**Delivers:** `TenantPublicInfoResponse` DTO (exactly `nome` + `logoDataUrl`), `TenantRepository.findFirstByOrderByCreatedAtAsc()`, new `PublicController` (`GET /api/v1/public/branding`), one exact-literal `SecurityConfig` `permitAll()` addition.
-**Addresses:** Public Tenant Branding Endpoint (P1, FEATURES.md).
-**Avoids:** Tenant entity/PII leak (Pitfall 3), wildcard `permitAll()` matcher (Pitfall 6), nondeterministic singleton-tenant lookup (Technical Debt table).
+### Phase 1: Foundation — CLI Init & Design Tokens
+**Rationale:** Every other phase depends on this; it is the single highest-leverage and highest-risk decision point (Base UI vs. Radix default, theme corruption risk).
+**Delivers:** `components.json` in `web/` (init first) then `webpage/` (hand-copied answers), full semantic token set merged into both `globals.css` files with institutional colors/radius/accent restored deliberately, ~15 missing primitives added net-new, explicit Radix-package-identity decision (migrate vs. tracked bridge), `react-day-picker` re-pinned to `9.14.0`, no `tailwind.config.js` created.
+**Addresses:** Foundation item from FEATURES.md MVP definition.
+**Avoids:** Pitfalls 1 (theme corruption), 3 (Radix package split), 4 (Tailwind v4 config misunderstanding), 5 (web/webpage drift).
 
-### Phase 2: `webpage/` Landing App
-**Rationale:** Can proceed in parallel with Phase 1 using a hardcoded branding stub — the biggest phase, covering nearly the entire v1 feature set; UI work is never blocked on the backend piece.
-**Delivers:** `webpage/` Next.js 16.2.6 app scaffold (Dockerfile mirroring `web/Dockerfile`'s 3-stage build, `next.config.ts` with `assetPrefix: '/landing-static'`, `proxy.ts` with setup-status-only gate), ported layout/globals.css/dark-light mode, Hero/Módulos/Prova social/Contacto sections, "Entrar" CTA as a plain `<a>`, matching security headers (CSP/HSTS/X-Frame-Options), and final integration swapping the branding stub for the real Phase 1 endpoint.
-**Addresses:** Setup-status gate, Personalized Hero, Módulos overview, Prova social (architecture-based trust copy), Contacto (static contact channel), CTA, responsive layout, dark/light mode, basic SEO meta — the full P1 MVP list from FEATURES.md.
-**Avoids:** Auto-redirect of anonymous visitors to `/login` (Pitfall 1), broken CTA via `next/link` across zones (Pitfall 2), client-gated spinner harming SEO/LCP (UX Pitfalls), CSP/security-header omission on the most internet-exposed page in the domain.
+### Phase 2: Design System Reconciliation
+**Rationale:** Must complete before any per-module visual work starts, or the app ships in a visibly half-migrated state (some components on tokens, some still hardcoded) — this is explicitly called out as a UX pitfall to avoid.
+**Delivers:** Each of the 14 existing hand-rolled files (button, dialog, alert-dialog, card, table, sheet, badge, input, label, popover, radio-group, switch, textarea, toaster) diffed against the current registry and reconciled one-by-one (custom variants like `gray` badge preserved, semantic tokens adopted now that they exist); Sonner swap-in replacing Toast/`toaster.tsx`, re-mounted at both apps' root layouts.
+**Avoids:** Pitfall 2 (blind overwrite data loss), Pitfall 8 (losing project-specific props while mistakenly re-verifying Radix a11y that was never at risk).
 
-### Phase 3: Infra Wiring & Deployment
-**Rationale:** Only makes sense once Phase 2 produces a working, buildable Docker image (per Architecture's build order) — this is where the highest-risk, highest-coordination-cost work (three drifting Caddy config sources, new container wiring, CI/CD) is deliberately deferred to the end, validated against two already-complete, independently-tested pieces rather than debugged blind.
-**Delivers:** `assetPrefix`-aware Caddy `handle` blocks added to **all three** config sources (`Caddyfile`, `Caddyfile.prod`, the inline heredoc in `docker-compose.hostinger.yml`) in correct pre-catch-all order; new `webpage` service added to all three `docker-compose*.yml` files (mirroring `frontend`'s resource limits); a third `docker/build-push-action@v6` step in `.github/workflows/deploy.yml`.
-**Uses:** Caddy 2 (existing), GitHub Actions (existing), Next.js Multi-Zones `assetPrefix` mechanism (Stack/Architecture).
-**Implements:** Caddy routing component + `docker-compose.*`/CI-CD component (Architecture's Component Responsibilities).
+### Phase 3: Dashboard Module
+**Rationale:** Lowest primitive need of any module (mostly `Skeleton`/`Empty`/`Badge`, all already exist or are trivial); best low-risk phase to visually validate the new token layer before deeper modules commit to it.
+**Delivers:** KPI card loading skeletons, `Empty` zero-result states, cosmetic Badge/Card token adoption.
+**Uses:** `Skeleton`, `Empty`, `Badge`, `Card` from Foundation.
+
+### Phase 4: Shared DataTable Pattern
+**Rationale:** FEATURES/ARCHITECTURE both flag this as the single largest net-new lift and insist it be built once, generically, before being applied across 5 screens — treat as its own phase/step rather than reinventing it per module.
+**Delivers:** `@tanstack/react-table` added as a dependency; one shared `columns.tsx`/`data-table.tsx`/toolbar/pagination recipe composed on the existing `Table` primitive; explicitly scoped to only the `hidden md:block` desktop branch of list pages, wired to the same server-side TanStack Query filters already in use (not duplicated client-side filtering).
+**Implements:** DataTable architecture pattern from FEATURES.md/ARCHITECTURE.md.
+**Avoids:** Pitfall 7 (dual-view pattern collapse), the Performance Trap of duplicate client/server filtering.
+
+### Phase 5: Clientes + Processos Modules (combined)
+**Rationale:** Both fichas use the identical hand-rolled toggle-button tab pattern by deliberate prior design decision; migrating only one breaks intentional visual consistency, so this must ship as one roadmap item, not two.
+**Delivers:** `Tabs` migration for both fichas (preserving RBAC-conditional trigger count, controlled `value`/`onValueChange`, re-added `overflow-x-auto`, tested at 375px across ADVOGADO/TECNICO/ASSISTENTE/ADMIN roles); `NativeSelect`/`Select` swap for raw `<select>` instances; `Avatar` for person-representing rows; DataTable adoption on both list screens.
+**Avoids:** Pitfall 6 (mobile tab overflow regression), Anti-Pattern 3 (reopening the tab-pattern decision without cause beyond CLI availability — this migration is independently justified by the a11y gap, not merely "Tabs now exists").
+
+### Phase 6: Agenda Module
+**Rationale:** Narrow, well-scoped primitive need (Calendar for date-picker form inputs only); the existing hand-rolled month-grid view is a distinct, richer component explicitly out of scope.
+**Delivers:** `Calendar`/`react-day-picker` wired into date-picker form inputs (`agenda/novo`, `agenda/[id]/editar`); `Select` for categoria/status filters.
+**Avoids:** Conflating "add Calendar primitive" with "replace the Agenda month view" (explicitly out of "not a redesign" scope).
+
+### Phase 7: Documentos + Financeiro Modules
+**Rationale:** Similar primitive needs (Select, Progress, DataTable adoption), modest scope each, safe to combine.
+**Delivers:** `Progress` for upload progress (replacing existing custom progress UI), `Select` for tipo/honorário/pagamento forms, DataTable adoption on both list screens.
+
+### Phase 8: Pareceres Module
+**Rationale:** Modest, well-scoped primitive need (Select, Tooltip, Accordion for versioning history).
+**Delivers:** `Select`, `Tooltip` on timeline events, `Accordion` for versioning collapse, DataTable adoption.
+
+### Phase 9: Notificações / Settings / Setup Wizard
+**Rationale:** Smallest surface area, safe to do last; the notification bell is already correctly implemented (`Popover`), so this phase is mostly additive (topbar user-menu, breadcrumbs, wizard progress).
+**Delivers:** Official `Pagination` on `/notificacoes`; `DropdownMenu` for a new topbar user-menu (not the bell); unread-badge swapped to official `Badge`; `Breadcrumb`/`NavigationMenu` for Settings sub-navigation; `Progress`-based linear step indicator for `/setup` (no Stepper component exists officially or is needed).
+**Avoids:** Anti-Feature of replacing the correct `Popover`-based bell with `DropdownMenu`; Anti-Feature of installing a third-party Stepper package.
+
+### Phase 10: `webpage/` Landing Refinement
+**Rationale:** Independent `components.json`, no dependency on `web/`'s per-module phases — can run in parallel with any module phase after Foundation/Reconciliation complete, not necessarily last in sequence.
+**Delivers:** Mobile navigation for `SiteHeader` (currently **zero nav on mobile**, reusing existing `Sheet`); Hero/Contact restructured around `Card`/`Badge`/`Avatar` composition matching the already-idiomatic `TrustSection`; optional `NavigationMenu` if a dropdown structure emerges.
+**Avoids:** Adopting third-party "shadcn blocks" marketplaces for marketing sections (no official equivalent exists — original composition from atomic primitives only).
 
 ### Phase Ordering Rationale
 
-- Phases 1 and 2 have zero mutual dependency (thanks to a mockable branding payload and the pre-existing public `/setup/status` endpoint), so they can be built in parallel or in either order — this maximizes early velocity.
-- Phase 3 must come last because it depends on real, working artifacts from both prior phases (an actual endpoint response shape to verify against, and a buildable `webpage` Docker image) and because it touches the exact area (`docker-compose.hostinger.yml`'s inline Caddy config) that has already caused four consecutive bug-fix commits in this repo's recent history — deferring it avoids debugging infra and application logic simultaneously.
-- This ordering directly avoids the "looks done but isn't" trap identified in Pitfalls research: testing `webpage/` only via `pnpm dev` (Phases 1-2) proves nothing about the cross-app collision/CTA/Caddy-drift risks that only surface once everything runs together behind Caddy (Phase 3) — so Phase 3's own verification step must explicitly include a full `docker compose up` test, not a repeat of Phase 2's isolated dev testing.
+- Foundation and Reconciliation must both complete before any module phase starts, because the "half-migrated, visually inconsistent app" state is itself flagged as a UX pitfall — this is the strongest ordering constraint in the research.
+- The DataTable pattern is deliberately its own phase (not folded into the first module that needs it) because building it once and reusing it across 5 screens is repeatedly emphasized across FEATURES.md and ARCHITECTURE.md as the correct sequencing to avoid 5 independent, subtly-inconsistent implementations.
+- Clientes and Processos are combined into a single phase because their tab-migration is explicitly required to ship together (identical pattern, deliberate prior consistency decision) — splitting them risks a visible inconsistency window.
+- Module order after that (Agenda → Documentos/Financeiro → Pareceres → Notificações/Settings/Setup) follows ARCHITECTURE.md's scaling table, roughly ascending by primitive-set novelty and descending by usage frequency/risk, ending with the smallest, safest surface area.
+- `webpage/` refinement is placed last only for narrative clarity — it has no technical dependency on `web/`'s module phases and can be parallelized once Foundation is done, which the roadmapper should feel free to do if resourcing allows.
 
 ### Research Flags
 
-Needs deeper attention during planning:
-- **Phase 3 (infra-wiring):** The three-source Caddy config drift has already caused real production bugs in this exact repo (commits `67e2120`, `534fa92`, `ba67f4e`, `1482f47`) — planning for this phase should explicitly re-read those commits and plan a side-by-side diff/verification step across all three files, plus a full `docker compose up` smoke test (not just `pnpm dev`), before considering it done.
+Needs research during planning (`/gsd:plan-phase --research-phase <N>`):
+- **Phase 1 (Foundation):** CLI flag names/preset taxonomy are under active churn (confirmed renamed at least once in the last 8 months: "new-york"/"default" → "nova"/"sera" + "base"/"radix"); re-verify with `npx shadcn@latest init --help`/`--dry-run` at actual execution time rather than trusting this research's exact flag syntax. Also needs a fresh decision on the Radix-package-migration strategy (`migrate radix` now vs. bridge state).
+- **Phase 4 (Shared DataTable Pattern):** It's a recipe, not an installable component — integrating it with the existing TanStack Query server-side filters (not duplicating client-side) needs implementation-time verification per screen's actual filter shape.
+- **Phase 5 (Clientes + Processos):** RBAC-conditional tab-overflow behavior needs functional verification across all 4 roles at real mobile viewport widths — not a "research the docs" task, but a "test against this app's actual RBAC matrix" task that planning should call out explicitly.
 
-Standard patterns, well-documented (skip additional research-phase):
-- **Phase 1 (backend-endpoint):** Strong existing precedent in this exact codebase (`AuthController.getMe()`'s explicit-copy pattern, `SetupController`'s narrow-public-controller shape, `UserSummaryResponse`'s narrow-DTO doc comment) — implementation guidance is already concrete and code-ready in ARCHITECTURE.md/PITFALLS.md.
-- **Phase 2 (webpage-app):** Grounded directly in official Next.js 16 Multi-Zones docs (bundled in this repo's own `node_modules`, matching the installed version) plus a working `web/` app to copy patterns from — low ambiguity.
+Phases with standard, well-documented patterns (skip research-phase):
+- **Phase 3 (Dashboard):** Skeleton/Empty are simple, official, drop-in components with no known gotchas.
+- **Phase 6 (Agenda):** Calendar/react-day-picker version pin is already resolved by this research (`9.14.0`); date-picker-only scope is narrow and low-risk.
+- **Phase 9 (Notificações/Settings/Setup):** No official Stepper exists and none is needed — `Progress`-based linear indicator is trivial; DropdownMenu/Breadcrumb are standard patterns.
+- **Phase 10 (webpage/):** Composition from already-verified atomic primitives (Card/Badge/Sheet), no official marketing blocks to evaluate.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Grounded in this repo's actual pinned versions (`web/package.json`, configs) plus Next.js 16.2.6's own bundled docs — the exact version installed in this repo, not an assumed/newer version |
-| Features | MEDIUM | Generic B2B SaaS/legal-tech landing-page patterns are well-documented and cross-verified across multiple sources; Cape Verde/NOSi-specific market data is sparse (no local competitor found). Codebase constraints (what data structurally can/cannot be shown) are HIGH confidence, sourced directly from `Tenant.java`, `SetupInitializeRequest.java`, `SecurityConfig.java` |
-| Architecture | HIGH | Grounded in actual repo files, official Next.js Multi-Zones docs matching the exact installed version, official Caddy `handle` docs, and this repo's own recent commit history for Compose-specific gotchas |
-| Pitfalls | HIGH | Grounded directly in project source files, git history, and official Next.js 16 docs; one item (server-side hairpin fetch risk) flagged MEDIUM pending a live-deploy smoke test |
+| Stack | HIGH | Verified live against official ui.shadcn.com docs/changelogs, npm registry, and GitHub issues this session (July 2026) — this area changed significantly in the last 8 months, so training data alone would have been wrong on several points (CLI package name, Base UI default, react-day-picker v10 break). |
+| Features | HIGH for component APIs/patterns (verified live), MEDIUM-HIGH for LexCV-specific fit (grounded by direct reads of actual current source: `clientes/[id]/page.tsx`, `dashboard/page.tsx`, `notification-bell.tsx`, `site-header.tsx`, `package.json`, `components/ui/` directory listings). |
+| Architecture | HIGH for CLI mechanics (verified against current shadcn CLI source via Context7) and repo facts (read directly from working tree); MEDIUM for exact CLI flag/preset naming stability at execution time given confirmed active churn. |
+| Pitfalls | HIGH for CLI mechanics and codebase-specific findings (verified by reading actual source: 93 import occurrences across 38 files, `badge.tsx`'s `gray` variant, `globals.css`'s 2-variable-only token set); MEDIUM for migration-specific UX regression claims (community-reported GitHub issues, cross-checked with 2+ sources). |
 
-**Overall confidence:** HIGH (Features section carries a MEDIUM sub-rating due to sparse Cape-Verde-specific market data, but this does not affect the structural/codebase-constraint findings, which are HIGH and are what actually drive scope decisions)
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Cape Verde/NOSi market specifics are directional, not validated:** No local competitor was found in research, so positioning/copy framing (NOSi ecosystem alignment, institutional trust messaging) is a reasonable inference rather than confirmed market research. Validate messaging with actual institutional stakeholders during content review, not just this research.
-- **Server-side "hairpin" fetch risk in `proxy.ts` is unverified:** A server-side relative-URL `fetch()` inside a container may resolve against the public domain (routing back out through Caddy) rather than the internal Docker network, unlike a browser-side fetch. `web/` already does this successfully, but PITFALLS.md flags this as needing an explicit staging/VPS deploy test before assuming it's risk-free for `webpage/` too — address this as a verification step in Phase 3, not an assumption in Phase 2.
-- **Whether `webpage/` needs its own distinct favicon/OG image/robots.txt is unresolved:** Architecture research flags this as a "Known Limitation, not a blocker" — `webpage/public/*` files are not reachable through Caddy's default catch-all today. PROJECT.md doesn't call out explicit SEO requirements, so this needs a scope decision during phase planning (add extra Caddy `handle` branches, or accept `web/`'s favicon/OG image for now).
-- **Exact contact channel for "Contacto/Pedir demonstração" needs a business decision:** Research confirms it must be a static, hardcoded value in `webpage/`'s own config (not sourced from `Tenant.email`/`telefone`), but which channel (mailto vs. external form embed) is a content/business decision, not a technical one — flag for the requirements/planning step.
+- **CLI flag/preset naming may have shifted again** between this research (2026-07-15) and actual Foundation-phase execution — re-verify with `npx shadcn@latest init --help` and `--dry-run` before running `init` for real, rather than trusting exact flag syntax from this document.
+- **Radix package migration strategy (unified `radix-ui` vs. scoped `@radix-ui/react-*`) is not yet decided** — flagged as an explicit foundation-phase decision point, not resolved by this research; needs a deliberate choice (migrate now vs. tracked bridge state) during roadmap/phase planning.
+- **Zod v4 compatibility with shadcn's current `Field`/Form docs** (which demonstrate v3 idioms) needs verification at the point `add form` is actually run — flagged as MEDIUM confidence in STACK.md/FEATURES.md, not fully resolved.
+- **Login/auth page patterns were not researched this pass** (FEATURES.md flags this as a gap in coverage, not a finding) — low priority since login is typically a simple form, but worth a quick look if a Settings/Setup/Auth-adjacent phase touches it.
+- **Whether the classic `Command`+`Popover` Combobox recipe or the newer Base UI-specific `base/combobox` variant applies** depends on the `-b radix` decision being fully honored throughout — should resolve cleanly given the Radix choice, but worth a sanity check if a Combobox is actually built (currently deferred/P3 anyway).
+- **Exact blast radius of the `webpage/` `button.tsx`/`card.tsx` re-add via CLI** (already near-identical to canonical output, low risk) was assessed as safe but not diffed line-by-line in this research pass — a quick `--diff` before touching is still warranted per the general reconciliation protocol.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `web/node_modules/next/dist/docs/01-app/02-guides/multi-zones.md` — Next.js 16.2.6's own bundled Multi-Zones guide (assetPrefix, routing, cross-zone linking, "no rewrite needed since Next 15")
-- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/output.md`, `assetPrefix.md`, `basePath.md` — version-matched Next.js config docs bundled with this repo's install
-- `web/node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md` — official Next.js 16 CSP guide
-- [Caddy — `handle` directive docs](https://caddyserver.com/docs/caddyfile/directives/handle) — official docs, mutual exclusivity and `handle_path` behavior
-- [Next.js — Guides: Multi-Zones](https://nextjs.org/docs/pages/guides/multi-zones) — official docs, version 16.2.10 (matches installed `next@16.2.6`)
-- Direct repo inspection: `web/package.json`, `web/next.config.ts`, `web/Dockerfile`, `web/tsconfig.json`, `web/postcss.config.mjs`, `web/src/app/globals.css`/`providers.tsx`/`layout.tsx`/`page.tsx`, `web/proxy.ts`, `web/src/lib/setup.ts`/`api.ts`/`utils.ts`, `web/src/components/ui/button.tsx`/`card.tsx`, `web/src/components/theme-toggle.tsx`
-- Backend repo inspection: `backend/src/main/java/com/lexcv/models/Tenant.java`, `config/SecurityConfig.java`, `controllers/SetupController.java`, `controllers/AuthController.java`, `services/SetupService.java`, `repositories/TenantRepository.java`, `dtos/UserResponse.java`/`UserSummaryResponse.java`/`SetupInitializeRequest.java`
-- Infra inspection: `Caddyfile`, `Caddyfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.hostinger.yml`, `.github/workflows/deploy.yml`
-- Git history: commits `67e2120`, `534fa92`, `ba67f4e`, `1482f47` (inspected via `git show`) — confirms `docker-compose.hostinger.yml` as the live, recently-fragile Caddy config path
-- [Customize Universal Login Page Templates (Auth0 Docs)](https://auth0.com/docs/customize/login-pages/universal-login/customize-templates); [Brands | Okta Developer](https://developer.okta.com/docs/concepts/brands/) — official docs, tenant-branding-portal precedent
-- [NOSi | Núcleo Operacional Para a Sociedade de Informação EPE](https://www.nosi.cv/en/); [Governo de Cabo Verde — NOSi](https://www.governo.cv/nucleo-operacional-da-sociedade-de-informacao-tem-novo-conselho-de-administracao/) — official Cape Verde government sources
-- `.planning/PROJECT.md` (v2.12 Landing Page milestone section) — project's own scope/constraints source of truth
+- https://ui.shadcn.com/docs/cli — CLI flags, `-o/--overwrite`/`--diff`/`--dry-run` behavior
+- https://ui.shadcn.com/docs/tailwind-v4 — Tailwind v4 CSS-first config, `@theme inline`, empty `tailwind.config` for v4
+- https://ui.shadcn.com/docs/monorepo — official `packages/ui` pattern, per-workspace `components.json` field consistency requirement
+- https://ui.shadcn.com/docs/components-json and https://ui.shadcn.com/schema.json — full `components.json` field/enum reference
+- https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default — Base UI becoming the new `init` default this month, `-b radix` opt-out, `asChild`→`render`
+- https://ui.shadcn.com/docs/changelog/2026-02-radix-ui — unified `radix-ui` package import change, `migrate radix` command
+- https://ui.shadcn.com/docs/changelog/2026-03-cli-v4 — `--dry-run`/`--diff`/`--view`, `shadcn info`/`shadcn docs`, `init --monorepo`, preset system
+- https://ui.shadcn.com/docs/changelog/2025-12-shadcn-create — style-preset taxonomy (Vega/Nova/Maia/Lyra/Mira) introduction
+- Full official component docs pages fetched live (Data Table, Tabs, Chart, Dropdown Menu, Forms/React Hook Form, Pagination, Combobox, Base UI Combobox, Command, Select, Native Select, Calendar, Toast/Sonner, Skeleton, Empty, Scroll Area, Breadcrumb, Accordion, Tooltip, Navigation Menu, Sidebar, Blocks index, Components index)
+- shadcn/ui CLI source (`init.ts`, `get-project-info.ts`, `preflight-init.ts`, `update-css.ts`) fetched via Context7, 2026-07-15 snapshot
+- npm registry live version checks for all relevant packages
+- Direct repository inspection: `web/package.json`, `webpage/package.json`, both `globals.css` files, all 15 `web/src/components/ui/*.tsx` files, both `tsconfig.json` files, `web/src/lib/utils.ts`, `webpage/src/lib/utils.ts`, `.github/workflows/deploy.yml`, both `Dockerfile`s, `dashboard-shell.tsx`, `notification-bell.tsx`, `clientes/[id]/page.tsx`, `clientes/page.tsx`, `dashboard/page.tsx`, `agenda/page.tsx`, `site-header.tsx`/`hero-section.tsx`/`trust-section.tsx`/`contact-section.tsx`, `.planning/PROJECT.md`, absence of root `pnpm-workspace.yaml`/`package.json`
 
 ### Secondary (MEDIUM confidence)
-- [Best Practices for Designing B2B SaaS Landing Pages (Genesys Growth)](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages)
-- [18 B2B SaaS Landing Page Best Practices That Convert (SaaS Hero)](https://www.saashero.net/design/saas-landing-page-best-practices/) and companion CTA/trust-signal articles from the same source
-- [26 SaaS landing pages: examples, trends and best practices (Unbounce)](https://unbounce.com/conversion-rate-optimization/the-state-of-saas-landing-pages/)
-- [How to Create a Lawyer Landing Page That Actually Converts (Clio)](https://www.clio.com/blog/lawyer-landing-page/) — mobile-traffic stat, consumer-facing context
-- [Best Legal Practice Management Software 2026 (PracticePanther)](https://www.practicepanther.com/blog/best-legal-practice-management-software/)
-- [The role of security badges on SaaS landing page effectiveness (Markettailor)](https://www.markettailor.io/blog/role-of-security-badges-on-saas-landing-page) — substitute-for-testimonials framing
-- WebSearch: "Caddy multiple Next.js apps same domain path routing assetPrefix" — cross-verification only, Next.js official docs remain primary source
-- WebSearch: "Next.js latest release version July 2026" — informational footnote (patch-version currency), does not change exact-match stack recommendation
+- https://github.com/shadcn-ui/ui/issues/10914 — open bug, `react-day-picker@10.0.1` build failure in Calendar component
+- https://github.com/shadcn-ui/ui/issues/2791 and #4845 — `init` overwriting/interfering with existing `globals.css`, closed as stale but consistent with documented append behavior
+- https://github.com/shadcn-ui/ui/issues/931, discussions #7739, #7672/#7794 — `add` overwrite/skip/prompt behavior across CLI versions
+- https://github.com/shadcn-ui/ui/discussions/9562 — Radix→Base UI migration guide, breaking-change inventory
+- https://github.com/shadcn-ui/ui/discussions/3263 and #6353 — confirms no official Stepper block has ever shipped despite repeated requests
+- radix-ui/primitives #855/#1155/#2359 and mui/base-ui #4822 — confirms both Radix `Tabs.Content` and Base UI `Tabs.Panel` unmount inactive panels by default
+- eastondev.com blog post on shadcn/Radix accessibility customization (single source, directionally consistent with Radix's documented behavior)
 
-### Tertiary (LOW confidence)
-- [21 Best Law Firm Landing Page Examples & Inspirations (Landingi)](https://landingi.com/landing-page/law-firm-examples/) — directional inspiration only, needs validation against actual institutional stakeholder feedback
+### Tertiary (LOW confidence, used only to confirm absence of an official equivalent)
+- shadcnblocks.com, shadcndesign.com, shadcnuikit.com, shadcnstudio.com — third-party marketing block/stepper registries, cited only to demonstrate they are explicitly out of scope per PROJECT.md, not as recommendations
 
 ---
 *Research completed: 2026-07-15*

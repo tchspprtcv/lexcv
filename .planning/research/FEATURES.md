@@ -1,188 +1,254 @@
+
 # Feature Research
 
-**Domain:** Institutional B2B landing page for a single-tenant legal-tech deployment (Cape Verde legal practice management platform)
+**Domain:** shadcn/ui-driven UI/UX refactor of an existing multi-tenant legal practice management app (LexCV) — internal dashboard `web/` + public landing `webpage/`
 **Researched:** 2026-07-15
-**Confidence:** MEDIUM (generic B2B SaaS/legal-tech landing page patterns are well-documented and cross-verified; Cape Verde/NOSi-specific market data is sparse — codebase constraints are HIGH confidence, sourced directly from `Tenant.java`, `SetupInitializeRequest.java`, and `SecurityConfig.java`)
+**Confidence:** HIGH for component APIs/patterns (verified live against ui.shadcn.com this session, July 2026) / MEDIUM-HIGH for LexCV-specific fit (grounded by reading actual current source) / flagged inline where lower
 
-> Supersedes the v2.11-dated `FEATURES.md` previously at this path (that research covered NOTF-24/25/26 notification extensions; this one is scoped entirely to the new v2.12 Landing Page milestone).
+> Supersedes the v2.12-dated `FEATURES.md` previously at this path (that research covered the `webpage/` landing-page content milestone; this one is scoped entirely to the new v2.13 shadcn/ui UI/UX refactor milestone).
 
-## Framing: this is NOT a typical multi-tenant SaaS marketing site
+## Critical Cross-Cutting Finding (read this before the per-area tables)
 
-Almost all "B2B SaaS landing page" research (Clio, MyCase, PracticePanther, generic SaaS growth blogs) assumes a marketing site that serves **prospects across many potential customers**, backed by a shared database of named clients, testimonials, logos, and self-serve signup/pricing. LexCV's v2.12 landing page is architecturally different and closer to a **branded splash/entry portal for one already-provisioned institution** — the same pattern used by:
+**shadcn/ui defaulted to Base UI on new `init` this month (July 2026 changelog: "New projects default to Base UI").** Base UI replaces Radix's `asChild` composition prop with a `render` prop. Radix is not deprecated and remains fully supported via an explicit CLI flag (`shadcn init -b radix`), but it is no longer the default. This matters enormously for LexCV specifically:
 
-- **Auth0/Okta Universal Login branding** — a tenant's login page shows only that org's logo/name, pulled from a small branding record (logo + display name), never cross-tenant data. (MEDIUM confidence, verified via Auth0/Okta developer docs)
-- **Zendesk Guide / Freshdesk support portals** — publicly reachable, personalized per-organization, but not a comparison/marketing hub across all customers of the underlying platform.
+- `web/package.json` already depends directly on `@radix-ui/react-dialog`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-popover`, `@radix-ui/react-radio-group`, `@radix-ui/react-switch`, `@radix-ui/react-slot`, `@radix-ui/react-toast` — every hand-built primitive in `web/src/components/ui/` (dialog, alert-dialog, sheet, popover, radio-group, switch) is Radix-based.
+- The codebase uses the Radix `asChild` composition pattern pervasively already (`<Button asChild><Link href="...">...</Link></Button>` appears dozens of times across Clientes/Processos/Dashboard/webpage).
+- If the shadcn CLI is initialized with its new default (Base UI) and used to add new primitives (Tabs, Select, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu — all currently missing per PROJECT.md), those new components would compose via `render` instead of `asChild`, producing a **mixed-primitive-library codebase** with two different composition idioms living side by side.
+- **This is a foundation-phase decision, not mine to make, but it gates every item below**: initializing with `shadcn init -b radix` keeps 100% API/composition consistency with everything already built and is the only choice that doesn't silently introduce a second paradigm. Flagging as HIGH confidence, directly sourced from the official [July 2026 Base UI changelog](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default).
+- The changelog also surfaces a `pnpm dlx skills add shadcn/ui` migration skill for progressively moving components from Radix to Base UI — this is almost certainly the exact mechanism PROJECT.md's "Fora de âmbito" line is pre-emptively excluding ("instalação de skills/pacotes externos não verificados (ex.: 'skills add shadcn/ui') — apenas a CLI oficial `shadcn@latest`"). That decision is validated by this research: it correctly avoids an unverified/fast-moving mechanism in favor of the stable, explicit `-b radix` init flag.
 
-This distinction is the single most important input for scoping: **the codebase has no field, table, or endpoint for "other institutions using LexCV," named customer logos, or testimonials** — and the deployment model (one tenant per deployment, `/setup` singleton) means such data structurally cannot exist without new cross-deployment infrastructure that is explicitly out of scope. Every "social proof" recommendation below is scoped around this constraint.
+**Toast is officially deprecated in favor of Sonner** ("The toast component has been deprecated. Use the sonner component instead" — `ui.shadcn.com/docs/components/toast`). LexCV's `web/src/components/ui/toast.tsx` + `toaster.tsx` + `@radix-ui/react-toast` are the old, deprecated shape. Notably, the app's own `useToast`/`toast` wrapper (`toast.success(...)`, `toast.error(...)`) already mirrors Sonner's exact call-site API (`toast.success()`, `toast.error()`), which makes a swap to Sonner a **near-zero-diff call-site migration** — only the underlying hook implementation and the root `<Toaster />` mount need to change; every existing `toast.success("...")` call in Clientes/Processos/Pareceres/Documentos forms keeps working unmodified.
+
+**Official blocks (`ui.shadcn.com/blocks`) are app/dashboard-oriented only** — categories confirmed: Dashboard, Sidebar (variants), Login, Signup, Calendar. **There is no official marketing/landing category** (no Hero, Features grid, Testimonials, Pricing, Contact/CTA blocks on ui.shadcn.com). All "shadcn hero/marketing blocks" surfaced by search (shadcnblocks.com, shadcndesign.com, shadcnuikit.com, shadcnstudio.com) are **third-party paid/community registries**, explicitly out of scope per PROJECT.md's "apenas a CLI oficial" constraint. This directly shapes the `webpage/` recommendation below: compose landing sections from official atomic primitives (Button, Card, Badge, Avatar, Separator, NavigationMenu) rather than importing a "block."
+
+---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Table Stakes (Do This)
 
-Features expected of any professional institutional/B2B product page. Missing these makes the deployment look unfinished or untrustworthy to an institutional buyer.
+#### Data-heavy list/CRUD screens — Clientes, Processos, Pareceres, Financeiro, Documentos
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Personalized hero (tenant `nome` + `logoDataUrl`) | Confirms "this deployment is ours" for the institution's staff/stakeholders; core requirement of the milestone | MEDIUM | **New backend work required**: `GET /api/v1/public/...` doesn't exist yet. Must be added to `SecurityConfig`'s `permitAll()` list alongside the existing `/api/v1/setup/status` pattern. Must return **only** `nome` + `logoDataUrl` — `Tenant.java` also has `nif`, `email`, `telefone`, `tipoEntidade` columns that must be explicitly excluded (confirmed via direct read of the entity; a naive `TenantResponse` DTO reuse would leak them) |
-| Setup-status gate (`/api/v1/setup/status` → redirect to `/setup` if uninitialized) | Preserves existing first-run behavior; a landing page must never show "personalized" content for a tenant that doesn't exist yet | LOW | Endpoint already public (`SecurityConfig` line 56-58) and already consumed by this exact pattern in `web/`'s `proxy.ts`. Pure port of existing logic into the new `webpage/` app |
-| Benefit-driven headline + sub-headline (value proposition) | First 5 seconds decide whether an institutional visitor keeps reading; HIGH confidence from cross-verified SaaS research | LOW | Static copy, no data dependency. Target headline ≤8 words per convergent industry guidance |
-| Módulos/Funcionalidades overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) | Confirmed content section; institutional buyers scan for "does it cover our actual workflow" before anything else | LOW | Purely static marketing copy describing already-shipped modules — zero new backend dependency. Risk is only content accuracy (must reflect real capability, not aspirational features) |
-| Primary CTA "Entrar" → `/login`, repeated top + bottom | Single, unambiguous CTA outperforms multi-CTA pages in every SaaS CRO source found (13.5% vs 10.5% conversion for single vs 5+ CTAs) | LOW | `/login` route already exists and is unaffected by this milestone |
-| Contact / "Pedir demonstração" section with a real reachable channel | Confirmed content section; the only lead-gen surface for institutions who don't yet have this deployment | MEDIUM | **Cannot source contact info from `Tenant.email`/`Tenant.telefone`** — those fields exist in the DB but (a) the milestone explicitly forbids exposing them via the public endpoint, and (b) the current `/setup` wizard (`SetupInitializeRequest`) never even populates them, so they may be null for every existing deployment. This section needs a **static, hardcoded contact channel in the `webpage/` app's own config** (e.g. a product-level email/mailto, or an external form embed) — not tenant-sourced data. Building a persisted "lead capture" endpoint is new backend scope (see Anti-Features) |
-| Responsive/mobile-first layout | Legal-tech landing pages skew heavily mobile — one industry source found 88% of legal landing-page traffic is mobile (MEDIUM confidence, single-source, consumer-facing law-firm context but directionally consistent with LexCV's own mobile-first history in v2.3) | LOW-MEDIUM | `web/` already has a full mobile design system (drawer nav, bottom-sheets, touch targets) to reference for consistent patterns, though `webpage/` is a simpler single-page layout |
-| Dark/light mode | Explicit milestone requirement ("Reutiliza... dark/light mode já usados em `web/`") | LOW | `web/src/components/theme-toggle.tsx` and `web/src/app/providers.tsx` already implement this — direct port |
-| Basic SEO meta (title, description, favicon) | Table stakes for any public page; institutional stakeholders/search engines need a coherent identity | LOW-MEDIUM | Favicon/OG image ideally uses tenant logo dynamically — bumps this from LOW to LOW-MEDIUM (see dynamic OG image differentiator below for the harder version) |
+| DataTable pattern (TanStack Table + shadcn `<Table>`) for the main list screens (`/clientes`, `/processos`, `/pareceres`, `/financeiro`) | shadcn ships **no single installable DataTable component** — it's an official copy-paste recipe (`columns.tsx` + `data-table.tsx` + `DataTableColumnHeader`/`DataTablePagination`/`DataTableViewOptions`) built on `@tanstack/react-table`, which is a **new dependency** (confirmed absent from `web/package.json` today — only `@tanstack/react-query` is present) | MEDIUM | Composes on top of shadcn's existing `Table`/`TableBody`/`TableRow`/`TableCell` (already in `web/src/components/ui/table.tsx`) + needs `Button`, `DropdownMenu`, `Checkbox`, `Input` (Checkbox/DropdownMenu are on PROJECT.md's missing-primitive list). This is the single biggest net-new pattern the milestone needs to stand up once, then reuse across 5 screens. |
+| Sortable column headers (`DataTableColumnHeader`, `getSortedRowModel`) | Users expect clicking "Nome"/"Estado"/"Data" to sort; today the tables (e.g. `ClienteProcessosTab`, `ClienteParecerTab`) are static, unsorted | LOW (once DataTable exists) | Purely additive on top of the DataTable foundation — no data-shape changes needed since sorting happens client-side per page. |
+| Toolbar filtering (search input + faceted filters using existing dropdown of statuses) | Clientes/Processos/Pareceres/Financeiro all already have hand-rolled filter UIs (per PROJECT.md's history: "filtros críticos", "pesquisa avançada") — DataTable's toolbar recipe formalizes this into a consistent shape | MEDIUM | `getFilteredRowModel()`; faceted filters need `Popover`+`Command`+`Checkbox` (Command is on the missing list). Riskiest part is preserving server-side filter semantics already wired to TanStack Query hooks — client-side TanStack Table filtering must not silently duplicate/conflict with server-side query params already in use. |
+| Row-selection + column-visibility toggle (`DataTableViewOptions`) | Standard DataTable affordance; useful for bulk actions if any exist (none currently in LexCV — see Anti-Features) | LOW-MEDIUM | Needs `Checkbox` (missing primitive) + `DropdownMenu` (missing primitive). Skip row-selection checkboxes on screens with no bulk action to keep scope honest (see Anti-Features). |
+| Official `Pagination` component (`Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`) for server-paginated lists | `/notificacoes` already implements "paginação real" per PROJECT.md (Phase 89) — almost certainly hand-rolled prev/next buttons today. This is exactly the kind of "amateur/inconsistent element" the milestone goal calls out. | LOW | Renders `<a>` by default; must swap to Next.js `<Link>`-based `PaginationLink` (documented pattern) to keep client-side routing. Good target for Notificações page + any other server-paginated list. |
+| Dialog-based create/edit forms (`Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`, `DialogTrigger`) | **Already in place and already idiomatic** — `dialog.tsx` exists, and Clientes/Processos already use exactly this pattern for "Adicionar" flows (Partes, Fases, Decisões, Factos, Testemunhas, Documentos a Tratar, Deslocações, Documento Entregue upload all use `Dialog`+`DialogTrigger`+`DialogFooter` today) | N/A — already done | This is a genuine strength to preserve, not rebuild. The only real gap is the raw `<select>`/`<textarea>` elements with hand-maintained Tailwind class strings inside those dialogs (see `selectClassName`/`textareaClassName` consts in `clientes/[id]/page.tsx`) — swap these for shadcn `Select`/`NativeSelect`/`Textarea` primitives once available, not a dialog-pattern change. |
+| `NativeSelect` for short static option lists inside forms (tipo de documento, ramo de atividade, tipo de decisão, etc.) | Confirmed official component (`ui.shadcn.com/docs/components/native-select`): "a styled native HTML select element with consistent design system integration," explicitly positioned as the right choice over the popover-based `Select` for simple, short, mobile-friendly dropdowns — exactly what today's raw `<select className={selectClassName}>` instances are | LOW | Nearly a drop-in swap: same native semantics/keyboard/mobile behavior, just shadcn design tokens instead of a hand-maintained className string duplicated across files. Lower risk than migrating these same dropdowns to the heavier Radix/Base `Select`. |
+| `Checkbox`, `Switch` for boolean toggles | `Switch` already exists (`avençado` toggle uses it correctly today); `Checkbox` does not exist yet and DataTable row-selection requires it | LOW | Standard Radix/Base primitive, no surprises. |
 
-### Differentiators (Competitive Advantage)
+#### Ficha de Cliente 7-tab pattern (and Processos' equivalent Partes/Fases/Decisões/Factos/Testemunhas/Documentos tabs)
 
-Features that set LexCV's landing page apart from generic legal-tech marketing pages — all achievable with **zero new data model changes**, by reframing verified architecture facts as trust copy rather than fabricating customer proof.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Migrate the manual toggle-`Button` tab bar to real shadcn `Tabs` (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`) | **This is a genuine, verifiable accessibility gap today, not a style preference.** The current implementation (`clientes/[id]/page.tsx`) is a `<div className="flex gap-2">` of plain `<Button variant={tab===x?"secondary":"outline"}>` elements with a `tab` state ternary below — it has no `role="tablist"`/`role="tab"`/`role="tabpanel"`, no `aria-selected`, and no arrow-key roving-tabindex navigation. Radix/Base `Tabs` provides all of this for free, which is precisely the milestone's own stated goal ("substituir elementos amadores/inconsistentes por primitivos shadcn/Radix acessíveis"). | MEDIUM | See dedicated verdict below. |
+
+**Dedicated verdict on the Tabs question:** The original PROJECT.md rationale for the manual pattern ("evita introduzir um componente novo; shadcn Tabs nunca foi inicializado no projeto") is **no longer valid as a blocker**, because this milestone's entire foundation phase is initializing the CLI and adding exactly this kind of missing primitive anyway — the cost of "introducing Tabs" is being paid regardless, for other components. Two things actually reduce risk further:
+1. **Lifecycle compatibility is good, not bad.** Verified: both Radix `Tabs.Content` and Base UI `Tabs.Panel` **unmount inactive panels by default** (no `forceMount`/`keepMounted`) — i.e., the exact same "only the active tab's subtree exists in the DOM" semantics the current ternary-based `tab === "dados" ? (...) : ...` already relies on (including the `useEffect` that resets in-tab dialog state when navigating away from "documentosATratar"/"deslocacoes"). Migrating does not change this contract.
+2. **Scope is 2x, not 1x**: Clientes' ficha AND Processos' ficha both use the identical hand-rolled pattern by deliberate design ("Partes e Fases... refatoradas para o mesmo padrão... para consistência visual" — PROJECT.md). Consistency demands migrating both together or neither; treat this as one roadmap item covering both fichas, not two.
+
+Recommendation: **table-stakes for this milestone**, MEDIUM complexity, but do it as a single dedicated phase covering both fichas together, after `Tabs` is added to the primitive library in the foundation phase.
+
+#### Dashboard KPIs
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Stat cards (icon + label + big number + trend badge) | **Already built and already structurally matches shadcn's own `dashboard-01` block `SectionCards` pattern** (Card → icon chip → trend Badge → uppercase label → large number). Confirmed by reading `dashboard/page.tsx`: KPI cards already compose `Card`/`CardContent`/`Badge` almost exactly like the official block. | N/A — mostly already done | Only real gap: the trend badges (`+12%`, `Estável`, `Urgente`, `+8%`) are **hardcoded strings**, not derived from `useDashboardKpis()` data (no delta/trend fields exist in the KPI payload). That's a data/business-logic gap, explicitly out of scope for a visual-only milestone — flag it as a known limitation, don't silently "fix" it under a UI refactor banner. |
+| Loading skeleton for KPI cards / Atividade Recente / list tables while `isLoading` | Every list screen currently renders a bare `"A carregar..."` text string during loading (`isLoading ? <div>A carregar...</div> : ...` appears throughout Clientes/Processos/Pareceres/Documentos) | LOW | Official `Skeleton` component (on the missing-primitive list) is a trivial swap: `<Skeleton className="h-4 w-32" />` compositions matching each card/row shape. High visual-polish return for very low effort — good "quick win" candidate early in the module rollout. |
+| `Empty` component for zero-result states | shadcn ships an official `Empty`/`EmptyHeader`/`EmptyMedia`/`EmptyTitle`/`EmptyDescription`/`EmptyContent` composition explicitly designed for "no data found in lists/tables," "notification centers with no items" — directly matches LexCV's many hand-rolled `"Nenhum ... registado."` one-line messages scattered across Clientes tabs, Processos tabs, Documentos, and the notification bell/page | LOW | Confirmed official component (not a recipe). Good candidate to standardize the ~10+ different "no data" messages currently written ad hoc as plain `<p>` tags. |
+
+#### Notificações (bell + `/notificacoes` page)
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Keep `Popover`-based bell — **do not switch to `DropdownMenu`** | Read `notification-bell.tsx` directly: it's **already built on shadcn's `Popover`/`PopoverTrigger`/`PopoverContent`** (already installed), not a hand-rolled dropdown. This is the *correct* choice already, not a gap: `DropdownMenu`'s `DropdownMenuItem` assumes simple `menuitem`-role entries and manages focus/typeahead accordingly — each notification row here has multiple independent interactive controls (mark-as-read button, snooze control, internal link), which is a known Radix/Base a11y anti-pattern inside `DropdownMenuItem`. `Popover` correctly leaves the internal content's semantics up to the app. | N/A — already correct | Table-stakes item here is *recognizing this is already right*, so the roadmap doesn't waste a phase "fixing" something that isn't broken. |
+| Swap the manual unread-count `<span>` badge for the official `Badge` component | Currently a bespoke `absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full ...` span, functionally a badge but not using the `Badge` primitive already used everywhere else in the app | LOW | Purely cosmetic consistency win; trivial. |
+
+#### Setup wizard / multi-step forms
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| shadcn's newer `<Field>`/`FieldLabel`/`FieldDescription`/`FieldError` composition (current official form-integration docs, `/docs/forms/react-hook-form`) as the presentational layer over the app's existing raw `react-hook-form` + `zod` usage | **Confirmed non-breaking**: shadcn's current docs explicitly frame `Field` as a purely presentational wrapper around `Controller`/`useForm`+`zodResolver` — "there's no wrapper abstraction requiring migration... you can adopt shadcn's Field components incrementally without refactoring existing form logic." LexCV's forms are 100% react-hook-form + zod already (`buildClienteFormSchema`, `zodResolver`, `useForm` throughout). | LOW-MEDIUM (per form, additive) | Note: shadcn's docs have moved away from the classic `Form`/`FormField`/`FormItem` naming I might otherwise assume from older training data — the current official surface is `Field`-based. Verify exact import names against the live CLI output at implementation time, not from memory. |
+| `Progress` component for a simple linear "step X of N" indicator in `/setup` | Official primitive (on the missing-primitive list), simplest possible way to add a wizard-progress affordance | LOW | See Anti-Features for what NOT to reach for. |
+
+#### Landing (`webpage/`)
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Mobile navigation menu for `SiteHeader` | Read `site-header.tsx` directly: nav links are `<nav className="hidden md:flex">` — **on mobile there is currently no navigation at all**, not even a hamburger fallback. This is a genuine, verifiable gap, not a style nitpick. | LOW-MEDIUM | LexCV's own `web/src/components/ui/sheet.tsx` already exists (built manually per Key Decisions log, "seguiu padrão de dialog.tsx com @radix-ui/react-dialog") — reuse it for a slide-in mobile nav instead of introducing anything new. Good "shared primitive across both apps" candidate if `webpage/` and `web/` end up sharing a `ui/` package, otherwise duplicate the same small file. |
+| Keep `TrustSection`'s existing `Card`/`CardHeader`/`CardTitle`/`CardDescription` composition | Already idiomatic shadcn usage today — no change needed | N/A | Good reference example for how Hero/Contact sections should also be restructured (see Differentiators). |
+
+---
+
+### Differentiators (Nice Visual Upgrade, Optional)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Multi-tenant data isolation as trust messaging ("os seus dados nunca se misturam com os de outra instituição") | Directly addresses the #1 enterprise security objection ("can I trust this with our data") — research confirms security-first messaging is the standard substitute for testimonials on new products (MEDIUM confidence, cross-verified across SaaS trust-signal sources) | LOW | **This is a real, verifiable architectural fact** — every domain entity carries `tenant_id`, unique constraints are per-tenant (per `CLAUDE.md`). Copy can honestly assert this without fabrication, unlike a generic SaaS bolting on a compliance badge it doesn't actually have |
-| Cabo Verde / NOSi ecosystem framing ("desenhado para a realidade jurídica cabo-verdiana", institutional/e-gov alignment) | Localization/institutional-fit signal matters more than generic feature lists for public-sector-adjacent buyers; NOSi is Cape Verde's e-government operational nucleus (public verified fact) and legal Portuguese domain language is already a hard project constraint | LOW | Confirmed: NOSi ("Núcleo Operacional da Sociedade de Informação") is a real Cape Verde EPE government agency driving e-government/digital transformation (HIGH confidence, official/gov.cv sources) — framing LexCV as part of that digital-governance push is credible, not aspirational marketing |
-| Curated real-UI screenshots/mockups (Dashboard, Ficha Cliente, Agenda) instead of generic stock illustrations | High-performing B2B SaaS heroes use actual product screenshots over abstract illustrations (MEDIUM confidence, cross-verified) | MEDIUM | Needs redacted/demo seed data (via existing `DatabaseSeeder`) to avoid ever screenshotting real tenant data; some design/curation effort but no new engineering |
-| RBAC + audit-trail messaging ("cada ação é registada, permissões por função") | Institutional legal buyers (compliance-conscious) respond to governance/audit framing more than generic "powerful features" copy | LOW | Backed by real `@PreAuthorize` scope-based RBAC and existing audit patterns already shipped (Parecer versioning audit, Phase 90 SAST hardening) — again, honest reuse of shipped capability as copy, not new engineering |
-| Dynamic OG/share image personalized with tenant name+logo | Differentiates the deployment when its link is shared (WhatsApp/email/LinkedIn preview) — an institution sharing "olha a nossa plataforma" gets a branded card, not a generic one | MEDIUM-HIGH | Requires Next.js dynamic image generation (`next/og` / `ImageResponse`) consuming the same public branding endpoint — real engineering effort, reasonable to defer to v1.x |
+| Recharts-backed `Chart` (`ChartContainer`, `ChartConfig`, `ChartTooltip`, `ChartLegend`) for a Dashboard trend chart (e.g. an area chart of processos/honorários over time, mirroring the official `dashboard-01` block's `ChartAreaInteractive`) | Visually elevates the Dashboard from "cards + static list" to the same shape as shadcn's flagship dashboard block; shadcn explicitly does not lock you into an abstraction ("we do not wrap Recharts") | HIGH | **New dependency** (`recharts` — confirmed absent from `web/package.json` today). Needs a real time-series KPI endpoint from the backend (currently `useDashboardKpis()` returns point-in-time totals only, no history) — this is a genuine cross-layer dependency, likely too large for a "visual-only" milestone unless the backend already has the data. Flag as a strong candidate to **defer to a future milestone** rather than force into this one. |
+| `ScrollArea` inside the notification bell's list (replacing the current `max-h-72 overflow-y-auto` on a plain `<ul>`) | Consistent cross-browser scrollbar styling | LOW | Cosmetic only; current native-scroll approach already works fine, so this is genuinely optional polish, not a fix. |
+| Official `Combobox` (either the classic `Command`+`Popover` recipe, or the newer Base UI-powered `docs/components/base/combobox` with `ComboboxInput`/`ComboboxContent`/`ComboboxList`) for the "tipo de documento" free-text-or-pick field in Documentos Entregues upload | Today this is a raw `<input list="..."><datalist>` — functional and accessible, but visually inconsistent with the rest of the design system | MEDIUM | Two different official implementations exist depending on which primitive style (Radix-recipe vs Base UI component) the foundation phase settles on — confirm which is available once `-b radix` vs default is decided, since the Base UI-specific `/docs/components/base/combobox` variant is separate from the classic `Command`+`Popover` recipe. |
+| `Breadcrumb` for ficha detail pages ("Clientes / [Nome do Cliente]", "Processos / [Número]") | Currently hand-built as a `<div>` with a `<Link>` + literal `/` character + current name (`clientes/[id]/page.tsx` header) — functional, but exactly the kind of ad hoc pattern that should become the official `Breadcrumb`/`BreadcrumbList`/`BreadcrumbItem`/`BreadcrumbLink`/`BreadcrumbPage`/`BreadcrumbSeparator` composition | LOW | Purely presentational upgrade of something that already works. |
+| `Tooltip` on icon-only/collapsed-sidebar buttons | Accessibility/discoverability polish for any icon-only affordances (collapsed sidebar icons, icon-only row actions) | LOW | Requires `TooltipProvider` once at the root. |
+| `Avatar` for advogado/administrativo pickers and any user-representing UI (Advogados/Administrativos cards in Clientes ficha, Testemunhas, notification "atribuído" flows) | Small but real visual upgrade over plain text names in lists | LOW | No functional change, cosmetic identity for "this row represents a person." |
+| Restructure Hero/Contact sections in `webpage/` around `Card`/`Badge`/`Avatar`(for a testimonial-style trust element) composition, matching `TrustSection`'s already-good pattern | Visual consistency across all 4 landing sections (today Hero/Contact are plain `<section>`+`<div>` while Trust already uses `Card`) | LOW-MEDIUM | No official "Hero block" exists to copy (see cross-cutting finding) — this is genuinely original composition work using only atomic primitives, not a block-adoption task. |
+| `NavigationMenu` for `webpage/`'s desktop nav (currently plain `<a>` anchor tags) | `NavigationMenu` is explicitly documented as being for marketing/website navigation (not app sidebars — see Anti-Features) — a legitimate, on-label use here, unlike in `web/`'s app shell | LOW-MEDIUM | Only worth it if a dropdown/mega-menu structure emerges; for 3 flat anchor links (`#funcionalidades`, `#confianca`, `#contacto`) plain styled links may remain simpler — judgment call, not obviously required. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+---
 
-Patterns that appear in nearly every generic "SaaS landing page best practices" search result but are actively wrong for this milestone's constraints — flagged explicitly because the quality gate requires it.
+### Anti-Features (Don't Do This)
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|------------------|-------------|
-| Customer logo wall / "trusted by N institutions" | Standard SaaS trust-signal advice (appears in every source found) | **Structurally impossible to source honestly.** This deployment is single-tenant — it has no knowledge of other LexCV deployments, and no central registry/table of "which institutions use LexCV" exists anywhere in the stack. Any such claim would be fabricated | Use the architecture-based trust messaging (data isolation, RBAC, audit) documented above — verifiable claims about *this product*, not unverifiable claims about *other customers* |
-| Customer testimonials carousel | Same standard SaaS advice; explicitly flagged as a trap in this research's quality gate | No testimonials table/data exists anywhere in the schema (checked `Tenant.java` and full ERD context) — would require new data capture (consent, sourcing, a testimonials model) entirely out of this milestone's scope | Institutional-confidence copy grounded in real shipped capability (multi-tenant isolation, RBAC, audit trail) instead of quotes |
-| Persisted "solicitar demonstração" lead-capture backend (name/email/message stored + admin-visible list) | Feels like the "proper" way to implement a confirmed "Contacto/Pedir demonstração" section | New backend scope: no `LeadRequest`/`DemoRequest` entity, controller, or admin UI exists today. Building one (with its own RBAC, persistence, spam protection) is a meaningfully sized feature, not a landing-page detail | A static `mailto:` link or an embed of an external form service (e.g. Formspree-style) satisfies the confirmed content section with zero new backend surface. Only build persistence if the business explicitly wants a CRM-like pipeline later |
-| Public pricing page / pricing calculator | Reflexive B2B SaaS pattern (most-cited "best practice" in this research) | Milestone explicitly has no self-serve signup and no public pricing model — provisioning is manual, per-institution, off-platform (sales/procurement conversation). A pricing page would misrepresent the actual buying motion | "Contacto/Pedir demonstração" IS the correct CTA for a sales-led, manually-provisioned institutional product — no pricing page needed |
-| Self-serve signup/trial CTA ("Começar grátis", "Criar conta") | Default CTA pattern for consumer-ish SaaS | **Explicitly out of scope per milestone** ("onboarding self-service multi-institituição... fora de âmbito") — the `/setup` wizard is a singleton, run once by whoever provisions the deployment, not a public registration flow | "Entrar" (existing tenant staff login) is the only authenticated CTA; "Pedir demonstração" is the only prospect-facing CTA |
-| Blog / CMS-backed content section | Common SaaS growth-marketing addition | No CMS in the stack (`web/` has none either); adds a real content-ops dependency (writing, publishing cadence) disproportionate to "a landing page for one institution's own deployment" | Static, versioned marketing copy in the `webpage/` app itself, updated via normal deploys |
-| Live chat widget | Common SaaS conversion tactic | Third-party script dependency (privacy/cookie implications, extra vendor), no equivalent pattern exists anywhere else in this codebase | The static contact/demo section already covers the "how do I reach someone" need |
-| Multi-language toggle (PT/EN) | Common for "reach a wider market" instinct | The entire product's domain language is Portuguese by explicit project convention (`CLAUDE.md`); the target audience is Cape Verdean law firms/institutions. Adding i18n here would be inconsistent with the rest of the app and out of scope | Portuguese-only, matching the rest of LexCV |
-| Interactive product tour / live sandbox demo embedded in the landing page | Appears in "high-converting SaaS page" research as a differentiator | Heavyweight engineering (would need a demo tenant environment, safe sandbox data, isolation from the real backend) — disproportionate for a landing page whose real job is "confirm this is our platform + point staff to login" | Curated screenshots (see Differentiators) achieve most of the same "show, don't tell" value at a fraction of the cost |
-| "Compare us vs. competitors" page | Standard competitive-positioning SaaS pattern | No named public competitor exists in the Cape Verde legal-tech market to research or reference (search returned no evidence of local competing products), and comparison framing is inconsistent with an institutional-trust, non-adversarial tone | Focus copy entirely on capability + local/ecosystem fit instead of relative positioning |
-| Cookie-consent banner / analytics tracking scripts | Often bundled by default with any new marketing page | No analytics/tracking infrastructure exists anywhere else in the app today (privacy-conscious posture is implicit throughout `CLAUDE.md`'s security constraints); adding third-party analytics introduces a compliance surface (consent banner, cookie policy) not requested by the milestone | Ship without analytics for v1; if conversion tracking is wanted later, treat it as its own scoped decision (privacy-respecting, e.g. server-side/first-party only) |
+| Feature | Why It Seems Appealing | Why Problematic | Alternative |
+|---------|------------------------|------------------|-------------|
+| Adopting shadcn's official `Sidebar` block/component (`SidebarProvider`, `Sidebar`, `SidebarContent`, `SidebarMenu`, collapsible-icon mode) to replace `dashboard-shell.tsx`/`bottom-nav.tsx` | It's the "official" way to build an app shell in shadcn, and the milestone is about adopting official components | Confirmed via direct comparison: adopting it would require **replacing the current sidebar markup structure wholesale** and would conflict with the already-validated Figma-aligned sidebar/topbar design. PROJECT.md is explicit that this milestone is **not a redesign** ("Preservar identidade visual... redesenho estrutural do layout institucional" is out of scope). This is a textbook large-disruption-for-no-clear-benefit swap. | Keep `dashboard-shell.tsx`/`bottom-nav.tsx` exactly as they are; only spot-upgrade their *internals* with proper primitives where genuinely missing (e.g. `Tooltip` on collapsed icon buttons, `Sheet` already used correctly for mobile drawer). |
+| Installing a third-party "shadcn Stepper" package/registry (ReUI, Shadcn Studio, allshadcn.com, shadcnblocks.com, etc.) for the Setup wizard | Multiple polished-looking multi-step-form component libraries exist and are heavily marketed as "shadcn stepper" | **Confirmed: shadcn/ui has no official Stepper/Steps/Wizard component** (verified against the full official components index — not present). Every "shadcn stepper" result is a third-party registry/community package, which directly violates PROJECT.md's explicit scope boundary ("apenas a CLI oficial `shadcn@latest`; fora de âmbito instalação de skills/pacotes externos não verificados"). | Hand-build the wizard's step indicator from official primitives already in scope: `Progress` for a simple linear bar, or a small custom "step pills" row (same visual idiom as the already-existing Clientes/Processos tab-toggle buttons) — no new dependency, no unverified package. |
+| Replacing the already-correct `Popover`-based notification bell with `DropdownMenu` "for consistency with other menus" | `DropdownMenu` sounds like the more "correct" semantic component name for a bell menu | Would be a regression: `DropdownMenuItem` assumes single-action menu-item semantics and manages roving focus/typeahead on that assumption; the notification list has multiple independent interactive controls per row (mark-as-read, snooze, navigate) — a known accessibility anti-pattern for menu primitives | Leave the `Popover`-based implementation as-is; it's already the right primitive choice. |
+| Adopting a general-purpose third-party "shadcn blocks" marketplace (shadcnblocks.com, shadcndesign.com, shadcnuikit.com) for the `webpage/` Hero/Features/Testimonials/Pricing sections | These sites have hundreds of polished, ready-made marketing sections that would visually "look like shadcn" | Confirmed these are **not part of `ui.shadcn.com`** — they're commercial/community registries outside the official CLI, explicitly excluded by PROJECT.md's scope boundary; they'd also introduce inconsistent code style/dependencies not vetted for this codebase | Compose landing sections from official atomic primitives only (`Button`, `Card`, `Badge`, `Avatar`, `Separator`, `NavigationMenu`) — more original work, but stays inside the explicit CLI-only constraint. |
+| Adding row-selection checkboxes + bulk-action toolbar to every DataTable "because the recipe includes it" | The official DataTable recipe demonstrates row selection as a core feature, so it's tempting to include it everywhere for "completeness" | LexCV currently has **no bulk actions anywhere** (no bulk-delete clientes, no bulk-status-change processos, etc.) — shipping selection checkboxes with nothing to do with the selection is dead UI and scope creep beyond a visual refactor | Only add row-selection where a genuine bulk action exists today or is explicitly requested; otherwise ship DataTable without the selection column. |
+| Migrating `webpage/`'s `SiteHeader` desktop nav or `web/`'s app sidebar links to `NavigationMenu` uniformly "since it's the official nav component" | Consistency instinct: use the same nav primitive everywhere | `NavigationMenu` is explicitly documented as designed for **website navigation with dropdown mega-menus**, not app sidebar/topbar navigation — using it inside `web/`'s dashboard shell would be a semantic misuse of the component, and the app shell is explicitly out of scope for restructuring anyway | Use `NavigationMenu` only inside `webpage/` (if/when a dropdown structure is actually needed); leave `web/`'s sidebar/topbar untouched. |
+| Migrating the deprecated `Toast`/`@radix-ui/react-toast` to Sonner as a "quick foundation win" without checking `Toaster` placement across both apps | The call-site API match (`toast.success`, `toast.error`) makes it look trivially safe | Still requires removing `@radix-ui/react-toast` and its current `toast.tsx`/`toaster.tsx`, and re-mounting a new `<Toaster />` (from `sonner`) at the correct root layout(s) for **both** `web/` and (if used there) `webpage/` — a small foundation-scope task, not a zero-risk one; sequence it deliberately in the foundation phase, not as an incidental drive-by change inside an unrelated module phase | Treat as its own small, explicit foundation-phase item; verify `Toaster` mounts correctly in both apps' root layouts before touching call sites. |
+
+---
 
 ## Feature Dependencies
 
 ```
-Personalized Hero (nome + logo)
-    └──requires──> Public Tenant Branding Endpoint (GET /api/v1/public/...)
-                       └──requires──> Tenant already provisioned via /setup (existing, singleton)
-                       └──requires──> SecurityConfig permitAll() entry (new, mirrors existing /setup/status pattern)
+[shadcn CLI init: `-b radix`]
+    └──gates──> [All new primitives added via CLI keep `asChild` composition parity]
+                    └──requires for──> [DataTable pattern] (Table + @tanstack/react-table + Checkbox + DropdownMenu + Input)
+                    └──requires for──> [Tabs migration] (Tabs primitive)
+                    └──requires for──> [Combobox] (Command + Popover, OR Base UI `base/combobox` — pick one, don't mix)
+                    └──requires for──> [Mobile nav in webpage/] (reuses existing Sheet — no new primitive needed)
 
-Setup-Status Redirect Gate
-    └──requires──> GET /api/v1/setup/status (existing, already public — zero new backend work)
+[Sonner adoption] ──replaces──> [Toast / @radix-ui/react-toast / toast.tsx / toaster.tsx]
+    └──requires──> [Toaster re-mounted at root layout(s) of web/ (and webpage/ if used there)]
 
-Dynamic OG/share image (tenant-branded)
-    └──requires──> Public Tenant Branding Endpoint (same one as Hero — no separate endpoint needed)
+[Chart component] ──requires──> [recharts dependency] ──requires──> [Backend: time-series KPI endpoint]
+    (currently absent; likely out of scope for a visual-only milestone — see Differentiators)
 
-Contact / Pedir Demonstração section
-    └──requires──> Static contact config in webpage/ app (NEW, app-level constant/env — NOT sourced from Tenant.email/telefone)
-    └──conflicts with──> Sourcing contact info from Tenant table (forbidden: milestone explicitly excludes email/telefone from the public response; also unreliable since /setup never populates them)
+[Tabs migration: Clientes ficha] ──must ship together with──> [Tabs migration: Processos ficha]
+    (both use the identical hand-rolled toggle-button pattern by deliberate design; migrating only one breaks the intentional visual consistency between them)
 
-Dark/Light mode toggle
-    └──requires──> Port of web/src/components/theme-toggle.tsx + providers.tsx pattern (existing, low-risk reuse)
+[DataTable pattern] ──enhances──> [Clientes list, Processos list, Pareceres list, Financeiro list, Documentos list]
+    (build once as a shared pattern/recipe, then apply per screen — not 5 independent builds)
 
-"Prova social / confiança institucional" section
-    └──requires──> Architecture facts already shipped (tenant_id isolation, RBAC, audit) — NO new data
-    └──conflicts with──> Customer logos / testimonials (structurally unavailable — see Anti-Features)
-
-Persisted "solicitar demonstração" lead capture (deferred/future)
-    └──requires──> NEW backend entity + controller + admin visibility (not part of this milestone's confirmed scope)
+[NativeSelect swap] ──independent of──> [DataTable, Tabs, Chart]
+    (can ship in parallel/early — lowest risk, no shared foundation dependency beyond CLI init itself)
 ```
 
 ### Dependency Notes
 
-- **Personalized Hero requires the Public Tenant Branding Endpoint:** this is the one genuinely new piece of backend work in the whole feature set. It must be scoped tightly (nome + logoDataUrl only) — the entity already carries fields (`nif`, `email`, `telefone`, `tipoEntidade`) that a careless DTO reuse would leak.
-- **Contact section conflicts with sourcing from Tenant data:** this is the most important negative dependency in this research. The natural-looking shortcut ("just expose tenant email/telefone too") is explicitly forbidden by the milestone and also unreliable, since the current `/setup` flow (`SetupInitializeRequest`) never captures those fields in the first place.
-- **Prova social conflicts with customer logos/testimonials:** flagged per the quality gate — this is exactly the "don't recommend a testimonials carousel sourced from a table that doesn't exist" trap, made explicit and structural (not just "not built yet" but "cannot exist under the current single-tenant-per-deployment model without new cross-deployment infrastructure").
-- **Dynamic OG image enhances Personalized Hero:** reuses the same endpoint, so it's a natural v1.x add-on rather than a new dependency chain.
+- **Everything in this document depends on the foundation phase's CLI init decision (`-b radix` vs default Base UI).** This is the single highest-leverage decision the Stack/Architecture researcher's foundation work makes — every component-level recommendation above assumes `-b radix` is chosen to preserve `asChild` parity with existing code. If the foundation phase chooses the new Base UI default instead, every "Complexity" rating above involving a *new* primitive (Tabs, DropdownMenu, Command, Checkbox, Select-family, Calendar, Breadcrumb, Accordion, NavigationMenu) should be reassessed upward, since it would introduce a second composition idiom into a codebase that currently has only one.
+- **DataTable is the largest single lift and should be built once, generically, before being applied to 5 screens.** Treat "stand up the DataTable pattern" as its own roadmap phase/step, with the 5 screen-specific adoptions as smaller follow-on steps that reuse it.
+- **Tabs migration only makes sense after Tabs exists in the foundation**, and must cover Clientes + Processos fichas together (see above) — don't split into two separate roadmap phases that could ship inconsistently.
+- **Chart conflicts with "visual-only" milestone framing** if it requires new backend history data — flag this dependency explicitly to whoever scopes the roadmap so it isn't silently promised as an easy KPI upgrade.
 
-## MVP Definition
+---
 
-### Launch With (v1)
+## MVP Definition (for this milestone)
 
-Minimum viable landing page — validates "this deployment has a real public front door personalized to its institution."
+### Launch With (Foundation — must exist before any module work)
 
-- [ ] Setup-status gate/redirect (port of existing `web/` `proxy.ts` logic) — without this, an uninitialized deployment would show a broken/generic page
-- [ ] Public Tenant Branding Endpoint (`nome` + `logoDataUrl` only) — the one required new backend surface
-- [ ] Personalized Hero + value proposition headline — the actual milestone goal
-- [ ] Funcionalidades/Módulos overview (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) — confirmed content section, zero data dependency
-- [ ] Prova social/confiança institucional section using architecture-based trust copy (isolamento de dados, RBAC, ecossistema NOSi/Cabo Verde) — confirmed content section, no fabricated proof
-- [ ] Contacto/Pedir demonstração with a static contact channel (mailto or external form embed) — confirmed content section, explicitly NOT sourced from Tenant.email/telefone
-- [ ] Primary CTA "Entrar" → `/login`, placed top and bottom
-- [ ] Responsive layout + dark/light mode (ported from `web/`)
-- [ ] Basic SEO meta (title/description/favicon)
+- [ ] `shadcn init` run for real in both `web/` and `webpage/` (`components.json` created), with the `-b radix` flag — preserves 100% composition-pattern parity with existing Radix-based primitives and the pervasive `asChild` usage already in the codebase
+- [ ] Missing primitives added via CLI: `Select`, `NativeSelect`, `Tabs`, `DropdownMenu`, `Command`, `Tooltip`, `Checkbox`, `Avatar`, `Separator`, `Skeleton`, `Progress`, `Calendar`, `Breadcrumb`, `Accordion`, `NavigationMenu`, `Empty` — matches PROJECT.md's own list plus `Empty` (a genuinely good fit found this session, not on the original list)
+- [ ] `@tanstack/react-table` added as a dependency; one shared DataTable recipe (`columns.tsx` pattern + `data-table.tsx` + toolbar/pagination helpers) built once
+- [ ] Sonner swap-in for the deprecated Toast (own small foundation item, sequenced deliberately — see Anti-Features)
 
-### Add After Validation (v1.x)
+### Add After Foundation (per-module rollout, within this milestone)
 
-- [ ] Dynamic OG/share image with tenant branding — add once the base personalization endpoint is proven stable
-- [ ] Curated real-UI screenshots (from seeded/demo data) replacing placeholder illustrations in the hero/features sections
-- [ ] Lightweight, privacy-respecting analytics (if the institution wants to measure "Pedir demonstração" conversion) — only if explicitly requested, given no analytics infra exists today
+- [ ] Clientes/Processos/Pareceres/Financeiro/Documentos lists migrated onto the shared DataTable pattern (sort + filter toolbar + official `Pagination`)
+- [ ] Clientes ficha + Processos ficha both migrated from toggle-`Button` tabs to real `Tabs` (single combined roadmap item, not two)
+- [ ] `NativeSelect`/`Select` swap for all raw `<select className={selectClassName}>` instances across Clientes/Processos/Setup forms
+- [ ] `Skeleton` loading states + `Empty` zero-result states standardized across all list/tab screens
+- [ ] `webpage/` mobile nav (reusing existing `Sheet`) + Hero/Contact restructured around `Card`/`Badge` composition to match `TrustSection`
 
-### Future Consideration (v2+)
+### Future Consideration (explicitly defer)
 
-- [ ] Persisted "solicitar demonstração" lead-capture backend + admin visibility — only if the product's distribution model shifts from "manual procurement" to something needing a tracked pipeline
-- [ ] Multi-institution case studies/comparison content — only viable if LexCV is ever deployed to multiple named, consenting Cape Verde institutions and a means to reference them (with permission) is established; currently structurally impossible given single-tenant-per-deployment isolation
-- [ ] i18n — only if the product ever targets non-Portuguese-speaking markets, which would be a major strategic shift inconsistent with the entire existing domain-language convention
+- [ ] Recharts-backed `Chart` for Dashboard trend visualization — blocked on backend time-series KPI data, not just a frontend component swap
+- [ ] Real trend-delta computation for KPI badges (`+12%` etc. are currently hardcoded) — business-logic/backend work, not visual refactor
+- [ ] `NavigationMenu` mega-menu structure for `webpage/` — only worth it if nav grows beyond 3 flat anchor links
+- [ ] Bulk row-selection/actions on any DataTable — no bulk actions exist in the product today; don't invent UI for a capability that doesn't exist
+
+---
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Setup-status redirect gate | HIGH | LOW | P1 |
-| Public Tenant Branding Endpoint | HIGH | MEDIUM | P1 |
-| Personalized Hero | HIGH | LOW (once endpoint exists) | P1 |
-| Módulos/Funcionalidades overview | HIGH | LOW | P1 |
-| Prova social (architecture-based trust copy) | MEDIUM-HIGH | LOW | P1 |
-| Contacto/Pedir demonstração (static) | MEDIUM | LOW-MEDIUM | P1 |
-| CTA "Entrar" | HIGH | LOW | P1 |
-| Dark/light mode | MEDIUM | LOW | P1 |
-| Responsive layout | HIGH | LOW-MEDIUM | P1 |
-| Basic SEO meta | MEDIUM | LOW | P1 |
-| Curated UI screenshots | MEDIUM | MEDIUM | P2 |
-| Dynamic OG image | LOW-MEDIUM | MEDIUM-HIGH | P2 |
-| Analytics (privacy-respecting) | LOW | MEDIUM | P3 |
-| Persisted demo-request capture | LOW (at current scale — single institution) | HIGH | P3 |
-| Customer logos / testimonials | N/A | N/A | Rejected (structurally unavailable, see Anti-Features) |
-| Pricing page / self-serve signup | N/A | N/A | Rejected (explicitly out of scope) |
+|---------|------------|----------------------|----------|
+| CLI init with `-b radix` + missing primitives | HIGH (unblocks everything else) | LOW | P1 |
+| Shared DataTable pattern (build once) | HIGH | MEDIUM | P1 |
+| DataTable adoption × 5 screens | HIGH | MEDIUM (per screen, after pattern exists) | P1 |
+| Tabs migration (Clientes + Processos fichas, combined) | HIGH (real a11y fix) | MEDIUM | P1 |
+| `NativeSelect`/`Select` swap on raw `<select>` | MEDIUM | LOW | P1 |
+| Official `Pagination` on `/notificacoes` and any other server-paginated list | MEDIUM | LOW | P1 |
+| `Skeleton` + `Empty` standardization | MEDIUM (polish) | LOW | P2 |
+| Sonner swap for deprecated Toast | LOW-MEDIUM (mostly invisible to users, real for maintainability) | LOW-MEDIUM | P2 |
+| `Breadcrumb`, `Tooltip`, `Avatar` cosmetic swaps | LOW-MEDIUM | LOW | P2 |
+| `webpage/` mobile nav via `Sheet` | HIGH (real functional gap on mobile today) | LOW-MEDIUM | P1 |
+| `webpage/` Hero/Contact restructuring | MEDIUM (visual consistency) | LOW-MEDIUM | P2 |
+| Recharts `Chart` for Dashboard | MEDIUM-HIGH (visual wow factor) | HIGH (new dependency + backend data) | P3 / deferred |
+| `Combobox` for tipo-de-documento field | LOW (already functional today) | MEDIUM | P3 |
 
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+**Priority key:** P1: do in this milestone. P2: do in this milestone if time allows, otherwise fine to slip. P3: explicitly defer to a future milestone.
 
-## Competitor Feature Analysis
+---
 
-Note: "competitors" here are the closest available reference points — global legal practice-management SaaS marketing sites — since no Cape Verde-specific competitor was found in research. LexCV's actual positioning (single-tenant institutional deployment, sales-led) differs structurally from all of them.
+## Reference: Official shadcn Blocks vs LexCV's Current Implementation
 
-| Feature | Clio / MyCase / PracticePanther (multi-tenant SaaS) | LexCV `webpage/` (single-tenant institutional) | Our Approach |
-|---------|--------------------------------------------------------|--------------------------------------------------|--------------|
-| Hero personalization | Generic, same for every visitor (the vendor's own brand) | Personalized per-deployment with the institution's own name/logo | Lean into this as the differentiator — "this is YOUR platform," not a generic vendor pitch |
-| Pricing | Public pricing tiers/calculator, self-serve trial CTA | None — no self-serve model exists | Replace with "Pedir demonstração" as the sole conversion path |
-| Social proof | Named customer logos, review-site badges (G2/Capterra), testimonials | Cannot use named external customers (single-tenant, no cross-deployment registry) | Substitute architecture/security trust messaging (data isolation, RBAC, audit) — honest and verifiable |
-| Feature showcase | Broad feature comparison tables against competitors | Module overview reflecting only this product's actually-shipped capability | Straightforward "o que a plataforma faz" without competitive framing (no local competitor to reference) |
-| Language/localization | English-first, sometimes localized | Portuguese-only, Cape Verde legal domain vocabulary throughout | Full alignment with existing product convention — no i18n |
-| CTA structure | Multiple CTAs (trial, demo, pricing, contact sales) | Single primary CTA ("Entrar") + single secondary CTA ("Pedir demonstração") | Matches the single/dual-CTA pattern research shows converts best, and matches the actual (narrow) set of real user intents for this deployment |
+| Pattern | Official shadcn reference | LexCV today | Gap |
+|---------|---------------------------|--------------|-----|
+| Dashboard KPI + chart + table layout | `dashboard-01` block: `SectionCards` (stat cards) + `ChartAreaInteractive` + `DataTable` | Stat cards already match `SectionCards` shape closely; no chart; table uses plain `Table`, no sort/filter | Chart is the only structurally missing piece (and it's the deferred one); table needs the DataTable upgrade |
+| App shell (sidebar + topbar) | `sidebar-01`..`sidebar-16` blocks, `SidebarProvider`/`Sidebar`/`SidebarContent` | Custom `dashboard-shell.tsx` + `bottom-nav.tsx`, validated against Figma | Deliberately **not** adopting the official block (see Anti-Features) — this is correct, not a gap |
+| Login/auth pages | `login-01`..`login-05` blocks (muted background, form+image split, etc.) | Not read this session (out of this question's scope) — flagged as a gap in coverage, not a finding | Low priority for this research pass; likely low-risk if revisited, since login is typically a single simple form |
+| Marketing landing page (hero/features/testimonials/pricing) | **None exist officially** | Hand-built Hero/Features/Trust/Contact in `webpage/` | Not a gap against shadcn (nothing to copy) — the work here is original composition from primitives, not block-adoption |
+
+---
 
 ## Sources
 
-- [Best Practices for Designing B2B SaaS Landing Pages – 2026 (Genesys Growth)](https://genesysgrowth.com/blog/designing-b2b-saas-landing-pages) — MEDIUM confidence
-- [18 B2B SaaS Landing Page Best Practices That Convert (SaaS Hero)](https://www.saashero.net/design/saas-landing-page-best-practices/) — MEDIUM confidence
-- [Data-Driven B2B SaaS Landing Page CTA Best Practices (SaaS Hero)](https://www.saashero.net/design/b2b-saas-landing-cta-practices/) — MEDIUM confidence (single-CTA conversion stat)
-- [26 SaaS landing pages: examples, trends and best practices (Unbounce)](https://unbounce.com/conversion-rate-optimization/the-state-of-saas-landing-pages/) — MEDIUM confidence
-- [How to Create a Lawyer Landing Page That Actually Converts (Clio)](https://www.clio.com/blog/lawyer-landing-page/) — MEDIUM confidence (consumer-facing law-firm context, directionally useful for mobile-traffic stat)
-- [21 Best Law Firm Landing Page Examples & Inspirations (Landingi)](https://landingi.com/landing-page/law-firm-examples/) — LOW-MEDIUM confidence
-- [Best Legal Practice Management Software 2026 (PracticePanther)](https://www.practicepanther.com/blog/best-legal-practice-management-software/) — MEDIUM confidence (module/feature framing reference)
-- [Customize Universal Login Page Templates (Auth0 Docs)](https://auth0.com/docs/customize/login-pages/universal-login/customize-templates) — HIGH confidence, official docs
-- [Brands | Okta Developer](https://developer.okta.com/docs/concepts/brands/) — HIGH confidence, official docs
-- [Landing Page Trust Signals: 10 Proven B2B SaaS Tactics (SaaS Hero)](https://www.saashero.net/design/landing-page-design-trust-signals/) — MEDIUM confidence
-- [The role of security badges on SaaS landing page effectiveness (Markettailor)](https://www.markettailor.io/blog/role-of-security-badges-on-saas-landing-page) — MEDIUM confidence (substitute-for-testimonials framing for new products)
-- [NOSi | Núcleo Operacional Para a Sociedade de Informação EPE](https://www.nosi.cv/en/) — HIGH confidence, official Cape Verde government-agency source
-- [Núcleo Operacional da Sociedade de Informação — Governo de Cabo Verde](https://www.governo.cv/nucleo-operacional-da-sociedade-de-informacao-tem-novo-conselho-de-administracao/) — HIGH confidence, official source
-- Direct codebase inspection: `backend/src/main/java/com/lexcv/models/Tenant.java`, `backend/src/main/java/com/lexcv/dtos/SetupInitializeRequest.java`, `backend/src/main/java/com/lexcv/config/SecurityConfig.java`, `web/src/app/setup/page.tsx`, `web/src/components/theme-toggle.tsx`, `web/src/app/providers.tsx`, `.planning/PROJECT.md` (v2.12 milestone section) — HIGH confidence, ground truth
+**Official shadcn/ui documentation (fetched live this session, July 2026 — HIGH confidence):**
+- [Data Table](https://ui.shadcn.com/docs/components/data-table) — recipe pattern, not an installable component; requires `@tanstack/react-table`
+- [Tabs](https://ui.shadcn.com/docs/components/tabs) — API, Radix-based accessibility
+- [Chart](https://ui.shadcn.com/docs/components/chart) — Recharts wrapper, `ChartContainer`/`ChartConfig`
+- [Dropdown Menu](https://ui.shadcn.com/docs/components/dropdown-menu)
+- [Forms (React Hook Form)](https://ui.shadcn.com/docs/forms/react-hook-form) — current `Field`-based composition, non-breaking over raw RHF+Zod
+- [Pagination](https://ui.shadcn.com/docs/components/pagination)
+- [Combobox](https://ui.shadcn.com/docs/components/combobox) and [Base UI Combobox](https://ui.shadcn.com/docs/components/base/combobox)
+- [Command](https://ui.shadcn.com/docs/components/command)
+- [Select](https://ui.shadcn.com/docs/components/select)
+- [Native Select](https://ui.shadcn.com/docs/components/native-select)
+- [Calendar](https://ui.shadcn.com/docs/components/calendar)
+- [Toast (deprecated)](https://ui.shadcn.com/docs/components/toast) → [Sonner](https://ui.shadcn.com/docs/components/sonner)
+- [Skeleton](https://ui.shadcn.com/docs/components/skeleton)
+- [Empty](https://ui.shadcn.com/docs/components/empty)
+- [Scroll Area](https://ui.shadcn.com/docs/components/scroll-area)
+- [Breadcrumb](https://ui.shadcn.com/docs/components/breadcrumb)
+- [Accordion](https://ui.shadcn.com/docs/components/accordion)
+- [Tooltip](https://ui.shadcn.com/docs/components/tooltip)
+- [Navigation Menu](https://ui.shadcn.com/docs/components/navigation-menu)
+- [Sidebar](https://ui.shadcn.com/docs/components/sidebar)
+- [Blocks index](https://ui.shadcn.com/blocks) — confirmed app/dashboard-only categories
+- [Dashboard block](https://ui.shadcn.com/blocks/dashboard)
+- [Components index](https://ui.shadcn.com/docs/components) — full official component inventory, confirms no Stepper/Steps/Wizard
+- [July 2026 changelog: Base UI as default](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default) — CLI default change, `-b radix` flag, `asChild`→`render`, `skills add shadcn/ui` migration tool
+
+**Community/third-party (used only to confirm absence of an official equivalent — LOW confidence as sources, not used as recommendations):**
+- [shadcn-ui/ui Discussion #3263: Multi-step form block request](https://github.com/shadcn-ui/ui/discussions/3263) and [#6353](https://github.com/shadcn-ui/ui/discussions/6353) — confirms Stepper is a repeatedly-requested but never-shipped official block
+- shadcnblocks.com, shadcndesign.com, shadcnuikit.com, shadcnstudio.com — third-party marketing block/stepper registries, cited only to demonstrate they are *not* part of the official CLI (out of scope per PROJECT.md)
+- [radix-ui/primitives #855, #1155, #2359](https://github.com/radix-ui/primitives) and [mui/base-ui #4822](https://github.com/mui/base-ui/issues/4822) — used to verify default mount/unmount behavior of Tabs content in both Radix and Base UI (both unmount inactive panels by default, matching LexCV's current ternary-based tab content pattern)
+
+**LexCV source files read directly this session (grounding, not shadcn docs):**
+- `.planning/PROJECT.md` — milestone scope, explicit out-of-scope decisions, prior Key Decisions log
+- `web/src/app/(dashboard)/clientes/[id]/page.tsx` — manual tab pattern, raw `<select>`/`<textarea>` styling, Dialog-based CRUD pattern, `toast.success`/`toast.error` call-site shape
+- `web/src/app/(dashboard)/dashboard/page.tsx` — KPI stat card structure, hardcoded trend badges
+- `web/src/components/shared/notification-bell.tsx` — confirmed already `Popover`-based, manual badge/scroll
+- `webpage/src/components/hero-section.tsx`, `trust-section.tsx`, `contact-section.tsx`, `site-header.tsx` — confirmed no mobile nav, confirmed `TrustSection` already uses `Card` well
+- `web/package.json` — confirmed current Radix packages (`@radix-ui/react-dialog`, `-alert-dialog`, `-popover`, `-radio-group`, `-slot`, `-switch`, `-toast`), confirmed absence of `@tanstack/react-table`, `recharts`, `cmdk`, `react-day-picker`, `sonner`
+- `web/src/components/ui/` directory listing — confirmed exactly which primitives already exist (alert-dialog, badge, button, card, dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast, toaster)
+- `webpage/src/components/ui/` directory listing — confirmed only `button.tsx`/`card.tsx` exist there today
 
 ---
-*Feature research for: institutional B2B legal-tech landing page, single-tenant deployment personalization*
+*Feature research for: shadcn/ui UI/UX refactor milestone (LexCV v2.13)*
 *Researched: 2026-07-15*

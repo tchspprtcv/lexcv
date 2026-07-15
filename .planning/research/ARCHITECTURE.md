@@ -1,521 +1,274 @@
 # Architecture Research
 
-**Domain:** Standalone marketing/landing Next.js app added to an existing multi-container monorepo (Caddy + Spring Boot + Next.js), single fixed domain, path-based routing
+**Domain:** shadcn/ui CLI integration into an existing two-app Next.js 16 (App Router, Tailwind v4) monorepo-style repo
 **Researched:** 2026-07-15
-**Confidence:** HIGH (grounded in actual repo files + official Next.js "Multi-Zones" docs matching the exact installed Next version + official Caddy docs + this repo's own recent commit history for Compose-specific gotchas)
+**Confidence:** HIGH for CLI mechanics (verified against current shadcn/ui CLI source via Context7, 2026-07-15 snapshot) / HIGH for repo facts (read directly from working tree) / MEDIUM for exact CLI flag defaults at execution time (upstream CLI evolves; re-verify with `npx shadcn@latest init --help` when the Foundation phase actually runs)
+
+## Correction to Milestone Framing (load-bearing for Q2)
+
+The milestone context states `web/` and `webpage/` are "both pnpm workspace members." **This is not what the repository currently contains.** Verified directly:
+
+- No root `package.json` and no root `pnpm-workspace.yaml` exist anywhere in the repo root.
+- `web/pnpm-lock.yaml` (192KB) and `webpage/pnpm-lock.yaml` (140KB) are two **independent** lockfiles — not a single workspace lockfile.
+- `webpage/pnpm-workspace.yaml` exists, but it is a **single-package** workspace file used only to scope a pnpm 11 supply-chain guard (`minimumReleaseAgeExclude: [electron-to-chromium]`, per the Phase 100 decision log) — it is not evidence of a multi-package monorepo.
+- `.github/workflows/deploy.yml` builds three fully separate Docker contexts: `context: ./backend`, `context: ./web`, `context: ./webpage`. Each app's `Dockerfile` does `COPY package.json pnpm-lock.yaml ./` (and, for webpage, its own single-package `pnpm-workspace.yaml`) and installs independently. Neither Dockerfile's build context can see files outside its own app directory.
+
+**Conclusion:** `web/` and `webpage/` are two fully standalone Next.js apps that happen to live in the same git repo, not pnpm workspace members today. This directly changes the cost/benefit of a shared `packages/ui` package (see Integration Points below) — it is not a config tweak, it is a new structural investment.
 
 ## Standard Architecture
 
-### System Overview
-
-Today (verified from `Caddyfile.prod`, `docker-compose.hostinger.yml`, `docker-compose.yml`):
+### System Overview (target end-state for this milestone)
 
 ```
-                         Caddy (:80/:443, single fixed domain)
-                    ┌─────────────┴─────────────┐
-              handle /api/*                  handle {} (catch-all)
-                    │                              │
-                    ▼                              ▼
-            backend:8080                    frontend:3000  (web/, Next 16)
-        (Spring Boot, JWT-gated              /login, /dashboard, /setup,
-         except permitAll list)              /, /_next/*, everything else
+┌───────────────────────────────────────────────────────────────────────────┐
+│  repo root (no shared workspace today — each app self-contained)          │
+├───────────────────────────────┬───────────────────────────────────────────┤
+│  web/ (dashboard app)          │  webpage/ (public landing app)             │
+│  ├─ components.json  (NEW)    │  ├─ components.json  (NEW)                 │
+│  ├─ src/app/globals.css       │  ├─ src/app/globals.css                    │
+│  │   (Tailwind v4 @theme,     │  │   (Tailwind v4 @theme, byte-identical   │
+│  │    tokens EXTENDED here)   │  │    today — extend in lockstep)          │
+│  ├─ src/lib/utils.ts (cn())   │  ├─ src/lib/utils.ts (cn()) — already      │
+│  │   already canonical        │  │   canonical, untouched                  │
+│  ├─ src/components/ui/*.tsx   │  ├─ src/components/ui/*.tsx                │
+│  │   14 existing + ~15 new    │  │   2 existing (button, card) — CLI-      │
+│  │   CLI-scaffolded           │  │   regenerate or leave, no new needs     │
+│  └─ src/components/shared/*   │  └─ src/components/* (marketing sections)  │
+├───────────────────────────────┴───────────────────────────────────────────┤
+│  CI/CD: .github/workflows/deploy.yml — 3 independent build-push-action    │
+│  blocks (context: ./web, ./webpage). UNCHANGED by this milestone if the   │
+│  "two components.json, no shared package" path is taken (recommended).    │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
-
-Target (this milestone) — insert ONE new mutually-exclusive `handle` branch, matched ONLY on the exact root path `/` plus a dedicated asset-prefix path, everything else falls through unchanged to the existing catch-all:
-
-```
-                         Caddy (:80/:443, single fixed domain)
-                    ┌─────────────┬───────────────────────────┬─────────────┐
-              handle /api/*   handle @webpage              handle {}   (unchanged)
-                    │          (path / OR /landing-static/*)     │
-                    ▼                    ▼                       ▼
-            backend:8080          webpage:3000              frontend:3000
-        (+ new permitAll      (NEW app, Next 16,          (web/, unchanged:
-         endpoint for           serves ONLY "/",           /login, /dashboard,
-         tenant branding)       its own _next assets        /setup, its own
-                                under /landing-static/*)    /_next/*, etc.)
-```
-
-This is Next.js's own documented **Multi-Zones** pattern (confirmed against `nextjs.org/docs/pages/guides/multi-zones`, doc version 16.2.10 — matches this repo's installed `next@16.2.6` in `web/package.json`): "A zone is a normal Next.js application where you also configure an `assetPrefix` to avoid conflicts with pages and static files in other zones... The default application handling all paths not routed to another more specific zone does not need an `assetPrefix`." That means **`web/` needs zero changes** for this to work — only the new, more-specific `webpage/` zone needs an `assetPrefix`.
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|-----------------|-------------------------|
-| `webpage/` (NEW) | Renders the public landing page at `/` only; SSR for SEO; checks setup status server-side and hard-redirects to `/setup` when uninitialized | Next.js 16 App Router, `output: 'standalone'`, `assetPrefix: '/landing-static'`, its own `proxy.ts` |
-| `PublicController` (NEW, backend) | Exposes only `nome` + `logoDataUrl` for the singleton tenant, unauthenticated | Small dedicated `@RestController` under `/api/v1/public`, mirrors `SetupController`'s "narrow, dedicated, public" shape |
-| Caddy (`Caddyfile`/`Caddyfile.prod`/hostinger entrypoint) | Routes `/api/*` → backend, exact `/` + `/landing-static/*` → webpage, everything else → frontend | 3rd mutually-exclusive `handle` block using a named matcher with two `path` patterns |
-| `docker-compose.*` | Adds `webpage` as a 4th application service (peer of `backend`/`frontend`), on the same `lexcv_net` network | New service block per file, mirrors `frontend`'s shape |
-| `.github/workflows/deploy.yml` | Builds/pushes a 3rd image (`webpage`) alongside `backend`/`frontend` | New `docker/build-push-action@v6` step, `context: ./webpage` |
+| Component | Responsibility | Current State (verified) |
+|-----------|-----------------|---------------------------|
+| `web/src/app/globals.css` | Tailwind v4 CSS-first theme config (`@theme inline`, `:root`/`.dark` variables) | Only defines `--background`/`--foreground` + font vars. No `--primary`/`--secondary`/`--muted`/`--accent`/`--destructive`/`--border`/`--input`/`--ring`/`--card`/`--popover`/`--radius` — the full shadcn semantic token set is **absent**, not just unthemed. |
+| `web/src/lib/utils.ts` | `cn()` helper (`clsx` + `tailwind-merge`) | Byte-for-byte matches canonical shadcn CLI output already. Zero risk on `init`. |
+| `web/src/components/ui/*.tsx` | Hand-rolled Radix-based primitives (14 files: alert-dialog, badge, button, card, dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast, toaster) | All built on `@radix-ui/react-*` (already installed), use `data-slot` attributes and CVA — structurally matches the **current** (data-slot era) shadcn source, not the older forwardRef era. Colors are hardcoded Tailwind palette utilities (`neutral-900`, `slate-950`, `blue-600`) instead of semantic tokens, because those tokens don't exist yet. |
+| `web/src/components/shared/dashboard-shell.tsx` | App shell: sidebar, topbar, mobile drawer (`Sheet`), bottom-nav | Hardcodes `bg-slate-950`, `text-blue-400`, `bg-blue-600/10` etc. directly for the "Anti-Safe Harbor" identity — none of this is token-driven today. This is the biggest visual-identity-preservation risk surface, not `globals.css`. |
+| `webpage/src/app/globals.css`, `webpage/src/lib/utils.ts`, `webpage/src/components/ui/{button,card}.tsx` | Same Tailwind v4 CSS-first setup, same `cn()`, and a **byte-identical** `button.tsx` to `web/`'s | Confirms both apps were hand-authored against the same (uninitialized) shadcn conventions from the start — no drift yet, cheap to keep in sync manually. |
+| `.github/workflows/deploy.yml` | CI: test → build-and-push 3 independent Docker images | `context: ./web`/`./webpage`, no shared context. A shared `packages/ui` would require changing this. |
 
 ## Recommended Project Structure
 
+### Q2 — Two `components.json` (recommended) vs. shared `packages/ui` (rejected for this milestone)
+
+**Decision: keep two independent `components.json` + `ui/` folders, one per app. Do not introduce `packages/ui` in this milestone.**
+
+This matches what PROJECT.md's target features literally say: *"inicializar shadcn CLI oficialmente (`components.json`) em `web/` e `webpage/`"* — plural config files, not a shared package. Concrete rationale:
+
+| | Two `components.json` (recommended) | Shared `packages/ui` (shadcn's official monorepo pattern) |
+|---|---|---|
+| **Prerequisite work** | None — each app already has its own `package.json`/lockfile/tsconfig with `@/*` → `./src/*` aliases already matching shadcn's default alias shape | Must first create root `package.json` (with `"workspaces"`/pnpm equivalent) + root `pnpm-workspace.yaml` (`packages: [web, webpage, packages/*]`), **merge** `web/pnpm-lock.yaml` + `webpage/pnpm-lock.yaml` into one root lockfile, add `packages/ui/{package.json, components.json, src/components, src/lib/utils.ts, src/styles/globals.css}` |
+| **CI/Docker impact** | Zero. `context: ./web` / `context: ./webpage` in `deploy.yml` keep working unmodified | Both Dockerfiles must change build `context` from `./web`/`./webpage` to repo root (`context: .`, add `dockerfile: web/Dockerfile`) so `COPY . .` can see `../packages/ui`; both `deps` stages must `COPY` the root `pnpm-workspace.yaml` and run a workspace-aware install; both apps' `next.config.ts` likely need `transpilePackages: ["@workspace/ui"]`. This touches the exact pipeline that Phase 100 just finished hardening (3 Caddy config sources, Multi-Zones `assetPrefix`) — high blast radius for a milestone explicitly scoped as "not a redesign." |
+| **Component alias plumbing** | Default shadcn aliases work as-is: `"ui": "@/components/ui"`, `"utils": "@/lib/utils"` — no change to `tsconfig.json` paths | Requires cross-package aliases (`"ui": "@workspace/ui/components"`, `"utils": "@workspace/ui/lib/utils"`) plus package.json `imports`/`exports` maps in the new `packages/ui`, per shadcn's own documented monorepo `components.json` shape |
+| **Duplication cost today** | Low: `webpage/` currently has only 2 UI files (`button.tsx`, `card.tsx`), and `button.tsx` is already byte-identical to `web/`'s. `webpage/` needs almost none of the 15 new primitives targeted for `web/` (Select/Tabs/DropdownMenu/Command/Form/Table-heavy modules don't exist on a static marketing page) | N/A — this is the whole point of a shared package, but the two apps' actual current+planned component needs barely overlap, so the sharing benefit is small |
+| **Sync mechanism** | Manual: when a primitive changes in both apps (rare — only Button/Card apply to both), re-run `npx shadcn add <name> --overwrite` in the second app, or hand-copy the file | Automatic via `workspace:*` dependency — but only pays off once 3+ apps or heavy component churn exists |
+| **Reversibility** | Fully reversible; each `components.json` is app-local, safe to add/remove independently | Harder to reverse once lockfiles are merged and Dockerfiles rewritten |
+
+**When to revisit:** if a third internal app is added, or if `webpage/` starts needing the same heavy primitive set as `web/` (Select, Tabs, Form, Table), promote to `packages/ui` in a dedicated future milestone — not as a side effect of this one.
+
+### Recommended file layout after Foundation phase
+
 ```
-webpage/
-├── Dockerfile              # 3-stage pnpm build, copy of web/Dockerfile pattern
-├── package.json             # Next 16 + React 19 + Tailwind v4 + shadcn primitives (copy pnpm versions from web/package.json — no CLI needed, no components.json exists in web/ either; primitives were hand-ported there too)
-├── next.config.ts           # output: standalone; assetPrefix: '/landing-static'; SAME rewrites()+headers() shape as web/next.config.ts
-├── proxy.ts                 # Next 16 middleware-equivalent — ONLY the "not initialized -> redirect /setup" branch (no /setup-path branch needed, webpage never serves /setup)
+web/
+├── components.json              # NEW — style: nova (or new-york-v4 legacy, see Patterns), base: radix
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx        # copy web/src/app/layout.tsx shape (fonts, Providers if needed, globals.css)
-│   │   ├── globals.css       # copy web/src/app/globals.css (same Tailwind v4 @theme tokens, dark mode via .dark class)
-│   │   └── page.tsx          # Server Component: fetch branding server-side, render Hero/Módulos/Prova social/Contacto sections, "Entrar" CTA as plain <a href="/login">
-│   ├── components/
-│   │   ├── ui/                # ONLY the shadcn primitives actually needed (button, card) — hand-copy from web/src/components/ui/, don't re-run a CLI
-│   │   └── landing/            # new: hero-section.tsx, features-section.tsx, trust-section.tsx, contact-section.tsx
-│   └── lib/
-│       ├── setup.ts           # duplicate of web/src/lib/setup.ts (fetchSetupStatus) — same contract, same public endpoint
-│       └── branding.ts         # new: fetchTenantBranding() calling the new public endpoint
-└── public/
-    └── favicon.ico, og-image.png, etc. (see Known Limitation below re: Caddy catch-all)
+│   ├── app/globals.css          # MODIFIED — additive tokens merged in by `shadcn init`
+│   ├── lib/utils.ts             # UNCHANGED (already canonical)
+│   └── components/
+│       ├── ui/                  # 14 existing files UNCHANGED (unless explicit CLI re-add) +
+│       │                        #   ~15 NEW: select, tabs, dropdown-menu, command, tooltip,
+│       │                        #   form, checkbox, avatar, separator, skeleton, progress,
+│       │                        #   calendar, breadcrumb, accordion, navigation-menu
+│       └── shared/               # UNCHANGED by Foundation; touched later, per-module, to swap
+│                                 #   hardcoded slate-*/blue-* utilities for semantic tokens
+│                                 #   ONLY where a module phase explicitly does so
+webpage/
+├── components.json              # NEW — same base/style choice as web/ for visual consistency
+├── src/
+│   ├── app/globals.css          # MODIFIED in lockstep with web/'s token additions
+│   └── components/ui/
+│       ├── button.tsx           # OPTION: re-add via CLI (`shadcn add button --overwrite`) —
+│       │                        #   safe, since it's already near-identical to canonical output
+│       └── card.tsx             # same treatment
 ```
 
 ### Structure Rationale
 
-- **No client-side TanStack Query needed for branding:** unlike `web/` (an authenticated, highly interactive dashboard app where TanStack Query's cache/refetch/mutation model earns its keep), `webpage/` is a mostly-static marketing page. Fetching tenant branding in a Server Component (`async function Home()`, plain `fetch()`) is simpler, SSR's the tenant name/logo for SEO/social previews, and avoids introducing a `Providers`/`QueryClientProvider` wrapper for a single GET with no mutations.
-- **`proxy.ts` only, no client-side `useEffect` check:** `web/src/app/page.tsx` today does BOTH a server-side check (`web/proxy.ts`) AND a client-side check (`useEffect` + `fetchSetupStatus()` in `page.tsx`) as defense-in-depth, because `web/page.tsx` also has to route already-authenticated users to `/dashboard` vs `/login` (an auth concern `webpage/` doesn't have). `webpage/` only needs the setup-status gate, which `proxy.ts` already covers as a real HTTP redirect — no client-side duplicate check needed.
-- **Hand-copy shadcn primitives, don't invoke a CLI:** confirmed `web/` has no `components.json` and one primitive (`sheet.tsx`) was hand-written to match `dialog.tsx`'s pattern because `npx shadcn` requires an interactive prompt this environment doesn't support (see PROJECT.md Key Decisions). Same constraint applies to `webpage/`.
+- **`components.json` per app, not shared:** matches the literal target feature text in PROJECT.md and avoids restructuring a CI/Docker pipeline that was only just stabilized in the immediately-prior milestone (v2.12, Phase 100).
+- **`globals.css` changes stay additive:** the CLI's CSS updater (`update-css.ts`) merges at the declaration level via a PostCSS AST — it replaces individual `--variable: value;` lines and `@apply` bodies, it does not delete or replace unrelated content. Only `--background` and `--foreground` will have their *values* touched (name collision with the CLI's baseColor palette); every other token it adds (`--primary`, `--card`, etc.) is net-new.
+- **`components/shared/*` deliberately left out of Foundation:** these are the highest-hardcoded-color files (`dashboard-shell.tsx` especially) and are exactly where "preserve identity, not a redesign" risk concentrates. Token normalization there should be a deliberate, reviewed per-module change, not an automatic side effect of running `shadcn init`.
 
 ## Architectural Patterns
 
-### Pattern 1: Next.js Multi-Zones via `assetPrefix` + Caddy path matcher (not `handle_path` stripping)
+### Pattern 1: Tailwind v4 CSS-first token merge on `shadcn init`
 
-**What:** Give the new, path-specific zone (`webpage`) an `assetPrefix` so its `/_next/static/*` chunk requests are namespaced under a prefix (`/landing-static`) that cannot collide with `web/`'s own unprefixed `/_next/*` requests on the same domain. Route the FULL path (including the prefix) to the `webpage` container unmodified — do **not** strip the prefix with `handle_path`, because Next.js itself (confirmed Next 15+, this repo is on Next 16.2.6) natively serves assets at `{assetPrefix}/_next/...` without any additional rewrite. The official Next.js docs explicitly note: *"In versions older than Next.js 15, you may also need an additional rewrite to handle the static assets. This is no longer necessary in Next.js 15."*
+**What:** Current shadcn CLI (verified against the CLI's own `get-project-info.ts` and `preflight-init.ts` via Context7) detects Tailwind v4 by an **empty** `tailwind.config` field in `components.json` and requires only a CSS file (no `tailwind.config.ts`) — exactly this repo's setup. It reads `web/src/app/globals.css`, confirms it has `@import "tailwindcss"`, and merges shadcn's token block into the existing `@theme inline` / `:root` / `.dark` rules using a PostCSS-based updater that **replaces matching declarations by name, does not truncate/overwrite the file.**
 
-**When to use:** Any time two or more independently-built Next.js apps must be reverse-proxied under the same domain with path-based routing (this is literally Next's documented use case for it).
+**When to use:** Run once per app, at the very start of the Foundation phase, before any module work.
 
-**Trade-offs:** One extra Caddy `handle` branch and one extra Next.js config line (`assetPrefix`) — negligible cost. The one thing to get right: only the **non-default** zone needs `assetPrefix` (the existing `web/`/`frontend` catch-all needs zero changes).
+**Trade-offs:** Safe and additive for all-new tokens. The two pre-existing tokens (`--background`, `--foreground`) WILL have their light/dark hex values overwritten by the CLI's chosen `baseColor` (default `"neutral"`, oklch-based) unless immediately restored post-init. This is a 4-line diff (2 values × light/dark), trivially caught in `git diff` right after running `init` — not a real risk if reviewed, but will silently regress the exact institutional colors (`#f8fafc`/`#020617`) if the init commit is not diffed carefully.
 
-**Example — `webpage/next.config.ts` (new file):**
-```typescript
-import type { NextConfig } from "next";
-
-const backendOrigin = process.env.BACKEND_API_ORIGIN;
-if (!backendOrigin) {
-  throw new Error("BACKEND_API_ORIGIN is required");
+**Example (concrete restoration step after `init`):**
+```css
+/* After `shadcn init`, verify these two blocks still read exactly: */
+:root {
+  --background: #f8fafc;   /* restore if CLI replaced with oklch neutral */
+  --foreground: #020617;
 }
-
-const nextConfig: NextConfig = {
-  output: "standalone",
-  assetPrefix: "/landing-static",
-  async rewrites() {
-    // Only exercised in local dev when running `pnpm dev` directly (no Caddy in front).
-    // In prod, Caddy's /api/* block reaches backend first and this never fires.
-    return [
-      { source: "/api/v1/:path*", destination: `${backendOrigin}/api/v1/:path*` },
-    ];
-  },
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';" },
-        ],
-      },
-    ];
-  },
-};
-
-export default nextConfig;
-```
-
-**Caddy side (all 3 files — exact diffs below in Integration Points).**
-
-### Pattern 2: Dedicated narrow public controller (mirrors `SetupController` precedent)
-
-**What:** A new, small, single-purpose `@RestController` whose entire surface is public by construction, rather than adding a public method to the ~1000-line `ResourceController` (which is entirely `authenticated()`-gated by default) or to `AuthController`. This repo already has exactly this precedent: `SetupController` (`/api/v1/setup/*`) is a tiny dedicated controller kept separate from everything else specifically so its `permitAll()` surface is easy to audit in one file.
-
-**When to use:** Any time you add an unauthenticated endpoint to a backend where authentication is the default posture — isolate it so the security review only has to look at one small file, not scroll a 1000-line controller looking for a stray missing `@PreAuthorize`.
-
-**Example — new `backend/src/main/java/com/lexcv/dtos/PublicTenantBrandingResponse.java`:**
-```java
-package com.lexcv.dtos;
-
-import lombok.Builder;
-import lombok.Getter;
-
-@Getter
-@Builder
-public class PublicTenantBrandingResponse {
-    private final String nome;
-    private final String logoDataUrl;
-    // Deliberately NOTHING else: Tenant.nif / tipoEntidade / email / telefone
-    // must never reach this DTO. Adding a field here == adding an authorization gap.
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
 }
 ```
 
-**Example — new `backend/src/main/java/com/lexcv/controllers/PublicController.java`:**
-```java
-package com.lexcv.controllers;
+### Pattern 2: Explicit `--base radix` on init (critical, non-obvious)
 
-import com.lexcv.dtos.PublicTenantBrandingResponse;
-import com.lexcv.models.Tenant;
-import com.lexcv.repositories.TenantRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+**What:** The current shadcn CLI (v3.x line, confirmed via the CLI's `init.ts` option schema) supports **two component-primitive backends**: `radix` (`@radix-ui/react-*`, what this repo already uses in all 14 hand-rolled primitives) and `base` (the newer Base UI library). Critically, `-d/--defaults` and the CLI's own preset defaults resolve to `base: "base"` (Base UI) with the `"nova"`/`"base-nova"` preset — **not** Radix. `-y/--yes` alone does not force a base; it only skips confirmation prompts using whatever base is otherwise selected/defaulted.
 
-@RestController
-@RequestMapping("/api/v1/public")
-@RequiredArgsConstructor
-public class PublicController {
-    private final TenantRepository tenantRepository;
+**When to use:** Every `init` and every `add` invocation in this repo, for both apps.
 
-    @GetMapping("/branding")
-    public ResponseEntity<PublicTenantBrandingResponse> getBranding() {
-        return tenantRepository.findFirstByOrderByCreatedAtAsc()
-                .map(t -> ResponseEntity.ok(
-                        PublicTenantBrandingResponse.builder()
-                                .nome(t.getNome())
-                                .logoDataUrl(t.getLogoDataUrl())
-                                .build()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+**Trade-offs:** Get this wrong once and every newly-scaffolded component (Select, Tabs, DropdownMenu, etc.) will be built on a *different, incompatible* underlying primitives library than the 14 existing hand-rolled components — two parallel component ecosystems in one `ui/` folder, silent architectural drift, and wasted new dependencies (`@base-ui/react` alongside the already-installed `@radix-ui/react-*` packages) that don't interoperate.
+
+**Example:**
+```bash
+# Correct — matches existing @radix-ui/react-* dependencies already in package.json
+npx shadcn@latest init --base radix --yes
+
+# Wrong — silently pulls in Base UI instead of Radix
+npx shadcn@latest init --defaults
+```
+
+*(Confidence: HIGH on the mechanism per current CLI source read via Context7; MEDIUM on exact flag names remaining stable by execution time — re-verify `npx shadcn@latest init --help` output when the Foundation phase actually runs, since this CLI area is under active naming churn: e.g., "new-york"/"default" styles from the 2023-era CLI have already been superseded by the "nova"/"sera" + "base"/"radix" preset system this milestone will encounter.)*
+
+### Pattern 3: `--radius` and `--primary` must be set deliberately, not left at preset defaults
+
+**What:** The repo's own history (v1.1 Phase 10: *"design Anti-Safe Harbor (sharp edges, cores específicas)"*) already hardcodes `rounded-none` overrides in `dialog.tsx` and uses `blue-600`/`blue-500` ad hoc as the institutional accent color throughout `dashboard-shell.tsx` — but neither "sharp edges" nor "institutional blue" exist as a token today. The CLI's default preset (`nova`) ships a non-zero `--radius` (~0.625rem, rounded) and a neutral `baseColor` (no blue). Left untouched, every newly CLI-scaffolded component (Select, Tabs, etc.) will render with rounded corners and a neutral/gray active-state color that visually clashes with the rest of the already-sharp, blue-accented app.
+
+**When to use:** Immediately after `init`, before adding any new primitive.
+
+**Trade-offs:** A few extra minutes of manual token editing in Foundation avoids every subsequent module phase having to override radius/accent per-component ad hoc (which is exactly the inconsistency this milestone exists to remove).
+
+**Example:**
+```css
+:root {
+  --radius: 0rem;                 /* matches existing rounded-none identity */
+  --primary: oklch(...)/#2563eb;  /* matches existing hardcoded blue-600 accent */
+  --primary-foreground: #ffffff;
 }
 ```
 
-**One-line addition to `backend/src/main/java/com/lexcv/repositories/TenantRepository.java`** (currently `public interface TenantRepository extends JpaRepository<Tenant, UUID> {}` — an empty marker interface):
-```java
-public interface TenantRepository extends JpaRepository<Tenant, UUID> {
-    Optional<Tenant> findFirstByOrderByCreatedAtAsc();
-}
-```
+### Pattern 4: `sheet.tsx` is already CLI-shape-compatible — normalize, don't re-scaffold
 
-This is safe because the system is structurally single-tenant per install: `SetupService.initializeSystem()` is gated by the `SystemSetting.SINGLETON_ID` row (can only run once) and is the ONLY code path that creates a `Tenant` row — confirmed by grep, `AdminController` has no tenant-creation endpoint. There will only ever be zero or one `Tenant` rows in this deployment model (matches PROJECT.md's explicit v2.12 scope note: "este deployment continua a servir uma única instituição").
+**What:** Direct comparison of `web/src/components/ui/sheet.tsx` against the current shadcn registry source (fetched via Context7) shows the **same** component shape: `Sheet`/`SheetTrigger`/`SheetClose`/`SheetPortal`/`SheetOverlay`/`SheetContent`/`SheetHeader`/`SheetFooter`/`SheetTitle`/`SheetDescription`, all built on `@radix-ui/react-dialog` (current shadcn also builds `Sheet` on Radix Dialog, not `vaul`/Drawer — that's a separate `drawer.tsx` component this repo doesn't have and doesn't need). The only differences are cosmetic: hardcoded `bg-white`/`dark:bg-neutral-950`, `ring-neutral-950`, `text-neutral-500` instead of the semantic `bg-background`, `ring-ring`, `text-muted-foreground` — because those tokens didn't exist when it was written.
 
-**Endpoint naming:** recommend `/api/v1/public/branding` over `/api/v1/public/tenant`. The name itself is a guardrail — "tenant" invites someone later to add more `Tenant` fields "since it's the tenant endpoint anyway"; "branding" scopes the endpoint's contract to exactly what it's for.
+**When to use:** Leave `sheet.tsx` (and `dialog.tsx`, same situation) as-is structurally in the Foundation phase. Optionally fold a one-line-per-file cosmetic normalization (swap hardcoded `neutral-*`/`white` literals for the new semantic classes) into the same Foundation phase's token-consolidation work, since by then the tokens exist and the swap is a pure find-replace with no behavior change.
 
-**One-line addition to `SecurityConfig.securityFilterChain()`'s existing `permitAll()` list** (exact current list quoted from the file):
-```java
-.requestMatchers(
-    "/api/v1/auth/login",
-    "/api/v1/auth/refresh",
-    "/api/v1/auth/logout",
-    "/api/v1/setup/status",
-    "/api/v1/setup/initialize",
-    "/api/v1/public/branding"          // NEW
-).permitAll()
-```
-Use the exact literal path, not a `/api/v1/public/**` wildcard — this repo's existing convention lists every public path explicitly (5 exact strings today, zero wildcards), and a wildcard would silently permit any future `/public/*` endpoint without a deliberate `SecurityConfig` review.
+**Trade-offs:** Re-scaffolding via `shadcn add sheet --overwrite` adds no capability (already equivalent) and risks losing the app-specific `className` compositions already passed at call sites (e.g., `dashboard-shell.tsx`'s `<SheetContent side="left" className="w-[270px] p-0 bg-slate-950...">`) if the regenerated base variant structure shifts even slightly — those overrides are merged via `cn()` today regardless of base implementation, so keeping the hand-written file is strictly lower-risk than regenerating for zero gain.
 
-### Pattern 3: Cross-zone navigation must be hard, not soft
+**Note on the original decision rationale:** the logged reason ("CLI exige setup interativo") is checked against the current CLI and found **outdated as a blocker for future work** — `shadcn init`/`add` both support fully non-interactive execution today (`-y/--yes` defaults to `true`; `add <component> --overwrite` skips the overwrite prompt). This doesn't retroactively matter for `sheet.tsx` (already correct), but it does mean nothing blocks running `init` non-interactively now, which is exactly what the Foundation phase should do.
 
-**What:** Next.js's own Multi-Zones docs are explicit: *"Links to paths in a different zone should use an `a` tag instead of the Next.js `<Link>` component... Next.js will try to prefetch and soft navigate to any relative path in `<Link>`, which will not work across zones."* `/login`, `/dashboard`, `/setup` all live in `web/`'s route manifest, not `webpage/`'s. `webpage/`'s router has zero knowledge of those paths.
+### Pattern 5: `table.tsx` ≠ `DataTable` — don't conflate the two in module phases
 
-**When to use:** Every outbound link/redirect FROM `webpage/` TO `web/` (the "Entrar" CTA, and the setup-status redirect).
+**What:** `web/src/components/ui/table.tsx` (used already in `clientes/[id]/page.tsx`, `processos/page.tsx`, `financeiro/page.tsx`, `documentos/page.tsx`, `pareceres/page.tsx`) is the plain semantic-HTML wrapper set shadcn ships (`Table`/`TableHeader`/`TableBody`/`TableRow`/`TableHead`/`TableCell`/`TableCaption`, all `data-slot`-tagged) — it matches canonical output exactly and needs no change. Shadcn's documented "Data Table" (sortable/filterable/paginated) is a separate **pattern**, not a CLI-added file — it requires adding `@tanstack/react-table` as a new dependency (not currently installed) and building a composition on top of the existing `Table` primitive.
 
-**Trade-offs:** A full page reload instead of a soft client transition — irrelevant here since these are zone boundary crossings anyway (full asset reload is unavoidable regardless of `<a>` vs `<Link>`; using `<Link>` would just 404 first).
+**When to use:** Only introduce the `@tanstack/react-table` DataTable pattern if a module phase *explicitly* calls for client-side sort/filter/pagination beyond what the existing hand-rolled `useState` filters already provide (confirmed present in `clientes/page.tsx`, `processos/page.tsx` today).
 
-**Example — the CTA:**
-```tsx
-{/* NOT <Link href="/login"> — that's a different zone, soft-nav 404s */}
-<a href="/login" className="...">Entrar</a>
-```
-
-**Example — `webpage/proxy.ts` (new file, adapted from `web/proxy.ts`'s already-proven pattern, dropped down to only the branch `webpage` needs):**
-```typescript
-import { NextResponse, type NextRequest } from "next/server";
-import { fetchSetupStatus } from "./src/lib/setup";
-
-export async function proxy(request: NextRequest) {
-  try {
-    const status = await fetchSetupStatus();
-    if (!status.initialized) {
-      return NextResponse.redirect(new URL("/setup", request.url));
-    }
-  } catch {
-    return NextResponse.next();
-  }
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: "/",
-};
-```
-This redirect is a real HTTP 302 (not a client script), so it correctly crosses from the `webpage` zone into the `web` zone — the browser re-requests `/setup` fresh, and Caddy's catch-all routes that fresh request to `frontend:3000` as it does today. No `<Link>`/soft-nav problem exists here because `NextResponse.redirect` never was a soft navigation to begin with.
-
-### Pattern 4: Server Component data fetch, no client Query for a public GET
-
-**What:** `webpage/src/app/page.tsx` as an `async` Server Component calling `fetchTenantBranding()` directly (plain `fetch`, same relative-URL-resolves-via-request-origin behavior already proven by `web/proxy.ts`'s `fetchSetupStatus()` in production today).
-
-**When to use:** Read-only, unauthenticated, low-frequency data with no client-side interactivity requirement (exactly this case). Reserve TanStack Query for `web/`'s authenticated, mutation-heavy screens where it's already standard.
-
-**Trade-offs:** No client-side refetch/cache — irrelevant for a page whose branding only changes once, at initial `/setup`, and is expected to be effectively static afterward. If the tenant name/logo can change post-setup in some future milestone, this page will just need a revalidation strategy then (`revalidate` / `dynamic = "force-dynamic"`) — not needed for this milestone's scope.
+**Trade-offs:** Treating "the lists need Table" as satisfied by the *existing* `table.tsx` (zero new work) is very different from "the lists need a DataTable" (new dependency + real component-architecture work) — conflating the two would silently expand scope in a milestone explicitly bounded as "not a redesign."
 
 ## Data Flow
 
-### Request Flow (production, all 3 apps live)
+### CLI scaffolding flow (Foundation phase)
 
 ```
-Browser → https://alcv.tech/
+npx shadcn@latest init --base radix --yes   (run in web/, then webpage/)
     ↓
-Caddy: matches @webpage (path == "/") → reverse_proxy webpage:3000
+writes web/components.json (style/base/aliases/cssVariables)
     ↓
-webpage's proxy.ts: fetch(relative "/api/v1/setup/status")
-    → resolves against request origin → https://alcv.tech/api/v1/setup/status
-    → Caddy: matches /api/* → reverse_proxy backend:8080 (SetupController, already permitAll)
+merges tokens into web/src/app/globals.css (@theme inline + :root/.dark)
+    ↓ (git diff review — restore --background/--foreground, set --radius/--primary)
+npx shadcn add select tabs dropdown-menu command tooltip form checkbox
+        avatar separator skeleton progress calendar breadcrumb accordion navigation-menu
     ↓
-  initialized == false → NextResponse.redirect("/setup")
-    → Browser re-requests https://alcv.tech/setup (full reload)
-    → Caddy catch-all (unchanged) → frontend:3000 → web/'s existing /setup wizard
-  initialized == true → webpage/page.tsx Server Component renders:
-    → fetch(relative "/api/v1/public/branding")
-    → Caddy /api/* → backend:8080 → NEW PublicController (permitAll) → {nome, logoDataUrl}
-    → landing page renders Hero/Módulos/Prova social/Contacto + "Entrar" <a href="/login">
+writes new files into web/src/components/ui/*.tsx (pure adds, no collisions —
+    none of these 15 names exist in the current 14-file ui/ folder)
+    ↓
+module phases import from @/components/ui/* as usual (existing alias, unchanged)
 ```
 
-### Static asset flow (why `assetPrefix` matters)
+### Key Data Flows
 
-```
-webpage's HTML references: /landing-static/_next/static/chunks/<hash>.js
-    ↓
-Caddy: matches @webpage (path starts with "/landing-static/") → reverse_proxy webpage:3000
-    ↓
-webpage's own Next.js server (assetPrefix registered) serves it natively — no stripping needed
+1. **Token flow:** `globals.css` (`:root`/`.dark` custom properties) → `@theme inline` (maps `--background` → `--color-background` etc., making them available as Tailwind utility classes `bg-background`, `text-foreground`) → consumed by both CLI-scaffolded components (which use semantic classes like `bg-primary` out of the box) and, optionally, by existing hand-rolled components once normalized in a later cleanup pass.
+2. **Per-app independence:** `web/` and `webpage/` each read their own `globals.css`/`components.json`/`lib/utils.ts` — there is no runtime or build-time sharing between them today (confirmed: separate lockfiles, separate Docker contexts, separate Next.js processes joined only via Caddy + Multi-Zones `assetPrefix` at the reverse-proxy layer). Keeping tokens *conceptually* in sync (same hex/oklch values in both files) is a manual discipline this milestone should establish, not something the tooling enforces.
 
-web/'s (frontend) HTML references: /_next/static/chunks/<hash>.js  (unprefixed, unchanged)
-    ↓
-Caddy catch-all (unchanged) → frontend:3000 → serves as it always has
-```
-These two asset namespaces (`/landing-static/_next/*` vs `/_next/*`) never collide — that is the entire point of `assetPrefix` on the non-default zone.
+## Scaling Considerations (module rollout order)
 
-## Scaling Considerations
+| Phase | What it needs from Foundation | New-vs-modified file impact |
+|-------|-------------------------------|------------------------------|
+| **Foundation** | N/A — this phase produces the primitives everything else needs | NEW: `web/components.json`, `webpage/components.json`, ~15 files in `web/src/components/ui/` (select, tabs, dropdown-menu, command, tooltip, form, checkbox, avatar, separator, skeleton, progress, calendar, breadcrumb, accordion, navigation-menu). MODIFIED: `web/src/app/globals.css`, `webpage/src/app/globals.css` (token additions + restoration of `--background`/`--foreground`), `package.json`/`pnpm-lock.yaml` in both apps (new Radix packages: `@radix-ui/react-select`, `-tabs`, `-dropdown-menu`, `-tooltip`, `-checkbox`, `-avatar`, `-separator`, `-accordion`, `-navigation-menu`; plus `cmdk`, `react-day-picker`, non-Radix `react-hook-form`-adjacent Form wiring which is already installed). Optionally MODIFIED: `webpage/src/components/ui/button.tsx`, `card.tsx` (re-added via CLI for provenance, low risk since already near-identical). |
+| **Dashboard** | Skeleton (KPI loading — currently ad hoc `animate-pulse` divs), Badge/Card/Table (already exist) | Lowest primitive need of any module — good first module phase to validate the token layer visually with minimal risk before deeper modules commit to it. MODIFIED: dashboard page only. |
+| **Clientes** | Select (replaces the `selectClassName`-styled native `<select>` used throughout the 7-tab ficha, confirmed in `clientes/[id]/page.tsx`), Avatar (client-initials circle, currently a hardcoded div), optionally Command/Combobox (advogado/administrativo user-pickers) | **Tabs is explicitly NOT needed here** — PROJECT.md already logged the decision to keep the 7-tab ficha as toggle-buttons, not Radix Tabs, for visual consistency with Processos; adding the Tabs primitive to the registry does not reopen that decision unless the user asks to. MODIFIED: `clientes/[id]/page.tsx` (heaviest native-`<select>` surface in the app), `clientes/novo/page.tsx`, `clientes/merge/page.tsx`. |
+| **Processos** | Select (juízo/origem/tipo-decisão enums, currently native `<select>`), Table (already exists, no DataTable needed unless explicitly requested — see Pattern 5), Tooltip (risco-prazo badges) | MODIFIED: `processos/page.tsx`, `processos/[id]/page.tsx`, `processos/novo/page.tsx`, `processos/[id]/editar/page.tsx`. |
+| **Agenda** | Calendar (react-day-picker) **for date-picker form inputs only** — the existing hand-rolled month-grid view (`grid-cols-7`, manual date math in `agenda/page.tsx`) is a distinct, richer component and stays untouched; Select (categoria/status filters); Popover (already used) | Do not conflate "add Calendar primitive" with "replace the Agenda month view" — confirmed the latter is fully custom and out of this milestone's "not a redesign" scope. MODIFIED: `agenda/novo/page.tsx`, `agenda/[id]/editar/page.tsx` (date inputs only). |
+| **Documentos** | Progress (upload progress — `useUploadDocumentoComProgresso` hook name implies existing custom progress UI to migrate), Select (tipo combobox — Phase 79 decision used a native `datalist`, a candidate for Command/Combobox upgrade, but that's a scope call for the roadmap, not assumed here) | MODIFIED: `documentos/page.tsx`, `documentos/novo/page.tsx`. |
+| **Financeiro** | Select (honorário/pagamento forms), Table/Badge (already exist) | MODIFIED: `financeiro/page.tsx`, `financeiro/[id]/page.tsx`, `financeiro/novo/page.tsx`. |
+| **Pareceres** | Select, Tooltip (timeline events), Accordion (versioning history collapse candidate) | MODIFIED: `pareceres/page.tsx`, `pareceres/[id]/page.tsx`, `pareceres/nova/page.tsx`. |
+| **Notificações / Settings / Setup wizard** | DropdownMenu is more relevant here (topbar avatar currently a plain `<Link>`, no menu) than for the notification bell, which **already uses `Popover`** (confirmed in `notification-bell.tsx` — not a gap); Breadcrumb/NavigationMenu are candidates for Settings sub-navigation (no breadcrumb component exists anywhere in the app today) | Smallest surface area, safe to do last. MODIFIED: `settings/page.tsx`, `components/shared/dashboard-shell.tsx` (if a user-menu is added), `app/setup/*`. |
+| **webpage refinement** | Whatever subset of the same primitives the marketing sections need (likely just re-added Button/Card via CLI; Accordion if an FAQ pattern is added) | Independent `components.json`, no dependency on `web/`'s module phases — can run in parallel with any module phase after Foundation, not necessarily last. |
 
-| Concern | At current scale (single institution) | If ever multi-tenant/self-service | Notes |
-|---------|------------------------------------------|--------------------------------------|-------|
-| Traffic | Trivial — a marketing page for one institution's own staff/prospects, not internet-scale | N/A — explicitly out of scope per PROJECT.md ("onboarding self-service multi-institituição... fora de âmbito") | Don't over-build caching/CDN for this milestone |
-| Branding data freshness | Fetched per-request server-side; fine at this volume | Would need per-tenant routing (subdomain/slug) — explicitly deferred | No action needed now |
-| Container footprint | `webpage` should get the smallest resource limits of the 3 app containers (it's the lightest workload) — mirror `frontend`'s `cpus: '0.5'`, `memory: 256M` in `docker-compose.prod.yml`/hostinger, or even less | N/A | Matches existing `frontend` limits already in `docker-compose.prod.yml` |
+### Scaling Priorities
+
+1. **First bottleneck: token/identity drift.** The real risk in this milestone isn't the CLI mechanics (well-defined, additive) — it's that `dashboard-shell.tsx` and other `components/shared/*` files hardcode `slate-*`/`blue-*` utilities directly rather than consuming tokens. If module phases each independently decide whether/how to normalize these, the "consistency" goal of the milestone will regress into a second inconsistency. Mitigate by deciding, in Foundation, a single explicit rule: *new* CLI-scaffolded components always use semantic tokens (`bg-primary`, etc.) by default (nothing to do — that's how the CLI generates them); *existing* hardcoded files are normalized only when a module phase explicitly touches that file for a stated reason, never as a blanket find-replace across the whole app in one commit.
+2. **Second bottleneck: primitive scope creep.** `Select`, `Command`, `Calendar`, and `Table`→`DataTable` are all "just add the CLI component" until they're not (Command implies rebuilding pickers as comboboxes, DataTable implies a new dependency and real refactor). Each module phase should default to the narrowest primitive that satisfies the existing native-`<select>`/native-`<input type=date>` gap, and treat richer patterns (Combobox, DataTable) as separate, explicitly-scoped follow-up decisions.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Exposing more than `nome`+`logoDataUrl` on the public DTO
+### Anti-Pattern 1: Running `shadcn init`/`add` with CLI defaults unexamined
 
-**What people do:** Add `@Data`/`@Builder` directly on the JPA `Tenant` entity to a `ResponseEntity<Tenant>`, or add "just one more field" (e.g. `email` for a "contact us" mailto link) to the public DTO later.
-**Why it's wrong:** `Tenant` also carries `nif`, `tipoEntidade`, `email`, `telefone` — PII/business data this milestone explicitly forbids exposing unauthenticated. Serializing the entity directly (or growing the DTO ad hoc) is exactly how that leaks.
-**Instead:** Keep `PublicTenantBrandingResponse` a hand-built, two-field DTO (Pattern 2 above) and treat any future field addition as a deliberate, reviewed decision, not a convenience shortcut.
+**What people do:** Run `npx shadcn@latest init -d` (or accept whatever the CLI's interactive/default prompt picks) trusting it will "just match" the existing setup.
+**Why it's wrong:** Current CLI defaults resolve to the `base: "base"` (Base UI) primitives library and the `"nova"` preset's rounded, neutral-accent styling — both of which conflict with this repo's actual state (`@radix-ui/react-*` already installed everywhere; sharp-edged, blue-accented "Anti-Safe Harbor" identity already established). Silent drift here is exactly the kind of inconsistency this milestone exists to remove.
+**Instead:** Always pass `--base radix` explicitly; always diff `globals.css` after `init` and restore `--background`/`--foreground`/set `--radius`/`--primary` deliberately before adding any component.
 
-### Anti-Pattern 2: `handle_path` stripping the asset prefix before proxying
+### Anti-Pattern 2: Treating "two `components.json`" as requiring `packages/ui` to "do it properly"
 
-**What people do:** Assume the reverse proxy must strip the `/landing-static` prefix (like a classic "mount path" reverse-proxy setup) before forwarding to the Next.js app, e.g. `handle_path /landing-static/* { reverse_proxy webpage:3000 }`.
-**Why it's wrong:** Next.js 15+'s own multi-zone docs show the recommended top-level router forwards the FULL prefixed path unmodified to the zone (`destination: ${BLOG_DOMAIN}/blog-static/:path+`) — the zone's own server expects and serves requests AT that prefixed path, because `assetPrefix` registration makes Next's router accept it there. Stripping the prefix would make `webpage`'s Next server receive `/_next/static/...` (unprefixed) while its manifest expects `/landing-static/_next/static/...` — a 404.
-**Instead:** Use a plain `handle` (or a named matcher combining `path / /landing-static/*`), not `handle_path`, for the webpage branch.
+**What people do:** See shadcn's official monorepo docs (`apps/*` + `packages/ui` + root `pnpm-workspace.yaml`/`turbo.json`) and assume that's the "correct" way to run shadcn across two apps, then build a root workspace as a prerequisite.
+**Why it's wrong:** That pattern exists for genuine monorepos with an established shared workspace and multiple apps that need heavy component overlap. This repo has neither today (no root workspace exists at all) — introducing one is a structural change to a CI/Docker pipeline that was only just stabilized (v2.12/Phase 100), for a sharing benefit that's minimal given `webpage/`'s actual (tiny, already near-duplicate) component footprint.
+**Instead:** Two independent `components.json`, synced manually on the rare occasions both apps need the same primitive. Revisit only if a third app or heavy overlap emerges.
 
-### Anti-Pattern 3: `{$VAR}`/`${VAR}` templating inside a Docker Compose `entrypoint: |` heredoc
+### Anti-Pattern 3: Reopening already-logged component decisions as a side effect of Foundation
 
-**What people do:** Try to keep the Hostinger Caddy config parametrized via Caddy-native `{$DOMAIN_NAME}` syntax embedded inside the `entrypoint: sh -c "echo '...' > Caddyfile"` string in `docker-compose.hostinger.yml`.
-**Why it's wrong:** **This already bit this exact repo twice**, in the two commits immediately preceding this research (`67e2120`, `534fa92`). Docker Compose performs its own `$VAR`/`${VAR}` interpolation across the ENTIRE compose file's string values — including inside an embedded heredoc meant for Caddy — BEFORE Caddy ever sees it. Verified via `git show 67e2120`: `echo '{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {'` had to become the hardcoded literal `echo 'alcv.tech, www.alcv.tech {'`. Verified via `git show 534fa92`: `{$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}` inside the same heredoc was removed entirely because the bcrypt hash's own literal `$` characters got mangled once Compose (and then the shell) tried to interpolate through them, crashing Caddy on startup.
-**Instead:** In `docker-compose.hostinger.yml` specifically, any new Caddy config text added inside that `entrypoint` block must use plain hardcoded values (matching the `alcv.tech` domain literal already there) and must contain **zero** `$` characters. `Caddyfile.prod` (a real mounted file, NOT embedded in Compose YAML) is unaffected by this bug and can safely keep using native `{$DOMAIN_NAME}` templating — the two files must be treated differently, and this repo already has both variants live today.
-
-### Anti-Pattern 4: `useRouter().push()`/`<Link>` for the setup-status redirect inside `webpage/`
-
-**What people do:** Copy `web/src/app/page.tsx`'s client-side `useEffect` + `useRouter().replace("/setup")` pattern verbatim into `webpage/`.
-**Why it's wrong:** That pattern works in `web/` because `/setup` is part of `web/`'s own route manifest — a soft client navigation there is a same-zone transition. Inside `webpage/`, `/setup` does not exist in the build, so a soft navigation attempt would produce a client-side 404 before ever reaching Caddy/`web/`.
-**Instead:** Do the check server-side in `webpage/proxy.ts` (Pattern 3) — an actual HTTP redirect, not a client route change, so it correctly re-enters through Caddy and lands in the `web/` zone.
-
-### Anti-Pattern 5: Wildcarding the new `permitAll()` entry
-
-**What people do:** Add `/api/v1/public/**` to `SecurityConfig`'s matcher list "to save having to edit this again for future public endpoints."
-**Why it's wrong:** Every other entry in this list (`/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/setup/status`, `/api/v1/setup/initialize`) is an exact literal path — the existing convention is "list what's public, explicitly, one at a time," which makes the whole authorization surface auditable by reading one `.requestMatchers(...)` call. A wildcard breaks that invariant for anyone who adds a `/public/whatever` endpoint later without re-reading `SecurityConfig`.
-**Instead:** Add the exact literal `"/api/v1/public/branding"`.
+**What people do:** Add the `Tabs` primitive in Foundation, then "since it exists now," swap the Clientes 7-tab ficha's toggle-button pattern over to it in the Clientes module phase.
+**Why it's wrong:** PROJECT.md already logged an explicit decision (Phase 76) to keep the toggle-button pattern for visual consistency with Processos, specifically *because* Tabs wasn't initialized — but the reason given was consistency with an existing pattern, not merely CLI availability. Silently reopening this without a fresh user decision expands scope beyond "consistency of components, spacing, accessibility."
+**Instead:** Foundation adds `Tabs` to the registry for use in NET NEW tabbed UI (if any module needs one); it does not, by itself, authorize revisiting already-shipped, explicitly-decided patterns.
 
 ## Integration Points
 
 ### External Services
 
 | Service | Integration Pattern | Notes |
-|---------|----------------------|-------|
-| GHCR (`ghcr.io/tchspprtcv/lexcv`) | New 3rd image `webpage`, pushed by `.github/workflows/deploy.yml`'s existing `build-and-push` job | Add a 3rd `docker/build-push-action@v6` step, `context: ./webpage`, `tags: ${{ env.REGISTRY }}/webpage:latest` + sha tag, `cache-from/to: type=gha,scope=webpage` — exact mirror of the existing `frontend` step (lines 97-110 of `deploy.yml`) |
+|---------|---------------------|-------|
+| shadcn/ui registry (`ui.shadcn.com`) | `npx shadcn@latest init` / `add <component>` fetch registry JSON over the network at scaffold time | No runtime dependency — components are copied into the repo, not installed as a library. Requires network access at scaffold time only (CI never needs to reach the registry, since scaffolded files are committed). |
+| npm registry (new Radix packages) | `pnpm install` picks up new `@radix-ui/react-select`, `-tabs`, `-dropdown-menu`, `-tooltip`, `-checkbox`, `-avatar`, `-separator`, `-accordion`, `-navigation-menu`, plus `cmdk` (Command) and `react-day-picker` (Calendar) | All are well-established, small, MIT-licensed packages consistent with the 7 Radix packages already in `web/package.json`. No SAST/license concerns beyond the existing pattern. |
 
-### Internal Boundaries (exact current syntax → exact new syntax)
+### Internal Boundaries
 
-**1. `Caddyfile` (dev, plain, unparametrized — read today verbatim):**
-```caddyfile
-:80 {
-    handle /api/* {
-        reverse_proxy backend:8080
-    }
-    handle {
-        reverse_proxy frontend:3000
-    }
-}
-```
-→ becomes:
-```caddyfile
-:80 {
-    handle /api/* {
-        reverse_proxy backend:8080
-    }
-
-    @webpage {
-        path / /landing-static/*
-    }
-    handle @webpage {
-        reverse_proxy webpage:3000
-    }
-
-    handle {
-        reverse_proxy frontend:3000
-    }
-}
-```
-
-**2. `Caddyfile.prod` (real mounted file, uses Caddy-native `{$DOMAIN_NAME}` — safe to keep):**
-```caddyfile
-{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {
-    handle /api/* {
-        reverse_proxy backend:8080
-    }
-    handle_path /minio-console* {
-        basicauth {
-            {$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}
-        }
-        reverse_proxy minio:9001
-    }
-    handle {
-        reverse_proxy frontend:3000
-    }
-}
-```
-→ insert the same `@webpage` block used above, between the `/minio-console*` block and the catch-all.
-
-**3. `docker-compose.hostinger.yml` (embedded heredoc, hardcoded literal domain since commit `67e2120` — must add ZERO new `$` characters, per Anti-Pattern 3):**
-```yaml
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo 'alcv.tech, www.alcv.tech {
-            handle /api/* {
-                reverse_proxy backend:8080
-            }
-            handle {
-                reverse_proxy frontend:3000
-            }
-        }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-```
-→ becomes (note: also update this service's `depends_on` list to include `webpage`):
-```yaml
-    entrypoint:
-      - sh
-      - -c
-      - |
-        echo 'alcv.tech, www.alcv.tech {
-            handle /api/* {
-                reverse_proxy backend:8080
-            }
-            @webpage {
-                path / /landing-static/*
-            }
-            handle @webpage {
-                reverse_proxy webpage:3000
-            }
-            handle {
-                reverse_proxy frontend:3000
-            }
-        }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
-    depends_on:
-      - frontend
-      - backend
-      - webpage
-```
-
-**4. New `webpage` service, all 3 compose files (mirrors `frontend`'s existing shape):**
-
-`docker-compose.yml` (base/dev — add after the `frontend` block):
-```yaml
-  webpage:
-    build:
-      context: ./webpage
-      dockerfile: Dockerfile
-    container_name: lexcv_webpage
-    depends_on:
-      - backend
-    environment:
-      BACKEND_API_ORIGIN: http://backend:8080
-      NEXT_PUBLIC_API_BASE_PATH: /api/v1
-    networks:
-      - lexcv_net
-    ports:
-      - "3004:3000"
-```
-Also add `webpage` to Caddy's `depends_on: [frontend, backend]` → `[frontend, backend, webpage]` in this file too.
-
-`docker-compose.prod.yml` (override — add alongside the existing `frontend:` override):
-```yaml
-  webpage:
-    image: ${REGISTRY:-ghcr.io/lexcv}/webpage:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-```
-
-`docker-compose.hostinger.yml` (self-contained — add a full block mirroring the existing `frontend:` block):
-```yaml
-  webpage:
-    image: ghcr.io/tchspprtcv/lexcv/webpage:latest
-    container_name: lexcv_webpage
-    depends_on:
-      - backend
-    environment:
-      BACKEND_API_ORIGIN: http://backend:8080
-      NEXT_PUBLIC_API_BASE_PATH: /api/v1
-    networks:
-      - lexcv_net
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-    restart: unless-stopped
-```
-
-**5. New backend endpoint (`SecurityConfig` + `TenantRepository` + `PublicController` + `PublicTenantBrandingResponse`)** — see Pattern 2 above for exact code.
-
-## Recommended Build Order
-
-The two biggest pieces — the backend endpoint and the `webpage` app — have **no hard dependency on each other** and should be built in parallel; only the infra wiring is strictly sequential and comes last.
-
-1. **Backend endpoint first (or in parallel), fully isolated:** `TenantRepository.findFirstByOrderByCreatedAtAsc()` + `PublicTenantBrandingResponse` + `PublicController` + the one-line `SecurityConfig` permitAll addition. Zero dependency on `webpage/`. Verifiable standalone with `curl http://localhost:8089/api/v1/public/branding` against the existing dev `docker-compose.yml` backend (port `8089` already mapped) — no new infra needed to test this in isolation.
-
-2. **`webpage/` scaffold + setup-status gate, in parallel with (1):** This does NOT need the new backend endpoint at all — it reuses `/api/v1/setup/status`, which is **already public today** (`SetupController`, already in `permitAll()`). Scaffold `webpage/` (layout, globals.css, `proxy.ts`, landing sections), and for the branding fetch, use a hardcoded stub (`{ nome: "LexCV", logoDataUrl: null }`) so UI work is never blocked on the backend piece. `webpage/` can be run standalone via `pnpm dev` (needs only its own `next.config.ts` rewrite + a `BACKEND_API_ORIGIN` pointing at a running backend, or none at all if the setup-status check is temporarily mocked too) — **no Caddy, no Docker, no compose changes needed yet** to build and visually iterate on this app.
-
-3. **Wire (1) into (2):** once the endpoint lands, swap the stub in `webpage/src/lib/branding.ts` for a real `fetch` call. Small, low-risk integration step.
-
-4. **`webpage/Dockerfile`:** copy `web/Dockerfile`'s exact 3-stage shape (deps → build → standalone runner), adjusting only package name/paths. Can be written and `docker build`-tested standalone before touching any compose file.
-
-5. **Compose wiring (all 3 files) + Caddy routing (all 3 files):** only makes sense once (4) produces a working image/buildable context — this is where `webpage` becomes reachable end-to-end for the first time (`docker compose up` locally, verify `http://localhost/` hits `webpage` and `http://localhost/login` still hits `frontend`).
-
-6. **CI/CD (`deploy.yml`):** add the 3rd build-push step last — it only matters once `webpage/Dockerfile` exists and the compose files reference the `ghcr.io/.../webpage` image tag, otherwise CI would be building an image nothing yet consumes.
-
-**Why this order:** it maximizes parallelizable work (steps 1 and 2 have zero mutual dependency thanks to the pre-existing public `/setup/status` endpoint and a mockable branding payload) and defers all infra/deployment risk (Caddy's known Compose brace-expansion footgun, new container wiring, CI changes) to the end, where it can be validated against two already-complete, independently-tested pieces rather than debugged blind.
-
-## Known Limitation (flag, not a blocker)
-
-`webpage/public/*` static files (`favicon.ico`, `robots.txt`, `sitemap.xml`, OG images) are NOT reachable through Caddy's catch-all default today, because that catch-all (unchanged) still routes unprefixed root-level static paths to `frontend:3000`, which will serve `web/`'s own `public/*` files instead. This only matters if the landing page needs its own distinct favicon/OG image/robots.txt from `web/`'s. If so, add explicit exact-path `handle` branches for those specific files to the `@webpage` matcher (e.g. `path / /favicon.ico /robots.txt /landing-static/*`) — deliberately not included in the default recommendation above to keep the routing change minimal and match the milestone's stated scope (no SEO/self-service requirements called out in PROJECT.md).
+| Boundary | Communication | Considerations |
+|----------|----------------|-----------------|
+| `web/components.json` ↔ `web/src/app/globals.css` | CLI reads/writes the CSS file named in `components.json`'s `tailwind.css` field | Must point to `src/app/globals.css` (the actual, already-Tailwind-v4 file) — verify this path in `components.json` immediately after `init`, since CLI auto-detection could pick a different candidate if one exists. |
+| `web/` ↔ `webpage/` | None at build/runtime (separate lockfiles, separate Docker images, separate Next.js processes joined only via Caddy + Multi-Zones `assetPrefix` at the reverse-proxy layer) | Keeping their two `globals.css`/`components.json` *conceptually* aligned (same token values, same `--base radix` choice) is a manual discipline for this milestone, not something enforced by any shared config. |
+| `components/ui/*` (CLI-owned) ↔ `components/shared/*` (hand-written app shells) | One-directional import only (`shared/*` imports from `ui/*`, never the reverse) | This is exactly the boundary where token-adoption risk concentrates (`dashboard-shell.tsx` hardcodes colors instead of consuming `ui/*`'s tokens) — normalize deliberately, per-module, not in Foundation. |
+| Foundation phase ↔ every module phase | Module phases assume the ~15 new primitives already exist in `web/src/components/ui/` | Foundation must run to completion (both apps) before any module phase starts; a module phase discovering a missing primitive mid-flight should be treated as a Foundation gap, not patched ad hoc within the module phase. |
 
 ## Sources
 
-- `Caddyfile`, `Caddyfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-compose.hostinger.yml` — read directly from this repo (2026-07-15)
-- `backend/src/main/java/com/lexcv/config/SecurityConfig.java`, `Tenant.java`, `SetupController.java`, `SetupService.java`, `TenantRepository.java`, `UserResponse.java`, `AuthController.java`, `AdminController.java` — read directly from this repo
-- `web/src/app/page.tsx`, `web/proxy.ts`, `web/src/lib/setup.ts`, `web/src/lib/api.ts`, `web/next.config.ts`, `web/Dockerfile`, `web/src/app/layout.tsx`, `web/src/app/providers.tsx`, `web/src/app/globals.css`, `web/src/components/shared/dashboard-shell.tsx`, `web/package.json` — read directly from this repo
-- `.github/workflows/deploy.yml` — read directly from this repo
-- This repo's own git history: commits `67e2120` ("fix: hardcode alcv.tech in Caddy entrypoint - avoid Docker Compose brace expansion bug") and `534fa92` ("fix: remove MinIO basicauth from Caddy - fix crash due to bcrypt hash dollar signs"), inspected via `git show` — HIGH confidence, first-party evidence, not inferred
-- [Next.js — Guides: Multi-Zones](https://nextjs.org/docs/pages/guides/multi-zones) — official docs, fetched version 16.2.10, matches installed `next@16.2.6` in `web/package.json`. HIGH confidence: `assetPrefix` behavior, "no rewrite needed since Next 15", `<a>` vs `<Link>` cross-zone requirement, "default zone needs no assetPrefix"
-- `web/node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/assetPrefix.md` and `basePath.md` — local, version-matched docs bundled with the installed Next package (per this repo's `web/AGENTS.md` warning to prefer these over training data)
-- [Caddy — `handle` directive docs](https://caddyserver.com/docs/caddyfile/directives/handle) — official docs, fetched directly. HIGH confidence: mutual exclusivity of sequential `handle` blocks, `handle_path` strips the matched prefix (confirms why NOT to use it here), `handle_path` sorts at the same priority as a `handle` with a path matcher
-- WebSearch: "Caddy multiple Next.js apps same domain path routing assetPrefix" — MEDIUM confidence, used only to corroborate/triangulate the Multi-Zones approach against real-world community write-ups (Caddy Community forum, dev.to); the Next.js official docs fetch above is the primary/authoritative source, this was cross-verification only
+- shadcn/ui CLI source (`packages/shadcn/src/commands/init.ts`, `src/utils/get-project-info.ts`, `src/preflights/preflight-init.ts`, `src/utils/updaters/update-css.ts`) — fetched via Context7 (`/shadcn-ui/ui`), 2026-07-15. HIGH confidence on mechanics; MEDIUM on flag/preset naming stability given active churn (multiple indexed versions from `shadcn@2.9.0` through `shadcn_3.5.0` show the preset system renamed at least once — "default"/"new-york" → "nova"/"sera" + "base"/"radix" — since older CLI docs).
+- shadcn/ui official monorepo doc (`apps/v4/content/docs/(root)/monorepo.mdx`) — fetched via Context7. HIGH confidence on the documented `packages/ui` pattern itself; used here to establish why it's a mismatch for this repo's *current* state, not to recommend adopting it now.
+- Direct repository reads (2026-07-15): `.planning/PROJECT.md`, `web/src/app/globals.css`, `webpage/src/app/globals.css`, `web/src/lib/utils.ts`, `web/src/components/ui/*.tsx` (all 14 files inventoried, `button.tsx`/`table.tsx`/`sheet.tsx`/`dialog.tsx` read in full), `webpage/src/components/ui/button.tsx`, `web/package.json`, `webpage/package.json`, `web/pnpm-lock.yaml`/`webpage/pnpm-lock.yaml` (existence/independence confirmed), `webpage/pnpm-workspace.yaml`, `web/tsconfig.json`, `webpage/tsconfig.json`, `web/postcss.config.mjs`, `web/next.config.ts`, `webpage/next.config.ts`, `.github/workflows/deploy.yml`, `web/Dockerfile`, `webpage/Dockerfile`, `web/src/components/shared/dashboard-shell.tsx`, `web/src/components/shared/notification-bell.tsx`, `web/src/app/providers.tsx`, `web/src/app/(dashboard)/clientes/[id]/page.tsx`, `web/src/app/(dashboard)/agenda/page.tsx`. HIGH confidence — these are primary-source facts about the actual codebase, not inference.
 
 ---
-*Architecture research for: standalone Next.js landing page app integration into existing Caddy/Compose/Spring Boot monorepo*
+*Architecture research for: shadcn/ui CLI integration into LexCV's `web/` + `webpage/` frontend*
 *Researched: 2026-07-15*
