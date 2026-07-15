@@ -1,12 +1,12 @@
 import type { SetupStatusResponse } from "@/types/setup";
 
-const apiBasePath = process.env.NEXT_PUBLIC_API_BASE_PATH;
+const backendOrigin = process.env.BACKEND_API_ORIGIN;
 
-if (!apiBasePath) {
-  throw new Error("NEXT_PUBLIC_API_BASE_PATH is required");
+if (!backendOrigin) {
+  throw new Error("BACKEND_API_ORIGIN is required");
 }
 
-const setupStatusUrl = `${apiBasePath}/setup/status`;
+const setupStatusUrl = `${backendOrigin}/api/v1/setup/status`;
 
 export async function fetchSetupStatus(init?: RequestInit): Promise<SetupStatusResponse> {
   const response = await fetch(setupStatusUrl, {
