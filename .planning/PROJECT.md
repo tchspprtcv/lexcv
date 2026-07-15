@@ -8,6 +8,17 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.13 Refactor UI/UX (shadcn/ui)
+
+**Goal:** Auditar e refatorar visualmente toda a plataforma (app interna `web/` + landing `webpage/`) seguindo estritamente os padrões oficiais do shadcn/ui, preservando a identidade institucional já validada (sidebar/topbar/cores alinhadas ao Figma desde a v1.1), com fundação de design system formalizada primeiro.
+
+**Target features:**
+- Fundação: inicializar shadcn CLI oficialmente (`components.json`) em `web/` e `webpage/` — hoje ambos usam as dependências do shadcn (Radix, CVA, clsx, tailwind-merge) mas nunca passaram pelo CLI; completar a biblioteca de primitivos em falta (Select, Tabs, DropdownMenu, Command, Tooltip, Form, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu) e consolidar tokens de design em `globals.css`
+- Auditoria visual + refactor por módulo do `web/`: Dashboard, Clientes, Processos, Agenda, Documentos, Financeiro, Pareceres, Notificações, Settings/Perfil, Setup wizard — substituir elementos amadores/inconsistentes por primitivos shadcn/Radix acessíveis
+- Refinamento da landing `webpage/` (Hero, Funcionalidades, Confiança, Contacto) à luz dos mesmos padrões
+- **Preservar identidade visual** — não é redesign: cores, estrutura sidebar/topbar e hierarquia de navegação já validadas mantêm-se; o foco é consistência de componentes, espaçamento e acessibilidade
+- **Fora de âmbito (decisão explícita):** instalação de skills/pacotes externos não verificados (ex.: "skills add shadcn/ui") — apenas a CLI oficial `shadcn@latest`; redesenho estrutural do layout institucional
+
 ## Requirements
 
 ### Validated
@@ -82,7 +93,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — a definir na próxima milestone via `/gsd-new-milestone`)
+- Milestone v2.13 (Refactor UI/UX shadcn/ui) em definição (`/gsd-new-milestone`, 2026-07-15) — fundação shadcn CLI + refactor por módulo do `web/` + refinamento da `webpage/`, preservando identidade visual institucional. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
 
 ### Out of Scope
 
@@ -213,7 +224,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** v2.12 shipped e arquivada — a aguardar definição da próxima milestone via `/gsd-new-milestone`.
+**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) em definição de requisitos/roadmap.
 
 ## Evolution
 
@@ -233,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 — milestone v2.12 (Landing Page) shipped*
+*Last updated: 2026-07-15 — milestone v2.13 (Refactor UI/UX shadcn/ui) started*
