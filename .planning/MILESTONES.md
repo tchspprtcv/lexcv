@@ -1,5 +1,19 @@
 # Milestones
 
+## v2.12 Landing Page (Shipped: 2026-07-15)
+
+**Phases completed:** 3 phases, 9 plans, 21 tasks
+
+**Key accomplishments:**
+
+- Novo endpoint público não-autenticado `GET /api/v1/public/branding` (`{nome, logoDataUrl}`), DTO explícito nunca a entidade `Tenant`, allowlist exact-literal no `SecurityConfig` — zero superfície de fuga de PII
+- Nova aplicação Next.js 16 standalone `webpage/` servindo a landing page completa (Hero, Funcionalidades, Confiança Institucional, Contacto), dark/light mode, gate de setup próprio sem acoplamento de autenticação, fetch de branding server-to-server (estruturalmente livre de CORS)
+- Routing e deployment completos em dev/prod/Hostinger via padrão Next.js Multi-Zones (`assetPrefix`), 3 fontes de configuração Caddy mantidas consistentes, novo artefacto `webpage` publicado no pipeline CI/CD
+- Verificação `docker compose up` ao vivo (não apenas checks isolados) encontrou e corrigiu 2 bugs reais em runtime: um fetch com URL relativo que desativaria silenciosamente o gate de redirect `/setup` em todos os ambientes, e uma anotação `@Transactional` em falta que crashava a leitura do logo da tenant via Hibernate/PostgreSQL
+- Um bug de deployment pré-existente (anterior a esta milestone) — falta de passthrough de variáveis de ambiente para o Caddy no override de produção — foi também encontrado e corrigido via code review durante esta milestone
+
+---
+
 ## v2.11 Auditoria Técnica e Notificações Avançadas (Shipped: 2026-07-14)
 
 **Phases completed:** 8 phases, 21 plans, 39 tasks

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.12
 milestone_name: Landing Page
-status: executing
-stopped_at: "v2.12 roadmap created — 3 phases (98–100) derived from 16/16 requirements, ROADMAP.md/REQUIREMENTS.md written and cross-checked for 100% coverage. Phases 98/99 marked mutually parallelizable; Phase 100 depends on both. No phase planning (`/gsd:plan-phase`) has run yet."
-last_updated: "2026-07-15T14:11:42.818Z"
-last_activity: 2026-07-15 -- Phase 100 execution started
+status: Awaiting next milestone
+stopped_at: "v2.12 shipped — all 3 phases (98–100) executed, verified, and audited. 16/16 requirements satisfied. Milestone archived, tag pending."
+last_updated: "2026-07-15T18:05:40.633Z"
+last_activity: 2026-07-15 — Milestone v2.12 completed and archived
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 100 — infraestrutura-routing-e-deployment
+**Current focus:** Milestone v2.12 shipped — awaiting next milestone
 
 ## Current Position
 
-Phase: 100 (infraestrutura-routing-e-deployment) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 100
-Last activity: 2026-07-15 -- Phase 100 execution started
+Phase: Milestone v2.12 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-15 — Milestone v2.12 completed and archived
 
 ## Performance Metrics
 
@@ -114,7 +114,7 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
-- (v2.12, flagged by research, unverified) Server-side "hairpin" fetch risk: a relative-URL `fetch()` inside the `webpage` container calling `/api/v1/setup/status` may resolve against the public domain (routing back out through Caddy) instead of the internal Docker network. `web/` already does this successfully today, but this needs an explicit `docker compose up`/staging verification for `webpage/` too — tracked as an explicit Phase 100 success criterion, not assumed risk-free.
+- ~~(v2.12, flagged by research, unverified) Server-side "hairpin" fetch risk: a relative-URL `fetch()` inside the `webpage` container calling `/api/v1/setup/status` may resolve against the public domain (routing back out through Caddy) instead of the internal Docker network~~ — **RESOLVED (2026-07-15, Phase 100-04):** live `docker compose up` test proved `BACKEND_API_ORIGIN=http://backend:8080` resolves correctly against the internal Docker network with zero hairpin. Separately, code review (99-REVIEW.md CR-01) found `webpage/src/lib/setup.ts` itself used a *relative* URL (not the internal-origin absolute URL the research anticipated) — a distinct, more severe bug (relative URLs throw in Node/Edge `fetch`, silently disabling the `/setup` redirect gate entirely) — fixed by switching to the same `BACKEND_API_ORIGIN`-based absolute-URL pattern `branding.ts` already used.
 
 ## Deferred Items
 
@@ -151,11 +151,11 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-15T09:00:00.000Z
-Stopped at: v2.12 roadmap created — 3 phases (98–100) derived from 16/16 requirements, ROADMAP.md/REQUIREMENTS.md written and cross-checked for 100% coverage. Phases 98/99 marked mutually parallelizable; Phase 100 depends on both. No phase planning (`/gsd:plan-phase`) has run yet.
+Last session: 2026-07-15T18:05:40.633Z
+Stopped at: v2.12 (Landing Page) shipped — all 3 phases (98, 99, 100) planned, executed, code-reviewed, and verified; milestone audit passed (tech_debt, 0 blockers, 16/16 requirements); milestone archived to `.planning/milestones/v2.12-*`. Two real runtime bugs (relative-URL fetch disabling the `/setup` gate; missing `@Transactional` on a `@Lob` read) and one pre-existing prod-deploy bug (Caddy env passthrough in `docker-compose.prod.yml`) were found and fixed live during execution, not deferred. One evidence-backed deferral remains (Hostinger MinIO console routing — both candidate fixes proven to reintroduce already-fixed bugs this session).
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd:plan-phase 98` (Backend — Endpoint Público de Branding) and/or `/gsd:plan-phase 99` (webpage/ — Nova App Next.js de Landing) — both are independent and can be planned/executed in either order or in parallel.
-- Run `/gsd:plan-phase 100` (Infraestrutura — Routing e Deployment) only after both Phase 98 and Phase 99 are complete.
+- Start the next milestone with /gsd-new-milestone
+- Optional follow-up (non-blocking, not part of v2.12): redesign MinIO credential delivery for the Hostinger Caddy config, or accept SSH-tunnel-only console access as the permanent posture (see v2.12-MILESTONE-AUDIT.md Tech Debt table)

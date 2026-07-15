@@ -8,20 +8,6 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone: v2.12 Landing Page
-
-**Goal:** Criar uma landing page moderna, profissional e informativa como ponto de entrada real da aplicação (rota `/`), como uma nova app Next.js standalone (`webpage/`), personalizada com o nome/logo da tenant já capturados no wizard `/setup`.
-
-**Target features:**
-- Nova app Next.js `webpage/` (sibling de `backend/`/`web/` na raiz do monorepo), com o seu próprio Dockerfile/container/porta
-- Caddy roteia `/` para `webpage/`; tudo o resto (`/login`, `/dashboard`, `/setup`, `/api/*`) continua a ir para `web/`/`backend/` inalterado
-- Ao carregar, verifica `/api/v1/setup/status`: se não inicializado → redireciona para `/setup` (preserva o comportamento atual do `web/`); se inicializado → mostra a landing personalizada
-- Novo endpoint público no backend (`GET /api/v1/public/...`) que devolve apenas `nome` + `logoDataUrl` da tenant — nunca NIF/email/telefone
-- Secções: Hero + proposta de valor · Funcionalidades/Módulos (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações) · Prova social/confiança institucional (multi-tenant, isolamento de dados, ecossistema NOSi/Cabo Verde) · Contacto/Pedir demonstração
-- CTA principal: "Entrar" → `/login`
-- Reutiliza shadcn/ui + Tailwind + dark/light mode já usados em `web/`
-- **Fora de âmbito (decisão explícita):** onboarding self-service multi-institituição, slug/subdomínio por tenant — este deployment continua a servir uma única instituição (o wizard `/setup` mantém-se singleton, como hoje)
-
 ## Requirements
 
 ### Validated
@@ -90,10 +76,13 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Notificações de processo (fase/documento/atribuição) alcançam toda a equipa de advogados/administrativos do cliente, não só o responsável único — v2.11 (Phase 95)
 - ✓ Snooze de lembrete de prazo (presets 1/3/7 dias, reaparece automaticamente, sem duplicação pelo job diário) — v2.11 (Phase 96)
 - ✓ Auditoria final de milestone: isolamento de tenant confirmado nas 3 novas superfícies de notificação; UAT ao vivo fechado para 8 fases históricas (~40 cenários); labels `DocumentoTipo` traduzidas + testes de NIF adicionados; bloqueio ambiental `MINIO_ENDPOINT` genuinamente resolvido pela primeira vez neste projeto; 1 gap de integração residual (divergência `dataInicio`/`dataFim` em `isEventoCritico`) encontrado e corrigido no próprio fecho — v2.11 (Phase 97)
+- ✓ Endpoint público não-autenticado `GET /api/v1/public/branding` (`{nome, logoDataUrl}` via DTO explícito, allowlist exact-literal) — v2.12 (Phase 98)
+- ✓ Nova app Next.js 16 standalone `webpage/` servindo a landing page pública em `/` (Hero, Funcionalidades, Confiança Institucional, Contacto, dark/light mode, gate de setup sem acoplamento de autenticação, fetch de branding server-to-server) — v2.12 (Phase 99)
+- ✓ Routing e deployment de `webpage/` em dev/prod/Hostinger via Next.js Multi-Zones (`assetPrefix`), 3 fontes de configuração Caddy consistentes, novo artefacto `webpage` no pipeline CI/CD, verificado com `docker compose up` completo — v2.12 (Phase 100)
 
 ### Active
 
-- Milestone v2.12 (Landing Page) em definição (`/gsd-new-milestone`, 2026-07-14) — nova app `webpage/` standalone, landing personalizada com dados da tenant, endpoint público de branding. REQUIREMENTS.md e ROADMAP.md a gerar nesta sessão.
+(Nenhum requisito ativo — a definir na próxima milestone via `/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -107,6 +96,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Novo campo de data de vencimento em `Honorario` — alerta de prazo de honorário usa dias sem pagamento total desde `dataAcordo` em vez de uma data explícita
 - Expansão do fan-out de equipa (NOTF-25) às categorias do job diário (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) — deliberadamente fora de âmbito da v2.11, `AlertasDiariosJob` mantém-se `responsavelId`-only; candidato de âmbito futuro
 - Matriz de preferências categoria×canal (NOTF-24) — prematuro com um único canal de entrega (in-app); só revisitar se email/push for adicionado
+- Onboarding self-service multi-instituição, slug/subdomínio por tenant — decisão confirmada na v2.12; este deployment continua a servir uma única instituição, o wizard `/setup` mantém-se singleton
 
 ## Context
 
@@ -193,14 +183,20 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | NOTF-25: PARECER_ATRIBUIDO mantém-se individual (só o advogado atribuído + fan-out ADMIN), NÃO alarga à equipa do cliente | Atribuição de parecer é semanticamente a decisão de um advogado específico assumir o trabalho; alargar diluiria o sinal | By design |
 | (v2.11, Phase 97, AUD-04) Bloqueio ambiental recorrente `MINIO_ENDPOINT` (presente em v2.8/v2.9/v2.10) fechado como resolução de ambiente/configuração, não como correção de código | `backend/.env` local passou a apontar para um container `lexcv_minio` real com credenciais válidas; `backend/.env.example` já documentava as variáveis `MINIO_*` necessárias — o bloqueio persistia apenas por o ambiente local não ter o container/credenciais provisionados nas sessões anteriores | ✓ Good (fechado 2026-07-14; ver STATE.md Blockers/Concerns) |
 | (v2.11, Phase 97, AUD-01/02/03/05) Auditoria final da milestone consolidada: isolamento de tenant confirmado (verdito COVERED, zero fixes) nas 3 novas superfícies de notificação (preferências, equipa, snooze); UAT ao vivo consolidado em `97-UAT.md` (~38 cenários das 8 fases 75/76/79/81/82/84/85/89, todos com veredito explícito — 2 itens transportados em aberto: migração vs. `ddl-auto=validate` nas Phases 81/82, decisão de produto da Phase 85); dívidas menores (labels `DocumentoTipo`, testes de NIF ausentes) fechadas; nova auditoria de código (fresca, não repetição da lista já conhecida) sobre as superfícies de notificação/preferências/equipa/snooze não encontrou gaps novos | Consolida os resultados das plans 97-01/02/03/04 num único registo, incluindo a correção de duas linhas de Deferred Items em STATE.md que atribuíam indevidamente itens das Phases 86/87 ao âmbito de AUD-02 (nenhuma das duas fases está entre as 8 cobertas por AUD-02) | ✓ Good (ver STATE.md Pending Todos/Deferred Items para o detalhe completo por fase) |
+| (v2.12, Phase 99) Fetch de branding server-side (Server Component), nunca client-side | Evita CORS por completo (fetch nunca corre no browser) — resolve definitivamente a preocupação de CORS que o endpoint público da Phase 98 teria exigido configurar | ✓ Good |
+| (v2.12, Phase 100) Next.js Multi-Zones (`assetPrefix` próprio só na app não-default) para coexistência `webpage/`+`web/` sob o mesmo domínio Caddy | Padrão documentado oficialmente pelo Next.js para este caso exato; `web/` não precisa de nenhuma alteração | ✓ Good |
+| (v2.12, Phase 100) As 3 fontes de configuração Caddy (`Caddyfile`, `Caddyfile.prod`, heredoc em `docker-compose.hostinger.yml`) tratadas como independentes, nunca DRY — o heredoc do Hostinger usa apenas literais hardcoded, zero caracteres `$` | Esta área já causou 4 commits de correção de bugs em produção na mesma sessão (Docker Compose interpola `$VAR` em todo o YAML, incluindo dentro do heredoc, antes do Caddy o ver) | ✓ Good |
+| (v2.12, Phase 100) `docker-compose.hostinger.yml`'s MinIO console route (`/minio-console*`) não foi replicada do `Caddyfile.prod` — deixada deliberadamente em aberto | Ambas as correções óbvias (montar `Caddyfile.prod` como ficheiro; adicionar o hash bcrypt literal no heredoc) já tinham sido tentadas e revertidas nesta mesma sessão; um hash bcrypt não pode satisfazer a regra "zero `$`" do heredoc por construção | Deferred (ver v2.12-MILESTONE-AUDIT.md) |
+| (v2.12, Phase 100, orquestrador) `webpage/pnpm-workspace.yaml` com `minimumReleaseAgeExclude` escopado a um único pacote (`electron-to-chromium`), não um `minimumReleaseAge: 0` global | Autorização explícita do utilizador foi para uma exceção estreita; pnpm 11+ moveu esta config de `.npmrc` (agora só auth/registry) para `pnpm-workspace.yaml` | ✓ Good |
 
 ## Current State
 
-**Shipped:** v2.11 (2026-07-14) — Auditoria Técnica e Notificações Avançadas. Fechou a dívida técnica acumulada e expandiu o sistema de notificações: SpotBugs/FindSecBugs corrigido contra JDK 23 (Phase 90); primeira infraestrutura de testes de integração real (Testcontainers+PostgreSQL) do projeto, com gate de CI (Phase 91); Agenda consolidada com `RiscoPrazoService` para Prazos e Eventos, fechando a 5ª implementação divergente de "prazo crítico" (Phase 92); preferências de notificação por utilizador (Phase 93); correção de um bug pré-existente de colisão de dedup ADMIN (Phase 94); notificações de processo alargadas a toda a equipa do cliente (Phase 95); snooze de lembrete de prazo (Phase 96); auditoria final de milestone — isolamento de tenant confirmado, UAT ao vivo fechado para 8 fases históricas (~40 cenários), labels `DocumentoTipo` traduzidas + testes de NIF, e o bloqueio ambiental `MINIO_ENDPOINT` genuinamente resolvido pela primeira vez neste projeto (Phase 97). 15/15 requisitos satisfeitos. Auditoria de milestone encontrou e fechou na mesma sessão 1 gap de integração residual (`isEventoCritico` divergindo em `dataInicio`/`dataFim`, deferido pela Phase 92 e nunca apanhado pelo âmbito da Phase 97 até a própria auditoria de fecho). Status: `tech_debt` — sem bloqueios; dívida residual é sobretudo verificação ao vivo (itens NEEDS-HUMAN-VISUAL de baixo risco) e 2 decisões de produto genuínas transportadas de milestones anteriores. Ver `.planning/milestones/v2.11-MILESTONE-AUDIT.md`.
+**Shipped:** v2.12 (2026-07-15) — Landing Page. Primeira rota pública real da aplicação: novo endpoint público não-autenticado `GET /api/v1/public/branding` (`{nome, logoDataUrl}` via DTO explícito, allowlist exact-literal no `SecurityConfig`, Phase 98); nova app Next.js 16 standalone `webpage/` servindo a landing completa em `/` — Hero, Funcionalidades/Módulos, Confiança Institucional, Contacto, dark/light mode, gate de setup próprio sem acoplamento de autenticação, fetch de branding server-to-server (Phase 99); routing e deployment completos via Next.js Multi-Zones (`assetPrefix`) em dev/prod/Hostinger, 3 fontes de configuração Caddy mantidas consistentes, novo artefacto `webpage` no CI/CD, verificado com `docker compose up` completo em vez de apenas checks isolados (Phase 100). 16/16 requisitos satisfeitos. Verificação ao vivo (não apenas estática) encontrou e corrigiu 3 bugs reais na própria sessão: um fetch com URL relativo que desativaria silenciosamente o gate de redirect `/setup` em todos os ambientes; uma anotação `@Transactional` em falta que crashava a leitura do logo da tenant via Hibernate/PostgreSQL; e um bug de deployment pré-existente (anterior a esta milestone) de falta de passthrough de variáveis de ambiente para o Caddy em produção. Status: `tech_debt` — sem bloqueios; a única dívida residual não fechada é o routing da consola MinIO no Hostinger, deliberadamente deferido com evidência concreta de que as duas correções óbvias já tinham sido tentadas e revertidas nesta mesma sessão. Ver `.planning/milestones/v2.12-MILESTONE-AUDIT.md`.
 
 <details>
-<summary>Histórico anterior (v1.0–v2.10)</summary>
+<summary>Histórico anterior (v1.0–v2.11)</summary>
 
+**v2.11** (2026-07-14) — Auditoria Técnica e Notificações Avançadas. Fechou a dívida técnica acumulada e expandiu o sistema de notificações: SpotBugs/FindSecBugs corrigido contra JDK 23 (Phase 90); primeira infraestrutura de testes de integração real (Testcontainers+PostgreSQL) do projeto, com gate de CI (Phase 91); Agenda consolidada com `RiscoPrazoService` para Prazos e Eventos, fechando a 5ª implementação divergente de "prazo crítico" (Phase 92); preferências de notificação por utilizador (Phase 93); correção de um bug pré-existente de colisão de dedup ADMIN (Phase 94); notificações de processo alargadas a toda a equipa do cliente (Phase 95); snooze de lembrete de prazo (Phase 96); auditoria final de milestone — isolamento de tenant confirmado, UAT ao vivo fechado para 8 fases históricas (~40 cenários), labels `DocumentoTipo` traduzidas + testes de NIF, e o bloqueio ambiental `MINIO_ENDPOINT` genuinamente resolvido pela primeira vez neste projeto (Phase 97). 15/15 requisitos satisfeitos. Ver `.planning/milestones/v2.11-MILESTONE-AUDIT.md`.
 **v2.10** (2026-07-10) — Notificações e Alertas. Sistema de notificações persistido construído do zero: `RiscoPrazoService` consolida 4 implementações inconsistentes de "prazo crítico" (Phase 85); entidade `Notificacao` + API completa com targeting estrito por entidade+ADMIN (Phase 86); 4 alertas disparados por evento — fase, documento, atribuição de processo (com novo fluxo de reatribuição), parecer (Phase 87); primeiro job `@Scheduled`/cross-tenant do projeto, verificação diária de prazos/eventos/honorários com isolamento de falha em 4 camadas e idempotência edge-triggered (Phase 88); sino reescrito + página `/notificacoes` dedicada, consumindo tudo o que as fases anteriores construíram (Phase 89). 16/16 requisitos satisfeitos, 0 gaps de integração cross-phase encontrados pela auditoria de milestone (apenas 2 avisos não-bloqueantes). Ver `.planning/milestones/v2.10-MILESTONE-AUDIT.md`.
 **v2.9** (2026-07-08) — Melhoria Módulo Processos. Módulo de processos aprofundado com dados jurídicos estruturados: Juízo/Origem no card Dados, sub-secções Decisões/Factos/Testemunhas (entidades próprias com verificação dupla de posse), aba Documentos dedicada, criação automática e idempotente de Honorário na formalização (`valorTotal` sempre em branco), Termo de Honorários imprimível com bloqueio quando o valor ainda não foi preenchido, e Partes/Fases refatoradas para o mesmo padrão visual das abas novas. Auditoria de milestone encontrou e fechou na mesma sessão 2 bugs de integração cross-phase (filtros `processo_id` ignorados pelo backend em `/honorarios` e `/documentos`). 17/17 requisitos satisfeitos.
 **v2.8** (2026-07-06) — Refatoração Ficha de Cliente. Ficha de cliente unificada e reestruturada em 7 separadores; enum `documento_tipo` restrito por tipo de cliente; "Documentos Entregues" passa a upload real.
@@ -217,7 +213,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.12 (Landing Page) em definição de requisitos/roadmap — nova app `webpage/` standalone servindo a landing pública em `/`, personalizada com dados da tenant.
+**Current focus:** v2.12 shipped e arquivada — a aguardar definição da próxima milestone via `/gsd-new-milestone`.
 
 ## Evolution
 
@@ -237,4 +233,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-14 — milestone v2.12 (Landing Page) started*
+*Last updated: 2026-07-15 — milestone v2.12 (Landing Page) shipped*
