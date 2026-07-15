@@ -4,6 +4,7 @@ import com.lexcv.dtos.TenantPublicInfoResponse;
 import com.lexcv.models.Tenant;
 import com.lexcv.repositories.TenantRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +22,25 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/public")
 @RequiredArgsConstructor
+@Slf4j
 public class PublicController {
 
     private final TenantRepository tenantRepository;
 
     @GetMapping("/branding")
     public ResponseEntity<?> getBranding() {
+        // WR-01 (Phase 98 code review): a suposição de "tenant singleton" só se mantém porque
+        // SetupService.initializeSystem() e DatabaseSeeder impedem, de forma independente e não
+        // coordenada, a criação de uma 2ª Tenant -- não há unique/check constraint no schema nem
+        // neste endpoint. Se essa suposição for violada (onboarding de tenant, insert manual,
+        // migração), este endpoint continuaria a servir silenciosamente a marca da tenant mais
+        // antiga a todos os visitantes anónimos, sem qualquer sinal de erro. Este log torna a
+        // violação observável em vez de silenciosa.
+        long tenantCount = tenantRepository.count();
+        if (tenantCount > 1) {
+            log.warn("PublicController.getBranding(): {} tenants encontrados; suposição de tenant singleton violada, a devolver a mais antiga por createdAt", tenantCount);
+        }
+
         Optional<Tenant> tenant = tenantRepository.findFirstByOrderByCreatedAtAsc();
 
         if (tenant.isEmpty()) {
