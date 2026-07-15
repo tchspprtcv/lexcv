@@ -100,14 +100,31 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
-    volumes:
-      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo '{$DOMAIN_NAME}, www.{$DOMAIN_NAME} {
+            handle /api/* {
+                reverse_proxy backend:8080
+            }
+            handle_path /minio-console* {
+                basicauth {
+                    {$CADDY_MINIO_USER} {$CADDY_MINIO_PASSWORD_HASH}
+                }
+                reverse_proxy minio:9001
+            }
+            handle {
+                reverse_proxy frontend:3000
+            }
+        }' > /etc/caddy/Caddyfile && exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME}
       CADDY_MINIO_USER: ${CADDY_MINIO_USER:-admin}
       CADDY_MINIO_PASSWORD_HASH: ${CADDY_MINIO_PASSWORD_HASH}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - frontend
       - backend
