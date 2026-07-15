@@ -93,6 +93,23 @@ services:
           memory: 256M
     restart: unless-stopped
 
+  webpage:
+    image: ghcr.io/tchspprtcv/lexcv/webpage:latest
+    container_name: lexcv_webpage
+    depends_on:
+      - backend
+    environment:
+      BACKEND_API_ORIGIN: http://backend:8080
+      NEXT_PUBLIC_API_BASE_PATH: /api/v1
+    networks:
+      - lexcv_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    restart: unless-stopped
+
   caddy:
     image: caddy:2-alpine
     container_name: lexcv_caddy
@@ -108,6 +125,12 @@ services:
             handle /api/* {
                 reverse_proxy backend:8080
             }
+            @webpage {
+                path / /landing-static/*
+            }
+            handle @webpage {
+                reverse_proxy webpage:3000
+            }
             handle {
                 reverse_proxy frontend:3000
             }
@@ -118,6 +141,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - webpage
     networks:
       - lexcv_net
     restart: unless-stopped
