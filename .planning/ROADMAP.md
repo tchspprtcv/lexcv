@@ -315,7 +315,11 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
   3. Os chunks `_next/static/*` da `webpage` (sob o seu `assetPrefix`) e os de `web/` nunca colidem quando pedidos através da mesma origem Caddy — verificado ao vivo contra o stack `docker compose up` a correr, nunca apenas assumido a partir de servidores de dev isolados
   4. `.github/workflows/deploy.yml` constrói e publica um 3º artefacto (`webpage`), a par dos passos `docker/build-push-action@v6` já existentes para `backend`/`web`, seguindo a mesma convenção de tagging/registo (GHCR)
   5. Um smoke test `docker compose up` completo confirma explicitamente que o fetch server-side de setup-status dentro do container `webpage` resolve corretamente contra a rede Docker interna, em vez de fazer "hairpin" para fora através do domínio público/Caddy (risco sinalizado como não verificado pela pesquisa) — documentado como passa/falha, nunca ignorado ou assumido
-**Plans**: TBD
+**Plans**: 4 plans (3 waves) — planned 2026-07-15
+- [ ] 100-01-PLAN.md — webpage image: `webpage/Dockerfile` (multi-stage, `output: standalone`, mirror `web/Dockerfile`) + `.dockerignore` + CI 3rd build-push step in `deploy.yml` (LP-15, LP-16)
+- [ ] 100-02-PLAN.md — Dev+prod routing & compose: `@webpage` block in `Caddyfile`/`Caddyfile.prod` + `webpage` service in `docker-compose.yml` (build ./webpage, port 3004) & `docker-compose.prod.yml` override + caddy `depends_on` (LP-14, LP-15)
+- [ ] 100-03-PLAN.md — Hostinger routing & compose (danger zone): internal-only `webpage` service + `@webpage` inside the caddy entrypoint heredoc with ZERO `$` (the `67e2120`/`534fa92` footgun) + caddy `depends_on`, verified via static `docker compose config` only — no live VPS deploy (LP-14, LP-15)
+- [ ] 100-04-PLAN.md — Live `docker compose up` verification: route matrix (`/`→webpage, `/login`+`/dashboard`+`/setup`→web, `/api/*`→backend), asset non-collision (LP-13), and no-hairpin internal-network smoke test (criterion #5) (LP-13)
 
 ## Progress
 
@@ -379,6 +383,6 @@ A pesquisa de arquitetura desta milestone identificou duas fases mutuamente para
 | 97. Auditoria de Milestone — Dívida Técnica e UAT Pendente | v2.11 | 4/4 | Complete    | 2026-07-14 |
 | 98. Backend — Endpoint Público de Branding | v2.12 | 1/1 | Complete   | 2026-07-15 |
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
-| 100. Infraestrutura — Routing e Deployment | v2.12 | 0/TBD | Not started | - |
+| 100. Infraestrutura — Routing e Deployment | v2.12 | 0/4 | Planned | - |
 
-**Next:** Phases 98 (1 plan) and 99 (4 plans, 4 waves) both planned 2026-07-15. Run `/gsd:execute-phase 98` and/or `/gsd:execute-phase 99` (independent — either order or parallel). Phase 100 (routing & deployment) depends on both 98 and 99 being complete.
+**Next:** Phase 100 (4 plans, 3 waves) planned 2026-07-15. Phases 98 and 99 are complete. Run `/gsd:execute-phase 100`. Wave 1: 100-01 (webpage image + CI). Wave 2: 100-02 + 100-03 (dev/prod and hostinger routing/compose wiring — parallel, disjoint files). Wave 3: 100-04 (live `docker compose up` verification).
