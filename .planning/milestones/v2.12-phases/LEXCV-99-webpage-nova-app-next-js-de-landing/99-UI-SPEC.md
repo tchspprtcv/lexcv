@@ -1,10 +1,11 @@
 ---
 phase: 99
 slug: webpage-nova-app-next-js-de-landing
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-15
+reviewed_at: 2026-07-15
 ---
 
 # Phase 99 — UI Design Contract
