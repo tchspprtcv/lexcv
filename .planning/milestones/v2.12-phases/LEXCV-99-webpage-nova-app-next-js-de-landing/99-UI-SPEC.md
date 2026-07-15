@@ -37,13 +37,13 @@ Declared values (must be multiples of 4) — these are Tailwind's own default to
 |-------|-------|-------|
 | xs | 4px | Icon-to-label gaps inside nav links and trust-bullet icon rows |
 | sm | 8px | Compact gaps (eyebrow tag internal padding, badge-style pills) |
-| md | 16px | Default gap between a card's icon/title/body lines; header horizontal item gaps |
+| md | 16px | Header horizontal item gaps (nav links, brand-to-nav spacing); default gap between new-authored icon+text pairs outside reused `Card` internals (see `CardHeader` exception below) |
 | lg | 24px | Card internal padding (`CardHeader`/`CardContent`'s own default `p-6`, inherited unmodified); gap between grid cards |
 | xl | 32px | Gap between a section's eyebrow+heading block and its content grid |
 | 2xl | 48px | Section vertical padding on mobile (`py-12`); gap between Hero title and subtitle block |
-| 3xl | 64px | Section vertical padding on tablet (`md:py-16`) |
+| 3xl | 64px | Section vertical padding on tablet and desktop (`md:py-16` and `lg:py-16`, held flat — see Exceptions) |
 
-**Exceptions:** one extended token beyond the base 7 — **4xl = 96px** (`py-24`, Tailwind `space-24`, still a multiple of 4) for Hero and section-band vertical padding on desktop (`lg:py-24`). Full responsive step-down for every section band: `py-12` (mobile) → `md:py-16` (64px) → `lg:py-24` (96px). No other exceptions. No icon-only touch targets are introduced by this phase — `ThemeToggle` is reused exactly as-is at its existing 36px (`h-9 w-9`) size, matching the rest of the app; this phase does not invent a new 44px minimum since it would be inconsistent with the unmodified reused component.
+**Exceptions:** none beyond the base 7 — every declared value maps directly to Tailwind's own default scale, capped at **3xl = 64px**. Full responsive step for every section band: `py-12` (mobile, 48px) → `md:py-16` (64px) → `lg:py-16` (64px, held flat from tablet through desktop — no further increase at the `lg:` breakpoint, so no 8th token is introduced). One documented, pre-existing exception scoped only to a reused component's internals: `CardHeader`'s own default (`flex flex-col gap-1.5 p-6`, verified in `web/src/components/ui/card.tsx`) uses an internal `gap-1.5` (6px) between its stacked children (icon/title/description) — not a multiple of 4 and not one of the tokens declared above. This is accepted because `CardHeader` is reused unmodified (per Component Reuse Inventory); the declared `md = 16px` token governs spacing between new-authored elements on this page, never `CardHeader`'s own internal child gap, which is inherited as-is and must not be overridden at any call site. No icon-only touch targets are introduced by this phase — `ThemeToggle` is reused exactly as-is at its existing 36px (`h-9 w-9`) size, matching the rest of the app; this phase does not invent a new 44px minimum since it would be inconsistent with the unmodified reused component.
 
 ---
 
@@ -60,8 +60,8 @@ Exactly 4 sizes, exactly 2 weights (400/600), declared flat (no responsive step-
 
 **Role assignment:**
 - **Display (48px)** — Hero H1 only. Flat at all breakpoints, no responsive step-down. This is deliberately the largest size proven anywhere in this codebase today (`web/src/app/setup/page.tsx`'s H1 uses `sm:text-5xl` as its desktop ceiling) — reused verbatim as the landing's one and only Display value, applied unconditionally rather than only above a breakpoint, for a bolder flagship treatment. The locked hero title ("Gestão jurídica completa para a sua instituição") is short enough that 2–3 line wraps on narrow mobile viewports remain fully legible; this avoids introducing a 5th, mobile-only size.
-- **Heading (24px)** — all section H2s ("Funcionalidades", "Confiança Institucional", "Contacto") and all card titles (6 module cards + 4 trust cards). Matches `CardTitle`'s own existing default (`text-2xl font-semibold leading-none tracking-tight`) exactly — zero override needed when reusing `CardTitle`.
-- **Body (16px)** — Hero subtítulo, section intro paragraphs, module/trust card descriptions, footer copy. Flat everywhere (no `text-sm→text-base` responsive step, unlike `setup.tsx`'s subtitle) — kept simple since 16px already reads well at every viewport.
+- **Heading (24px)** — all section H2s ("Funcionalidades", "Confiança Institucional", "Contacto") and all card titles (6 module cards + 4 trust cards). `CardTitle`'s own default (`font-semibold leading-none tracking-tight`, verified in `web/src/components/ui/card.tsx`) does **not** bake in a `text-2xl` size — apply explicit `className="text-2xl"` at all 10 `CardTitle` call sites (6 module cards + 4 trust cards) to reach this declared Heading size.
+- **Body (16px)** — Hero subtítulo, section intro paragraphs, module/trust card descriptions, footer copy. Flat everywhere (no `text-sm→text-base` responsive step, unlike `setup.tsx`'s subtitle) — kept simple since 16px already reads well at every viewport. `CardDescription`'s own default (`text-sm text-neutral-500 dark:text-neutral-400`, verified in `web/src/components/ui/card.tsx`) renders at 14px, not this 16px Body role — apply explicit `className="text-base"` at all 10 `CardDescription` call sites (6 module cards + 4 trust cards) to reach the declared Body size.
 - **Label (14px)** — nav anchor links, eyebrow/kicker tags (uppercase + `tracking-[0.2em]`, matching the letter-spacing pattern already used in `setup/page.tsx`'s eyebrow tag and `dashboard-shell.tsx`'s "Sistema" group label — only the numeric size is standardized here into 14px instead of `setup.tsx`'s one-off 11px, to keep this phase's palette at exactly 4 declared sizes while preserving the visual *pattern*), footer fine print, CTA button labels (see exception below).
 
 **Two documented, pre-existing exceptions (do not extend elsewhere on this page):**
@@ -179,7 +179,7 @@ This phase adds **zero** new UI dependencies (locked by LP-12/CONTEXT.md). It re
 Single-page layout (per CONTEXT.md — no multi-route nav), top to bottom:
 
 1. **Sticky header** — `h-16` (64px, matches `dashboard-shell.tsx`'s own header height convention), `bg-white/80 dark:bg-[#020617]/80 backdrop-blur-md`, border-bottom `slate-200`/`dark:slate-800`, `sticky top-0 z-10`. Contents: brand mark (left) · anchor nav (center/right, hidden `<md:`) · `ThemeToggle` · "Entrar" CTA (small/secondary).
-2. **Hero** — full-width band, Dominant background, no card wrapper, no decorative gradients/blobs/mesh (the existing codebase has zero precedent for decorative backgrounds beyond the 36px avatar gradient — keep the Hero flat, consistent with `setup/page.tsx`'s equally undecorated top block). Vertical padding per the 4xl/3xl/2xl step (96/64/48). Centered or left-aligned single column, max-width constrained (match `setup/page.tsx`'s `max-w-7xl`/`max-w-3xl` container pattern).
+2. **Hero** — full-width band, Dominant background, no card wrapper, no decorative gradients/blobs/mesh (the existing codebase has zero precedent for decorative backgrounds beyond the 36px avatar gradient — keep the Hero flat, consistent with `setup/page.tsx`'s equally undecorated top block). **The Hero H1 (Display, 48px) is the primary focal point of the entire page** — the single largest, boldest element in the declared type scale, positioned first, with no other element of equal size or accent weight competing anywhere below the fold. Vertical padding per the 3xl/2xl step (64/48), held flat from `md:` through `lg:` (see Spacing Scale exceptions). Centered or left-aligned single column, max-width constrained (match `setup/page.tsx`'s `max-w-7xl`/`max-w-3xl` container pattern).
 3. **Funcionalidades/Módulos** — eyebrow + H2 + 6-card grid (`Card` component, unmodified styling).
 4. **Confiança Institucional** — eyebrow + H2 + 4-card/bullet grid.
 5. **Contacto** — eyebrow + H2 + body + single `mailto:` CTA, no form.
@@ -203,7 +203,7 @@ Single-page layout (per CONTEXT.md — no multi-route nav), top to bottom:
 | Component | Source | Modification |
 |---|---|---|
 | `Button` | `web/src/components/ui/button.tsx` | none to the file; call-site `className="rounded-none"` on every instance used on this page |
-| `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent` | `web/src/components/ui/card.tsx` | none — used as-is for module/trust cards |
+| `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent` | `web/src/components/ui/card.tsx` | none to the file; call-site `className="text-2xl"` on every `CardTitle` and `className="text-base"` on every `CardDescription` (10 instances of each: 6 module cards + 4 trust cards) — see Typography role assignment. `CardHeader`'s internal `gap-1.5` (6px) is inherited as-is (see Spacing Scale exceptions). |
 | `ThemeToggle` | `web/src/components/theme-toggle.tsx` | none — copied verbatim |
 | `cn()` | `web/src/lib/utils.ts` | none — copied verbatim, dependency of the above |
 | `Badge` (optional) | `web/src/components/ui/badge.tsx` | none, if used at all (e.g. a small "Novo" flourish) — not required by any locked requirement |
