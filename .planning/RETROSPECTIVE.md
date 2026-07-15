@@ -314,6 +314,50 @@ A complete, persisted notification system built from zero prior infrastructure. 
 
 ---
 
+## Milestone: v2.11 — Auditoria Técnica e Notificações Avançadas
+
+**Shipped:** 2026-07-14
+**Phases:** 8 (90–97) | **Plans:** 21 | **Tasks:** 39
+
+### What Was Built
+
+A dual-purpose milestone: close accumulated technical debt AND expand notifications. SpotBugs/FindSecBugs fixed against JDK 23 bytecode and committed (Phase 90). The project's first real integration-test infrastructure — Testcontainers+PostgreSQL, covering the native `buscarPorFiltros` query and the `numeroVersao` concurrency lock, with a CI gate (Phase 91). Agenda consolidated onto `RiscoPrazoService` for both Prazos and Eventos, removing the orphaned `/eventos/upcoming` endpoint (Phase 92). A 4-phase sequential notification chain, forced sequential by mechanical collision on `NotificacaoService.java`: per-user category mute with `PRAZO_VENCIDO` protected (Phase 93); a pre-existing ADMIN/team-member dedup collision bug fixed (Phase 94); notification fan-out expanded from single `responsavelId` to the whole cliente team via `resolverEquipaCliente` (Phase 95); snooze/adiar for prazo reminders with 1/3/7-day presets (Phase 96). The milestone closed with a cross-cutting audit (Phase 97): tenant isolation re-confirmed on all 3 new notification surfaces, ~40 UAT scenarios closed across 8 historical phases, `DocumentoTipo` labels translated + NIF test coverage added, and — for the first time in this project's history — the recurring `MINIO_ENDPOINT` environment blocker genuinely resolved (native Postgres + real MinIO container), not merely documented as a workaround.
+
+### What Worked
+
+- **The research-driven 3-track parallel structure held up exactly as planned**: Phases 90/91/92 (zero file overlap with each other or the notification chain) ran independently; Phases 93→94→95→96 correctly ran sequential despite logical independence, because all four collide mechanically on `NotificacaoService.java`; Phase 97 correctly ran last, seeing the milestone's final integration shape.
+- **Genuinely resolving `MINIO_ENDPOINT` this session** (rather than working around it again) unlocked real, live, authenticated E2E verification — not just code-review — for NOTF-24 (mute toggle), AGD-35 (risco field), NOTF-25 (team fan-out notification), and the full NOTF-26 snooze flow (badge drop, history, bell-hide). This is a qualitative shift from every prior milestone in this project, which all accepted `human_needed` verification status by necessity.
+- **The plan-checker caught 2 real blockers in Phase 97's own UAT-closure plan before execution**: 11 of Phase 89's UAT scenarios were unassigned in the first draft, and a code citation cited the wrong line range entirely (would have planted a false citation into the phase's own evidence document). Both were fixed in one revision round.
+- **Worktree-isolated parallel execution for Phase 97's Wave 1** (3 concurrent plans — tenant-isolation audit, DocumentoTipo/NIF fixes, UAT closure) merged with zero conflicts, confirmed by the plan-checker's file-overlap check before dispatch.
+- **The milestone-level integration audit found and fixed a real gap in the same session it was found**, rather than deferring it a second time: `isEventoCritico`'s use of `dataFim` (vs. `listEventos`/`AlertasDiariosJob`'s `dataInicio`) — a genuine 5th divergent "prazo crítico" implementation that Phase 92's own goal was supposed to eliminate, flagged by Phase 92's own code review as deferred to Phase 97, but missed by Phase 97's bounded AUD-05 scope until the milestone-audit integration-checker rediscovered it independently.
+
+### What Was Inefficient
+
+- **The `dataInicio`/`dataFim` divergence (above) fell through the cracks between two phases** despite being explicitly named in both `92-REVIEW.md` and `92-CONTEXT.md` as "deferred to Phase 97" — a deferred item recorded only in a phase-level review document, without a corresponding line in STATE.md's Pending Todos, is invisible to whichever later phase is supposed to pick it up. It survived only because the milestone-level integration-checker does independent source comparison rather than trusting phase claims.
+- **The same class of Postgres-transaction-abort bug was independently discovered twice** (Phase 93's preference-mute upsert, Phase 94's dedup fix) — `save()`/`saveAndFlush()` + a local `catch(DataIntegrityViolationException)` does not protect an enclosing `@Transactional` method's commit on Postgres (unlike H2/MySQL, which don't abort the whole transaction on a single constraint violation). Both times converged on the same fix (atomic native `INSERT ... ON CONFLICT DO NOTHING`), but the underlying platform-semantics lesson wasn't captured as a standing pitfall after the first occurrence.
+- **Docker Desktop 4.80 / Testcontainers 1.20.4's npipe incompatibility persisted the entire milestone**, despite Phase 91 existing specifically to build the integration-test infrastructure this blocked from running locally. The tests compile and are logically sound (confirmed via direct code review), but were never actually executed in this sandbox — only in CI, unverified this session.
+- **A session interruption during Phase 92's second code-review-fix iteration** left an orphaned worktree/branch and a recovery-sentinel file; recovery required manually verifying the interrupted fixer's commits had already landed (via `git merge-base --is-ancestor`) before cleaning up — no work was lost, but it consumed a diagnostic pass that a cleaner interruption-handling contract could have avoided.
+
+### Patterns Established
+
+- **Atomic native `INSERT ... ON CONFLICT DO NOTHING` upsert queries** are the correct fix for "Postgres aborts the whole transaction on any constraint violation" — not `try/catch` around `save()`. Established in Phase 93 (`NotificacaoPreferenciaRepository.upsertSilenciar`), reused in Phase 94 (`NotificacaoRepository.inserirSeNaoDuplicado`).
+- **`criarComFanOutAdmin` helper**: merge primary recipient(s) + team + ADMIN fan-out into a single deduplicated `LinkedHashSet<UUID>` before the notification-creation loop, rather than looping over each tier separately — established in Phase 94, extended with an 11-arg overload in Phase 95 for the team tier.
+- **A single choke-point service method (`criar()`) can absorb 4 sequential feature additions (mute, dedup, team fan-out, snooze) across 4 phases without becoming unmaintainable**, provided each addition is a narrow, orthogonal guard/field rather than a rewrite of the method's control flow.
+
+### Key Lessons
+
+1. **A deferred cross-phase item needs a durable, centrally-tracked home (STATE.md Pending Todos), not just a mention in a phase-level REVIEW.md/CONTEXT.md** — the latter is invisible to whatever later phase is supposed to close it, and only an independent, source-comparing audit (not a phase's own bounded scope) reliably catches the gap.
+2. **PostgreSQL's whole-transaction-abort-on-constraint-violation semantics are a standing pitfall for this codebase specifically** (most prior H2/MySQL-trained instincts about local try/catch recovery don't hold) — worth a permanent note in PITFALLS-style documentation now that it's recurred twice.
+3. **Resolving a recurring environment blocker for real (not documenting a workaround) has compounding value** — this session's actual MinIO+Postgres fix immediately converted 5 phases' worth of `human_needed` verification into genuine live-tested confirmations, something no prior milestone in this project's history had been able to do.
+
+### Cost Observations
+
+- Model mix: opus for all phase planners; sonnet for pattern-mapping, execution (including parallel worktree executors), plan-checking, code-review/fix iterations, phase verification, and the milestone integration audit.
+- Sessions: one continuous session covering milestone setup, all 8 phases' full discuss→plan→check→execute→verify→review→fix cycles, live browser-based UAT verification, and the complete milestone lifecycle (audit→complete→cleanup).
+- Notable: this is the first milestone in the project where the orchestrator itself (not a spawned subagent) performed live browser verification directly against a running dev environment mid-session, closing several `human_needed` items with real evidence rather than accepting them as pending — a capability unlocked entirely by this session's genuine resolution of the `MINIO_ENDPOINT` blocker.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -325,5 +369,6 @@ A complete, persisted notification system built from zero prior infrastructure. 
 | v2.8 Refatoração Ficha de Cliente | 6 (incl. 2 gap-closure plans) | 13 | 3 | 81 | 20/20 (post-review-remediation) |
 | v2.9 Melhoria Módulo Processos | 5 | 12 | 2 | 97 | 17/17 (post-audit-remediation) |
 | v2.10 Notificações e Alertas | 5 | 14 | 3 | 29 (backend+web+migrations) | 16/16 (0 audit gaps) |
+| v2.11 Auditoria Técnica e Notificações Avançadas | 8 | 21 | 3 | 133 | 15/15 (1 integration gap found+fixed at audit) |
 
 *Table grows with each milestone*
