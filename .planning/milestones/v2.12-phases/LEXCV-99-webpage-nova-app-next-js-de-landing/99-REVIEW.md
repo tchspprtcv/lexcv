@@ -1,208 +1,187 @@
 ---
 phase: 99-webpage-nova-app-next-js-de-landing
-reviewed: 2026-07-15T11:20:47Z
+reviewed: 2026-07-15T12:13:42Z
 depth: standard
-files_reviewed: 27
+files_reviewed: 8
 files_reviewed_list:
-  - webpage/.env.example
-  - webpage/.gitignore
-  - webpage/eslint.config.mjs
   - webpage/next.config.ts
-  - webpage/package.json
-  - webpage/postcss.config.mjs
-  - webpage/tsconfig.json
   - webpage/proxy.ts
-  - webpage/src/app/globals.css
-  - webpage/src/app/layout.tsx
-  - webpage/src/app/page.tsx
-  - webpage/src/app/providers.tsx
-  - webpage/src/components/theme-toggle.tsx
-  - webpage/src/components/ui/button.tsx
-  - webpage/src/components/ui/card.tsx
-  - webpage/src/lib/utils.ts
   - webpage/src/lib/setup.ts
   - webpage/src/lib/branding.ts
-  - webpage/src/types/setup.ts
-  - webpage/src/types/branding.ts
+  - webpage/src/lib/backend-origin.ts
+  - webpage/src/components/theme-toggle.tsx
   - webpage/src/components/brand-mark.tsx
-  - webpage/src/components/site-header.tsx
-  - webpage/src/components/hero-section.tsx
-  - webpage/src/components/site-footer.tsx
-  - webpage/src/components/features-section.tsx
-  - webpage/src/components/trust-section.tsx
-  - webpage/src/components/contact-section.tsx
+  - webpage/.env.example
 findings:
   critical: 1
-  warning: 5
-  info: 3
-  total: 9
+  warning: 0
+  info: 4
+  total: 5
 status: issues_found
 ---
 
-# Phase 99: Code Review Report
+# Phase 99: Code Review Report (Re-review after second fix iteration)
 
-**Reviewed:** 2026-07-15T11:20:47Z
+**Reviewed:** 2026-07-15T12:13:42Z
 **Depth:** standard
-**Files Reviewed:** 27
+**Files Reviewed:** 8
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the new standalone `webpage/` Next.js 16 app (landing page, no auth, no forms) end to end, with a focus on the four areas requested: XSS via tenant-supplied `nome`/`logoDataUrl`, SSRF/URL-construction correctness in the server-to-server fetches, safety of `proxy.ts`'s fail-open behavior, and correctness of `next.config.ts`'s `assetPrefix`/security-headers/rewrite config.
+This is iteration-3 (final) of a 3-iteration auto-fix loop. It independently re-verifies `99-REVIEW-FIX.md`'s claim that commit `8aeb1a8` resolved the prior round's WR-01 (`BACKEND_API_ORIGIN` never validated/normalized) via a new shared `getBackendOrigin()` helper in `webpage/src/lib/backend-origin.ts`. Nothing in this section is taken from the fix report at face value — every claim was re-derived from the current source (`git show 8aeb1a8`, direct file reads) and, for the behavioral claims, verified with an executable reproduction, not just read.
 
-Cross-checked findings against this phase's own planning artifacts (`99-CONTEXT.md`, `99-02-PLAN.md`, `99-02-SUMMARY.md`, `98-CONTEXT.md`) to avoid re-litigating deliberately-accepted, already-documented risks (e.g. the `/setup`/`/login` cross-zone routing deferred to Phase 100, and the STRIDE-reasoned XSS/SSRF/fail-open threat model in `99-CONTEXT.md`). Where the team's own threat-model reasoning is sound, this review says so explicitly rather than re-flagging it.
+**WR-01's literal symptom is genuinely fixed — verified empirically.** I built a faithful Node ESM reproduction of the exact import chain (`backend-origin.mjs` → `setup.mjs` → `proxy.mjs`, mirroring the real files line-for-line) and ran all four inputs the prior review and the fix report discuss:
 
-**XSS (`nome`/`logoDataUrl`):** No exploitable XSS found. `nome` is rendered as a React text child (`{nome}`), which auto-escapes — confirmed no `dangerouslySetInnerHTML` anywhere in the app. `logoDataUrl` is only ever used as an `<img src>` after a `startsWith("data:image/")` guard, and browsers do not execute scripts embedded in SVGs loaded via `<img>` (image context, not document context). One residual hardening gap is noted (WR-05): the guard does not exclude the `image/svg+xml` subtype specifically.
+```
+BACKEND_API_ORIGIN="http://localhost:8080"   -> setup URL correct, proxy() try succeeds
+BACKEND_API_ORIGIN="http://localhost:8080/"  -> trailing slash stripped correctly, proxy() try succeeds (no double slash)
+BACKEND_API_ORIGIN="localhost:8080"          -> throws "must include a scheme..." at import time
+(unset)                                       -> throws "is required" at import time
+```
 
-**SSRF:** No SSRF found in either `lib/setup.ts` or `lib/branding.ts` — both fetch destinations are built entirely from fixed environment variables and literal path suffixes, never from visitor-supplied input (query params, headers, or path segments), so a visitor cannot redirect either call to an attacker-chosen destination.
+The trailing-slash case — the primary example in the prior WR-01 — is cleanly fixed with zero side effects: `raw.replace(/\/+$/, "")` correctly normalizes it and the resulting URL is verified correct. `tsc --noEmit -p webpage/tsconfig.json` and `eslint` on all 8 files both pass clean (re-run independently, not reused from either prior report).
 
-**URL-construction correctness:** This is where the real, high-severity bug lives (CR-01 below). `fetchSetupStatus()` builds a **relative** URL (`${NEXT_PUBLIC_API_BASE_PATH}/setup/status`) and this is the one server-side fetch call in the app that is invoked from `proxy.ts` (a Node.js-runtime Edge Proxy) with no request-derived base — and relative URLs are not valid `fetch()` input outside a browser document context. This was verified both empirically (a plain `node -e "fetch('/api/v1/setup/status')"` throws `TypeError: Failed to parse URL from /api/v1/setup/status`) and against Next.js's own locally-installed docs, which record "`v12.0.9` — Enforce absolute URLs in Edge Runtime" as an intentional, long-standing platform constraint. The practical effect: the entire "redirect to `/setup` when the system is uninitialized" gate — this phase's core requirement (LP-05) — never fires, in any environment, regardless of whether the backend is actually initialized.
+**But the fix introduces a new, more severe problem for the "missing scheme" sub-case, and this is the central finding of this round (CR-01 below).** Both `setup.ts:4` and `branding.ts:4` call `getBackendOrigin()` at module top level — outside any function, therefore outside every try/catch that exists in their callers. `proxy.ts`'s fail-open `try { await fetchSetupStatus() } catch { return NextResponse.next(); }` and `branding.ts`'s own internal `try/catch` around its `fetch()` call both exist specifically so a backend/config problem can never take down this public, unauthenticated marketing site — that intent is stated explicitly in both files' own comments ("fail open — um erro transitório do backend nunca deve bloquear a landing pública"; "nunca crash para um visitante anónimo"). My reproduction proves neither catch block can intercept a throw from `getBackendOrigin()`, because that throw happens during static `import` resolution, before either function body (and its try block) ever executes — this is invariant JS module semantics, not a framework nuance. The practical consequence: a `BACKEND_API_ORIGIN` that's present but missing an `http(s)://` scheme (a materially plausible ops typo — e.g. copying just `host:port` from a runbook) now takes down the *entire* site for *every* visitor (both the `/setup` redirect gate in `proxy.ts` and the actual homepage render in `page.tsx`, confirmed via grep as the only two importers of this code), instead of the prior graceful degradation (broken redirect gate, page still served). That is a worse observable outcome than the bug WR-01 set out to fix, and it directly contradicts this codebase's own explicitly-documented fail-open contract. See CR-01 for full detail, reproduction, and a concrete minimal fix.
 
-**`proxy.ts` fail-open safety:** The *design* is sound — this app protects no sensitive resource, so failing open to show the public marketing page is the correct trade-off (matches this phase's own explicit, accepted threat-model disposition). The *implementation* is not sound: because of CR-01, the "fail open on genuine transient error" catch block is actually catching a deterministic, always-reproducible bug on every single request, silently, with no logging (IN-02) — masking the fact that the redirect branch is dead code.
+Notably, `99-REVIEW-FIX.md` itself states the throw is "a build/startup-time error, not a per-request one" as the justification for keeping it outside the catch blocks — this specific factual claim is not substantiated anywhere in that report and my reproduction directly contradicts it for the realistic case where `BACKEND_API_ORIGIN` is (correctly, per this app's own `output: "standalone"` + non-`NEXT_PUBLIC_`-prefixed design) injected at container/process runtime rather than baked in at build time.
 
-**`next.config.ts` (`assetPrefix`/headers/rewrite):** `assetPrefix: "/landing-static"` is correctly coordinated with the Proxy `matcher`'s `landing-static` exclusion (both added together, consistent, no accidental exposure). The security headers and the `/api/v1/:path*` rewrite were copied verbatim from `web/next.config.ts` rather than scoped to this app's much narrower needs — this surfaces two independent findings (WR-01, WR-02) rather than an "exposure," since the backend's own auth layer is the actual security boundary in both cases.
+**All 4 carried-forward Info items were independently re-confirmed against the current source** (not copy-pasted from the prior report). One line-number correction: IN-02 (branding.ts unvalidated cast) shifted from lines 22-23 to lines 19-20 because the fix commit shortened the file by 3 lines. IN-01 (orphaned `NEXT_PUBLIC_API_BASE_PATH`) was specifically re-checked against the new `backend-origin.ts` file per this round's instructions — confirmed it does **not** reference `NEXT_PUBLIC_API_BASE_PATH` (it only reads `BACKEND_API_ORIGIN`), and a repo-wide grep still returns only the variable's own declaration in `.env.example` — it remains fully orphaned, unchanged in status. IN-03 and IN-04 are byte-for-byte unchanged (their files were not touched by commit `8aeb1a8`, confirmed via `git show --stat`).
+
+**Recommendation for the orchestrator:** CR-01 is a genuine, reproduced, Critical-severity finding (a plausible single-typo config error causes a full outage of a public site, contradicting the app's own stated design contract) discovered on the final allowed iteration. Per this review framework's own rule, BLOCKER/Critical findings must be fixed before this code ships. The fix is small and localized (move one function call from module scope into the two async function bodies — see CR-01's fix), so it should not require a further multi-file iteration if the orchestrator chooses to route it back for one more targeted fix.
 
 ## Critical Issues
 
-### CR-01: `fetchSetupStatus()`'s relative URL cannot be parsed server-side — the `/setup` redirect gate is dead code
+### CR-01: `getBackendOrigin()` validation runs outside every fail-open catch — a scheme-less `BACKEND_API_ORIGIN` crashes the entire public site instead of degrading gracefully
 
-**File:** `webpage/src/lib/setup.ts:3-12`, `webpage/proxy.ts:7-19`
+*(Fresh finding this round; unrelated to the round-1 `CR-01`, which remains resolved.)*
+
+**File:** `webpage/src/lib/backend-origin.ts:18-33`, `webpage/src/lib/setup.ts:2,4`, `webpage/src/lib/branding.ts:2,4`, `webpage/proxy.ts:3,10-19`
 **Issue:**
-`setup.ts` builds the fetch target from a relative base path:
+
+`setup.ts` and `branding.ts` both do this, at module scope, outside any function:
+
 ```ts
-const apiBasePath = process.env.NEXT_PUBLIC_API_BASE_PATH; // "/api/v1"
-const setupStatusUrl = `${apiBasePath}/setup/status`;       // "/api/v1/setup/status"
+// setup.ts:2,4                              // branding.ts:2,4
+import { getBackendOrigin } from "@/lib/backend-origin";
+const backendOrigin = getBackendOrigin();     // throws here if BACKEND_API_ORIGIN is missing/malformed
 ```
-This is only ever called from `proxy.ts`:
-```ts
-try {
-  const status = await fetchSetupStatus();
-  if (!status.initialized && pathname !== SETUP_PATH) {
-    return NextResponse.redirect(new URL(SETUP_PATH, request.url));
+
+`getBackendOrigin()` throws for two input shapes: entirely unset, or set-but-missing-a-scheme (e.g. `BACKEND_API_ORIGIN=localhost:8080` instead of `http://localhost:8080`). Because this call executes during the module's static `import`, it runs and can throw *before* either consuming function's body — and therefore before its try/catch — ever executes:
+
+- `proxy.ts:3` does `import { fetchSetupStatus } from "./src/lib/setup";` — this import alone triggers `setup.ts`'s module-scope `getBackendOrigin()` call. If it throws, `proxy.ts`'s own module fails to finish loading, so the `try { await fetchSetupStatus(); } catch { return NextResponse.next(); }` block at `proxy.ts:10-19` never gets a chance to run — there is no `proxy()` function to catch anything with, because the module holding it never finished initializing.
+- `webpage/src/app/page.tsx:7` does `import { fetchBranding } from "@/lib/branding";` (confirmed via grep as the only other importer of this code besides `proxy.ts`). The identical mechanism applies: `branding.ts`'s own internal `try { ... } catch { return FALLBACK; }` (which correctly protects against network/timeout/JSON errors) cannot protect against this, because `getBackendOrigin()` throws during `page.tsx`'s import of the module, before `fetchBranding()` is ever called.
+
+I independently reproduced this with a faithful line-for-line copy of the real import chain (not the fix report's `node -e` snippets, which only tested `new URL()` semantics in isolation and never exercised the actual try/catch bypass):
+
+```js
+// proxy.mjs (mirrors webpage/proxy.ts's structure exactly)
+import { fetchSetupStatus } from "./setup.mjs";
+export async function proxy() {
+  try {
+    const status = await fetchSetupStatus();
+    return "next()";
+  } catch (err) {
+    console.log("[proxy] fail-open catch DID fire:", err.message);
+    return "next() via catch";
   }
-} catch {
-  return NextResponse.next(); // fail open
+}
+
+// runner.mjs — simulates the framework invoking proxy() per request
+try {
+  const mod = await import("./proxy.mjs");
+  console.log("RESULT:", await mod.proxy());
+} catch (err) {
+  console.log("Import of proxy.mjs itself threw (proxy()'s internal try/catch NEVER RAN):", err.message);
 }
 ```
-`proxy.ts` runs server-side (Next.js 16 Proxy defaults to the Node.js runtime; historically Edge runtime enforced this too). A bare relative string is **not valid input to `fetch()`** outside a browser document context — there is no implicit base URL to resolve against, so the underlying `fetch`/`URL` constructor throws before any network request is even attempted.
 
-Verified empirically in this exact repo:
+Output for `BACKEND_API_ORIGIN="localhost:8080"` (missing scheme):
+
 ```
-$ node -e "fetch('/api/v1/setup/status').catch(e => console.log('THROWN:', e.name, '-', e.message))"
-THROWN: TypeError - Failed to parse URL from /api/v1/setup/status
+Import of proxy.mjs itself threw (proxy()'s internal try/catch NEVER RAN):
+ -> BACKEND_API_ORIGIN must include a scheme (http:// or https://), got: localhost:8080
 ```
-And confirmed against this project's own locally-installed Next.js docs (`webpage/node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`), version history table: `v12.0.9 | Enforce absolute URLs in Edge Runtime`.
 
-Consequence: `fetchSetupStatus()` **always throws**, `proxy.ts`'s `catch` **always** fires, and `NextResponse.next()` is returned unconditionally. The `!status.initialized` redirect branch — the literal purpose of this file and this phase's LP-05 requirement — can never execute in any environment, not just when the backend is genuinely down. This is a strictly worse outcome than the risk this phase's own threat model (`99-CONTEXT.md`, T-99-03) consciously accepted ("if the backend is down during a genuine first boot, the redirect won't fire") — the redirect never fires, period, backend state notwithstanding.
+vs. the well-formed and trailing-slash cases, both of which correctly reach and pass through `proxy()`'s own try block:
 
-This also explains why it shipped: the task's own `<verify>` gate is purely textual (`grep`/`diff -q`/`pnpm build`) and never exercises the proxy against a live, genuinely-uninitialized backend; the plan's own `<human-check>` for the adjacent branding fetch was explicitly skipped in this execution (per `99-02-SUMMARY.md`), and no equivalent human-check existed for this redirect path at all.
+```
+BACKEND_API_ORIGIN="http://localhost:8080"  -> [proxy] fail-open try succeeded, status: http://localhost:8080/api/v1/setup/status
+BACKEND_API_ORIGIN="http://localhost:8080/" -> [proxy] fail-open try succeeded, status: http://localhost:8080/api/v1/setup/status
+```
 
-**Fix:** Mirror the pattern already used correctly in `webpage/src/lib/branding.ts` — call the backend directly via the absolute origin, never a relative path, for any fetch performed outside a browser:
+This is not a hypothetical: it is precisely one of the two concrete inputs the prior review round used to justify WR-01 (`localhost:8080`, no scheme). The prior bug for that input was "fetch silently never reaches the intended backend, indistinguishable from a transient outage" — a real but *contained* problem (only the `/setup` redirect gate degraded; the marketing site itself still rendered for every visitor). The current fix converts that into a *total* outage of the entire public site — both the redirect gate (`proxy.ts`) and the homepage content itself (`page.tsx`, which renders nothing without `fetchBranding()`) — for a misconfiguration that is materially easier to ship to production undetected than "entirely forgot to set the variable" (which is far more likely to be caught by the very first smoke test in any environment). This also directly contradicts the fail-open design intent stated verbatim in both consumer files' own comments.
+
+`99-REVIEW-FIX.md` (the fix report) frames this as intentional: *"a misconfigured origin still throws at module-load/first-import time (a loud, immediate startup failure) rather than being silently swallowed by either fail-open catch block"* and *"moving the throw inside the fetch call... would have re-introduced the 'swallowed by a catch block' risk this finding is about"* — but "swallowed by the catch block" is exactly this app's own stated design goal for backend/config-related failures (see the comments quoted above), and the report's claim that this is "a build/startup-time error, not a per-request one" is unproven — for this app's own deployment shape (`output: "standalone"`, `BACKEND_API_ORIGIN` deliberately *not* `NEXT_PUBLIC_`-prefixed, i.e. designed to be injected at container/process runtime rather than baked in at build time), the reproduction above shows the throw fires exactly when the module is loaded to serve a real request, not at some separate, decoupled "build" phase.
+
+**Fix:** Move the `getBackendOrigin()` call from module scope into each async function body, so it executes inside the try/catch that already exists for exactly this purpose. This preserves fail-fast semantics (still throws immediately, every time, with the same descriptive message) while restoring the fail-open guarantee for live traffic:
+
 ```ts
-import type { SetupStatusResponse } from "@/types/setup";
-
-const backendOrigin = process.env.BACKEND_API_ORIGIN;
-if (!backendOrigin) {
-  throw new Error("BACKEND_API_ORIGIN is required");
-}
-
-const setupStatusUrl = `${backendOrigin}/api/v1/setup/status`;
+// setup.ts
+import { getBackendOrigin } from "@/lib/backend-origin";
 
 export async function fetchSetupStatus(init?: RequestInit): Promise<SetupStatusResponse> {
-  const response = await fetch(setupStatusUrl, {
+  const backendOrigin = getBackendOrigin(); // now runs inside proxy.ts's try/catch
+  const response = await fetch(`${backendOrigin}/api/v1/setup/status`, {
     ...init,
     cache: "no-store",
+    signal: init?.signal ?? AbortSignal.timeout(3000),
     headers: { Accept: "application/json", ...(init?.headers ?? {}) },
   });
-  if (!response.ok) {
-    throw new Error(`Setup status failed with ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Setup status failed with ${response.status}`);
   return (await response.json()) as SetupStatusResponse;
 }
 ```
-(This also removes the now-unneeded dependency on `NEXT_PUBLIC_API_BASE_PATH` for this call site.) After fixing, add an integration test/human-check that actually points at a backend with no tenant seeded and confirms the redirect fires — the current automated gate cannot catch this class of bug.
 
-Note for the user (out of this review's file scope, but worth independent verification): `webpage/src/lib/setup.ts` was intentionally copied byte-for-byte from `web/src/lib/setup.ts`, and `web/proxy.ts` calls it the same way (no base URL). If that's accurate, the identical bug likely exists in the already-shipped `web/` app's setup-gate and post-setup redirect (`/dashboard`/`/login`) logic — worth checking independently since `web/` was not part of this review's scope.
-
-## Warnings
-
-### WR-01: CSP allows `'unsafe-inline'` and `'unsafe-eval'` in `script-src`
-
-**File:** `webpage/next.config.ts:25`
-**Issue:** The `Content-Security-Policy` header is `script-src 'self' 'unsafe-inline' 'unsafe-eval'; ...`. `'unsafe-inline'` permits inline `<script>`/event handlers and `'unsafe-eval'` permits `eval()`/`new Function()`/string-based `setTimeout` — together these neutralize CSP's main value as an XSS mitigation, since the dominant XSS payload shape (inline script injection) is explicitly allowed. This was copied verbatim from `web/next.config.ts` rather than authored fresh for this app.
-**Fix:** Prefer a nonce- or hash-based `script-src` (Next.js supports per-request nonces via Proxy) and drop `'unsafe-eval'` unless a specific, verified dependency requires it:
 ```ts
-{ key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'nonce-<per-request-nonce>'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none';" }
-```
-If nonce-based CSP is out of scope for this milestone, at minimum remove `'unsafe-eval'` (no code in this app calls `eval`/`Function`) and track `'unsafe-inline'` removal as follow-up.
-
-### WR-02: `/api/v1/:path*` rewrite proxies the entire backend API through the public marketing site, and is currently unused
-
-**File:** `webpage/next.config.ts:11-14`
-**Issue:** The rewrite forwards *any* path under `/api/v1/` to `${backendOrigin}`, not just the specific public endpoints this app needs (`/api/v1/public/branding`, `/api/v1/setup/status`). The backend's own JWT/`@PreAuthorize` layer is the real authorization boundary (per `CLAUDE.md`), so this isn't a direct data-exposure bug, but it needlessly makes the *entire* authenticated backend surface reachable through this unauthenticated app's origin — a least-privilege gap, and a larger blast radius if this domain ever gets weaker network-layer protections (WAF/rate-limits) than the main app's domain. It also appears to be dead configuration today: `fetchBranding()` calls `backendOrigin` directly (bypassing this rewrite), and `fetchSetupStatus()`'s relative call never reaches it either (see CR-01) — no code path in `webpage/` currently depends on this rewrite.
-**Fix:** Narrow the rewrite to only the paths actually consumed, e.g.:
-```ts
-{ source: "/api/v1/public/:path*", destination: `${backendOrigin}/api/v1/public/:path*` },
-{ source: "/api/v1/setup/status", destination: `${backendOrigin}/api/v1/setup/status` },
-```
-or remove it entirely if all fetches stay server-to-server against `backendOrigin` (consistent with the fix recommended in CR-01).
-
-### WR-03: No timeout on either server-side `fetch()` call — a hanging backend defeats the "never block the landing" intent
-
-**File:** `webpage/src/lib/setup.ts:12`, `webpage/src/lib/branding.ts:13`
-**Issue:** Both fetches only guard against *rejection* (`catch`) and non-2xx (`!response.ok`) — neither has a timeout. If the backend accepts the connection but never responds (slow DB, thread-pool exhaustion, etc.), `await fetch(...)` hangs indefinitely. In `proxy.ts` this stalls every route in the app (subject to platform/runtime execution limits, which would then likely surface as a hard error rather than the intended graceful fail-open); in `page.tsx` (`fetchBranding`, called with `dynamic = "force-dynamic"` on every request) this stalls the entire landing page's SSR render for every visitor. Both directly contradict the documented design intent ("um erro transitório do backend nunca deve bloquear a landing pública").
-**Fix:**
-```ts
-const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(3000), headers: {...} });
-```
-and ensure the `catch` also handles the resulting `AbortError`/`TimeoutError` (it already will, since both are thrown/rejected errors caught by the existing generic `catch`).
-
-### WR-04: Theme toggle uses `theme` instead of `resolvedTheme` — first click can be a visual no-op
-
-**File:** `webpage/src/components/theme-toggle.tsx:10,17`
-**Issue:** `providers.tsx` sets `defaultTheme="system"` with `enableSystem`. When a visitor hasn't made an explicit choice, `next-themes`'s `theme` value is the literal string `"system"`, not `"light"`/`"dark"` — the *actually rendered* appearance in that case is exposed separately as `resolvedTheme`. The toggle handler:
-```ts
-onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-```
-compares `theme` (which is `"system"`, not `"dark"`) rather than `resolvedTheme`. For a visitor whose OS preference is dark: `theme === "dark"` is `false`, so the first click sets `theme` to `"dark"` — which is visually identical to what was already being shown via the system preference, so the click appears to do nothing. A second click is then needed to actually reach `"light"`. This is a well-documented `next-themes` gotcha, not a hypothetical.
-**Fix:**
-```ts
-const { resolvedTheme, setTheme } = useTheme();
-...
-onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+// branding.ts
+export async function fetchBranding(): Promise<BrandingResponse> {
+  try {
+    const backendOrigin = getBackendOrigin(); // now runs inside this try
+    const response = await fetch(`${backendOrigin}/api/v1/public/branding`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return FALLBACK;
+    const data = (await response.json()) as BrandingResponse;
+    return { nome: data.nome || "LexCV", logoDataUrl: data.logoDataUrl ?? null };
+  } catch {
+    return FALLBACK;
+  }
+}
 ```
 
-### WR-05: Logo guard allows `data:image/svg+xml`, a known XSS-adjacent MIME subtype
-
-**File:** `webpage/src/components/brand-mark.tsx:14`
-**Issue:** `hasLogo` only checks `logoDataUrl.startsWith("data:image/")`, which admits `data:image/svg+xml`. SVG is the one `image/*` subtype that can embed `<script>`/event handlers. Current mainstream browsers do not execute such content when the SVG is loaded via a plain `<img src>` (it's decoded in image context, not document/script context), and this phase's own threat model (`99-CONTEXT.md` T-99-02) already reasons this through soundly, including the mitigating fact that this data is admin-supplied (via `/setup`), not visitor-supplied. Given that, this is a hardening suggestion rather than a proven exploit path — but it's a cheap, concrete tightening of a control the team is explicitly relying on.
-**Fix:** Narrow the allowlist to the actual raster/vector formats you intend to support, e.g.:
-```ts
-const hasLogo = typeof logoDataUrl === "string" && /^data:image\/(png|jpe?g|gif|webp);base64,/.test(logoDataUrl);
-```
+Once moved, fixing IN-03 (add `console.error` in `proxy.ts`'s catch) becomes a necessary companion, not just a nice-to-have — otherwise a misconfigured origin fails open *silently*, with no signal at all that anything is wrong (the same class of "no observability" gap that let the original CR-01 ship unnoticed in the first place).
 
 ## Info
 
-### IN-01: `fetchBranding()` casts the response JSON without runtime validation
+### IN-01: `NEXT_PUBLIC_API_BASE_PATH` in `.env.example` is still dead configuration — confirmed unaffected by the `backend-origin.ts` addition
 
-**File:** `webpage/src/lib/branding.ts:21-22`
-**Issue:** `(await response.json()) as BrandingResponse` trusts the shape completely. `data.nome || "LexCV"` means that if `nome` were ever a non-array truthy object (contract drift, a future backend bug, a misbehaving intermediary), `<span>{nome}</span>` in `brand-mark.tsx` would throw ("Objects are not valid as a React child"), crashing the SSR render for every visitor — the exact outcome this code otherwise goes to lengths to avoid. Low likelihood today since Phase 98's backend DTO declares `nome`/`logoDataUrl` as plain Java `String` fields, but cheap to close.
-**Fix:** Add a minimal runtime guard before use, e.g. `typeof data?.nome === "string" ? data.nome : "LexCV"`.
+**File:** `webpage/.env.example:2`
+**Issue:** Re-checked specifically for this round: `webpage/src/lib/backend-origin.ts` reads only `process.env.BACKEND_API_ORIGIN` (line 19); it does not reference `NEXT_PUBLIC_API_BASE_PATH` anywhere. A repo-wide grep for `NEXT_PUBLIC_API_BASE_PATH` across `webpage/` (all `.ts`/`.tsx`/`.example` files) still returns exactly one hit — its own declaration in `.env.example:2`. Status unchanged from the prior round: still orphaned, still liable to mislead whoever configures deployment into thinking it's required.
+**Fix:** Remove the line from `webpage/.env.example`, or add a one-line comment if it's intentionally reserved for a future browser-side fetch.
 
-### IN-02: `proxy.ts`'s `catch` swallows every error silently, with no logging
+### IN-02: `fetchBranding()` casts the response JSON without runtime validation (carried over; line numbers shifted by the CR-01/WR-01 fix)
+
+**File:** `webpage/src/lib/branding.ts:19-20` (previously reported as 22-23; shifted by -3 lines because commit `8aeb1a8` replaced a 5-line inline guard with a 2-line import+call)
+**Issue:** `(await response.json()) as BrandingResponse` (line 19) still trusts the response shape completely; `data.nome || "LexCV"` (line 20) would let a non-string truthy `nome` (contract drift, misbehaving intermediary) reach `<span>{nome}</span>` in `brand-mark.tsx:29` and throw ("Objects are not valid as a React child"), crashing SSR for every visitor. Unchanged in substance from the prior round; not touched by commit `8aeb1a8` beyond the line-shift.
+**Fix:** `typeof data?.nome === "string" ? data.nome : "LexCV"` before use.
+
+### IN-03: `proxy.ts`'s `catch` still swallows every error silently, with no logging (carried over, unchanged; now also relevant to CR-01)
 
 **File:** `webpage/proxy.ts:16-18`
-**Issue:** The `catch {}` block has no logging of any kind. This is precisely why CR-01 can ship unnoticed: there is no server-side signal distinguishing "backend genuinely down" from "this code has a bug that always throws." Fail-open is the right behavior either way, but silence is not.
-**Fix:** `console.error("[proxy] setup-status check failed, failing open:", err)` (capture `err` in the catch) before `return NextResponse.next();`.
+**Issue:** Still no logging in the `catch {}` block (confirmed byte-for-byte unchanged — `proxy.ts` was not among the files touched by commit `8aeb1a8`). This was already the root gap that let the original CR-01 ship unnoticed. It's now doubly relevant: even after CR-01 above is fixed by moving `getBackendOrigin()` inside `fetchSetupStatus()`, a misconfigured origin would fail open *silently* through this exact catch block unless logging is added here too.
+**Fix:** `catch (err) { console.error("[proxy] setup-status check failed, failing open:", err); return NextResponse.next(); }`.
 
-### IN-03: Tenant logo `<img>` uses `alt=""`
+### IN-04: Tenant logo `<img>` uses `alt=""` (carried over, unchanged)
 
-**File:** `webpage/src/components/brand-mark.tsx:24`
-**Issue:** The logo conveys the institution's identity, not decoration, so an empty `alt` hides that information from screen-reader users even though the adjacent `<span>{nome}</span>` is visually present.
-**Fix:** `alt={nome || "Logótipo"}` (or similarly derive it from `nome`).
+**File:** `webpage/src/components/brand-mark.tsx:25`
+**Issue:** Confirmed byte-for-byte unchanged (only `hasLogo`'s regex on lines 14-15 was touched by the earlier WR-05 fix, not this line). The logo conveys institution identity, not decoration; empty `alt` hides that from screen-reader users.
+**Fix:** `alt={nome || "Logótipo"}`.
 
 ---
 
-_Reviewed: 2026-07-15T11:20:47Z_
+_Reviewed: 2026-07-15T12:13:42Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
