@@ -55,6 +55,15 @@ public class SecurityConfig {
                     "/api/v1/auth/logout",
                     "/api/v1/setup/status",
                     "/api/v1/setup/initialize",
+                    // WR-02 (Phase 98 code review): permitAll() só isenta autenticação, NÃO
+                    // isenta o filtro CORS (corsConfigurationSource() abaixo aplica-se a "/**",
+                    // incluindo este path). O consumidor previsto (app webpage/, Phase 99) ainda
+                    // não existe neste repositório. Antes dessa integração, confirmar se o fetch
+                    // é server-side (CORS não entra em jogo) ou client-side no browser (nesse
+                    // caso a origem de webpage/ tem de ser adicionada a
+                    // app.cors.allowed-origins/CORS_ALLOWED_ORIGINS, ou este path precisa de um
+                    // CorsConfigurationSource próprio, sem allowCredentials, já que é uma leitura
+                    // pública sem cookies). Ver corsConfigurationSource() abaixo.
                     "/api/v1/public/branding"
                 ).permitAll()
                 .anyRequest().authenticated()
@@ -65,6 +74,11 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // WR-02 (Phase 98 code review): esta configuração aplica-se também a
+    // /api/v1/public/branding (permitAll() na requestMatchers acima só isenta autenticação,
+    // não CORS). allowCredentials(true) implica que "*" nunca pode substituir a allowlist de
+    // origens abaixo -- ver o comentário junto a "/api/v1/public/branding" acima para o que
+    // falta confirmar antes da Phase 99/100 (integração com a app webpage/).
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
