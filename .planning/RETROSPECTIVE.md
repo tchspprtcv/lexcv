@@ -358,6 +358,49 @@ A dual-purpose milestone: close accumulated technical debt AND expand notificati
 
 ---
 
+## Milestone: v2.12 — Landing Page
+
+**Shipped:** 2026-07-15
+**Phases:** 3 (98–100) | **Plans:** 9 | **Tasks:** 21
+
+### What Was Built
+
+The application's first real public, unauthenticated surface. A new `GET /api/v1/public/branding` backend endpoint (Phase 98) exposing exactly `{nome, logoDataUrl}` via an explicit copy-DTO, never the `Tenant` entity, with an exact-literal `SecurityConfig` allowlist entry. A brand-new standalone Next.js 16 app `webpage/` (Phase 99) — scaffolded from scratch (own `package.json`/`next.config.ts`/`tsconfig.json`), with a setup-status gate stripped of every authentication branch, a server-side branding fetch (structurally CORS-free by construction), and a full landing page (Hero, Funcionalidades, Confiança Institucional, Contacto, dark/light mode) built from byte-copied `web/` UI primitives. Full routing/deployment wiring across dev, prod, and Hostinger (Phase 100) via Next.js's official Multi-Zones pattern (`assetPrefix`), keeping 3 independently-maintained Caddy configuration sources consistent, plus a 3rd CI/CD image artifact. Phase 100's own success criteria mandated a live `docker compose up` verification rather than isolated checks — deliberately, because this exact area (`docker-compose.hostinger.yml`'s embedded Caddy heredoc) had already produced 4 production bug-fix commits earlier in the same session.
+
+### What Worked
+
+- **The two-phases-in-parallel, one-phase-last structure held up exactly as designed**: Phase 98 (backend) and Phase 99 (`webpage/`) share zero files and have zero mutual dependency — Phase 99 was planned to consume a stub payload if built first; Phase 100 (routing) correctly waited for both to produce real artifacts (an actual endpoint shape, a buildable Docker image) before touching the historically fragile Caddy/Compose area.
+- **The mandated live `docker compose up` verification (Phase 100-04) caught two genuine runtime bugs that all prior static/unit-level checks missed**: a relative-URL `fetch()` in `webpage/src/lib/setup.ts` that would have silently disabled the `/setup` redirect gate in every real deployment (Node/Edge `fetch` rejects relative URLs; the bug was invisible in isolated `pnpm dev` testing), and a missing `@Transactional(readOnly = true)` on `PublicController.getBranding()`'s `@Lob` read that only crashed for a tenant with a real persisted logo (the automated unit tests only covered the null-logo case). Both were found and fixed live, in the same session, not deferred.
+- **Two independent findings from this milestone's git history (the `$`-interpolation footgun from `67e2120`/`534fa92`) were correctly treated as hard constraints, not just cautionary notes** — every task touching `docker-compose.hostinger.yml`'s heredoc carried an explicit acceptance criterion asserting zero new `$` characters, and the plan-checker empirically reproduced the historical bug class to prove the guard actually catches a reintroduction, not just a generic "does it start" check.
+- **A code-review auto-fix iteration self-corrected its own regression**: iteration 2's fix for a `BACKEND_API_ORIGIN` validation gap moved the validation call to module scope, which — unnoticed by that same pass — placed it outside the fail-open `try/catch` blocks it was meant to protect, converting a contained config error into a total site outage. The very next re-review iteration caught this via an executable reproduction (not just a code read) and iteration 3 fixed it correctly (validation moved back inside the async function bodies). Neither the mistake nor the fix required user intervention.
+- **When code review flagged a real, orthogonal, pre-existing bug (Hostinger's `docker-compose.hostinger.yml` missing a MinIO console route present in `Caddyfile.prod`) whose only two candidate fixes had already been tried and reverted earlier in this exact session**, the fixer investigated the actual git history independently, discovered *both* fixes had already failed for structural reasons (file-mounting unreliable on Hostinger; a bcrypt hash cannot satisfy the heredoc's "zero `$`" constraint by construction), and correctly deferred rather than reintroducing a known-bad pattern to force a fix.
+
+### What Was Inefficient
+
+- **The gsd-sdk's `roadmap.analyze`, `phases.list`, and `milestone.complete` verbs do not resolve this project's milestone-scoped phase directory convention** (`.planning/milestones/v{version}-phases/{PROJECT_CODE}-{N}-{slug}/`), even though `init.phase-op` and `find-phase` resolve it correctly — this silently produced `disk_status: "no_directory"`, `completed_phases: 0`, and empty accomplishment lists at multiple points this session (milestone init, phase discovery, and finally `milestone.complete` itself), requiring manual correction of `MILESTONES.md` and `STATE.md` after the fact. Flagged as a standalone gsd-sdk bug for a dedicated fix — this is a tooling gap, not a project defect, but it cost real orchestration time working around it.
+- **The same class of "obvious fix breaks something else" surfaced twice** in the Docker/pnpm-supply-chain area: a `docker build` failure from pnpm's `minimumReleaseAge` guard needed a package-scoped exception, but the first two attempts (`.npmrc`, then a scalar YAML value) silently had zero effect because pnpm 11+ moved this setting out of `.npmrc` into `pnpm-workspace.yaml` and requires a proper YAML list — this took 3 iterations of empirical Docker-build testing to root-cause, rather than being caught by documentation lookup first.
+- **A live-testing executor used a broad `taskkill //F //IM node.exe //T`** to stop a background dev-server smoke test, which kills every Node process on the machine rather than the one it started — caught and corrected via explicit instruction to subsequent parallel executors (use PID-scoped termination), but the first occurrence could have disrupted unrelated processes.
+
+### Patterns Established
+
+- **Server-side data fetching from a public, unauthenticated Next.js app structurally eliminates CORS as a concern** — if a fetch never executes in a browser (Server Component or Edge middleware only, confirmed by grepping for `"use client"` importers), the browser-enforced CORS mechanism never applies, regardless of what origins are or aren't configured on the backend.
+- **Next.js Multi-Zones via `assetPrefix`** is the correct, officially-documented pattern for two independently-built Next.js apps sharing one domain with path-based routing — only the non-default zone needs `assetPrefix`; the existing default zone (`web/`) needs zero changes.
+- **Historically-fragile, hand-authored embedded config (a Docker Compose `entrypoint: sh -c "echo '...' > file"` heredoc) must be treated as a genuinely separate, non-DRY config source** from any sibling file with similar-looking content (`Caddyfile.prod`) — reconciling them by unifying isn't always safe, and forcing a fix to close a drift gap can reintroduce a bug already fixed for a structural reason (a bcrypt hash cannot appear `$`-free).
+
+### Key Lessons
+
+1. **Mandating live, end-to-end verification (not just static config review or isolated dev-server checks) for infrastructure changes finds bugs that no other verification layer catches** — this milestone's single `docker compose up` test surfaced 2 of the 3 real bugs found this session, exactly the outcome the milestone's own ROADMAP anticipated when it wrote that requirement in reaction to this project's own recent incident history.
+2. **A code-review auto-fix loop's own fixes need the same adversarial re-verification as the original findings** — trusting a fix's self-report (rather than re-deriving from source and re-testing) would have shipped a fix that converts a minor bug into a total outage.
+3. **When a reviewer's suggested fix would repeat an approach already tried and reverted in the project's own recent git history, checking that history before applying the fix is not optional** — it's the difference between fixing a bug and reintroducing one.
+
+### Cost Observations
+
+- Model mix: opus for all phase planners; sonnet for codebase scouting, pattern research, execution (including parallel worktree executors), plan-checking, code-review/fix iterations, phase verification, and the milestone integration audit.
+- Sessions: one continuous session covering milestone setup (from a prior session), all 3 phases' full discuss→plan→check→execute→verify→review→fix cycles, live Docker Compose verification, and the complete milestone lifecycle (audit→complete→cleanup).
+- Notable: this is the first milestone in the project where the orchestrator itself started Docker Desktop mid-session specifically to satisfy a phase's mandated live-verification requirement, and where a code-review fix pass's own regression was caught and corrected within the same automated iteration loop rather than surfacing only at milestone audit.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -370,5 +413,6 @@ A dual-purpose milestone: close accumulated technical debt AND expand notificati
 | v2.9 Melhoria Módulo Processos | 5 | 12 | 2 | 97 | 17/17 (post-audit-remediation) |
 | v2.10 Notificações e Alertas | 5 | 14 | 3 | 29 (backend+web+migrations) | 16/16 (0 audit gaps) |
 | v2.11 Auditoria Técnica e Notificações Avançadas | 8 | 21 | 3 | 133 | 15/15 (1 integration gap found+fixed at audit) |
+| v2.12 Landing Page | 3 | 9 | 1 | 79 | 16/16 (0 audit gaps; 3 runtime bugs found+fixed live during execution) |
 
 *Table grows with each milestone*
