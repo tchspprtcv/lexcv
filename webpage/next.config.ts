@@ -1,18 +1,15 @@
 import type { NextConfig } from "next";
 
-const backendOrigin = process.env.BACKEND_API_ORIGIN;
-if (!backendOrigin) {
-  throw new Error("BACKEND_API_ORIGIN is required");
-}
+// NOTE: no rewrites() here — every server-side fetch in this app (lib/setup.ts,
+// lib/branding.ts) calls BACKEND_API_ORIGIN directly with an absolute URL, so a
+// public "/api/v1/:path*" rewrite would only expose the full authenticated
+// backend surface through this unauthenticated marketing site's origin without
+// being used by any code path (see 99-REVIEW.md WR-02). Add a narrowly-scoped
+// rewrite here only if a browser-side (non-server) fetch ever needs one.
 
 const nextConfig: NextConfig = {
   output: "standalone",
   assetPrefix: "/landing-static",
-  async rewrites() {
-    return [
-      { source: "/api/v1/:path*", destination: `${backendOrigin}/api/v1/:path*` },
-    ];
-  },
   async headers() {
     return [
       {
