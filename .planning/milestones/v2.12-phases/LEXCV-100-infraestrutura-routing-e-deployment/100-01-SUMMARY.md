@@ -116,6 +116,15 @@ None - no external service configuration required for the code itself. However, 
 - LP-15 is a multi-plan requirement (also claimed by plans 100-02 and 100-03, which own the docker-compose service-wiring portion) — this plan only delivers the Dockerfile portion of LP-15, and even that portion's build-success proof is currently blocked. LP-16 is solely owned by this plan; its CI YAML is structurally complete but its first real execution will be blocked by the same root cause until resolved. Recommend the orchestrator hold off on marking LP-15/LP-16 complete in REQUIREMENTS.md until the blocker above is resolved and the docker build is confirmed.
 - No other blockers. Task 2 (CI wiring) is fully verifiable by its own static acceptance criteria and required no deviations.
 
+## Orchestrator Resolution (post-executor)
+
+The Docker-build blocker above was resolved by the orchestrator after presenting the tradeoff to the user, who authorized a narrow, package-scoped exception (not `--trust-lockfile`'s blanket lockfile-trust bypass):
+
+- Root cause was more specific than the executor could see from inside the build alone: `corepack prepare pnpm@latest` resolves **pnpm 11.13.0** inside the `node:22-alpine` build stage (vs. 10.28.2 locally), and **pnpm 11+ moved `minimumReleaseAge`/`minimumReleaseAgeExclude` out of `.npmrc`** (now auth/registry-only) **into `pnpm-workspace.yaml`**. An `.npmrc`-based attempt was silently ineffective for this reason, not a syntax error.
+- Fix: added `webpage/pnpm-workspace.yaml` with `minimumReleaseAgeExclude: [electron-to-chromium]` (single package, not a blanket `minimumReleaseAge: 0`), and added it to `webpage/Dockerfile`'s `deps` stage `COPY` line so it reaches the build context. Commit `6702a42`.
+- Verified: `docker build --no-cache -t lexcv-webpage:verify ./webpage` completes successfully (`✓ Compiled successfully`, image exports cleanly); a smoke-run of the built image (`docker run -p 3005:3000 ...`) returns `HTTP 200` and Next.js's `✓ Ready` log line. Verification image removed after the check (`docker rmi`).
+- LP-15/LP-16 can now be considered unblocked for this plan's portion; the earlier recommendation to hold off is superseded.
+
 ## Self-Check: PASSED
 
 All created/modified files verified present on disk:
