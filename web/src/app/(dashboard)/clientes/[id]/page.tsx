@@ -33,6 +33,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import {
@@ -440,66 +441,20 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         </div>
       ) : cliente.data ? (
         <div className="space-y-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <div className="overflow-x-auto">
-            <div className="flex gap-2 w-max">
-              <Button
-                type="button"
-                variant={tab === "dados" ? "secondary" : "outline"}
-                onClick={() => setTab("dados")}
-              >
-                Dados
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "contactosNotas" ? "secondary" : "outline"}
-                onClick={() => setTab("contactosNotas")}
-              >
-                Contactos e Notas
-              </Button>
-              {canViewProcessos ? (
-                <Button
-                  type="button"
-                  variant={tab === "processos" ? "secondary" : "outline"}
-                  onClick={() => setTab("processos")}
-                >
-                  Processos
-                </Button>
-              ) : null}
-              {canViewPareceres ? (
-                <Button
-                  type="button"
-                  variant={tab === "pareceres" ? "secondary" : "outline"}
-                  onClick={() => setTab("pareceres")}
-                >
-                  Pareceres
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant={tab === "documentosEntregues" ? "secondary" : "outline"}
-                onClick={() => setTab("documentosEntregues")}
-              >
-                Documentos Entregues
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "documentosATratar" ? "secondary" : "outline"}
-                onClick={() => setTab("documentosATratar")}
-              >
-                Documentos a Tratar
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "deslocacoes" ? "secondary" : "outline"}
-                onClick={() => setTab("deslocacoes")}
-              >
-                Deslocações
-              </Button>
-            </div>
+            <TabsList variant="default">
+              <TabsTrigger value="dados">Dados</TabsTrigger>
+              <TabsTrigger value="contactosNotas">Contactos e Notas</TabsTrigger>
+              {canViewProcessos ? <TabsTrigger value="processos">Processos</TabsTrigger> : null}
+              {canViewPareceres ? <TabsTrigger value="pareceres">Pareceres</TabsTrigger> : null}
+              <TabsTrigger value="documentosEntregues">Documentos Entregues</TabsTrigger>
+              <TabsTrigger value="documentosATratar">Documentos a Tratar</TabsTrigger>
+              <TabsTrigger value="deslocacoes">Deslocações</TabsTrigger>
+            </TabsList>
           </div>
 
-          {tab === "dados" ? (
-          <>
+          <TabsContent value="dados" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -874,8 +829,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               useRemove={useRemoveAdministrativo}
             />
           </div>
-          </>
-          ) : tab === "contactosNotas" ? (
+          </TabsContent>
+
+          <TabsContent value="contactosNotas">
           <div className="grid gap-4 lg:grid-cols-2">
             <ClienteContactosCard
               clienteId={id}
@@ -894,20 +850,26 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               isError={notas.isError}
             />
           </div>
-          ) : tab === "processos" ? (
-            canViewProcessos ? (
+          </TabsContent>
+
+          <TabsContent value="processos">
+            {canViewProcessos ? (
               <ClienteProcessosTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
-            )
-          ) : tab === "pareceres" ? (
-            canViewPareceres ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="pareceres">
+            {canViewPareceres ? (
               <ClienteParecerTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
-            )
-          ) : tab === "documentosEntregues" ? (
-            canViewDocumentos ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="documentosEntregues">
+            {canViewDocumentos ? (
               <ClienteDocumentosEntreguesTab
                 clienteId={id}
                 editable={isEditing}
@@ -915,8 +877,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os documentos deste cliente." />
-            )
-          ) : tab === "documentosATratar" ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="documentosATratar">
             <Card>
               <CardContent className="space-y-2 pt-6">
                 <div className="flex items-center justify-between">
@@ -972,7 +936,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 )}
               </CardContent>
             </Card>
-          ) : tab === "deslocacoes" ? (
+          </TabsContent>
+
+          <TabsContent value="deslocacoes">
             <Card>
               <CardContent className="space-y-2 pt-6">
                 <div className="flex items-center justify-between">
@@ -1051,7 +1017,8 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 )}
               </CardContent>
             </Card>
-          ) : null}
+          </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">
