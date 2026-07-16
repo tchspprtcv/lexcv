@@ -1,8 +1,8 @@
 ---
 phase: LEXCV-104-padr-o-datatable-partilhado
-reviewed: 2026-07-16T00:00:00Z
+reviewed: 2026-07-16T16:30:00Z
 depth: standard
-files_reviewed: 16
+files_reviewed: 20
 files_reviewed_list:
   - web/package.json
   - web/src/app/(dashboard)/clientes/columns.tsx
@@ -21,173 +21,119 @@ files_reviewed_list:
   - web/src/components/shared/data-table/data-table-view-options.tsx
   - web/src/components/shared/data-table/data-table.tsx
   - web/src/components/ui/pagination.tsx
+  - web/src/lib/csv.ts
+  - web/src/lib/financeiro.ts
+  - web/src/lib/pareceres.ts
 findings:
   critical: 1
-  warning: 6
-  info: 5
-  total: 12
+  warning: 1
+  info: 3
+  total: 5
 status: issues_found
 ---
 
-# Phase LEXCV-104: Code Review Report
+# Phase LEXCV-104: Code Review Report (Re-review, iteration 3 — final)
 
-**Reviewed:** 2026-07-16T00:00:00Z
+**Reviewed:** 2026-07-16T16:30:00Z
 **Depth:** standard
-**Files Reviewed:** 16
+**Files Reviewed:** 20
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the shared TanStack-Table-based `DataTable` primitive (`data-table.tsx`, `data-table-column-header.tsx`, `data-table-pagination.tsx`, `data-table-view-options.tsx`), the shadcn `Pagination` primitive, and the 5 migrated list screens (Clientes, Processos, Pareceres, Financeiro, Documentos) plus `/notificacoes`. RBAC gating (`canEdit*`/`canCreate*` threaded from `usePermissions()`) is preserved in every `columns.tsx` Ações cell that has one, and the multi-tenant read paths are unaffected by this UI-only migration.
+Final re-review of the two targeted fixes applied since the last review pass (commits `7914611` and `d91646e`), plus a fresh look at the 4 files those commits touched (`web/src/lib/csv.ts`, `web/src/app/(dashboard)/clientes/page.tsx`, `web/src/app/(dashboard)/financeiro/page.tsx`, `web/src/app/(dashboard)/documentos/columns.tsx`). The other 16 files in scope have no commits since the prior full review pass (confirmed via `git log -- <file>` on each), so their prior "clean apart from the two carried-forward Info items" status stands unchanged.
 
-The most serious finding is a CSV/formula-injection vulnerability (CWE-1236) in the Financeiro export function — it neutralizes quotes/commas/newlines but not leading `=`, `+`, `-`, `@`, so an attacker-controlled cliente/processo name is executed as a formula when the exported file is opened in Excel/Sheets. The same escaping gap exists in the shared `lib/csv.ts` helper used by the Clientes CSV export.
+Both requested verifications hold up on their own narrow terms:
 
-Beyond that, most issues are systemic quality/consistency gaps introduced by the migration itself: the new column-visibility dropdown (`DataTableViewOptions`) can never show a human-readable label because every column's `header` is a render function rather than a string, so all 5 tables show raw column ids in that menu; the Documentos desktop Ações column dropped the Download action that the mobile card still has; and column-def memoization is inconsistent across the 5 pages (2 of 5 wrap it in `useMemo`, 3 don't).
+1. **CR-01 scoping (verified, with a caveat — see new CR-01 below):** `guardCsvFormula()` in `lib/csv.ts` is no longer applied by `escapeCsvValue`/`toCsv` to every field. `clientes/page.tsx`'s `onExportCsv` now calls it only on `nome` (`clientes/page.tsx:112`); `tipo`, `nif`, `telefone`, `email` are exported unprefixed. `financeiro/page.tsx` mirrors this with a local `guardFormula()` applied only to `processoLabel`/`clienteLabel` (`financeiro/page.tsx:76-77`); `id`, `valorTotal`, `totalPago`, `estado`, `dataAcordo` are unprefixed. The Financeiro side is fully sound: every unguarded field there is either attacker-uncontrollable (a `number` converted via `String()`, which can never contain formula syntax beyond a leading numeric sign) or a closed enum/computed string (`estado`).
+2. **WR-01 (verified fixed):** `DocumentoAcoesCell` in `documentos/columns.tsx:78-86` now renders `<Button asChild variant="ghost" size="sm" aria-label="Download"><a href=... target="_blank" rel="noreferrer"><Download .../></a></Button>` — a single `<a>` element, matching `ClienteAcoesCell`'s established `asChild` pattern. No nested interactive elements, no duplicate tab-stop.
+
+However, digging into *why* `telefone`/`nif` were assumed "structured" for the Clientes side surfaces a new, genuine issue: that assumption doesn't hold for `telefone` (and, more narrowly, `email`). Checked against both the frontend Zod schema (`web/src/schemas/clientes.ts`) and the backend JPA entity (`backend/src/main/java/com/lexcv/models/Cliente.java`):
+- `nif` **is** genuinely structured/safe: `@Pattern(regexp = "^\\d{9}$")` enforced server-side, `nifPattern = /^\d{9}$/` enforced client-side. It can never start with a formula-trigger character.
+- `telefone` has **zero** format validation anywhere in the stack — `optionalTrimmedString` client-side (any string at all), plain `private String telefone;` with no `@Pattern`/`@Email` server-side. It is exactly as attacker-controlled as `nome`.
+- `email` is validated client-side with Zod's `.email()`, but that regex still accepts a leading `+` or `-` in the local part (verified interactively: `z.string().email().safeParse("+1+1@x.com").success === true`, same for a leading `-`), and the backend has no `@Email`/`@Pattern` constraint on `Cliente.email` either.
+
+So the Clientes CSV export (`onExportCsv`) still leaves a real, reachable CSV/formula-injection vector via `telefone` (and, to a lesser degree, `email`) — see CR-01 below. This is not a regression *introduced by* the two targeted fixes (those two fixes are internally correct and were applied exactly as their own commit messages describe), but it is a residual, unremediated instance of the original vulnerability class (CWE-1236) that the "structured fields don't need guarding" rationale did not actually hold for once checked against the schema/model.
+
+A second, smaller residual issue: the anti-formula prefix is still asymmetric — `guardCsvFormula()` prefixes `nome` on export but nothing strips it back out in `parseCsv`/`onImportFile`, so a Clientes CSV round-tripped through this app's own Export→Import feature will still silently corrupt any `nome` that happens to start with `=`, `+`, `-`, `@`, tab, or CR (narrower than the original telefone-wide corruption bug the iteration-2 fix closed, but not eliminated). See WR-01 below.
 
 ## Critical Issues
 
-### CR-01: CSV/Formula-injection in Financeiro export (and shared CSV helper)
+### CR-01: CSV/formula-injection still reachable via unguarded `telefone`/`email` fields in Clientes export
 
-**File:** `web/src/app/(dashboard)/financeiro/page.tsx:31-36`
-**Issue:** `escapeField()` only quotes values containing `,`, `"`, or `\n`. It does not neutralize a leading `=`, `+`, `-`, or `@`, which spreadsheet applications (Excel, LibreOffice, Google Sheets) interpret as the start of a formula when the CSV is opened. Every field written by `exportHonorariosCsv` (`web/src/app/(dashboard)/financeiro/page.tsx:53-92`) is attacker-influenced end-to-end: `processoLabel` and `clienteLabel` come straight from `Processo.numero/titulo` and `Cliente.nome`, both of which are free-text fields any user with `clientes:create`/`processos:create` can set (e.g. a cliente named `=cmd|'/c calc'!A1` or `=HYPERLINK("http://evil/",...)`). Anyone who exports "Honorários" and opens the file in Excel executes that payload. The exact same escaping gap exists in `web/src/lib/csv.ts`'s `escapeCsvValue`, which is used by the Clientes CSV export (`web/src/app/(dashboard)/clientes/page.tsx:110-129`, `nome` field), so the same vector is reachable from Clientes as well.
-**Fix:**
+**File:** `web/src/app/(dashboard)/clientes/page.tsx:110-118`, `web/src/lib/csv.ts:36-53`
+**Issue:** The current fix applies `guardCsvFormula()` only to `c.nome` in `onExportCsv`'s `rows` array:
 ```ts
-// web/src/app/(dashboard)/financeiro/page.tsx
-const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
-
-function escapeField(value: string): string {
-  let v = value;
-  if (FORMULA_TRIGGER_CHARS.some((c) => v.startsWith(c))) {
-    v = "'" + v; // neutralize formula interpretation, mirrors OWASP CSV-injection guidance
-  }
-  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("\r")) {
-    return '"' + v.replace(/"/g, '""') + '"';
-  }
-  return v;
-}
+const rows = (clientes.data ?? []).map((c) => [
+  guardCsvFormula(c.nome ?? ""),
+  c.tipo ?? "",
+  c.nif ?? "",
+  c.telefone ?? "",   // unguarded, and NOT format-locked anywhere
+  c.email ?? "",       // unguarded, and the format check has a gap
+]);
 ```
-Apply the same prefixing in `web/src/lib/csv.ts`'s `escapeCsvValue` so the Clientes export is covered too (both should ideally share one implementation — see WR-05 for the related duplication finding).
+The rationale for leaving `telefone`/`nif` unguarded is that they're "structured" data. That holds for `nif` (`^\d{9}$`, enforced both client- and server-side — confirmed in `schemas/clientes.ts:5` and `backend/src/main/java/com/lexcv/models/Cliente.java:39-41`), but not for the other two:
+- `telefone` has no format constraint at all, client or server (`schemas/clientes.ts:41` — `optionalTrimmedString`; `Cliente.java:43` — plain `String telefone` with no `@Pattern`). A user with `clientes:create`/`clientes:edit` can set `telefone` to `=1+1`, `+HYPERLINK("http://evil/","x")`, or a DDE-style payload (`-2+3+cmd|'/c calc'!A0`), and it is stored and exported verbatim.
+- `email` is checked client-side against Zod's HTML5-style email regex, but that regex still accepts a leading `+` or `-` in the local part — confirmed: `z.string().email().safeParse("+1+1@x.com").success === true` (and identically for a leading `-`) — and there is no server-side `@Email`/`@Pattern` constraint on `Cliente.email` at all (`Cliente.java:42`). A minimal value like `+1+1@x.com` passes validation and is enough to trigger the same class of Excel/Sheets formula execution once exported.
+
+Any staff member who exports "Clientes" to CSV and opens the file in Excel/LibreOffice/Google Sheets is exposed to formula execution (including DDE-based command execution in legacy Excel configurations, or phishing via `HYPERLINK`) driven by another tenant user's `telefone`/`email` input — the exact vulnerability class CR-01 was originally raised to close, still reachable through two fields the "scoped" fix assumed were safe.
+
+**Fix:** Extend the guard to every field whose value is not provably format-locked, rather than trusting a "looks structured" assumption:
+```ts
+// clientes/page.tsx
+const rows = (clientes.data ?? []).map((c) => [
+  guardCsvFormula(c.nome ?? ""),
+  c.tipo ?? "",
+  c.nif ?? "",                       // safe: backend + frontend enforce ^\d{9}$
+  guardCsvFormula(c.telefone ?? ""), // NOT format-locked anywhere — must be guarded
+  guardCsvFormula(c.email ?? ""),    // client regex still allows a leading +/- — must be guarded
+]);
+```
+Longer-term, either add a real `@Pattern` phone-number constraint server-side (which would make excluding `telefone` from the guard defensible) or keep guarding every field whose value isn't backed by a strict, server-enforced format — don't rely on "this field is usually formatted like X" as a security boundary.
 
 ## Warnings
 
-### WR-01: Documentos desktop Ações column has no Download action (mobile/desktop parity gap)
+### WR-01: `nome` values starting with a formula-trigger character are still silently corrupted on Clientes CSV re-import
 
-**File:** `web/src/app/(dashboard)/documentos/columns.tsx:50-84,159-167`
-**Issue:** `DocumentoAcoesCell` (used by the desktop `DataTable`) renders only an "Apagar" button gated on `canEditDocumentos`, and returns `null` entirely for users without edit permission — i.e. the desktop table has no way to download a document from the row at all. Compare with `DocumentoMobileCard` in `documentos/page.tsx:165-245`, which renders an explicit "Download" link (`/api/v1/documentos/${id}/download`) available to every viewer regardless of edit permission. Desktop users (the majority, given `hidden md:block`/`md:hidden` split) lose a capability mobile users retain; they must know to click into the detail page instead.
-**Fix:** Add a Download link to `DocumentoAcoesCell`, ungated by `canEditDocumentos` (matching the mobile card's availability to all viewers):
-```tsx
-<div className="inline-flex items-center gap-1">
-  <a href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`} target="_blank" rel="noreferrer">
-    <Button type="button" variant="ghost" size="sm" aria-label="Download">
-      <Download className="h-4 w-4" />
-    </Button>
-  </a>
-  {canEditDocumentos ? (/* existing Apagar button */) : null}
-</div>
-```
-
-### WR-02: Column-visibility dropdown always shows raw column ids, never the header title
-
-**File:** `web/src/components/shared/data-table/data-table-view-options.tsx:56-57`
-**Issue:** `const label = typeof header === "string" ? header : column.id;` — but every single column definition across all 5 migrated tables sets `header: ({ column }) => <DataTableColumnHeader column={column} title="..." />`, i.e. `header` is always a function, never a string. The `"string"` branch is therefore dead code and the dropdown always falls back to `column.id`. This surfaces unfriendly raw ids to end users: e.g. Documentos shows "processo_id", "cliente_id", "confidencialidade"; Financeiro shows "valorTotal", "dataAcordo"; Processos shows "area_juridica". This defeats the purpose of the newly-added view-options feature (a human-readable column picker) on every screen that uses it.
-**Fix:** Thread the human title through `columnDef.meta` (TanStack Table's supported mechanism for this) instead of only inside the header render prop, and read it back in `DataTableViewOptions`:
-```tsx
-// columns.tsx, e.g. documentos
-{
-  accessorKey: "processo_id",
-  meta: { label: "Processo" },
-  header: ({ column }) => <DataTableColumnHeader column={column} title="Processo" />,
-  ...
-}
-
-// data-table-view-options.tsx
-const label = (column.columnDef.meta as { label?: string } | undefined)?.label ?? column.id;
-```
-
-### WR-03: Clientes "NIF" column sorts by a different value than it displays
-
-**File:** `web/src/app/(dashboard)/clientes/columns.tsx:182-208`
-**Issue:** The column's `accessorFn` (used for sorting) is `cliente.nif ?? cliente.documento_numero ?? cliente.documentoNumero ?? ""`. Since `Cliente.nif` is a required, non-optional `string` (`web/src/types/clientes.ts:39`), the `??` chain effectively always resolves to `cliente.nif` (an empty string `""` is not `null`/`undefined`, so it never falls through). But the **cell** renders `documento_numero`/`documento_tipo` instead of `nif` whenever `documento_tipo` (or `documentoTipo`) is set — which is exactly the common case for `PARTICULAR` clients using BI/passport identifiers. The result: sorting the "NIF" column orders rows by `nif`, while the visible column shows document numbers — clicking the sort header will visibly "not sort" for any dataset mixing empresa/particular clients.
-**Fix:** Make the accessor match what's actually displayed:
+**File:** `web/src/lib/csv.ts:1-34,48-53`, `web/src/app/(dashboard)/clientes/page.tsx:110-118,136-208`
+**Issue:** `onExportCsv` prefixes `nome` with `guardCsvFormula()` when it starts with `=`, `+`, `-`, `@`, tab, or CR, but `parseCsvLine` (used by `parseCsv`, in turn used by `onImportFile`) has no counterpart that strips a leading guard apostrophe back out. Re-importing a Clientes CSV that this app itself just exported — a directly supported workflow via the same page's "Exportar CSV" / "Importar CSV" buttons — will create a cliente whose `nome` is `'Sociedade Exemplo` instead of `-Sociedade Exemplo` (or whatever the original value was) for any `nome` that happens to start with one of those six characters. This is a narrower version of the exact round-trip corruption bug the CR-01 rescoping fix (iteration 2) was written to eliminate for `telefone` — it wasn't eliminated for `nome`, only made much rarer (company/cliente names starting with `-`, `+`, `@`, or `=` are less common than international phone numbers starting with `+`, but not impossible).
+**Fix:** Mirror the fix already suggested for the telefone case, scoped to import: strip a single leading `'` in `onImportFile` (or in `parseCsv`) when it's immediately followed by one of the trigger characters:
 ```ts
-accessorFn: (cliente) =>
-  (cliente.documento_tipo || cliente.documentoTipo)
-    ? (cliente.documento_numero ?? cliente.documentoNumero ?? "")
-    : (cliente.nif ?? ""),
-```
-
-### WR-04: Inconsistent memoization of column defs across the 5 migrated pages
-
-**File:** `web/src/app/(dashboard)/processos/page.tsx:55-56`, `web/src/app/(dashboard)/pareceres/page.tsx:439`, `web/src/app/(dashboard)/financeiro/page.tsx:296`
-**Issue:** Clientes (`clientes/page.tsx:64`) and Documentos (`documentos/page.tsx:62`) wrap their `columns(...)` factory call in `React.useMemo`. Processos, Pareceres, and Financeiro instead call `columns(...)` directly inline on every render (and, for Processos/Financeiro, also rebuild the `clienteNomeById`/`processoById` lookup `Map`s fresh on every render rather than memoizing them). This is an inconsistent pattern across screens meant to share one convention, and it means `useReactTable` receives a brand-new `columns` array identity on every keystroke in a sibling filter field.
-**Fix:** Apply the same pattern uniformly, e.g. in `processos/page.tsx`:
-```ts
-const clienteNomeById = React.useMemo(
-  () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
-  [clientes.data],
-);
-const processoColumns = React.useMemo(() => columns(clienteNomeById), [clienteNomeById]);
-```
-
-### WR-05: Duplicated formatting/status logic between `columns.tsx` and `page.tsx`
-
-**File:** `web/src/app/(dashboard)/financeiro/columns.tsx:11-30` / `web/src/app/(dashboard)/financeiro/page.tsx:17-29`, and `web/src/app/(dashboard)/pareceres/columns.tsx:13-30` / `web/src/app/(dashboard)/pareceres/page.tsx:24-41`
-**Issue:** `formatMoneyCVE`, `formatDate`, and `calcHonorarioStatus` are defined verbatim in both `financeiro/columns.tsx` and `financeiro/page.tsx`. `formatDate` and `statusVariant` are likewise duplicated verbatim in both `pareceres/columns.tsx` and `pareceres/page.tsx`. Any future change to a status threshold, badge color mapping, or date format has to be made in two places and will silently drift if one is missed (e.g. the mobile card branch in `financeiro/page.tsx` and the desktop column cell already risk diverging).
-**Fix:** Extract each pair into a shared module (e.g. `lib/financeiro.ts`, `lib/pareceres.ts`) and import from both `columns.tsx` and `page.tsx`.
-
-### WR-06: Shared `DataTable` relies on index-based row identity while several columns hold per-row local state
-
-**File:** `web/src/components/shared/data-table/data-table.tsx:47-72`
-**Issue:** `useReactTable` is configured without a `getRowId`, so TanStack Table falls back to the default index-based row id. Several `Ações` cells render components that own per-row local React state/hooks tied to that row identity: `ClienteAcoesCell` calls `useDeleteCliente(cliente.id)` per row, and `DocumentoAcoesCell` holds `React.useState<string | null>` for an inline error message. Because `TableRow key={row.id}` in `data-table.tsx:100` is index-based rather than entity-based, if the underlying `data` array is ever reordered between renders without changing its reference identity semantics that TanStack considers "new" (e.g. a refetch that returns the same length but a different order), React will reuse the row component instance for what is now a different entity — potentially showing a stale delete-error message or a stuck "pending" spinner against the wrong row.
-**Fix:** Add an optional `getRowId` prop to the shared `DataTable` and pass a stable id from each caller:
-```tsx
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  getRowId?: (row: TData) => string;
+// lib/csv.ts — export FORMULA_TRIGGER_CHARS alongside guardCsvFormula so importers can share it
+export function stripCsvFormulaGuard(value: string): string {
+  if (value.length > 1 && value[0] === "'" && FORMULA_TRIGGER_CHARS.some((c) => value[1] === c)) {
+    return value.slice(1);
+  }
+  return value;
 }
-// ...
-const table = useReactTable({ data, columns, getRowId, ... });
 ```
-```tsx
-// clientes/page.tsx
-<DataTable columns={clienteColumns} data={clientes.data} getRowId={(c) => c.id} />
+```ts
+// clientes/page.tsx, onImportFile
+const nome = stripCsvFormulaGuard((r[idxNome] ?? "").trim());
 ```
 
 ## Info
 
-### IN-01: `DataTable`'s empty-state `colSpan` uses the raw columns prop, not the visible-leaf-column count
+### IN-01: Anti-formula-injection trigger-char array still duplicated between `lib/csv.ts` and `financeiro/page.tsx`
 
-**File:** `web/src/components/shared/data-table/data-table.tsx:110-115`
-**Issue:** `colSpan={columns.length}` uses the length of the full `columns` prop array, not `table.getVisibleLeafColumns().length`. If a user hides columns via `DataTableViewOptions` and the visible page then has zero rows, the "Sem resultados" cell will span more columns than are actually rendered in the header. Currently unreachable in practice because every one of the 5 call sites already guards on `data.length` before rendering `<DataTable>` at all, but it's a latent bug for future reuse of this shared component.
-**Fix:** `colSpan={table.getVisibleLeafColumns().length}`.
+**File:** `web/src/lib/csv.ts:36`, `web/src/app/(dashboard)/financeiro/page.tsx:18`
+**Issue:** `FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"]` is defined verbatim in both files (`lib/csv.ts`'s `guardCsvFormula` and `financeiro/page.tsx`'s local `guardFormula`). Flagged already in the prior review iteration as an accepted, explicitly out-of-scope Info item (`fix_scope: critical_warning`); still true today, unchanged.
+**Fix:** Export `FORMULA_TRIGGER_CHARS` (and ideally `guardCsvFormula` itself) from `lib/csv.ts` and import it in `financeiro/page.tsx` instead of redefining it locally.
 
-### IN-02: Pareceres protects a different "anchor" column than its sibling screens
+### IN-02: Dead fallback branch in `DataTableViewOptions` after the WR-02 fix
 
-**File:** `web/src/app/(dashboard)/pareceres/columns.tsx:41-43,52-63`
-**Issue:** Clientes, Documentos, and Processos all mark their primary identity/name column `enableHiding: false` (the column carrying the main navigation link). Pareceres instead marks `status` as non-hideable while `cliente` (which carries the `Link` to the parecer detail page) can be hidden via the view-options dropdown. Not fatal — the Ações column's "Ver detalhes" button still works — but it's an inconsistent convention versus the other 4 screens.
-**Fix:** Consider marking the `cliente` column `enableHiding: false` instead of/in addition to `status`, for consistency with the other screens' "identity column can't be hidden" convention.
+**File:** `web/src/components/shared/data-table/data-table-view-options.tsx:56-58`
+**Issue:** `const label = metaLabel ?? (typeof header === "string" ? header : column.id);` — every column definition across all 5 migrated tables now sets `meta.label`, so `metaLabel` is always defined for a hideable column and the `typeof header === "string"` branch is unreachable. Unchanged since the prior review; still Info-level (no user-facing effect).
+**Fix:** Simplify to `const label = metaLabel ?? column.id;` unless there's a deliberate intent to support a future un-migrated column without `meta.label`.
 
-### IN-03: Dead fallback on a non-optional field
-
-**File:** `web/src/app/(dashboard)/documentos/columns.tsx:147`
-**Issue:** `` `v${row.original.versao ?? 1}` `` — `Documento.versao` is typed as a required `number` (`web/src/types/documentos.ts:8`), so the `?? 1` branch can never execute per the type contract. Either the type is wrong (API can omit `versao`) or the fallback is dead code; worth confirming against the actual API contract.
-**Fix:** If the API guarantees `versao`, drop the `?? 1`. If it doesn't, make the type `versao?: number`.
-
-### IN-04: Download link missing `encodeURIComponent` (inconsistent with the rest of the file)
+### IN-03: Documentos mobile card Download link still missing `encodeURIComponent`
 
 **File:** `web/src/app/(dashboard)/documentos/page.tsx:223`
-**Issue:** `href={`/api/v1/documentos/${id}/download`}` interpolates `id` directly, whereas every other link in the same file (and the desktop columns) uses `encodeURIComponent(...)` (e.g. `documentos/page.tsx:201`, `documentos/columns.tsx:99`). Harmless while ids are UUIDs, but inconsistent with the codebase's own convention and would become a real bug if `id` format ever changes.
+**Issue:** `href={`/api/v1/documentos/${id}/download`}` interpolates `id` directly, unlike the desktop `DocumentoAcoesCell` (`documentos/columns.tsx:80`, fixed alongside WR-01) and every other link in the same file (e.g. `documentos/page.tsx:201`), which use `encodeURIComponent(id)`. This file was not touched by either of the two targeted fix commits, so it remains exactly as flagged in the original (iteration 1) review — harmless today since ids are UUIDs, but an inconsistency with the codebase's own convention.
 **Fix:** `href={`/api/v1/documentos/${encodeURIComponent(id)}/download`}`.
-
-### IN-05: Raw `<input>` elements bypass the shared `Input` component
-
-**File:** `web/src/app/(dashboard)/financeiro/page.tsx:235-250`, `web/src/app/(dashboard)/pareceres/page.tsx:262-268,334-349`
-**Issue:** Financeiro's date filters and Pareceres' "Pesquisa Avançada" text/date fields use raw `<input>` elements with hand-duplicated Tailwind classes, while Clientes and Processos use the shared `@/components/ui/input` `Input` component for equivalent fields. This is a style/consistency drift introduced across the migrated screens rather than a functional bug.
-**Fix:** Replace the raw `<input>` elements with the shared `Input` component for consistency with Clientes/Processos.
 
 ---
 
-_Reviewed: 2026-07-16T00:00:00Z_
+_Reviewed: 2026-07-16T16:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
