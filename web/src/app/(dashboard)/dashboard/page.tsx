@@ -481,7 +481,7 @@ function RecentProcessosCardWithClientes() {
       recentProcessos={recentProcessos}
       clienteNomeById={clienteNomeById}
       isLoading={processos.isLoading || clientes.isLoading}
-      isError={processos.isError || clientes.isError}
+      isError={processos.isError}
     />
   );
 }
