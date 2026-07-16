@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -466,11 +467,16 @@ function ParecerPageContent() {
                         <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.prazo)}</TableCell>
                         <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.createdAt)}</TableCell>
                         <TableCell className="text-right">
-                          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                            <Link href={`/pareceres/${encodeURIComponent(s.id)}`}>
-                              <MoreVertical className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                <Link href={`/pareceres/${encodeURIComponent(s.id)}`}>
+                                  <MoreVertical className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ver detalhes</TooltipContent>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}

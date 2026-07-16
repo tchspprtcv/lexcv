@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useClientes } from "@/hooks/use-clientes";
 import { useEventos } from "@/hooks/use-eventos";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -378,11 +379,16 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                         ) : null}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                          <Link href={`/processos/${encodeURIComponent(p.id)}`}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                              <Link href={`/processos/${encodeURIComponent(p.id)}`}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ver detalhes</TooltipContent>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
