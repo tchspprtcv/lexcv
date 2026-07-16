@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Filter, MoreVertical, Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { columns } from "./columns";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -436,52 +436,7 @@ function ParecerPageContent() {
 
               {/* Desktop: tabela */}
               <div className="hidden md:block">
-                <Table>
-                  <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
-                    <TableRow className="border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">ESTADO</TableHead>
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">CLIENTE</TableHead>
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">PRIORIDADE</TableHead>
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">PRAZO</TableHead>
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">CRIADO</TableHead>
-                      <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">AÇÕES</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.map((s) => (
-                      <TableRow key={s.id} className="border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                        <TableCell>
-                          <Badge variant={statusVariant(s.status)} className="rounded-none font-bold tracking-wide">
-                            {s.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-bold text-slate-700 dark:text-slate-300">
-                          <Link
-                            href={`/pareceres/${encodeURIComponent(s.id)}`}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            {clienteNomeById.get(s.clienteId) ?? s.clienteId}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{s.prioridade ?? "—"}</TableCell>
-                        <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.prazo)}</TableCell>
-                        <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{formatDate(s.createdAt)}</TableCell>
-                        <TableCell className="text-right">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                                <Link href={`/pareceres/${encodeURIComponent(s.id)}`}>
-                                  <MoreVertical className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Ver detalhes</TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <DataTable columns={columns(clienteNomeById)} data={rows} />
               </div>
             </>
           )}
