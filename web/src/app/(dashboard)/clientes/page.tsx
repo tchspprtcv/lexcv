@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { useClientes, useCreateCliente, useDeleteCliente } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -453,17 +454,27 @@ function ClientesPageContent({
                         <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 pl-[52px]">Tel: {c.telefone}</div>
                       )}
                       <div className="mt-3 pl-[52px] flex items-center gap-1">
-                        <Button asChild size="sm" variant="ghost" className="h-12 w-12 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                          <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-12 w-12 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                              <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ver detalhes</TooltipContent>
+                        </Tooltip>
                         {canEditClientes && (
-                          <Button asChild size="sm" variant="ghost" className="h-12 w-12 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                            <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
-                              <Pencil className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button asChild size="sm" variant="ghost" aria-label="Editar" className="h-12 w-12 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                                <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </div>
@@ -589,38 +600,59 @@ function ClienteRow({
       </TableCell>
       <TableCell className="text-right">
         <div className="inline-flex items-center gap-1">
-          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
-              <Eye className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-            <Link
-              href={`/clientes/${encodeURIComponent(cliente.id)}/ficha`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Printer className="h-4 w-4" />
-            </Link>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
+                  <Eye className="h-4 w-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ver detalhes</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button asChild size="sm" variant="ghost" aria-label="Imprimir" className="h-9 w-9 p-0 text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                <Link
+                  href={`/clientes/${encodeURIComponent(cliente.id)}/ficha`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Printer className="h-4 w-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Imprimir</TooltipContent>
+          </Tooltip>
           {canEditClientes ? (
-            <Button asChild size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-              <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
-                <Pencil className="h-4 w-4" />
-              </Link>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild size="sm" variant="ghost" aria-label="Editar" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                  <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Editar</TooltipContent>
+            </Tooltip>
           ) : null}
           {canEditClientes ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-9 w-9 p-0 text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-              onClick={onDelete}
-              disabled={del.isPending}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label="Eliminar"
+                  className="h-9 w-9 p-0 text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  onClick={onDelete}
+                  disabled={del.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Eliminar</TooltipContent>
+            </Tooltip>
           ) : null}
         </div>
       </TableCell>
