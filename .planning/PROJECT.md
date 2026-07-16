@@ -92,10 +92,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Routing e deployment de `webpage/` em dev/prod/Hostinger via Next.js Multi-Zones (`assetPrefix`), 3 fontes de configuração Caddy consistentes, novo artefacto `webpage` no pipeline CI/CD, verificado com `docker compose up` completo — v2.12 (Phase 100)
 - ✓ Fundação shadcn/ui — `components.json` inicializado via `shadcn init -b radix` em `web/` e `webpage/` (base Radix explícita, não o novo default Base UI), tokens semânticos consolidados em ambos os `globals.css` (identidade institucional preservada: `--radius: 0rem`, `--primary` azul, bg/fg restaurados), 16 primitivos novos adicionados (Select, NativeSelect, Tabs, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu, Empty), `react-day-picker` fixado em 9.14.0, pacotes Radix unificados via `shadcn migrate radix`, Sonner a substituir o Toast depreciado (contrato `toast.success()`/`toast.error()` preservado) — v2.13 (Phase 101)
 - ✓ Reconciliação do Design System — 13 componentes hand-rolled (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`) reconciliados via `add --diff` sem perder nenhuma variante customizada (badge `gray` incluído); elevação intencional de superfícies em dark mode (card/dialog/alert-dialog/popover/sheet/table agora usam `--card`/`--popover` em vez de hex flat hardcoded); `Tooltip` com `TooltipProvider delayDuration={700}` adicionado a ícones sem texto (sidebar logout, ações de linha em Clientes/Settings/Processos/Pareceres) — v2.13 (Phase 102)
+- ✓ Módulo Dashboard — `Skeleton` para KPI cards e Atividade Recente, `Empty` para Prazos Urgentes/Processos Recentes; auditoria de código encontrou e corrigiu um bug crítico pré-existente (gate de RBAC usava `!permissions.isLoading` em vez de `permissions.isFetched`, causando flash de "Acesso negado" em todos os utilizadores no primeiro render) mais 3 avisos (estados de erro em falta, badge "HOJE" hardcoded em vez de calculado, `isLoading` incompleto ao combinar processos+clientes) — v2.13 (Phase 103)
 
 ### Active
 
-- Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma (`/gsd-autonomous`, 2026-07-15/16) — Fases 101 (Fundação) e 102 (Reconciliação do Design System) completas, 11/11 requisitos FND+DSR satisfeitos. Próxima: Fase 103 (Módulo Dashboard).
+- Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma (`/gsd-autonomous`, 2026-07-15/16) — Fases 101 (Fundação), 102 (Reconciliação do Design System) e 103 (Módulo Dashboard) completas, 13/13 requisitos FND+DSR+DASH satisfeitos. Próxima: Fase 104 (Padrão DataTable Partilhado).
 
 ### Out of Scope
 
@@ -206,6 +207,8 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 | (v2.13, Phase 101) Instalações via `isolation="worktree"` não propagam `node_modules` ao checkout principal — `pnpm install` tem de correr explicitamente no checkout principal após o merge de cada worktree, antes do build pós-merge | Descoberto ao correr o gate de build pós-merge da Wave 3 (101-03+101-04): `pnpm build` falhou com "Cannot find module 'react-day-picker'" apesar do `package.json`/lockfile já estarem corretos após o merge | ✓ Good (lição a aplicar em todas as futuras waves paralelas com worktrees) |
 | (v2.13, Phase 102) `MoreVertical` em `processos/page.tsx`/`pareceres/page.tsx` recebeu `Tooltip`+`aria-label`, apesar de ter sido deliberadamente excluído do texto literal de DSR-03 durante o planeamento (padrão "navegar para detalhe", distinto do padrão de "ações explícitas" de Clientes/Settings) | A auditoria UI da Phase 102 encontrou que a exclusão textual não anula o facto de ser um botão icon-only sem nome acessível — um bug de acessibilidade real, independente do âmbito estreito do requisito | ✓ Good (corrigido no mesmo dia, commit `ddd06f8`) |
 | (v2.13, Phase 102) Redundância `dark:bg-card`/`dark:bg-popover` (CSS variables já trocam via `.dark`, a classe `dark:` é puro ruído) e `Tooltip` num botão `disabled` (não dispara) deixados como dívida documentada, não corrigidos | Ambos são cosméticos/limitações da Radix, não bugs funcionais; corrigir agora alargaria o âmbito desta fase de reconciliação | Deferred (ver 102-UI-REVIEW.md) |
+| (v2.13, Phase 103) Gate de acesso do Dashboard corrigido de `!permissions.isLoading` para `permissions.isFetched` | TanStack Query v5 define `isLoading = isPending && isFetching`; uma query desativada durante SSR (`enabled: typeof window !== "undefined"`) nunca chega a fazer fetch, logo `isFetching=false` e `isLoading` resolve para `false` mesmo com `data` ainda `undefined` — isto fazia o gate de "Acesso negado" disparar erradamente no primeiro render para todos os utilizadores, incluindo autorizados. Bug pré-existente, não introduzido por esta fase, mas descoberto na revisão de código do seu ficheiro | ✓ Good (corrigido no mesmo dia, commit `575acbf`) |
+| (v2.13, Phase 103) 2 iterações de code review necessárias — a 1ª correção do WR-01 (juntar `processos.isError \|\| clientes.isError`) introduziu uma regressão nova (escondia a tabela inteira quando só a query secundária de clientes falhava); a 2ª iteração corrigiu para `processos.isError` apenas | Lição: uma correção de "adicionar tratamento de erro em falta" pode ela própria introduzir um bug de UX se não distinguir a fonte de dados primária da secundária — vale a pena um passe de re-revisão mesmo após aplicar um fix aparentemente simples | ✓ Good (padrão a aplicar em fases futuras com múltiplas queries combinadas) |
 
 ## Current State
 
@@ -231,7 +234,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma — Phases 101 (Fundação) e 102 (Reconciliação do Design System) completas; Phase 103 (Módulo Dashboard) a seguir.
+**Current focus:** Milestone v2.13 (Refactor UI/UX shadcn/ui) em execução autónoma — Phases 101 (Fundação), 102 (Reconciliação do Design System) e 103 (Módulo Dashboard) completas; Phase 104 (Padrão DataTable Partilhado) a seguir.
 
 ## Evolution
 
@@ -251,4 +254,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-16 — Phase 102 (Reconciliação do Design System) da v2.13 completa*
+*Last updated: 2026-07-16 — Phase 103 (Módulo Dashboard) da v2.13 completa*
