@@ -5,8 +5,17 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useClientes, useMergeClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { toast } from "@/hooks/use-toast";
@@ -67,6 +76,19 @@ export default function ClientesMergePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Merge de clientes</h1>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/clientes">Clientes</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Merge</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Seleciona um cliente principal e um duplicado. O duplicado será removido.
           </p>
@@ -89,10 +111,10 @@ export default function ClientesMergePage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <div className="text-sm font-medium">Cliente principal</div>
-                <select
+                <NativeSelect
                   value={primaryId}
                   onChange={(e) => setPrimaryId(e.target.value)}
-                  className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+                  size="default"
                 >
                   <option value="">Selecionar...</option>
                   {options.map((o) => (
@@ -100,15 +122,15 @@ export default function ClientesMergePage() {
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
 
               <div className="space-y-2">
                 <div className="text-sm font-medium">Cliente duplicado</div>
-                <select
+                <NativeSelect
                   value={secondaryId}
                   onChange={(e) => setSecondaryId(e.target.value)}
-                  className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+                  size="default"
                 >
                   <option value="">Selecionar...</option>
                   {options.map((o) => (
@@ -116,7 +138,7 @@ export default function ClientesMergePage() {
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
             </div>
           )}
