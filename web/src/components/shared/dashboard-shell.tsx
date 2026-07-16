@@ -23,6 +23,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { clearTokens } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -151,9 +152,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 {(me.data?.roles?.[0] ?? "—").toString()}
               </div>
             </div>
-            <Button type="button" variant="ghost" className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" onClick={onLogout}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" aria-label="Terminar sessão" className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" onClick={onLogout}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Terminar sessão</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </aside>

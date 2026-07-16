@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { MockUser, MockRole, MockPermission } from "@/server/mock-db";
 import type { NotificacaoCategoria } from "@/types/notificacoes";
 
@@ -455,21 +456,33 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleEditClick(user)}
-                              className="h-8 w-8 p-0 text-slate-500 hover:text-blue-500 dark:text-slate-400 dark:hover:text-blue-400"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  aria-label="Editar"
+                                  onClick={() => handleEditClick(user)}
+                                  className="h-8 w-8 p-0 text-slate-500 hover:text-blue-500 dark:text-slate-400 dark:hover:text-blue-400"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
                             {user.id !== currentUserId && (
-                              <Button
-                                variant="ghost"
-                                onClick={() => handleDeleteClick(user.id)}
-                                className="h-8 w-8 p-0 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    aria-label="Eliminar"
+                                    onClick={() => handleDeleteClick(user.id)}
+                                    className="h-8 w-8 p-0 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Eliminar</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
                         </td>
