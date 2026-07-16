@@ -39,9 +39,15 @@ This correction does not change CONTEXT.md's locked decisions (Skeleton shape, n
 
 ---
 
+## Visual Hierarchy
+
+Unchanged from `102-UI-SPEC.md` / the current shipped layout — this phase adds no new focal point and does not rearrange the page. The existing hierarchy stands: page header (`h1` "Dashboard Institucional" + "Novo Processo" CTA) → KPI card row (highest-attention numbers, `text-3xl font-bold`, one per RBAC-visible metric) → secondary two-column row ("Status dos Processos" chart placeholder + "Prazos Urgentes") → tertiary two-column row ("Processos Recentes" table + "Atividade Recente"). The Skeleton and Empty states this phase introduces occupy the exact same visual slots as the content they temporarily replace — they do not introduce a new focal point, do not compete with the KPI row's existing primacy, and do not change reading order.
+
+---
+
 ## Spacing Scale
 
-**Inherited from `101-UI-SPEC.md`/`102-UI-SPEC.md`, unchanged.** No new spacing value is introduced; Skeleton/Empty placeholders must match the exact box dimensions of the real content they temporarily replace (see Loading & Empty State Contract below).
+**Inherited from `101-UI-SPEC.md`/`102-UI-SPEC.md`, unchanged.** No new spacing value is introduced; Skeleton/Empty placeholders must match the exact box dimensions (block width/height — `h-*`/`w-*`) of the real content they temporarily replace (see Loading & Empty State Contract below). Vertical rhythm *between* Skeleton blocks always uses the standard token scale below, even in the one case (KPI label row, noted in the Loading & Empty State Contract) where the real content's own gap happens to already be off-scale.
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -68,17 +74,26 @@ Exceptions: none. `Skeleton`'s own `rounded-md` and `Empty`'s own `rounded-lg` b
 | Heading | 24px (`text-2xl`) | 600 semibold | 1.2 |
 | Display | 30px (`text-3xl`) | 600 semibold | 1.2 |
 
-`Empty`'s own `EmptyTitle` renders at `text-lg font-medium` and `EmptyDescription` at `text-sm` — both already inside the ≤4-size/≤2-weight guideline (no new size/weight introduced by adopting the primitive as shipped).
+`Empty`'s shipped default renders `EmptyTitle` at `text-lg font-medium` (18px / weight 500) and `EmptyDescription` at `text-sm` (14px / weight 400). `EmptyDescription` needs no change — its shipped `text-sm` already matches the Body role exactly. `EmptyTitle` as shipped does **not** fit this contract: adopting it unmodified would introduce a 5th distinct size (18px, on top of 12/14/24/30) and a 3rd distinct weight (500, on top of 400/600) — both over this project's hard caps (≤4 sizes, ≤2 weights).
+
+**Required implementation detail (mandatory, not optional polish):** the executor must override `EmptyTitle`'s className to reuse an existing size/weight pair from the declared scale instead of accepting the shipped default:
+
+```tsx
+<EmptyTitle className="text-sm font-semibold">{title}</EmptyTitle>
+```
+
+This resolves to 14px/600 — the Body role's size paired with the Label role's weight, both already declared above, so no new size or weight is introduced. Using the raw imported `EmptyTitle` without this className override fails the typography contract for every Empty instance in the Loading & Empty State Contract table below.
 
 ---
 
 ## Color
 
-**Inherited from `102-UI-SPEC.md`, unchanged — this phase adds zero new colored elements.**
+**Inherited from `101-UI-SPEC.md`/`102-UI-SPEC.md`, unchanged — this phase adds zero new colored elements.**
 
 | Role | Value | Usage |
 |------|-------|-------|
 | Dominant (60%) | `--background`/`--foreground` | Page background + default text |
+| Secondary (30%) | `--card`/`--popover` (Card/Dialog chrome, reconciled to these tokens by Phase 102) + sidebar/topbar hardcoded literals (`bg-slate-950` sidebar, `bg-slate-900/50` nav-surface — not yet tokenized, unchanged since Phase 101) | Card chrome that every KPI card, Skeleton, and Empty state in this phase renders inside (`Card`/`CardHeader`/`CardContent`); sidebar; topbar nav. **Unchanged by this phase** — Skeleton/Empty sit inside this surface, they do not alter it |
 | Accent (10%) | `--primary` | Reserved exclusively for the closed list in `102-UI-SPEC.md` (sidebar active-nav, avatar badge, search focus ring, KPI positive/urgent number highlight) — **Skeleton and Empty do not join this list** |
 | Destructive | `--destructive` | Destructive actions only — not applicable this phase (no destructive action ships here) |
 | `--radius` | `0rem` | Sharp corners |
@@ -97,14 +112,16 @@ This is the section that governs the actual implementation work this phase does 
 
 | Section | Trigger | Skeleton composition (CONTEXT.md: "bloco retangular a imitar a forma real", not a generic bar) |
 |---------|---------|----------------------------------------------------------------------------------------------|
-| KPI cards (`DashboardKpis`) | `useDashboardKpis().isLoading` (already-called hook — read the `isLoading` field that today is discarded) | Per card, inside the same `Card`/`CardContent` shell (do not skeleton the Card chrome itself): row 1 = `<Skeleton className="h-10 w-10" />` (icon slot) + `<Skeleton className="h-5 w-14 rounded-full" />` (badge slot), right-aligned exactly like the real `flex items-start justify-between` row; row 2 (`mt-5`) = `<Skeleton className="h-3 w-24" />` (label line); row 3 (`mt-1`) = `<Skeleton className="h-8 w-16" />` (big number line). Render one skeleton card per *visible* KPI (respect the same RBAC `canView*` gates already used to decide which cards exist — do not skeleton a card the user isn't permitted to see). |
-| "Atividade Recente" | Same `useDashboardKpis().isLoading` boolean — this is the **only** async signal that exists anywhere on this page today; reusing it (either by passing `isLoading` down as a prop from the parent, or calling `useDashboardKpis()` again in-place) gives a real, non-fabricated loading window. Calling the hook a second time is safe and free: TanStack Query shares cache/loading state by `queryKey: ["dashboard", "kpis"]`, so this is not a duplicate network request. | Exactly **3 rows** (matches the 3 real hardcoded entries below it, avoids layout shift on reveal — CONTEXT.md said "3-4," this spec fixes it at 3 for zero-shift parity with the real content). Each row mirrors the real `flex gap-4` shape: `<Skeleton className="h-10 w-10" />` (icon-chip slot) + a `min-w-0 pt-1` column with `<Skeleton className="h-4 w-40" />` (title line) and, below it (`mt-1.5`), `<Skeleton className="h-3 w-24" />` (timestamp line). |
+| KPI cards (`DashboardKpis`) | `useDashboardKpis().isLoading` (already-called hook — read the `isLoading` field that today is discarded) | Per card, inside the same `Card`/`CardContent` shell (do not skeleton the Card chrome itself): row 1 = `<Skeleton className="h-10 w-10" />` (icon slot) + `<Skeleton className="h-5 w-14 rounded-full" />` (badge slot), right-aligned exactly like the real `flex items-start justify-between` row; row 2 (`mt-4`) = `<Skeleton className="h-3 w-24" />` (label line); row 3 (`mt-1`) = `<Skeleton className="h-8 w-16" />` (big number line). Note: the real KPI markup's own label-line gap is `mt-5` (20px) — an already off-scale, pre-existing value (not introduced by this phase, not addressed by it, same category of debt as the `font-bold` KPI-number inconsistency flagged in `101-UI-SPEC.md`). This phase's *new* Skeleton markup uses the standard-scale `mt-4` (16px) instead, per the "Exceptions: none" spacing rule — a 4px difference during a sub-second loading window only, imperceptible in practice. Do not "fix" the real `mt-5` as part of this phase; that markup is untouched, out of scope. Render one skeleton card per *visible* KPI (respect the same RBAC `canView*` gates already used to decide which cards exist — do not skeleton a card the user isn't permitted to see). |
+| "Atividade Recente" | Same `useDashboardKpis().isLoading` boolean — this is the **only** async signal that exists anywhere on this page today; reusing it (either by passing `isLoading` down as a prop from the parent, or calling `useDashboardKpis()` again in-place) gives a real, non-fabricated loading window. Calling the hook a second time is safe and free: TanStack Query shares cache/loading state by `queryKey: ["dashboard", "kpis"]`, so this is not a duplicate network request. | Exactly **3 rows** (matches the 3 real hardcoded entries below it, avoids layout shift on reveal — CONTEXT.md said "3-4," this spec fixes it at 3 for zero-shift parity with the real content). Each row mirrors the real `flex gap-4` shape: `<Skeleton className="h-10 w-10" />` (icon-chip slot) + a `min-w-0 pt-1` column with `<Skeleton className="h-4 w-40" />` (title line) and, below it (`mt-1`, matching the real content's actual timestamp-line gap — verified in `dashboard/page.tsx` lines 92/101/110, correcting this spec's earlier draft value of `mt-1.5` which was invented and off the 4px scale), `<Skeleton className="h-3 w-24" />` (timestamp line). |
 
 **Explicitly out of Skeleton scope this phase** (per the literal ROADMAP/REQUIREMENTS text — "KPI cards e a secção 'Atividade Recente'," nothing else): "Prazos Urgentes," "Processos Recentes," and "Status dos Processos" do **not** get a Skeleton loading state this phase. Do not add one — that would be unrequested scope expansion of a deliberately narrow phase.
 
 **No custom fade transition** (CONTEXT.md, explicit decision): swap Skeleton → real content on the same render React already produces when `isLoading` flips to `false`; do not add `transition`/`animate-in` wrapper classes around the swap.
 
 ### Empty (DASH-02) — broader than just Atividade Recente; applies to any section genuinely capable of holding zero items
+
+**Typography override requirement (see Typography section above, mandatory for every row below):** every `EmptyTitle` instance in this table must be rendered as `<EmptyTitle className="text-sm font-semibold">` (14px/600) — never the shipped, unmodified `text-lg font-medium` default. `EmptyDescription` needs no override (its shipped `text-sm` already matches the Body role).
 
 | Section | Current state | Target | Copy (pt-PT/pt-CV) | Icon (`lucide-react`, `EmptyMedia variant="icon"` — neutral, no color override) |
 |---------|---------------|--------|----|------|
