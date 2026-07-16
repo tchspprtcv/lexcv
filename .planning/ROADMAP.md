@@ -316,7 +316,11 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. Cada um dos 14 componentes (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`) foi reconciliado individualmente via `add <component> --diff` — nunca overwrite cego de uma vez só — com as variantes/props customizadas preservadas (ex.: variante `gray` do badge, tratamento de `showCloseButton` do dialog).
   2. `pnpm build`/typecheck de `web/` passa sem erros novos, confirmando que as 93 ocorrências de import destes 14 componentes (38 ficheiros) continuam a compilar e a passar typecheck depois da reconciliação.
   3. Botões icon-only em toda a app (ícones da sidebar colapsada, ações de linha icon-only) mostram um `Tooltip` ao passar o rato/foco, com um único `TooltipProvider` montado na raiz da app.
-**Plans**: TBD
+**Plans**: 4 plans (2 waves)
+- [ ] 102-01-PLAN.md — Rule-C identity components (button/badge/input/label/radio-group/switch/textarea) reconciled diff-first + inherited Phase-101 dedup (buttonVariants export, Slot alias, shadcn→devDeps)
+- [ ] 102-02-PLAN.md — Rule-A/B surface reconciliation (card/dialog/alert-dialog/popover/table/sheet): dark-mode elevation via --card/--popover, tokenized rounded-lg
+- [ ] 102-03-PLAN.md — Tooltip rollout (DSR-03): single TooltipProvider (delayDuration=700) + icon-only buttons (clientes row actions + sidebar LogOut)
+- [ ] 102-04-PLAN.md — Final pnpm build gate + mandatory human visual checkpoint (light+dark, getComputedStyle)
 
 #### Phase 103: Módulo Dashboard
 
@@ -472,7 +476,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
-| 102. Reconciliação do Design System | v2.13 | 0/TBD | Not started | - |
+| 102. Reconciliação do Design System | v2.13 | 0/4 | Planned | - |
 | 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
@@ -482,4 +486,4 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 101 (Fundação — CLI Init e Design Tokens) planeada — 5 planos em 4 waves (101-01 gate → 101-02 → {101-03, 101-04} → 101-05), FND-01..FND-08 cobertos. Run `/gsd:execute-phase 101` to build.
+**Next:** Phase 102 (Reconciliação do Design System) planeada — 4 planos em 2 waves (Wave 1: {102-01, 102-02, 102-03} paralelos, zero file overlap → Wave 2: 102-04 checkpoint humano), DSR-01/02/03 cobertos. Run `/gsd:execute-phase 102` to build.
