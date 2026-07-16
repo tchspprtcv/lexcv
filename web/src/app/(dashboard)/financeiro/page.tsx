@@ -28,11 +28,17 @@ function calcHonorarioStatus(totalPago: number, valorTotal: number | null): Hono
   return "Pago";
 }
 
+const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
+
 function escapeField(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return '"' + value.replace(/"/g, '""') + '"';
+  let v = value;
+  if (FORMULA_TRIGGER_CHARS.some((c) => v.startsWith(c))) {
+    v = "'" + v; // neutralize formula interpretation, mirrors OWASP CSV-injection guidance
   }
-  return value;
+  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("\r")) {
+    return '"' + v.replace(/"/g, '""') + '"';
+  }
+  return v;
 }
 
 interface HonorarioRow {

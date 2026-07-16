@@ -33,11 +33,17 @@ function parseCsvLine(line: string, delimiter: string) {
   return out.map((v) => v.trim());
 }
 
+const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
+
 function escapeCsvValue(value: string, delimiter: string) {
+  let v = value;
+  if (FORMULA_TRIGGER_CHARS.some((c) => v.startsWith(c))) {
+    v = "'" + v; // neutralize formula interpretation, mirrors OWASP CSV-injection guidance
+  }
   const needsQuote =
-    value.includes('"') || value.includes("\n") || value.includes("\r") || value.includes(delimiter);
-  if (!needsQuote) return value;
-  return `"${value.replaceAll('"', '""')}"`;
+    v.includes('"') || v.includes("\n") || v.includes("\r") || v.includes(delimiter);
+  if (!needsQuote) return v;
+  return `"${v.replaceAll('"', '""')}"`;
 }
 
 export function detectCsvDelimiter(headerLine: string) {
