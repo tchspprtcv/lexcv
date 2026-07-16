@@ -32,8 +32,8 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 ### DataTable Partilhada
 
 - [x] **DTB-01**: `@tanstack/react-table` adicionado como dependência; padrão partilhado (`columns.tsx` + `data-table.tsx` + toolbar de filtro + `DataTablePagination`/`DataTableViewOptions`) construído uma vez sobre o `Table` existente
-- [ ] **DTB-02**: Listas de Clientes, Processos, Pareceres, Financeiro e Documentos migradas para o padrão DataTable partilhado (ordenação por coluna, toolbar de filtro) sem duplicar os filtros já servidos pelo backend via TanStack Query
-- [ ] **DTB-03**: `Pagination` oficial aplicada em `/notificacoes` e qualquer outra lista paginada no servidor
+- [x] **DTB-02**: Listas de Clientes, Processos, Pareceres, Financeiro e Documentos migradas para o padrão DataTable partilhado (ordenação por coluna, toolbar de filtro) sem duplicar os filtros já servidos pelo backend via TanStack Query
+- [x] **DTB-03**: `Pagination` oficial aplicada em `/notificacoes` e qualquer outra lista paginada no servidor
 
 ### Clientes + Processos
 
@@ -116,8 +116,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | DASH-01 | Phase 103 | Complete |
 | DASH-02 | Phase 103 | Complete |
 | DTB-01 | Phase 104 | Complete |
-| DTB-02 | Phase 104 | Pending |
-| DTB-03 | Phase 104 | Pending |
+| DTB-02 | Phase 104 | Complete |
+| DTB-03 | Phase 104 | Complete |
 | CLP-01 | Phase 105 | Pending |
 | CLP-02 | Phase 105 | Pending |
 | CLP-03 | Phase 105 | Pending |
