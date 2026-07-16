@@ -59,7 +59,7 @@ export default function EventoDetailPage(props: PageProps) {
     );
   }
 
-  if (!permissions.isLoading && !canViewAgenda) {
+  if (permissions.isFetched && !canViewAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este evento."
