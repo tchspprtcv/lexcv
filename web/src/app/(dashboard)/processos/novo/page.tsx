@@ -8,10 +8,19 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -31,9 +40,6 @@ import {
   type ProcessoIntakeFormValues,
 } from "@/schemas/processos";
 import type { ConflictCheckDecisaoRequest, ConflictCheckResponse, Processo } from "@/types/processos";
-
-const selectClassName =
-  "flex h-9 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50";
 
 const textareaClassName =
   "flex min-h-24 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
@@ -197,6 +203,19 @@ function ProcessoWizardContent() {
   return (
     <div className="space-y-6">
       {/* Page header */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/processos">Processos</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Novo Processo</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Novo Processo</h1>
@@ -280,9 +299,10 @@ function ProcessoWizardContent() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="cliente_id">Cliente</Label>
-                  <select
+                  <NativeSelect
                     id="cliente_id"
-                    className={selectClassName}
+                    size="default"
+                    className="w-full"
                     disabled={clientes.isPending || clientes.isError}
                     {...intakeForm.register("cliente_id")}
                   >
@@ -292,7 +312,7 @@ function ProcessoWizardContent() {
                         {c.nome}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   {clientes.isError ? (
                     <p className="text-sm text-red-600">
                       {clientes.error instanceof Error ? clientes.error.message : "Erro ao carregar clientes"}
@@ -305,9 +325,10 @@ function ProcessoWizardContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="tipo_processo">Tipo de Processo</Label>
-                  <select
+                  <NativeSelect
                     id="tipo_processo"
-                    className={selectClassName}
+                    size="default"
+                    className="w-full"
                     {...intakeForm.register("tipo_processo")}
                   >
                     <option value="">Selecionar tipo</option>
@@ -318,7 +339,7 @@ function ProcessoWizardContent() {
                     <option value="comercial">Comercial</option>
                     <option value="familia">Família</option>
                     <option value="outro">Outro</option>
-                  </select>
+                  </NativeSelect>
                   {intakeForm.formState.errors.tipo_processo ? (
                     <p className="text-sm text-red-600">{intakeForm.formState.errors.tipo_processo.message}</p>
                   ) : null}
@@ -328,15 +349,16 @@ function ProcessoWizardContent() {
               {/* Row: Origem */}
               <div className="space-y-2">
                 <Label htmlFor="origem">Origem</Label>
-                <select
+                <NativeSelect
                   id="origem"
-                  className={selectClassName}
+                  size="default"
+                  className="w-full"
                   {...intakeForm.register("origem")}
                 >
                   <option value="">Selecionar origem</option>
                   <option value="PETICAO_INICIAL">{origemProcessoToLabel("PETICAO_INICIAL")}</option>
                   <option value="NOTIFICACOES_AVULSAS">{origemProcessoToLabel("NOTIFICACOES_AVULSAS")}</option>
-                </select>
+                </NativeSelect>
                 {intakeForm.formState.errors.origem ? (
                   <p className="text-sm text-red-600">{intakeForm.formState.errors.origem.message}</p>
                 ) : null}
@@ -535,9 +557,10 @@ function ProcessoWizardContent() {
 
                     <div className="space-y-2">
                       <Label htmlFor="nivel_final">Nível final</Label>
-                      <select
+                      <NativeSelect
                         id="nivel_final"
-                        className={selectClassName}
+                        size="default"
+                        className="w-full"
                         {...decisaoForm.register("nivel")}
                       >
                         <option value="">Selecionar nível</option>
@@ -545,7 +568,7 @@ function ProcessoWizardContent() {
                         <option value="potencial">Potencial</option>
                         <option value="sanavel">Sanável</option>
                         <option value="impeditivo">Impeditivo</option>
-                      </select>
+                      </NativeSelect>
                       {decisaoForm.formState.errors.nivel ? (
                         <p className="text-sm text-red-600">{decisaoForm.formState.errors.nivel.message}</p>
                       ) : null}
