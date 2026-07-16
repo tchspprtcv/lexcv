@@ -19,26 +19,8 @@ import {
   type ParecerPesquisaFilters,
   type ParecerSolicitacoesListFilters,
 } from "@/hooks/use-pareceres";
-import type { ParecerSolicitacao, ParecerStatus } from "@/types/pareceres";
-
-function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-
-function statusVariant(status: ParecerStatus) {
-  return status === "PENDENTE"
-    ? "gray"
-    : status === "EM_ELABORACAO"
-      ? "blue"
-      : status === "EM_REVISAO"
-        ? "amber"
-        : status === "CONCLUIDO"
-          ? "green"
-          : "secondary";
-}
+import { formatDate, statusVariant } from "@/lib/pareceres";
+import type { ParecerSolicitacao } from "@/types/pareceres";
 
 export default function ParecerPage() {
   const permissions = usePermissions();

@@ -13,20 +13,7 @@ import { useClientes } from "@/hooks/use-clientes";
 import { useHonorarios } from "@/hooks/use-financeiro";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
-
-function formatMoneyCVE(v: number | null | undefined) {
-  if (v == null) return "A confirmar";
-  return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
-}
-
-type HonorarioStatus = "Pendente" | "Parcialmente Pago" | "Pago";
-
-function calcHonorarioStatus(totalPago: number, valorTotal: number | null): HonorarioStatus {
-  if (valorTotal == null) return "Pendente";
-  if (totalPago <= 0) return "Pendente";
-  if (totalPago < valorTotal) return "Parcialmente Pago";
-  return "Pago";
-}
+import { calcHonorarioStatus, formatDate, formatMoneyCVE } from "@/lib/financeiro";
 
 const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
 
@@ -95,13 +82,6 @@ function exportHonorariosCsv(
   a.download = `honorarios-${today}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
 }
 
 export default function FinanceiroPage() {

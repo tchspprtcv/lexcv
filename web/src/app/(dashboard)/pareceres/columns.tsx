@@ -8,26 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
-import type { ParecerSolicitacao, ParecerStatus } from "@/types/pareceres";
-
-function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-
-function statusVariant(status: ParecerStatus) {
-  return status === "PENDENTE"
-    ? "gray"
-    : status === "EM_ELABORACAO"
-      ? "blue"
-      : status === "EM_REVISAO"
-        ? "amber"
-        : status === "CONCLUIDO"
-          ? "green"
-          : "secondary";
-}
+import { formatDate, statusVariant } from "@/lib/pareceres";
+import type { ParecerSolicitacao } from "@/types/pareceres";
 
 /**
  * Column definitions for the Pareceres desktop DataTable.

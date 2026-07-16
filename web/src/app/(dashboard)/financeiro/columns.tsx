@@ -5,29 +5,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { Badge } from "@/components/ui/badge";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
+import { calcHonorarioStatus, formatDate, formatMoneyCVE } from "@/lib/financeiro";
 import type { Honorario } from "@/types/financeiro";
 import type { Processo } from "@/types/processos";
-
-function formatMoneyCVE(v: number | null | undefined) {
-  if (v == null) return "A confirmar";
-  return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
-}
-
-function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-
-type HonorarioStatus = "Pendente" | "Parcialmente Pago" | "Pago";
-
-function calcHonorarioStatus(totalPago: number, valorTotal: number | null): HonorarioStatus {
-  if (valorTotal == null) return "Pendente";
-  if (totalPago <= 0) return "Pendente";
-  if (totalPago < valorTotal) return "Parcialmente Pago";
-  return "Pago";
-}
 
 /**
  * Column definitions for the Financeiro desktop DataTable.
