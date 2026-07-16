@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import Link from "next/link";
 import { FileText, Plus, Scale, Timer, Users, Wallet } from "lucide-react";
 
@@ -7,6 +9,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useClientes } from "@/hooks/use-clientes";
 import { useDashboardKpis } from "@/hooks/use-dashboard-kpis";
@@ -75,45 +78,87 @@ export default function DashboardPage() {
           )
         ) : null}
 
-        <Card>
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4 bg-slate-50/50 dark:bg-slate-900/20">
-            <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
-              <Users className="h-4 w-4 text-slate-500" />
-              Atividade Recente
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-5">
-            <div className="flex gap-4 group">
-              <div className="h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors">
-                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="min-w-0 pt-1">
-                <div className="text-sm font-bold text-slate-900 dark:text-white">Documento Submetido</div>
-                <div className="text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase mt-1">Há 45 minutos</div>
-              </div>
-            </div>
-            <div className="flex gap-4 group">
-              <div className="h-10 w-10 rounded-none bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-lg font-light group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors">
-                +
-              </div>
-              <div className="min-w-0 pt-1">
-                <div className="text-sm font-bold text-slate-900 dark:text-white">Novo Cliente</div>
-                <div className="text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase mt-1">Há 2 horas</div>
-              </div>
-            </div>
-            <div className="flex gap-4 group">
-              <div className="h-10 w-10 rounded-none bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
-                ✓
-              </div>
-              <div className="min-w-0 pt-1">
-                <div className="text-sm font-bold text-slate-900 dark:text-white">Processo Concluído</div>
-                <div className="text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase mt-1">Ontem, 17:40</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <AtividadeRecenteCard />
       </div>
     </div>
+  );
+}
+
+type AtividadeRecenteEntry = {
+  id: string;
+  icon: ReactNode;
+  iconWrapperClassName: string;
+  titulo: string;
+  timestamp: string;
+};
+
+const ATIVIDADE_RECENTE_ENTRIES: AtividadeRecenteEntry[] = [
+  {
+    id: "documento-submetido",
+    icon: <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+    iconWrapperClassName:
+      "h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors",
+    titulo: "Documento Submetido",
+    timestamp: "Há 45 minutos",
+  },
+  {
+    id: "novo-cliente",
+    icon: "+",
+    iconWrapperClassName:
+      "h-10 w-10 rounded-none bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-lg font-light group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors",
+    titulo: "Novo Cliente",
+    timestamp: "Há 2 horas",
+  },
+  {
+    id: "processo-concluido",
+    icon: "✓",
+    iconWrapperClassName:
+      "h-10 w-10 rounded-none bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors",
+    titulo: "Processo Concluído",
+    timestamp: "Ontem, 17:40",
+  },
+];
+
+function AtividadeRecenteCard() {
+  const kpis = useDashboardKpis();
+  const entries = ATIVIDADE_RECENTE_ENTRIES;
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4 bg-slate-50/50 dark:bg-slate-900/20">
+        <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+          <Users className="h-4 w-4 text-slate-500" />
+          Atividade Recente
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-5">
+        {kpis.isLoading ? (
+          <>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="flex gap-4">
+                <Skeleton className="h-10 w-10" />
+                <div className="min-w-0 pt-1">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24 mt-1" />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          entries.map((entry) => (
+            <div key={entry.id} className="flex gap-4 group">
+              <div className={entry.iconWrapperClassName}>{entry.icon}</div>
+              <div className="min-w-0 pt-1">
+                <div className="text-sm font-bold text-slate-900 dark:text-white">{entry.titulo}</div>
+                <div className="text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase mt-1">
+                  {entry.timestamp}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -129,6 +174,24 @@ function DashboardKpis({
   canViewFinanceiro: boolean;
 }) {
   const kpis = useDashboardKpis();
+  const visibleKpiCount = [
+    canViewClientes,
+    canViewProcessos,
+    canViewAgenda,
+    canViewFinanceiro,
+  ].filter(Boolean).length;
+
+  if (kpis.isLoading) {
+    if (!visibleKpiCount) return null;
+    return (
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: visibleKpiCount }).map((_, index) => (
+          <KpiCardSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
+
   const cards = [
     canViewClientes ? (
       <Card key="clientes">
@@ -216,6 +279,21 @@ function DashboardKpis({
   if (!cards.length) return null;
 
   return <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">{cards}</div>;
+}
+
+function KpiCardSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <Skeleton className="h-10 w-10" />
+          <Skeleton className="h-5 w-14 rounded-full" />
+        </div>
+        <Skeleton className="h-3 w-24 mt-4" />
+        <Skeleton className="h-8 w-16 mt-1" />
+      </CardContent>
+    </Card>
+  );
 }
 
 function ProcessosStatusCard() {
