@@ -6,9 +6,9 @@ files_reviewed: 1
 files_reviewed_list:
   - web/src/app/(dashboard)/dashboard/page.tsx
 findings:
-  critical: 1
-  warning: 3
-  info: 4
+  critical: 0
+  warning: 1
+  info: 7
   total: 8
 status: issues_found
 ---
@@ -22,106 +22,23 @@ status: issues_found
 
 ## Summary
 
-Reviewed `web/src/app/(dashboard)/dashboard/page.tsx` (568 lines) against the phase-103 diff (`git diff cc56071..HEAD`) plus full-file context, cross-referencing `use-me.ts`, `use-permissions.ts`, `use-dashboard-kpis.ts`, `use-eventos.ts`, `use-processos.ts`, `components/ui/empty.tsx`, `components/ui/badge.tsx`, `dashboard-shell.tsx`, `access-denied-state.tsx`, and the phase planning artifacts (`103-CONTEXT.md`, `103-01-PLAN.md`, `103-01-SUMMARY.md`).
+Re-review after the fix pass recorded in `103-REVIEW-FIX.md` (commits `575acbf`, `36968bf`, `d4d3be8`, `99e0e58`). All four in-scope findings from the prior `103-REVIEW.md` (CR-01, WR-01, WR-02, WR-03) were re-read directly in the current file, cross-referenced against `use-me.ts`, `use-permissions.ts`, `use-dashboard-kpis.ts`, `use-eventos.ts`, `use-processos.ts`, `use-clientes.ts`, and `components/ui/badge.tsx`, and confirmed against `git show` for each fix commit. `npx tsc --noEmit` and `npx eslint` were run against the file: no errors specific to this file (the only `tsc` errors in the project are pre-existing missing-`vitest`-types errors in unrelated `*.test.ts` files, not this page).
 
-The four items the review was specifically asked to verify:
-1. **KPI card `isLoading` wiring** — the skeleton/real-card branches are internally consistent (same `canView*` booleans drive both the skeleton count and the real card count), so there's no *skeleton-vs-real-card* count mismatch or KPI-grid layout shift. However, tracing the `isLoading` semantics up through `usePermissions()`/`useMe()` surfaced a materially worse pre-existing defect that this phase's new loading-state code now shares a code path with — see CR-01.
-2. **RBAC-gated skeleton count vs RBAC-gated real KPI count** — confirmed correct; both are computed from the identical `[canViewClientes, canViewProcessos, canViewAgenda, canViewFinanceiro].filter(Boolean)` list in the same order (lines 223-228 vs 241-323).
-3. **No leftover ad hoc "Sem urgências." (or similar) strings** — confirmed removed; grep across the file for `Sem urg`, `italic`, `Nenhum`, `Sem \w+\.` returns no matches.
-4. **`EmptyTitle` className override applied consistently** — confirmed; there is a single shared `EmptyState` helper (lines 38-58) that is the only call site rendering `EmptyTitle`, and it always carries `className="text-sm font-semibold"`. All three consumers (Atividade Recente, Prazos Urgentes, Processos Recentes) route through it, so the override can't drift.
+**Fix verification (all 4 confirmed correct):**
 
-Beyond those four checks, tracing `usePermissions()` → `useMe()` uncovered a real, reproducible defect (CR-01) in the pre-existing top-of-page RBAC gate that this phase's changes did not introduce but do share the same `isLoading` signal family with. Three further Warnings and four Info items are documented below, some pre-existing and some directly tied to this phase's new `isLoading`/empty-state code.
+1. **CR-01 — fixed.** Line 70 now reads `if (permissions.isFetched && !canViewAny)`. `usePermissions()` spreads the full `useMe()` query result (`use-permissions.ts:24-28`), so `isFetched` is available and — unlike `isLoading` — is not conflated with "query currently disabled" for `useMe()`'s `enabled: typeof window !== "undefined"` gate (`use-me.ts:8`). Traced SSR/first-paint behavior: on the server and on the very first client render, `enabled` is `false` and the query has never settled, so `isFetched` is `false` on both passes — the gate does not fire and the same (empty-but-not-"denied") shell renders on both server and client, so there's no hydration mismatch either. Once the `/auth/me` query resolves, `isFetched` flips to `true` and the gate now evaluates against a real `canViewAny`. Confirmed no more false "Acesso negado" flash for permitted users, matching the reported live-browser verification.
+2. **WR-01 — fixed.** `.isError` branches were added and are correctly ordered *before* the "settled but zero data" branches in all three components: `DashboardKpis` (lines 230-237, checked before `kpis.isLoading` at 239), `PrazosUrgentesCard` (lines 448-451, checked before `urgentes.isLoading` at 452), and `RecentProcessosCard` (new `isError` prop, lines 505/515/533-536, checked before the empty-state branch at 537). `RecentProcessosCardWithClientes` passes `isError={processos.isError || clientes.isError}` (line 484) and `RecentProcessosCardNoClientes` passes `isError={processos.isError}` (line 497). Errors are no longer indistinguishable from "no data." See new WR-01/IN-02 below for two follow-on observations this introduced.
+3. **WR-02 — fixed.** `isSameCalendarDay` (lines 397-403) plus `.slice().sort((a,b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime()).slice(0, 2)` (lines 407-410) replace the old unsorted `.slice(0, 2)`. The badge (lines 433-437) now renders `"HOJE"` only `isSameCalendarDay(dataInicio, new Date())`, else `dataInicio.toLocaleDateString("pt-CV", { day: "2-digit", month: "2-digit" })` — matches the reported live "20/06" output. See new IN-01 below for a timezone edge case this introduces.
+4. **WR-03 — fixed.** Line 483: `isLoading={processos.isLoading || clientes.isLoading}` in `RecentProcessosCardWithClientes`. The name-lookup map can no longer render `"—"` for every row due to `clientes` still being in flight after `processos` resolved.
 
-## Critical Issues
-
-### CR-01: `usePermissions().isLoading` is `false` while permissions are still unresolved on first render, causing a false "Acesso negado" flash on every dashboard load
-
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:70` (root cause chain: `web/src/hooks/use-permissions.ts:9`, `web/src/hooks/use-me.ts:8`)
-**Issue:**
-The gate at line 70 is:
-```tsx
-if (!permissions.isLoading && !canViewAny) {
-  return <AccessDeniedState description="Não tem permissões suficientes para aceder ao dashboard." backHref="/login" backLabel="Ir para login" />;
-}
-```
-`permissions` is `usePermissions()`, which spreads `useMe()` (`use-permissions.ts:24-28`), and `useMe()` gates its query with `const enabled = typeof window !== "undefined";` (`use-me.ts:8`).
-
-On the server (SSR — this route is under `(dashboard)/layout.tsx`, a Server Component wrapping a `"use client"` `DashboardShell`/`DashboardPage`, so the client tree is still rendered to HTML on the first pass), `window` is undefined, so the `/auth/me` query is `enabled: false`. TanStack Query v5's `isLoading` is defined as `isPending && isFetching` (`@tanstack/query-core` `queryObserver.js:307-310`). For a disabled query that has never fetched: `status` is `"pending"` (`isPending = true`) but `fetchStatus` is `"idle"` (`isFetching = false`), so `isLoading = true && false = false`.
-
-Consequently, on the very first render (SSR output, and the first client render before the query-mount effect fires a fetch):
-- `permissions.isLoading` is `false` (even though `me.data` is `undefined` and permissions genuinely haven't loaded).
-- `permissions = me.data?.permissions ?? []` is `[]`, so every `canView*` flag is `false` and `canViewAny` is `false`.
-- `!permissions.isLoading && !canViewAny` evaluates to `true`.
-
-The result: **every user who navigates to `/dashboard` (including admins with full permissions) sees the "Acesso negado" card with an "Ir para login" button flash on screen** before the real dashboard appears, because the code cannot distinguish "permissions confirmed empty" from "permissions not fetched yet." This is not a hypothetical edge case — it fires on every fresh page load / hard refresh, since the query is disabled precisely during the window where this check runs.
-
-This predates phase 103 (the gate itself is unchanged in the reviewed diff), but it directly undermines the same `isLoading` contract that phase 103's new KPI/Atividade-Recente loading branches now also rely on, and it's the most severe thing this review verifies against the "isLoading wiring... doesn't cause a flash" ask.
-
-**Fix:** Don't rely on `isLoading` (which is conflated with "disabled") to mean "we know the answer." Use a signal that only becomes true once the query has actually settled at least once, e.g. `isFetched`/`isSuccess`, or explicit `data !== undefined`:
-```tsx
-// permissions.isFetched is true once the /auth/me query has completed
-// (success or error) at least once — unlike isLoading, it is NOT
-// conflated with "query is currently disabled".
-if (permissions.isFetched && !canViewAny) {
-  return (
-    <AccessDeniedState
-      description="Não tem permissões suficientes para aceder ao dashboard."
-      backHref="/login"
-      backLabel="Ir para login"
-    />
-  );
-}
-```
-The same fix should be considered for the analogous `kpis.isLoading` gate on `DashboardKpis` (line 230) and any other component gating on a disabled-by-default query's `isLoading`, since the same "disabled ⇒ isLoading=false" trap applies whenever `enabled: typeof window !== "undefined"` is used (it appears in every hook in `web/src/hooks/`).
+Tracing through the applied fixes surfaced one genuine new Warning-level trade-off (introduced by the WR-01 fix, not present before this fix pass) and a few Info-level observations. No Critical issues were found. The four Info items already known from the previous review (IN-01 through IN-04 there) remain unfixed, as expected — they were explicitly out of the fixer's `critical_warning` scope — and are carried forward below under new IDs for completeness.
 
 ## Warnings
 
-### WR-01: Query errors are rendered identically to "no data" everywhere in this file
+### WR-01: Combining `processos` and `clientes` error states in `RecentProcessosCardWithClientes` hides otherwise-valid processos data when only the enrichment `clientes` query fails
 
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:230-328` (`DashboardKpis`), `:388-429` (`PrazosUrgentesCard`), `:443-567` (`RecentProcessosCard*`)
-**Issue:** None of the components check `.isError`. If `useDashboardKpis()`, `useEventos()`, or `useProcessos()`/`useClientes()` fail (network error, 500, expired session, etc.), `isLoading` becomes `false` while `.data` stays `undefined`. The UI then falls straight into the "settled, zero data" branches:
-- `DashboardKpis` shows `"—"` for every KPI number (line 257, 277, 297, 317) — indistinguishable from "not yet answered."
-- `PrazosUrgentesCard` renders the `EmptyState` "Sem prazos urgentes" (line 424-428) — telling the user there are no urgent deadlines when the real answer is "we don't know, the request failed."
-- `RecentProcessosCard` renders `EmptyState` "Sem processos recentes" (line 500-507) for the same reason.
-
-A user relying on "Prazos Urgentes" being empty to mean "nothing due" during an outage would incorrectly believe there's nothing pending.
-
-**Fix:** Check `.isError` before the zero-data branch and render a distinct error affordance, e.g.:
-```tsx
-) : urgentes.isError ? (
-  <p className="text-sm text-red-600">Não foi possível carregar os prazos. Tente novamente.</p>
-) : urgentes.isLoading ? null : (
-  <EmptyState icon={CalendarCheck} title="Sem prazos urgentes" description="Não há eventos urgentes nos próximos dias." />
-)}
-```
-
-### WR-02: "Prazos Urgentes" doesn't sort or filter by actual urgency, and hardcodes a "HOJE" badge regardless of the event's real date
-
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:389-390, 411-413`
-**Issue:**
-```tsx
-const urgentes = useEventos({ concluido: false });
-const urgentEventos = (urgentes.data ?? []).slice(0, 2);
-...
-<Badge variant="red" className="rounded-none">HOJE</Badge>
-```
-`useEventos({ concluido: false })` fetches **all** non-completed events, unsorted, and the component simply takes whichever two happen to be first in the API's response order — not the two soonest by `dataInicio`. Every one of those two is then labeled "HOJE" (Today) unconditionally, even if `e.dataInicio` (rendered a few lines below at line 419) is weeks away. A card titled "Prazos Urgentes" can therefore show non-urgent events tagged as due today. (Pre-existing behavior, not touched by this phase's diff, but directly inside the component this phase's Empty-state work targeted.)
-**Fix:** Sort by `dataInicio` ascending before slicing, and derive the badge from the actual date instead of a literal:
-```tsx
-const urgentEventos = (urgentes.data ?? [])
-  .slice()
-  .sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime())
-  .slice(0, 2);
-// ...
-<Badge variant="red" className="rounded-none">
-  {isSameDay(new Date(e.dataInicio), new Date()) ? "HOJE" : formatShortDate(e.dataInicio)}
-</Badge>
-```
-
-### WR-03: `RecentProcessosCardWithClientes`'s threaded `isLoading` only tracks the `processos` query, not `clientes`
-
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:443-457, 541-543`
-**Issue:** This phase's diff added `isLoading={processos.isLoading}` to both wrapper components (a real, in-scope change). For `RecentProcessosCardWithClientes`, the name-lookup map is built from a *second*, independent query:
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:472-487` (`RecentProcessosCardWithClientes`), `:533-536` (render)
+**Issue:** The WR-01 fix (commit `36968bf`) added:
 ```tsx
 function RecentProcessosCardWithClientes() {
   const processos = useProcessos();
@@ -129,41 +46,70 @@ function RecentProcessosCardWithClientes() {
   const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
   const recentProcessos = (processos.data ?? []).slice(0, 3);
   return (
-    <RecentProcessosCard recentProcessos={recentProcessos} clienteNomeById={clienteNomeById} isLoading={processos.isLoading} />
+    <RecentProcessosCard
+      recentProcessos={recentProcessos}
+      clienteNomeById={clienteNomeById}
+      isLoading={processos.isLoading || clientes.isLoading}
+      isError={processos.isError || clientes.isError}
+    />
   );
 }
 ```
-If `processos` resolves before `clientes` does, `isLoading` is already `false` and the table renders real rows — but `clienteNomeById` is still built from an empty map (`clientes.data` still `undefined`), so every row's "Cliente" cell shows `"—"` (line 542: `clienteNomeById?.get(p.cliente_id) ?? "—"`) — identical to the case where a `cliente_id` genuinely has no match. This is a transient, but user-visible, false "no client found" state on every load where the two queries resolve out of order.
-**Fix:**
+`isError` is an OR of two independent queries. If `processos` succeeds but `clientes` fails, the card now renders the fixed `"Não foi possível carregar os processos recentes."` message and shows **no table at all** — even though the processos list did load successfully. Before this fix pass, a `clientes` failure only degraded the "Cliente" column to `"—"` per row (via `clienteNomeById?.get(p.cliente_id) ?? "—"`, line 579) while the processos table itself still rendered. The fix (correctly) stops treating "clientes still loading" the same as "clientes failed," but by folding both queries into one boolean it also now suppresses a fully-successful, independently-useful `processos` fetch whenever the secondary enrichment query errors — a net loss of previously-visible data for a failure that doesn't actually affect the primary content.
+**Fix:** Don't equate a secondary/enrichment-query failure with a primary-data failure. Gate the hard error state on `processos.isError` only, and degrade gracefully (e.g. a small inline note, or just `"—"` cells as before) when only `clientes.isError` is true:
 ```tsx
-isLoading={processos.isLoading || clientes.isLoading}
+<RecentProcessosCard
+  recentProcessos={recentProcessos}
+  clienteNomeById={clienteNomeById}
+  isLoading={processos.isLoading || clientes.isLoading}
+  isError={processos.isError}
+  // optionally surface clientes.isError as a non-blocking inline notice
+/>
 ```
 
 ## Info
 
-### IN-01: `AtividadeRecenteCard`'s defensive empty branch is unreachable given current data
+### IN-01: `isSameCalendarDay`'s "HOJE" boundary is computed in the browser's local timezone, not Cabo Verde's
+
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:397-403, 433-437`
+**Issue:** `isSameCalendarDay(dataInicio, new Date())` compares `getFullYear`/`getMonth`/`getDate` in whatever timezone the *browser* is running in. LexCV is a Cape Verde platform (tenant timezone is presumably `Atlantic/Cape_Verde`, UTC−01:00); a user viewing the dashboard from a different timezone (e.g. Portugal, UTC±00:00/+01:00) could see an event mislabeled ("HOJE" vs. a date, or vice versa) right around local midnight, since "today" is evaluated against the viewer's clock rather than the tenant's. This risk didn't exist before WR-02's fix (the badge was a hardcoded literal), so it's a new — but low-severity, cosmetic-only — consideration introduced by this round.
+**Fix:** If cross-timezone viewing is a real scenario for this tenant base, compute "today" in the tenant's fixed offset rather than the browser's local time (e.g. via `Intl.DateTimeFormat` with an explicit `timeZone`, or a shared date-utils helper) rather than raw `Date` getters. Low priority given LexCV's single-country (Cabo Verde) usage profile.
+
+### IN-02: `RecentProcessosCard`'s new error branch shows a fixed generic string instead of the actual query error, inconsistent with its siblings
+
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:535` vs. `:234` and `:450`
+**Issue:** `DashboardKpis` (line 234) and `PrazosUrgentesCard` (line 450) both render `kpis.error instanceof Error ? kpis.error.message : "..."` / `urgentes.error instanceof Error ? urgentes.error.message : "..."` — i.e. they surface the real backend/network error message when available. `RecentProcessosCard`'s new error branch (line 535) instead always renders the literal `"Não foi possível carregar os processos recentes."`, discarding both `processos.error` and `clientes.error` entirely. This is a minor inconsistency within the very fix that introduced all three error branches in the same commit.
+**Fix:** Thread the error object(s) through and apply the same `instanceof Error ? error.message : fallback` pattern used by the other two components, e.g. pick `processos.error ?? clientes.error`.
+
+### IN-03: `AtividadeRecenteCard`'s defensive empty branch is still unreachable (carried over, unchanged)
 
 **File:** `web/src/app/(dashboard)/dashboard/page.tsx:164, 187-192`
-**Issue:** `const entries = ATIVIDADE_RECENTE_ENTRIES;` is a fixed 3-item compile-time constant (lines 135-160), so `entries.length === 0` (line 187) can never be true — the `EmptyState` branch it guards is dead code today. This is confirmed intentional in `103-01-SUMMARY.md` ("Atividade Recente defensive Empty branch (intentional dead code today)") and `103-01-PLAN.md` (line 215), deferred pending a real activity-feed backend (`DASH-V2`). No action required now; flagging only so the dead branch stays tracked and isn't mistaken for a bug fixed in a future refactor.
-**Fix:** N/A — tracked as intentional tech debt. When a real activity-feed hook is introduced, replace `ATIVIDADE_RECENTE_ENTRIES` with live query data so this branch becomes reachable.
+**Issue:** Unchanged from the previous review's IN-01. `ATIVIDADE_RECENTE_ENTRIES` is a fixed 3-item constant, so `entries.length === 0` can never be true. Confirmed intentional per `103-01-SUMMARY.md`/`103-01-PLAN.md`, deferred pending a real activity-feed backend. Out of this fix pass's scope (Info-only); no action expected now.
+**Fix:** N/A — tracked tech debt; replace with live query data when a real activity-feed hook exists.
 
-### IN-02: `AtividadeRecenteCard`'s loading skeleton is keyed off an unrelated query
+### IN-04: `AtividadeRecenteCard`'s loading skeleton is still keyed off the unrelated `useDashboardKpis` query (carried over, unchanged)
 
 **File:** `web/src/app/(dashboard)/dashboard/page.tsx:163, 175`
-**Issue:** `AtividadeRecenteCard` calls `const kpis = useDashboardKpis();` purely to read `kpis.isLoading` for its own skeleton-vs-content branch, even though its rendered content (`ATIVIDADE_RECENTE_ENTRIES`) is a static array with no data dependency at all. This is a deliberate, documented choice (`103-01-PLAN.md`/`103-01-SUMMARY.md`: "reuse an existing TanStack Query hook's isLoading... instead of inventing a backend/hook") to avoid inventing a stub endpoint, and it is genuinely free (shared query cache/key). It does mean Atividade Recente's skeleton duration is entirely a function of how long the *KPI* endpoint takes to answer, with no code-level indication of that coupling beyond the shared variable name.
-**Fix:** Consider a one-line comment at the `const kpis = useDashboardKpis();` call in `AtividadeRecenteCard` noting that this is intentionally borrowing the KPI query's loading state as a stand-in until a real activity-feed hook exists, so a future change to `useDashboardKpis` (e.g. adding `suspense: true`, changing `staleTime`, or splitting the endpoint) doesn't silently change Atividade Recente's behavior without anyone noticing the dependency.
+**Issue:** Unchanged from the previous review's IN-02. `const kpis = useDashboardKpis();` is called solely to read `kpis.isLoading` for a component whose actual content is a static array. Documented as an intentional stand-in per the phase plan.
+**Fix:** Consider a one-line comment at the call site noting the borrowed-loading-state dependency, so future changes to `useDashboardKpis` don't silently change `AtividadeRecenteCard`'s behavior unnoticed.
 
-### IN-03: KPI trend badges are hardcoded and don't reflect the adjacent real figures
+### IN-05: KPI trend badges remain hardcoded, unrelated to the adjacent real figures (carried over, unchanged)
 
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:249-251, 269-271, 289-291, 309-311`
-**Issue:** The `Badge` next to each KPI ("+12%", "Estável", "Urgente", "+8%") is a literal string, unrelated to `kpis.data`. E.g. the "Clientes Ativos" card could show "+12%" next to a `total_clientes` value that's actually flat or falling. Pre-existing, not part of this phase's diff.
-**Fix:** Either compute the trend from real data (requires a backend delta field) or replace with a neutral, non-quantified label until real trend data exists, to avoid implying false analytics.
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:258-260, 278-280, 298-300, 318-320`
+**Issue:** Unchanged from the previous review's IN-03. `"+12%"`, `"Estável"`, `"Urgente"`, `"+8%"` are literals unrelated to `kpis.data`. Pre-existing, deferred to `DASH-V2` per `REQUIREMENTS.md`.
+**Fix:** Compute from real trend data when available, or replace with a neutral non-quantified label in the meantime.
 
-### IN-04: Inconsistent JSX indentation in `RecentProcessosCard`'s conditional
+### IN-06: Inconsistent JSX indentation in `RecentProcessosCard`'s final ternary branch (carried over, unchanged)
 
-**File:** `web/src/app/(dashboard)/dashboard/page.tsx:500-564`
-**Issue:** The `else` branch's `<CardContent className="p-0">` (line 509) and its closing `)}` (line 564) are not indented to match the surrounding ternary, unlike the `if` branch above it. Purely cosmetic, no functional impact.
-**Fix:** Run the project formatter (e.g. `pnpm lint --fix` / Prettier) over this block.
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:546, 601`
+**Issue:** Unchanged from the previous review's IN-04. The `<CardContent className="p-0">` at line 546 (and its closing `)}` at line 601) sit one indent level shallower than the sibling branches directly above them (lines 534, 538, 544 are indented to 8 spaces; 546/601 sit at 6). Purely cosmetic.
+**Fix:** Run the project formatter (`pnpm lint --fix` / Prettier) over this block.
+
+### IN-07: `RecentProcessosCard`'s table has no dedicated loading skeleton — briefly renders header-only during fetch
+
+**File:** `web/src/app/(dashboard)/dashboard/page.tsx:533-601`
+**Issue:** While `isLoading` is `true` and `isError` is `false`, `recentProcessos.length === 0 && !isLoading` evaluates to `false` (because `!isLoading` is `false`), so rendering falls through to the `<Table>` branch with an empty `<TableBody>` — the table headers ("ID Processo", "Cliente", "Estado", "Ação") render with no rows and no loading indicator until data arrives or the empty-state kicks in. This predates the current fix pass (the DASH-01 skeleton effort, per commit `c927156`, covered only the KPI cards and Atividade Recente, not this table) and was not part of any of the four target fixes, but it's a real, currently-observable gap in the same component this pass modified.
+**Fix:** Add a `isLoading` branch (e.g. row-shaped `Skeleton` placeholders) before the zero-data / table branches, mirroring the pattern already used for `KpiCardSkeleton` and `AtividadeRecenteCard`.
 
 ---
 
