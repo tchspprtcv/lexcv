@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm, type FieldErrors } from "react-hook-form";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { DatePickerField } from "@/components/shared/date-picker-field";
 import { useEvento, useUpdateEvento } from "@/hooks/use-eventos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -246,7 +247,13 @@ function EventoEditContent({ id }: { id: number }) {
 
                 <div className="space-y-2">
                   <Label htmlFor="dataInicio">Início</Label>
-                  <Input id="dataInicio" type="datetime-local" {...form.register("dataInicio")} />
+                  <Controller
+                    control={form.control}
+                    name="dataInicio"
+                    render={({ field }) => (
+                      <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                    )}
+                  />
                   {form.formState.errors.dataInicio ? (
                     <p className="text-sm text-red-600">{form.formState.errors.dataInicio.message}</p>
                   ) : null}
@@ -254,7 +261,13 @@ function EventoEditContent({ id }: { id: number }) {
 
                 <div className="space-y-2">
                   <Label htmlFor="dataFim">Fim</Label>
-                  <Input id="dataFim" type="datetime-local" {...form.register("dataFim")} />
+                  <Controller
+                    control={form.control}
+                    name="dataFim"
+                    render={({ field }) => (
+                      <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                    )}
+                  />
                   {form.formState.errors.dataFim ? (
                     <p className="text-sm text-red-600">{form.formState.errors.dataFim.message}</p>
                   ) : null}
