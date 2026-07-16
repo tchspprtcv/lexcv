@@ -183,7 +183,10 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
     },
     {
       id: "nif",
-      accessorFn: (cliente) => cliente.nif ?? cliente.documento_numero ?? cliente.documentoNumero ?? "",
+      accessorFn: (cliente) =>
+        (cliente.documento_tipo || cliente.documentoTipo)
+          ? (cliente.documento_numero ?? cliente.documentoNumero ?? "")
+          : (cliente.nif ?? ""),
       meta: { label: "NIF" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="NIF" />,
       cell: ({ row }) => {
