@@ -343,8 +343,8 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   2. As listas desktop (ramo `hidden md:block`) de Clientes, Processos, Pareceres, Financeiro e Documentos usam o padrão DataTable partilhado (ordenação por coluna, toolbar de filtro), continuando a usar exatamente os mesmos filtros server-side já servidos via TanStack Query — sem duplicar filtragem client-side.
   3. `/notificacoes` e qualquer outra lista paginada no servidor usa o componente oficial `Pagination` em vez de um pager customizado.
 **Plans**: 6 plans (4 waves)
-- [ ] 104-01-PLAN.md — Package legitimacy gate (blocking-human) for @tanstack/react-table
-- [ ] 104-02-PLAN.md — Install @tanstack/react-table + add Pagination primitive + build shared DataTable pattern
+- [x] 104-01-PLAN.md — Package legitimacy gate (blocking-human) for @tanstack/react-table
+- [x] 104-02-PLAN.md — Install @tanstack/react-table + add Pagination primitive + build shared DataTable pattern
 - [ ] 104-03-PLAN.md — Adopt DataTable on Clientes + Processos (already on Table)
 - [ ] 104-04-PLAN.md — Adopt DataTable on Pareceres + Financeiro (Financeiro: first Table adoption + Badge migration)
 - [ ] 104-05-PLAN.md — Adopt DataTable on Documentos (first Table adoption) + /notificacoes official Pagination swap (DTB-03)
@@ -485,7 +485,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
-| 104. Padrão DataTable Partilhado | v2.13 | 0/6 | Not started | - |
+| 104. Padrão DataTable Partilhado | v2.13 | 2/6 | In Progress|  |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |

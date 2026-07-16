@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: executing
-stopped_at: Completed 103-01-PLAN.md (Phase 103 fully complete, 1/1 plan; DASH-01/02 satisfied)
-last_updated: "2026-07-16T10:49:03.300Z"
-last_activity: 2026-07-16 -- Phase 104 planning complete
+stopped_at: Completed 104-02-PLAN.md (shared DataTable pattern + Pagination primitive built; 104-03/04/05 unblocked)
+last_updated: "2026-07-16T11:17:09.233Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 16
-  completed_plans: 10
+  completed_plans: 12
   percent: 30
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 ## Current Position
 
 Phase: 104 of 110 (padrão datatable partilhado)
-Plan: Not started
+Plan: 3 of 6
 Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 104 planning complete
+Last activity: 2026-07-16
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Last activity: 2026-07-16 -- Phase 104 planning complete
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
+| Phase 104 P02 | ~25min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase 102]: (v2.13, Phase 102 Plan 04, closing gate) Final holistic `pnpm build` + regression-grep gate green (badge-gray call-site surface enumerated across 8 files via `grep -rl '"gray"' web/src/app/`, not a stale 3-path list); mandatory human visual checkpoint (light+dark, real browser + getComputedStyle) APPROVED with concrete evidence — card dark background confirmed ~7.8% lightness vs. page background's `rgb(2,6,23)`, Rule-C button/badge identity unchanged, DSR-03 tooltips + aria-labels confirmed on `/clientes` and `/settings`. Phase 102 complete — DSR-01/02/03 all satisfied, 0 follow-up fix plans needed.
 - [Phase 103]: (v2.13, Phase 103 Plan 01) Task split strictly followed Skeleton-first (Task 1) then Empty-second (Task 2) so each task commit builds/typechecks standalone; AtividadeRecenteCard's defensive Inbox/EmptyState branch was deliberately held out of the Task 1 commit and added in Task 2, matching the plan's own task boundaries.
 - [Phase 103]: (v2.13, Phase 103 Plan 01) Verified-against-source: no literal 'A carregar...' string ever existed in dashboard/page.tsx (that string only lives in the separate, out-of-scope processos/dashboard/page.tsx); DASH-01's real gap was the discarded useDashboardKpis().isLoading field, not ad hoc text. The one ad hoc string genuinely removed was 'Sem urgencias.' on Prazos Urgentes (DASH-02).
+- [Phase 104]: (v2.13, Phase 104 Plan 02) shadcn add pagination --diff (dry run) revealed it would overwrite Phase 102's reconciled button.tsx (Pagination depends on Button); declined that overwrite interactively so only pagination.tsx was created, preserving the reconciled primitive untouched
+- [Phase 104]: (v2.13, Phase 104 Plan 02) Generic DataTable wrapper configures useReactTable with core+sorted+pagination row models only, never getFilteredRowModel -- filtering stays owned by each screen's existing use-* hook, closing the mandated 12px/600 uppercase muted column-header typography inconsistency across all 5 list screens
+- [Phase 104]: (v2.13, Phase 104 Plan 02) Only DTB-01 marked complete in REQUIREMENTS.md, not DTB-03 -- the Pagination primitive was added but not yet applied to /notificacoes (that swap is 104-05's job); marking DTB-03 complete now would misrepresent an unfinished requirement
 
 ### Pending Todos
 
@@ -171,8 +175,8 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-16T08:43:47.959Z
-Stopped at: Completed 103-01-PLAN.md (Phase 103 fully complete, 1/1 plan; DASH-01/02 satisfied)
+Last session: 2026-07-16T11:15:51.097Z
+Stopped at: Completed 104-02-PLAN.md (shared DataTable pattern + Pagination primitive built; 104-03/04/05 unblocked)
 Resume file: None
 
 ## Operator Next Steps
