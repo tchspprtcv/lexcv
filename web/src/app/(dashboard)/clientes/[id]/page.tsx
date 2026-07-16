@@ -6,7 +6,16 @@ import * as React from "react";
 import { Printer } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,9 +29,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import {
@@ -97,8 +108,15 @@ function formatMoneyCVE(v: number) {
   return v.toLocaleString("pt-CV", { style: "currency", currency: "CVE" });
 }
 
-const selectClassName =
-  "flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
+function deriveInitials(nome: string) {
+  return nome
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+}
 
 const textareaClassName =
   "flex min-h-24 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
@@ -259,7 +277,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
 
     // Detect a pre-existing documento_tipo that isn't valid for the loaded tipo (e.g. legacy
     // data not covered by the 74-cleanup-nif-documento-tipo.sql migration). If we silently fed
-    // this into the native <select>, the browser would fall back to the first <option>
+    // this into the native select element, the browser would fall back to the first option
     // ("Nenhum", value "") since there's no matching option, and an unrelated save would then
     // clear the field as a side effect. Instead, flag it and keep the raw value selected below.
     const isValidCombo =
@@ -353,15 +371,21 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Cliente</h1>
-          <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            <Link href="/clientes" className="hover:underline">
-              Clientes
-            </Link>{" "}
-            <span>/</span>{" "}
-            <span className="text-neutral-900 dark:text-neutral-50">
-              {cliente.data?.numero_cliente ?? cliente.data?.nome ?? "…"}
-            </span>
-          </div>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/clientes">Clientes</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>
+                  {cliente.data?.numero_cliente ?? cliente.data?.nome ?? "…"}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
 
         <div className="flex gap-2">
@@ -417,66 +441,20 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
         </div>
       ) : cliente.data ? (
         <div className="space-y-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <div className="overflow-x-auto">
-            <div className="flex gap-2 w-max">
-              <Button
-                type="button"
-                variant={tab === "dados" ? "secondary" : "outline"}
-                onClick={() => setTab("dados")}
-              >
-                Dados
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "contactosNotas" ? "secondary" : "outline"}
-                onClick={() => setTab("contactosNotas")}
-              >
-                Contactos e Notas
-              </Button>
-              {canViewProcessos ? (
-                <Button
-                  type="button"
-                  variant={tab === "processos" ? "secondary" : "outline"}
-                  onClick={() => setTab("processos")}
-                >
-                  Processos
-                </Button>
-              ) : null}
-              {canViewPareceres ? (
-                <Button
-                  type="button"
-                  variant={tab === "pareceres" ? "secondary" : "outline"}
-                  onClick={() => setTab("pareceres")}
-                >
-                  Pareceres
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant={tab === "documentosEntregues" ? "secondary" : "outline"}
-                onClick={() => setTab("documentosEntregues")}
-              >
-                Documentos Entregues
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "documentosATratar" ? "secondary" : "outline"}
-                onClick={() => setTab("documentosATratar")}
-              >
-                Documentos a Tratar
-              </Button>
-              <Button
-                type="button"
-                variant={tab === "deslocacoes" ? "secondary" : "outline"}
-                onClick={() => setTab("deslocacoes")}
-              >
-                Deslocações
-              </Button>
-            </div>
+            <TabsList variant="default">
+              <TabsTrigger value="dados">Dados</TabsTrigger>
+              <TabsTrigger value="contactosNotas">Contactos e Notas</TabsTrigger>
+              {canViewProcessos ? <TabsTrigger value="processos">Processos</TabsTrigger> : null}
+              {canViewPareceres ? <TabsTrigger value="pareceres">Pareceres</TabsTrigger> : null}
+              <TabsTrigger value="documentosEntregues">Documentos Entregues</TabsTrigger>
+              <TabsTrigger value="documentosATratar">Documentos a Tratar</TabsTrigger>
+              <TabsTrigger value="deslocacoes">Deslocações</TabsTrigger>
+            </TabsList>
           </div>
 
-          {tab === "dados" ? (
-          <>
+          <TabsContent value="dados" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -585,9 +563,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="documento_tipo">Tipo de Documento</Label>
-                          <select
+                          <NativeSelect
                             id="documento_tipo"
-                            className={selectClassName}
+                            size="default"
                             {...form.register("documento_tipo")}
                           >
                             <option value="">Nenhum</option>
@@ -601,7 +579,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                                 {legacyDocumentoTipo} (inválido para o tipo atual)
                               </option>
                             ) : null}
-                          </select>
+                          </NativeSelect>
                           {legacyDocumentoTipo ? (
                             <p className="text-sm text-amber-600">
                               Este cliente tem um tipo de documento (&quot;{legacyDocumentoTipo}&quot;) que já não é
@@ -717,9 +695,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="ramo_atividade">Ramo de Atividade</Label>
-                        <select
+                        <NativeSelect
                           id="ramo_atividade"
-                          className={selectClassName}
+                          size="default"
                           {...form.register("ramo_atividade")}
                         >
                           <option value="">Selecione o ramo de atividade</option>
@@ -729,7 +707,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           <option value="Serviços">Serviços</option>
                           <option value="Comércio">Comércio</option>
                           <option value="Outros">Outros</option>
-                        </select>
+                        </NativeSelect>
                         {form.formState.errors.ramo_atividade ? (
                           <p className="text-sm text-red-600">{form.formState.errors.ramo_atividade.message}</p>
                         ) : null}
@@ -851,8 +829,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               useRemove={useRemoveAdministrativo}
             />
           </div>
-          </>
-          ) : tab === "contactosNotas" ? (
+          </TabsContent>
+
+          <TabsContent value="contactosNotas">
           <div className="grid gap-4 lg:grid-cols-2">
             <ClienteContactosCard
               clienteId={id}
@@ -871,20 +850,26 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               isError={notas.isError}
             />
           </div>
-          ) : tab === "processos" ? (
-            canViewProcessos ? (
+          </TabsContent>
+
+          <TabsContent value="processos">
+            {canViewProcessos ? (
               <ClienteProcessosTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
-            )
-          ) : tab === "pareceres" ? (
-            canViewPareceres ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="pareceres">
+            {canViewPareceres ? (
               <ClienteParecerTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
-            )
-          ) : tab === "documentosEntregues" ? (
-            canViewDocumentos ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="documentosEntregues">
+            {canViewDocumentos ? (
               <ClienteDocumentosEntreguesTab
                 clienteId={id}
                 editable={isEditing}
@@ -892,8 +877,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os documentos deste cliente." />
-            )
-          ) : tab === "documentosATratar" ? (
+            )}
+          </TabsContent>
+
+          <TabsContent value="documentosATratar">
             <Card>
               <CardContent className="space-y-2 pt-6">
                 <div className="flex items-center justify-between">
@@ -949,7 +936,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 )}
               </CardContent>
             </Card>
-          ) : tab === "deslocacoes" ? (
+          </TabsContent>
+
+          <TabsContent value="deslocacoes">
             <Card>
               <CardContent className="space-y-2 pt-6">
                 <div className="flex items-center justify-between">
@@ -1028,7 +1017,8 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 )}
               </CardContent>
             </Card>
-          ) : null}
+          </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -1664,12 +1654,17 @@ function ResponsaveisCard({
                 key={u.id}
                 className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 dark:border-neutral-800 p-2"
               >
-                <div className="min-w-0">
-                  <div className="font-medium text-sm truncate">{u.nome}</div>
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate space-x-2">
-                    {u.numeroCedula ? <span>Cédula: {u.numeroCedula}</span> : null}
-                    {u.telefone ? <span>Tel: {u.telefone}</span> : null}
-                    {u.email ? <span>{u.email}</span> : null}
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar size="sm">
+                    <AvatarFallback>{deriveInitials(u.nome)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm truncate">{u.nome}</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate space-x-2">
+                      {u.numeroCedula ? <span>Cédula: {u.numeroCedula}</span> : null}
+                      {u.telefone ? <span>Tel: {u.telefone}</span> : null}
+                      {u.email ? <span>{u.email}</span> : null}
+                    </div>
                   </div>
                 </div>
                 {canEditClientes && editable ? (
@@ -1695,10 +1690,10 @@ function ResponsaveisCard({
           </DialogHeader>
           <div className="space-y-2">
             <Label>Utilizador</Label>
-            <select
+            <NativeSelect
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
-              className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+              size="default"
             >
               <option value="">Selecionar utilizador...</option>
               {candidateUsers.map((u) => (
@@ -1706,7 +1701,7 @@ function ResponsaveisCard({
                   {u.nome ?? u.email ?? u.id}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
@@ -1818,15 +1813,15 @@ function ClienteContactosCard({
       <CardContent className="space-y-4">
         {canEditClientes && editable ? (
           <div className="grid gap-2 sm:grid-cols-[140px_1fr_auto]">
-            <select
+            <NativeSelect
               value={newTipo}
               onChange={(e) => setNewTipo(e.target.value)}
-              className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+              size="default"
             >
               <option value="EMAIL">Email</option>
               <option value="TELEFONE">Telefone</option>
               <option value="OUTRO">Outro</option>
-            </select>
+            </NativeSelect>
             <input
               value={newValor}
               onChange={(e) => setNewValor(e.target.value)}
@@ -1857,16 +1852,16 @@ function ClienteContactosCard({
                   <div className="min-w-0 flex-1">
                     {isEditing ? (
                       <div className="grid gap-2 sm:grid-cols-[140px_1fr]">
-                        <select
+                        <NativeSelect
                           value={editTipo}
                           onChange={(e) => setEditTipo(e.target.value)}
-                          className="h-9 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+                          size="default"
                         >
                           <option value="">—</option>
                           <option value="EMAIL">Email</option>
                           <option value="TELEFONE">Telefone</option>
                           <option value="OUTRO">Outro</option>
-                        </select>
+                        </NativeSelect>
                         <input
                           value={editValor}
                           onChange={(e) => setEditValor(e.target.value)}
