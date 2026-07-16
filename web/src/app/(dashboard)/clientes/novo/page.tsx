@@ -133,7 +133,7 @@ export default function ClienteCreatePage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Novo cliente</h1>
+          <h1 className="text-2xl font-semibold">Novo Cliente</h1>
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>

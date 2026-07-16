@@ -1198,7 +1198,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <input
                       id="prazo_dataLimite"
                       type="date"
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                       {...prazoForm.register("dataLimite")}
                     />
                     {prazoForm.formState.errors.dataLimite ? (
@@ -1792,7 +1792,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <input
                               id="decisao_data"
                               type="date"
-                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                               {...decisaoForm.register("data")}
                             />
                             {decisaoForm.formState.errors.data ? (
@@ -1976,7 +1976,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <input
                               id="facto_data"
                               type="date"
-                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                               {...factoForm.register("data")}
                             />
                             {factoForm.formState.errors.data ? (
@@ -1991,7 +1991,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 id="facto_ordem"
                                 type="number"
                                 min={1}
-                                className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                                 value={factoOrdemDraft}
                                 onChange={(e) =>
                                   setFactoOrdemDraft(Math.max(1, Math.trunc(Number(e.target.value) || 1)))
