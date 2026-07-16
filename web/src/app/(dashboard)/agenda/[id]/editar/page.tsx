@@ -17,7 +17,7 @@ import { useEvento, useUpdateEvento } from "@/hooks/use-eventos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
-import { eventoFormSchema, type EventoFormValues } from "@/schemas/eventos";
+import { eventoEditFormSchema, type EventoEditFormValues } from "@/schemas/eventos";
 import type { EventoUpdateRequest } from "@/types/eventos";
 
 type PageProps = {
@@ -82,8 +82,8 @@ function EventoEditContent({ id }: { id: number }) {
   const canEditAgenda = permissions.can.edit("agenda");
   const [serverError, setServerError] = React.useState<string | null>(null);
 
-  const form = useForm<EventoFormValues>({
-    resolver: zodResolver(eventoFormSchema),
+  const form = useForm<EventoEditFormValues>({
+    resolver: zodResolver(eventoEditFormSchema),
     defaultValues: {
       processoId: "",
       titulo: "",
@@ -92,7 +92,6 @@ function EventoEditContent({ id }: { id: number }) {
       dataFim: "",
       prioridade: "MEDIA",
       concluido: false,
-      recurrenceRule: "NONE" as const,
     },
   });
 
@@ -107,12 +106,10 @@ function EventoEditContent({ id }: { id: number }) {
       dataFim: toDateTimeLocalValue(evento.data.dataFim),
       prioridade: evento.data.prioridade ?? "MEDIA",
       concluido: evento.data.concluido ?? false,
-      recurrenceRule: (evento.data.recurrenceRule as EventoFormValues["recurrenceRule"]) ?? "NONE",
-      recurrenceEndDate: evento.data.recurrenceEndDate ?? undefined,
     });
   }, [evento.data, form]);
 
-  const onSubmit = async (values: EventoFormValues) => {
+  const onSubmit = async (values: EventoEditFormValues) => {
     setServerError(null);
     try {
       const payload: EventoUpdateRequest = {
@@ -135,7 +132,7 @@ function EventoEditContent({ id }: { id: number }) {
     }
   };
 
-  const onInvalid = (errors: FieldErrors<EventoFormValues>) => {
+  const onInvalid = (errors: FieldErrors<EventoEditFormValues>) => {
     const messages = Object.values(errors)
       .map((err) => err?.message)
       .filter((m): m is string => typeof m === "string");
