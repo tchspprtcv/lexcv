@@ -59,15 +59,11 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { DataTable } from "@/components/shared/data-table/data-table";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useTenantUsers } from "@/hooks/use-users";
 import { useClientes } from "@/hooks/use-clientes";
-import {
-  useDeleteDocumento,
-  useDocumentos,
-  useDownloadDocumento,
-  useUploadDocumentoComProgresso,
-} from "@/hooks/use-documentos";
+import { useDocumentos, useUploadDocumentoComProgresso } from "@/hooks/use-documentos";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   useAddDecisao,
@@ -124,7 +120,6 @@ import {
   type TestemunhaFormValues,
   type TransicaoJustificativaFormValues,
 } from "@/schemas/processos";
-import type { Documento } from "@/types/documentos";
 import type {
   AuditLogEntry,
   Decisao,
@@ -143,6 +138,7 @@ import type {
   TimelineItemType,
   TransicaoInfo,
 } from "@/types/processos";
+import { columns } from "./documentos-columns";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -183,19 +179,6 @@ function formatDate(v: string | undefined) {
   if (!v) return "—";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-
-function formatDocumentoSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDocumentoDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("pt-CV");
 }
 
@@ -2651,90 +2634,9 @@ function ProcessoDocumentosTab({
         ) : documentos.length === 0 ? (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum documento registado.</p>
         ) : (
-          <ul className="space-y-1">
-            {documentos.map((doc: Documento) => (
-              <ProcessoDocumentoRow key={doc.id} documento={doc} canEditDocumentos={canEditDocumentos} />
-            ))}
-          </ul>
+          <DataTable columns={columns(canEditDocumentos)} data={documentos} getRowId={(d) => d.id} />
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function ProcessoDocumentoRow({
-  documento,
-  canEditDocumentos,
-}: {
-  documento: Documento;
-  canEditDocumentos: boolean;
-}) {
-  const del = useDeleteDocumento(documento.id);
-  const download = useDownloadDocumento(documento.id);
-
-  // WR-01: the backend serializes the raw Documento entity with its Java field
-  // names (tamanho, createdAt), not the snake_case/renamed shape declared on
-  // the shared frontend `Documento` type (size, created_at) — same
-  // workaround already applied on ClienteDocumentoEntregueRow
-  // (clientes/[id]/page.tsx), transferable verbatim since both endpoints
-  // serialize the identical entity shape.
-  const wireDocumento = documento as unknown as { tamanho?: number; createdAt?: string };
-  const tamanho = wireDocumento.tamanho ?? 0;
-  const criadoEm = wireDocumento.createdAt;
-
-  const onDelete = async () => {
-    const ok = window.confirm("Apagar este documento?");
-    if (!ok) return;
-    try {
-      await del.mutateAsync();
-      toast.success("Documento apagado com sucesso.");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
-      toast.error(msg);
-    }
-  };
-
-  const onDownload = async () => {
-    try {
-      const res = await download.mutateAsync();
-      window.open(res.url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao gerar link de download.");
-    }
-  };
-
-  return (
-    <li className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{documento.nome}</span>
-          <span className="text-neutral-500 dark:text-neutral-400">{documento.tipo || "—"}</span>
-        </div>
-        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-          {formatDocumentoSize(tamanho)} · {formatDocumentoDate(criadoEm)}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <button
-          type="button"
-          onClick={onDownload}
-          disabled={download.isPending}
-          className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium disabled:opacity-50"
-        >
-          Download
-        </button>
-        {canEditDocumentos ? (
-          <button
-            type="button"
-            className="text-neutral-500 hover:text-red-600"
-            onClick={onDelete}
-            aria-label="Apagar documento"
-            disabled={del.isPending}
-          >
-            ✕
-          </button>
-        ) : null}
-      </div>
-    </li>
   );
 }
