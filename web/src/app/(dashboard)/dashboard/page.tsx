@@ -227,6 +227,15 @@ function DashboardKpis({
     canViewFinanceiro,
   ].filter(Boolean).length;
 
+  if (kpis.isError) {
+    if (!visibleKpiCount) return null;
+    return (
+      <p className="text-sm text-red-600">
+        {kpis.error instanceof Error ? kpis.error.message : "Não foi possível carregar os indicadores."}
+      </p>
+    );
+  }
+
   if (kpis.isLoading) {
     if (!visibleKpiCount) return null;
     return (
@@ -420,6 +429,10 @@ function PrazosUrgentesCard() {
               </div>
             </div>
           ))
+        ) : urgentes.isError ? (
+          <p className="text-sm text-red-600">
+            {urgentes.error instanceof Error ? urgentes.error.message : "Não foi possível carregar os prazos."}
+          </p>
         ) : urgentes.isLoading ? null : (
           <EmptyState
             icon={CalendarCheck}
@@ -452,6 +465,7 @@ function RecentProcessosCardWithClientes() {
       recentProcessos={recentProcessos}
       clienteNomeById={clienteNomeById}
       isLoading={processos.isLoading}
+      isError={processos.isError || clientes.isError}
     />
   );
 }
@@ -464,6 +478,7 @@ function RecentProcessosCardNoClientes() {
       recentProcessos={recentProcessos}
       clienteNomeById={undefined}
       isLoading={processos.isLoading}
+      isError={processos.isError}
     />
   );
 }
@@ -472,6 +487,7 @@ function RecentProcessosCard({
   recentProcessos,
   clienteNomeById,
   isLoading,
+  isError,
 }: {
   recentProcessos: Array<{
     id: string;
@@ -482,6 +498,7 @@ function RecentProcessosCard({
   }>;
   clienteNomeById: Map<string, string> | undefined;
   isLoading: boolean;
+  isError: boolean;
 }) {
   return (
     <Card className="lg:col-span-2">
@@ -497,7 +514,11 @@ function RecentProcessosCard({
           Ver todos
         </Link>
       </CardHeader>
-      {recentProcessos.length === 0 && !isLoading ? (
+      {isError ? (
+        <CardContent>
+          <p className="text-sm text-red-600">Não foi possível carregar os processos recentes.</p>
+        </CardContent>
+      ) : recentProcessos.length === 0 && !isLoading ? (
         <CardContent>
           <EmptyState
             icon={FolderOpen}
