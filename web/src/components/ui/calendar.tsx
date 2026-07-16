@@ -9,40 +9,8 @@ import {
 } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
-import { Button, type ButtonProps } from "@/components/ui/button"
+import { Button, type ButtonProps, buttonVariants } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
-import { cva } from "class-variance-authority"
-
-// button.tsx (hand-rolled, untouched per Phase 101 scope) does not export
-// its internal `buttonVariants` CVA or forward a ref - both are needed here
-// (nav button classNames + roving-tabindex focus in CalendarDayButton).
-// Mirrors button.tsx's variant/size classes exactly; keep in sync if that
-// file's styling changes (tracked as a documented, bounded duplication).
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300",
-  {
-    variants: {
-      variant: {
-        default: "bg-neutral-900 text-neutral-50 hover:bg-neutral-900/90",
-        secondary: "bg-neutral-100 text-neutral-900 hover:bg-neutral-100/80",
-        outline:
-          "border border-neutral-200 bg-white hover:bg-neutral-100 text-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-800 dark:text-neutral-50",
-        ghost: "hover:bg-neutral-100 text-neutral-900 dark:hover:bg-neutral-800 dark:text-neutral-50",
-        link: "text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50",
-      },
-      size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-)
 
 // Button is a plain function component (no forwardRef); this cast lets
 // CalendarDayButton attach a ref for roving-tabindex focus management
@@ -249,7 +217,6 @@ function CalendarDayButton({
           "the calendar will silently stop working. See 101-REVIEW.md WR-03."
       )
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
