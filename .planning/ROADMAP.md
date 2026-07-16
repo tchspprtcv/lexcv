@@ -485,7 +485,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
-| 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete   | 2026-07-16 |
+| 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
