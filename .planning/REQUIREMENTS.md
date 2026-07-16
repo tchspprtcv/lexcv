@@ -37,11 +37,11 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Clientes + Processos
 
-- [ ] **CLP-01**: Ficha de Cliente (7 separadores) migrada de botões-toggle manuais para `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, preservando contagem de separadores condicional por RBAC e `overflow-x-auto` em mobile
+- [x] **CLP-01**: Ficha de Cliente (7 separadores) migrada de botões-toggle manuais para `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, preservando contagem de separadores condicional por RBAC e `overflow-x-auto` em mobile
 - [x] **CLP-02**: Ficha de Processo (Partes/Fases/Decisões/Factos/Testemunhas/Documentos) migrada para o mesmo padrão `Tabs`, entregue em conjunto com CLP-01 (nunca isoladamente)
-- [ ] **CLP-03**: Todos os `<select className={selectClassName}>` nativos em formulários de Clientes/Processos substituídos por `NativeSelect`/`Select`
+- [x] **CLP-03**: Todos os `<select className={selectClassName}>` nativos em formulários de Clientes/Processos substituídos por `NativeSelect`/`Select`
 - [x] **CLP-04**: `Avatar` usado para representar advogados/administrativos/testemunhas em listagens e pickers
-- [ ] **CLP-05**: Cabeçalhos das fichas de Cliente/Processo usam `Breadcrumb` em vez do `<div>`+`Link`+"/" atual
+- [x] **CLP-05**: Cabeçalhos das fichas de Cliente/Processo usam `Breadcrumb` em vez do `<div>`+`Link`+"/" atual
 
 ### Agenda
 
@@ -118,11 +118,11 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | DTB-01 | Phase 104 | Complete |
 | DTB-02 | Phase 104 | Complete |
 | DTB-03 | Phase 104 | Complete |
-| CLP-01 | Phase 105 | Pending |
+| CLP-01 | Phase 105 | Complete |
 | CLP-02 | Phase 105 | Complete |
-| CLP-03 | Phase 105 | Pending |
+| CLP-03 | Phase 105 | Complete |
 | CLP-04 | Phase 105 | Complete |
-| CLP-05 | Phase 105 | Pending |
+| CLP-05 | Phase 105 | Complete |
 | AGD-36 | Phase 106 | Pending |
 | AGD-37 | Phase 106 | Pending |
 | DOF-01 | Phase 107 | Pending |
