@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
@@ -232,10 +233,11 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                     Estado
                   </div>
                   <div className="mt-2">
-                    <select
+                    <NativeSelect
                       value={draftEstado}
                       onChange={(e) => setDraftEstado(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
+                      className="w-full"
                     >
                       <option value="">Todos</option>
                       <option value="TRIAGEM">Em triagem</option>
@@ -243,7 +245,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                       <option value="SUSPENSO">Suspenso</option>
                       <option value="ENCERRADO">Encerrado</option>
                       <option value="CONCLUIDO">Concluído</option>
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div className="lg:col-span-3">
@@ -277,10 +279,11 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                     Cliente
                   </div>
                   <div className="mt-2">
-                    <select
+                    <NativeSelect
                       value={draftClienteId}
                       onChange={(e) => setDraftClienteId(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
+                      className="w-full"
                     >
                       <option value="">Todos</option>
                       {(clientes.data ?? []).map((c) => (
@@ -288,7 +291,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                           {c.nome}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
               </div>

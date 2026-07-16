@@ -6,10 +6,19 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useClientes } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -21,9 +30,6 @@ import type { ProcessoUpdateRequest } from "@/types/processos";
 type PageProps = {
   params: Promise<{ id: string }>;
 };
-
-const selectClassName =
-  "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
 
 const textareaClassName =
   "flex min-h-24 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
@@ -107,14 +113,28 @@ function ProcessoEditContent({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/processos">Processos</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/processos/${encodeURIComponent(id)}`}>{processo.data?.numero ?? "…"}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Editar</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Editar processo</h1>
-          <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            <Link href={`/processos/${encodeURIComponent(id)}`} className="hover:underline">
-              Voltar ao detalhe
-            </Link>
-          </div>
         </div>
 
         <Button asChild variant="outline">
@@ -137,9 +157,10 @@ function ProcessoEditContent({ id }: { id: string }) {
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
               <div className="space-y-2">
                 <Label htmlFor="cliente_id">Cliente</Label>
-                <select
+                <NativeSelect
                   id="cliente_id"
-                  className={selectClassName}
+                  size="default"
+                  className="w-full"
                   disabled={clientes.isLoading || clientes.isError}
                   {...form.register("cliente_id")}
                 >
@@ -149,7 +170,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                       {c.nome}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 {clientes.isError ? (
                   <p className="text-sm text-red-600">
                     {clientes.error instanceof Error ? clientes.error.message : "Erro ao carregar clientes"}
