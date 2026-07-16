@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Download } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,8 +58,6 @@ function DocumentoAcoesCell({
   const del = useDeleteDocumento(documento.id);
   const [error, setError] = React.useState<string | null>(null);
 
-  if (!canEditDocumentos) return null;
-
   const onDelete = async () => {
     setError(null);
     const ok = window.confirm("Apagar este documento?");
@@ -75,9 +74,22 @@ function DocumentoAcoesCell({
 
   return (
     <div className="space-y-1">
-      <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
-        {del.isPending ? "A apagar..." : "Apagar"}
-      </Button>
+      <div className="inline-flex items-center gap-1">
+        <a
+          href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button type="button" variant="ghost" size="sm" aria-label="Download">
+            <Download className="h-4 w-4" />
+          </Button>
+        </a>
+        {canEditDocumentos ? (
+          <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
+            {del.isPending ? "A apagar..." : "Apagar"}
+          </Button>
+        ) : null}
+      </div>
       {error ? <div className="text-xs text-red-600">{error}</div> : null}
     </div>
   );
