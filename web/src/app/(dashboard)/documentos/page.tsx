@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { DataTable } from "@/components/shared/data-table/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { columns } from "./columns";
 import { useDeleteDocumento, useDocumentos } from "@/hooks/use-documentos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -57,6 +59,7 @@ function DocumentosContent({
 }) {
   const [filters, setFilters] = React.useState<DocumentosListFilters>({});
   const list = useDocumentos(filters);
+  const tableColumns = React.useMemo(() => columns(canEditDocumentos), [canEditDocumentos]);
 
   const onSubmit = (values: DocumentosFiltersFormValues) => {
     setFilters({ processo_id: values.processo_id, cliente_id: values.cliente_id });
@@ -136,40 +139,7 @@ function DocumentosContent({
           ) : (
             <>
             <div className="hidden md:block">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                      <th className="py-2 pr-4 font-medium">Nome</th>
-                      <th className="py-2 pr-4 font-medium">Tipo</th>
-                      <th className="py-2 pr-4 font-medium">Processo</th>
-                      <th className="py-2 pr-4 font-medium">Cliente</th>
-                      <th className="py-2 pr-4 font-medium">Confid.</th>
-                      <th className="py-2 pr-4 font-medium">Ver.</th>
-                      <th className="py-2 pr-4 font-medium">Tamanho</th>
-                      <th className="py-2 pr-4 font-medium">Criado</th>
-                      <th className="py-2 pr-4 font-medium">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.data.map((d) => (
-                      <DocumentoRow
-                        key={d.id}
-                        id={d.id}
-                        nome={d.nome}
-                        tipo={d.tipo}
-                        processoId={d.processo_id}
-                        clienteId={d.cliente_id}
-                        confidencialidade={d.confidencialidade}
-                        versao={d.versao}
-                        size={d.size}
-                        createdAt={d.created_at}
-                        canEditDocumentos={canEditDocumentos}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable columns={tableColumns} data={list.data} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {list.data.map((d) => (
@@ -271,74 +241,5 @@ function DocumentoMobileCard({
         )}
       </div>
     </div>
-  );
-}
-
-function DocumentoRow({
-  id,
-  nome,
-  tipo,
-  processoId,
-  clienteId,
-  confidencialidade,
-  versao,
-  size,
-  createdAt,
-  canEditDocumentos,
-}: {
-  id: string;
-  nome: string;
-  tipo?: string;
-  processoId?: string;
-  clienteId?: string;
-  confidencialidade?: string;
-  versao: number;
-  size: number;
-  createdAt: string;
-  canEditDocumentos: boolean;
-}) {
-  const del = useDeleteDocumento(id);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const onDelete = async () => {
-    setError(null);
-    const ok = window.confirm("Apagar este documento?");
-    if (!ok) return;
-    try {
-      await del.mutateAsync();
-      toast.success("Documento apagado com sucesso.");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao apagar documento";
-      setError(msg);
-      toast.error(msg);
-    }
-  };
-
-  return (
-    <tr className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800">
-      <td className="py-2 pr-4">
-        <Link
-          href={`/documentos/${encodeURIComponent(id)}`}
-          className="font-medium text-neutral-900 hover:underline dark:text-neutral-50"
-        >
-          {nome}
-        </Link>
-        {error ? <div className="text-xs text-red-600">{error}</div> : null}
-      </td>
-      <td className="py-2 pr-4">{tipo ?? "—"}</td>
-      <td className="py-2 pr-4">{processoId ?? "—"}</td>
-      <td className="py-2 pr-4">{clienteId ?? "—"}</td>
-      <td className="py-2 pr-4">{confidencialidade ?? "PUBLICO"}</td>
-      <td className="py-2 pr-4">v{versao ?? 1}</td>
-      <td className="py-2 pr-4">{size.toLocaleString("pt-CV")} bytes</td>
-      <td className="py-2 pr-4">{new Date(createdAt).toLocaleString("pt-CV")}</td>
-      <td className="py-2 pr-4">
-        {canEditDocumentos ? (
-          <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
-            {del.isPending ? "A apagar..." : "Apagar"}
-          </Button>
-        ) : null}
-      </td>
-    </tr>
   );
 }
