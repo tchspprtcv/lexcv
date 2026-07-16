@@ -36,7 +36,7 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
-export function Button({ className, variant, size, asChild, ...props }: ButtonProps) {
+function Button({ className, variant, size, asChild, ...props }: ButtonProps) {
   const Comp = asChild ? SlotPrimitive.Slot : "button";
   return (
     <Comp
@@ -46,3 +46,5 @@ export function Button({ className, variant, size, asChild, ...props }: ButtonPr
     />
   );
 }
+
+export { Button, buttonVariants };
