@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
@@ -340,29 +341,29 @@ function ClientesPageContent({
                 <div className="lg:col-span-3">
                   <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">Tipo</div>
                   <div className="mt-2">
-                    <select
+                    <NativeSelect
                       value={draftTipo}
                       onChange={(e) => setDraftTipo(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
                     >
                       <option value="">Todos</option>
                       <option value="PARTICULAR">Particular</option>
                       <option value="EMPRESA">Empresa</option>
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div className="lg:col-span-3">
                   <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">Estado</div>
                   <div className="mt-2">
-                    <select
+                    <NativeSelect
                       value={draftAtivo}
                       onChange={(e) => setDraftAtivo(e.target.value as "all" | "true" | "false")}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
                     >
                       <option value="all">Todos</option>
                       <option value="true">Ativo</option>
                       <option value="false">Inativo</option>
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div className="lg:col-span-3">
