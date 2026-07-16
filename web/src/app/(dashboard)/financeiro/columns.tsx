@@ -51,6 +51,7 @@ export function columns(
     {
       accessorKey: "id",
       enableHiding: false,
+      meta: { label: "Honorário" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Honorário" />,
       cell: ({ row }) => (
         <Link
@@ -67,6 +68,7 @@ export function columns(
         const processo = processoById.get(h.processoId);
         return processo ? (processo.numero ?? processo.titulo ?? processo.id) : h.processoId;
       },
+      meta: { label: "Processo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Processo" />,
       cell: ({ row }) => {
         const processo = processoById.get(row.original.processoId);
@@ -85,6 +87,7 @@ export function columns(
         const clienteId = processoById.get(h.processoId)?.cliente_id;
         return clienteId ? (clienteNomeById.get(clienteId) ?? clienteId) : "";
       },
+      meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
       cell: ({ row }) => {
         const clienteId = processoById.get(row.original.processoId)?.cliente_id;
@@ -99,17 +102,20 @@ export function columns(
     },
     {
       accessorKey: "valorTotal",
+      meta: { label: "Total" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Total" />,
       cell: ({ row }) => <>{formatMoneyCVE(row.original.valorTotal)}</>,
     },
     {
       accessorKey: "dataAcordo",
+      meta: { label: "Data do Acordo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Data do Acordo" />,
       cell: ({ row }) => <>{formatDate(row.original.dataAcordo)}</>,
     },
     {
       id: "estado",
       accessorFn: (h) => calcHonorarioStatus(h.totalPago, h.valorTotal),
+      meta: { label: "Estado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
       cell: ({ row }) => {
         const status = calcHonorarioStatus(row.original.totalPago, row.original.valorTotal);

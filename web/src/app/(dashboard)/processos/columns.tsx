@@ -23,6 +23,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
       id: "numero",
       accessorFn: (p) => p.numero || p.titulo || "",
       enableHiding: false,
+      meta: { label: "Número do Processo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Número do Processo" />,
       cell: ({ row }) => {
         const p = row.original;
@@ -47,6 +48,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
     {
       id: "cliente",
       accessorFn: (p) => clienteNomeById.get(p.cliente_id) ?? "",
+      meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
       cell: ({ row }) => (
         <span className="font-bold text-slate-700 dark:text-slate-300">
@@ -57,6 +59,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
     {
       id: "tribunal",
       accessorFn: (p) => p.tribunal ?? "",
+      meta: { label: "Tribunal" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tribunal" />,
       cell: ({ row }) => (
         <span className="text-slate-500 dark:text-slate-400 font-medium">{row.original.tribunal ?? "—"}</span>
@@ -65,6 +68,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
     {
       id: "area_juridica",
       accessorFn: (p) => p.area_juridica ?? "",
+      meta: { label: "Área Jurídica" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Área Jurídica" />,
       cell: ({ row }) => (
         <Badge variant="blue" className="rounded-none font-bold tracking-wide">
@@ -75,6 +79,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
     {
       id: "estado",
       accessorFn: (p) => (p.estado ?? "").toUpperCase(),
+      meta: { label: "Estado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
       cell: ({ row }) => {
         const p = row.original;
@@ -121,6 +126,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
       id: "acoes",
       enableSorting: false,
       enableHiding: false,
+      meta: { label: "Ações" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Ações" />,
       cell: ({ row }) => (
         <div className="flex justify-end">

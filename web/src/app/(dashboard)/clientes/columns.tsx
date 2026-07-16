@@ -123,6 +123,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
       id: "nome",
       accessorKey: "nome",
       enableHiding: false,
+      meta: { label: "Nome / Razão Social" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Nome / Razão Social" />,
       cell: ({ row }) => {
         const cliente = row.original;
@@ -168,6 +169,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
     {
       id: "tipo",
       accessorFn: (cliente) => (cliente.tipo ?? "").toUpperCase(),
+      meta: { label: "Tipo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
       cell: ({ row }) => {
         const tipo = (row.original.tipo ?? "").toUpperCase();
@@ -182,6 +184,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
     {
       id: "nif",
       accessorFn: (cliente) => cliente.nif ?? cliente.documento_numero ?? cliente.documentoNumero ?? "",
+      meta: { label: "NIF" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="NIF" />,
       cell: ({ row }) => {
         const cliente = row.original;
@@ -209,6 +212,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
     {
       id: "contacto",
       enableSorting: false,
+      meta: { label: "Contacto" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Contacto" />,
       cell: ({ row }) => {
         const cliente = row.original;
@@ -224,6 +228,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
       id: "acoes",
       enableSorting: false,
       enableHiding: false,
+      meta: { label: "Ações" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Ações" />,
       cell: ({ row }) => (
         <div className="flex justify-end">

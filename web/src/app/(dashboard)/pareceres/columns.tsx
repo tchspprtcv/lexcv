@@ -41,6 +41,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
     {
       accessorKey: "status",
       enableHiding: false,
+      meta: { label: "Estado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
       cell: ({ row }) => (
         <Badge variant={statusVariant(row.original.status)} className="rounded-none font-bold tracking-wide">
@@ -51,6 +52,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
     {
       id: "cliente",
       accessorFn: (s) => clienteNomeById.get(s.clienteId) ?? s.clienteId,
+      meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
       cell: ({ row }) => (
         <Link
@@ -63,6 +65,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
     },
     {
       accessorKey: "prioridade",
+      meta: { label: "Prioridade" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Prioridade" />,
       cell: ({ row }) => (
         <span className="text-slate-500 dark:text-slate-400 font-medium">
@@ -72,6 +75,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
     },
     {
       accessorKey: "prazo",
+      meta: { label: "Prazo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Prazo" />,
       cell: ({ row }) => (
         <span className="text-slate-500 dark:text-slate-400 font-medium">
@@ -81,6 +85,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
     },
     {
       accessorKey: "createdAt",
+      meta: { label: "Criado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criado" />,
       cell: ({ row }) => (
         <span className="text-slate-500 dark:text-slate-400 font-medium">
@@ -92,6 +97,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
       id: "acoes",
       enableSorting: false,
       enableHiding: false,
+      meta: { label: "Ações" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Ações" />,
       cell: ({ row }) => (
         <div className="text-right">

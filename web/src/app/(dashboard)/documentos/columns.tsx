@@ -105,6 +105,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
     {
       accessorKey: "nome",
       enableHiding: false,
+      meta: { label: "Nome" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Nome" />,
       cell: ({ row }) => (
         <Link
@@ -117,6 +118,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
     },
     {
       accessorKey: "tipo",
+      meta: { label: "Tipo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
       cell: ({ row }) =>
         row.original.tipo ? (
@@ -129,16 +131,19 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
     },
     {
       accessorKey: "processo_id",
+      meta: { label: "Processo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Processo" />,
       cell: ({ row }) => row.original.processo_id ?? "—",
     },
     {
       accessorKey: "cliente_id",
+      meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
       cell: ({ row }) => row.original.cliente_id ?? "—",
     },
     {
       accessorKey: "confidencialidade",
+      meta: { label: "Confidencialidade" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Confid." />,
       cell: ({ row }) => {
         const value = row.original.confidencialidade ?? "PUBLICO";
@@ -155,16 +160,19 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
     {
       accessorKey: "versao",
       enableSorting: false,
+      meta: { label: "Versão" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Ver." />,
       cell: ({ row }) => `v${row.original.versao ?? 1}`,
     },
     {
       accessorKey: "size",
+      meta: { label: "Tamanho" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tamanho" />,
       cell: ({ row }) => `${row.original.size.toLocaleString("pt-CV")} bytes`,
     },
     {
       accessorKey: "created_at",
+      meta: { label: "Criado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criado" />,
       cell: ({ row }) => new Date(row.original.created_at).toLocaleString("pt-CV"),
     },
@@ -172,6 +180,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
       id: "acoes",
       enableSorting: false,
       enableHiding: false,
+      meta: { label: "Ações" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Ações" />,
       cell: ({ row }) => (
         <DocumentoAcoesCell documento={row.original} canEditDocumentos={canEditDocumentos} />

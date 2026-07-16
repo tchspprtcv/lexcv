@@ -54,7 +54,8 @@ export function DataTableViewOptions<TData>({
       <DropdownMenuContent align="end" className="w-[180px]">
         {hideableColumns.map((column) => {
           const header = column.columnDef.header;
-          const label = typeof header === "string" ? header : column.id;
+          const metaLabel = (column.columnDef.meta as { label?: string } | undefined)?.label;
+          const label = metaLabel ?? (typeof header === "string" ? header : column.id);
 
           return (
             <DropdownMenuCheckboxItem
