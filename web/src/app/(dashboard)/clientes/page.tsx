@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { useClientes, useCreateCliente } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
-import { guardCsvFormula, parseCsv, toCsv } from "@/lib/csv";
+import { guardCsvFormula, parseCsv, stripCsvFormulaGuard, toCsv } from "@/lib/csv";
 import { nifPattern } from "@/schemas/clientes";
 import type { ClientesListFilters } from "@/types/clientes";
 
@@ -160,7 +160,7 @@ function ClientesPageContent({
 
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i] ?? [];
-        const nome = (r[idxNome] ?? "").trim();
+        const nome = stripCsvFormulaGuard((r[idxNome] ?? "").trim());
         const nif = idxNif >= 0 ? (r[idxNif] ?? "").trim() : "";
         if (!nome) {
           failed++;
@@ -179,8 +179,8 @@ function ClientesPageContent({
               ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
               : undefined,
             nif,
-            telefone: idxTelefone >= 0 ? (r[idxTelefone] ?? "").trim() || undefined : undefined,
-            email: idxEmail >= 0 ? (r[idxEmail] ?? "").trim() || undefined : undefined,
+            telefone: idxTelefone >= 0 ? stripCsvFormulaGuard((r[idxTelefone] ?? "").trim()) || undefined : undefined,
+            email: idxEmail >= 0 ? stripCsvFormulaGuard((r[idxEmail] ?? "").trim()) || undefined : undefined,
           });
           created++;
         } catch (err) {

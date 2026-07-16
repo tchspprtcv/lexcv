@@ -52,6 +52,23 @@ export function guardCsvFormula(value: string) {
   return value;
 }
 
+/**
+ * Reverses `guardCsvFormula`: strips a single leading `'` when it was added
+ * to neutralize a formula-trigger character, so a CSV exported by this app
+ * (via `guardCsvFormula`) round-trips cleanly back through `onImportFile`
+ * without leaving a permanent leading apostrophe on the re-imported value.
+ * Only strips when the guard apostrophe is immediately followed by one of
+ * the trigger characters — an apostrophe that's part of the original value
+ * (e.g. "O'Brien") is left untouched since it wouldn't have been added by
+ * `guardCsvFormula` in the first place.
+ */
+export function stripCsvFormulaGuard(value: string) {
+  if (value.length > 1 && value[0] === "'" && FORMULA_TRIGGER_CHARS.some((c) => value[1] === c)) {
+    return value.slice(1);
+  }
+  return value;
+}
+
 function escapeCsvValue(value: string, delimiter: string) {
   const needsQuote =
     value.includes('"') || value.includes("\n") || value.includes("\r") || value.includes(delimiter);
