@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: ready_to_plan
-stopped_at: Phase 104 complete (6/6) — ready to discuss Phase 105
-last_updated: 2026-07-16T14:09:48.152Z
+status: planning
+stopped_at: Completed 105-03-PLAN.md (Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable); 105-06 (closing plan) remains
+last_updated: "2026-07-16T17:33:36.694Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 10
-  completed_phases: 3
-  total_plans: 16
-  completed_plans: 16
-  percent: 30
+  completed_phases: 4
+  total_plans: 22
+  completed_plans: 21
+  percent: 40
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 ## Current Position
 
 Phase: 105 of 110 (módulos clientes + processos (combinados))
-Plan: Not started
-Status: Ready to plan
+Plan: 6 of 6 (105-01, 105-02, 105-03, 105-04, 105-05 complete — 105-06 closing plan remaining)
+Status: Ready to execute
 Last activity: 2026-07-16
 
 ## Performance Metrics
@@ -77,6 +77,7 @@ Last activity: 2026-07-16
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
 | Phase 104 P02 | ~25min | 3 tasks | 7 files |
+| Phase 105 P03 | ~25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Recent decisions affecting current work:
 - [Phase 104]: (v2.13, Phase 104 Plan 02) shadcn add pagination --diff (dry run) revealed it would overwrite Phase 102's reconciled button.tsx (Pagination depends on Button); declined that overwrite interactively so only pagination.tsx was created, preserving the reconciled primitive untouched
 - [Phase 104]: (v2.13, Phase 104 Plan 02) Generic DataTable wrapper configures useReactTable with core+sorted+pagination row models only, never getFilteredRowModel -- filtering stays owned by each screen's existing use-* hook, closing the mandated 12px/600 uppercase muted column-header typography inconsistency across all 5 list screens
 - [Phase 104]: (v2.13, Phase 104 Plan 02) Only DTB-01 marked complete in REQUIREMENTS.md, not DTB-03 -- the Pagination primitive was added but not yet applied to /notificacoes (that swap is 104-05's job); marking DTB-03 complete now would misrepresent an unfinished requirement
+- [Phase 105 Plan 03]: Dropped both the 'Processo' and 'Cliente' columns from the processo-scoped documentos-columns.tsx -- Processo is redundant (row already scoped to processoId), Cliente would always render em-dash since this tab's upload flow only ever sets processo_id, never cliente_id
+- [Phase 105 Plan 03]: Decisões and Factos tabs (also raw table markup in the same file) were deliberately left untouched -- neither 105-CONTEXT.md nor 105-UI-SPEC.md/105-PATTERNS.md name them in the Table-primitive migration scope, unlike Partes/Fases/Testemunhas which are explicitly named
 
 ### Pending Todos
 
@@ -176,8 +179,8 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-16T11:15:51.097Z
-Stopped at: Completed 104-02-PLAN.md (shared DataTable pattern + Pagination primitive built; 104-03/04/05 unblocked)
+Last session: 2026-07-16T17:33:36.664Z
+Stopped at: Completed 105-03-PLAN.md (Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable); 105-06 (closing plan) remains
 Resume file: None
 
 ## Operator Next Steps

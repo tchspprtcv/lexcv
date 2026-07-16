@@ -366,7 +366,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 **Plans**: 6 plans (3 waves)
 - [x] 105-01-PLAN.md — Ficha de Cliente: Tabs (7) + NativeSelect + Avatar (ResponsaveisCard) + Breadcrumb (Wave 1)
 - [x] 105-02-PLAN.md — Ficha de Processo (tab shell): Tabs (8, ?tab= preserved) + NativeSelect + Breadcrumb + h1 font-semibold (Wave 1)
-- [ ] 105-03-PLAN.md — Ficha de Processo (conteúdo): Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable (novo columns.tsx) (Wave 2, depende de 105-02)
+- [x] 105-03-PLAN.md — Ficha de Processo (conteúdo): Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable (novo columns.tsx) (Wave 2, depende de 105-02)
 - [x] 105-04-PLAN.md — Páginas secundárias Clientes (list/novo/merge): NativeSelect + Breadcrumb (Wave 1)
 - [x] 105-05-PLAN.md — Páginas secundárias Processos (list/novo/editar): NativeSelect + Breadcrumb (Wave 1)
 - [ ] 105-06-PLAN.md — Gate holístico (build/lint/regressão) + checkpoint visual humano (2 fichas, 2 temas, matriz RBAC 4 roles × mobile) (Wave 3, depende de todos)
@@ -492,7 +492,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
 | 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
-| 105. Módulos Clientes + Processos | v2.13 | 4/6 | In Progress|  |
+| 105. Módulos Clientes + Processos | v2.13 | 5/6 | In Progress|  |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
 | 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
