@@ -3,12 +3,30 @@
 import type { ReactNode } from "react";
 
 import Link from "next/link";
-import { FileText, Plus, Scale, Timer, Users, Wallet } from "lucide-react";
+import {
+  CalendarCheck,
+  FileText,
+  FolderOpen,
+  Inbox,
+  Plus,
+  Scale,
+  Timer,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useClientes } from "@/hooks/use-clientes";
@@ -16,6 +34,28 @@ import { useDashboardKpis } from "@/hooks/use-dashboard-kpis";
 import { useEventos } from "@/hooks/use-eventos";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
+
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon />
+        </EmptyMedia>
+        <EmptyTitle className="text-sm font-semibold">{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
 
 export default function DashboardPage() {
   const permissions = usePermissions();
@@ -144,6 +184,12 @@ function AtividadeRecenteCard() {
               </div>
             ))}
           </>
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title="Sem atividade recente"
+            description="A atividade mais recente vai aparecer aqui."
+          />
         ) : (
           entries.map((entry) => (
             <div key={entry.id} className="flex gap-4 group">
@@ -374,8 +420,12 @@ function PrazosUrgentesCard() {
               </div>
             </div>
           ))
-        ) : (
-          <div className="text-sm text-slate-500 dark:text-slate-400 italic">Sem urgências.</div>
+        ) : urgentes.isLoading ? null : (
+          <EmptyState
+            icon={CalendarCheck}
+            title="Sem prazos urgentes"
+            description="Não há eventos urgentes nos próximos dias."
+          />
         )}
 
         <Button
@@ -397,18 +447,31 @@ function RecentProcessosCardWithClientes() {
   const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
   const recentProcessos = (processos.data ?? []).slice(0, 3);
 
-  return <RecentProcessosCard recentProcessos={recentProcessos} clienteNomeById={clienteNomeById} />;
+  return (
+    <RecentProcessosCard
+      recentProcessos={recentProcessos}
+      clienteNomeById={clienteNomeById}
+      isLoading={processos.isLoading}
+    />
+  );
 }
 
 function RecentProcessosCardNoClientes() {
   const processos = useProcessos();
   const recentProcessos = (processos.data ?? []).slice(0, 3);
-  return <RecentProcessosCard recentProcessos={recentProcessos} clienteNomeById={undefined} />;
+  return (
+    <RecentProcessosCard
+      recentProcessos={recentProcessos}
+      clienteNomeById={undefined}
+      isLoading={processos.isLoading}
+    />
+  );
 }
 
 function RecentProcessosCard({
   recentProcessos,
   clienteNomeById,
+  isLoading,
 }: {
   recentProcessos: Array<{
     id: string;
@@ -418,6 +481,7 @@ function RecentProcessosCard({
     estado?: string;
   }>;
   clienteNomeById: Map<string, string> | undefined;
+  isLoading: boolean;
 }) {
   return (
     <Card className="lg:col-span-2">
@@ -433,6 +497,15 @@ function RecentProcessosCard({
           Ver todos
         </Link>
       </CardHeader>
+      {recentProcessos.length === 0 && !isLoading ? (
+        <CardContent>
+          <EmptyState
+            icon={FolderOpen}
+            title="Sem processos recentes"
+            description="Os processos criados mais recentemente aparecerão aqui."
+          />
+        </CardContent>
+      ) : (
       <CardContent className="p-0">
         <Table>
           <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
@@ -488,6 +561,7 @@ function RecentProcessosCard({
           </TableBody>
         </Table>
       </CardContent>
+      )}
     </Card>
   );
 }
