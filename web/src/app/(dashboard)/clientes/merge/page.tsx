@@ -31,7 +31,7 @@ export default function ClientesMergePage() {
   const [primaryId, setPrimaryId] = React.useState("");
   const [secondaryId, setSecondaryId] = React.useState("");
 
-  if (!permissions.isLoading && !canEditClientes) {
+  if (permissions.isFetched && !canEditClientes) {
     return (
       <AccessDeniedState
         description="Não tem permissão para fazer merge de clientes."

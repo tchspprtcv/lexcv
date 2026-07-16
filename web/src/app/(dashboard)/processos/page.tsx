@@ -22,7 +22,7 @@ export default function ProcessosPage() {
   const canViewProcessos = permissions.can.view("processos");
   const canCreateProcessos = permissions.can.create("processos");
 
-  if (!permissions.isLoading && !canViewProcessos) {
+  if (permissions.isFetched && !canViewProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de processos."

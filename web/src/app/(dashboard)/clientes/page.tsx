@@ -27,7 +27,7 @@ export default function ClientesPage() {
   const canCreateClientes = permissions.can.create("clientes");
   const canEditClientes = permissions.can.edit("clientes");
 
-  if (!permissions.isLoading && !canViewClientes) {
+  if (permissions.isFetched && !canViewClientes) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de clientes."

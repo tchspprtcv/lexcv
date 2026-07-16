@@ -48,7 +48,7 @@ export default function ProcessoCreatePage() {
   const permissions = usePermissions();
   const canCreateProcessos = permissions.can.create("processos");
 
-  if (!permissions.isLoading && !canCreateProcessos) {
+  if (permissions.isFetched && !canCreateProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar processos."

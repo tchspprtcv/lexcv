@@ -215,7 +215,7 @@ export default function ProcessoDetailPage({ params }: PageProps) {
   const canEditProcessos = permissions.can.edit("processos");
   const canManageProcessos = permissions.can.manage("processos");
 
-  if (!permissions.isLoading && !canViewProcessos) {
+  if (permissions.isFetched && !canViewProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este processo."
@@ -1265,18 +1265,16 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
           </Dialog>
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-            <div className="flex flex-wrap gap-2">
-              <TabsList variant="default">
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="partes">Partes</TabsTrigger>
-                <TabsTrigger value="fases">Fases</TabsTrigger>
-                <TabsTrigger value="decisoes">Decisões</TabsTrigger>
-                <TabsTrigger value="factos">Factos</TabsTrigger>
-                <TabsTrigger value="testemunhas">Testemunhas</TabsTrigger>
-                <TabsTrigger value="documentos">Documentos</TabsTrigger>
-                {canManageProcessos ? <TabsTrigger value="auditoria">Auditoria</TabsTrigger> : null}
-              </TabsList>
-            </div>
+            <TabsList variant="default" className="h-auto w-full flex-wrap">
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="partes">Partes</TabsTrigger>
+              <TabsTrigger value="fases">Fases</TabsTrigger>
+              <TabsTrigger value="decisoes">Decisões</TabsTrigger>
+              <TabsTrigger value="factos">Factos</TabsTrigger>
+              <TabsTrigger value="testemunhas">Testemunhas</TabsTrigger>
+              <TabsTrigger value="documentos">Documentos</TabsTrigger>
+              {canManageProcessos ? <TabsTrigger value="auditoria">Auditoria</TabsTrigger> : null}
+            </TabsList>
 
           <TabsContent value="timeline">
             <Card>

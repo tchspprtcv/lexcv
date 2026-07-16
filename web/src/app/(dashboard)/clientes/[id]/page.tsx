@@ -127,7 +127,7 @@ export default function ClienteDetailPage({ params }: PageProps) {
   const canViewClientes = permissions.can.view("clientes");
   const canEditClientes = permissions.can.edit("clientes");
 
-  if (!permissions.isLoading && !canViewClientes) {
+  if (permissions.isFetched && !canViewClientes) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este cliente."

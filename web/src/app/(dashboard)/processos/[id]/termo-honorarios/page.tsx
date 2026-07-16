@@ -52,7 +52,7 @@ export default function TermoHonorariosPage({ params }: PageProps) {
   const permissions = usePermissions();
   const canViewProcessos = permissions.can.view("processos");
 
-  if (!permissions.isLoading && !canViewProcessos) {
+  if (permissions.isFetched && !canViewProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este processo."

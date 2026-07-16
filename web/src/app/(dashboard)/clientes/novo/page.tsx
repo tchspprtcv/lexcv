@@ -116,7 +116,7 @@ export default function ClienteCreatePage() {
     }
   };
 
-  if (!permissions.isLoading && !canCreateClientes) {
+  if (permissions.isFetched && !canCreateClientes) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar clientes."

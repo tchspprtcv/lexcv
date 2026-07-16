@@ -47,7 +47,7 @@ export default function FichaPage({ params }: PageProps) {
   const permissions = usePermissions();
   const canViewClientes = permissions.can.view("clientes");
 
-  if (!permissions.isLoading && !canViewClientes) {
+  if (permissions.isFetched && !canViewClientes) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar a ficha deste cliente."
