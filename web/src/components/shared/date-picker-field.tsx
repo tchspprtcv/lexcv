@@ -38,9 +38,9 @@ export function DatePickerField({
   const timePart = withTime && value ? value.slice(11, 16) : "00:00";
 
   function commit(nextDate: Date | undefined, nextTime: string) {
-    if (!nextDate) return;
+    const base = nextDate ?? new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
-    const datePart = `${nextDate.getFullYear()}-${pad(nextDate.getMonth() + 1)}-${pad(nextDate.getDate())}`;
+    const datePart = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
     onChange(withTime ? `${datePart}T${nextTime}` : datePart);
   }
 
