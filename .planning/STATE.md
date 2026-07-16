@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: executing
-stopped_at: Completed 102-04-PLAN.md (Phase 102 fully complete, 4/4 plans; DSR-01/02/03 satisfied)
-last_updated: "2026-07-16T08:27:55.631Z"
-last_activity: 2026-07-16 -- Phase 103 planning complete
+status: verifying
+stopped_at: Completed 103-01-PLAN.md (Phase 103 fully complete, 1/1 plan; DASH-01/02 satisfied)
+last_updated: "2026-07-16T08:43:47.995Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 10
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
-  percent: 20
+  completed_plans: 10
+  percent: 30
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 ## Current Position
 
 Phase: 103 of 110 (módulo dashboard)
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 103 planning complete
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-07-16
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Last activity: 2026-07-16 -- Phase 103 planning complete
 | 102 | 4 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
+| Phase 103 P01 | ~10min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 102]: (v2.13, Phase 102 Plan 02) 6 surface primitives (card/dialog/alert-dialog/popover/table/sheet) tokenized onto `--card`/`--popover`/`--muted`, replacing the flat `dark:bg-[#020617]`/`dark:bg-slate-950` magic hex that gave zero dark-mode elevation contrast — this Rule-B change was flagged for, and later confirmed by, the Plan 04 human visual checkpoint as an intended improvement, not a bug.
 - [Phase 102]: (v2.13, Phase 102 Plan 03) Single global `TooltipProvider` (delayDuration=700, explicit — the primitive defaults to 0/instant) mounted in `providers.tsx`; DSR-03 "ícones da sidebar colapsada" interpreted as the sidebar-footer LogOut button (the app has no literal icon-only collapsed-rail mode) — a recorded, evidence-based reading, not a silent assumption. Broadened grep confirmed exactly 2 in-scope icon-only row-action surfaces app-wide (`clientes/page.tsx`, `settings/page.tsx`), both wrapped with Tooltip + matching aria-label.
 - [Phase 102]: (v2.13, Phase 102 Plan 04, closing gate) Final holistic `pnpm build` + regression-grep gate green (badge-gray call-site surface enumerated across 8 files via `grep -rl '"gray"' web/src/app/`, not a stale 3-path list); mandatory human visual checkpoint (light+dark, real browser + getComputedStyle) APPROVED with concrete evidence — card dark background confirmed ~7.8% lightness vs. page background's `rgb(2,6,23)`, Rule-C button/badge identity unchanged, DSR-03 tooltips + aria-labels confirmed on `/clientes` and `/settings`. Phase 102 complete — DSR-01/02/03 all satisfied, 0 follow-up fix plans needed.
+- [Phase 103]: (v2.13, Phase 103 Plan 01) Task split strictly followed Skeleton-first (Task 1) then Empty-second (Task 2) so each task commit builds/typechecks standalone; AtividadeRecenteCard's defensive Inbox/EmptyState branch was deliberately held out of the Task 1 commit and added in Task 2, matching the plan's own task boundaries.
+- [Phase 103]: (v2.13, Phase 103 Plan 01) Verified-against-source: no literal 'A carregar...' string ever existed in dashboard/page.tsx (that string only lives in the separate, out-of-scope processos/dashboard/page.tsx); DASH-01's real gap was the discarded useDashboardKpis().isLoading field, not ad hoc text. The one ad hoc string genuinely removed was 'Sem urgencias.' on Prazos Urgentes (DASH-02).
 
 ### Pending Todos
 
@@ -167,8 +170,8 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-16T01:38:34.000Z
-Stopped at: Completed 102-04-PLAN.md (Phase 102 fully complete, 4/4 plans; DSR-01/02/03 satisfied)
+Last session: 2026-07-16T08:43:47.959Z
+Stopped at: Completed 103-01-PLAN.md (Phase 103 fully complete, 1/1 plan; DASH-01/02 satisfied)
 Resume file: None
 
 ## Operator Next Steps

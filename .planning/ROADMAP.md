@@ -331,7 +331,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. Os KPI cards e a secção "Atividade Recente" do Dashboard mostram placeholders `Skeleton` enquanto os dados carregam, substituindo por completo o texto "A carregar...".
   2. Qualquer secção do Dashboard sem dados (ex.: sem atividade recente) mostra o componente `Empty` em vez de uma mensagem ad hoc.
 **Plans**: 1 plan (1 wave)
-- [ ] 103-01-PLAN.md — DASH-01 (Skeleton loading states: KPI cards + Atividade Recente) + DASH-02 (Empty zero-data states: Prazos Urgentes, Processos Recentes, defensive Atividade Recente) num único ficheiro `dashboard/page.tsx`, autónomo, com override obrigatório de EmptyTitle (text-sm/font-semibold) e gate `pnpm build`
+- [x] 103-01-PLAN.md — DASH-01 (Skeleton loading states: KPI cards + Atividade Recente) + DASH-02 (Empty zero-data states: Prazos Urgentes, Processos Recentes, defensive Atividade Recente) num único ficheiro `dashboard/page.tsx`, autónomo, com override obrigatório de EmptyTitle (text-sm/font-semibold) e gate `pnpm build`
 
 #### Phase 104: Padrão DataTable Partilhado
 
@@ -478,7 +478,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
-| 103. Módulo Dashboard | v2.13 | 0/1 | Not started | - |
+| 103. Módulo Dashboard | v2.13 | 1/1 | Complete   | 2026-07-16 |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |

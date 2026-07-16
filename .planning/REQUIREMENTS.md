@@ -26,8 +26,8 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Dashboard
 
-- [ ] **DASH-01**: Estados de loading do Dashboard (KPI cards, Atividade Recente) usam `Skeleton` em vez de texto "A carregar..."
-- [ ] **DASH-02**: Estados vazios do Dashboard usam `Empty` em vez de mensagens ad hoc
+- [x] **DASH-01**: Estados de loading do Dashboard (KPI cards, Atividade Recente) usam `Skeleton` em vez de texto "A carregar..."
+- [x] **DASH-02**: Estados vazios do Dashboard usam `Empty` em vez de mensagens ad hoc
 
 ### DataTable Partilhada
 
@@ -113,8 +113,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | DSR-01 | Phase 102 | Complete |
 | DSR-02 | Phase 102 | Complete |
 | DSR-03 | Phase 102 | Complete |
-| DASH-01 | Phase 103 | Pending |
-| DASH-02 | Phase 103 | Pending |
+| DASH-01 | Phase 103 | Complete |
+| DASH-02 | Phase 103 | Complete |
 | DTB-01 | Phase 104 | Pending |
 | DTB-02 | Phase 104 | Pending |
 | DTB-03 | Phase 104 | Pending |
