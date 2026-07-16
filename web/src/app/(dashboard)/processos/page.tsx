@@ -2,20 +2,19 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { AlertCircle, Download, Filter, MoreVertical, Plus, Scale, Search, Sparkles } from "lucide-react";
+import { Download, Filter, Plus, Scale, Search, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
 import { useEventos } from "@/hooks/use-eventos";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
-import { prazosRiscoToLabel, prazosRiscoToVariant } from "@/lib/prazos";
 
 export default function ProcessosPage() {
   const permissions = usePermissions();
@@ -54,6 +53,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
   const processos = useProcessos(filters);
 
   const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
+  const processoColumns = columns(clienteNomeById);
 
   const isLoading = processos.isPending || clientes.isPending;
   const isError = processos.isError || clientes.isError;
@@ -308,109 +308,8 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               {filters.estado === "TRIAGEM" ? "Nenhum processo em triagem." : "Nenhum processo encontrado."}
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
-                <TableRow className="border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">NÚMERO DO PROCESSO</TableHead>
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">CLIENTE</TableHead>
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">TRIBUNAL</TableHead>
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">ÁREA JURÍDICA</TableHead>
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">ESTADO</TableHead>
-                  <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">AÇÕES</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {processos.data.map((p) => {
-                  const estado = (p.estado ?? "").toUpperCase();
-                  const estadoVariant =
-                    estado === "ATIVO"
-                      ? "green"
-                      : estado === "SUSPENSO"
-                        ? "amber"
-                        : estado === "TRIAGEM"
-                          ? "purple"
-                          : estado === "CONCLUIDO" || estado === "ENCERRADO"
-                            ? "gray"
-                            : "secondary";
-                  const estadoLabel =
-                    estado === "TRIAGEM" ? "EM TRIAGEM" : (p.estado ?? "—");
-
-                  return (
-                    <TableRow key={p.id} className="border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                      <TableCell>
-                        <Link
-                          href={`/processos/${encodeURIComponent(p.id)}`}
-                          className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          {p.numero || p.titulo || "Sem número"}
-                        </Link>
-                        <div className="text-[11px] font-medium tracking-wider uppercase text-slate-500 dark:text-slate-400 mt-0.5">
-                          Entrada: {new Date(p.created_at).toLocaleDateString("pt-CV")}
-                        </div>
-                        {/* Responsável sub-line */}
-                        <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-                          Resp.: {p.responsavel_nome ?? "—"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-bold text-slate-700 dark:text-slate-300">
-                        {clienteNomeById.get(p.cliente_id) ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-slate-500 dark:text-slate-400 font-medium">{p.tribunal ?? "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="blue" className="rounded-none font-bold tracking-wide">{p.area_juridica ?? "—"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"} className="rounded-none font-bold tracking-wide">
-                          {estadoLabel}
-                        </Badge>
-                        {/* Prazo risco signal — only render for proximo or vencido */}
-                        {p.risco_mais_critico && p.risco_mais_critico !== "ok" ? (
-                          <div className="mt-1 flex items-center gap-1">
-                            <Badge
-                              variant={prazosRiscoToVariant(p.risco_mais_critico)}
-                              className="rounded-none font-bold tracking-wide text-[11px]"
-                            >
-                              {prazosRiscoToLabel(p.risco_mais_critico)}
-                            </Badge>
-                            {p.tem_prazo_escalonado ? (
-                              <AlertCircle className="h-3 w-3 text-amber-500 dark:text-amber-400 inline-block ml-1" />
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                              <Link href={`/processos/${encodeURIComponent(p.id)}`}>
-                                <MoreVertical className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver detalhes</TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DataTable columns={processoColumns} data={processos.data} />
           )}
-        </CardContent>
-        <CardContent className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              Exibindo {(processos.data ?? []).length} processos
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">‹</button>
-              <button className="h-9 w-9 rounded-none bg-blue-600 text-white font-bold">1</button>
-              <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">2</button>
-              <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">3</button>
-              <div className="px-2 text-sm text-slate-500">…</div>
-              <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">›</button>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
