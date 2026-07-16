@@ -67,7 +67,7 @@ export default function DashboardPage() {
   const canViewAny =
     canViewClientes || canViewProcessos || canViewAgenda || canViewFinanceiro;
 
-  if (!permissions.isLoading && !canViewAny) {
+  if (permissions.isFetched && !canViewAny) {
     return (
       <AccessDeniedState
         description="Não tem permissões suficientes para aceder ao dashboard."
