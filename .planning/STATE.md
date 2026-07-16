@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: verifying
-stopped_at: Completed 103-01-PLAN.md (Phase 103 fully complete, 1/1 plan; DASH-01/02 satisfied)
-last_updated: "2026-07-16T08:43:47.995Z"
+status: ready_to_plan
+stopped_at: Phase 103 complete (1/1) — ready to discuss Phase 104
+last_updated: 2026-07-16T09:44:27.755Z
 last_activity: 2026-07-16
 progress:
   total_phases: 10
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 103 — módulo dashboard
+**Current focus:** Phase 104 — padrão datatable partilhado
 
 ## Current Position
 
-Phase: 103 of 110 (módulo dashboard)
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 104 of 110 (padrão datatable partilhado)
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-16
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 81
+- Total plans completed: 82
 - Average duration: —
 - Total execution time: —
 
@@ -71,6 +71,7 @@ Last activity: 2026-07-16
 | 101 P05 | 1 | 25min | 25min |
 | 101 | 5 | - | - |
 | 102 | 4 | - | - |
+| 103 | 1 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
