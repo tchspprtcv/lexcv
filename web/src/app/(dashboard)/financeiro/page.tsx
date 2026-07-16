@@ -289,7 +289,7 @@ function FinanceiroContent({
           ) : (
             <>
             <div className="hidden md:block">
-              <DataTable columns={honorarioColumns} data={filteredList} />
+              <DataTable columns={honorarioColumns} data={filteredList} getRowId={(h) => String(h.id)} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {filteredList.map((h) => {

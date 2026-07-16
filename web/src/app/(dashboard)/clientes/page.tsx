@@ -486,7 +486,7 @@ function ClientesPageContent({
 
               {/* Desktop: DataTable */}
               <div className="hidden md:block">
-                <DataTable columns={clienteColumns} data={clientes.data} />
+                <DataTable columns={clienteColumns} data={clientes.data} getRowId={(c) => c.id} />
               </div>
             </>
           )}

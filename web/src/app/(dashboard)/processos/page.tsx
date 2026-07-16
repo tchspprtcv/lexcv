@@ -311,7 +311,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               {filters.estado === "TRIAGEM" ? "Nenhum processo em triagem." : "Nenhum processo encontrado."}
             </div>
           ) : (
-            <DataTable columns={processoColumns} data={processos.data} />
+            <DataTable columns={processoColumns} data={processos.data} getRowId={(p) => p.id} />
           )}
         </CardContent>
       </Card>

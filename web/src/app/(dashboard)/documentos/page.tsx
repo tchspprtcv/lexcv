@@ -139,7 +139,7 @@ function DocumentosContent({
           ) : (
             <>
             <div className="hidden md:block">
-              <DataTable columns={tableColumns} data={list.data} />
+              <DataTable columns={tableColumns} data={list.data} getRowId={(d) => d.id} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {list.data.map((d) => (

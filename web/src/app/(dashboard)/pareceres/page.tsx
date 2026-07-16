@@ -419,7 +419,7 @@ function ParecerPageContent() {
 
               {/* Desktop: tabela */}
               <div className="hidden md:block">
-                <DataTable columns={parecerColumns} data={rows} />
+                <DataTable columns={parecerColumns} data={rows} getRowId={(s) => s.id} />
               </div>
             </>
           )}
