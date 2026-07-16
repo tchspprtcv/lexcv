@@ -15,7 +15,7 @@
 - ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
 - ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
 - ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
-- 🚧 **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (roadmap criado, planeamento pendente)
+- 🚧 **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (Phases 101-102 completas, 103+ pendente)
 
 ## Phases
 
@@ -320,7 +320,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 - [x] 102-01-PLAN.md — Rule-C identity components (button/badge/input/label/radio-group/switch/textarea) reconciled diff-first + inherited Phase-101 dedup (buttonVariants export, Slot alias, shadcn→devDeps)
 - [x] 102-02-PLAN.md — Rule-A/B surface reconciliation (card/dialog/alert-dialog/popover/table/sheet): dark-mode elevation via --card/--popover, tokenized rounded-lg
 - [x] 102-03-PLAN.md — Tooltip rollout (DSR-03): single TooltipProvider (delayDuration=700) + icon-only buttons (clientes row actions + sidebar LogOut)
-- [ ] 102-04-PLAN.md — Final pnpm build gate + mandatory human visual checkpoint (light+dark, getComputedStyle)
+- [x] 102-04-PLAN.md — Final pnpm build gate + mandatory human visual checkpoint (light+dark, getComputedStyle)
 
 #### Phase 103: Módulo Dashboard
 
@@ -476,7 +476,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 99. webpage/ — Nova App Next.js de Landing | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 100. Infraestrutura — Routing e Deployment | v2.12 | 4/4 | Complete   | 2026-07-15 |
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
-| 102. Reconciliação do Design System | v2.13 | 3/4 | In Progress|  |
+| 102. Reconciliação do Design System | v2.13 | 4/4 | Complete   | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 0/TBD | Not started | - |
 | 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
@@ -486,4 +486,4 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 102 (Reconciliação do Design System) planeada — 4 planos em 2 waves (Wave 1: {102-01, 102-02, 102-03} paralelos, zero file overlap → Wave 2: 102-04 checkpoint humano), DSR-01/02/03 cobertos. Run `/gsd:execute-phase 102` to build.
+**Next:** Phase 102 (Reconciliação do Design System) completa — 4/4 planos (Wave 1: {102-01, 102-02, 102-03} paralelos, zero file overlap → Wave 2: 102-04 checkpoint humano aprovado), DSR-01/02/03 satisfeitos. Run `/gsd:plan-phase 103` (Módulo Dashboard) to continue.

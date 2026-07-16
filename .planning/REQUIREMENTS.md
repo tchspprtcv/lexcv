@@ -20,9 +20,9 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Reconciliação do Design System
 
-- [ ] **DSR-01**: Cada um dos 14 componentes hand-rolled existentes (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`) reconciliado individualmente via `add <component> --diff` — nunca overwrite cego — preservando variantes/props customizadas (ex.: variante `gray` do badge)
-- [ ] **DSR-02**: As 93 ocorrências de import destes 14 componentes (38 ficheiros) continuam a compilar e passar typecheck após a reconciliação
-- [ ] **DSR-03**: `Tooltip` adicionado a botões icon-only em toda a app (ícones da sidebar colapsada, ações de linha icon-only), com `TooltipProvider` montado uma vez na raiz
+- [x] **DSR-01**: Cada um dos 14 componentes hand-rolled existentes (`button`, `dialog`, `alert-dialog`, `card`, `table`, `sheet`, `badge`, `input`, `label`, `popover`, `radio-group`, `switch`, `textarea`) reconciliado individualmente via `add <component> --diff` — nunca overwrite cego — preservando variantes/props customizadas (ex.: variante `gray` do badge)
+- [x] **DSR-02**: As 93 ocorrências de import destes 14 componentes (38 ficheiros) continuam a compilar e passar typecheck após a reconciliação
+- [x] **DSR-03**: `Tooltip` adicionado a botões icon-only em toda a app (ícones da sidebar colapsada, ações de linha icon-only), com `TooltipProvider` montado uma vez na raiz
 
 ### Dashboard
 
@@ -110,9 +110,9 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | FND-06 | Phase 101 | Complete |
 | FND-07 | Phase 101 | Complete |
 | FND-08 | Phase 101 | Complete |
-| DSR-01 | Phase 102 | Pending |
-| DSR-02 | Phase 102 | Pending |
-| DSR-03 | Phase 102 | Pending |
+| DSR-01 | Phase 102 | Complete |
+| DSR-02 | Phase 102 | Complete |
+| DSR-03 | Phase 102 | Complete |
 | DASH-01 | Phase 103 | Pending |
 | DASH-02 | Phase 103 | Pending |
 | DTB-01 | Phase 104 | Pending |

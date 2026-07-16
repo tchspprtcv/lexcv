@@ -23,26 +23,28 @@ key-files:
   created: []
   modified: []
 
-key-decisions: []
+key-decisions:
+  - "Human visual sign-off (light+dark, real browser + getComputedStyle) confirms Rule-B dark-mode elevation on card/dialog/alert-dialog/popover is an intended, correctly-rendered improvement, not a bug — card background resolves to a visibly lighter value (~7.8% lightness) than the page background (rgb(2,6,23)), matching --card's oklch(0.205 0 0)"
 
-requirements-completed: []  # Not yet complete — see "Checkpoint Status" below; DSR-01/02/03 completion is pending the Task 2 human verdict.
+requirements-completed: [DSR-01, DSR-02, DSR-03]
 
 # Metrics
-duration: in-progress
-completed: PENDING (Task 1 only; Task 2 awaiting human checkpoint)
+duration: ~30min
+completed: 2026-07-16
 ---
 
 # Phase 102 Plan 04: Final Holistic Gate + Mandatory Human Visual Sign-Off Summary
 
-**Task 1 (automated build + regression gate) is fully green across all 6 checks; Task 2 (mandatory human visual checkpoint, light+dark) is presented below and awaiting the human verdict — this SUMMARY is partial and will be finalized once the verdict is recorded.**
+**Whole-app `pnpm build` gate green (badge-gray surface enumerated across 8 files, magic-hex removed, radix unified, radius tokenized, tooltip provider confirmed) plus a live browser + getComputedStyle human sign-off confirming the Rule-B dark-mode elevation change renders correctly and no Rule-C identity/DSR-03 tooltip regression occurred — Phase 102 closes with DSR-01/02/03 satisfied.**
 
 ## Performance
 
-- **Duration (Task 1 only):** ~15 min
+- **Duration:** ~30 min
 - **Started:** 2026-07-16T01:15:00Z (approx)
 - **Task 1 completed:** 2026-07-16T01:29:31Z
-- **Tasks:** 1/2 completed (Task 2 is a blocking checkpoint awaiting human input)
-- **Files modified:** 0 (Task 1 is verification-only, no edits — confirmed via `git status --short web/` returning empty after `pnpm build`)
+- **Task 2 (human verdict) received:** 2026-07-16T01:38:34Z (approx)
+- **Tasks:** 2/2 completed
+- **Files modified:** 0 (this plan is verification-only end-to-end — no `web/` source files were created or changed; only `.planning/` documentation was written)
 
 ## Task 1: Final Holistic Automated Gate — Results
 
@@ -82,35 +84,49 @@ The `rounded-none` grep across the full `web/src/components/ui/` directory (not 
 
 **Task 1 verdict: GATE GREEN.** No code changes were required or made — this was a pure verification task, as specified.
 
-## Task 2: Mandatory Human Visual Sign-Off — AWAITING VERDICT
+## Task 2: Mandatory Human Visual Sign-Off — APPROVED
 
-Per the plan, Task 2 is `type="checkpoint:human-verify" gate="blocking"` and requires a human to visually confirm, in both light and dark mode, that the Rule-B dark-mode elevation change is an intended improvement (not a bug) and that no Rule-C identity or DSR-03 tooltip regression occurred.
+Per the plan, Task 2 is `type="checkpoint:human-verify" gate="blocking"` and required a human to visually confirm, in both light and dark mode, that the Rule-B dark-mode elevation change is an intended improvement (not a bug) and that no Rule-C identity or DSR-03 tooltip regression occurred.
 
-**Verification environment prepared:**
+**Verification environment used:**
 - `pnpm build` re-confirmed green (Task 1, above) immediately before this checkpoint.
-- A Next.js dev server for `web/` is already running and healthy at **http://localhost:3003** (pre-existing background process, PID 21388 — confirmed responding 200 on `/` and serving the current `/login` page with the merged Wave-1 code). A duplicate `pnpm dev` start attempt on port 3000 correctly self-detected the existing instance and exited without binding a second server.
+- A Next.js dev server for `web/` was already running and healthy at **http://localhost:3003** (pre-existing background process, PID 21388 — confirmed responding 200 on `/` and serving the current `/login` page with the merged Wave-1 code).
 - Backend confirmed reachable: `GET http://localhost:8080/api/v1/setup/status` → `{"initialized":true}`.
 
-**This SUMMARY will be finalized (verdict recorded verbatim, frontmatter `requirements-completed` populated, final commit made) only after the human verdict is received.** See the CHECKPOINT REACHED message accompanying this SUMMARY for the exact manual verification steps.
+### Human verdict (recorded verbatim)
+
+> approved
+>
+> Verifiquei ao vivo no browser (http://localhost:3003), autenticado como admin@lexcv.cv:
+>
+> 1. DARK MODE — Rule B elevação: confirmado via getComputedStyle — card `className` agora usa `bg-card`/`dark:bg-card` (não mais o hex hardcoded), cor computada visivelmente mais clara (lab ~7.8% lightness) que o page background (rgb(2,6,23)). Elevação real e visível, como esperado.
+> 2. LIGHT MODE — sem regressão: card background = branco puro (lab 100), border-radius = 0px. Sem regressão visual.
+> 3. Rule C — botões não azuis: botão "Criar" em /clientes/novo tem cor computada neutra (LAB a≈0, b≈0, lightness baixa = neutral-900), nada de azul institucional.
+> 4. Rule C — badges: em /clientes confirmei PARTICULAR (azul), EMPRESA (roxo), CLI-0001 (cinza), Avençado (verde) — todas as cores distintas preservadas. Em /settings confirmei ADMIN (azul), overrides (laranja), Ativo (verde).
+> 5. Cantos afiados preservados em ambos os temas (confirmado radius=0px e visualmente sem arredondamento em cards/dialogs/inputs).
+> 6. Tooltips DSR-03: confirmado visualmente "Eliminar" a aparecer em /clientes (linha de ação), "Eliminar" em /settings (Gestão de Utilizadores), e "Terminar sessão" no ícone de logout da sidebar — todos em português, com o delay a sentir-se como uma pausa curta (~700ms), não instantâneo.
+> 7. Acessibilidade icon-only: confirmado via árvore de acessibilidade e getAttribute('aria-label') — /clientes e /settings expõem nomes acessíveis corretos ("Ver detalhes", "Imprimir", "Editar", "Eliminar", "Terminar sessão").
+
+**Task 2 verdict: APPROVED.** All 7 acceptance-criteria checks confirmed live in-browser, in both themes, with concrete evidence (getComputedStyle lightness readings, LAB color values, accessibility-tree `aria-label` reads) — not a rubber-stamp approval. No issues reported; no follow-up fix plan required.
 
 ## Task Commits
 
-1. **Task 1: Final holistic automated gate (build + regression greps)** — no commit (pure verification task, zero file changes; per plan's own annotation "should be verification-only, likely no commits")
-2. **Task 2:** pending — checkpoint awaiting human verdict, no commit yet.
+1. **Task 1: Final holistic automated gate (build + regression greps)** — no commit (pure verification task, zero file changes; per the plan's own annotation "should be verification-only, likely no commits")
+2. **Task 2: Mandatory human visual sign-off** — no commit (human-judgment checkpoint, not a code task); verdict recorded in this SUMMARY
 
-**Plan metadata:** this SUMMARY.md commit (partial, pre-verdict) — see below.
+**Plan metadata:** `f066bd1` (docs: partial SUMMARY, Task 1 results) + this finalization commit (docs: complete plan with Task 2 verdict, STATE/ROADMAP/REQUIREMENTS updates)
 
 ## Files Created/Modified
 
-None — Task 1 is read-only verification; Task 2 has not yet executed any change (it is a human-judgment gate, not a code task).
+None — this plan is verification-only end-to-end. Zero `web/` source files were created or modified; only `.planning/` documentation (this SUMMARY, STATE.md, ROADMAP.md, REQUIREMENTS.md) was written.
 
 ## Decisions Made
 
-None yet beyond what Task 1 confirmed. Any interpretation/scope decision from the human's verdict will be recorded here once received.
+- The Rule-B dark-mode elevation change (card/dialog/alert-dialog/popover adopting `--card`/`--popover` instead of the flat `#020617` magic hex) is confirmed, by live human verification, to be the correct intended improvement rather than a bug — closing out the one open visual-risk item this plan existed to gate.
 
 ## Deviations from Plan
 
-None — Task 1 executed exactly as written, all 6 checks green on the first pass, no fixes needed.
+None — both tasks executed exactly as written. Task 1's 6 automated checks were green on the first pass; Task 2's human checkpoint returned "approved" with no issues, requiring no follow-up fix plan.
 
 ## Issues Encountered
 
@@ -122,12 +138,18 @@ None — this plan makes no code changes.
 
 ## User Setup Required
 
-None — the dev server verification environment is already running; no external service configuration needed.
+None — no external service configuration required.
 
-## Next Phase Readiness — NOT YET READY
+## Next Phase Readiness
 
-Phase 102 cannot close until the Task 2 human verdict is recorded here. If approved, this SUMMARY will be updated with `requirements-completed: [DSR-01, DSR-02, DSR-03]`, the verdict transcript, and the final metrics; if issues are reported, they will be captured as a gap for a follow-up fix plan per the plan's own `<verification>` instruction ("do not close the phase with an unresolved visual regression").
+- **Phase 102 (Reconciliação do Design System) is now fully complete** — all 3 requirements (DSR-01, DSR-02, DSR-03) satisfied across 102-01 (button/badge/form Rule-C), 102-02 (card/dialog/alert-dialog/popover/table/sheet Rule-B+A), 102-03 (TooltipProvider mount + DSR-03 rollout), and this plan's closing gate (build-clean + human-verified visual sign-off).
+- The 13 hand-rolled shadcn components are reconciled against the official registry with zero variant/color drift on Rule-C identity, an intentional and now human-confirmed Rule-B dark-mode elevation improvement, and full DSR-03 tooltip coverage on `/clientes` and `/settings` icon-only actions.
+- No blockers for Phase 103 (Dashboard) or any of the subsequent parallelizable module phases (104-109) — all depend only on Phase 102 being complete, which it now is.
 
 ---
 *Phase: LEXCV-102-reconcilia-o-do-design-system*
-*Status: PARTIAL — Task 1 complete, Task 2 awaiting human checkpoint verdict*
+*Completed: 2026-07-16*
+
+## Self-Check: PASSED
+
+Commit `f066bd1` (partial SUMMARY, Task 1 results) confirmed present in `git log --oneline --all`. `102-04-SUMMARY.md` confirmed present on disk. No source files were created/modified by this plan (verification-only), so no file-existence claims beyond the SUMMARY itself and the recorded commit hash apply.

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: executing
-stopped_at: Completed 101-05-PLAN.md (Phase 101 fully complete, 5/5 plans)
-last_updated: "2026-07-16T00:52:26.012Z"
-last_activity: 2026-07-16 -- Phase 102 planning complete
+stopped_at: Completed 102-04-PLAN.md (Phase 102 fully complete, 4/4 plans)
+last_updated: "2026-07-16T01:39:58.902Z"
+last_activity: 2026-07-16 -- Phase 102 (Reconciliação do Design System) complete, 4/4 plans
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 5
-  percent: 10
+  completed_plans: 9
+  percent: 20
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 102 — reconciliação do design system
+**Current focus:** Phase 103 — Módulo Dashboard (Phase 102 complete)
 
 ## Current Position
 
-Phase: 102 of 110 (reconciliação do design system)
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 102 planning complete
+Phase: 102 of 110 (reconciliação do design system) — COMPLETE, 4/4 plans
+Plan: Not started (next: Phase 103 — Módulo Dashboard)
+Status: Ready to execute Phase 103
+Last activity: 2026-07-16 -- Phase 102 (Reconciliação do Design System) complete, DSR-01/02/03 satisfied
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Last activity: 2026-07-16 -- Phase 102 planning complete
 | 101 P02 | 1 | 20min | 20min |
 | 101 P05 | 1 | 25min | 25min |
 | 101 | 5 | - | - |
+| 102 | 4 | ~93min (35+18+20+~30min-in-progress-during-checkpoint) | ~23min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 
@@ -104,6 +105,10 @@ Recent decisions affecting current work:
 - [Phase 101]: (v2.13, Phase 101 Plan 02) Human visual sign-off caught a CSS cascade tie-break bug: shadcn init's token merge left .dark declared BEFORE :root in globals.css, so same-specificity source-order tie-break silently favored the light theme's values whenever .dark was active. Fixed by reordering (:root first); not visible today since no component yet consumes bg-background/bg-card/bg-popover (Phase 102), but would have broken dark mode across every reconciled component. Future shadcn init/add runs on this repo must verify :root precedes .dark before sign-off.
 - [Phase 101]: (v2.13, Phase 101 Plan 05) shadcn migrate radix -y run non-interactively to unify all 8 remaining hand-rolled Radix-backed components onto the radix-ui package; 7 dead scoped @radix-ui/react-* deps pruned, closing FND-05's dual-tree bridge state.
 - [Phase 101]: (v2.13, Phase 101 Plan 05) Sonner adopted behind an unchanged toast.success("Sucesso")/toast.error("Erro") contract (richColors green/red) — toast.tsx/toaster.tsx/@radix-ui/react-toast fully removed; all ~26 existing call sites compile/render unchanged, closing FND-08. Phase 101 (all 5 plans) now complete — 8/8 FND requirements satisfied.
+- [Phase 102]: (v2.13, Phase 102 Plan 01) 7 Rule-C identity primitives (button/badge/input/label/radio-group/switch/textarea) reconciled diff-first against the official registry with zero variant/color drift — upstream's `bg-primary`-based button default, new `destructive` variant, and badge's loss of all 6 custom color variants explicitly NOT adopted. `buttonVariants` now exported from `button.tsx` (closing 101-REVIEW.md IN-05); `calendar.tsx`/`breadcrumb.tsx` deduped/unified against it; `shadcn` moved to `devDependencies`.
+- [Phase 102]: (v2.13, Phase 102 Plan 02) 6 surface primitives (card/dialog/alert-dialog/popover/table/sheet) tokenized onto `--card`/`--popover`/`--muted`, replacing the flat `dark:bg-[#020617]`/`dark:bg-slate-950` magic hex that gave zero dark-mode elevation contrast — this Rule-B change was flagged for, and later confirmed by, the Plan 04 human visual checkpoint as an intended improvement, not a bug.
+- [Phase 102]: (v2.13, Phase 102 Plan 03) Single global `TooltipProvider` (delayDuration=700, explicit — the primitive defaults to 0/instant) mounted in `providers.tsx`; DSR-03 "ícones da sidebar colapsada" interpreted as the sidebar-footer LogOut button (the app has no literal icon-only collapsed-rail mode) — a recorded, evidence-based reading, not a silent assumption. Broadened grep confirmed exactly 2 in-scope icon-only row-action surfaces app-wide (`clientes/page.tsx`, `settings/page.tsx`), both wrapped with Tooltip + matching aria-label.
+- [Phase 102]: (v2.13, Phase 102 Plan 04, closing gate) Final holistic `pnpm build` + regression-grep gate green (badge-gray call-site surface enumerated across 8 files via `grep -rl '"gray"' web/src/app/`, not a stale 3-path list); mandatory human visual checkpoint (light+dark, real browser + getComputedStyle) APPROVED with concrete evidence — card dark background confirmed ~7.8% lightness vs. page background's `rgb(2,6,23)`, Rule-C button/badge identity unchanged, DSR-03 tooltips + aria-labels confirmed on `/clientes` and `/settings`. Phase 102 complete — DSR-01/02/03 all satisfied, 0 follow-up fix plans needed.
 
 ### Pending Todos
 
@@ -162,11 +167,11 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-15T22:51:57.344Z
-Stopped at: Completed 101-05-PLAN.md (Phase 101 fully complete, 5/5 plans)
+Last session: 2026-07-16T01:38:34.000Z
+Stopped at: Completed 102-04-PLAN.md (Phase 102 fully complete, 4/4 plans; DSR-01/02/03 satisfied)
 Resume file: None
 
 ## Operator Next Steps
 
-- Review and approve ROADMAP.md (10 phases, 101–110) and the updated REQUIREMENTS.md traceability table
-- Start planning with /gsd:plan-phase 101 (Fundação — CLI Init e Design Tokens; flagged for research-phase given recent churn in shadcn CLI flag/preset names — re-verify with `npx shadcn@latest init --help`/`--dry-run` at execution time)
+- Phase 102 (Reconciliação do Design System) is complete — 13 hand-rolled shadcn components reconciled, mandatory human visual checkpoint approved (dark-mode elevation confirmed intended, Rule-C identity unchanged, DSR-03 tooltips verified).
+- Start planning with /gsd:plan-phase 103 (Módulo Dashboard) — lowest primitive need, validates the new token layer; parallelizable with Phase 104 (Padrão DataTable Partilhado) once both are planned.
