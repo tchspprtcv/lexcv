@@ -4,12 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { DatePickerField } from "@/components/shared/date-picker-field";
 import { useCreateEvento } from "@/hooks/use-eventos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -18,9 +20,6 @@ import { eventoFormSchema, type EventoFormValues } from "@/schemas/eventos";
 import type { EventoCreateRequest } from "@/types/eventos";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 
-const selectClassName =
-  "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
-
 const textareaClassName =
   "flex min-h-24 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
 
@@ -28,7 +27,7 @@ export default function EventoCreatePage() {
   const permissions = usePermissions();
   const canCreateAgenda = permissions.can.create("agenda");
 
-  if (!permissions.isLoading && !canCreateAgenda) {
+  if (permissions.isFetched && !canCreateAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar eventos."
@@ -116,9 +115,10 @@ function EventoCreateContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="processoId">Processo (opcional)</Label>
-              <select
+              <NativeSelect
                 id="processoId"
-                className={selectClassName}
+                size="default"
+                className="w-full"
                 disabled={processos.isPending || processos.isError}
                 {...form.register("processoId")}
               >
@@ -130,7 +130,7 @@ function EventoCreateContent() {
                     {p.numero || p.titulo || "Sem número"}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               {processos.isError ? (
                 <p className="text-sm text-red-600">
                   {processos.error instanceof Error ? processos.error.message : "Erro ao carregar processos"}
@@ -143,9 +143,10 @@ function EventoCreateContent() {
 
             <div className="space-y-2">
               <Label htmlFor="tipo">Categoria</Label>
-              <select
+              <NativeSelect
                 id="tipo"
-                className={selectClassName}
+                size="default"
+                className="w-full"
                 {...form.register("tipo")}
               >
                 <option value="">Sem categoria</option>
@@ -154,7 +155,7 @@ function EventoCreateContent() {
                 <option value="DILIGENCIA">Diligência</option>
                 <option value="REUNIAO">Reunião</option>
                 <option value="OUTRO">Outro</option>
-              </select>
+              </NativeSelect>
               {form.formState.errors.tipo ? (
                 <p className="text-sm text-red-600">{form.formState.errors.tipo.message}</p>
               ) : null}
@@ -171,11 +172,11 @@ function EventoCreateContent() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="prioridade">Prioridade</Label>
-                <select id="prioridade" className={selectClassName} {...form.register("prioridade")}>
+                <NativeSelect id="prioridade" size="default" className="w-full" {...form.register("prioridade")}>
                   <option value="BAIXA">BAIXA</option>
                   <option value="MEDIA">MEDIA</option>
                   <option value="ALTA">ALTA</option>
-                </select>
+                </NativeSelect>
                 {form.formState.errors.prioridade ? (
                   <p className="text-sm text-red-600">{form.formState.errors.prioridade.message}</p>
                 ) : null}
@@ -183,7 +184,13 @@ function EventoCreateContent() {
 
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="dataInicio">Início</Label>
-                <Input id="dataInicio" type="datetime-local" {...form.register("dataInicio")} />
+                <Controller
+                  control={form.control}
+                  name="dataInicio"
+                  render={({ field }) => (
+                    <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                  )}
+                />
                 {form.formState.errors.dataInicio ? (
                   <p className="text-sm text-red-600">{form.formState.errors.dataInicio.message}</p>
                 ) : null}
@@ -191,7 +198,13 @@ function EventoCreateContent() {
 
               <div className="space-y-2 sm:col-span-1">
                 <Label htmlFor="dataFim">Fim</Label>
-                <Input id="dataFim" type="datetime-local" {...form.register("dataFim")} />
+                <Controller
+                  control={form.control}
+                  name="dataFim"
+                  render={({ field }) => (
+                    <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                  )}
+                />
                 {form.formState.errors.dataFim ? (
                   <p className="text-sm text-red-600">{form.formState.errors.dataFim.message}</p>
                 ) : null}
@@ -213,16 +226,17 @@ function EventoCreateContent() {
 
             <div className="space-y-2">
               <Label htmlFor="recurrenceRule">Recorrência</Label>
-              <select
+              <NativeSelect
                 id="recurrenceRule"
-                className={selectClassName}
+                size="default"
+                className="w-full"
                 {...form.register("recurrenceRule")}
               >
                 <option value="NONE">Nenhuma</option>
                 <option value="DAILY">Diária</option>
                 <option value="WEEKLY">Semanal</option>
                 <option value="MONTHLY">Mensal</option>
-              </select>
+              </NativeSelect>
               {form.formState.errors.recurrenceRule ? (
                 <p className="text-sm text-red-600">{form.formState.errors.recurrenceRule.message}</p>
               ) : null}
@@ -231,7 +245,13 @@ function EventoCreateContent() {
             {recurrenceRule && recurrenceRule !== "NONE" ? (
               <div className="space-y-2">
                 <Label htmlFor="recurrenceEndDate">Fim da recorrência</Label>
-                <Input id="recurrenceEndDate" type="date" {...form.register("recurrenceEndDate")} />
+                <Controller
+                  control={form.control}
+                  name="recurrenceEndDate"
+                  render={({ field }) => (
+                    <DatePickerField value={field.value} onChange={field.onChange} />
+                  )}
+                />
                 {form.formState.errors.recurrenceEndDate ? (
                   <p className="text-sm text-red-600">{form.formState.errors.recurrenceEndDate.message}</p>
                 ) : null}
