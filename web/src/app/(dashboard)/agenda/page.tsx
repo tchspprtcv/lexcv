@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useEventos } from "@/hooks/use-eventos";
@@ -23,7 +24,7 @@ export default function AgendaPage() {
   const canViewAgenda = permissions.can.view("agenda");
   const canCreateAgenda = permissions.can.create("agenda");
 
-  if (!permissions.isLoading && !canViewAgenda) {
+  if (permissions.isFetched && !canViewAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar a agenda."
@@ -40,7 +41,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
   const eventos = useEventos({});
   const prazos = useAllPrazos();
 
-  const [selectedProcessoId, setSelectedProcessoId] = React.useState<string>("");
+  const [selectedProcessoId, setSelectedProcessoId] = React.useState<string>("todos");
   const [selectedCategoria, setSelectedCategoria] = React.useState<string>("todos");
   const [selectedConcluido, setSelectedConcluido] = React.useState<string>("todos");
 
@@ -119,7 +120,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
   const filteredEvents = React.useMemo(() => {
     return allUnifiedEvents.filter((e) => {
-      if (selectedProcessoId && e.processoId !== selectedProcessoId) {
+      if (selectedProcessoId !== "todos" && e.processoId !== selectedProcessoId) {
         return false;
       }
       if (selectedConcluido === "concluidos" && !e.concluido) {
@@ -242,46 +243,49 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
         <div className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 p-4 rounded-none flex flex-wrap items-center gap-4 shadow-sm">
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Processo</span>
-            <select
-              value={selectedProcessoId}
-              onChange={(e) => setSelectedProcessoId(e.target.value)}
-              className="h-9 w-48 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-            >
-              <option value="">Todos os Processos</option>
-              {(processos.data ?? []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.numero || p.titulo || "Sem número"}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedProcessoId} onValueChange={setSelectedProcessoId}>
+              <SelectTrigger size="default" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Processos</SelectItem>
+                {(processos.data ?? []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.numero || p.titulo || "Sem número"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Categoria</span>
-            <select
-              value={selectedCategoria}
-              onChange={(e) => setSelectedCategoria(e.target.value)}
-              className="h-9 w-40 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-            >
-              <option value="todos">Todas</option>
-              <option value="PRAZO">Prazos Criticos</option>
-              <option value="AUDIENCIA">Audiências</option>
-              <option value="DILIGENCIA">Diligências</option>
-              <option value="REUNIAO">Reuniões</option>
-            </select>
+            <Select value={selectedCategoria} onValueChange={setSelectedCategoria}>
+              <SelectTrigger size="default" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas</SelectItem>
+                <SelectItem value="PRAZO">Prazos Criticos</SelectItem>
+                <SelectItem value="AUDIENCIA">Audiências</SelectItem>
+                <SelectItem value="DILIGENCIA">Diligências</SelectItem>
+                <SelectItem value="REUNIAO">Reuniões</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Estado</span>
-            <select
-              value={selectedConcluido}
-              onChange={(e) => setSelectedConcluido(e.target.value)}
-              className="h-9 w-36 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-            >
-              <option value="todos">Todos</option>
-              <option value="pendentes">Pendentes</option>
-              <option value="concluidos">Concluídos</option>
-            </select>
+            <Select value={selectedConcluido} onValueChange={setSelectedConcluido}>
+              <SelectTrigger size="default" className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="pendentes">Pendentes</SelectItem>
+                <SelectItem value="concluidos">Concluídos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button
@@ -289,7 +293,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
             variant="ghost"
             className="self-end h-9 px-3 rounded-none font-bold text-slate-500 hover:text-slate-900 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => {
-              setSelectedProcessoId("");
+              setSelectedProcessoId("todos");
               setSelectedCategoria("todos");
               setSelectedConcluido("todos");
             }}
