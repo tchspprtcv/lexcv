@@ -270,25 +270,31 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
     };
   }, []);
 
-  React.useEffect(() => {
-    if (!cliente.data) return;
-    const loadedTipo = (cliente.data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
-    const loadedDocumentoTipo = cliente.data.documento_tipo ?? cliente.data.documentoTipo ?? "";
-
-    // Detect a pre-existing documento_tipo that isn't valid for the loaded tipo (e.g. legacy
-    // data not covered by the 74-cleanup-nif-documento-tipo.sql migration). If we silently fed
-    // this into the native select element, the browser would fall back to the first option
-    // ("Nenhum", value "") since there's no matching option, and an unrelated save would then
-    // clear the field as a side effect. Instead, flag it and keep the raw value selected below.
+  // Detect a pre-existing documento_tipo that isn't valid for the loaded tipo (e.g. legacy
+  // data not covered by the 74-cleanup-nif-documento-tipo.sql migration). If we silently fed
+  // this into the native select element, the browser would fall back to the first option
+  // ("Nenhum", value "") since there's no matching option, and an unrelated save would then
+  // clear the field as a side effect. Instead, flag it and keep the raw value selected below.
+  // Shared by the load effect AND onCancel so that cancelling a tipo-change confirmation
+  // restores this flag in lockstep with the form values it resets alongside (CR-01 review fix:
+  // previously onCancel only reset the form, leaving legacyDocumentoTipo out of sync and
+  // silently dropping the legacy value on the next unrelated save).
+  const computeLegacyDocumentoTipo = React.useCallback((data: Cliente) => {
+    const loadedTipo = (data.tipo as "PARTICULAR" | "EMPRESA" | undefined) ?? undefined;
+    const loadedDocumentoTipo = data.documento_tipo ?? data.documentoTipo ?? "";
     const isValidCombo =
       !loadedDocumentoTipo ||
       getDocumentoTipoOptions(loadedTipo).some((opt) => opt.value === loadedDocumentoTipo);
-    setLegacyDocumentoTipo(isValidCombo ? null : loadedDocumentoTipo);
+    return isValidCombo ? null : loadedDocumentoTipo;
+  }, []);
 
+  React.useEffect(() => {
+    if (!cliente.data) return;
+    setLegacyDocumentoTipo(computeLegacyDocumentoTipo(cliente.data));
     form.reset(buildDefaultValues(cliente.data));
     setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
     setDeslocacoes(cliente.data.deslocacoes ?? []);
-  }, [cliente.data, form, buildDefaultValues]);
+  }, [cliente.data, form, buildDefaultValues, computeLegacyDocumentoTipo]);
 
   function confirmAddDocATratar() {
     if (!newDocATratar.descricao.trim()) return;
@@ -348,6 +354,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const onCancel = () => {
     if (cliente.data) {
       form.reset(buildDefaultValues(cliente.data));
+      setLegacyDocumentoTipo(computeLegacyDocumentoTipo(cliente.data));
       setDocumentosATratar(cliente.data.documentos_a_tratar ?? []);
       setDeslocacoes(cliente.data.deslocacoes ?? []);
     }
