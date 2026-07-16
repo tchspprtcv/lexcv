@@ -35,15 +35,28 @@ function parseCsvLine(line: string, delimiter: string) {
 
 const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
 
-function escapeCsvValue(value: string, delimiter: string) {
-  let v = value;
-  if (FORMULA_TRIGGER_CHARS.some((c) => v.startsWith(c))) {
-    v = "'" + v; // neutralize formula interpretation, mirrors OWASP CSV-injection guidance
+/**
+ * Neutralizes spreadsheet formula execution on a single value (OWASP
+ * CSV-injection guidance). Apply this ONLY to genuinely free-text,
+ * attacker-influenced field values (e.g. a cliente's `nome`) before
+ * building the `rows` array passed to `toCsv` — do not apply it to every
+ * exported field. Structured data such as phone numbers legitimately
+ * starts with `+` (e.g. this app's own "+238 000 0000" placeholder), and
+ * this app's own CSV importer does not strip the guard back out, so
+ * blanket-applying it corrupts data on export/import round-trips.
+ */
+export function guardCsvFormula(value: string) {
+  if (FORMULA_TRIGGER_CHARS.some((c) => value.startsWith(c))) {
+    return "'" + value;
   }
+  return value;
+}
+
+function escapeCsvValue(value: string, delimiter: string) {
   const needsQuote =
-    v.includes('"') || v.includes("\n") || v.includes("\r") || v.includes(delimiter);
-  if (!needsQuote) return v;
-  return `"${v.replaceAll('"', '""')}"`;
+    value.includes('"') || value.includes("\n") || value.includes("\r") || value.includes(delimiter);
+  if (!needsQuote) return value;
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 export function detectCsvDelimiter(headerLine: string) {

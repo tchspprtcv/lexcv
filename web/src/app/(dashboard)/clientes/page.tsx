@@ -16,7 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { useClientes, useCreateCliente } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
-import { parseCsv, toCsv } from "@/lib/csv";
+import { guardCsvFormula, parseCsv, toCsv } from "@/lib/csv";
 import { nifPattern } from "@/schemas/clientes";
 import type { ClientesListFilters } from "@/types/clientes";
 
@@ -109,7 +109,7 @@ function ClientesPageContent({
 
   const onExportCsv = () => {
     const rows = (clientes.data ?? []).map((c) => [
-      c.nome ?? "",
+      guardCsvFormula(c.nome ?? ""),
       c.tipo ?? "",
       c.nif ?? "",
       c.telefone ?? "",

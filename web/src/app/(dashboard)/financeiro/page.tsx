@@ -17,15 +17,26 @@ import { calcHonorarioStatus, formatDate, formatMoneyCVE } from "@/lib/financeir
 
 const FORMULA_TRIGGER_CHARS = ["=", "+", "-", "@", "\t", "\r"];
 
+/**
+ * Neutralizes spreadsheet formula execution on a single value (OWASP
+ * CSV-injection guidance). Apply this ONLY to genuinely free-text,
+ * attacker-influenced field values (processoLabel/clienteLabel) — do not
+ * apply it to structured fields (ids, valores, estado, datas), since a
+ * blanket prefix would corrupt otherwise-legitimate data with no way to
+ * strip it back out on import.
+ */
+function guardFormula(value: string): string {
+  if (FORMULA_TRIGGER_CHARS.some((c) => value.startsWith(c))) {
+    return "'" + value;
+  }
+  return value;
+}
+
 function escapeField(value: string): string {
-  let v = value;
-  if (FORMULA_TRIGGER_CHARS.some((c) => v.startsWith(c))) {
-    v = "'" + v; // neutralize formula interpretation, mirrors OWASP CSV-injection guidance
+  if (value.includes(",") || value.includes('"') || value.includes("\n") || value.includes("\r")) {
+    return '"' + value.replace(/"/g, '""') + '"';
   }
-  if (v.includes(",") || v.includes('"') || v.includes("\n") || v.includes("\r")) {
-    return '"' + v.replace(/"/g, '""') + '"';
-  }
-  return v;
+  return value;
 }
 
 interface HonorarioRow {
@@ -62,8 +73,8 @@ function exportHonorariosCsv(
     lines.push(
       [
         escapeField(String(h.id)),
-        escapeField(processoLabel),
-        escapeField(clienteLabel),
+        escapeField(guardFormula(processoLabel)),
+        escapeField(guardFormula(clienteLabel)),
         escapeField(h.valorTotal == null ? "" : String(h.valorTotal)),
         escapeField(String(h.totalPago)),
         escapeField(estado),
