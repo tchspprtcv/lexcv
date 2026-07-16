@@ -394,9 +394,20 @@ function ProcessosStatusCard() {
   );
 }
 
+function isSameCalendarDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 function PrazosUrgentesCard() {
   const urgentes = useEventos({ concluido: false });
-  const urgentEventos = (urgentes.data ?? []).slice(0, 2);
+  const urgentEventos = (urgentes.data ?? [])
+    .slice()
+    .sort((a, b) => new Date(a.dataInicio).getTime() - new Date(b.dataInicio).getTime())
+    .slice(0, 2);
 
   return (
     <Card className="border-t-4 border-t-red-500 dark:border-t-red-500">
@@ -408,27 +419,32 @@ function PrazosUrgentesCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {urgentEventos.length ? (
-          urgentEventos.map((e) => (
-            <div
-              key={e.id}
-              className="border-l-2 border-red-500 pl-3 py-1 bg-red-50/50 dark:bg-red-500/5 p-3 group hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                  {e.titulo}
+          urgentEventos.map((e) => {
+            const dataInicio = new Date(e.dataInicio);
+            return (
+              <div
+                key={e.id}
+                className="border-l-2 border-red-500 pl-3 py-1 bg-red-50/50 dark:bg-red-500/5 p-3 group hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                    {e.titulo}
+                  </div>
+                  <Badge variant="red" className="rounded-none">
+                    {isSameCalendarDay(dataInicio, new Date())
+                      ? "HOJE"
+                      : dataInicio.toLocaleDateString("pt-CV", { day: "2-digit", month: "2-digit" })}
+                  </Badge>
                 </div>
-                <Badge variant="red" className="rounded-none">
-                  HOJE
-                </Badge>
+                <div className="mt-1.5 text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase">
+                  {e.processoId ? `Processo ${e.processoId}` : "Sem processo"}
+                </div>
+                <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  {dataInicio.toLocaleString("pt-CV")}
+                </div>
               </div>
-              <div className="mt-1.5 text-[11px] font-medium tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                {e.processoId ? `Processo ${e.processoId}` : "Sem processo"}
-              </div>
-              <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                {new Date(e.dataInicio).toLocaleString("pt-CV")}
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : urgentes.isError ? (
           <p className="text-sm text-red-600">
             {urgentes.error instanceof Error ? urgentes.error.message : "Não foi possível carregar os prazos."}
