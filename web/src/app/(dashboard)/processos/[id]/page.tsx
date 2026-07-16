@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -56,6 +57,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -180,6 +189,16 @@ function formatDate(v: string | undefined) {
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return v;
   return d.toLocaleDateString("pt-CV");
+}
+
+function deriveInitials(nome: string) {
+  return nome
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
 }
 
 const ACAO_ICONS: Record<string, React.ReactNode> = {
@@ -1602,27 +1621,24 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem partes.</div>
                 ) : (
                   <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <table className="w-full min-w-[400px] text-sm">
-                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                          <th className="py-2 pr-4 font-medium">Tipo</th>
-                          <th className="py-2 pr-4 font-medium">Nome</th>
-                          <th className="py-2 pr-4 font-medium">NIF</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table className="min-w-[400px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>NIF</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {partes.data.map((p) => (
-                          <tr
-                            key={p.id}
-                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
-                          >
-                            <td className="py-2 pr-4">{p.tipo ?? "—"}</td>
-                            <td className="py-2 pr-4 font-medium">{p.nome}</td>
-                            <td className="py-2 pr-4">{p.nif ?? "—"}</td>
-                          </tr>
+                          <TableRow key={p.id}>
+                            <TableCell>{p.tipo ?? "—"}</TableCell>
+                            <TableCell className="font-medium">{p.nome}</TableCell>
+                            <TableCell>{p.nif ?? "—"}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
@@ -1695,22 +1711,19 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <div className="text-sm text-neutral-500 dark:text-neutral-400">Sem fases.</div>
                   ) : (
                     <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                      <table className="w-full min-w-[480px] text-sm">
-                        <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                          <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                            <th className="py-2 pr-4 font-medium">Fase</th>
-                            <th className="py-2 pr-4 font-medium">Status</th>
-                            <th className="py-2 pr-4 font-medium">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      <Table className="min-w-[480px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Fase</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {fases.data.map((f) => (
-                            <tr
-                              key={f.id}
-                              className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
-                            >
-                              <td className="py-2 pr-4 font-medium">{f.nome ?? "—"}</td>
-                              <td className="py-2 pr-4">
+                            <TableRow key={f.id}>
+                              <TableCell className="font-medium">{f.nome ?? "—"}</TableCell>
+                              <TableCell>
                                 <NativeSelect
                                   size="default"
                                   value={faseDraftStatus[f.id] ?? f.status}
@@ -1726,8 +1739,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   <option value="EM_ANDAMENTO">Em andamento</option>
                                   <option value="CONCLUIDA">Concluída</option>
                                 </NativeSelect>
-                              </td>
-                              <td className="py-2 pr-4">
+                              </TableCell>
+                              <TableCell>
                                 <Button
                                   type="button"
                                   size="sm"
@@ -1737,11 +1750,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 >
                                   Guardar
                                 </Button>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
                   )}
                 </CardContent>
@@ -2200,25 +2213,29 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhuma testemunha registada.</p>
                 ) : (
                   <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                    <table className="w-full min-w-[480px] text-sm">
-                      <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                        <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                          <th className="py-2 pr-4 font-medium">Nome</th>
-                          <th className="py-2 pr-4 font-medium">Tipo</th>
-                          <th className="py-2 pr-4 font-medium">Contacto</th>
-                          <th className="py-2 pr-4 font-medium">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table className="min-w-[480px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Contacto</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {testemunhas.data.map((t) => (
-                          <tr
-                            key={t.id}
-                            className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
-                          >
-                            <td className="py-2 pr-4 font-medium">{t.nome}</td>
-                            <td className="py-2 pr-4">{t.tipo ? tipoTestemunhaToLabel(t.tipo) : "—"}</td>
-                            <td className="py-2 pr-4">{t.contacto ?? "—"}</td>
-                            <td className="py-2 pr-4">
+                          <TableRow key={t.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Avatar size="sm">
+                                  <AvatarFallback>{deriveInitials(t.nome)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{t.nome}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{t.tipo ? tipoTestemunhaToLabel(t.tipo) : "—"}</TableCell>
+                            <TableCell>{t.contacto ?? "—"}</TableCell>
+                            <TableCell>
                               {canEditProcessos ? (
                                 <div className="flex items-center gap-2">
                                   <button
@@ -2238,11 +2255,11 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   </button>
                                 </div>
                               ) : null}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
