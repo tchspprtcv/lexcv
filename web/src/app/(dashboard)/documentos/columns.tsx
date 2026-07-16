@@ -75,15 +75,15 @@ function DocumentoAcoesCell({
   return (
     <div className="space-y-1">
       <div className="inline-flex items-center gap-1">
-        <a
-          href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Button type="button" variant="ghost" size="sm" aria-label="Download">
+        <Button asChild variant="ghost" size="sm" aria-label="Download">
+          <a
+            href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Download className="h-4 w-4" />
-          </Button>
-        </a>
+          </a>
+        </Button>
         {canEditDocumentos ? (
           <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
             {del.isPending ? "A apagar..." : "Apagar"}
