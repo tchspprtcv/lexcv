@@ -25,10 +25,12 @@ function parseDateOnly(v: string | undefined): Date | undefined {
 }
 
 export function DatePickerField({
+  id,
   value,
   onChange,
   withTime = false,
 }: {
+  id?: string;
   value: string | undefined;
   onChange: (v: string) => void;
   withTime?: boolean;
@@ -49,6 +51,7 @@ export function DatePickerField({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             type="button"
             variant="outline"
             className={cn("justify-start text-left font-normal", withTime ? "flex-1 min-w-0" : "w-full")}
@@ -77,6 +80,7 @@ export function DatePickerField({
       </Popover>
       {withTime ? (
         <Input
+          id={id ? `${id}-time` : undefined}
           type="time"
           className="w-24 shrink-0"
           value={timePart}

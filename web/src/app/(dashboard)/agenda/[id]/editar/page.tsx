@@ -251,7 +251,7 @@ function EventoEditContent({ id }: { id: number }) {
                     control={form.control}
                     name="dataInicio"
                     render={({ field }) => (
-                      <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                      <DatePickerField id="dataInicio" value={field.value} onChange={field.onChange} withTime />
                     )}
                   />
                   {form.formState.errors.dataInicio ? (
@@ -265,7 +265,7 @@ function EventoEditContent({ id }: { id: number }) {
                     control={form.control}
                     name="dataFim"
                     render={({ field }) => (
-                      <DatePickerField value={field.value} onChange={field.onChange} withTime />
+                      <DatePickerField id="dataFim" value={field.value} onChange={field.onChange} withTime />
                     )}
                   />
                   {form.formState.errors.dataFim ? (
