@@ -111,9 +111,9 @@ function ClientesPageContent({
     const rows = (clientes.data ?? []).map((c) => [
       guardCsvFormula(c.nome ?? ""),
       c.tipo ?? "",
-      c.nif ?? "",
-      c.telefone ?? "",
-      c.email ?? "",
+      c.nif ?? "", // safe: backend + frontend enforce ^\d{9}$, cannot start with a formula-trigger char
+      guardCsvFormula(c.telefone ?? ""), // not format-locked anywhere — must be guarded (CR-01)
+      guardCsvFormula(c.email ?? ""), // client regex still allows a leading +/- — must be guarded (CR-01)
     ]);
     const csv = toCsv(["nome", "tipo", "nif", "telefone", "email"], rows, ",");
 
