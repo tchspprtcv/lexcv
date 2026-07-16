@@ -80,7 +80,9 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
       enableSorting: false,
       enableHiding: false,
       meta: { label: "Ações" },
-      header: ({ column }) => <DataTableColumnHeader column={column} title="Ações" />,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Ações" className="block text-right" />
+      ),
       cell: ({ row }) => (
         <div className="text-right">
           <Tooltip>

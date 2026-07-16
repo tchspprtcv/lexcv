@@ -102,7 +102,7 @@ export function columns(
         return (
           <Badge
             variant={status === "Pago" ? "green" : status === "Parcialmente Pago" ? "blue" : "amber"}
-            className="rounded-none font-bold text-[10px]"
+            className="rounded-none font-bold"
           >
             {status}
           </Badge>

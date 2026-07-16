@@ -7,10 +7,12 @@ import { Download } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 import { useDeleteDocumento } from "@/hooks/use-documentos";
 import { toast } from "@/hooks/use-toast";
 import type { Documento } from "@/types/documentos";
+import type { Processo } from "@/types/processos";
 
 /**
  * Confidencialidade has no pre-existing Badge mapping anywhere in the
@@ -75,15 +77,20 @@ function DocumentoAcoesCell({
   return (
     <div className="space-y-1">
       <div className="inline-flex items-center gap-1">
-        <Button asChild variant="ghost" size="sm" aria-label="Download">
-          <a
-            href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Download className="h-4 w-4" />
-          </a>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="ghost" size="sm" aria-label="Download">
+              <a
+                href={`/api/v1/documentos/${encodeURIComponent(documento.id)}/download`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Download</TooltipContent>
+        </Tooltip>
         {canEditDocumentos ? (
           <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
             {del.isPending ? "A apagar..." : "Apagar"}
@@ -99,8 +106,18 @@ function DocumentoAcoesCell({
  * ColumnDef factory for the Documentos DataTable — a factory (not a bare
  * array) because the Ações column needs canEditDocumentos threaded through
  * from the page, and column defs can't call hooks/read props on their own.
+ *
+ * `processoById`/`clienteNomeById` are threaded in the same way (built in
+ * documentos/page.tsx from sibling useProcessos/useClientes hooks) so the
+ * Processo/Cliente cells resolve to human-readable labels instead of raw
+ * foreign-key ids — mirrors the pattern financeiro/columns.tsx established
+ * in this same phase.
  */
-export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
+export function columns(
+  canEditDocumentos: boolean,
+  processoById: Map<string, Processo>,
+  clienteNomeById: Map<string, string>,
+): ColumnDef<Documento>[] {
   return [
     {
       accessorKey: "nome",
@@ -122,7 +139,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
       cell: ({ row }) =>
         row.original.tipo ? (
-          <Badge variant="blue" className="rounded-none font-bold text-[10px]">
+          <Badge variant="blue" className="rounded-none font-bold">
             {row.original.tipo}
           </Badge>
         ) : (
@@ -130,16 +147,40 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
         ),
     },
     {
-      accessorKey: "processo_id",
+      id: "processo",
+      accessorFn: (d) => {
+        if (!d.processo_id) return "";
+        const processo = processoById.get(d.processo_id);
+        return processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processo_id;
+      },
       meta: { label: "Processo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Processo" />,
-      cell: ({ row }) => row.original.processo_id ?? "—",
+      cell: ({ row }) => {
+        if (!row.original.processo_id) return "—";
+        const processo = processoById.get(row.original.processo_id);
+        return processo ? (
+          <Link href={`/processos/${encodeURIComponent(processo.id)}`} className="hover:underline">
+            {processo.numero ?? processo.titulo ?? processo.id}
+          </Link>
+        ) : (
+          <>{row.original.processo_id}</>
+        );
+      },
     },
     {
-      accessorKey: "cliente_id",
+      id: "cliente",
+      accessorFn: (d) => (d.cliente_id ? (clienteNomeById.get(d.cliente_id) ?? d.cliente_id) : ""),
       meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
-      cell: ({ row }) => row.original.cliente_id ?? "—",
+      cell: ({ row }) => {
+        const clienteId = row.original.cliente_id;
+        if (!clienteId) return "—";
+        return (
+          <Link href={`/clientes/${encodeURIComponent(clienteId)}`} className="hover:underline">
+            {clienteNomeById.get(clienteId) ?? clienteId}
+          </Link>
+        );
+      },
     },
     {
       accessorKey: "confidencialidade",
@@ -150,7 +191,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
         return (
           <Badge
             variant={confidencialidadeVariant(value)}
-            className="rounded-none font-bold text-[10px]"
+            className="rounded-none font-bold"
           >
             {value}
           </Badge>

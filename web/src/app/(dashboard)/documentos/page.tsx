@@ -13,9 +13,11 @@ import { DataTable } from "@/components/shared/data-table/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { columns } from "./columns";
+import { useClientes } from "@/hooks/use-clientes";
 import { useDeleteDocumento, useDocumentos } from "@/hooks/use-documentos";
 import { toast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useProcessos } from "@/hooks/use-processos";
 import { documentosFiltersFormSchema, type DocumentosFiltersFormValues } from "@/schemas/documentos";
 import type { DocumentosListFilters } from "@/types/documentos";
 
@@ -59,7 +61,21 @@ function DocumentosContent({
 }) {
   const [filters, setFilters] = React.useState<DocumentosListFilters>({});
   const list = useDocumentos(filters);
-  const tableColumns = React.useMemo(() => columns(canEditDocumentos), [canEditDocumentos]);
+  const processos = useProcessos();
+  const clientes = useClientes({});
+
+  const processoById = React.useMemo(
+    () => new Map((processos.data ?? []).map((p) => [p.id, p] as const)),
+    [processos.data],
+  );
+  const clienteNomeById = React.useMemo(
+    () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
+    [clientes.data],
+  );
+  const tableColumns = React.useMemo(
+    () => columns(canEditDocumentos, processoById, clienteNomeById),
+    [canEditDocumentos, processoById, clienteNomeById],
+  );
 
   const onSubmit = (values: DocumentosFiltersFormValues) => {
     setFilters({ processo_id: values.processo_id, cliente_id: values.cliente_id });
@@ -142,17 +158,23 @@ function DocumentosContent({
               <DataTable columns={tableColumns} data={list.data} getRowId={(d) => d.id} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
-              {list.data.map((d) => (
-                <DocumentoMobileCard
-                  key={d.id}
-                  id={d.id}
-                  nome={d.nome}
-                  tipo={d.tipo}
-                  processoId={d.processo_id}
-                  createdAt={d.created_at}
-                  canEditDocumentos={canEditDocumentos}
-                />
-              ))}
+              {list.data.map((d) => {
+                const processo = d.processo_id ? processoById.get(d.processo_id) : undefined;
+                const processoLabel = d.processo_id
+                  ? (processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processo_id)
+                  : undefined;
+                return (
+                  <DocumentoMobileCard
+                    key={d.id}
+                    id={d.id}
+                    nome={d.nome}
+                    tipo={d.tipo}
+                    processoLabel={processoLabel}
+                    createdAt={d.created_at}
+                    canEditDocumentos={canEditDocumentos}
+                  />
+                );
+              })}
             </div>
             </>
           )}
@@ -166,14 +188,14 @@ function DocumentoMobileCard({
   id,
   nome,
   tipo,
-  processoId,
+  processoLabel,
   createdAt,
   canEditDocumentos,
 }: {
   id: string;
   nome: string;
   tipo?: string;
-  processoId?: string;
+  processoLabel?: string;
   createdAt: string;
   canEditDocumentos: boolean;
 }) {
@@ -209,9 +231,9 @@ function DocumentoMobileCard({
           </Badge>
         )}
       </div>
-      {processoId && (
+      {processoLabel && (
         <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-          Processo: <span className="font-medium text-neutral-700 dark:text-neutral-300">{processoId}</span>
+          Processo: <span className="font-medium text-neutral-700 dark:text-neutral-300">{processoLabel}</span>
         </div>
       )}
       <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
