@@ -85,6 +85,7 @@ function ParecerPageContent() {
     () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
     [clientes.data],
   );
+  const parecerColumns = React.useMemo(() => columns(clienteNomeById), [clienteNomeById]);
 
   const pareceres = usePareceres(filters);
   const pesquisa = usePesquisarPareceres(pesquisaFilters);
@@ -436,7 +437,7 @@ function ParecerPageContent() {
 
               {/* Desktop: tabela */}
               <div className="hidden md:block">
-                <DataTable columns={columns(clienteNomeById)} data={rows} />
+                <DataTable columns={parecerColumns} data={rows} />
               </div>
             </>
           )}

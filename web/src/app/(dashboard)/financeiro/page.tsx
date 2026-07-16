@@ -132,8 +132,18 @@ function FinanceiroContent({
   const processos = useProcessos();
   const clientes = useClientes({});
 
-  const processoById = new Map((processos.data ?? []).map((p) => [p.id, p] as const));
-  const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
+  const processoById = React.useMemo(
+    () => new Map((processos.data ?? []).map((p) => [p.id, p] as const)),
+    [processos.data],
+  );
+  const clienteNomeById = React.useMemo(
+    () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
+    [clientes.data],
+  );
+  const honorarioColumns = React.useMemo(
+    () => columns(processoById, clienteNomeById),
+    [processoById, clienteNomeById],
+  );
 
   const isLoading = honorarios.isPending || processos.isPending || clientes.isPending;
   const isError = honorarios.isError || processos.isError || clientes.isError;
@@ -299,7 +309,7 @@ function FinanceiroContent({
           ) : (
             <>
             <div className="hidden md:block">
-              <DataTable columns={columns(processoById, clienteNomeById)} data={filteredList} />
+              <DataTable columns={honorarioColumns} data={filteredList} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {filteredList.map((h) => {

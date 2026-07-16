@@ -52,8 +52,11 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
   });
   const processos = useProcessos(filters);
 
-  const clienteNomeById = new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const));
-  const processoColumns = columns(clienteNomeById);
+  const clienteNomeById = React.useMemo(
+    () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
+    [clientes.data],
+  );
+  const processoColumns = React.useMemo(() => columns(clienteNomeById), [clienteNomeById]);
 
   const isLoading = processos.isPending || clientes.isPending;
   const isError = processos.isError || clientes.isError;
