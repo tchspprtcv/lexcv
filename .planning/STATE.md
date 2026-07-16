@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: planning
-stopped_at: Completed 105-03-PLAN.md (Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable); 105-06 (closing plan) remains
-last_updated: "2026-07-16T17:33:36.694Z"
+status: ready_to_plan
+stopped_at: Phase 105 complete (6/6) — ready to discuss Phase 106
+last_updated: 2026-07-16T20:09:34.864Z
 last_activity: 2026-07-16
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 40
 ---
 
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 105 — módulos clientes + processos (combinados)
+**Current focus:** Phase 106 — módulo agenda
 
 ## Current Position
 
-Phase: 105 of 110 (módulos clientes + processos (combinados))
-Plan: 6 of 6 (105-01, 105-02, 105-03, 105-04, 105-05 complete — 105-06 closing plan remaining)
-Status: Ready to execute
+Phase: 106 of 110 (módulo agenda)
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-16
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 88
+- Total plans completed: 94
 - Average duration: —
 - Total execution time: —
 
@@ -73,6 +73,7 @@ Last activity: 2026-07-16
 | 102 | 4 | - | - |
 | 103 | 1 | - | - |
 | 104 | 6 | - | - |
+| 105 | 6 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
