@@ -342,7 +342,13 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. `@tanstack/react-table` está adicionado como dependência e existe um padrão partilhado único (`columns.tsx` + `data-table.tsx` + toolbar de filtro + `DataTablePagination`/`DataTableViewOptions`) construído uma vez sobre o `Table` existente, nunca reinventado por módulo.
   2. As listas desktop (ramo `hidden md:block`) de Clientes, Processos, Pareceres, Financeiro e Documentos usam o padrão DataTable partilhado (ordenação por coluna, toolbar de filtro), continuando a usar exatamente os mesmos filtros server-side já servidos via TanStack Query — sem duplicar filtragem client-side.
   3. `/notificacoes` e qualquer outra lista paginada no servidor usa o componente oficial `Pagination` em vez de um pager customizado.
-**Plans**: TBD
+**Plans**: 6 plans (4 waves)
+- [ ] 104-01-PLAN.md — Package legitimacy gate (blocking-human) for @tanstack/react-table
+- [ ] 104-02-PLAN.md — Install @tanstack/react-table + add Pagination primitive + build shared DataTable pattern
+- [ ] 104-03-PLAN.md — Adopt DataTable on Clientes + Processos (already on Table)
+- [ ] 104-04-PLAN.md — Adopt DataTable on Pareceres + Financeiro (Financeiro: first Table adoption + Badge migration)
+- [ ] 104-05-PLAN.md — Adopt DataTable on Documentos (first Table adoption) + /notificacoes official Pagination swap (DTB-03)
+- [ ] 104-06-PLAN.md — Final holistic build gate + mandatory human visual checkpoint (5 screens, both themes)
 
 *Nota para planeamento:* é uma receita de composição, não um componente instalável — integrar com os filtros TanStack Query já existentes (sem duplicar) precisa de verificação no momento da implementação, por cada ecrã, dado o shape de filtro real de cada um.
 
@@ -479,7 +485,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 101. Fundação — CLI Init e Design Tokens | v2.13 | 5/5 | Complete    | 2026-07-15 |
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
-| 104. Padrão DataTable Partilhado | v2.13 | 0/TBD | Not started | - |
+| 104. Padrão DataTable Partilhado | v2.13 | 0/6 | Not started | - |
 | 105. Módulos Clientes + Processos | v2.13 | 0/TBD | Not started | - |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
@@ -487,4 +493,4 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 103 (Módulo Dashboard) planeada — 1 plano autónomo (103-01, Wave 1) cobrindo DASH-01 (Skeleton) + DASH-02 (Empty) no único ficheiro `dashboard/page.tsx`. Run `/gsd:execute-phase 103` to continue.
+**Next:** Phase 104 (Padrão DataTable Partilhado) planeada — 6 planos (4 waves): 104-01 gate de legitimidade @tanstack/react-table (Wave 1), 104-02 padrão DataTable partilhado + primitivo Pagination (Wave 2), 104-03/04/05 adoção paralela dos 5 ecrãs + swap /notificacoes (Wave 3), 104-06 gate de build holístico + checkpoint visual humano (Wave 4). Run `/gsd:execute-phase 104` to continue.
