@@ -115,6 +115,7 @@ export default function ClientesMergePage() {
                   value={primaryId}
                   onChange={(e) => setPrimaryId(e.target.value)}
                   size="default"
+                  className="w-full"
                 >
                   <option value="">Selecionar...</option>
                   {options.map((o) => (
@@ -131,6 +132,7 @@ export default function ClientesMergePage() {
                   value={secondaryId}
                   onChange={(e) => setSecondaryId(e.target.value)}
                   size="default"
+                  className="w-full"
                 >
                   <option value="">Selecionar...</option>
                   {options.map((o) => (

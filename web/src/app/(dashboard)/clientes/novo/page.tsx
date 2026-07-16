@@ -255,6 +255,7 @@ export default function ClienteCreatePage() {
                     <NativeSelect
                       id="documento_tipo"
                       size="default"
+                      className="w-full"
                       {...form.register("documento_tipo")}
                     >
                       <option value="">Nenhum</option>
@@ -290,6 +291,7 @@ export default function ClienteCreatePage() {
                     <NativeSelect
                       id="ramo_atividade"
                       size="default"
+                      className="w-full"
                       {...form.register("ramo_atividade")}
                     >
                       <option value="">Selecione o ramo de atividade</option>

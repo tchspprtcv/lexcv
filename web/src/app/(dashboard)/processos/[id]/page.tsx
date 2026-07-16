@@ -1213,6 +1213,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <NativeSelect
                       id="prazo_prioridade"
                       size="default"
+                      className="w-full"
                       {...prazoForm.register("prioridade")}
                     >
                       <option value="ALTA">ALTA</option>
@@ -1226,6 +1227,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <NativeSelect
                       id="prazo_responsavel"
                       size="default"
+                      className="w-full"
                       {...prazoForm.register("responsavelId")}
                     >
                       <option value="">— Sem responsável —</option>
@@ -1724,6 +1726,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               <TableCell>
                                 <NativeSelect
                                   size="default"
+                                  className="w-full"
                                   value={faseDraftStatus[f.id] ?? f.status}
                                   onChange={(e) =>
                                     setFaseDraftStatus((current) => ({
@@ -1802,6 +1805,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <NativeSelect
                               id="decisao_tipo"
                               size="default"
+                              className="w-full"
                               {...decisaoForm.register("tipo")}
                             >
                               <option value="">Selecionar tipo</option>
@@ -2125,6 +2129,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <NativeSelect
                               id="testemunha_tipo"
                               size="default"
+                              className="w-full"
                               {...testemunhaForm.register("tipo")}
                             >
                               <option value="">Selecionar tipo</option>
@@ -2413,6 +2418,7 @@ function ReatribuirResponsavelControl({
               <NativeSelect
                 id="reatribuir_responsavel"
                 size="default"
+                className="w-full"
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
               >

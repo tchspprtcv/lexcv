@@ -573,6 +573,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           <NativeSelect
                             id="documento_tipo"
                             size="default"
+                            className="w-full"
                             {...form.register("documento_tipo")}
                           >
                             <option value="">Nenhum</option>
@@ -705,6 +706,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                         <NativeSelect
                           id="ramo_atividade"
                           size="default"
+                          className="w-full"
                           {...form.register("ramo_atividade")}
                         >
                           <option value="">Selecione o ramo de atividade</option>
@@ -1701,6 +1703,7 @@ function ResponsaveisCard({
               value={selectedUserId}
               onChange={(e) => setSelectedUserId(e.target.value)}
               size="default"
+              className="w-full"
             >
               <option value="">Selecionar utilizador...</option>
               {candidateUsers.map((u) => (
@@ -1824,6 +1827,7 @@ function ClienteContactosCard({
               value={newTipo}
               onChange={(e) => setNewTipo(e.target.value)}
               size="default"
+              className="w-full"
             >
               <option value="EMAIL">Email</option>
               <option value="TELEFONE">Telefone</option>
@@ -1863,6 +1867,7 @@ function ClienteContactosCard({
                           value={editTipo}
                           onChange={(e) => setEditTipo(e.target.value)}
                           size="default"
+                          className="w-full"
                         >
                           <option value="">—</option>
                           <option value="EMAIL">Email</option>

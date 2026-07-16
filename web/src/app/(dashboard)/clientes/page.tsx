@@ -345,6 +345,7 @@ function ClientesPageContent({
                       value={draftTipo}
                       onChange={(e) => setDraftTipo(e.target.value)}
                       size="default"
+                      className="w-full"
                     >
                       <option value="">Todos</option>
                       <option value="PARTICULAR">Particular</option>
@@ -359,6 +360,7 @@ function ClientesPageContent({
                       value={draftAtivo}
                       onChange={(e) => setDraftAtivo(e.target.value as "all" | "true" | "false")}
                       size="default"
+                      className="w-full"
                     >
                       <option value="all">Todos</option>
                       <option value="true">Ativo</option>
