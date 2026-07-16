@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
 import { useHonorarios } from "@/hooks/use-financeiro";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -88,14 +90,6 @@ function exportHonorariosCsv(
   a.click();
   URL.revokeObjectURL(url);
 }
-
-const statusBadgeClass: Record<HonorarioStatus, string> = {
-  Pendente:
-    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  "Parcialmente Pago":
-    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  Pago: "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-};
 
 function formatDate(v: string | undefined) {
   if (!v) return "—";
@@ -299,73 +293,7 @@ function FinanceiroContent({
           ) : (
             <>
             <div className="hidden md:block">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                      <th className="py-2 pr-4 font-medium">Honorário</th>
-                      <th className="py-2 pr-4 font-medium">Processo</th>
-                      <th className="py-2 pr-4 font-medium">Cliente</th>
-                      <th className="py-2 pr-4 font-medium">Total</th>
-                      <th className="py-2 pr-4 font-medium">Data do acordo</th>
-                      <th className="py-2 pr-4 font-medium">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredList.map((h) => {
-                      const processo = processoById.get(h.processoId);
-                      const clienteId = processo?.cliente_id;
-                      return (
-                        <tr
-                          key={h.id}
-                          className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
-                        >
-                          <td className="py-2 pr-4">
-                            <Link
-                              href={`/financeiro/${encodeURIComponent(String(h.id))}`}
-                              className="font-medium text-neutral-900 hover:underline dark:text-neutral-50"
-                            >
-                              #{h.id}
-                            </Link>
-                          </td>
-                          <td className="py-2 pr-4">
-                            {processo ? (
-                              <Link
-                                href={`/processos/${encodeURIComponent(processo.id)}`}
-                                className="hover:underline"
-                              >
-                                {processo.numero ?? processo.titulo ?? processo.id}
-                              </Link>
-                            ) : (
-                              h.processoId
-                            )}
-                          </td>
-                          <td className="py-2 pr-4">
-                            {clienteId ? (
-                              <Link
-                                href={`/clientes/${encodeURIComponent(clienteId)}`}
-                                className="hover:underline"
-                              >
-                                {clienteNomeById.get(clienteId) ?? clienteId}
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="py-2 pr-4">{formatMoneyCVE(h.valorTotal)}</td>
-                          <td className="py-2 pr-4">{formatDate(h.dataAcordo)}</td>
-                          <td className="py-2 pr-4">
-                            {(() => {
-                              const status = calcHonorarioStatus(h.totalPago, h.valorTotal);
-                              return <span className={statusBadgeClass[status]}>{status}</span>;
-                            })()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable columns={columns(processoById, clienteNomeById)} data={filteredList} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {filteredList.map((h) => {
