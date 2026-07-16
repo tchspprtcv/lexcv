@@ -7,6 +7,14 @@ import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -18,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -27,9 +36,6 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { getDocumentoTipoOptions, toDocumentoTipo } from "@/lib/cliente-documento-tipo";
 import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteCreateRequest } from "@/types/clientes";
-
-const selectClassName =
-  "flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
 
 const textareaClassName =
   "flex min-h-24 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
@@ -128,6 +134,19 @@ export default function ClienteCreatePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Novo cliente</h1>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/clientes">Clientes</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Novo Cliente</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">Criar um novo cliente.</p>
         </div>
 
@@ -233,9 +252,9 @@ export default function ClienteCreatePage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="documento_tipo">Tipo de Documento</Label>
-                    <select
+                    <NativeSelect
                       id="documento_tipo"
-                      className={selectClassName}
+                      size="default"
                       {...form.register("documento_tipo")}
                     >
                       <option value="">Nenhum</option>
@@ -244,7 +263,7 @@ export default function ClienteCreatePage() {
                           {opt.label}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                     {form.formState.errors.documento_tipo ? (
                       <p className="text-sm text-red-600">{form.formState.errors.documento_tipo.message}</p>
                     ) : null}
@@ -268,9 +287,9 @@ export default function ClienteCreatePage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="ramo_atividade">Ramo de Atividade</Label>
-                    <select
+                    <NativeSelect
                       id="ramo_atividade"
-                      className={selectClassName}
+                      size="default"
                       {...form.register("ramo_atividade")}
                     >
                       <option value="">Selecione o ramo de atividade</option>
@@ -280,7 +299,7 @@ export default function ClienteCreatePage() {
                       <option value="Serviços">Serviços</option>
                       <option value="Comércio">Comércio</option>
                       <option value="Outros">Outros</option>
-                    </select>
+                    </NativeSelect>
                     {form.formState.errors.ramo_atividade ? (
                       <p className="text-sm text-red-600">{form.formState.errors.ramo_atividade.message}</p>
                     ) : null}
