@@ -56,6 +56,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
@@ -1261,68 +1262,21 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
             </DialogContent>
           </Dialog>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={tab === "timeline" ? "secondary" : "outline"}
-              onClick={() => setTab("timeline")}
-            >
-              Timeline
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "partes" ? "secondary" : "outline"}
-              onClick={() => setTab("partes")}
-            >
-              Partes
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "fases" ? "secondary" : "outline"}
-              onClick={() => setTab("fases")}
-            >
-              Fases
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "decisoes" ? "secondary" : "outline"}
-              onClick={() => setTab("decisoes")}
-            >
-              Decisões
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "factos" ? "secondary" : "outline"}
-              onClick={() => setTab("factos")}
-            >
-              Factos
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "testemunhas" ? "secondary" : "outline"}
-              onClick={() => setTab("testemunhas")}
-            >
-              Testemunhas
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "documentos" ? "secondary" : "outline"}
-              onClick={() => setTab("documentos")}
-            >
-              Documentos
-            </Button>
-            {canManageProcessos ? (
-              <Button
-                type="button"
-                variant={tab === "auditoria" ? "secondary" : "outline"}
-                onClick={() => setTab("auditoria")}
-              >
-                Auditoria
-              </Button>
-            ) : null}
-          </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+            <div className="flex flex-wrap gap-2">
+              <TabsList variant="default">
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="partes">Partes</TabsTrigger>
+                <TabsTrigger value="fases">Fases</TabsTrigger>
+                <TabsTrigger value="decisoes">Decisões</TabsTrigger>
+                <TabsTrigger value="factos">Factos</TabsTrigger>
+                <TabsTrigger value="testemunhas">Testemunhas</TabsTrigger>
+                <TabsTrigger value="documentos">Documentos</TabsTrigger>
+                {canManageProcessos ? <TabsTrigger value="auditoria">Auditoria</TabsTrigger> : null}
+              </TabsList>
+            </div>
 
-          {tab === "timeline" ? (
+          <TabsContent value="timeline">
             <Card>
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
@@ -1580,7 +1534,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "partes" ? (
+          </TabsContent>
+
+          <TabsContent value="partes">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1688,7 +1644,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "fases" ? (
+          </TabsContent>
+
+          <TabsContent value="fases">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1805,7 +1763,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   )}
                 </CardContent>
               </Card>
-          ) : tab === "decisoes" ? (
+          </TabsContent>
+
+          <TabsContent value="decisoes">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1972,7 +1932,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "factos" ? (
+          </TabsContent>
+
+          <TabsContent value="factos">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2123,7 +2085,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "testemunhas" ? (
+          </TabsContent>
+
+          <TabsContent value="testemunhas">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2300,9 +2264,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "documentos" ? (
+          </TabsContent>
+
+          <TabsContent value="documentos">
             <ProcessoDocumentosTab processoId={id} canEditDocumentos={canEditDocumentos} />
-          ) : tab === "auditoria" && canManageProcessos ? (
+          </TabsContent>
+
+          <TabsContent value="auditoria">
+            {canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
@@ -2358,8 +2327,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : null
-          }
+            ) : null}
+          </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">Processo não encontrado.</div>
