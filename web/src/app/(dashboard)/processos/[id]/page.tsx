@@ -34,6 +34,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,6 +55,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
@@ -158,9 +168,6 @@ const TAB_KEYS: TabKey[] = [
   "documentos",
   "auditoria",
 ];
-
-const selectClassName =
-  "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
 
 const textareaClassName =
   "flex min-h-24 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
@@ -707,16 +714,22 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Processo</h1>
-          <div className="text-sm text-neutral-500 dark:text-neutral-400">
-            <Link href="/processos" className="hover:underline">
-              Processos
-            </Link>{" "}
-            <span>/</span>{" "}
-            <span className="text-neutral-900 dark:text-neutral-50">
-              {processo.data?.numero ?? processo.data?.titulo ?? "…"}
-            </span>
-          </div>
+          <h1 className="text-2xl font-semibold">Processo</h1>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/processos">Processos</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>
+                  {processo.data?.numero ?? processo.data?.titulo ?? "…"}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
 
         <div className="flex gap-2">
@@ -1195,22 +1208,22 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
                   <div className="space-y-2">
                     <Label htmlFor="prazo_prioridade">Prioridade</Label>
-                    <select
+                    <NativeSelect
                       id="prazo_prioridade"
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
                       {...prazoForm.register("prioridade")}
                     >
                       <option value="ALTA">ALTA</option>
                       <option value="MEDIA">MÉDIA</option>
                       <option value="BAIXA">BAIXA</option>
-                    </select>
+                    </NativeSelect>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="prazo_responsavel">Responsável</Label>
-                    <select
+                    <NativeSelect
                       id="prazo_responsavel"
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      size="default"
                       {...prazoForm.register("responsavelId")}
                     >
                       <option value="">— Sem responsável —</option>
@@ -1221,7 +1234,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             {u.nome}
                           </option>
                         ))}
-                    </select>
+                    </NativeSelect>
                   </div>
 
                   {prazoError ? (
@@ -1249,68 +1262,21 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
             </DialogContent>
           </Dialog>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={tab === "timeline" ? "secondary" : "outline"}
-              onClick={() => setTab("timeline")}
-            >
-              Timeline
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "partes" ? "secondary" : "outline"}
-              onClick={() => setTab("partes")}
-            >
-              Partes
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "fases" ? "secondary" : "outline"}
-              onClick={() => setTab("fases")}
-            >
-              Fases
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "decisoes" ? "secondary" : "outline"}
-              onClick={() => setTab("decisoes")}
-            >
-              Decisões
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "factos" ? "secondary" : "outline"}
-              onClick={() => setTab("factos")}
-            >
-              Factos
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "testemunhas" ? "secondary" : "outline"}
-              onClick={() => setTab("testemunhas")}
-            >
-              Testemunhas
-            </Button>
-            <Button
-              type="button"
-              variant={tab === "documentos" ? "secondary" : "outline"}
-              onClick={() => setTab("documentos")}
-            >
-              Documentos
-            </Button>
-            {canManageProcessos ? (
-              <Button
-                type="button"
-                variant={tab === "auditoria" ? "secondary" : "outline"}
-                onClick={() => setTab("auditoria")}
-              >
-                Auditoria
-              </Button>
-            ) : null}
-          </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+            <div className="flex flex-wrap gap-2">
+              <TabsList variant="default">
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="partes">Partes</TabsTrigger>
+                <TabsTrigger value="fases">Fases</TabsTrigger>
+                <TabsTrigger value="decisoes">Decisões</TabsTrigger>
+                <TabsTrigger value="factos">Factos</TabsTrigger>
+                <TabsTrigger value="testemunhas">Testemunhas</TabsTrigger>
+                <TabsTrigger value="documentos">Documentos</TabsTrigger>
+                {canManageProcessos ? <TabsTrigger value="auditoria">Auditoria</TabsTrigger> : null}
+              </TabsList>
+            </div>
 
-          {tab === "timeline" ? (
+          <TabsContent value="timeline">
             <Card>
               <CardHeader>
                 <CardTitle>Timeline</CardTitle>
@@ -1568,7 +1534,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "partes" ? (
+          </TabsContent>
+
+          <TabsContent value="partes">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1676,7 +1644,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "fases" ? (
+          </TabsContent>
+
+          <TabsContent value="fases">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1758,8 +1728,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             >
                               <td className="py-2 pr-4 font-medium">{f.nome ?? "—"}</td>
                               <td className="py-2 pr-4">
-                                <select
-                                  className={selectClassName}
+                                <NativeSelect
+                                  size="default"
                                   value={faseDraftStatus[f.id] ?? f.status}
                                   onChange={(e) =>
                                     setFaseDraftStatus((current) => ({
@@ -1772,7 +1742,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   <option value="PENDENTE">Pendente</option>
                                   <option value="EM_ANDAMENTO">Em andamento</option>
                                   <option value="CONCLUIDA">Concluída</option>
-                                </select>
+                                </NativeSelect>
                               </td>
                               <td className="py-2 pr-4">
                                 <Button
@@ -1793,7 +1763,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   )}
                 </CardContent>
               </Card>
-          ) : tab === "decisoes" ? (
+          </TabsContent>
+
+          <TabsContent value="decisoes">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1833,9 +1805,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
                           <div className="space-y-2">
                             <Label htmlFor="decisao_tipo">Tipo</Label>
-                            <select
+                            <NativeSelect
                               id="decisao_tipo"
-                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              size="default"
                               {...decisaoForm.register("tipo")}
                             >
                               <option value="">Selecionar tipo</option>
@@ -1844,7 +1816,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   {tipoDecisaoToLabel(t)}
                                 </option>
                               ))}
-                            </select>
+                            </NativeSelect>
                             {decisaoForm.formState.errors.tipo ? (
                               <p className="text-sm text-red-600">{decisaoForm.formState.errors.tipo.message}</p>
                             ) : null}
@@ -1960,7 +1932,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "factos" ? (
+          </TabsContent>
+
+          <TabsContent value="factos">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2111,7 +2085,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "testemunhas" ? (
+          </TabsContent>
+
+          <TabsContent value="testemunhas">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -2152,9 +2128,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
                           <div className="space-y-2">
                             <Label htmlFor="testemunha_tipo">Tipo</Label>
-                            <select
+                            <NativeSelect
                               id="testemunha_tipo"
-                              className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              size="default"
                               {...testemunhaForm.register("tipo")}
                             >
                               <option value="">Selecionar tipo</option>
@@ -2163,7 +2139,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   {tipoTestemunhaToLabel(t)}
                                 </option>
                               ))}
-                            </select>
+                            </NativeSelect>
                             {testemunhaForm.formState.errors.tipo ? (
                               <p className="text-sm text-red-600">
                                 {testemunhaForm.formState.errors.tipo.message}
@@ -2288,9 +2264,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : tab === "documentos" ? (
+          </TabsContent>
+
+          <TabsContent value="documentos">
             <ProcessoDocumentosTab processoId={id} canEditDocumentos={canEditDocumentos} />
-          ) : tab === "auditoria" && canManageProcessos ? (
+          </TabsContent>
+
+          <TabsContent value="auditoria">
+            {canManageProcessos ? (
             <Card>
               <CardHeader>
                 <CardTitle>Auditoria</CardTitle>
@@ -2346,8 +2327,9 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 )}
               </CardContent>
             </Card>
-          ) : null
-          }
+            ) : null}
+          </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="text-sm text-neutral-500 dark:text-neutral-400">Processo não encontrado.</div>
@@ -2430,9 +2412,9 @@ function ReatribuirResponsavelControl({
             </p>
             <div className="space-y-2">
               <Label htmlFor="reatribuir_responsavel">Novo Responsável</Label>
-              <select
+              <NativeSelect
                 id="reatribuir_responsavel"
-                className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                size="default"
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
               >
@@ -2447,7 +2429,7 @@ function ReatribuirResponsavelControl({
                     {u.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
           </div>
           <DialogFooter>
