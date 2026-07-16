@@ -381,7 +381,11 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 **Success Criteria** (what must be TRUE):
   1. Os inputs de data dos formulários de criar/editar prazo usam o `Calendar` (shadcn/react-day-picker), sem alterar a vista de calendário mensal já existente.
   2. Os filtros de categoria/status da Agenda usam `Select`.
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+- [ ] 106-01-PLAN.md — DatePickerField partilhado (Popover+Calendar, 1º do projeto) + filtros da Agenda para `Select` (AGD-37) + fix RBAC `isFetched` (list+detail) (Wave 1)
+- [ ] 106-02-PLAN.md — Form criar evento: NativeSelect (×4) + DatePickerField (×3: dataInicio/dataFim c/ hora, recurrenceEndDate só-data) + fix RBAC (Wave 2)
+- [ ] 106-03-PLAN.md — Form editar evento: NativeSelect (×3) + DatePickerField (×2: dataInicio/dataFim c/ hora, sem recorrência) + fix RBAC (Wave 2)
+- [ ] 106-04-PLAN.md — Gate holístico (build/lint/regressão) + checkpoint visual humano (2 formulários, 2 temas, matriz RBAC 4 roles) (Wave 3)
 
 #### Phase 107: Módulos Documentos + Financeiro
 
@@ -493,10 +497,10 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
 | 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 105. Módulos Clientes + Processos | v2.13 | 6/6 | Complete    | 2026-07-16 |
-| 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
+| 106. Módulo Agenda | v2.13 | 0/4 | Planned | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
 | 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 105 (Módulos Clientes + Processos) planeada — 6 planos (3 waves): Wave 1 paraleliza 105-01 (Ficha Cliente), 105-02 (Ficha Processo tab shell), 105-04 (secundárias Clientes) e 105-05 (secundárias Processos) sem sobreposição de ficheiros; Wave 2 é 105-03 (conteúdo interno da Ficha Processo — Table primitives + Documentos DataTable, partilha `processos/[id]/page.tsx` com 105-02); Wave 3 é 105-06 (gate holístico + checkpoint visual humano com matriz RBAC 4 roles × mobile). Run `/gsd:execute-phase 105` to continue.
+**Next:** Phase 106 (Módulo Agenda) planeada — 4 planos (3 waves): Wave 1 é 106-01 (DatePickerField partilhado Popover+Calendar — 1ª composição do projeto — + filtros para `Select` + fix RBAC na list/detail); Wave 2 paraleliza 106-02 (form criar) e 106-03 (form editar), ambos consumindo o DatePickerField, ficheiros distintos, sem sobreposição; Wave 3 é 106-04 (gate holístico + checkpoint visual humano). Run `/gsd:execute-phase 106` to continue.
