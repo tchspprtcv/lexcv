@@ -76,8 +76,8 @@ function EventoCreateContent() {
         tipo: values.tipo,
         titulo: values.titulo,
         descricao: values.descricao,
-        dataInicio: new Date(values.dataInicio).toISOString().slice(0, 19),
-        dataFim: new Date(values.dataFim).toISOString().slice(0, 19),
+        dataInicio: `${values.dataInicio}:00`,
+        dataFim: `${values.dataFim}:00`,
         prioridade: values.prioridade,
         concluido: values.concluido,
         ...(values.recurrenceRule && values.recurrenceRule !== "NONE"

@@ -1,100 +1,114 @@
 ---
 phase: 106-m-dulo-agenda
-reviewed: 2026-07-16T00:00:00Z
+reviewed: 2026-07-16T23:30:14Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 6
 files_reviewed_list:
   - web/src/components/shared/date-picker-field.tsx
-  - web/src/app/(dashboard)/agenda/page.tsx
-  - web/src/app/(dashboard)/agenda/[id]/page.tsx
   - web/src/app/(dashboard)/agenda/novo/page.tsx
   - web/src/app/(dashboard)/agenda/[id]/editar/page.tsx
+  - web/src/schemas/eventos.ts
+  - web/src/app/(dashboard)/agenda/page.tsx
+  - web/src/app/(dashboard)/agenda/[id]/page.tsx
 findings:
-  critical: 0
-  warning: 3
-  info: 2
-  total: 5
+  critical: 1
+  warning: 0
+  info: 1
+  total: 2
 status: issues_found
 ---
 
-# Phase 106: Code Review Report
+# Phase 106: Code Review Report (re-review after fix pass, iteration 1)
 
-**Reviewed:** 2026-07-16
+**Reviewed:** 2026-07-16T23:30:14Z
 **Depth:** standard
-**Files Reviewed:** 5
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the 5 files touched by Phase 106 (shared `DatePickerField`, Agenda list filters, and the create/edit/detail Evento pages). The RBAC `isFetched` race fix was applied consistently and correctly across all 4 Agenda pages, and the previously-fixed date-only UTC/local timezone bug (`parseDateOnly`) is confirmed correctly implemented — no regression there. No security vulnerabilities, injection vectors, or hardcoded secrets were found.
+Re-reviewed Phase 106 after the fix pass (commits `4504a96` WR-01, `b60b942` WR-02, `6fbd2d1` WR-03) applied against the 3 Warning-level findings from the prior `106-REVIEW.md`. Verified each fix against the actual diff (`git show`), re-ran `npx tsc --noEmit` project-wide (reproduces only the same 3 pre-existing unrelated `vitest` module-resolution errors, no new errors), confirmed the installed `zod` version (`4.4.3`), traced `react-day-picker`'s (`9.14.0`) single-select toggle semantics in `node_modules`, and confirmed the backend's `PUT /eventos/{id}` partial-update semantics (`ResourceController.java:2585-2618`) are compatible with the new edit-form payload shape.
 
-Three Warning-level issues were found, all stemming from gaps in the new `DatePickerField` component's contract (no `id`/`name` passthrough) and a cross-file schema/UI mismatch introduced by the edit form's deliberate omission of recurrence UI. Two Info-level code-quality items are also noted. Per this review's known context, the already-fixed date-only off-by-one bug is not re-flagged, and the separately-tracked +1h `.toISOString()` timezone bug in `onSubmit` (documented in `deferred-items.md`, confirmed pre-existing and out of this phase's scope) is not re-flagged as new — see reference in WR-03's related-issue note below for context only.
+**WR-02 and WR-03 are correctly and fully resolved, with no new regressions.** **WR-01's originally-reported defect (typing a time before a date is picked being silently discarded) is fixed as described, but the fix introduces a new, more severe Critical regression** in the same function: clicking the already-selected day a second time in `DatePickerField`'s calendar (a normal, plausible user action) now silently overwrites the field's value with **today's date** instead of leaving it unchanged, with no warning and no way to undo before the popover closes. This affects `dataInicio`, `dataFim`, and `recurrenceEndDate` in both the create and edit Evento forms — i.e. legal-deadline / court-date fields (`Prazo Fatal`, `Audiência`, etc.). See CR-01 below.
 
-## Warnings
+## Critical Issues
 
-### WR-01: DatePickerField's time input silently no-ops until a date has been selected
+### CR-01: WR-01's fix introduces silent date corruption to "today" when the user clicks the already-selected calendar day (new regression, not present before this fix pass)
 
-**File:** `web/src/components/shared/date-picker-field.tsx:40-41,79-84`
-**Issue:** `commit(nextDate, nextTime)` returns immediately if `nextDate` is falsy (`if (!nextDate) return;`). The time `<Input>`'s `onChange` calls `commit(dateValue, e.target.value)`, passing the *current* `dateValue` (derived from `parseDateOnly(value)`) as `nextDate`. When no date has been picked yet (`value` is `""`, the default for a new `dataInicio`/`dataFim` field), `dateValue` is `undefined`, so typing a time is a complete no-op: `onChange` (the RHF field setter) is never called, and on the next render the time input's `value` prop reverts to the derived default (`"00:00"`), erasing whatever the user just typed with no error or visual feedback. Users who try to set the time before picking the date lose their input silently.
-**Fix:** Either disable/hide the time `Input` until a date is selected, or make `commit` tolerant of a not-yet-selected date by falling back to "today" so the time keystroke is not discarded:
+**File:** `web/src/components/shared/date-picker-field.tsx:42-47` (the shared `commit()` function, changed by commit `4504a96`), reachable from every call site: `web/src/app/(dashboard)/agenda/novo/page.tsx:191,205,252` (`dataInicio`, `dataFim`, `recurrenceEndDate`), `web/src/app/(dashboard)/agenda/[id]/editar/page.tsx:251,265` (`dataInicio`, `dataFim`)
+
+**Issue:** The WR-01 fix changed `commit()` from:
 ```tsx
-function commit(nextDate: Date | undefined, nextTime: string) {
-  const base = nextDate ?? new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const datePart = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
-  onChange(withTime ? `${datePart}T${nextTime}` : datePart);
+if (!nextDate) return;
+```
+to:
+```tsx
+const base = nextDate ?? new Date();
+```
+This does fix the originally-reported bug (typing a time before any date is picked, so `dateValue` is `undefined`, no longer silently no-ops). However, `commit()` is *also* invoked from the `Calendar`'s `onSelect` handler (line 71-74: `onSelect={(d) => { commit(d, timePart); setOpen(false); }}`), and the `Calendar` is rendered with `mode="single"` and no `required` prop (`date-picker-field.tsx:68-78`). Per `react-day-picker@9.14.0`'s own selection logic (`node_modules/react-day-picker/dist/esm/selection/useSingle.js:19-24`):
+```js
+if (!required && selected && selected && isSameDay(triggerDate, selected)) {
+  // If the date is the same, clear the selection.
+  newDate = undefined;
 }
 ```
+clicking the **currently-selected day a second time** calls `onSelect(undefined, ...)` — this is react-day-picker's documented toggle-off behavior for optional single-select (`required?: false` → `onSelect?: OnSelectHandler<Date | undefined>`, confirmed in `node_modules/react-day-picker/dist/esm/types/props.d.ts:599-606`). Before this fix pass, `commit(undefined, timePart)` hit the `if (!nextDate) return;` early-return, so toggling off was a harmless no-op (the popover closed, the field kept its previous value). **After this fix**, the same call now falls through to `base = nextDate ?? new Date()` → `new Date()` (today), so the field is silently overwritten with **today's date** (keeping only the previously-selected time-of-day, for `withTime` fields).
 
-### WR-02: DatePickerField has no `id`/`name` passthrough, breaking `<Label htmlFor>` association
+Concretely: a user editing/creating an evento with `dataInicio` set 3 months out (e.g. an `Audiência` or `Prazo Fatal`), reopens the date picker to double-check the date, sees the already-highlighted day, and clicks it again (a completely ordinary "confirm/close" interaction, or a simple misclick) — the field's value is silently replaced with today's date the instant the popover closes (`setOpen(false)` runs unconditionally, regardless of whether `nextDate` was defined). There is no error, no confirmation, and no visual feedback other than the trigger button's label quietly changing to today's date the next time it's rendered/reopened. If the user doesn't notice before submitting, a legal deadline is silently corrupted to today's date. This is a genuinely new failure mode — it did not exist prior to the WR-01 fix (the previous no-op only ever preserved state; it never wrote a wrong value).
 
-**File:** `web/src/components/shared/date-picker-field.tsx:27-35` (component signature has no `id`/`name`/`aria-*` prop)
-**Also affects:** `web/src/app/(dashboard)/agenda/novo/page.tsx:185-197` (`dataInicio`), `:199-211` (`dataFim`), `:246-258` (`recurrenceEndDate`); `web/src/app/(dashboard)/agenda/[id]/editar/page.tsx:248-260` (`dataInicio`), `:262-274` (`dataFim`)
-**Issue:** Every call site keeps `<Label htmlFor="dataInicio">Início</Label>` (etc.) immediately before the `Controller`-wrapped `<DatePickerField>`, but `DatePickerField` never renders an element with `id="dataInicio"` (it has no `id` prop at all — the trigger is a plain `<Button type="button">` and the optional `<Input type="time">` also gets no `id`). This is a regression versus the previous native `<Input id="dataInicio" type="datetime-local">`: the label is now visually adjacent but not programmatically associated with any focusable control, so clicking the label no longer focuses/opens the picker, and screen readers no longer announce the field name when the trigger button receives focus.
-**Fix:** Add an `id` prop to `DatePickerField` and apply it to the trigger `Button` (and forward a derived id to the time `Input`, e.g. `${id}-time`):
+**Fix:** Distinguish "no date has ever been chosen yet" (the time-input scenario WR-01 targeted) from "the user explicitly toggled off the current selection via the calendar" (which should be a no-op, matching the pre-fix behavior for that specific path). Do not conflate both cases behind one `nextDate ?? new Date()` fallback in a function shared by both call sites. For example, keep the calendar's `onSelect` guarding against `undefined` (ignore toggle-off, or re-open with the prior date reselected) while only defaulting to `new Date()` from the time `<Input>`'s `onChange`:
 ```tsx
-export function DatePickerField({
-  id,
-  value,
-  onChange,
-  withTime = false,
-}: { id?: string; value: string | undefined; onChange: (v: string) => void; withTime?: boolean }) {
-  ...
-  <Button id={id} type="button" ...>
-  ...
-  {withTime ? <Input id={id ? `${id}-time` : undefined} type="time" ... /> : null}
+<Calendar
+  mode="single"
+  selected={dateValue}
+  onSelect={(d) => {
+    if (!d) return; // ignore toggle-off — do not silently reset to today
+    commit(d, timePart);
+    setOpen(false);
+  }}
+  locale={pt}
+  weekStartsOn={0}
+  autoFocus
+/>
+...
+<Input
+  id={id ? `${id}-time` : undefined}
+  type="time"
+  className="w-24 shrink-0"
+  value={timePart}
+  onChange={(e) => commit(dateValue ?? new Date(), e.target.value)} // fallback only here
+/>
 ```
-and pass `id="dataInicio"` / `id="dataFim"` / `id="recurrenceEndDate"` from each call site.
+and simplify `commit()` back to requiring a defined date (or keep the `nextDate ?? new Date()` fallback purely as documentation that this function should never be called with `undefined` from the calendar path).
 
-### WR-03: Shared `eventoFormSchema`'s recurrence validation can make the edit form permanently unsavable for some eventos
-
-**File:** `web/src/app/(dashboard)/agenda/[id]/editar/page.tsx:85-113` (form + `form.reset`, no recurrenceRule/recurrenceEndDate UI anywhere in this file) cross-referenced with `web/src/schemas/eventos.ts:37-45` (`superRefine`)
-**Issue:** `agenda/[id]/editar/page.tsx` reuses `eventoFormSchema` (shared with the create form), whose `superRefine` requires `recurrenceEndDate` whenever `recurrenceRule !== "NONE"`. The edit form's `form.reset()` (line 110-111) still populates both `recurrenceRule` and `recurrenceEndDate` from `evento.data`, but this form has **no UI field for either** (by design, per `106-CONTEXT.md`'s deferred-items note). The backend's `Evento` entity (`backend/.../models/Evento.java:46-50`) has no `NOT NULL`/check constraint tying `recurrence_end_date` to `recurrence_rule`, so it is possible (e.g. via direct API/DB access, a future recurrence-editing feature, or partial data) for an evento to have `recurrenceRule` set and `recurrenceEndDate` null. Editing *any* such evento through this form will always fail validation on submit — `onInvalid` (lines 138-147) surfaces a generic banner ("Não foi possível guardar: A data de fim da recorrência é obrigatória.") referencing a field that doesn't exist anywhere in the visible form, with no way for the user to resolve it. The form becomes permanently unusable for that record via the UI.
-**Fix:** Either (a) strip `recurrenceRule`/`recurrenceEndDate` out of the values passed to the edit form's resolver before validation (e.g. validate against a `.omit({ recurrenceRule: true, recurrenceEndDate: true })` variant of the schema in the edit form), or (b) don't carry `recurrenceRule`/`recurrenceEndDate` into `form.reset()` at all for this form, since they are never read or submitted:
-```tsx
-// schemas/eventos.ts
-export const eventoEditFormSchema = eventoFormSchema.innerType().omit({
-  recurrenceRule: true,
-  recurrenceEndDate: true,
-});
-```
+**WR-01 status:** Partially resolved — the originally-reported symptom (time keystroke silently discarded) is fixed, but the fix as applied introduces this new Critical regression via the same shared function. Needs another fix iteration.
 
 ## Info
 
-### IN-01: Dead branch in `buildMonthGrid` (pre-existing, in a reviewed file)
+### IN-01: DatePickerField's time `<Input>` still has no associated `<label>` (residual a11y gap, unchanged by WR-02's id passthrough)
 
-**File:** `web/src/app/(dashboard)/agenda/page.tsx:569-570`
-**Issue:** `if (end.getDay() === 6 && days.length === 42) return days; return days;` — both branches return the identical `days` value, making the `if` a no-op. This predates Phase 106 (the monthly grid was explicitly left byte-for-byte unchanged per `106-CONTEXT.md`), but it's still present in a file this phase modified.
-**Fix:** Remove the dead conditional: `return days;`.
-
-### IN-02: Inconsistent RBAC prop-passing pattern across the 4 Agenda pages
-
-**File:** `web/src/app/(dashboard)/agenda/novo/page.tsx:26-48`, `web/src/app/(dashboard)/agenda/[id]/editar/page.tsx:46-82`
-**Issue:** `agenda/page.tsx` and `agenda/[id]/page.tsx` compute `canCreateAgenda`/`canEditAgenda` once in the outer gate component and pass it down as a prop to the `*Content` component. `agenda/novo/page.tsx` and `agenda/[id]/editar/page.tsx` instead call `usePermissions()` a second time inside the nested `*Content` component and recompute `canCreateAgenda`/`canEditAgenda` independently. Functionally harmless (the underlying query is cached), but it's an inconsistent pattern across files touched in the same phase, and duplicates the permission-derivation logic.
-**Fix:** Pass `canCreateAgenda`/`canEditAgenda` down as a prop from the outer gate component, matching the pattern already used in `agenda/page.tsx`/`agenda/[id]/page.tsx`.
+**File:** `web/src/components/shared/date-picker-field.tsx:81-88`; call sites `web/src/app/(dashboard)/agenda/novo/page.tsx:185-197,199-211`, `web/src/app/(dashboard)/agenda/[id]/editar/page.tsx:245-257,259-271`
+**Issue:** WR-02's fix correctly restores `<Label htmlFor="dataInicio">`/`<Label htmlFor="dataFim">` association with the date-picker trigger `Button` (`id={id}`), and the time `Input` now receives a derived id (`${id}-time`) — but no `<label htmlFor="dataInicio-time">` element exists anywhere, so the time input itself remains unlabelled for assistive technology (it's only reachable/understandable via visual proximity to the date button and its own label). This isn't a new regression (the time input had no `id` and no label before WR-02 either — it's simply an incomplete fix of the underlying a11y gap in the composite field), but it's worth flagging since WR-02 was specifically about label association.
+**Fix:** Add a visually-hidden label for the time input, e.g. `<label htmlFor={id ? \`${id}-time\` : undefined} className="sr-only">Hora</label>` next to it, or set `aria-label="Hora"` directly on the `Input`.
 
 ---
 
-_Reviewed: 2026-07-16_
+## WR-02 and WR-03 verification detail (no new issues)
+
+**WR-02 (DatePickerField id/name passthrough):** Confirmed correct. `id` prop added to the component signature, applied to the trigger `Button` (which spreads `...props` including `id` onto the native `<button>`/Radix `Slot`, per `web/src/components/ui/button.tsx:39-48` — no forwarding gap). All 5 call sites (`dataInicio`/`dataFim` in both create and edit forms, `recurrenceEndDate` in create) now pass matching `id` values that line up with their pre-existing `<Label htmlFor>`. `git diff` for `b60b942` shows no unintended changes elsewhere. Resolved.
+
+**WR-03 (edit form schema mismatch):** Confirmed correct and sound. The fixer's deviation from the review's originally-suggested `eventoFormSchema.innerType().omit({...})` patch was necessary and well-reasoned — `zod@4.4.3` (confirmed installed version) throws when `.omit()` is called on a schema carrying `.refine()`/`.superRefine()`. The implemented approach (refinement-free `eventoBaseObjectSchema`, with `eventoFormSchema` and `eventoEditFormSchema` each deriving from it independently) is a clean, idiomatic solution. Verified:
+- `eventoEditFormSchema`'s shape genuinely excludes `recurrenceRule`/`recurrenceEndDate` (`.omit()` on a plain `ZodObject`, not a `ZodEffects` — valid in v4).
+- The shared `dataFimRefinementOptions.path` (a mutable `string[]`, not `as const`) avoids the readonly-tuple TS error the fix report mentions.
+- `agenda/[id]/editar/page.tsx` correctly switched its resolver, `defaultValues`, `form.reset`, `onSubmit`, and `onInvalid` typing to `eventoEditFormSchema`/`EventoEditFormValues`, and no longer carries `recurrenceRule`/`recurrenceEndDate` through `form.reset()` (verified via `git show 6fbd2d1`).
+- Checked the backend's `PUT /eventos/{id}` (`ResourceController.java:2556-2621`): it is a partial update (`if (payload.getX() != null) evento.setX(...)`) for every field including `recurrenceRule`/`recurrenceEndDate`, so the edit form's payload never including those keys does **not** wipe them server-side — an evento's recurrence metadata survives edits made through this form, consistent with the documented product constraint (recurrence can only be set at creation). No new data-loss risk introduced by removing the "accidental" validation block.
+- `npx tsc --noEmit` (project-wide, re-run independently for this review) reproduces only the same 3 pre-existing `TS2307: Cannot find module 'vitest'` errors in unrelated `*.test.ts` files — no new type errors.
+- No other consumer of `eventoFormSchema`/`EventoFormValues` exists in the codebase that could have been broken by the schema split (`grep` confirms only `agenda/novo/page.tsx` and `agenda/[id]/editar/page.tsx` import these symbols, and each now imports the correct one).
+
+Resolved, no new issues.
+
+---
+
+_Reviewed: 2026-07-16T23:30:14Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

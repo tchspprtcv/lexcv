@@ -13,9 +13,18 @@ export type EventosListFilters = {
 
 function normalizeDateParam(value: string | undefined) {
   if (!value) return undefined;
+  // Never round-trip through toISOString(): it converts to UTC, silently shifting
+  // the clock by the browser's timezone offset while looking like an unshifted
+  // naive-local string once the trailing "Z" is dropped. Format using local
+  // getters instead, for both the date-only and date+time input shapes.
+  const hasTime = value.length > 10 && value[10] === "T";
+  if (!hasTime) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : undefined;
+  }
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return undefined;
-  return d.toISOString().slice(0, 19);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function buildEventosQuery(filters: EventosListFilters) {

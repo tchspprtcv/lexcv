@@ -93,7 +93,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       if (optimisticOverrides.has(e.id)) {
         const newInicio = optimisticOverrides.get(e.id)!;
         const durMs = new Date(e.dataFim).getTime() - new Date(e.dataInicio).getTime();
-        const newFim = new Date(new Date(newInicio).getTime() + durMs).toISOString().slice(0, 19);
+        const newFim = addDurationLocal(newInicio, durMs);
         // WR-04 (92-REVIEW.md): drop the stale server-computed risco (based on the pre-move
         // dataInicio) rather than carrying it over via the spread — weekStats.urgentes and any
         // risk badge read e.risco directly, so an unmoved value would misreport urgency until
@@ -425,7 +425,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                         if (key === originKey) { setDragState(null); setDragOverKey(null); return; }
                         const newInicio = moveDatePreservingTime(dragState.originalDataInicio, key);
                         const durMs = new Date(dragState.originalDataFim).getTime() - new Date(dragState.originalDataInicio).getTime();
-                        const newFim = new Date(new Date(newInicio).getTime() + durMs).toISOString().slice(0, 19);
+                        const newFim = addDurationLocal(newInicio, durMs);
                         setOptimisticOverrides((m) => new Map(m).set(dragState.eventId, newInicio));
                         const id = dragState.eventId;
                         setDragState(null);
@@ -542,6 +542,18 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
 
 function moveDatePreservingTime(originalISO: string, newDateKey: string): string {
   return newDateKey + originalISO.slice(10);
+}
+
+// Never format via toISOString(): it converts to UTC, silently shifting the
+// clock by the browser's timezone offset while looking like an unshifted
+// naive-local string once the trailing "Z" is dropped. `new Date(startISO)`
+// and the final `.getTime()` arithmetic are timezone-invariant (both operate
+// on the same absolute instant), so only the final re-formatting step needs
+// to stay local.
+function addDurationLocal(startISO: string, durMs: number): string {
+  const end = new Date(new Date(startISO).getTime() + durMs);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
 }
 
 function dayKey(d: Date) {
