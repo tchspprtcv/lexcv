@@ -45,8 +45,8 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Agenda
 
-- [ ] **AGD-36**: `Calendar` (shadcn/react-day-picker) usado nos inputs de data dos formulários de Agenda (criar/editar prazo), sem alterar a vista de calendário mensal existente
-- [ ] **AGD-37**: Filtros de categoria/status da Agenda usam `Select`
+- [x] **AGD-36**: `Calendar` (shadcn/react-day-picker) usado nos inputs de data dos formulários de Agenda (criar/editar prazo), sem alterar a vista de calendário mensal existente
+- [x] **AGD-37**: Filtros de categoria/status da Agenda usam `Select`
 
 ### Documentos + Financeiro
 
@@ -123,8 +123,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | CLP-03 | Phase 105 | Complete |
 | CLP-04 | Phase 105 | Complete |
 | CLP-05 | Phase 105 | Complete |
-| AGD-36 | Phase 106 | Pending |
-| AGD-37 | Phase 106 | Pending |
+| AGD-36 | Phase 106 | Complete |
+| AGD-37 | Phase 106 | Complete |
 | DOF-01 | Phase 107 | Pending |
 | DOF-02 | Phase 107 | Pending |
 | PARC-18 | Phase 108 | Pending |

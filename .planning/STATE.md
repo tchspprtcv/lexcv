@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: ready_to_plan
-stopped_at: Phase 105 complete (6/6) — ready to discuss Phase 106
-last_updated: 2026-07-16T20:09:34.864Z
+stopped_at: Phase 106 complete (4/4) — ready to discuss Phase 107
+last_updated: 2026-07-16T21:55:00.000Z
 last_activity: 2026-07-16
 progress:
   total_phases: 10
-  completed_phases: 4
-  total_plans: 22
-  completed_plans: 22
-  percent: 40
+  completed_phases: 5
+  total_plans: 26
+  completed_plans: 26
+  percent: 50
 ---
 
 # Project State
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 106 — módulo agenda
+**Current focus:** Phase 107 — módulos documentos + financeiro
 
 ## Current Position
 
-Phase: 106 of 110 (módulo agenda)
+Phase: 107 of 110 (módulos documentos + financeiro)
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-07-16
@@ -74,6 +74,7 @@ Last activity: 2026-07-16
 | 103 | 1 | - | - |
 | 104 | 6 | - | - |
 | 105 | 6 | - | - |
+| 106 | 4 | ~70 min | ~17 min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
@@ -122,6 +123,7 @@ Recent decisions affecting current work:
 - [Phase 104]: (v2.13, Phase 104 Plan 02) Only DTB-01 marked complete in REQUIREMENTS.md, not DTB-03 -- the Pagination primitive was added but not yet applied to /notificacoes (that swap is 104-05's job); marking DTB-03 complete now would misrepresent an unfinished requirement
 - [Phase 105 Plan 03]: Dropped both the 'Processo' and 'Cliente' columns from the processo-scoped documentos-columns.tsx -- Processo is redundant (row already scoped to processoId), Cliente would always render em-dash since this tab's upload flow only ever sets processo_id, never cliente_id
 - [Phase 105 Plan 03]: Decisões and Factos tabs (also raw table markup in the same file) were deliberately left untouched -- neither 105-CONTEXT.md nor 105-UI-SPEC.md/105-PATTERNS.md name them in the Table-primitive migration scope, unlike Partes/Fases/Testemunhas which are explicitly named
+- [Phase 106]: A timezone off-by-one bug (UTC-midnight parsing of bare "YYYY-MM-DD" date-only strings vs. local-time parsing of "YYYY-MM-DDTHH:mm" strings) was caught by gsd-plan-checker BEFORE execution, in the shared DatePickerField's parseDateOnly reference implementation (106-PATTERNS.md Shared Pattern 4d) -- fixed pre-execution by parsing Y/M/D components directly instead of handing the raw string to `new Date(v)`. Live UAT then found a SEPARATE, pre-existing +1h bug one layer up (agenda/novo and agenda/[id]/editar's onSubmit handlers using `new Date(v).toISOString().slice(0,19)`, which silently UTC-shifts the already-correct local string) -- confirmed present in the pre-Phase-106 base commit, also present in agenda/page.tsx's drag-and-drop reschedule (out of scope) and use-eventos.ts -- deferred to a future dedicated fix, documented in full in `106-04/deferred-items.md` since fixing only the 2 files this phase touched would leave the identical bug live in the explicitly out-of-scope monthly grid.
 
 ### Pending Todos
 
@@ -139,6 +141,7 @@ Recent decisions affecting current work:
 - ~~AUD-05 fresh code-discovery audit~~ — CLOSED by v2.11 Phase 97-04 Task 1: bounded fresh pass over `NotificacaoService.java`, `NotificacaoController.java`, `AlertasDiariosJob.java`, and the notification/preference/snooze web hooks + adjacent components (bell, snooze control, settings tab) found zero new gaps — all 8 `NotificacaoController` endpoints confirmed to carry `@PreAuthorize`, zero real `TODO`/`FIXME`/`XXX` markers (one substring false-positive on "TODOS" checked and dismissed), zero dead-code references anywhere to the removed `/eventos/upcoming` endpoint, `AlertasDiariosJob`'s 4-layer error isolation (job/tenant/category/entity, all catching `Throwable`) confirmed intact. Clean result — no FIX-NOW or RECORD-AS-DEBT findings; see `97-04-SUMMARY.md` for the enumerated coverage.
 - (v2.12) Contact channel for LP-10 ("Contacto/Pedir demonstração") needs a concrete value at plan time — REQUIREMENTS.md/research flag it as a static `mailto:` link, but the exact address is a content decision not yet made; Phase 99 planning should confirm this with the user rather than inventing a placeholder that ships to production.
 - (v2.12) Whether `webpage/` needs its own favicon/OG-image/robots.txt is explicitly out of scope for this milestone (see REQUIREMENTS.md Out of Scope) — Phase 99/100 must not silently add extra Caddy routing branches for this; it inherits `web/`'s static files via the existing catch-all.
+- (v2.13, Phase 106) **Real data-correctness bug found live, not yet fixed:** every `Evento` created or edited via `/agenda/novo` or `/agenda/{id}/editar` has its `dataInicio`/`dataFim` silently stored 1 hour later than what the user selected, for any tenant running in a negative-UTC-offset timezone (this app's actual Cabo Verde market, UTC-01:00). Root cause: `new Date(values.dataInicio).toISOString().slice(0, 19)` in both forms' `onSubmit` (and the same pattern in `agenda/page.tsx`'s drag-and-drop reschedule + `use-eventos.ts`) parses the naive local datetime as local time then serializes it via UTC `toISOString()`, keeping the UTC-shifted clock value while dropping the `Z` marker. Confirmed pre-existing (present in the pre-Phase-106 base commit `ba896e3`), NOT introduced by Phase 106's Calendar/Select migration. See `.planning/phases/LEXCV-106-m-dulo-agenda/deferred-items.md` for full file:line detail and a suggested one-line-per-site fix. Recommend a dedicated fix phase/task — this silently corrupts real production Agenda data every time it's exercised.
 
 ### Blockers/Concerns
 
@@ -180,11 +183,12 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-16T17:33:36.664Z
-Stopped at: Completed 105-03-PLAN.md (Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable); 105-06 (closing plan) remains
+Last session: 2026-07-16T21:55:00.000Z
+Stopped at: Completed 106-04-PLAN.md (holistic gate + human-verify checkpoint APPROVED) — Phase 106 (Módulo Agenda) closed, all 4 plans done
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 102 (Reconciliação do Design System) is complete — 13 hand-rolled shadcn components reconciled, mandatory human visual checkpoint approved (dark-mode elevation confirmed intended, Rule-C identity unchanged, DSR-03 tooltips verified).
-- Start planning with /gsd:plan-phase 103 (Módulo Dashboard) — lowest primitive need, validates the new token layer; parallelizable with Phase 104 (Padrão DataTable Partilhado) once both are planned.
+- Phase 106 (Módulo Agenda) is complete — DatePickerField (Popover+Calendar, 1st composition in the project), Radix Select list filters, NativeSelect form fields, RBAC isFetched fix all shipped and verified live (both themes, 2 roles). AGD-36/AGD-37 marked Complete in REQUIREMENTS.md.
+- A pre-existing, out-of-scope +1h timezone bug in Evento date/time storage was found during live UAT and documented (not fixed) — see `.planning/phases/LEXCV-106-m-dulo-agenda/deferred-items.md`. Recommend a dedicated follow-up fix given real production-data impact.
+- Start planning with /gsd:plan-phase 107 (Módulos Documentos + Financeiro) — Progress/Select forms, only depends on Phase 102 (already complete); parallelizable with Phases 108/109/110 once planned.
