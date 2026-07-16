@@ -173,12 +173,22 @@ function ClientesPageContent({
           failureReasons.push(`linha ${i + 1}: NIF inválido`);
           continue;
         }
+        // Validate `tipo` against the same enum the manual form enforces via
+        // z.enum(["PARTICULAR", "EMPRESA"]) instead of force-casting an arbitrary
+        // CSV string, which would otherwise be silently rejected by the backend
+        // with a generic "erro desconhecido" import failure (see WR-03).
+        const rawTipo = idxTipo >= 0 ? (r[idxTipo] ?? "").trim().toUpperCase() : "";
+        const tipo: "PARTICULAR" | "EMPRESA" | undefined =
+          rawTipo === "PARTICULAR" || rawTipo === "EMPRESA" ? rawTipo : undefined;
+        if (idxTipo >= 0 && rawTipo && !tipo) {
+          failed++;
+          failureReasons.push(`linha ${i + 1}: tipo inválido ("${rawTipo}")`);
+          continue;
+        }
         try {
           await createCliente.mutateAsync({
             nome,
-            tipo: idxTipo >= 0
-              ? ((r[idxTipo] ?? "").trim() || undefined) as "PARTICULAR" | "EMPRESA" | undefined
-              : undefined,
+            tipo,
             nif,
             telefone: idxTelefone >= 0 ? stripCsvFormulaGuard((r[idxTelefone] ?? "").trim()) || undefined : undefined,
             email: idxEmail >= 0 ? stripCsvFormulaGuard((r[idxEmail] ?? "").trim()) || undefined : undefined,
