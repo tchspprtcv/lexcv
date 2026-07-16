@@ -364,11 +364,11 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   4. `Avatar` é usado para representar advogados/administrativos/testemunhas em listagens e pickers de ambos os módulos.
   5. Os cabeçalhos das fichas de Cliente e Processo usam `Breadcrumb` em vez do `<div>`+`Link`+"/" atual.
 **Plans**: 6 plans (3 waves)
-- [ ] 105-01-PLAN.md — Ficha de Cliente: Tabs (7) + NativeSelect + Avatar (ResponsaveisCard) + Breadcrumb (Wave 1)
-- [ ] 105-02-PLAN.md — Ficha de Processo (tab shell): Tabs (8, ?tab= preserved) + NativeSelect + Breadcrumb + h1 font-semibold (Wave 1)
+- [x] 105-01-PLAN.md — Ficha de Cliente: Tabs (7) + NativeSelect + Avatar (ResponsaveisCard) + Breadcrumb (Wave 1)
+- [x] 105-02-PLAN.md — Ficha de Processo (tab shell): Tabs (8, ?tab= preserved) + NativeSelect + Breadcrumb + h1 font-semibold (Wave 1)
 - [ ] 105-03-PLAN.md — Ficha de Processo (conteúdo): Partes/Fases/Testemunhas Table primitives + Testemunhas Avatar + Documentos DataTable (novo columns.tsx) (Wave 2, depende de 105-02)
-- [ ] 105-04-PLAN.md — Páginas secundárias Clientes (list/novo/merge): NativeSelect + Breadcrumb (Wave 1)
-- [ ] 105-05-PLAN.md — Páginas secundárias Processos (list/novo/editar): NativeSelect + Breadcrumb (Wave 1)
+- [x] 105-04-PLAN.md — Páginas secundárias Clientes (list/novo/merge): NativeSelect + Breadcrumb (Wave 1)
+- [x] 105-05-PLAN.md — Páginas secundárias Processos (list/novo/editar): NativeSelect + Breadcrumb (Wave 1)
 - [ ] 105-06-PLAN.md — Gate holístico (build/lint/regressão) + checkpoint visual humano (2 fichas, 2 temas, matriz RBAC 4 roles × mobile) (Wave 3, depende de todos)
 
 *Nota para planeamento:* o comportamento de overflow dos separadores condicionados por RBAC precisa de verificação funcional real contra as 4 roles (ADMIN/ADVOGADO/TECNICO/ASSISTENTE) em larguras de mobile reais — não é uma tarefa de "consultar a documentação", é uma tarefa de "testar contra a matriz RBAC real desta app".
@@ -492,7 +492,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 102. Reconciliação do Design System | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 103. Módulo Dashboard | v2.13 | 1/1 | Complete    | 2026-07-16 |
 | 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
-| 105. Módulos Clientes + Processos | v2.13 | 0/6 | Not started | - |
+| 105. Módulos Clientes + Processos | v2.13 | 4/6 | In Progress|  |
 | 106. Módulo Agenda | v2.13 | 0/TBD | Not started | - |
 | 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
 | 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
