@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   useMarcarNotificacaoLida,
   useMarcarTodasNotificacoesLidas,
   useNotificacoes,
@@ -226,27 +233,43 @@ function NotificacoesContent() {
                 ))}
               </div>
               {list.data.totalPages > 1 ? (
-                <div className="flex items-center justify-between gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  >
-                    Anterior
-                  </Button>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">
-                    Página {page + 1} de {list.data.totalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={page + 1 >= list.data.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Seguinte
-                  </Button>
-                </div>
+                <Pagination className="pt-4">
+                  <PaginationContent className="w-full justify-between">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        text="Anterior"
+                        href="#"
+                        aria-disabled={page === 0}
+                        className={page === 0 ? "pointer-events-none opacity-50" : undefined}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (page === 0) return;
+                          setPage((p) => Math.max(0, p - 1));
+                        }}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span className="px-2 text-sm text-slate-500 dark:text-slate-400">
+                        Página {page + 1} de {list.data.totalPages}
+                      </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        text="Seguinte"
+                        href="#"
+                        aria-disabled={page + 1 >= list.data.totalPages}
+                        className={
+                          page + 1 >= list.data.totalPages ? "pointer-events-none opacity-50" : undefined
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (page + 1 >= list.data.totalPages) return;
+                          setPage((p) => p + 1);
+                        }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               ) : null}
             </>
           )}
