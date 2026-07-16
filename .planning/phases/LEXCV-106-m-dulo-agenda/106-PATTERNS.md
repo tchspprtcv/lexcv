@@ -358,10 +358,17 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+// Do NOT replace with `new Date(v)`: a bare "YYYY-MM-DD" string parses as UTC
+// midnight per the ECMA-262 Date Time String Format, while "YYYY-MM-DDTHH:mm"
+// parses as local time — that asymmetry shows a day-before off-by-one for any
+// negative-UTC-offset timezone (e.g. Cabo Verde, CVT = UTC-01:00) the moment
+// recurrenceEndDate is selected. Parsing Y/M/D components directly avoids it
+// for both the date-only and date+time variants.
 function parseDateOnly(v: string | undefined): Date | undefined {
   if (!v) return undefined;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  const [y, m, d] = v.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d); // local midnight — safe for both date-only and date+time strings
 }
 
 export function DatePickerField({
