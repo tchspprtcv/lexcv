@@ -862,7 +862,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           </TabsContent>
 
           <TabsContent value="processos">
-            {canViewProcessos ? (
+            {!permissions.isFetched ? (
+              <div className="p-6 text-sm text-neutral-500">A carregar...</div>
+            ) : canViewProcessos ? (
               <ClienteProcessosTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
@@ -870,7 +872,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           </TabsContent>
 
           <TabsContent value="pareceres">
-            {canViewPareceres ? (
+            {!permissions.isFetched ? (
+              <div className="p-6 text-sm text-neutral-500">A carregar...</div>
+            ) : canViewPareceres ? (
               <ClienteParecerTab clienteId={id} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
@@ -878,7 +882,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           </TabsContent>
 
           <TabsContent value="documentosEntregues">
-            {canViewDocumentos ? (
+            {!permissions.isFetched ? (
+              <div className="p-6 text-sm text-neutral-500">A carregar...</div>
+            ) : canViewDocumentos ? (
               <ClienteDocumentosEntreguesTab
                 clienteId={id}
                 editable={isEditing}
