@@ -2,23 +2,23 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Eye, Filter, Pencil, Plus, Printer, Search, Trash2 } from "lucide-react";
+import { Eye, Filter, Pencil, Plus, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DataTable } from "@/components/shared/data-table/data-table";
+import { columns } from "./columns";
 import { toast } from "@/hooks/use-toast";
-import { useClientes, useCreateCliente, useDeleteCliente } from "@/hooks/use-clientes";
+import { useClientes, useCreateCliente } from "@/hooks/use-clientes";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
 import { parseCsv, toCsv } from "@/lib/csv";
-import { cn } from "@/lib/utils";
 import { nifPattern } from "@/schemas/clientes";
-import type { ClientesListFilters, Cliente } from "@/types/clientes";
+import type { ClientesListFilters } from "@/types/clientes";
 
 export default function ClientesPage() {
   const permissions = usePermissions();
@@ -60,6 +60,8 @@ function ClientesPageContent({
   const [draftCreatedTo, setDraftCreatedTo] = React.useState("");
 
   const [filters, setFilters] = React.useState<ClientesListFilters>({});
+
+  const clienteColumns = React.useMemo(() => columns(canEditClientes), [canEditClientes]);
 
   const allClientes = useClientes({});
   const clientes = useClientes(filters);
@@ -482,180 +484,14 @@ function ClientesPageContent({
                 })}
               </div>
 
-              {/* Desktop: tabela */}
+              {/* Desktop: DataTable */}
               <div className="hidden md:block">
-                <div className="overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 hover:bg-transparent">
-                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Nome / Razão Social</TableHead>
-                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Tipo</TableHead>
-                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">NIF</TableHead>
-                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">Contacto</TableHead>
-                        <TableHead className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {clientes.data.map((c) => (
-                        <ClienteRow key={c.id} cliente={c} canEditClientes={canEditClientes} />
-                      ))}
-                    </TableBody>
-                  </Table>
-
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
-                    <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      A mostrar 1-{clientes.data.length} de {totalClientes.toLocaleString("pt-CV")} clientes
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">‹</button>
-                      <button className="h-9 w-9 rounded-none bg-blue-600 text-white font-bold">1</button>
-                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">2</button>
-                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">3</button>
-                      <div className="px-2 text-sm text-slate-500">…</div>
-                      <button className="h-9 w-9 rounded-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">›</button>
-                    </div>
-                  </div>
-                </div>
+                <DataTable columns={clienteColumns} data={clientes.data} />
               </div>
             </>
           )}
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function ClienteRow({
-  cliente,
-  canEditClientes,
-}: {
-  cliente: Cliente;
-  canEditClientes: boolean;
-}) {
-  const del = useDeleteCliente(cliente.id);
-
-  const initials = cliente.nome
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-
-  const tipo = (cliente.tipo ?? "").toUpperCase();
-
-  const badgeVariant = tipo === "PARTICULAR" ? "blue" : tipo === "EMPRESA" ? "purple" : "gray";
-
-  const onDelete = () => {
-    if (del.isPending) return;
-    const ok = window.confirm("Remover este cliente?");
-    if (!ok) return;
-    del.mutate();
-  };
-
-  return (
-    <TableRow className="border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold shadow-sm">
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <Link href={`/clientes/${encodeURIComponent(cliente.id)}`} className="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              {cliente.nome}
-            </Link>
-            {(cliente.numero_cliente || cliente.avencado) && (
-              <div className="flex items-center gap-1 mt-1">
-                {cliente.numero_cliente && (
-                  <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
-                    {cliente.numero_cliente}
-                  </Badge>
-                )}
-                {cliente.avencado && (
-                  <Badge variant="green" className="rounded-none font-bold text-[10px]">
-                    Avençado
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant={badgeVariant as "blue" | "purple" | "gray"} className="rounded-none font-bold tracking-wide">{tipo || "—"}</Badge>
-      </TableCell>
-      <TableCell className={cn("text-slate-800 dark:text-slate-200 font-medium", !cliente.nif && !cliente.documento_numero && !cliente.documentoNumero && "text-slate-400 dark:text-slate-600")}>
-        {cliente.documento_tipo || cliente.documentoTipo ? (
-          <div className="flex flex-col">
-            <span>{cliente.documento_numero ?? cliente.documentoNumero}</span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal uppercase">{cliente.documento_tipo ?? cliente.documentoTipo}</span>
-          </div>
-        ) : (
-          cliente.nif ?? "—"
-        )}
-      </TableCell>
-      <TableCell>
-        <div className="text-sm font-medium text-slate-900 dark:text-slate-200">{cliente.telefone ?? "—"}</div>
-        <div className="text-[11px] text-slate-500 dark:text-slate-400">{cliente.email ?? ""}</div>
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="inline-flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button asChild size="sm" variant="ghost" aria-label="Ver detalhes" className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
-                  <Eye className="h-4 w-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Ver detalhes</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button asChild size="sm" variant="ghost" aria-label="Imprimir" className="h-9 w-9 p-0 text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                <Link
-                  href={`/clientes/${encodeURIComponent(cliente.id)}/ficha`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Printer className="h-4 w-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Imprimir</TooltipContent>
-          </Tooltip>
-          {canEditClientes ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button asChild size="sm" variant="ghost" aria-label="Editar" className="h-9 w-9 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                  <Link href={`/clientes/${encodeURIComponent(cliente.id)}`}>
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Editar</TooltipContent>
-            </Tooltip>
-          ) : null}
-          {canEditClientes ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Eliminar"
-                  className="h-9 w-9 p-0 text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                  onClick={onDelete}
-                  disabled={del.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Eliminar</TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-      </TableCell>
-    </TableRow>
   );
 }
