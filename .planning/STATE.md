@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
 status: ready_to_plan
-stopped_at: Phase 106 complete (4/4) — ready to discuss Phase 107
-last_updated: 2026-07-16T21:55:00.000Z
-last_activity: 2026-07-16
+stopped_at: Phase 107 complete (6/6) — ready to discuss Phase 108
+last_updated: 2026-07-17T01:15:00.000Z
+last_activity: 2026-07-17
 progress:
   total_phases: 10
-  completed_phases: 5
-  total_plans: 26
-  completed_plans: 26
-  percent: 50
+  completed_phases: 6
+  total_plans: 32
+  completed_plans: 32
+  percent: 60
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 107 — módulos documentos + financeiro
+**Current focus:** Phase 108 — módulo pareceres
 
 ## Current Position
 
-Phase: 107 of 110 (módulos documentos + financeiro)
+Phase: 108 of 110 (módulo pareceres)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-07-16
+Last activity: 2026-07-17
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Last activity: 2026-07-16
 | 104 | 6 | - | - |
 | 105 | 6 | - | - |
 | 106 | 4 | ~70 min | ~17 min |
+| 107 | 6 | ~90 min | ~15 min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
@@ -123,6 +124,7 @@ Recent decisions affecting current work:
 - [Phase 104]: (v2.13, Phase 104 Plan 02) Only DTB-01 marked complete in REQUIREMENTS.md, not DTB-03 -- the Pagination primitive was added but not yet applied to /notificacoes (that swap is 104-05's job); marking DTB-03 complete now would misrepresent an unfinished requirement
 - [Phase 105 Plan 03]: Dropped both the 'Processo' and 'Cliente' columns from the processo-scoped documentos-columns.tsx -- Processo is redundant (row already scoped to processoId), Cliente would always render em-dash since this tab's upload flow only ever sets processo_id, never cliente_id
 - [Phase 105 Plan 03]: Decisões and Factos tabs (also raw table markup in the same file) were deliberately left untouched -- neither 105-CONTEXT.md nor 105-UI-SPEC.md/105-PATTERNS.md name them in the Table-primitive migration scope, unlike Partes/Fases/Testemunhas which are explicitly named
+- [Phase 107]: Built the project's first `Combobox` (Popover+Command composition, following Phase 106's DatePickerField precedent for "compose from scratch, no in-repo analog") supporting two modes from one component -- closed-list searchable (Documentos list filters, must select an existing processo/cliente) and creatable (Documento.tipo, no enum in any layer, free-typeable via a "Usar \"...\"" commit item). gsd-plan-checker caught 3 non-blocking warnings pre-execution (creatable Combobox missing emptyMessage/id props in the plan's illustrative snippets; 107-06's checkpoint missing an explicit RBAC role-switch step) -- all fixed in the plan docs before execution, confirmed present in the shipped code during UAT (empty-state copy "Nenhuma sugestão." verified live). Live UAT also found a NEW Critical-severity finding unrelated to any Phase 107 file: every NEW document upload (via any of the 3 call sites sharing one endpoint) crashes 100% of the time with a Hibernate `StaleObjectStateException`, root-caused to `ResourceController.uploadDocumento` explicitly setting a non-null `@Version` field on a never-persisted entity (confirmed pre-existing via git log -- last touch to that file was Phase 97, 2026-07-14; zero backend files touched by any of Phase 107's 6 plans) -- flagged as a dedicated background task given severity (blocks a core feature app-wide), documented in `107-06/deferred-items.md`, phase closed without fixing it (backend Java, outside this frontend-only phase's scope).
 - [Phase 106]: A timezone off-by-one bug (UTC-midnight parsing of bare "YYYY-MM-DD" date-only strings vs. local-time parsing of "YYYY-MM-DDTHH:mm" strings) was caught by gsd-plan-checker BEFORE execution, in the shared DatePickerField's parseDateOnly reference implementation (106-PATTERNS.md Shared Pattern 4d) -- fixed pre-execution by parsing Y/M/D components directly instead of handing the raw string to `new Date(v)`. Live UAT then found a SEPARATE, pre-existing +1h bug one layer up (agenda/novo and agenda/[id]/editar's onSubmit handlers using `new Date(v).toISOString().slice(0,19)`, which silently UTC-shifts the already-correct local string) -- confirmed present in the pre-Phase-106 base commit, also present in agenda/page.tsx's drag-and-drop reschedule and use-eventos.ts -- initially deferred, then FIXED same-day (commit `248a3e1`) at direct user request: all 4 sites now avoid any Date-to-UTC round-trip (pure string concat for the two forms, a new `addDurationLocal()` helper for the drag-and-drop reschedule, a dual-shape-aware rewrite of `normalizeDateParam`); verified live under the real `Atlantic/Cape_Verde` timezone.
 - [Phase 106]: Full quality pipeline closed — code-review fix/re-review loop ran 3 iterations (WR-01/02/03 fixed → re-review found a NEW Critical regression, CR-01: the WR-01 fix made DatePickerField's Calendar silently reset to today on a same-day reclick, since react-day-picker's optional single-select mode fires `onSelect(undefined)` on reclick → fixed by adding `required` to the Calendar element, which react-day-picker's own source confirms disables the deselect-on-reclick branch entirely → final re-review APPROVED, 0 critical/0 warning). Goal-backward verification passed 5/5 against current source (not just SUMMARY.md claims). UI audit scored 21/24; one genuine new-composition accessibility gap (DatePickerField's time input had no label) was fixed (added an optional `label` prop, wired to `aria-label`); two other findings (submit-button `disabled` still using `isLoading` not `isFetched`; editar's `onSubmit` missing a defense-in-depth `canEditAgenda` guard `novo`'s has) were confirmed pre-existing/deliberately out-of-scope and left documented in `deferred-items.md`, not fixed.
 
@@ -146,6 +148,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
+- **(v2.13, Phase 107, 2026-07-17) Document upload is completely broken — every NEW upload crashes 100% of the time.** `ResourceController.uploadDocumento`'s create-new branch (`backend/.../ResourceController.java`, `replaceId == null` path) explicitly sets a non-null `@Version` field (`.versao(1)`) on a never-persisted `Documento` builder result, which makes Spring Data JPA treat the entity as pre-existing and route `save()` through `merge()` instead of `persist()` — Hibernate then throws `StaleObjectStateException` since no matching row exists. Affects all 3 upload call sites (`/documentos/novo`, Processo ficha's Documentos tab, Cliente ficha's Documentos Entregues tab — all share one endpoint). Confirmed pre-existing (git log: `ResourceController.java` last touched by Phase 97's `f0c62ff`, 2026-07-14) and unrelated to Phase 107's frontend-only changes. Flagged as a dedicated background task (see `.planning/phases/LEXCV-107-m-dulos-documentos-financeiro/deferred-items.md` for full root-cause detail and a suggested fix) — high priority, blocks a core product feature app-wide, recommend fixing before this milestone's remaining phases rely on any document-upload live testing.
 - ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
 - ~~(v2.12, flagged by research, unverified) Server-side "hairpin" fetch risk: a relative-URL `fetch()` inside the `webpage` container calling `/api/v1/setup/status` may resolve against the public domain (routing back out through Caddy) instead of the internal Docker network~~ — **RESOLVED (2026-07-15, Phase 100-04):** live `docker compose up` test proved `BACKEND_API_ORIGIN=http://backend:8080` resolves correctly against the internal Docker network with zero hairpin. Separately, code review (99-REVIEW.md CR-01) found `webpage/src/lib/setup.ts` itself used a *relative* URL (not the internal-origin absolute URL the research anticipated) — a distinct, more severe bug (relative URLs throw in Node/Edge `fetch`, silently disabling the `/setup` redirect gate entirely) — fixed by switching to the same `BACKEND_API_ORIGIN`-based absolute-URL pattern `branding.ts` already used.
 
@@ -184,12 +187,12 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-16T21:55:00.000Z
-Stopped at: Completed 106-04-PLAN.md (holistic gate + human-verify checkpoint APPROVED) — Phase 106 (Módulo Agenda) closed, all 4 plans done
+Last session: 2026-07-17T01:15:00.000Z
+Stopped at: Completed 107-06-PLAN.md (holistic gate + human-verify checkpoint APPROVED) — Phase 107 (Módulos Documentos + Financeiro) closed, all 6 plans done
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 106 (Módulo Agenda) is complete — DatePickerField (Popover+Calendar, 1st composition in the project), Radix Select list filters, NativeSelect form fields, RBAC isFetched fix all shipped and verified live (both themes, 2 roles). AGD-36/AGD-37 marked Complete in REQUIREMENTS.md.
-- A pre-existing, out-of-scope +1h timezone bug in Evento date/time storage was found during live UAT and documented (not fixed) — see `.planning/phases/LEXCV-106-m-dulo-agenda/deferred-items.md`. Recommend a dedicated follow-up fix given real production-data impact.
-- Start planning with /gsd:plan-phase 107 (Módulos Documentos + Financeiro) — Progress/Select forms, only depends on Phase 102 (already complete); parallelizable with Phases 108/109/110 once planned.
+- Phase 107 (Módulos Documentos + Financeiro) is complete — Combobox (Popover+Command, 1st composition, both closed-list and creatable modes), Progress (3 duplicate upload bars), Select (Financeiro filters), NativeSelect (confidencialidade, honorário processoId), RBAC isFetched fix all shipped and verified live. DOF-01/DOF-02 marked Complete in REQUIREMENTS.md; DOF-V2-01 closed.
+- **High-priority, out-of-scope backend bug found during live UAT: document upload is completely broken** (every new upload crashes with a Hibernate optimistic-locking error) — see Blockers/Concerns above and `.planning/phases/LEXCV-107-m-dulos-documentos-financeiro/deferred-items.md` for full root-cause detail. Recommend fixing this before any future phase needs live document-upload testing.
+- Start planning with /gsd:plan-phase 108 (Módulo Pareceres) — Select/Tooltip/Accordion, only depends on Phase 102 (already complete); parallelizable with Phases 109/110 once planned.

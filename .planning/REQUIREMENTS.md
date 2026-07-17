@@ -50,8 +50,8 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Documentos + Financeiro
 
-- [ ] **DOF-01**: Upload de documentos usa `Progress` oficial em vez da UI de progresso customizada existente
-- [ ] **DOF-02**: Formulários de tipo de documento/honorário/pagamento usam `Select`
+- [x] **DOF-01**: Upload de documentos usa `Progress` oficial em vez da UI de progresso customizada existente
+- [x] **DOF-02**: Formulários de tipo de documento/honorário/pagamento usam `Select`
 
 ### Pareceres
 
@@ -125,8 +125,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | CLP-05 | Phase 105 | Complete |
 | AGD-36 | Phase 106 | Complete |
 | AGD-37 | Phase 106 | Complete |
-| DOF-01 | Phase 107 | Pending |
-| DOF-02 | Phase 107 | Pending |
+| DOF-01 | Phase 107 | Complete |
+| DOF-02 | Phase 107 | Complete |
 | PARC-18 | Phase 108 | Pending |
 | PARC-19 | Phase 108 | Pending |
 | PARC-20 | Phase 108 | Pending |

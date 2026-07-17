@@ -396,12 +396,12 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. O upload de documentos usa o componente oficial `Progress` em vez da UI de progresso customizada existente.
   2. Os formulários de tipo de documento/honorário/pagamento usam `Select`.
 **Plans**: 6 plans (3 waves)
-- [ ] 107-01-PLAN.md — Shared Combobox composition (Popover+Command), first Command consumer (Wave 1)
-- [ ] 107-02-PLAN.md — Documentos forms: Progress bar + NativeSelect confidencialidade + isFetched (documentos/novo, documentos/[id]) (Wave 1)
-- [ ] 107-03-PLAN.md — Financeiro: Select list filters (todos sentinel) + NativeSelect processoId + isFetched (page/novo/[id]) (Wave 1)
-- [ ] 107-04-PLAN.md — Documentos list filters: closed-list Combobox for Processo/Cliente (Controller) + isFetched (Wave 2, dep 107-01)
-- [ ] 107-05-PLAN.md — Ficha document tabs: creatable Combobox (tipo) + Progress in Processo/Cliente tabs + close DOF-V2-01 (Wave 2, dep 107-01)
-- [ ] 107-06-PLAN.md — Holistic build/lint/regression gate + human visual checkpoint (Wave 3, dep all)
+- [x] 107-01-PLAN.md — Shared Combobox composition (Popover+Command), first Command consumer (Wave 1)
+- [x] 107-02-PLAN.md — Documentos forms: Progress bar + NativeSelect confidencialidade + isFetched (documentos/novo, documentos/[id]) (Wave 1)
+- [x] 107-03-PLAN.md — Financeiro: Select list filters (todos sentinel) + NativeSelect processoId + isFetched (page/novo/[id]) (Wave 1)
+- [x] 107-04-PLAN.md — Documentos list filters: closed-list Combobox for Processo/Cliente (Controller) + isFetched (Wave 2, dep 107-01)
+- [x] 107-05-PLAN.md — Ficha document tabs: creatable Combobox (tipo) + Progress in Processo/Cliente tabs + close DOF-V2-01 (Wave 2, dep 107-01)
+- [x] 107-06-PLAN.md — Holistic build/lint/regression gate + human visual checkpoint (Wave 3, dep all)
 
 #### Phase 108: Módulo Pareceres
 
@@ -504,9 +504,9 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 105. Módulos Clientes + Processos | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 106. Módulo Agenda | v2.13 | 4/4 | Complete    | 2026-07-16 |
-| 107. Módulos Documentos + Financeiro | v2.13 | 0/6 | Not started | - |
+| 107. Módulos Documentos + Financeiro | v2.13 | 6/6 | Complete    | 2026-07-17 |
 | 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 106 (Módulo Agenda) concluída — DatePickerField partilhado (Popover+Calendar, 1ª composição do projeto), filtros da Agenda em `Select`, formulários criar/editar em `NativeSelect`+`DatePickerField`, fix RBAC `isFetched` nos 4 ficheiros. UAT ao vivo aprovado (2 temas, matriz RBAC). Um bug pré-existente de timezone (+1h no armazenamento de dataInicio/dataFim) foi encontrado durante o UAT e documentado em `106-04/deferred-items.md` — fora de âmbito desta fase (afeta também a grelha mensal, fora de âmbito), recomendado como fix dedicado futuro. Run `/gsd:plan-phase 107` to continue.
+**Next:** Phase 107 (Módulos Documentos + Financeiro) concluída — `Progress` oficial em 3 barras de upload duplicadas, `Combobox` partilhado (Popover+Command, 1ª composição do projeto) em 4 sítios (filtros fechados de Documentos + tipo criável nas abas de ficha), `Select` nos filtros do Financeiro, `NativeSelect` em confidencialidade/honorário, fix RBAC `isFetched` em 6 ficheiros, `DOF-V2-01` fechado. UAT ao vivo aprovado (Combobox em ambos os modos verificado end-to-end, RBAC em 2 papéis). Um bug pré-existente e grave no backend (upload de novo documento falha sempre com erro de optimistic locking do Hibernate) foi encontrado durante o UAT, diagnosticado até à causa-raiz e documentado em `107-06/deferred-items.md` — fora de âmbito desta fase (zero ficheiros backend tocados por qualquer plano), sinalizado como tarefa dedicada de alta prioridade. Run `/gsd:plan-phase 108` to continue.
