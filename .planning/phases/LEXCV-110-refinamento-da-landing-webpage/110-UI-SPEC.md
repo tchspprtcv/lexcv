@@ -1,7 +1,8 @@
 ---
 phase: 110
 slug: refinamento-da-landing-webpage
-status: draft
+status: approved
+reviewed_at: 2026-07-17
 shadcn_initialized: true
 preset: radix-vega
 created: 2026-07-17
@@ -58,6 +59,12 @@ Declared values (must be multiples of 4) — confirmed against existing `webpage
 **Exceptions:**
 - Icon-only hamburger trigger: **36px (`h-9 w-9`)**, not the 44px touch-target default — this matches the *existing* app-wide convention already used by `ThemeToggle` (`h-9 w-9`) in this same header, and by `web/`'s own mobile-drawer trigger in `dashboard-shell.tsx`. Introducing 44px here would look visually inconsistent sitting directly next to the 36px `ThemeToggle` button in the same header row. Keep 36px.
 - Sheet drawer width: **`w-72`** (288px = 72 × 4, a valid multiple of 4 even though not one of the named scale tokens) — a fixed component dimension, not a spacing token. `web/`'s analogous app-shell drawer uses `w-[270px]` for its full sidebar replica; this phase's drawer is a much shorter 4-item nav list, so `w-72 sm:max-w-sm` is the prescribed size (does not need to match `web/`'s sidebar width, different composition).
+
+---
+
+## Visual Hierarchy
+
+Hero H1 + CTA button pair are the primary visual anchor of the landing page; the Badge eyebrow and the blue accent rule are secondary, supporting elements. The new Hero/Contacto `Card` wrappers do not compete with this hierarchy — they use the same flat, low-contrast surface treatment already established by `TrustSection`/`FeaturesSection`, so they read as a consistent section container, not a new focal point.
 
 ---
 
