@@ -300,7 +300,7 @@ export default function SetupPage() {
                 <Button
                   type="submit"
                   className="h-11 w-full rounded-none bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || wizardPhase !== "idle"}
                 >
                   {form.formState.isSubmitting ? "A configurar ambiente..." : "Concluir configuração"}
                   <ArrowRight className="h-4 w-4" />
