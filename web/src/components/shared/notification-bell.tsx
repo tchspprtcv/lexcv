@@ -89,7 +89,7 @@ export function NotificationBell() {
             <Badge
               className={cn(
                 "absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] font-bold leading-none text-white border-transparent",
-                unread.isError ? "bg-slate-400" : "bg-red-500",
+                unread.isError ? "bg-slate-400 dark:bg-slate-400" : "bg-red-500 dark:bg-red-500",
               )}
             >
               {unread.isError ? "!" : count > 9 ? "9+" : count}
