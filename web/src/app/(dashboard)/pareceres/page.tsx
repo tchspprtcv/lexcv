@@ -242,11 +242,15 @@ function ParecerPageContent() {
             <form className="space-y-4" onSubmit={onPesquisar}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  <label
+                    htmlFor="pesquisa-texto"
+                    className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400"
+                  >
                     Pesquisar
                   </label>
                   <div className="mt-2">
                     <input
+                      id="pesquisa-texto"
                       type="text"
                       value={pesquisaTexto}
                       onChange={(e) => setPesquisaTexto(e.target.value)}
@@ -320,8 +324,9 @@ function ParecerPageContent() {
                   </label>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Início</label>
+                      <label htmlFor="pesquisa-data-inicio" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Início</label>
                       <input
+                        id="pesquisa-data-inicio"
                         type="date"
                         value={pesquisaDataInicio}
                         onChange={(e) => setPesquisaDataInicio(e.target.value)}
@@ -329,8 +334,9 @@ function ParecerPageContent() {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Fim</label>
+                      <label htmlFor="pesquisa-data-fim" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Fim</label>
                       <input
+                        id="pesquisa-data-fim"
                         type="date"
                         value={pesquisaDataFim}
                         onChange={(e) => setPesquisaDataFim(e.target.value)}
