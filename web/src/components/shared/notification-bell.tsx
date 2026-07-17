@@ -82,6 +82,7 @@ export function NotificationBell() {
         <Button
           type="button"
           variant="ghost"
+          aria-label="Notificações"
           className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
         >
           <Bell className="h-[1.1rem] w-[1.1rem]" />
