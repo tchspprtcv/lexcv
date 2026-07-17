@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Progress } from "@/components/ui/progress";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useUploadDocumentoComProgresso } from "@/hooks/use-documentos";
@@ -117,7 +119,7 @@ export default function DocumentoUploadPage() {
     }
   };
 
-  if (!permissions.isLoading && !canCreateDocumentos) {
+  if (permissions.isFetched && !canCreateDocumentos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para enviar documentos."
@@ -182,12 +184,7 @@ export default function DocumentoUploadPage() {
                     <span>A enviar...</span>
                     <span>{progresso}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
-                    <div
-                      className="h-2 rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${progresso}%` }}
-                    />
-                  </div>
+                  <Progress value={progresso ?? 0} />
                 </div>
               ) : null}
 
@@ -230,16 +227,12 @@ export default function DocumentoUploadPage() {
 
             <div className="space-y-2">
               <Label htmlFor="confidencialidade">Confidencialidade</Label>
-              <select
-                id="confidencialidade"
-                className="flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300"
-                {...form.register("confidencialidade")}
-              >
+              <NativeSelect id="confidencialidade" size="default" className="w-full" {...form.register("confidencialidade")}>
                 <option value="PUBLICO">Público</option>
                 <option value="INTERNO">Interno</option>
                 <option value="CONFIDENCIAL">Confidencial</option>
                 <option value="RESTRITO">Restrito</option>
-              </select>
+              </NativeSelect>
               {form.formState.errors.confidencialidade ? (
                 <p className="text-sm text-red-600">{form.formState.errors.confidencialidade.message}</p>
               ) : null}
