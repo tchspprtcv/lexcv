@@ -72,9 +72,12 @@ export function Combobox({
   }
 
   function handleOpenChange(next: boolean) {
-    if (disabled) return;
+    if (disabled && next) return;
     if (!next && creatable && trimmedQuery && trimmedQuery !== value) {
-      onChange(trimmedQuery);
+      const matched = options.find(
+        (option) => option.label.toLowerCase() === trimmedQuery.toLowerCase(),
+      );
+      onChange(matched ? matched.value : trimmedQuery);
     }
     setOpen(next);
     setQuery("");
@@ -112,16 +115,24 @@ export function Combobox({
                   {createLabel(trimmedQuery)}
                 </CommandItem>
               ) : null}
-              {filtered.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  data-checked={option.value === value}
-                  onSelect={() => commit(option.value)}
-                >
-                  {option.label}
-                </CommandItem>
-              ))}
+              {filtered.map((option) => {
+                // cmdk treats a falsy internal `value` (including "") as "nothing
+                // selected" in its own keyboard-navigation state tracking, which
+                // permanently breaks ArrowUp/ArrowDown/Enter for an empty-string
+                // sentinel option (e.g. a "Todos" clear-filter entry). Give cmdk a
+                // non-empty identity token; onSelect still commits the real value.
+                const itemKey = option.value === "" ? "__combobox_empty__" : option.value;
+                return (
+                  <CommandItem
+                    key={option.value}
+                    value={itemKey}
+                    data-checked={option.value === value}
+                    onSelect={() => commit(option.value)}
+                  >
+                    {option.label}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
           </CommandList>
