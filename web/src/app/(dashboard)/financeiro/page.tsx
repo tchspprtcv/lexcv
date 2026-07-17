@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
@@ -100,7 +101,7 @@ export default function FinanceiroPage() {
   const canViewFinanceiro = permissions.can.view("financeiro");
   const canCreateFinanceiro = permissions.can.create("financeiro");
 
-  if (!permissions.isLoading && !canViewFinanceiro) {
+  if (permissions.isFetched && !canViewFinanceiro) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo financeiro."
@@ -139,16 +140,16 @@ function FinanceiroContent({
   const isLoading = honorarios.isPending || processos.isPending || clientes.isPending;
   const isError = honorarios.isError || processos.isError || clientes.isError;
 
-  const [filtroProcesso, setFiltroProcesso] = React.useState("");
-  const [filtroStatus, setFiltroStatus] = React.useState<"" | "Pendente" | "Parcialmente Pago" | "Pago">("");
+  const [filtroProcesso, setFiltroProcesso] = React.useState("todos");
+  const [filtroStatus, setFiltroStatus] = React.useState<"todos" | "Pendente" | "Parcialmente Pago" | "Pago">("todos");
   const [filtroDataDe, setFiltroDataDe] = React.useState("");
   const [filtroDataAte, setFiltroDataAte] = React.useState("");
 
   const list = honorarios.data ?? [];
 
   let filteredList = list;
-  if (filtroProcesso) filteredList = filteredList.filter((h) => h.processoId === filtroProcesso);
-  if (filtroStatus) filteredList = filteredList.filter((h) => calcHonorarioStatus(h.totalPago, h.valorTotal) === filtroStatus);
+  if (filtroProcesso !== "todos") filteredList = filteredList.filter((h) => h.processoId === filtroProcesso);
+  if (filtroStatus !== "todos") filteredList = filteredList.filter((h) => calcHonorarioStatus(h.totalPago, h.valorTotal) === filtroStatus);
   if (filtroDataDe) filteredList = filteredList.filter((h) => h.dataAcordo != null && h.dataAcordo >= filtroDataDe);
   if (filtroDataAte) filteredList = filteredList.filter((h) => h.dataAcordo != null && h.dataAcordo <= filtroDataAte);
   const now = new Date();
@@ -209,32 +210,34 @@ function FinanceiroContent({
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Processo</label>
-          <select
-            value={filtroProcesso}
-            onChange={(e) => setFiltroProcesso(e.target.value)}
-            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          >
-            <option value="">Todos</option>
-            {(processos.data ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.numero ?? p.titulo ?? p.id}
-              </option>
-            ))}
-          </select>
+          <Select value={filtroProcesso} onValueChange={setFiltroProcesso}>
+            <SelectTrigger size="default">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {(processos.data ?? []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.numero ?? p.titulo ?? p.id}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Estado</label>
-          <select
-            value={filtroStatus}
-            onChange={(e) => setFiltroStatus(e.target.value as "" | "Pendente" | "Parcialmente Pago" | "Pago")}
-            className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
-          >
-            <option value="">Todos</option>
-            <option value="Pendente">Pendente</option>
-            <option value="Parcialmente Pago">Parcialmente Pago</option>
-            <option value="Pago">Pago</option>
-          </select>
+          <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as "todos" | "Pendente" | "Parcialmente Pago" | "Pago")}>
+            <SelectTrigger size="default">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+              <SelectItem value="Parcialmente Pago">Parcialmente Pago</SelectItem>
+              <SelectItem value="Pago">Pago</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -257,12 +260,12 @@ function FinanceiroContent({
           />
         </div>
 
-        {(filtroProcesso || filtroStatus || filtroDataDe || filtroDataAte) ? (
+        {(filtroProcesso !== "todos" || filtroStatus !== "todos" || filtroDataDe || filtroDataAte) ? (
           <Button
             variant="outline"
             onClick={() => {
-              setFiltroProcesso("");
-              setFiltroStatus("");
+              setFiltroProcesso("todos");
+              setFiltroStatus("todos");
               setFiltroDataDe("");
               setFiltroDataAte("");
             }}
