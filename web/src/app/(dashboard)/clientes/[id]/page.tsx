@@ -30,11 +30,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { Combobox } from "@/components/shared/combobox";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import {
   useAddAdministrativo,
@@ -1322,20 +1324,17 @@ function ClienteDocumentosEntreguesTab({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={datalistId}>Tipo</Label>
-                    <input
+                    <Combobox
                       id={datalistId}
-                      list={`${datalistId}-options`}
-                      className="flex h-9 w-full rounded-none border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300"
-                      placeholder="Selecione ou escreva um tipo"
                       value={novoTipo}
-                      onChange={(e) => setNovoTipo(e.target.value)}
-                      disabled={upload.isPending}
+                      onChange={setNovoTipo}
+                      options={tipoOptions.map((t) => ({ value: t, label: t }))}
+                      creatable
+                      emptyMessage="Nenhuma sugestão."
+                      placeholder="Selecionar ou escrever tipo..."
+                      searchPlaceholder="Pesquisar ou escrever novo tipo..."
+                      triggerClassName="rounded-none"
                     />
-                    <datalist id={`${datalistId}-options`}>
-                      {tipoOptions.map((t) => (
-                        <option key={t} value={t} />
-                      ))}
-                    </datalist>
                   </div>
                   {progresso !== null ? (
                     <div className="space-y-1">
@@ -1343,12 +1342,7 @@ function ClienteDocumentosEntreguesTab({
                         <span>A enviar...</span>
                         <span>{progresso}%</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
-                        <div
-                          className="h-2 rounded-full bg-blue-600 transition-all"
-                          style={{ width: `${progresso}%` }}
-                        />
-                      </div>
+                      <Progress value={progresso ?? 0} />
                     </div>
                   ) : null}
                   {uploadError ? <p className="text-sm text-red-600">{uploadError}</p> : null}
