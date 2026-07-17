@@ -285,7 +285,13 @@ function ParecerDetailContent({
                     </p>
                   </div>
                 ) : (
-                  <Accordion type="single" collapsible defaultValue={defaultOpenVersaoId} className="relative">
+                  <Accordion
+                    key={defaultOpenVersaoId}
+                    type="single"
+                    collapsible
+                    defaultValue={defaultOpenVersaoId}
+                    className="relative"
+                  >
                     {sortedVersoes.map((versao, index) => {
                       const isLast = index === sortedVersoes.length - 1;
                       const autorNome = versao.criadoPorId ? resolveUserNome(versao.criadoPorId) : "—";
