@@ -31,6 +31,7 @@ export function Combobox({
   creatable = false,
   createLabel = (query: string) => `Usar "${query}"`,
   triggerClassName,
+  disabled = false,
 }: {
   id?: string;
   value: string | undefined;
@@ -42,6 +43,7 @@ export function Combobox({
   creatable?: boolean;
   createLabel?: (query: string) => string;
   triggerClassName?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -70,6 +72,7 @@ export function Combobox({
   }
 
   function handleOpenChange(next: boolean) {
+    if (disabled) return;
     if (!next && creatable && trimmedQuery && trimmedQuery !== value) {
       onChange(trimmedQuery);
     }
@@ -86,6 +89,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          disabled={disabled}
           className={cn("w-full justify-between font-normal", triggerClassName)}
         >
           <span className={cn("truncate", isPlaceholder && "text-muted-foreground")}>

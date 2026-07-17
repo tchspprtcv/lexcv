@@ -1334,6 +1334,7 @@ function ClienteDocumentosEntreguesTab({
                       placeholder="Selecionar ou escrever tipo..."
                       searchPlaceholder="Pesquisar ou escrever novo tipo..."
                       triggerClassName="rounded-none"
+                      disabled={upload.isPending}
                     />
                   </div>
                   {progresso !== null ? (
