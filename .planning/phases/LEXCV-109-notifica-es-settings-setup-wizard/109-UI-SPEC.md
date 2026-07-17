@@ -1,7 +1,8 @@
 ---
 phase: 109
 slug: notifica-es-settings-setup-wizard
-status: draft
+status: approved
+reviewed_at: 2026-07-17
 shadcn_initialized: true
 preset: "components.json (style: radix-vega, baseColor: neutral, cssVariables: true, iconLibrary: lucide) — inherited unchanged from Phase 101/102/104/105/106/107/108, not re-initialized this phase"
 created: 2026-07-17
