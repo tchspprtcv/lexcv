@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { NotificationBell } from "@/components/shared/notification-bell";
+import { SidebarNav, type NavItem } from "@/components/shared/sidebar-nav";
 import { UserMenu } from "@/components/shared/user-menu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -10,12 +10,10 @@ import {
   Calendar,
   FileText,
   Home,
-  LifeBuoy,
   Menu,
   Scale,
   ScrollText,
   Search,
-  Settings,
   Users,
   Wallet,
 } from "lucide-react";
@@ -23,19 +21,10 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { clearTokens } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
-import { cn } from "@/lib/utils";
 import { useMe } from "@/hooks/use-me";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BottomNav } from "@/components/shared/bottom-nav";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  requiredPermission?: string;
-};
 
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -83,52 +72,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="text-[11px] font-bold tracking-widest text-slate-400">LEXCV <span className="text-slate-600 font-normal">| INSTITUCIONAL</span></div>
         </div>
 
-        <nav className="px-3 space-y-1 mt-4">
-          {NAV.filter((item) => hasPermission(me.data?.permissions, item.requiredPermission)).map((item) => {
-            const active = pathname === item.href || (item.href === "/processos" && pathname.startsWith("/processos/dashboard"));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                  active
-                    ? "bg-blue-600/10 text-blue-400 dark:bg-blue-500/10 dark:text-blue-400 shadow-[inset_2px_0_0_0_theme(colors.blue.500)]"
-                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 dark:hover:bg-slate-900/50",
-                )}
-              >
-                <Icon className={cn("h-4 w-4", active ? "text-blue-500" : "text-slate-500")} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-8 px-5">
-          <div className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase mb-3">Sistema</div>
-          <div className="space-y-1">
-            <Link
-              href="/settings"
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                pathname === "/settings"
-                  ? "bg-blue-600/10 text-blue-400 dark:bg-blue-500/10 dark:text-blue-400 shadow-[inset_2px_0_0_0_theme(colors.blue.500)]"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 dark:hover:bg-slate-900/50"
-              )}
-            >
-              <Settings className={cn("h-4 w-4", pathname === "/settings" ? "text-blue-500" : "text-slate-500")} />
-              Configurações
-            </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-colors"
-            >
-              <LifeBuoy className="h-4 w-4 text-slate-500" />
-              Suporte
-            </Link>
-          </div>
-        </div>
+        <SidebarNav nav={NAV} pathname={pathname} permissions={me.data?.permissions} />
 
         <div className="mt-auto p-4">
           <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">
@@ -143,52 +87,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="text-[11px] font-bold tracking-widest text-slate-400">LEXCV <span className="text-slate-600 font-normal">| INSTITUCIONAL</span></div>
           </div>
 
-          <nav className="px-3 space-y-1 mt-4">
-            {NAV.filter((item) => hasPermission(me.data?.permissions, item.requiredPermission)).map((item) => {
-              const active = pathname === item.href || (item.href === "/processos" && pathname.startsWith("/processos/dashboard"));
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                    active
-                      ? "bg-blue-600/10 text-blue-400 dark:bg-blue-500/10 dark:text-blue-400 shadow-[inset_2px_0_0_0_theme(colors.blue.500)]"
-                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 dark:hover:bg-slate-900/50",
-                  )}
-                >
-                  <Icon className={cn("h-4 w-4", active ? "text-blue-500" : "text-slate-500")} />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="mt-8 px-5">
-            <div className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase mb-3">Sistema</div>
-            <div className="space-y-1">
-              <Link
-                href="/settings"
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                  pathname === "/settings"
-                    ? "bg-blue-600/10 text-blue-400 dark:bg-blue-500/10 dark:text-blue-400 shadow-[inset_2px_0_0_0_theme(colors.blue.500)]"
-                    : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 dark:hover:bg-slate-900/50"
-                )}
-              >
-                <Settings className={cn("h-4 w-4", pathname === "/settings" ? "text-blue-500" : "text-slate-500")} />
-                Configurações
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-colors"
-              >
-                <LifeBuoy className="h-4 w-4 text-slate-500" />
-                Suporte
-              </Link>
-            </div>
-          </div>
+          <SidebarNav nav={NAV} pathname={pathname} permissions={me.data?.permissions} />
 
           <div className="mt-auto p-4">
             <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">
