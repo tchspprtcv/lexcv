@@ -1,253 +1,282 @@
 ---
 phase: LEXCV-109-notifica-es-settings-setup-wizard
-reviewed: 2026-07-17T14:23:05Z
+reviewed: 2026-07-17T16:10:00Z
 depth: standard
-files_reviewed: 4
+files_reviewed: 5
 files_reviewed_list:
   - web/src/components/shared/user-menu.tsx
   - web/src/components/shared/dashboard-shell.tsx
+  - web/src/components/shared/sidebar-nav.tsx
   - web/src/components/shared/notification-bell.tsx
   - web/src/app/setup/page.tsx
 findings:
   critical: 0
-  warning: 5
-  info: 7
+  warning: 1
+  info: 11
   total: 12
 status: issues_found
 ---
 
-# Phase LEXCV-109: Code Review Report
+# Phase LEXCV-109: Code Review Report (Iteration 2 — Re-review)
 
-**Reviewed:** 2026-07-17T14:23:05Z
+**Reviewed:** 2026-07-17T16:10:00Z
 **Depth:** standard
-**Files Reviewed:** 4
+**Files Reviewed:** 5 (4 from iteration 1 + `sidebar-nav.tsx`, a new file extracted by the WR-03 fix)
 **Status:** issues_found
+
+This report **supersedes** `109-REVIEW.md` (iteration 1). It re-verifies the 5 Warning fixes
+applied in commits `3853682`, `1788f20`, `1ea8b9b`, `3b975e6`, `11bedd5` (per
+`109-REVIEW-FIX.md`), checks for regressions those fixes may have introduced, and gives the
+newly-extracted `sidebar-nav.tsx` a full fresh read (not just a diff check).
 
 ## Summary
 
-Reviewed the four files touched by this phase: the newly-extracted `UserMenu` shared
-component, the `DashboardShell` that now consumes it, the `NotificationBell` (span → `Badge`
-swap for the unread-count pill), and the `/setup` first-run wizard (added `Progress`
-indicator). Cross-checked call sites (`use-me`, `use-notificacoes`, `permissions.ts`,
-`notificacao-categoria.ts`, `lib/api.ts`, `lib/auth.ts`, `schemas/setup.ts`, the Radix
-`dropdown-menu`/`badge`/`progress` UI primitives, and the `(dashboard)/layout.tsx` Suspense
-boundary) to confirm behavior rather than assuming it.
+Re-reviewed all 5 in-scope files, diffed each fix commit individually against its claimed
+finding, and gave the new `SidebarNav` component (extracted from `dashboard-shell.tsx` by the
+WR-03 fix) a complete independent read as if it were new code — because it is.
 
-No crashes, injection vectors, or hardcoded secrets found in these four files. The main
-finding worth blocking on is a real visual regression introduced by this diff: the
-notification unread-count badge silently loses its intended red/gray color in dark mode
-because of a Tailwind CSS specificity interaction between the new `Badge` wrapper's default
-variant and the ad-hoc override classes. The rest are logic gaps and quality issues
-(duplicate code the phase's own refactor didn't finish addressing, a double-submit window
-in the setup wizard, superficial file-type validation) that should be fixed but don't block
-core functionality.
+### Fix verification (5/5 confirmed correct, no regressions)
+
+- **WR-01 (badge dark-mode color)** — `notification-bell.tsx:89`. Confirmed via
+  `git show 3853682`: the diff adds exactly `dark:bg-slate-400` / `dark:bg-red-500`
+  counterparts, one line changed. Verified against `badge.tsx`'s `secondary` default variant
+  (`bg-neutral-100 dark:bg-neutral-800`) that both the light (`bg-red-500`/`bg-slate-400`)
+  and dark (`dark:bg-red-500`/`dark:bg-slate-400`) override classes now share the same
+  tailwind-merge conflict group as the default variant's background utilities, so the
+  override correctly wins in both themes. Fixed correctly.
+- **WR-02 (double-submit window)** — `setup/page.tsx:304`. Confirmed via `git show 1788f20`:
+  `disabled={form.formState.isSubmitting || wizardPhase !== "idle"}`, exactly the suggested
+  fix. Traced `wizardPhase`'s derivation (`successMessage ? "success" : ... : "idle"`) —
+  button now stays disabled through the entire success→redirect window and correctly
+  re-enables on a caught error (since `successMessage` stays `null` and `isSubmitting`
+  resets to `false`, `wizardPhase` returns to `"idle"`, permitting a legitimate retry).
+  Fixed correctly, no regression.
+- **WR-03 (dedup extraction)** — new file `sidebar-nav.tsx` + `dashboard-shell.tsx`.
+  Confirmed via `git show 3b975e6` that the extracted block is a pure move: the removed
+  `<aside>` and `<Sheet>` copies were byte-for-byte identical to each other, and the new
+  `SidebarNav` component's JSX is byte-for-byte identical to what was removed (including the
+  at-the-time-still-buggy `/processos/dashboard` special case, which WR-04 then fixed in the
+  single consolidated location one commit later). Verified `dashboard-shell.tsx`'s import list
+  post-extraction — every import is still used (`Building2`, `Calendar`, `FileText`, `Home`,
+  `Menu`, `Scale`, `ScrollText`, `Search`, `Users`, `Wallet`, `Sheet`/`SheetContent`, `Input`,
+  `clearTokens`, `useMe`, `ThemeToggle`, `BottomNav`, `SidebarNav`/`NavItem`, `UserMenu`,
+  `NotificationBell`) and the claimed-removed imports (`Link`, `Settings`, `LifeBuoy`,
+  `hasPermission`, `cn`) are in fact gone. `npx eslint` and `npx tsc --noEmit` both confirm:
+  `sidebar-nav.tsx` has 0 lint issues and 0 type errors; the only pre-existing issues
+  (`react-hooks/set-state-in-effect` on the untouched `setDrawerOpen(false)` effect,
+  `@next/next/no-img-element` on `dashboard-shell.tsx`/`user-menu.tsx`) are unchanged from
+  before the phase and are performance/render-cascade concerns, out of this review's scope.
+  **Regarding the specific question of preserved callbacks:** neither the old duplicated
+  blocks nor the new `SidebarNav` ever wired a per-item `onClick` to close the mobile drawer
+  — drawer-closing was and still is handled entirely by the pre-existing, untouched
+  `useEffect(() => setDrawerOpen(false), [pathname])` in `dashboard-shell.tsx` (present
+  verbatim in the diff-base version, confirmed via `git show <diff_base>`). So no
+  prop/callback was dropped by the extraction — but this pre-existing mechanism itself has an
+  edge-case gap, newly surfaced by this fresh read: see **WR-01 (new)** below.
+- **WR-04 (generalize active-route match)** — `sidebar-nav.tsx:33`. Confirmed via
+  `git show 11bedd5`: a 1-line, single-location change to
+  `pathname === item.href || pathname.startsWith(\`${item.href}/\`)`, exactly the suggested
+  fix, applied only once (correctly, since WR-03 had already consolidated both copies).
+  Fixed correctly. Note: the fix was scoped to the `nav` prop's item loop only — see
+  **IN-07** below for a related inconsistency left in the same file.
+- **WR-05 (logo MIME allowlist)** — `setup/page.tsx:19-20, 63-67`. Confirmed via
+  `git show 1ea8b9b`: `ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"]` and
+  `.includes(file.type)` check, exactly as suggested, correctly rejecting `image/svg+xml` and
+  all other MIME types. Fixed correctly. See **IN-08** below for one loose end left by this
+  fix (input's `accept` attribute wasn't narrowed to match).
+
+No Critical issues found in any of the 5 files (no injection vectors, no hardcoded secrets, no
+`eval`/`dangerouslySetInnerHTML`, no auth bypasses). One new Warning-level functional edge
+case was surfaced by the fresh read of the drawer-close mechanism (pre-existing, not
+introduced by this iteration's fixes). The remaining findings are Info-level: several are
+carried over unresolved from iteration 1 (out of the 5-Warning fix scope, confirmed still
+present and unchanged), a few are new observations from this iteration's fresh look (an
+unused export in the new file, an inconsistency the WR-04 fix left behind, and a
+cross-file consistency note about `bottom-nav.tsx`, which was deliberately left untouched
+per `109-REVIEW-FIX.md`).
 
 ## Warnings
 
-### WR-01: Unread notification badge loses its color in dark mode
+### WR-01: Mobile nav drawer does not close when the clicked link matches the current pathname
 
-**File:** `web/src/components/shared/notification-bell.tsx:88-97`
-**Issue:** This diff replaced a plain `<span className={...}>` with `<Badge className={cn(...)}>`,
-but no `variant` prop is passed, so `Badge` falls back to its `defaultVariants: { variant: "secondary" }`
-(see `web/src/components/ui/badge.tsx:25-27`), which injects
-`border-transparent bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-50`
-ahead of the passed-in className.
-
-`cn()` uses `tailwind-merge`, which only dedupes classes that share the *same* variant/modifier
-key. `bg-red-500` / `bg-slate-400` (no modifier) do not conflict with `dark:bg-neutral-800`
-(has the `dark:` modifier) from tailwind-merge's point of view, so **both** classes survive
-in the final class string. In the browser, Tailwind v4's `dark:` variant here compiles to
-`:is(.dark *)` (see `app/globals.css:5`, `@custom-variant dark (&:is(.dark *));`), which has
-higher CSS specificity (0,2,0) than a bare `.bg-red-500` (0,1,0). Result: whenever the app is
-in dark mode (confirmed wired via `next-themes` `attribute="class"` in `app/providers.tsx`),
-`dark:bg-neutral-800` wins and the badge renders as a dull gray pill instead of red
-(unread) / slate-400 (error), defeating the purpose of the indicator. This bug did not exist
-in the prior plain-`<span>` implementation, which had no default variant classes to fight.
-
-**Fix:**
+**File:** `web/src/components/shared/dashboard-shell.tsx:54-56` (mechanism), consumed via
+`web/src/components/shared/sidebar-nav.tsx:36-49, 56-67` (every `Link` in the drawer)
+**Issue:** The only mechanism that closes the mobile `Sheet` drawer after a nav click is:
 ```tsx
-<Badge
-  className={cn(
-    "absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] font-bold leading-none text-white border-transparent",
-    unread.isError ? "bg-slate-400 dark:bg-slate-400" : "bg-red-500 dark:bg-red-500",
-  )}
->
+React.useEffect(() => {
+  setDrawerOpen(false);
+}, [pathname]);
 ```
-Add the `dark:` counterpart for every color utility that must win in both themes (any single
-custom `variant` value in `badgeVariants` would have the same problem, since every variant
-in that `cva` config defines both a light and a dark background).
-
-### WR-02: Setup wizard submit button re-enables during the post-success redirect window
-
-**File:** `web/src/app/setup/page.tsx:84-108, 300-307`
-**Issue:** `onSubmit` sets `successMessage` and schedules `window.setTimeout(() => router.replace("/login"), 1200)`
-but does not `await` the timeout — the async handler resolves immediately after that. Once
-it resolves, `form.formState.isSubmitting` flips back to `false`, and the submit
-`<Button disabled={form.formState.isSubmitting}>` re-enables while the success banner is
-still showing and the app is still on `/setup` for ~1.2s. A user who clicks "Concluir
-configuração" again in that window fires a second `POST /setup/initialize`, which the
-backend will reject (already initialized), flashing an error over the success state right
-before the redirect fires. This is the one-time bootstrap wizard, so it's worth closing the
-window rather than relying on timing.
-**Fix:**
+This effect only fires when `pathname` (from `usePathname()`) actually *changes*. If a user
+opens the hamburger drawer while already on, say, `/clientes`, and then taps the "Clientes"
+link again (or the "Configurações" link while already on `/settings`) — a very plausible
+action, e.g. to dismiss the drawer without navigating elsewhere — Next's `<Link>` does not
+trigger a route change (same URL), so `pathname` never changes, the effect never re-runs, and
+`setDrawerOpen(false)` is never called. The drawer stays open, covering the screen, and the
+user has no obvious way to dismiss it apart from the small `X` close button or tapping the
+overlay. This is pre-existing (the same `useEffect`-only approach existed in the duplicated
+blocks before the WR-03 extraction — confirmed via `git show <diff_base>`), so it is **not** a
+regression introduced by this iteration's fixes, but it was missed in both the iteration-1
+review and the WR-03 extraction (which was a good opportunity to close it, since `SidebarNav`
+now centralizes every nav link in one place).
+**Fix:** Give `SidebarNav` an optional `onNavigate` callback and fire it directly from each
+`Link`'s `onClick`, rather than relying solely on the `pathname`-diff effect:
 ```tsx
-<Button
-  type="submit"
-  disabled={form.formState.isSubmitting || wizardPhase !== "idle"}
-  ...
->
-```
-(`wizardPhase !== "idle"` covers both `"submitting"` and `"success"`.)
-
-### WR-03: This phase's own dedup refactor left an equally-sized duplicate block unaddressed
-
-**File:** `web/src/components/shared/dashboard-shell.tsx:86-131` vs `146-191`
-**Issue:** This phase extracted `UserMenu` specifically to remove the 3x-duplicated
-avatar/name/logout JSX (per the new component's own doc comment: "Consumed at 3 call
-sites... the menu content is identical across all 3"). But the desktop `<aside>` nav block
-(NAV filter/map, lines 86-106, plus the "Sistema" Configurações/Suporte links, lines
-108-131) is byte-for-byte duplicated in the mobile `<Sheet>` (lines 146-166 and 168-191)
-and was left untouched. This is exactly the kind of drift risk (edit one copy, forget the
-other) the `UserMenu` extraction in this same phase was meant to eliminate.
-**Fix:** Extract a `SidebarNav` (or similar) component analogous to `UserMenu` and render it
-in both the `<aside>` and the `<Sheet>`.
-
-### WR-04: Nav active-state highlighting only works for exact-match routes plus one hardcoded exception
-
-**File:** `web/src/components/shared/dashboard-shell.tsx:88, 148`
-**Issue:**
-```tsx
-const active = pathname === item.href || (item.href === "/processos" && pathname.startsWith("/processos/dashboard"));
-```
-Every nested/detail route breaks nav highlighting except the one special-cased
-`/processos/dashboard*`. The app has nested routes under every other nav section
-(confirmed present: `clientes/[id]`, `clientes/novo`, `clientes/merge`, `agenda/[id]`,
-`agenda/novo`, `documentos/[id]`, `documentos/novo`, `financeiro/[id]`, `financeiro/novo`).
-Visiting e.g. `/clientes/abc-123` leaves no sidebar item highlighted as active, which is
-inconsistent with how `/processos/dashboard/*` is handled.
-**Fix:** Generalize instead of special-casing one route:
-```tsx
-const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-```
-(this also subsumes the `/processos/dashboard` case, so the special-case branch can be
-deleted).
-
-### WR-05: Logo upload validation is client-side only and permits SVG despite the UI copy promising raster formats
-
-**File:** `web/src/app/setup/page.tsx:62-66`
-**Issue:** `handleLogoChange` only checks `file.type.startsWith("image/")`. `file.type` is a
-client-reported MIME string with no server-side confirmation from this code path, and the
-check accepts `image/svg+xml` even though the UI label says "PNG, JPG, WEBP até 2MB"
-(line 192). SVG can embed `<script>`/event-handler payloads; while rendering it via
-`<img src="data:image/svg+xml,...">` (as `dashboard-shell.tsx` and `user-menu.tsx` do for
-`tenant_logo_data_url`/`avatar_url`) suppresses script execution per spec, this is the
-first-run, effectively pre-auth bootstrap endpoint, so defense-in-depth matters more here
-than elsewhere.
-**Fix:**
-```ts
-const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
-if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-  setLogoError("O logo deve ser PNG, JPG ou WEBP.");
-  event.target.value = "";
-  return;
+interface SidebarNavProps {
+  nav: NavItem[];
+  pathname: string;
+  permissions: string[] | undefined;
+  onNavigate?: () => void;
 }
+
+export function SidebarNav({ nav, pathname, permissions, onNavigate }: SidebarNavProps) {
+  // ...
+  <Link key={item.href} href={item.href} onClick={onNavigate} className={...}>
+  // ...
+  <Link href="/settings" onClick={onNavigate} className={...}>
 ```
-and confirm the backend independently re-validates content type/magic bytes for
-`SetupInitializeRequest.logo` rather than trusting the client-declared type.
+And in `dashboard-shell.tsx`, pass `onNavigate={() => setDrawerOpen(false)}` at minimum to the
+`<Sheet>`'s instance (harmless no-op if also passed to the `<aside>` instance, since
+`drawerOpen` is already `false` there).
 
 ## Info
 
 ### IN-01: Dead code in `onLogout` — unused dynamic import, comment describes unimplemented behavior
 
-**File:** `web/src/components/shared/dashboard-shell.tsx:69-77`
-**Issue:**
-```tsx
-const onLogout = async () => {
-  await clearTokens();
-
-  // Invalidamos a cache do React Query para forçar a verificação de estado e limpar dados
-  await import("@tanstack/react-query");
-  // Mas não podemos chamar hook dentro de função callback.
-  // Em vez disso fazemos um hard reload ou só o replace que já vai forçar no auth check
-  window.location.href = "/login";
-};
-```
-`await import("@tanstack/react-query")` imports the module but never uses it (no
-`queryClient.clear()` call) — it's a no-op left over from an abandoned approach; the
-following two comment lines already explain why it wasn't implemented that way. Pre-existing
-(not part of this diff), but present in a file under review.
-**Fix:** Delete the unused import and the first comment line; the `window.location.href`
-full navigation already resets all client state on its own.
+**File:** `web/src/components/shared/dashboard-shell.tsx:58-66`
+**Issue:** Unchanged from iteration 1 (`await import("@tanstack/react-query")` is imported but
+never used — no `queryClient.clear()` call). Still present verbatim; out of the 5-Warning fix
+scope for this iteration.
+**Fix:** Delete the unused import and its explanatory comment line; `window.location.href`
+already resets all client state via full navigation.
 
 ### IN-02: Setup wizard re-reads/re-encodes the logo file on submit instead of reusing the cached preview
 
-**File:** `web/src/app/setup/page.tsx:75, 93`
-**Issue:** `handleLogoChange` already computes `logoPreview` via `readFileAsDataUrl(file)`
-and stores it in state. `onSubmit` then calls `readFileAsDataUrl(logoFile)` again for the
-same `File` object to build the payload, redundantly re-running `FileReader` on an
-already-encoded value.
-**Fix:** Reuse `logoPreview` directly in the payload (`logo: logoPreview`) instead of
-re-invoking `readFileAsDataUrl`.
+**File:** `web/src/app/setup/page.tsx:76, 94`
+**Issue:** Unchanged from iteration 1. `handleLogoChange` already computes `logoPreview` via
+`readFileAsDataUrl(file)`; `onSubmit` redundantly re-invokes `readFileAsDataUrl(logoFile)` for
+the same `File`.
+**Fix:** Reuse `logoPreview` directly in the payload (`logo: logoPreview`).
 
 ### IN-03: Wizard "progress" percentage is purely decorative and starts at 33% before any user action
 
-**File:** `web/src/app/setup/page.tsx:48-50, 267-271`
-**Issue:** `wizardProgress` is `33` at `"idle"` (i.e., on initial page load, before the user
-has typed anything), `66` while submitting, `100` on success. It doesn't track the 3 listed
-steps ("Criação do tenant" / "Criação do admin" / "Fecho do wizard") which all happen inside
-a single network call — it's cosmetic only, and showing 33% before any input is entered can
-read as "a third of the work is already done."
+**File:** `web/src/app/setup/page.tsx:49-51, 268-272`
+**Issue:** Unchanged from iteration 1. `wizardProgress` is `33` at `"idle"` (on initial page
+load, before any input), `66` while submitting, `100` on success — cosmetic only, not tied to
+the 3 listed steps.
 **Fix:** Either relabel as a phase indicator instead of a percentage, or start at `0` for
 `"idle"`.
 
 ### IN-04: Non-functional placeholder "Suporte" link
 
-**File:** `web/src/components/shared/dashboard-shell.tsx:123-129, 183-189`
-**Issue:** `<Link href="#">` with a `LifeBuoy` icon and "Suporte" label does nothing when
-clicked, duplicated in both the desktop aside and mobile Sheet.
-**Fix:** Wire it to a real destination, or remove/disable it until implemented, to avoid a
-dead-end UI affordance in a shipped feature.
+**File:** `web/src/components/shared/sidebar-nav.tsx:68-74`
+**Issue:** Still present — `<Link href="#">` with a `LifeBuoy` icon and "Suporte" label does
+nothing when clicked. The WR-03 extraction moved this from two duplicated locations in
+`dashboard-shell.tsx` down to one location in `sidebar-nav.tsx` (an improvement — only one
+copy to fix now — but the underlying dead-end affordance itself was not addressed, since it
+was out of the WR-03 finding's scope).
+**Fix:** Wire it to a real destination, or remove/disable it until implemented.
 
 ### IN-05: Header search input is presentation-only
 
-**File:** `web/src/components/shared/dashboard-shell.tsx:212-218`
-**Issue:** The `<Input placeholder="Pesquisar processos, entidades...">` has no `value`,
-`onChange`, or submit handling — typing into it does nothing.
-**Fix:** Either wire it up to real search behavior or, if intentionally deferred to a later
-phase, note that explicitly (e.g., `disabled` + tooltip) so it doesn't read as a broken
-feature.
+**File:** `web/src/components/shared/dashboard-shell.tsx:113-117`
+**Issue:** Unchanged from iteration 1. The `<Input placeholder="Pesquisar processos,
+entidades...">` has no `value`, `onChange`, or submit handling.
+**Fix:** Wire it up to real search behavior, or mark it `disabled` with a tooltip if
+intentionally deferred.
 
-### IN-06: No maximum length on password fields
+### IN-06: New dead code — unused default export in `sidebar-nav.tsx`
 
-**File:** `web/src/schemas/setup.ts:10-16` (consumed by `web/src/app/setup/page.tsx:236-247, 250-261`)
-**Issue:** `adminPassword`/`confirmPassword` only enforce a *minimum* complexity via regex;
-there's no upper bound, so a client could submit an arbitrarily large string as a "password"
-to the pre-auth `/setup/initialize` endpoint.
-**Fix:** Add `.max(128)` (or similar) to both fields, consistent with common password-length
-guidance (e.g. ASVS V2.1.2), and to bound payload/hash-cost size for what is effectively an
-unauthenticated bootstrap endpoint.
+**File:** `web/src/components/shared/sidebar-nav.tsx:81`
+**Issue:** The new file adds `export default SidebarNav;` in addition to the named
+`export function SidebarNav`, but the only consumer (`dashboard-shell.tsx`) imports it via the
+named import (`import { SidebarNav, type NavItem } from "@/components/shared/sidebar-nav"`).
+Grepped the whole `src/` tree — no default import of this module exists anywhere. The default
+export is unreachable dead code introduced by this iteration's WR-03 fix (mirrors an identical
+pre-existing pattern in `notification-bell.tsx:183`, which is also unused, but that one
+predates this phase).
+**Fix:** Drop the default export; keep only the named export, consistent with `UserMenu`'s
+pattern in the same directory.
 
-### IN-07: `returnUrl` open-redirect risk in the flow `DashboardShell` feeds into (adjacent file, flagged for awareness)
+### IN-07: `Settings` link's active-state check remains exact-match only, now inconsistent with the just-generalized `NAV` item check in the same file
 
-**File:** `web/src/app/(auth)/login/page.tsx:46` (outside this review's 4-file scope; found by
-tracing `web/src/components/shared/dashboard-shell.tsx:58-63`, which constructs the redirect)
-**Issue:** `DashboardShell`'s auth-redirect effect safely builds
-`` `/login?returnUrl=${encodeURIComponent(currentPath)}` `` from the app's own current route
-— that part is fine. But the consumer, `login/page.tsx`, accepts any `returnUrl` query
-param and only checks `returnUrl.startsWith("/")` before calling `router.replace(returnUrl)`.
-That check does not exclude protocol-relative values like `//evil.com`, which also start
-with `/` and are treated by browsers as absolute URLs, enabling an open redirect after a
-successful login via a crafted link
-(`/login?returnUrl=%2F%2Fevil.com`). The codebase already has a hardened pattern for exactly
-this class of bug (`isInternalLinkUrl` in `web/src/lib/notificacao-categoria.ts:106-113`,
-whose doc comment explicitly documents having been bypassed twice by protocol-relative and
-backslash variants before landing on a URL-parser-based sentinel check). Recommend applying
-the same pattern to the login redirect. Not counted in this review's Warning/Critical totals
-since the vulnerable line lives outside the 4 files in scope for this phase — flagging for
-separate follow-up.
+**File:** `web/src/components/shared/sidebar-nav.tsx:33` vs `60`
+**Issue:** WR-04 generalized the `nav` prop's item loop to
+`pathname === item.href || pathname.startsWith(\`${item.href}/\`)` (line 33), but the
+hardcoded `/settings` link a few lines below it (line 60) was left as
+`pathname === "/settings"` only — the exact same pattern WR-04 just fixed, in the exact same
+component, one scroll away. Currently harmless (there is no nested `/settings/*` route today —
+confirmed via `find web/src/app/**/settings`), but it is a latent inconsistency: if a nested
+settings route is added later (e.g. `/settings/security`), the "Configurações" sidebar item
+will silently stop highlighting as active while every other nav item would correctly stay
+highlighted for its own nested routes.
+**Fix:** Apply the same generalized check for consistency:
+```tsx
+const settingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
+```
+
+### IN-08: Logo file input's `accept` attribute wasn't narrowed to match the WR-05 MIME allowlist
+
+**File:** `web/src/app/setup/page.tsx:214`
+**Issue:** WR-05 correctly tightened the *validation* logic (`ALLOWED_LOGO_TYPES` allowlist
+check in `handleLogoChange`) to reject anything other than PNG/JPEG/WEBP, but the underlying
+`<Input id="logo" type="file" accept="image/*" ...>` still advertises `image/*` to the OS file
+picker. A user can still select an SVG (or any other image type) in the picker; it's only
+rejected *after* selection, via the JS validation added by WR-05. Not a security regression
+(WR-05's allowlist check still runs and still blocks it), but an incomplete fix from a UX
+standpoint — the picker itself should steer users toward valid formats.
+**Fix:**
+```tsx
+<Input id="logo" type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoChange} />
+```
+
+### IN-09 (adjacent file, flagged for awareness): No maximum length on password fields
+
+**File:** `web/src/schemas/setup.ts:10-16` (consumed by `web/src/app/setup/page.tsx:238-249,
+252-263`) — outside this review's 5-file scope, carried over from iteration 1's IN-06,
+confirmed still unresolved and unrelated to any of the 5 fix commits.
+**Issue:** `adminPassword`/`confirmPassword` only enforce a *minimum* complexity via regex; no
+upper bound, so a client could submit an arbitrarily large string to the pre-auth
+`/setup/initialize` endpoint.
+**Fix:** Add `.max(128)` (or similar) to both fields.
+
+### IN-10 (adjacent file, flagged for awareness): `returnUrl` open-redirect risk in the flow `DashboardShell` feeds into
+
+**File:** `web/src/app/(auth)/login/page.tsx:46` — outside this review's 5-file scope, carried
+over from iteration 1's IN-07, confirmed still present, unrelated to any of the 5 fix commits.
+**Issue:** `login/page.tsx` accepts any `returnUrl` query param and only checks
+`returnUrl.startsWith("/")` before calling `router.replace(returnUrl)`. This does not exclude
+protocol-relative values like `//evil.com`, enabling an open redirect after login via a
+crafted link. `dashboard-shell.tsx`'s own construction of `returnUrl` (from the app's own
+current route) is safe; the vulnerable code is the *consumer* in `login/page.tsx`.
+**Fix:** Apply the same hardened pattern already used elsewhere in this codebase
+(`isInternalLinkUrl` in `web/src/lib/notificacao-categoria.ts:106-113`) to the login redirect.
+
+### IN-11 (adjacent file, flagged for awareness): `bottom-nav.tsx` still has the pre-generalization active-route pattern, now inconsistent with `sidebar-nav.tsx`
+
+**File:** `web/src/components/shared/bottom-nav.tsx:23` — outside this review's 5-file scope.
+Per `109-REVIEW-FIX.md`, this was a deliberate, explicitly-noted scope decision (its own
+separate `BOTTOM_NAV` array, not part of the WR-04 finding's cited file/line range), not an
+oversight.
+**Issue:**
+```tsx
+const active = pathname === item.href || (item.href === "/processos" && pathname.startsWith("/processos/dashboard"));
+```
+This is the exact pattern WR-04 just fixed in `sidebar-nav.tsx`. The two navigation surfaces
+now behave inconsistently on mobile: the hamburger-drawer `SidebarNav` correctly highlights any
+nested route (e.g. `/clientes/abc-123`), while the persistent bottom tab bar
+(`bottom-nav.tsx`, visible on the same mobile viewport, `flex md:hidden`) does not — visiting
+`/clientes/abc-123` leaves the bottom nav's "Clientes" tab unhighlighted while the drawer (if
+opened) would show it highlighted.
+**Fix:** Apply the same generalized check to `bottom-nav.tsx:23` for consistency across both
+mobile nav surfaces:
+```tsx
+const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+```
 
 ---
 
-_Reviewed: 2026-07-17T14:23:05Z_
+_Reviewed: 2026-07-17T16:10:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Iteration: 2 (supersedes 109-REVIEW.md iteration 1)_
