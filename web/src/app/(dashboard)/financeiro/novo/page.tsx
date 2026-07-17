@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCreateHonorario } from "@/hooks/use-financeiro";
 import { toast } from "@/hooks/use-toast";
@@ -18,14 +19,11 @@ import { useProcessos } from "@/hooks/use-processos";
 import { honorarioFormSchema, type HonorarioFormValues } from "@/schemas/financeiro";
 import type { HonorarioCreateRequest } from "@/types/financeiro";
 
-const selectClassName =
-  "flex h-9 w-full rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:focus-visible:ring-neutral-300";
-
 export default function HonorarioCreatePage() {
   const permissions = usePermissions();
   const canCreateFinanceiro = permissions.can.create("financeiro");
 
-  if (!permissions.isLoading && !canCreateFinanceiro) {
+  if (permissions.isFetched && !canCreateFinanceiro) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar honorários."
@@ -101,9 +99,9 @@ function HonorarioCreateContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="processoId">Processo</Label>
-              <select
-                id="processoId"
-                className={selectClassName}
+              <NativeSelect id="processoId"
+                size="default"
+                className="w-full"
                 disabled={processos.isPending || processos.isError}
                 {...form.register("processoId")}
               >
@@ -119,7 +117,7 @@ function HonorarioCreateContent() {
                     {p.numero || p.titulo || "Sem número"}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               {processos.isError ? (
                 <p className="text-sm text-red-600">
                   {processos.error instanceof Error
