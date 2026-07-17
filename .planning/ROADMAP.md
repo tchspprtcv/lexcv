@@ -15,7 +15,7 @@
 - ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
 - ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
 - ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
-- 🚧 **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (Phases 101-102 completas, 103+ pendente)
+- 🚧 **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (Phases 101-109 completas, 110 pendente — última fase)
 
 ## Phases
 
@@ -512,8 +512,8 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 105. Módulos Clientes + Processos | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 106. Módulo Agenda | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 107. Módulos Documentos + Financeiro | v2.13 | 6/6 | Complete    | 2026-07-17 |
-| 108. Módulo Pareceres | v2.13 | 0/4 | Not started | - |
-| 109. Notificações / Settings / Setup Wizard | v2.13 | 0/3 | Not started | - |
+| 108. Módulo Pareceres | v2.13 | 4/4 | Complete    | 2026-07-17 |
+| 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
-**Next:** Phase 107 (Módulos Documentos + Financeiro) concluída — `Progress` oficial em 3 barras de upload duplicadas, `Combobox` partilhado (Popover+Command, 1ª composição do projeto) em 4 sítios (filtros fechados de Documentos + tipo criável nas abas de ficha), `Select` nos filtros do Financeiro, `NativeSelect` em confidencialidade/honorário, fix RBAC `isFetched` em 6 ficheiros, `DOF-V2-01` fechado. UAT ao vivo aprovado (Combobox em ambos os modos verificado end-to-end, RBAC em 2 papéis). Um bug pré-existente e grave no backend (upload de novo documento falha sempre com erro de optimistic locking do Hibernate) foi encontrado durante o UAT, diagnosticado até à causa-raiz e documentado em `107-06/deferred-items.md` — fora de âmbito desta fase (zero ficheiros backend tocados por qualquer plano), sinalizado como tarefa dedicada de alta prioridade. Run `/gsd:plan-phase 108` to continue.
+**Next:** Phase 109 (Notificações / Settings / Setup Wizard) concluída — menu de utilizador da topbar/sidebar/Sheet consolidado num `UserMenu` partilhado (1º consumidor real de `DropdownMenu`), contador de não-lidas do sino migrado para `Badge` (com um bug genuíno de cor em dark mode apanhado e corrigido pela revisão de código), wizard `/setup` com `Progress` a substituir o Checklist estático. Um componente `SidebarNav` partilhado adicional foi extraído durante a revisão de código para fechar um gap de duplicação que o revisor encontrou. NTF-28/29/30 fechados. Pipeline completo fechado: revisão de código (3 iterações, 7 findings de nível warning corrigidos), verificação goal-backward (13/14), auditoria de UI (18/24, 3 achados corrigidos). Causa-raiz encontrada para a instabilidade recorrente do Browser-pane nesta sessão (um bug real de hydration mismatch em `dashboard/page.tsx`, Phase 103) — já corrigido numa sessão independente, ainda não integrado no `master`. Run `/gsd:plan-phase 110` to continue (última fase do milestone v2.13).
