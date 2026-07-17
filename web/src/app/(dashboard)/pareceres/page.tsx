@@ -7,6 +7,7 @@ import { Filter, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
@@ -26,7 +27,7 @@ export default function ParecerPage() {
   const permissions = usePermissions();
   const canView = permissions.can.view("pareceres");
 
-  if (!permissions.isLoading && !canView) {
+  if (permissions.isFetched && !canView) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de pareceres."
@@ -42,9 +43,9 @@ function ParecerPageContent() {
   const permissions = usePermissions();
   const canCreatePareceres = permissions.can.create("pareceres");
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
-  const [draftStatus, setDraftStatus] = React.useState("");
-  const [draftAdvogadoId, setDraftAdvogadoId] = React.useState("");
-  const [draftClienteId, setDraftClienteId] = React.useState("");
+  const [draftStatus, setDraftStatus] = React.useState("todos");
+  const [draftAdvogadoId, setDraftAdvogadoId] = React.useState("todos");
+  const [draftClienteId, setDraftClienteId] = React.useState("todos");
   const [filters, setFilters] = React.useState<ParecerSolicitacoesListFilters>({});
 
   const [pesquisaOpen, setPesquisaOpen] = React.useState(false);
@@ -81,16 +82,16 @@ function ParecerPageContent() {
     e.preventDefault();
     setPesquisaSubmitted(false);
     setFilters({
-      status: draftStatus.trim(),
-      advogadoId: draftAdvogadoId.trim(),
-      clienteId: draftClienteId.trim(),
+      status: draftStatus === "todos" ? "" : draftStatus,
+      advogadoId: draftAdvogadoId === "todos" ? "" : draftAdvogadoId,
+      clienteId: draftClienteId === "todos" ? "" : draftClienteId,
     });
   };
 
   const onClear = () => {
-    setDraftStatus("");
-    setDraftAdvogadoId("");
-    setDraftClienteId("");
+    setDraftStatus("todos");
+    setDraftAdvogadoId("todos");
+    setDraftClienteId("todos");
     setFilters({});
   };
 
@@ -175,17 +176,18 @@ function ParecerPageContent() {
                     Estado
                   </div>
                   <div className="mt-2">
-                    <select
-                      value={draftStatus}
-                      onChange={(e) => setDraftStatus(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      <option value="PENDENTE">Pendente</option>
-                      <option value="EM_ELABORACAO">Em elaboração</option>
-                      <option value="EM_REVISAO">Em revisão</option>
-                      <option value="CONCLUIDO">Concluído</option>
-                    </select>
+                    <Select value={draftStatus} onValueChange={setDraftStatus}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="PENDENTE">Pendente</SelectItem>
+                        <SelectItem value="EM_ELABORACAO">Em elaboração</SelectItem>
+                        <SelectItem value="EM_REVISAO">Em revisão</SelectItem>
+                        <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="lg:col-span-4">
@@ -193,18 +195,19 @@ function ParecerPageContent() {
                     Advogado
                   </div>
                   <div className="mt-2">
-                    <select
-                      value={draftAdvogadoId}
-                      onChange={(e) => setDraftAdvogadoId(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      {advogados.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.nome}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={draftAdvogadoId} onValueChange={setDraftAdvogadoId}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        {advogados.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="lg:col-span-4">
@@ -212,18 +215,19 @@ function ParecerPageContent() {
                     Cliente
                   </div>
                   <div className="mt-2">
-                    <select
-                      value={draftClienteId}
-                      onChange={(e) => setDraftClienteId(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      {(clientes.data ?? []).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={draftClienteId} onValueChange={setDraftClienteId}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        {(clientes.data ?? []).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
