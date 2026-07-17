@@ -55,9 +55,9 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 
 ### Pareceres
 
-- [ ] **PARC-18**: Campos de formulário de Pareceres usam `Select`
-- [ ] **PARC-19**: Eventos da timeline de Pareceres usam `Tooltip`
-- [ ] **PARC-20**: Histórico de versionamento usa `Accordion` para colapsar versões antigas
+- [x] **PARC-18**: Campos de formulário de Pareceres usam `Select`
+- [x] **PARC-19**: Eventos da timeline de Pareceres usam `Tooltip`
+- [x] **PARC-20**: Histórico de versionamento usa `Accordion` para colapsar versões antigas
 
 ### Notificações / Settings / Setup
 
@@ -127,9 +127,9 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | AGD-37 | Phase 106 | Complete |
 | DOF-01 | Phase 107 | Complete |
 | DOF-02 | Phase 107 | Complete |
-| PARC-18 | Phase 108 | Pending |
-| PARC-19 | Phase 108 | Pending |
-| PARC-20 | Phase 108 | Pending |
+| PARC-18 | Phase 108 | Complete |
+| PARC-19 | Phase 108 | Complete |
+| PARC-20 | Phase 108 | Complete |
 | NTF-28 | Phase 109 | Pending |
 | NTF-29 | Phase 109 | Pending |
 | NTF-30 | Phase 109 | Pending |

@@ -413,10 +413,10 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   2. Os eventos da timeline de Pareceres mostram um `Tooltip`.
   3. O histórico de versionamento usa `Accordion` para colapsar versões antigas.
 **Plans**: 4 plans (2 waves)
-- [ ] 108-01-PLAN.md — Lista Pareceres: 6 filtros Radix Select (sentinela todos) + lógica de filtro + RBAC isFetched (Wave 1)
-- [ ] 108-02-PLAN.md — Form criar Parecer: 4 NativeSelect + remoção do selectClassName + RBAC isFetched (Wave 1)
-- [ ] 108-03-PLAN.md — Detalhe Parecer: NativeSelect do diálogo + timeline Tooltip/Accordion (1º consumidor de Accordion) + RBAC isFetched (Wave 1)
-- [ ] 108-04-PLAN.md — Gate holístico (build/lint/regressão) + checkpoint visual humano (Wave 2)
+- [x] 108-01-PLAN.md — Lista Pareceres: 6 filtros Radix Select (sentinela todos) + lógica de filtro + RBAC isFetched (Wave 1)
+- [x] 108-02-PLAN.md — Form criar Parecer: 4 NativeSelect + remoção do selectClassName + RBAC isFetched (Wave 1)
+- [x] 108-03-PLAN.md — Detalhe Parecer: NativeSelect do diálogo + timeline Tooltip/Accordion (1º consumidor de Accordion) + RBAC isFetched (Wave 1)
+- [x] 108-04-PLAN.md — Gate holístico (build/lint/regressão) + checkpoint visual humano (Wave 2)
 
 #### Phase 109: Notificações / Settings / Setup Wizard
 
