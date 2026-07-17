@@ -17,6 +17,7 @@ import { setupSchema, type SetupFormValues } from "@/schemas/setup";
 import type { SetupInitializeRequest, SetupInitializeResponse } from "@/types/setup";
 
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -59,8 +60,8 @@ export default function SetupPage() {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setLogoError("O logo deve ser uma imagem válida.");
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      setLogoError("O logo deve ser PNG, JPG ou WEBP.");
       event.target.value = "";
       return;
     }
