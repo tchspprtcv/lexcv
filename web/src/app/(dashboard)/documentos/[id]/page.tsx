@@ -22,7 +22,7 @@ export default function DocumentoDetailPage(props: PageProps) {
   const canViewDocumentos = permissions.can.view("documentos");
   const canEditDocumentos = permissions.can.edit("documentos");
 
-  if (!permissions.isLoading && !canViewDocumentos) {
+  if (permissions.isFetched && !canViewDocumentos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este documento."
