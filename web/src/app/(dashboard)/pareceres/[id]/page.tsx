@@ -16,11 +16,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
 import { useAdminUsers } from "@/hooks/use-admin";
@@ -80,7 +88,7 @@ export default function ParecerDetailPage({ params }: PageProps) {
   const permissions = usePermissions();
   const canView = permissions.can.view("pareceres");
 
-  if (!permissions.isLoading && !canView) {
+  if (permissions.isFetched && !canView) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de pareceres."
@@ -154,10 +162,26 @@ function ParecerDetailContent({
     Boolean(me?.roles.includes("ADMIN")) ||
     Boolean(parecer.data?.advogadoId && parecer.data.advogadoId === me?.id);
   const isConcluido = parecer.data?.status === "CONCLUIDO";
+
+  const sortedVersoes = React.useMemo(
+    () => [...(versoes.data ?? [])].sort((a, b) => b.numeroVersao - a.numeroVersao),
+    [versoes.data],
+  );
+  const defaultOpenVersaoId = isConcluido
+    ? (parecer.data?.versaoFinalId ?? sortedVersoes[0]?.id)
+    : sortedVersoes[0]?.id;
+
+  function versaoTooltipLabel(versao: ParecerVersao, index: number): string {
+    if (isConcluido) {
+      return versao.id === defaultOpenVersaoId ? "Versão entregue" : "Versão anterior";
+    }
+    return index === 0 ? "Versão atual" : "Versão anterior";
+  }
+
   const showNovaVersaoForm =
-    !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
+    permissions.isFetched && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
   const showEntregarTrigger =
-    !permissions.isLoading &&
+    permissions.isFetched &&
     !versoes.isLoading &&
     canEditPareceres &&
     isResponsavelOuAdmin &&
@@ -214,7 +238,7 @@ function ParecerDetailContent({
               </CardContent>
             </Card>
 
-            {permissions.isLoading ? (
+            {!permissions.isFetched ? (
               <Card>
                 <CardContent className="py-6">
                   <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12" />
@@ -261,47 +285,60 @@ function ParecerDetailContent({
                     </p>
                   </div>
                 ) : (
-                  <div className="relative">
-                    {[...versoes.data].sort((a, b) => b.numeroVersao - a.numeroVersao).map((versao, index, sorted) => {
-                      const isLast = index === sorted.length - 1;
+                  <Accordion type="single" collapsible defaultValue={defaultOpenVersaoId} className="relative">
+                    {sortedVersoes.map((versao, index) => {
+                      const isLast = index === sortedVersoes.length - 1;
                       const autorNome = versao.criadoPorId ? resolveUserNome(versao.criadoPorId) : "—";
                       return (
-                        <div key={versao.id} className="relative flex gap-3 py-4">
-                          <div className="relative flex flex-col items-center">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400 dark:bg-slate-500" />
+                        <div key={versao.id} className="relative flex gap-3">
+                          <div className="relative flex flex-col items-center pt-4">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  tabIndex={0}
+                                  aria-label={versaoTooltipLabel(versao, index)}
+                                  className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-400 dark:bg-slate-500"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>{versaoTooltipLabel(versao, index)}</TooltipContent>
+                            </Tooltip>
                             {!isLast ? (
                               <div className="absolute top-3 bottom-0 left-[5px] w-0.5 bg-slate-200 dark:bg-slate-700" />
                             ) : null}
                           </div>
-                          <div className="min-w-0 flex-1 pb-4">
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                Versão {versao.numeroVersao}
+                          <AccordionItem value={versao.id} className="min-w-0 flex-1">
+                            <AccordionTrigger>
+                              <div className="flex items-center justify-between gap-2 flex-wrap w-full pr-2">
+                                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                  Versão {versao.numeroVersao}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  {formatDateTime(versao.createdAt)}
+                                </p>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
+                                {autorNome}
                               </p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {formatDateTime(versao.createdAt)}
-                              </p>
-                            </div>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">
-                              {autorNome}
-                            </p>
-                            {versao.conteudo ? (
-                              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
-                                {versao.conteudo}
-                              </p>
-                            ) : null}
-                            <div className="mt-2">
-                              <AnexoLink
-                                solicitacaoId={id}
-                                versaoId={versao.id}
-                                caminhoAnexo={versao.caminhoAnexo}
-                              />
-                            </div>
-                          </div>
+                              {versao.conteudo ? (
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">
+                                  {versao.conteudo}
+                                </p>
+                              ) : null}
+                              <div className="mt-2">
+                                <AnexoLink
+                                  solicitacaoId={id}
+                                  versaoId={versao.id}
+                                  caminhoAnexo={versao.caminhoAnexo}
+                                />
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
                         </div>
                       );
                     })}
-                  </div>
+                  </Accordion>
                 )}
               </CardContent>
             </Card>
@@ -489,9 +526,9 @@ function EntregarParecerDialog({
 
         <div className="space-y-2">
           <Label htmlFor="versaoFinalId">Selecione a versão a entregar como final:</Label>
-          <select
-            id="versaoFinalId"
-            className="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm dark:border-neutral-800"
+          <NativeSelect id="versaoFinalId"
+            size="default"
+            className="w-full"
             value={selectedVersaoId ?? ""}
             onChange={(e) => setSelectedVersaoId(e.target.value)}
             disabled={entregar.isPending}
@@ -501,7 +538,7 @@ function EntregarParecerDialog({
                 Versão {versao.numeroVersao} — {formatDateTime(versao.createdAt)}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         {entregaError ? <p className="text-sm text-red-600 px-1">{entregaError}</p> : null}
