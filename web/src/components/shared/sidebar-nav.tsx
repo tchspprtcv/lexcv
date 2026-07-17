@@ -30,8 +30,7 @@ export function SidebarNav({ nav, pathname, permissions }: SidebarNavProps) {
     <>
       <nav className="px-3 space-y-1 mt-4">
         {nav.filter((item) => hasPermission(permissions, item.requiredPermission)).map((item) => {
-          const active =
-            pathname === item.href || (item.href === "/processos" && pathname.startsWith("/processos/dashboard"));
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link
