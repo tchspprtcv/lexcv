@@ -1,308 +1,162 @@
 ---
 phase: LEXCV-108-m-dulo-pareceres
-reviewed: 2026-07-17T12:00:00Z
+reviewed: 2026-07-17T15:00:00Z
 depth: standard
-files_reviewed: 3
+files_reviewed: 5
 files_reviewed_list:
   - web/src/app/(dashboard)/pareceres/page.tsx
   - web/src/app/(dashboard)/pareceres/nova/page.tsx
   - web/src/app/(dashboard)/pareceres/[id]/page.tsx
+  - web/src/hooks/use-pareceres.ts
+  - web/src/lib/pareceres.ts
 findings:
-  critical: 1
-  warning: 7
-  info: 4
-  total: 12
+  critical: 0
+  warning: 1
+  info: 5
+  total: 6
 status: issues_found
 ---
 
-# Phase LEXCV-108: Code Review Report
+# Phase LEXCV-108: Code Review Report (Iteration 2 — Re-review)
 
-**Reviewed:** 2026-07-17T12:00:00Z
+**Reviewed:** 2026-07-17T15:00:00Z
 **Depth:** standard
-**Files Reviewed:** 3
+**Files Reviewed:** 5
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the three Pareceres (legal-opinion request) pages: the list/search page, the creation
-form, and the detail page (with its nested "Nova Versão" and "Entregar Parecer" flows). The
-permission gating (`usePermissions().can.*`) consistently mirrors the backend's
-`@PreAuthorize` scopes (`pareceres:view/create/edit`) and the "responsável ou ADMIN" business
-rule for delivering/versioning a parecer, which is a real strength — both layers agree, per
-project convention.
+This is a re-review of the Pareceres module after commits c871554, 16edcb5, 4598c80, 4c48a41,
+70c0a7b, f83c711, 9baf465, 1d319c0 claimed to fix all 8 findings (1 critical, 7 warning) from the
+first-pass review (`108-REVIEW.md` iteration 1). This pass re-verifies each of the 8 fixes line by
+line against the current code, specifically checks whether any fix introduced a new regression, and
+takes a fresh adversarial look at all five files (the three page components plus the two now-included
+support modules, `hooks/use-pareceres.ts` and `lib/pareceres.ts`).
 
-The most significant defect is in the "Entregar Parecer" (deliver final opinion) dialog: it
-picks the *last array element* of an unsorted `versoes` list as the default final version, while
-the same file explicitly distrusts that same array's order everywhere else (it re-sorts by
-`numeroVersao` for the visible history). The backend repository method backing this list has no
-`ORDER BY`, so nothing guarantees the last element is actually the newest version — for an action
-the UI itself describes as irreversible. Several further issues affect date-display correctness,
-a stale-state UI trap for the version-selection accordion, an inconsistent error-message path for
-file uploads, and inactive users remaining selectable as "advogado responsável."
+**Fix verification result: all 8 fixes are correctly and completely applied, with no regressions
+found**, including one fix (WR-06) that received deep scrutiny because it touches a shared helper
+(`formatDate`) used for two structurally different kinds of values (date-only `prazo` strings vs.
+full `createdAt` timestamps) — tracing through the ECMAScript Date Time String Format rules confirms
+the new regex-based parsing produces byte-identical Y/M/D output to the pre-fix `new Date(v)` path for
+timestamp strings (which were never affected by the original bug, since date-*time* strings without an
+offset are parsed as local time, not UTC, per spec), so no new day-shift bug was introduced for
+`createdAt` displays. Detail on all 8 verifications is below.
 
-## Critical Issues
+The fresh look surfaced one new Warning: `EntregarParecerDialog`'s local "which version to deliver"
+selection state is never reset when the dialog is cancelled and reopened, so a manually-picked
+(possibly non-newest) version silently persists as the pre-selected default on the next open — a
+residual risk in the same "irreversible delivery" flow that CR-01 hardened, just via a different
+mechanism (stale component state instead of unsorted array order). One new Info-level accessibility
+gap was also found (a subset of Pesquisa Avançada's `<label>`s were left unpaired, out of WR-07's
+original scope). The four Info items from iteration 1 (IN-01 through IN-04) were intentionally left
+unfixed per the requested fix scope and remain present, unchanged — they are carried forward below
+for completeness since this document supersedes the iteration-1 review.
 
-### CR-01: "Entregar Parecer" default final version relies on unsorted/unguaranteed array order
+## Fix Verification (Iteration 1 → Iteration 2)
 
-**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:260,465-541`
-
-**Issue:**
-`EntregarParecerDialog` is passed the raw `versoes.data` (not the parent's already-sorted
-`sortedVersoes`):
-
-```tsx
-// line 260
-{showEntregarTrigger ? (
-  <EntregarParecerDialog solicitacaoId={id} versoes={versoes.data} />
-) : null}
-```
-
-Inside the dialog, the default version to deliver as final is derived by indexing the *last*
-element of that raw array:
-
-```tsx
-// lines 476-477
-const defaultVersaoId = versoes && versoes.length > 0 ? versoes[versoes.length - 1].id : null;
-const selectedVersaoId = selectedVersaoIdState ?? defaultVersaoId;
-```
-
-and the `<option>` list at lines 536-540 is rendered in that same raw, unsorted order.
-
-This assumes the API always returns versions in ascending `numeroVersao`/creation order, but:
-- The backend repository call backing this data, `ParecerVersaoRepository.findBySolicitacaoId`,
-  is a plain Spring Data derived query with **no `@Query`/`ORDER BY`** — JPA/Hibernate makes no
-  ordering guarantee for a query without an explicit `ORDER BY` clause.
-- The same file already treats this exact data as unordered elsewhere: `sortedVersoes` (lines
-  166-169) explicitly re-sorts `versoes.data` by `numeroVersao` descending before rendering the
-  "Histórico de Versões" panel, specifically because the raw order can't be trusted.
-
-If the raw order ever deviates from creation order (e.g. due to a query plan change, a future
-`ORDER BY id` addition to the repository, or any other backend change), the dialog will silently
-pre-select an old version as the "final" one. The delivery action is explicitly described in the
-UI as irreversible ("Esta ação é irreversível. Depois de entregue, o parecer não pode receber
-novas versões nem ser reaberto."), so a user who trusts the default and clicks "Confirmar Entrega"
-without manually re-checking the dropdown could deliver the wrong version as the client's final
-legal opinion, with no way to undo it.
-
-**Fix:** Derive the default (and the option order) from an explicit sort by `numeroVersao`, reusing
-the same logic already used for `sortedVersoes`, and pass that into the dialog instead of the raw
-array:
-
-```tsx
-// call site
-<EntregarParecerDialog solicitacaoId={id} versoes={sortedVersoes} />
-
-// inside EntregarParecerDialog — versoes is now sorted descending (highest first)
-const defaultVersaoId = versoes && versoes.length > 0 ? versoes[0].id : null;
-```
-
-(Optionally also add an explicit `ORDER BY numero_versao` — e.g.
-`@Query("... ORDER BY v.numeroVersao DESC")` — to `ParecerVersaoRepository.findBySolicitacaoId` on
-the backend, so the guarantee doesn't rely solely on the frontend's sort.)
+| ID | Description | Status |
+|----|--------------|--------|
+| CR-01 | "Entregar Parecer" default final version relied on unsorted array order | **Fixed correctly.** `[id]/page.tsx:261` now passes `sortedVersoes` (descending by `numeroVersao`) into `EntregarParecerDialog`; the dialog's `defaultVersaoId` now reads `versoes[0].id` (line 483), which is the newest version given the descending sort. The `<option>` list (lines 543-547) iterates the same sorted prop. Verified no other call site still passes the raw `versoes.data` in a way that matters (the one remaining raw-array consumer, `ParecerEntregueBlock`, only does an `.find()` by id, so order is irrelevant there). |
+| WR-01 | Advanced-search query fired unconditionally before the panel was used | **Fixed correctly.** `usePesquisarPareceres` (`use-pareceres.ts:60-64`) now takes an `options.enabled` param folded into its own `enabled` computation; `page.tsx:74` passes `{ enabled: pesquisaSubmitted }`. Confirmed `usePesquisarPareceres` has exactly one call site so the signature change is safe. `pesquisaSubmitted` is correctly reset to `false` by both `onApply` (line 83) and `onLimparPesquisa` (line 125), so switching back to the plain filter list also disables the search query. |
+| WR-02 | Advogado pickers didn't exclude inactive users | **Fixed correctly** in both files (`page.tsx:64`, `nova/page.tsx:77`): `.filter((u) => u.roles?.includes("ADVOGADO") && u.ativo !== false)`. Confirmed `MockUser.ativo` is `boolean | undefined` (`server/mock-db.ts:38`), so `!== false` correctly treats "unset" as active, matching the project convention. |
+| WR-03 | `setValue("processoId", undefined)` on a native select | **Fixed correctly.** `nova/page.tsx:72` now sets `""`. Confirmed the schema's `optionalTrimmedString.transform((v) => (v.length ? v : undefined))` (`schemas/pareceres.ts:7-11`) converts `""` back to `undefined` in the parsed *output* passed to `onSubmit`, so the payload sent to `useCreateParecer` is unaffected — no create-request regression (`processoId` is correctly omitted server-side when left as the placeholder). |
+| WR-04 | Version-history accordion's default-open item didn't update after "Entregar" | **Fixed correctly.** `[id]/page.tsx:290` adds `key={defaultOpenVersaoId}` to force a remount whenever the intended default-open item changes. Confirmed the Accordion is only ever rendered once `versoes.data` is loaded and non-empty (guarded by the surrounding `versoes.isLoading` / `!versoes.data?.length` branches), so there's no intermediate render with an `undefined` key that would cause an extra remount flash. |
+| WR-05 | Upload-failure path discarded the backend's validation message | **Fixed correctly.** `use-pareceres.ts:165-182`'s `xhr.onload` failure branch now parses `xhr.responseText` as JSON and rejects with `json?.message || json?.error`, falling back to the generic `API {status}` string only if the body isn't valid JSON — matching `apiFetch`'s error-surfacing convention. |
+| WR-06 | `formatDate` mis-displayed date-only `prazo` by one day in CV's timezone | **Fixed correctly in both copies** (`lib/pareceres.ts:3-9` and the duplicate in `[id]/page.tsx:67-73`), and **verified not to regress `createdAt`/full-timestamp displays** that also flow through this same helper (`page.tsx:427`, `columns.tsx:74`): per the ECMA-262 Date Time String Format, a date-*time* string without a UTC offset (which is what the backend's `LocalDateTime` serializes to, e.g. `"2026-07-17T14:23:45.123"`) is parsed as **local** time, not UTC — so the Y/M/D digits `new Date(v)` would have produced are identical to the Y/M/D digits the new regex now extracts directly. Only true date-*only* strings (`YYYY-MM-DD`, i.e. `prazo`) were ever parsed as UTC-midnight, and those are exactly what the fix targets. No new bug introduced. |
+| WR-07 | Bare `<label>`s without `htmlFor`/`id` in Pesquisa Avançada | **Fixed correctly for the 3 elements originally cited**: `pesquisa-texto` (`page.tsx:246,253`), `pesquisa-data-inicio` and `pesquisa-data-fim` (`page.tsx:327-339`) all now have matching `id`/`htmlFor`. Note: the *other* bare `<label>`s in the same panel (Cliente/Advogado/Estado, wrapping `Select` components) were not part of the original finding's scope and remain unpaired — see IN-05 below. |
 
 ## Warnings
 
-### WR-01: Advanced-search query fires unconditionally, even before the panel is opened
+### WR-08: `EntregarParecerDialog`'s selected-version state is never reset on cancel/reopen, allowing a stale non-default pick to silently persist
 
-**File:** `web/src/app/(dashboard)/pareceres/page.tsx:73-74`
+**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:480,484`
 
-**Issue:**
+**Issue:** `EntregarParecerDialog` holds its "which version to deliver" choice in local state that
+outlives the dialog's own open/close cycle, because the state is declared in the outer component
+(mounted for as long as `showEntregarTrigger` is true), not inside the conditionally-rendered dialog
+content:
+
 ```tsx
-const pareceres = usePareceres(filters);
-const pesquisa = usePesquisarPareceres(pesquisaFilters);
-```
-Both hooks are `enabled: typeof window !== "undefined"` only (see `hooks/use-pareceres.ts`), so
-`usePesquisarPareceres` fires a request to `/pareceres/pesquisa` on every mount and on every
-`pesquisaFilters` change — regardless of whether the user has ever opened "Pesquisa Avançada" or
-clicked "Pesquisar" (`pesquisaOpen`/`pesquisaSubmitted` are not part of the `enabled` condition).
-This means the page always issues two list requests instead of one, and continues issuing the
-second one in the background even while the search UI is fully hidden.
-
-**Fix:** Gate the search query by whether it has actually been used, e.g. extend the hook to accept
-an `enabled` option and pass `pesquisaSubmitted`:
-```tsx
-const pesquisa = usePesquisarPareceres(pesquisaFilters, { enabled: pesquisaSubmitted });
-```
-
-### WR-02: "Advogado" pickers don't exclude inactive users
-
-**File:** `web/src/app/(dashboard)/pareceres/page.tsx:63-66`, `web/src/app/(dashboard)/pareceres/nova/page.tsx:76-79`
-
-**Issue:** Both files derive the advogado list the same way:
-```tsx
-const advogados = React.useMemo(
-  () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
-  [adminUsers.data],
-);
-```
-This does not filter out deactivated users (`u.ativo === false`), even though `MockUser.ativo` is
-available and `web/src/app/(dashboard)/processos/[id]/page.tsx` already establishes the project
-convention of filtering with `.filter((u) => u.ativo !== false)` for equivalent
-responsible-user pickers. The backend's `ParecerController.validateAdvogado` explicitly rejects a
-deactivated advogado (`Boolean.FALSE.equals(user.getAtivo())`), so today a user can select an
-inactive advogado in "Nova Solicitação de Parecer" and only find out it's invalid after submitting,
-via a generic 400 response ("advogadoId não pertence a este tenant, não tem papel ADVOGADO ou está
-inativo"). The same unfiltered list is also offered in the list page's advanced-filter dropdown.
-
-**Fix:**
-```tsx
-const advogados = React.useMemo(
-  () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO") && u.ativo !== false),
-  [adminUsers.data],
-);
-```
-
-### WR-03: Clearing `processoId` via `setValue(..., undefined)` on a native select
-
-**File:** `web/src/app/(dashboard)/pareceres/nova/page.tsx:71-74`
-
-**Issue:**
-```tsx
-React.useEffect(() => {
-  form.setValue("processoId", undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [clienteIdValue]);
-```
-`processoId` is bound to a native `<select>` via `register()`, whose first option has
-`value=""` ("Nenhum processo associado"). Assigning `undefined` to a DOM `<select>`'s `.value`
-coerces to the string `"undefined"`, which matches no `<option>`, so the browser can end up with no
-option visually selected (`selectedIndex === -1`) instead of falling back to the intended
-placeholder option. Using `""` is the well-known-safe way to reset a registered select/text field in
-react-hook-form.
-
-**Fix:**
-```tsx
-form.setValue("processoId", "");
-```
-
-### WR-04: Version-history accordion's default open item does not update after "Entregar"
-
-**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:288`
-
-**Issue:**
-```tsx
-<Accordion type="single" collapsible defaultValue={defaultOpenVersaoId} className="relative">
-```
-`defaultValue` is an *uncontrolled* prop — Radix (like a native `<details>`) only reads it once, at
-mount, to seed internal state; later re-renders with a different `defaultOpenVersaoId` do not
-re-open a different item. Concretely: while the parecer is still open, the accordion mounts with
-the newest version expanded (`sortedVersoes[0]`). After the user calls "Entregar Parecer" choosing
-an *older* version as the final one, `isConcluido` flips to `true` and `defaultOpenVersaoId`
-recomputes to `parecer.data.versaoFinalId`, but the already-mounted accordion keeps the previously
-expanded (newest, non-final) version open rather than auto-expanding the delivered version.
-
-**Fix:** Make the accordion controlled (`value`/`onValueChange`) or force remount on delivery, e.g.
-`<Accordion key={defaultOpenVersaoId} ... defaultValue={defaultOpenVersaoId}>`.
-
-### WR-05: Version-upload failures lose the backend's validation message
-
-**File:** `web/src/hooks/use-pareceres.ts:162-171` (surfaces in `web/src/app/(dashboard)/pareceres/[id]/page.tsx:378-386`)
-
-**Issue:** Every other mutation in this module (and the app) goes through `apiFetch`, which parses
-the response body and surfaces the backend's `message`/`error` field (e.g. "É necessário fornecer
-conteúdo ou anexo"). `useCreateParecerVersao` instead uses a raw `XMLHttpRequest` (needed for
-upload-progress events) whose failure handler discards the body entirely:
-```ts
-xhr.onload = () => {
-  if (xhr.status >= 200 && xhr.status < 300) { ... }
-  else {
-    reject(new Error(`API ${xhr.status}`));
-  }
-};
-```
-As a result, `NovaVersaoForm`'s catch block (`pareceres/[id]/page.tsx:378-386`) shows the user a
-bare `"API 400"`-style message instead of the actual validation reason, which is a visible
-regression in error-message quality specific to this one upload path.
-
-**Fix:** Parse `xhr.responseText` on failure the same way `apiFetch` does, and reject with that
-message:
-```ts
-xhr.onload = () => {
-  if (xhr.status >= 200 && xhr.status < 300) {
-    try { resolve(JSON.parse(xhr.responseText) as ParecerVersao); }
-    catch { reject(new Error("Resposta inválida do servidor")); }
-    return;
-  }
-  let message = `API ${xhr.status}`;
-  try {
-    const json = JSON.parse(xhr.responseText);
-    message = json?.message || json?.error || message;
-  } catch { /* not JSON */ }
-  reject(new Error(message));
-};
-```
-
-### WR-06: `formatDate` mis-displays date-only `prazo` values by one day in Cape Verde's timezone
-
-**File:** `web/src/lib/pareceres.ts:3-8` (imported by `page.tsx`/`columns.tsx`); duplicated at `web/src/app/(dashboard)/pareceres/[id]/page.tsx:67-72`
-
-**Issue:**
-```ts
-export function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-```
-`prazo` is a date-only string (`YYYY-MM-DD`, produced by `<input type="date">` in
-`nova/page.tsx:170-176`). Per the ECMAScript Date Time String Format, a date-only string with no
-explicit timezone is parsed as **UTC midnight**, not local midnight. `toLocaleDateString("pt-CV")`
-then renders that instant in the browser's local timezone. Cape Verde is UTC−01:00 year-round (no
-DST), so `new Date("2026-07-20").toLocaleDateString("pt-CV")` renders **"19/07/2026"** — one day
-before the stored deadline — for any user whose browser timezone is Atlantic/Cape_Verde. In a
-legal-deadline ("Prazo") context this is a meaningful correctness issue, not just cosmetic. (This
-exact helper is duplicated verbatim in `processos/[id]/page.tsx` and `financeiro/[id]/page.tsx`
-too, so it's a pre-existing, systemic pattern this phase reproduces rather than a novel regression
-— but it is present, and doubly so, in the reviewed files.)
-
-**Fix:** For date-only values, parse the components explicitly instead of handing the raw string to
-`Date`:
-```ts
-export function formatDate(v: string | undefined) {
-  if (!v) return "—";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
-  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleDateString("pt-CV");
-}
-```
-
-### WR-07: Raw `<label>` elements without `htmlFor`/`id` pairing in "Pesquisa Avançada"
-
-**File:** `web/src/app/(dashboard)/pareceres/page.tsx:245-256,322-339`
-
-**Issue:** The free-text search input and the two date inputs use bare `<label>` tags with no
-`htmlFor`, and the inputs have no matching `id`:
-```tsx
-<label className="...">Pesquisar</label>
-<input type="text" value={pesquisaTexto} onChange={...} .../>
+const [selectedVersaoIdState, setSelectedVersaoId] = React.useState<string | null>(null);
 ...
-<label className="...">Data Início</label>
-<input type="date" value={pesquisaDataInicio} onChange={...} .../>
+const defaultVersaoId = versoes && versoes.length > 0 ? versoes[0].id : null;
+const selectedVersaoId = selectedVersaoIdState ?? defaultVersaoId;
 ```
-This is inconsistent with `nova/page.tsx`, which consistently pairs `<Label htmlFor="clienteId">`
-with `id="clienteId"` etc., and degrades screen-reader/label-click association for these fields.
 
-**Fix:** Add matching `id`/`htmlFor`, e.g. `<label htmlFor="pesquisa-texto">...</label>` /
-`<input id="pesquisa-texto" .../>`.
+As long as the user never manually changes the `<select>`, `selectedVersaoIdState` stays `null` and
+`selectedVersaoId` correctly tracks the live "newest version" default on every render (this is what
+CR-01's fix relies on). But the moment a user manually picks a *different* version from the dropdown
+(e.g. to intentionally review delivering an older version, or by mis-click) and then clicks
+"Cancelar" instead of confirming, `selectedVersaoIdState` keeps that non-default value forever — it is
+never cleared on cancel, on dialog close, or on reopen. If the user reopens "Entregar Parecer" later
+(e.g. after being interrupted, or after re-reading the description to double-check), the dropdown
+will silently pre-select that stale, previously-chosen (and possibly not-the-newest) version again,
+rather than resetting to the current newest version. This is the same class of risk CR-01 fixed
+(silently defaulting to the wrong version for an action explicitly described as irreversible), just
+reached via leftover component state instead of unsorted array order.
+
+Note the backend does defend against cross-solicitação misuse (`ParecerController.entregarSolicitacao`
+validates `versao.getSolicitacaoId().equals(id)`), but it has no way to know the frontend's
+"newest version" intent — it will happily deliver whatever `versaoFinalId` the client sends, including
+a stale one the user no longer means to pick.
+
+**Fix:** Reset the selection when the dialog closes (or when it reopens), e.g.:
+```tsx
+<AlertDialog
+  open={confirmOpen}
+  onOpenChange={(next) => {
+    if (entregar.isPending) return;
+    setConfirmOpen(next);
+    if (!next) setSelectedVersaoId(null); // reset to default on close/cancel
+  }}
+>
+```
 
 ## Info
 
+### IN-05: Residual un-paired `<label>` elements for Select-based fields in "Pesquisa Avançada" (new, out of WR-07's original scope)
+
+**File:** `web/src/app/(dashboard)/pareceres/page.tsx:262-264,282-284,302-305`
+
+**Issue:** The "Cliente", "Advogado", and "Estado" fields in the same Pesquisa Avançada panel that
+WR-07 fixed still use bare `<label>` tags with no `htmlFor`, wrapping the custom `Select` component
+rather than a native input:
+```tsx
+<label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+  Cliente
+</label>
+<Select value={pesquisaClienteId} onValueChange={setPesquisaClienteId}>...</Select>
+```
+This wasn't part of the original WR-07 finding (which only cited the free-text input and the two date
+inputs), so it wasn't touched by the fix pass, but it's the same underlying accessibility gap.
+
+**Fix:** Radix `Select` doesn't take a plain `htmlFor` target the same way a native input does; use
+`aria-label` on the `SelectTrigger`, or wrap the trigger with `aria-labelledby` pointing at an `id` on
+the label, e.g. `<label id="pesquisa-cliente-label">Cliente</label>` +
+`<SelectTrigger aria-labelledby="pesquisa-cliente-label">`.
+
+---
+
+_The following four Info items are carried forward unchanged from iteration 1 — they were explicitly
+out of scope for the fix pass (critical + warning only) and remain present in the code as of this
+review. Line numbers re-verified against current source._
+
 ### IN-01: Duplicated `formatDate`/`statusVariant` instead of reusing `@/lib/pareceres`
 
-**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:67-84`
+**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:67-85`
 
-**Issue:** `pareceres/page.tsx` and `columns.tsx` both import `formatDate` and `statusVariant` from
-`@/lib/pareceres`, but `[id]/page.tsx` re-implements byte-for-byte identical versions of both
-functions locally (only `formatDateTime` is genuinely new).
+**Issue:** `[id]/page.tsx` still re-implements byte-for-byte identical `formatDate` and
+`statusVariant` locally instead of importing them from `@/lib/pareceres` (only `formatDateTime` is
+genuinely new to this file). Both copies did receive the WR-06 date-parsing fix, so they're
+currently in sync, but the duplication remains a latent risk if either copy is edited again in
+isolation.
 
 **Fix:** Import `formatDate`/`statusVariant` from `@/lib/pareceres` here too, keeping only the new
 `formatDateTime` local.
 
 ### IN-02: Resolver type-checking bypassed with `as any`
 
-**File:** `web/src/app/(dashboard)/pareceres/nova/page.tsx:53-56`
+**File:** `web/src/app/(dashboard)/pareceres/nova/page.tsx:53-55`
 
 **Issue:**
 ```tsx
@@ -310,45 +164,35 @@ const form = useForm<ParecerCreateFormValues>({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolver: zodResolver(parecerCreateFormSchema) as any,
 ```
-This is almost certainly working around the `z.input`/`z.output` mismatch introduced by
-`optionalTrimmedString`'s `.transform()` in `schemas/pareceres.ts`. Casting to `any` silences the
-compiler entirely at this boundary rather than fixing the underlying generic mismatch.
+Still present, working around the `z.input`/`z.output` mismatch from `optionalTrimmedString`'s
+`.transform()`.
 
-**Fix:** Type the form with the schema's *input* type instead of its (transformed) output type,
-e.g. `useForm<z.input<typeof parecerCreateFormSchema>>(...)`, which avoids the cast.
+**Fix:** Type the form with the schema's *input* type instead, e.g.
+`useForm<z.input<typeof parecerCreateFormSchema>>(...)`.
 
 ### IN-03: Repeated `undefined as unknown as FileList` casts
 
-**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:373,417,420`
+**File:** `web/src/app/(dashboard)/pareceres/[id]/page.tsx:380,424,427`
 
-**Issue:** The same double-cast is repeated three times to represent "no file selected":
-```ts
-form.reset({ conteudo: "", file: undefined as unknown as FileList });
-...
-form.setValue("file", createFileList(file), { shouldValidate: true })
-...
-form.setValue("file", undefined as unknown as FileList, { shouldValidate: true })
-```
+**Issue:** The same double-cast is still repeated three times to represent "no file selected."
+
 **Fix:** Factor out a small typed helper (e.g. `const EMPTY_FILE_LIST = undefined as unknown as
-FileList;`, or loosen the schema's field type to `FileList | undefined`) to avoid repeating the
-unsafe cast at each call site.
+FileList;`) to avoid repeating the unsafe cast at each call site.
 
 ### IN-04: `usePermissions()` invoked twice per page (parent guard + content component)
 
-**File:** `web/src/app/(dashboard)/pareceres/page.tsx:27,43`, `web/src/app/(dashboard)/pareceres/nova/page.tsx:30,47`, `web/src/app/(dashboard)/pareceres/[id]/page.tsx:88`
+**File:** `web/src/app/(dashboard)/pareceres/page.tsx:27,43`, `web/src/app/(dashboard)/pareceres/nova/page.tsx:30,47`, `web/src/app/(dashboard)/pareceres/[id]/page.tsx:89`
 
-**Issue:** Each page calls `usePermissions()` once in the outer `AccessDeniedState`-guard
-component and again in the inner `*Content` component it renders. This is harmless in practice
-(TanStack Query dedupes the underlying `["auth","me"]` fetch), but it's an easy-to-avoid redundant
-hook call — the already-resolved `permissions` could be passed down as a prop instead (as is
-already done for `permissions` in `ParecerDetailContent`, just not reused for the guard itself).
+**Issue:** Each page still calls `usePermissions()` once in the outer guard component and again in
+the inner content component. Harmless (TanStack Query dedupes `["auth","me"]`), but an easy-to-avoid
+redundant hook call.
 
-**Fix:** Not required, but consider computing permissions once at the top and passing down instead
-of calling the hook again in the nested content component, for consistency with
-`ParecerDetailContent`'s existing `permissions` prop pattern.
+**Fix:** Not required; consider computing permissions once and passing down, as already done for
+`ParecerDetailContent`'s `permissions` prop.
 
 ---
 
-_Reviewed: 2026-07-17T12:00:00Z_
+_Reviewed: 2026-07-17T15:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Iteration: 2 (re-review; supersedes iteration 1)_
