@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
@@ -81,6 +80,10 @@ function DocumentosContent({
       })),
     [processos.data],
   );
+  const clienteOptions = React.useMemo(
+    () => (clientes.data ?? []).map((c) => ({ value: c.id, label: c.nome })),
+    [clientes.data],
+  );
   const tableColumns = React.useMemo(
     () => columns(canEditDocumentos, processoById, clienteNomeById),
     [canEditDocumentos, processoById, clienteNomeById],
@@ -142,7 +145,21 @@ function DocumentosContent({
 
             <div className="space-y-2">
               <Label htmlFor="cliente_id">Cliente ID</Label>
-              <Input id="cliente_id" {...form.register("cliente_id")} placeholder="Ex.: 1a2b..." />
+              <Controller
+                control={form.control}
+                name="cliente_id"
+                render={({ field }) => (
+                  <Combobox
+                    id="cliente_id"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={clienteOptions}
+                    placeholder="Todos os clientes"
+                    searchPlaceholder="Pesquisar cliente por nome..."
+                    emptyMessage="Nenhum cliente encontrado."
+                  />
+                )}
+              />
               {form.formState.errors.cliente_id ? (
                 <p className="text-sm text-red-600">{form.formState.errors.cliente_id.message}</p>
               ) : null}
