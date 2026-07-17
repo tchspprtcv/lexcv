@@ -38,7 +38,11 @@ export function UserMenu({ variant, me, onLogout }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {variant === "topbar" ? (
-          <button type="button" className="flex items-center gap-3 pl-1">
+          <button
+            type="button"
+            aria-label="Menu do utilizador"
+            className="flex items-center gap-3 pl-1 outline-none rounded-md focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+          >
             <div className="text-right leading-tight hidden sm:block">
               <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{me?.nome ?? "—"}</div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{(me?.roles?.[0] ?? "—").toString()}</div>
@@ -52,7 +56,11 @@ export function UserMenu({ variant, me, onLogout }: UserMenuProps) {
             </div>
           </button>
         ) : (
-          <button type="button" className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <button
+            type="button"
+            aria-label="Menu do utilizador"
+            className="flex items-center gap-3 flex-1 min-w-0 text-left outline-none rounded-md focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
+          >
             <div className="h-9 w-9 rounded-md bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden hover:opacity-80 transition-opacity">
               {me?.avatar_url ? (
                 <img src={me.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
