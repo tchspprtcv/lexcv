@@ -62,8 +62,8 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 ### Notificações / Settings / Setup
 
 - [ ] **NTF-28**: Novo menu de utilizador na topbar usa `DropdownMenu`
-- [ ] **NTF-29**: Contador de não-lidas do sino trocado do `<span>` manual para `Badge` oficial (o próprio Popover do sino mantém-se — já correto, não é alterado)
-- [ ] **NTF-30**: Wizard `/setup` usa indicador de progresso linear baseado em `Progress` (sem Stepper de terceiros)
+- [x] **NTF-29**: Contador de não-lidas do sino trocado do `<span>` manual para `Badge` oficial (o próprio Popover do sino mantém-se — já correto, não é alterado)
+- [x] **NTF-30**: Wizard `/setup` usa indicador de progresso linear baseado em `Progress` (sem Stepper de terceiros)
 
 ### Landing (webpage/)
 
@@ -131,8 +131,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PARC-19 | Phase 108 | Complete |
 | PARC-20 | Phase 108 | Complete |
 | NTF-28 | Phase 109 | Pending |
-| NTF-29 | Phase 109 | Pending |
-| NTF-30 | Phase 109 | Pending |
+| NTF-29 | Phase 109 | Complete |
+| NTF-30 | Phase 109 | Complete |
 | LDG-17 | Phase 110 | Pending |
 | LDG-18 | Phase 110 | Pending |
 
