@@ -2,159 +2,57 @@
 phase: LEXCV-107-m-dulos-documentos-financeiro
 reviewed: 2026-07-17T00:00:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 1
 files_reviewed_list:
   - web/src/components/shared/combobox.tsx
-  - web/src/app/(dashboard)/documentos/page.tsx
-  - web/src/app/(dashboard)/documentos/novo/page.tsx
-  - web/src/app/(dashboard)/documentos/[id]/page.tsx
-  - web/src/app/(dashboard)/financeiro/page.tsx
-  - web/src/app/(dashboard)/financeiro/novo/page.tsx
-  - web/src/app/(dashboard)/financeiro/[id]/page.tsx
-  - web/src/app/(dashboard)/processos/[id]/page.tsx (ProcessoDocumentosTab only)
-  - web/src/app/(dashboard)/clientes/[id]/page.tsx (ClienteDocumentosEntreguesTab only)
 findings:
-  critical: 1
-  warning: 4
-  info: 2
-  total: 7
-status: issues_found
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
 ---
 
-# Phase 107: Módulos Documentos + Financeiro — Code Review Report
+# Phase 107: Módulos Documentos + Financeiro — Code Review Report (Final Re-review, iteration 3 of 3)
 
 **Reviewed:** 2026-07-17
 **Depth:** standard
-**Files Reviewed:** 9
-**Status:** issues_found
+**Files Reviewed:** 1 — targeted re-review of `web/src/components/shared/combobox.tsx` (scope explicitly restricted to this file per the fix/re-review loop; the other 3 files from the iteration-2 pass — `documentos/page.tsx`, the `ProcessoDocumentosTab` slice of `processos/[id]/page.tsx`, and the `ClienteDocumentosEntreguesTab` slice of `clientes/[id]/page.tsx` — were not touched by commit `06d797f` and are unaffected by this pass)
+**Status:** clean
 
 ## Summary
 
-Phase 107 migrated three visual patterns across Documentos + Financeiro: the official `Progress` bar (replacing 3 duplicated hand-rolled progress divs), `NativeSelect`/`Select` for real-enum and list-filter fields, and — the phase's centerpiece — a brand-new shared `Combobox` (Popover+Command) composition used in 4 call sites (2 closed-searchable list filters in Documentos, 2 creatable `Documento.tipo` fields in the Processo/Cliente document-upload dialogs). The 6 bundled `permissions.isFetched` RBAC-race fixes were also verified and are all correctly applied, with no remaining instances of the old `!permissions.isLoading` gate pattern in either module.
+This is the third and final re-review in the Phase 107 fix/re-review loop (max 3 iterations). Commit `06d797f` applied three targeted fixes to `web/src/components/shared/combobox.tsx`, addressing all three findings raised in the iteration-2 pass of `107-REVIEW.md` (new CR-01, new WR-01, new WR-02). Each fix was re-read directly against the current file contents (not taken on the fix-report's word), and the CR-01 fix was additionally traced line-by-line against the real `cmdk` runtime (`web/node_modules/cmdk/dist/index.mjs`) — the same runtime whose internal `W()`/`Q()`/`M()` functions were cited as the root cause in iteration 2 — to confirm the keyboard-navigation defect is actually closed, not just superficially patched.
 
-The `Progress`/`NativeSelect`/`Select`/RBAC migrations are clean and match the established patterns from Phases 103/105/106 with no defects found. The new `Combobox`, however, has a significant behavioral gap in its **creatable** mode: it only commits a value to the bound field when the user explicitly clicks (or keyboard-selects) a list item — there is no commit-on-close/blur path. Combined with the fact that the frontend has no document-update endpoint, this means a user who types a new `Documento.tipo` value and then closes the popover any other way (clicking the dialog's own "Confirmar" button, clicking outside, Tab, Escape) silently uploads the document with the previous/empty tipo instead of what they typed, with zero error feedback. Three further, real (though lower-severity) defects were found in the same component and its call sites: a keyboard-selection ambiguity when two options share a label (plausible for client names), a stale-search-text bug on the two persistently-mounted filter instances, and a lost "disable while uploading" behavior for the tipo field (the component has no `disabled` prop at all). The Documentos list filters also regressed a piece of existing functionality — the ability to clear a single filter independently — that the Financeiro Select migration in the very same phase preserved via a `"todos"` sentinel.
+**All three iteration-2 findings are resolved, with no new regressions introduced by this fix pass.**
+
+## Fix Verification (iteration-2 findings from 107-REVIEW.md)
+
+| iteration-2 ID | Resolved? | Notes |
+|---|---|---|
+| new CR-01 (cmdk empty-value keyboard-nav freeze) | **Yes** | `combobox.tsx:118-135`. The `filtered.map` now computes `itemKey = option.value === "" ? "__combobox_empty__" : option.value` and passes it as `CommandItem`'s `value` prop (line 128), while `key` (line 127) and the `onSelect` closure's `commit(option.value)` (line 130) still use the real `option.value`. Traced against `cmdk`'s actual source: the `ve()` hook that derives each item's DOM-identity token short-circuits on `typeof r.value === "string"`, so the non-empty `itemKey` is what gets written to the `data-value` attribute and registered as the item's tracked identity — never the empty string. This means `W()`'s `E.setState("value", a||void 0)` now receives a truthy token for the sentinel (no collapse to `undefined`), the "is-selected" predicate `v.value&&v.value===b.current` now evaluates truthy for the sentinel when it's the tracked value, and `M()` (`querySelector('[cmdk-item=""][aria-selected="true"]')`) now correctly resolves to a real DOM node instead of permanently returning `null`. Re-tracing the original repro (open popover → the sentinel auto-selects on mount → `ArrowDown`) with the fix in place: `Q(1)` now finds `a = M()` (the sentinel node, correctly matched), computes `i = 0`, and advances to `s[1]` (the next real option), calling `E.setState("value", ...)` with that option's own token. Keyboard navigation is no longer stuck. `onSelect`'s closure ignores the argument cmdk passes it (`b.current`, i.e. the token) and commits the closed-over real `option.value` instead, so the bound field's `""`/id semantics are completely unaffected by the token swap — only cmdk's internal identity tracking changed. |
+| new WR-01 (commit-on-close bypassed `hasExactMatch`) | **Yes** | `combobox.tsx:76-81`. `handleOpenChange`'s close-time commit path now runs the identical case-insensitive label lookup used by `hasExactMatch` (`options.find((option) => option.label.toLowerCase() === trimmedQuery.toLowerCase())`) and commits `matched.value` when found, falling back to the raw `trimmedQuery` only for genuinely new entries. This exactly matches the fix suggested in iteration 2 and closes the case-variant-duplicate gap: typing `"procuração especial"` when `"Procuração Especial"` already exists now commits the canonical existing value on close, not the as-typed variant. |
+| new WR-02 (disabled guard blocked legitimate closes) | **Yes** | `combobox.tsx:75`. The guard is now `if (disabled && next) return;` (previously `if (disabled) return;`), so it only short-circuits attempts to *open* while disabled; `next === false` (closing) always falls through to `setOpen(next)`/`setQuery("")` regardless of `disabled`. This matches the fix suggested in iteration 2 and removes the "popover stuck open forever once disabled flips true while open" failure mode for future reuse of this shared primitive. |
+
+## Sentinel token collision analysis (`"__combobox_empty__"`)
+
+Checked whether the hardcoded sentinel token could ever collide with a real, legitimate `option.value` in the current codebase:
+
+- The only two `Combobox` instances whose `options` include an empty-string-valued entry are `processoOptions`/`clienteOptions` in `web/src/app/(dashboard)/documentos/page.tsx:75-91`. Both are **non-creatable**, and every non-sentinel option's `value` is a backend-issued entity id (`p.id` / `c.id`, sourced from `useProcessos()`/`useClientes()`) — never free-typed user text. A backend-generated id literally equaling the 20-character string `__combobox_empty__` is not a realistic concern.
+- The two **creatable** `Combobox` instances (`tipoOptions` in `ProcessoDocumentosTab` and `ClienteDocumentosEntreguesTab`) do accept free-typed values as real `option.value`s, so a user could in principle type `__combobox_empty__` as a tipo name — but neither of those `tipoOptions` arrays contains an empty-string-valued option (confirmed in the iteration-2 pass and unchanged here), so the `option.value === "" ? "__combobox_empty__" : option.value` ternary's true-branch never fires for those instances. A collision requires the *same* `options` array to contain both an empty-string option and a real option whose value is literally `"__combobox_empty__"` — a configuration that does not exist anywhere in the current codebase and cannot arise from the current data model.
+- **Conclusion: no collision is reachable in practice today.** The token is nonetheless a hardcoded magic string with no structural collision-proofing (e.g. a reserved-character prefix or reuse of the `"__todos__"`-style sentinel-as-real-value pattern already used in Financeiro, `financeiro/page.tsx:143,218`). This is a defensive-hardening nit, not a defect — not raised as a Warning/Info item because it doesn't correspond to any provable current or near-term risk, and adding one at the very end of a closed fix loop would be scope creep against the loop's own exit criteria.
 
 ## Narrative Findings (AI reviewer)
 
-### Critical Issues
+No new Critical, Warning, or Info findings in `web/src/components/shared/combobox.tsx`. The three targeted fixes are correctly scoped, don't interact adversely with each other (verified: the disabled-close guard change, the matched-value commit-on-close lookup, and the itemKey sentinel swap all touch disjoint concerns inside `handleOpenChange`/`filtered.map` and were traced together end-to-end for the combined "disabled flips true while a creatable popover with unsaved typed text is open" scenario without finding a gap), and match the fix suggestions from `107-REVIEW.md` iteration 2 essentially verbatim.
 
-#### CR-01: Creatable Combobox silently discards typed text that isn't explicitly selected — silent `Documento.tipo` data loss with no in-app remedy
+One pre-existing, Info-severity, non-blocking item from the iteration-2 pass remains open but is **out of scope for this file-scoped re-review**: IN-01 (`placeholder` prop is near-dead code for the two sentinel-equipped Documentos filter Comboboxes, `web/src/app/(dashboard)/documentos/page.tsx:140,162`) lives in a different file that was not touched by commit `06d797f` and was never one of the three findings this iteration was scoped to resolve. It does not affect the verdict below.
 
-**File:** `web/src/components/shared/combobox.tsx:46-119` (root cause)
-**Also affects call sites:**
-- `web/src/app/(dashboard)/processos/[id]/page.tsx:2595-2605` (`ProcessoDocumentosTab`)
-- `web/src/app/(dashboard)/clientes/[id]/page.tsx:1327-1337` (`ClienteDocumentosEntreguesTab`)
+## Final Verdict
 
-**Issue:**
-The bound `value`/`onChange` pair is only ever updated inside `commit()` (line 66-70), which is only called from a `CommandItem`'s `onSelect` — i.e., only when the user explicitly clicks an existing option or the synthetic `Usar "{query}"` create item. There is no `onBlur` handler on `CommandInput`, and `<Popover open={open} onOpenChange={setOpen}>` has no side effect that commits the in-progress `query` when the popover closes for any other reason (clicking outside, pressing Escape, Tab-ing away, or clicking a sibling button such as the dialog's "Confirmar").
+**Phase 107's code review is clean.** All three iteration-2 findings (new CR-01, new WR-01, new WR-02) are confirmed resolved by direct code inspection and, for CR-01, by tracing the fix against the actual `cmdk` runtime rather than accepting the fix report's description. No new regressions were introduced by this fix pass, and the one theoretical concern raised during this re-review (sentinel token collision) is not reachable given the current data model and is documented above rather than filed as a blocking finding.
 
-Concretely, in both `ProcessoDocumentosTab` and `ClienteDocumentosEntreguesTab`:
-1. User opens "Adicionar Documento", picks a file.
-2. User clicks the Tipo combobox and types e.g. `"Procuração Especial"` but — reasonably, since this looks like a normal text field — does not click the `Usar "Procuração Especial"` suggestion.
-3. User clicks "Confirmar" directly. The click's `mousedown`/outside-click first dismisses the Popover (discarding the typed-but-uncommitted `query` with no trace), then the button's `onClick` fires `onConfirmarUpload`, which reads `novoTipo` — still `""` (or whatever it was before this edit) — from component state.
-4. `upload.mutateAsync({ file, tipo: novoTipo.trim(), processo_id/cliente_id })` fires with the wrong/empty `tipo`. The upload succeeds (HTTP 2xx once the backend bug is fixed — see deferred-items.md), the success toast fires, and the document is now permanently miscategorized.
-
-There is no `useUpdateDocumento`/PATCH hook in `web/src/hooks/use-documentos.ts` — once uploaded, `Documento.tipo` cannot be edited from the UI. The only recovery is delete + re-upload (requires edit/delete permission and the user noticing the mistake at all, which nothing in the UI surfaces).
-
-**Fix:** Commit the typed value when the popover closes without an explicit selection, e.g.:
-```tsx
-function handleOpenChange(next: boolean) {
-  if (!next && creatable && trimmedQuery && trimmedQuery !== value) {
-    onChange(trimmedQuery);
-  }
-  setOpen(next);
-  setQuery("");
-}
-
-// ...
-<Popover open={open} onOpenChange={handleOpenChange}>
-```
-This also resolves WR-02 below (the `query` reset now happens unconditionally on every close, not only on `commit()`).
-
----
-
-### Warnings
-
-#### WR-01: `CommandItem value={option.label}` breaks cmdk's single-item selection tracking when two options share a label
-
-**File:** `web/src/components/shared/combobox.tsx:106`
-**Issue:** cmdk (`node_modules/.../cmdk/dist/index.mjs`) tracks the "currently selected/highlighted" item as a single string (`state.value`), matched against each item's own `value` prop via `state.value === itemValue`. Because `value={option.label}` is used here (not the guaranteed-unique `option.value`), two options with an identical label will both simultaneously satisfy `aria-selected="true"`/`data-selected="true"` whenever either is the tracked selection. Pressing Enter then dispatches `onSelect` on whichever of the two DOM nodes `document.querySelector('[aria-selected="true"]')` returns first — not necessarily the one the user arrow-keyed to.
-
-This is a real risk for the Documentos list Cliente filter (`clienteOptions`, labeled by `c.nome` — two clients sharing a full name is a completely ordinary occurrence in a legal-practice client base) and, less likely but not impossible, for the Processo filter if two processos ever share the same fallback label.
-
-Selecting by mouse click is unaffected (the `onSelect={() => commit(option.value)}` closure captures the correct `option.value` regardless of the `value` prop collision), so this only affects keyboard navigation/selection.
-
-**Fix:** Use the unique identifier for cmdk's own item identity, keep the label only as display text:
-```tsx
-<CommandItem
-  key={option.value}
-  value={option.value}
-  data-checked={option.value === value}
-  onSelect={() => commit(option.value)}
->
-  {option.label}
-</CommandItem>
-```
-(Safe here because `shouldFilter={false}` means cmdk never uses `value` for its own text matching — filtering is already done manually against `option.label` above.)
-
-#### WR-02: `query` search-box state is never reset when the popover closes without a commit — stale search text/list reappears on reopen
-
-**File:** `web/src/components/shared/combobox.tsx:46-47, 73` (state declarations + `Popover onOpenChange={setOpen}`)
-**Issue:** `query` is only cleared inside `commit()`. If the user types a search term and then closes the popover any other way (click outside, Escape), `query` keeps its stale value. Because `Combobox`'s `open`/`query` state lives in the `Combobox` component itself (not inside the conditionally-mounted `PopoverContent`/`Command` tree), this state survives across open/close cycles for any `Combobox` instance that is **not** itself unmounted between uses.
-
-This concretely affects the two Documentos list filter instances (`web/src/app/(dashboard)/documentos/page.tsx:130-140` Processo, `:151-161` Cliente), which are rendered directly on the page (not inside a `Dialog`, so they never unmount): typing a search term, abandoning it (click elsewhere), then reopening the same combobox later in the session shows the old leftover search text and the correspondingly-filtered (possibly single-item or empty) list instead of the full option list.
-
-(The two creatable instances in `ProcessoDocumentosTab`/`ClienteDocumentosEntreguesTab` happen to escape this in practice today only because they live inside a `DialogContent`, which Radix fully unmounts on close, incidentally resetting the `Combobox`'s local state along with it — this is not a property of `Combobox` itself and would break the moment it's reused inside any always-mounted container.)
-
-**Fix:** See CR-01's fix — resetting `query` unconditionally in the `onOpenChange` handler fixes both issues at once.
-
-#### WR-03: Documentos list filters lost the ability to clear a single field independently (regression vs. the previous free-text `Input`, and inconsistent with Financeiro's own Select migration in this same phase)
-
-**File:** `web/src/app/(dashboard)/documentos/page.tsx:124-166`
-**Issue:** Before this phase, `processo_id`/`cliente_id` were plain `<Input>` fields — a user could clear just one of them (select-all + delete) and click "Filtrar" to filter by only the other. The new `Combobox` options list has no blank/"Todos" entry and the trigger has no clear ("×") affordance, so once a Processo or Cliente is selected there is no way to deselect it except the page-wide "Limpar" button, which resets **both** filters and the date-range fields.
-
-This is also an internal inconsistency: `web/src/app/(dashboard)/financeiro/page.tsx:213-225` migrated its Processo/Estado filters to `Select` in this exact same phase and deliberately added a `"todos"` sentinel item precisely to preserve this same "clear one filter" capability (see `107-03-SUMMARY.md`'s "Filter sentinel pattern" decision) — the Documentos Combobox migration did not carry the equivalent affordance over.
-
-**Fix:** Add a leading sentinel option (mirroring the Financeiro pattern) to both `processoOptions`/`clienteOptions`, e.g.:
-```tsx
-const processoOptions = React.useMemo(
-  () => [
-    { value: "", label: "Todos os processos" },
-    ...(processos.data ?? []).map((p) => ({ value: p.id, label: p.numero ?? p.titulo ?? p.id })),
-  ],
-  [processos.data],
-);
-```
-(with the Combobox's non-creatable `options.find` logic already treating `value === ""` as any other option — `placeholder` would then only be used before first interaction). Alternatively, add a small clear icon to the `Combobox` trigger when `value` is truthy.
-
-#### WR-04: `Combobox` has no `disabled` prop — the tipo field's "disable while uploading" behavior was silently dropped by the migration
-
-**File:** `web/src/components/shared/combobox.tsx:23-45` (prop signature — no `disabled`)
-**Also affects:** `web/src/app/(dashboard)/processos/[id]/page.tsx:2595-2605`, `web/src/app/(dashboard)/clientes/[id]/page.tsx:1327-1337`
-**Issue:** The pre-migration `<input list=... disabled={upload.isPending} ...>` disabled the tipo field while an upload was in flight. The migration to `Combobox` dropped this — `Combobox` has no `disabled` prop for a call site to wire up — while the sibling `FileDropZone` in the same dialog still correctly receives `disabled={upload.isPending}` (line 2588 / 1320). The user can now reopen the tipo popover and change the value while a request is in flight (impact is limited since the "Confirmar" submit button itself is still correctly disabled via `disabled={!novoFicheiro || upload.isPending}`, so no duplicate submission is possible — but it is a real, silently-dropped piece of the previous UX contract).
-
-**Fix:** Add an optional `disabled?: boolean` prop, applied to the trigger `Button` (and ideally short-circuiting `PopoverTrigger`/`onOpenChange`):
-```tsx
-<Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open}
-  disabled={disabled} className={...}>
-```
-and pass `disabled={upload.isPending}` at both call sites.
-
----
-
-### Info
-
-#### IN-01: Combobox trigger lacks `aria-controls`/`aria-haspopup="listbox"` wiring to the popover listbox
-
-**File:** `web/src/components/shared/combobox.tsx:74-88`
-**Issue:** The trigger `Button` sets `role="combobox"` and `aria-expanded`, but not `aria-controls` (pointing at the `CommandList`'s id) or `aria-haspopup="listbox"`. This matches the common shadcn/ui reference Combobox example (not a phase-specific regression), but full WAI-ARIA 1.2 combobox conformance would wire these up.
-**Fix:** Forward `CommandList`'s generated id via `aria-controls` on the trigger, and add `aria-haspopup="listbox"`.
-
-#### IN-02: `Progress value={progresso ?? 0}` fallback is unreachable dead code at all 3 call sites
-
-**File:** `web/src/app/(dashboard)/documentos/novo/page.tsx:187`, `web/src/app/(dashboard)/processos/[id]/page.tsx:2613`, `web/src/app/(dashboard)/clientes/[id]/page.tsx:1345`
-**Issue:** All three occurrences of `<Progress value={progresso ?? 0} />` are rendered only inside a `{progresso !== null ? (...) : null}` guard, so `progresso` is already guaranteed non-null (and typed `number`) at that point — the `?? 0` fallback can never execute. Harmless, but slightly misleading defensive code that implies a null case which cannot occur.
-**Fix:** `<Progress value={progresso} />` (drop the `?? 0`), or type the guard so TypeScript itself narrows `progresso` to `number` inside the branch.
+This closes the fix/re-review loop for Phase 107 (iteration 3 of 3 max). No further fix iteration is required.
 
 ---
 
