@@ -94,3 +94,10 @@ None - no external service configuration required.
 ---
 *Phase: 108-m-dulo-pareceres*
 *Completed: 2026-07-17*
+
+## Self-Check: PASSED
+
+- FOUND: `web/src/app/(dashboard)/pareceres/[id]/page.tsx`
+- FOUND: `.planning/phases/LEXCV-108-m-dulo-pareceres/108-03-SUMMARY.md`
+- FOUND commit: `6a93eb4` (Task 1)
+- FOUND commit: `6001958` (Task 2)
