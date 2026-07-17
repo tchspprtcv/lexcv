@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
@@ -80,7 +81,7 @@ export default function ParecerDetailPage({ params }: PageProps) {
   const permissions = usePermissions();
   const canView = permissions.can.view("pareceres");
 
-  if (!permissions.isLoading && !canView) {
+  if (permissions.isFetched && !canView) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de pareceres."
@@ -155,9 +156,9 @@ function ParecerDetailContent({
     Boolean(parecer.data?.advogadoId && parecer.data.advogadoId === me?.id);
   const isConcluido = parecer.data?.status === "CONCLUIDO";
   const showNovaVersaoForm =
-    !permissions.isLoading && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
+    permissions.isFetched && canEditPareceres && isResponsavelOuAdmin && !isConcluido;
   const showEntregarTrigger =
-    !permissions.isLoading &&
+    permissions.isFetched &&
     !versoes.isLoading &&
     canEditPareceres &&
     isResponsavelOuAdmin &&
@@ -214,7 +215,7 @@ function ParecerDetailContent({
               </CardContent>
             </Card>
 
-            {permissions.isLoading ? (
+            {!permissions.isFetched ? (
               <Card>
                 <CardContent className="py-6">
                   <div className="animate-pulse bg-slate-100 dark:bg-slate-800 rounded h-12" />
@@ -489,9 +490,9 @@ function EntregarParecerDialog({
 
         <div className="space-y-2">
           <Label htmlFor="versaoFinalId">Selecione a versão a entregar como final:</Label>
-          <select
-            id="versaoFinalId"
-            className="flex h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-1 text-sm shadow-sm dark:border-neutral-800"
+          <NativeSelect id="versaoFinalId"
+            size="default"
+            className="w-full"
             value={selectedVersaoId ?? ""}
             onChange={(e) => setSelectedVersaoId(e.target.value)}
             disabled={entregar.isPending}
@@ -501,7 +502,7 @@ function EntregarParecerDialog({
                 Versão {versao.numeroVersao} — {formatDateTime(versao.createdAt)}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
 
         {entregaError ? <p className="text-sm text-red-600 px-1">{entregaError}</p> : null}
