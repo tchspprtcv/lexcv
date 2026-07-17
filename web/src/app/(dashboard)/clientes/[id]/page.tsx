@@ -1304,7 +1304,7 @@ function ClienteDocumentosEntreguesTab({
               }}
             >
               <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                <Button type="button" variant="outline" size="sm" className="rounded-none">Adicionar</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -1352,6 +1352,7 @@ function ClienteDocumentosEntreguesTab({
                   <Button
                     type="button"
                     variant="outline"
+                    className="rounded-none"
                     onClick={() => {
                       setAddDocumentoModal(false);
                       resetUploadState();
@@ -1359,7 +1360,12 @@ function ClienteDocumentosEntreguesTab({
                   >
                     Cancelar
                   </Button>
-                  <Button type="button" onClick={onConfirmarUpload} disabled={!novoFicheiro || upload.isPending}>
+                  <Button
+                    type="button"
+                    className="rounded-none"
+                    onClick={onConfirmarUpload}
+                    disabled={!novoFicheiro || upload.isPending}
+                  >
                     Confirmar
                   </Button>
                 </DialogFooter>

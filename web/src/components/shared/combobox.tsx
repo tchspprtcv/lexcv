@@ -32,6 +32,7 @@ export function Combobox({
   createLabel = (query: string) => `Usar "${query}"`,
   triggerClassName,
   disabled = false,
+  loading = false,
 }: {
   id?: string;
   value: string | undefined;
@@ -44,6 +45,7 @@ export function Combobox({
   createLabel?: (query: string) => string;
   triggerClassName?: string;
   disabled?: boolean;
+  loading?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -134,7 +136,7 @@ export function Combobox({
                 );
               })}
             </CommandGroup>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>{loading ? "A carregar..." : emptyMessage}</CommandEmpty>
           </CommandList>
         </Command>
       </PopoverContent>

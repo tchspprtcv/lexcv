@@ -140,6 +140,7 @@ function DocumentosContent({
                     placeholder="Todos os processos"
                     searchPlaceholder="Pesquisar processo por número ou título..."
                     emptyMessage="Nenhum processo encontrado."
+                    loading={processos.isPending}
                   />
                 )}
               />
@@ -162,6 +163,7 @@ function DocumentosContent({
                     placeholder="Todos os clientes"
                     searchPlaceholder="Pesquisar cliente por nome..."
                     emptyMessage="Nenhum cliente encontrado."
+                    loading={clientes.isPending}
                   />
                 )}
               />
