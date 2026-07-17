@@ -3,14 +3,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
@@ -32,7 +32,7 @@ export default function DocumentosPage() {
     defaultValues: { processo_id: "", cliente_id: "" },
   });
 
-  if (!permissions.isLoading && !canViewDocumentos) {
+  if (permissions.isFetched && !canViewDocumentos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar documentos."
@@ -70,6 +70,18 @@ function DocumentosContent({
   );
   const clienteNomeById = React.useMemo(
     () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
+    [clientes.data],
+  );
+  const processoOptions = React.useMemo(
+    () =>
+      (processos.data ?? []).map((p) => ({
+        value: p.id,
+        label: p.numero ?? p.titulo ?? p.id,
+      })),
+    [processos.data],
+  );
+  const clienteOptions = React.useMemo(
+    () => (clientes.data ?? []).map((c) => ({ value: c.id, label: c.nome })),
     [clientes.data],
   );
   const tableColumns = React.useMemo(
@@ -111,7 +123,21 @@ function DocumentosContent({
           <form className="grid gap-4 sm:grid-cols-3" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="processo_id">Processo ID</Label>
-              <Input id="processo_id" {...form.register("processo_id")} placeholder="Ex.: 7c8b..." />
+              <Controller
+                control={form.control}
+                name="processo_id"
+                render={({ field }) => (
+                  <Combobox
+                    id="processo_id"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={processoOptions}
+                    placeholder="Todos os processos"
+                    searchPlaceholder="Pesquisar processo por número ou título..."
+                    emptyMessage="Nenhum processo encontrado."
+                  />
+                )}
+              />
               {form.formState.errors.processo_id ? (
                 <p className="text-sm text-red-600">{form.formState.errors.processo_id.message}</p>
               ) : null}
@@ -119,7 +145,21 @@ function DocumentosContent({
 
             <div className="space-y-2">
               <Label htmlFor="cliente_id">Cliente ID</Label>
-              <Input id="cliente_id" {...form.register("cliente_id")} placeholder="Ex.: 1a2b..." />
+              <Controller
+                control={form.control}
+                name="cliente_id"
+                render={({ field }) => (
+                  <Combobox
+                    id="cliente_id"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={clienteOptions}
+                    placeholder="Todos os clientes"
+                    searchPlaceholder="Pesquisar cliente por nome..."
+                    emptyMessage="Nenhum cliente encontrado."
+                  />
+                )}
+              />
               {form.formState.errors.cliente_id ? (
                 <p className="text-sm text-red-600">{form.formState.errors.cliente_id.message}</p>
               ) : null}
