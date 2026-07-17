@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useAdminUsers } from "@/hooks/use-admin";
 import { useClientes } from "@/hooks/use-clientes";
@@ -22,9 +23,6 @@ import {
   type ParecerCreateFormValues,
 } from "@/schemas/pareceres";
 
-const selectClassName =
-  "flex h-9 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50";
-
 const textareaClassName =
   "flex min-h-24 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
 
@@ -32,7 +30,7 @@ export default function ParecerCreatePage() {
   const permissions = usePermissions();
   const canCreatePareceres = permissions.can.create("pareceres");
 
-  if (!permissions.isLoading && !canCreatePareceres) {
+  if (permissions.isFetched && !canCreatePareceres) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar solicitações de parecer."
@@ -124,19 +122,14 @@ function ParecerCreateFormContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="clienteId">Cliente</Label>
-              <select
-                id="clienteId"
-                className={selectClassName}
-                disabled={clientes.isPending || clientes.isError}
-                {...form.register("clienteId")}
-              >
+              <NativeSelect id="clienteId" size="default" className="w-full rounded-none" disabled={clientes.isPending || clientes.isError} {...form.register("clienteId")}>
                 <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
                 {(clientes.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               {clientes.isError ? (
                 <p className="text-sm text-red-600">
                   {clientes.error instanceof Error ? clientes.error.message : "Erro ao carregar clientes"}
@@ -149,18 +142,14 @@ function ParecerCreateFormContent() {
 
             <div className="space-y-2">
               <Label htmlFor="processoId">Processo (opcional)</Label>
-              <select
-                id="processoId"
-                className={selectClassName}
-                {...form.register("processoId")}
-              >
+              <NativeSelect id="processoId" size="default" className="w-full rounded-none" {...form.register("processoId")}>
                 <option value="">Nenhum processo associado</option>
                 {(processos.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.numero ?? p.titulo ?? p.id}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
 
             <div className="space-y-2">
@@ -188,23 +177,23 @@ function ParecerCreateFormContent() {
 
             <div className="space-y-2">
               <Label htmlFor="prioridade">Prioridade</Label>
-              <select id="prioridade" className={selectClassName} {...form.register("prioridade")}>
+              <NativeSelect id="prioridade" size="default" className="w-full rounded-none" {...form.register("prioridade")}>
                 <option value="ALTA">Alta</option>
                 <option value="MEDIA">Média</option>
                 <option value="BAIXA">Baixa</option>
-              </select>
+              </NativeSelect>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="advogadoId">Advogado responsável (opcional)</Label>
-              <select id="advogadoId" className={selectClassName} {...form.register("advogadoId")}>
+              <NativeSelect id="advogadoId" size="default" className="w-full rounded-none" {...form.register("advogadoId")}>
                 <option value="">Atribuir mais tarde</option>
                 {advogados.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.nome}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
 
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
@@ -216,7 +205,7 @@ function ParecerCreateFormContent() {
                 disabled={
                   form.formState.isSubmitting ||
                   createParecer.isPending ||
-                  permissions.isLoading ||
+                  !permissions.isFetched ||
                   !canCreatePareceres
                 }
               >
