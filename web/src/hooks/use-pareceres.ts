@@ -57,8 +57,11 @@ function buildParecerPesquisaSearch(filters: ParecerPesquisaFilters) {
   return qs ? `?${qs}` : "";
 }
 
-export function usePesquisarPareceres(filters: ParecerPesquisaFilters = {}) {
-  const enabled = typeof window !== "undefined";
+export function usePesquisarPareceres(
+  filters: ParecerPesquisaFilters = {},
+  options: { enabled?: boolean } = {},
+) {
+  const enabled = typeof window !== "undefined" && (options.enabled ?? true);
   const texto = filters.texto?.trim() ?? "";
   const clienteId = filters.clienteId?.trim() ?? "";
   const advogadoId = filters.advogadoId?.trim() ?? "";

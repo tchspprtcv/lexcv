@@ -71,7 +71,7 @@ function ParecerPageContent() {
   const parecerColumns = React.useMemo(() => columns(clienteNomeById), [clienteNomeById]);
 
   const pareceres = usePareceres(filters);
-  const pesquisa = usePesquisarPareceres(pesquisaFilters);
+  const pesquisa = usePesquisarPareceres(pesquisaFilters, { enabled: pesquisaSubmitted });
 
   const searchActive = pesquisaSubmitted;
   const rows: ParecerSolicitacao[] = searchActive ? (pesquisa.data ?? []) : (pareceres.data ?? []);
