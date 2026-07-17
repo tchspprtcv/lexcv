@@ -50,9 +50,9 @@ function ParecerPageContent() {
 
   const [pesquisaOpen, setPesquisaOpen] = React.useState(false);
   const [pesquisaTexto, setPesquisaTexto] = React.useState("");
-  const [pesquisaClienteId, setPesquisaClienteId] = React.useState("");
-  const [pesquisaAdvogadoId, setPesquisaAdvogadoId] = React.useState("");
-  const [pesquisaStatus, setPesquisaStatus] = React.useState("");
+  const [pesquisaClienteId, setPesquisaClienteId] = React.useState("todos");
+  const [pesquisaAdvogadoId, setPesquisaAdvogadoId] = React.useState("todos");
+  const [pesquisaStatus, setPesquisaStatus] = React.useState("todos");
   const [pesquisaDataInicio, setPesquisaDataInicio] = React.useState("");
   const [pesquisaDataFim, setPesquisaDataFim] = React.useState("");
   const [pesquisaFilters, setPesquisaFilters] = React.useState<ParecerPesquisaFilters>({});
@@ -105,9 +105,9 @@ function ParecerPageContent() {
     const dataInicio = pesquisaDataInicio.trim();
     const dataFim = pesquisaDataFim.trim();
     if (texto) next.texto = texto;
-    if (clienteId) next.clienteId = clienteId;
-    if (advogadoId) next.advogadoId = advogadoId;
-    if (status) next.status = status;
+    if (clienteId && clienteId !== "todos") next.clienteId = clienteId;
+    if (advogadoId && advogadoId !== "todos") next.advogadoId = advogadoId;
+    if (status && status !== "todos") next.status = status;
     if (dataInicio) next.dataInicio = dataInicio;
     if (dataFim) next.dataFim = dataFim;
     setPesquisaFilters(next);
@@ -116,9 +116,9 @@ function ParecerPageContent() {
 
   const onLimparPesquisa = () => {
     setPesquisaTexto("");
-    setPesquisaClienteId("");
-    setPesquisaAdvogadoId("");
-    setPesquisaStatus("");
+    setPesquisaClienteId("todos");
+    setPesquisaAdvogadoId("todos");
+    setPesquisaStatus("todos");
     setPesquisaDataInicio("");
     setPesquisaDataFim("");
     setPesquisaFilters({});
@@ -260,18 +260,19 @@ function ParecerPageContent() {
                     Cliente
                   </label>
                   <div className="mt-2">
-                    <select
-                      value={pesquisaClienteId}
-                      onChange={(e) => setPesquisaClienteId(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      {(clientes.data ?? []).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={pesquisaClienteId} onValueChange={setPesquisaClienteId}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        {(clientes.data ?? []).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
@@ -279,18 +280,19 @@ function ParecerPageContent() {
                     Advogado
                   </label>
                   <div className="mt-2">
-                    <select
-                      value={pesquisaAdvogadoId}
-                      onChange={(e) => setPesquisaAdvogadoId(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      {advogados.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.nome}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={pesquisaAdvogadoId} onValueChange={setPesquisaAdvogadoId}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        {advogados.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
@@ -298,17 +300,18 @@ function ParecerPageContent() {
                     Estado
                   </label>
                   <div className="mt-2">
-                    <select
-                      value={pesquisaStatus}
-                      onChange={(e) => setPesquisaStatus(e.target.value)}
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <option value="">Todos</option>
-                      <option value="PENDENTE">Pendente</option>
-                      <option value="EM_ELABORACAO">Em elaboração</option>
-                      <option value="EM_REVISAO">Em revisão</option>
-                      <option value="CONCLUIDO">Concluído</option>
-                    </select>
+                    <Select value={pesquisaStatus} onValueChange={setPesquisaStatus}>
+                      <SelectTrigger size="default" className="w-full rounded-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="PENDENTE">Pendente</SelectItem>
+                        <SelectItem value="EM_ELABORACAO">Em elaboração</SelectItem>
+                        <SelectItem value="EM_REVISAO">Em revisão</SelectItem>
+                        <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
