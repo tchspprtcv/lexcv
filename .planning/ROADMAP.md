@@ -428,9 +428,9 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   2. O contador de não-lidas do sino usa o componente oficial `Badge` em vez do `<span>` manual.
   3. O wizard `/setup` mostra um indicador de progresso linear baseado em `Progress` (sem Stepper de terceiros).
 **Plans**: 3 plans (2 waves)
-- [ ] 109-01-PLAN.md — UserMenu shared DropdownMenu (NTF-28): novo componente + 3 call sites em dashboard-shell.tsx (Wave 1)
-- [ ] 109-02-PLAN.md — Badge no contador do sino (NTF-29) + Progress no wizard /setup (NTF-30) (Wave 1)
-- [ ] 109-03-PLAN.md — Gate holístico (build/lint) + checkpoint visual humano (3 superfícies, 2 temas) (Wave 2, depende de 109-01/109-02)
+- [x] 109-01-PLAN.md — UserMenu shared DropdownMenu (NTF-28): novo componente + 3 call sites em dashboard-shell.tsx (Wave 1)
+- [x] 109-02-PLAN.md — Badge no contador do sino (NTF-29) + Progress no wizard /setup (NTF-30) (Wave 1)
+- [x] 109-03-PLAN.md — Gate holístico (build/lint) + checkpoint visual humano (3 superfícies, 2 temas) (Wave 2, depende de 109-01/109-02)
 
 #### Phase 110: Refinamento da Landing (webpage/)
 
