@@ -427,7 +427,10 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. O novo menu de utilizador na topbar usa `DropdownMenu` (o `Popover` do sino de notificações mantém-se inalterado — nunca convertido para `DropdownMenu`, um anti-padrão de acessibilidade conhecido para listas com múltiplos controlos).
   2. O contador de não-lidas do sino usa o componente oficial `Badge` em vez do `<span>` manual.
   3. O wizard `/setup` mostra um indicador de progresso linear baseado em `Progress` (sem Stepper de terceiros).
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+- [ ] 109-01-PLAN.md — UserMenu shared DropdownMenu (NTF-28): novo componente + 3 call sites em dashboard-shell.tsx (Wave 1)
+- [ ] 109-02-PLAN.md — Badge no contador do sino (NTF-29) + Progress no wizard /setup (NTF-30) (Wave 1)
+- [ ] 109-03-PLAN.md — Gate holístico (build/lint) + checkpoint visual humano (3 superfícies, 2 temas) (Wave 2, depende de 109-01/109-02)
 
 #### Phase 110: Refinamento da Landing (webpage/)
 
@@ -510,7 +513,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 106. Módulo Agenda | v2.13 | 4/4 | Complete    | 2026-07-16 |
 | 107. Módulos Documentos + Financeiro | v2.13 | 6/6 | Complete    | 2026-07-17 |
 | 108. Módulo Pareceres | v2.13 | 0/4 | Not started | - |
-| 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
+| 109. Notificações / Settings / Setup Wizard | v2.13 | 0/3 | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
 
 **Next:** Phase 107 (Módulos Documentos + Financeiro) concluída — `Progress` oficial em 3 barras de upload duplicadas, `Combobox` partilhado (Popover+Command, 1ª composição do projeto) em 4 sítios (filtros fechados de Documentos + tipo criável nas abas de ficha), `Select` nos filtros do Financeiro, `NativeSelect` em confidencialidade/honorário, fix RBAC `isFetched` em 6 ficheiros, `DOF-V2-01` fechado. UAT ao vivo aprovado (Combobox em ambos os modos verificado end-to-end, RBAC em 2 papéis). Um bug pré-existente e grave no backend (upload de novo documento falha sempre com erro de optimistic locking do Hibernate) foi encontrado durante o UAT, diagnosticado até à causa-raiz e documentado em `107-06/deferred-items.md` — fora de âmbito desta fase (zero ficheiros backend tocados por qualquer plano), sinalizado como tarefa dedicada de alta prioridade. Run `/gsd:plan-phase 108` to continue.
