@@ -395,7 +395,13 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 **Success Criteria** (what must be TRUE):
   1. O upload de documentos usa o componente oficial `Progress` em vez da UI de progresso customizada existente.
   2. Os formulários de tipo de documento/honorário/pagamento usam `Select`.
-**Plans**: TBD
+**Plans**: 6 plans (3 waves)
+- [ ] 107-01-PLAN.md — Shared Combobox composition (Popover+Command), first Command consumer (Wave 1)
+- [ ] 107-02-PLAN.md — Documentos forms: Progress bar + NativeSelect confidencialidade + isFetched (documentos/novo, documentos/[id]) (Wave 1)
+- [ ] 107-03-PLAN.md — Financeiro: Select list filters (todos sentinel) + NativeSelect processoId + isFetched (page/novo/[id]) (Wave 1)
+- [ ] 107-04-PLAN.md — Documentos list filters: closed-list Combobox for Processo/Cliente (Controller) + isFetched (Wave 2, dep 107-01)
+- [ ] 107-05-PLAN.md — Ficha document tabs: creatable Combobox (tipo) + Progress in Processo/Cliente tabs + close DOF-V2-01 (Wave 2, dep 107-01)
+- [ ] 107-06-PLAN.md — Holistic build/lint/regression gate + human visual checkpoint (Wave 3, dep all)
 
 #### Phase 108: Módulo Pareceres
 
@@ -498,7 +504,7 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 104. Padrão DataTable Partilhado | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 105. Módulos Clientes + Processos | v2.13 | 6/6 | Complete    | 2026-07-16 |
 | 106. Módulo Agenda | v2.13 | 4/4 | Complete    | 2026-07-16 |
-| 107. Módulos Documentos + Financeiro | v2.13 | 0/TBD | Not started | - |
+| 107. Módulos Documentos + Financeiro | v2.13 | 0/6 | Not started | - |
 | 108. Módulo Pareceres | v2.13 | 0/TBD | Not started | - |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 0/TBD | Not started | - |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 0/TBD | Not started | - |
