@@ -508,6 +508,7 @@ function EntregarParecerDialog({
       onOpenChange={(next) => {
         if (entregar.isPending) return;
         setConfirmOpen(next);
+        if (!next) setSelectedVersaoId(null);
       }}
     >
       <AlertDialogTrigger asChild>
