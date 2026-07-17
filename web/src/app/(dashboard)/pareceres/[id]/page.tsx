@@ -257,7 +257,7 @@ function ParecerDetailContent({
             ) : null}
 
             {showEntregarTrigger ? (
-              <EntregarParecerDialog solicitacaoId={id} versoes={versoes.data} />
+              <EntregarParecerDialog solicitacaoId={id} versoes={sortedVersoes} />
             ) : null}
           </div>
 
@@ -473,7 +473,7 @@ function EntregarParecerDialog({
   const [selectedVersaoIdState, setSelectedVersaoId] = React.useState<string | null>(null);
   const [entregaError, setEntregaError] = React.useState<string | null>(null);
 
-  const defaultVersaoId = versoes && versoes.length > 0 ? versoes[versoes.length - 1].id : null;
+  const defaultVersaoId = versoes && versoes.length > 0 ? versoes[0].id : null;
   const selectedVersaoId = selectedVersaoIdState ?? defaultVersaoId;
 
   const entregar = useEntregarParecer(solicitacaoId);
