@@ -74,7 +74,7 @@ function ParecerCreateFormContent() {
   }, [clienteIdValue]);
 
   const advogados = React.useMemo(
-    () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
+    () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO") && u.ativo !== false),
     [adminUsers.data],
   );
 

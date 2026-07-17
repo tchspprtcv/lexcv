@@ -61,7 +61,7 @@ function ParecerPageContent() {
   const clientes = useClientes({});
   const adminUsers = useAdminUsers();
   const advogados = React.useMemo(
-    () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO")),
+    () => (adminUsers.data ?? []).filter((u) => u.roles?.includes("ADVOGADO") && u.ativo !== false),
     [adminUsers.data],
   );
   const clienteNomeById = React.useMemo(
