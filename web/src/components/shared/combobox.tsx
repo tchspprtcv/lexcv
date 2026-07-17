@@ -69,8 +69,16 @@ export function Combobox({
     setQuery("");
   }
 
+  function handleOpenChange(next: boolean) {
+    if (!next && creatable && trimmedQuery && trimmedQuery !== value) {
+      onChange(trimmedQuery);
+    }
+    setOpen(next);
+    setQuery("");
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           id={id}
