@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { apiFetch } from "@/lib/api";
 import { setupSchema, type SetupFormValues } from "@/schemas/setup";
 import type { SetupInitializeRequest, SetupInitializeResponse } from "@/types/setup";
@@ -43,6 +44,10 @@ export default function SetupPage() {
       confirmPassword: "",
     },
   });
+
+  const wizardPhase: "idle" | "submitting" | "success" =
+    successMessage ? "success" : form.formState.isSubmitting ? "submitting" : "idle";
+  const wizardProgress = wizardPhase === "success" ? 100 : wizardPhase === "submitting" ? 66 : 33;
 
   const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -259,9 +264,11 @@ export default function SetupPage() {
 
               <div className="space-y-5 border-l-0 border-slate-200 lg:border-l lg:pl-8 dark:border-slate-800">
                 <div className="space-y-3 border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-[#020617]">
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                    Checklist
+                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                    <span>Progresso</span>
+                    <span>{wizardProgress}%</span>
                   </div>
+                  <Progress value={wizardProgress} />
                   <div className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
                     <p>1. Criação do primeiro tenant institucional.</p>
                     <p>2. Criação do utilizador administrador com password hasheada.</p>

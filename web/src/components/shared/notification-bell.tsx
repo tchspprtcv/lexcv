@@ -15,6 +15,7 @@ import {
   useNotificacoes,
   useNotificacoesUnreadCount,
 } from "@/hooks/use-notificacoes";
+import { cn } from "@/lib/utils";
 import {
   categoriaToBadgeVariant,
   categoriaToLabel,
@@ -85,13 +86,14 @@ export function NotificationBell() {
         >
           <Bell className="h-[1.1rem] w-[1.1rem]" />
           {showBadge && (
-            <span
-              className={`absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center leading-none ${
-                unread.isError ? "bg-slate-400" : "bg-red-500"
-              }`}
+            <Badge
+              className={cn(
+                "absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] font-bold leading-none text-white border-transparent",
+                unread.isError ? "bg-slate-400" : "bg-red-500",
+              )}
             >
               {unread.isError ? "!" : count > 9 ? "9+" : count}
-            </span>
+            </Badge>
           )}
         </Button>
       </PopoverTrigger>
