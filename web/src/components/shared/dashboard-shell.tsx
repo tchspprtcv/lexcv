@@ -72,7 +72,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="text-[11px] font-bold tracking-widest text-slate-400">LEXCV <span className="text-slate-600 font-normal">| INSTITUCIONAL</span></div>
         </div>
 
-        <SidebarNav nav={NAV} pathname={pathname} permissions={me.data?.permissions} />
+        <SidebarNav
+          nav={NAV}
+          pathname={pathname}
+          permissions={me.data?.permissions}
+          onNavigate={() => setDrawerOpen(false)}
+        />
 
         <div className="mt-auto p-4">
           <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">
@@ -87,7 +92,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="text-[11px] font-bold tracking-widest text-slate-400">LEXCV <span className="text-slate-600 font-normal">| INSTITUCIONAL</span></div>
           </div>
 
-          <SidebarNav nav={NAV} pathname={pathname} permissions={me.data?.permissions} />
+          <SidebarNav
+            nav={NAV}
+            pathname={pathname}
+            permissions={me.data?.permissions}
+            onNavigate={() => setDrawerOpen(false)}
+          />
 
           <div className="mt-auto p-4">
             <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">

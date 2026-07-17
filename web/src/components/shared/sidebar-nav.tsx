@@ -18,6 +18,7 @@ interface SidebarNavProps {
   nav: NavItem[];
   pathname: string;
   permissions: string[] | undefined;
+  onNavigate?: () => void;
 }
 
 /**
@@ -25,7 +26,7 @@ interface SidebarNavProps {
  * links) consumed at 2 call sites in DashboardShell (desktop `<aside>` and mobile
  * `<Sheet>`) — the markup and active-state logic are identical across both.
  */
-export function SidebarNav({ nav, pathname, permissions }: SidebarNavProps) {
+export function SidebarNav({ nav, pathname, permissions, onNavigate }: SidebarNavProps) {
   return (
     <>
       <nav className="px-3 space-y-1 mt-4">
@@ -36,6 +37,7 @@ export function SidebarNav({ nav, pathname, permissions }: SidebarNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
                 active
@@ -55,6 +57,7 @@ export function SidebarNav({ nav, pathname, permissions }: SidebarNavProps) {
         <div className="space-y-1">
           <Link
             href="/settings"
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
               pathname === "/settings"
