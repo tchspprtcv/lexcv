@@ -26,11 +26,13 @@ function parseDateOnly(v: string | undefined): Date | undefined {
 
 export function DatePickerField({
   id,
+  label,
   value,
   onChange,
   withTime = false,
 }: {
   id?: string;
+  label?: string;
   value: string | undefined;
   onChange: (v: string) => void;
   withTime?: boolean;
@@ -82,6 +84,7 @@ export function DatePickerField({
       {withTime ? (
         <Input
           id={id ? `${id}-time` : undefined}
+          aria-label={label ? `Hora de ${label}` : "Hora"}
           type="time"
           className="w-24 shrink-0"
           value={timePart}
