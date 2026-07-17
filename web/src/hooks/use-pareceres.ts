@@ -169,9 +169,16 @@ export function useCreateParecerVersao(
             } catch {
               reject(new Error("Resposta inválida do servidor"));
             }
-          } else {
-            reject(new Error(`API ${xhr.status}`));
+            return;
           }
+          let message = `API ${xhr.status}`;
+          try {
+            const json = JSON.parse(xhr.responseText);
+            message = json?.message || json?.error || message;
+          } catch {
+            // not JSON — fall back to the generic status message
+          }
+          reject(new Error(message));
         };
 
         xhr.onerror = () => reject(new Error("Erro de rede ao enviar ficheiro"));
