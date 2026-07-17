@@ -73,15 +73,20 @@ function DocumentosContent({
     [clientes.data],
   );
   const processoOptions = React.useMemo(
-    () =>
-      (processos.data ?? []).map((p) => ({
+    () => [
+      { value: "", label: "Todos os processos" },
+      ...(processos.data ?? []).map((p) => ({
         value: p.id,
         label: p.numero ?? p.titulo ?? p.id,
       })),
+    ],
     [processos.data],
   );
   const clienteOptions = React.useMemo(
-    () => (clientes.data ?? []).map((c) => ({ value: c.id, label: c.nome })),
+    () => [
+      { value: "", label: "Todos os clientes" },
+      ...(clientes.data ?? []).map((c) => ({ value: c.id, label: c.nome })),
+    ],
     [clientes.data],
   );
   const tableColumns = React.useMemo(
