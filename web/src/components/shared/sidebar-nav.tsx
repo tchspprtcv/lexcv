@@ -27,6 +27,8 @@ interface SidebarNavProps {
  * `<Sheet>`) — the markup and active-state logic are identical across both.
  */
 export function SidebarNav({ nav, pathname, permissions, onNavigate }: SidebarNavProps) {
+  const settingsActive = pathname === "/settings" || pathname.startsWith("/settings/");
+
   return (
     <>
       <nav className="px-3 space-y-1 mt-4">
@@ -60,12 +62,12 @@ export function SidebarNav({ nav, pathname, permissions, onNavigate }: SidebarNa
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-              pathname === "/settings"
+              settingsActive
                 ? "bg-blue-600/10 text-blue-400 dark:bg-blue-500/10 dark:text-blue-400 shadow-[inset_2px_0_0_0_theme(colors.blue.500)]"
                 : "text-slate-400 hover:bg-slate-900 hover:text-slate-200 dark:hover:bg-slate-900/50"
             )}
           >
-            <Settings className={cn("h-4 w-4", pathname === "/settings" ? "text-blue-500" : "text-slate-500")} />
+            <Settings className={cn("h-4 w-4", settingsActive ? "text-blue-500" : "text-slate-500")} />
             Configurações
           </Link>
           <Link
