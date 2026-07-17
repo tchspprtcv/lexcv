@@ -81,7 +81,7 @@ Reconhecidos mas adiados. Não fazem parte do roadmap atual.
 
 ### Documentos
 
-- **DOF-V2-01**: `Combobox` para o campo tipo-de-documento em Documentos Entregues — já funcional hoje via `datalist` nativo, upgrade puramente cosmético
+- **DOF-V2-01**: `Combobox` para o campo tipo-de-documento em Documentos Entregues — já funcional hoje via `datalist` nativo, upgrade puramente cosmético (coberto/resolvido pela Fase 107: migração `datalist`→`Combobox` criável em `ClienteDocumentosEntreguesTab`)
 
 ## Out of Scope
 
