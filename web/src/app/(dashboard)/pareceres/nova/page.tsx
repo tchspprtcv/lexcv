@@ -69,7 +69,7 @@ function ParecerCreateFormContent() {
   const adminUsers = useAdminUsers();
 
   React.useEffect(() => {
-    form.setValue("processoId", undefined);
+    form.setValue("processoId", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteIdValue]);
 
