@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { NotificationBell } from "@/components/shared/notification-bell";
+import { UserMenu } from "@/components/shared/user-menu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import {
@@ -10,7 +11,6 @@ import {
   FileText,
   Home,
   LifeBuoy,
-  LogOut,
   Menu,
   Scale,
   ScrollText,
@@ -21,9 +21,7 @@ import {
 } from "lucide-react";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { clearTokens } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -134,32 +132,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-auto p-4">
           <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">
-            <Link href="/settings" className="h-9 w-9 rounded-md bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden hover:opacity-80 transition-opacity">
-              {me.data?.avatar_url ? (
-                <img src={me.data.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                (me.data?.nome ?? "U")
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((p) => p[0])
-                  .join("")
-                  .toUpperCase()
-              )}
-            </Link>
-            <div className="min-w-0 flex-1">
-              <Link href="/settings" className="text-sm font-medium truncate text-slate-200 hover:underline">{me.data?.nome ?? "—"}</Link>
-              <div className="text-[10px] text-slate-500 truncate uppercase tracking-wider mt-0.5">
-                {(me.data?.roles?.[0] ?? "—").toString()}
-              </div>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button type="button" variant="ghost" aria-label="Terminar sessão" className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" onClick={onLogout}>
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Terminar sessão</TooltipContent>
-            </Tooltip>
+            <UserMenu variant="sidebar" me={me.data} onLogout={onLogout} />
           </div>
         </div>
       </aside>
@@ -219,32 +192,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <div className="mt-auto p-4">
             <div className="flex items-center gap-3 rounded-lg bg-slate-900/50 dark:bg-slate-900/30 px-3 py-3 border border-slate-800/50">
-              <Link href="/settings" className="h-9 w-9 rounded-md bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden hover:opacity-80 transition-opacity">
-                {me.data?.avatar_url ? (
-                  <img src={me.data.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  (me.data?.nome ?? "U")
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((p) => p[0])
-                    .join("")
-                    .toUpperCase()
-                )}
-              </Link>
-              <div className="min-w-0 flex-1">
-                <Link href="/settings" className="text-sm font-medium truncate text-slate-200 hover:underline">{me.data?.nome ?? "—"}</Link>
-                <div className="text-[10px] text-slate-500 truncate uppercase tracking-wider mt-0.5">
-                  {(me.data?.roles?.[0] ?? "—").toString()}
-                </div>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="button" variant="ghost" aria-label="Terminar sessão" className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" onClick={onLogout}>
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Terminar sessão</TooltipContent>
-              </Tooltip>
+              <UserMenu variant="sidebar" me={me.data} onLogout={onLogout} />
             </div>
           </div>
         </SheetContent>
@@ -291,24 +239,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
             <NotificationBell />
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
-            <div className="flex items-center gap-3 pl-1">
-              <div className="text-right leading-tight hidden sm:block">
-                <Link href="/settings" className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:underline">{me.data?.nome ?? "—"}</Link>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{(me.data?.roles?.[0] ?? "—").toString()}</div>
-              </div>
-              <Link href="/settings" className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-white dark:ring-[#020617] overflow-hidden hover:opacity-90 transition-opacity">
-                {me.data?.avatar_url ? (
-                  <img src={me.data.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  (me.data?.nome ?? "U")
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((p) => p[0])
-                    .join("")
-                    .toUpperCase()
-                )}
-              </Link>
-            </div>
+            <UserMenu variant="topbar" me={me.data} onLogout={onLogout} />
           </div>
         </header>
 
