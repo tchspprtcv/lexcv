@@ -4,23 +4,23 @@
 **Files analyzed:** 9 (2 new core files, 4 modified repositories, 1 new migration, 2 new test files)
 **Analogs found:** 9 / 9
 
-## Naming note (verify before planning)
+## Naming note (resolved)
 
-CONTEXT.md's Integration Points section locks the literal class names `SearchController` and `SearchResultDto` (English domain nouns) and the literal route `GET /api/v1/pesquisa` (Portuguese path segment, matching `ParecerPesquisaController`'s precedent). This is a deliberate mix — every other controller in this codebase pairs a Portuguese domain noun with the `Controller`/`Repository` suffix (`ParecerPesquisaController`, `NotificacaoController`, `ClienteRepository`), whereas `SearchController`/`SearchResultDto` use an English noun. This appears intentional in CONTEXT.md (stated twice, under both Decisions and Integration Points) rather than an oversight, so this map uses those exact names — but it is worth a final confirmation with the user/planner since it's a one-off deviation from `CLAUDE.md`'s "domain language is Portuguese" convention. The **route path** (`/api/v1/pesquisa`) and the **method name** (suggested `pesquisar()`, matching `ParecerPesquisaController.pesquisarSolicitacoes()`) stay Portuguese either way.
+CONTEXT.md locks `PesquisaController`/`ResultadoPesquisaDto` — Portuguese domain nouns, consistent with every other controller/DTO in this codebase (`ParecerPesquisaController`, `NotificacaoController`, `ClienteRepository`) and with `CLAUDE.md`'s "domain language is Portuguese" convention. An earlier draft of this map used the English `SearchController`/`SearchResultDto`; that was a naming slip caught during discuss and corrected in CONTEXT.md before planning — all class names throughout this document now reflect the corrected Portuguese naming. The **route path** (`/api/v1/pesquisa`) and the **method name** (`pesquisar()`, matching `ParecerPesquisaController.pesquisarSolicitacoes()`) were Portuguese from the start.
 
 ## File Classification
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
-| `backend/src/main/java/com/lexcv/controllers/SearchController.java` (NEW) | controller | request-response (read aggregation) | `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java` (shape) + `ResourceController.getTimeline` (merge logic) | exact |
-| `backend/src/main/java/com/lexcv/dtos/SearchResultDto.java` (NEW) | model/dto | transform (discriminated union) | `backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java` | exact |
+| `backend/src/main/java/com/lexcv/controllers/PesquisaController.java` (NEW) | controller | request-response (read aggregation) | `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java` (shape) + `ResourceController.getTimeline` (merge logic) | exact |
+| `backend/src/main/java/com/lexcv/dtos/ResultadoPesquisaDto.java` (NEW) | model/dto | transform (discriminated union) | `backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java` | exact |
 | `backend/src/main/java/com/lexcv/repositories/ClienteRepository.java` (MODIFIED — add 1 method) | repository | CRUD (native read) | `backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java` (`pesquisar()`) | exact |
 | `backend/src/main/java/com/lexcv/repositories/ProcessoRepository.java` (MODIFIED — add 1 method) | repository | CRUD (native read) | same | exact |
 | `backend/src/main/java/com/lexcv/repositories/DocumentoRepository.java` (MODIFIED — add 1 method) | repository | CRUD (native read) | same | exact |
 | `backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java` (MODIFIED — add 1 new method, see tension note) | repository | CRUD (native read) | itself (existing `pesquisar()`, same file) | exact |
 | `backend/migrations/111-enable-search-extensions.sql` (NEW) | migration | batch (schema DDL) | `backend/migrations/96-add-notificacao-snoozed-until.sql` (header/shape) | exact (wrapper) / no in-repo precedent for `CREATE EXTENSION` content itself |
-| `backend/src/test/java/com/lexcv/repositories/SearchRepositoryIT.java` (NEW, suggested name) | test | CRUD (tenant-isolation integration) | `backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java` | exact |
-| `backend/src/test/java/com/lexcv/controllers/SearchControllerTest.java` (NEW, suggested name) | test | request-response (RBAC branch unit test) | `backend/src/test/java/com/lexcv/controllers/ResourceControllerUploadDocumentoTest.java` | role-match |
+| `backend/src/test/java/com/lexcv/repositories/PesquisaRepositoryIT.java` (NEW, suggested name) | test | CRUD (tenant-isolation integration) | `backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java` | exact |
+| `backend/src/test/java/com/lexcv/controllers/PesquisaControllerTest.java` (NEW, suggested name) | test | request-response (RBAC branch unit test) | `backend/src/test/java/com/lexcv/controllers/ResourceControllerUploadDocumentoTest.java` | role-match |
 
 **Explicitly out of scope for this phase** (per CONTEXT.md `## Phase Boundary`: "Backend apenas; nenhuma UI nesta fase"): no frontend files. `GlobalSearchDialog`, `useGlobalSearch`, `use-debounced-value.ts`, `types/search.ts`, and the `dashboard-shell.tsx` edit from ARCHITECTURE.md's Recommended Project Structure belong to Phase 112, not this phase.
 
@@ -28,7 +28,7 @@ CONTEXT.md's Integration Points section locks the literal class names `SearchCon
 
 ## Pattern Assignments
 
-### `backend/src/main/java/com/lexcv/controllers/SearchController.java` (controller, request-response)
+### `backend/src/main/java/com/lexcv/controllers/PesquisaController.java` (controller, request-response)
 
 **Analog 1 (dedicated-controller shape + tenant/routing idiom):** `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java` (full file, 58 lines)
 
@@ -53,7 +53,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 ```
-For `SearchController`, add `com.lexcv.dtos.SearchResultDto` and the 4 repositories (`ClienteRepository`, `ProcessoRepository`, `DocumentoRepository`, `ParecerSolicitacaoRepository`) in place of the single one above; add `java.util.ArrayList` for the merge list.
+For `PesquisaController`, add `com.lexcv.dtos.ResultadoPesquisaDto` and the 4 repositories (`ClienteRepository`, `ProcessoRepository`, `DocumentoRepository`, `ParecerSolicitacaoRepository`) in place of the single one above; add `java.util.ArrayList` for the merge list.
 
 **Class header + routing pitfall warning — copy this comment's *intent*, not its literal words** (lines 20-33):
 ```java
@@ -74,7 +74,7 @@ public class ParecerPesquisaController {
 
     private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
 ```
-`SearchController` must mirror this exact shape: `@RequestMapping("/api/v1/pesquisa")` at class level (bare, no trailing path segment), one bare `@GetMapping` on the single method — never a sub-path that could get concatenated, and never a method added to `ResourceController` (Anti-Pattern 5 in ARCHITECTURE.md; `ResourceController` is 3,296 lines / 170KB).
+`PesquisaController` must mirror this exact shape: `@RequestMapping("/api/v1/pesquisa")` at class level (bare, no trailing path segment), one bare `@GetMapping` on the single method — never a sub-path that could get concatenated, and never a method added to `ResourceController` (Anti-Pattern 5 in ARCHITECTURE.md; `ResourceController` is 3,296 lines / 170KB).
 
 **Tenant helper — duplicate verbatim, this idiom is intentionally copy-pasted 3× already** (lines 37-41, identical to `ResourceController.java:127-131` and `NotificacaoController.java:57-61`):
 ```java
@@ -99,7 +99,7 @@ public ResponseEntity<?> pesquisarSolicitacoes(
     return ResponseEntity.ok(result);
 }
 ```
-`SearchController` needs a coarser gate than this single-scope example — see **Analog 2** and **Shared Patterns > Per-Branch RBAC Gating** below for the actual 4-branch shape required by CONTEXT.md.
+`PesquisaController` needs a coarser gate than this single-scope example — see **Analog 2** and **Shared Patterns > Per-Branch RBAC Gating** below for the actual 4-branch shape required by CONTEXT.md.
 
 ---
 
@@ -134,7 +134,7 @@ public ResponseEntity<?> getTimeline(@PathVariable UUID id) {
     return ResponseEntity.ok(items);
 }
 ```
-This is the *only* existing precedent in the codebase for "N entity sources → one flat discriminated `List<Dto>` response," and `SearchController` is structurally the same shape, generalized from one processo's sub-entities to the whole tenant's top-level entities. Key transferable details: build a mutable `List<SearchResultDto>`, `.add(...)` per source (per Pattern 2 below, each source is conditionally skipped), single `ResponseEntity.ok(items)` at the end — no per-branch try/catch, no partial-failure handling (list-building can't throw here since it's plain repository calls + stream ops).
+This is the *only* existing precedent in the codebase for "N entity sources → one flat discriminated `List<Dto>` response," and `PesquisaController` is structurally the same shape, generalized from one processo's sub-entities to the whole tenant's top-level entities. Key transferable details: build a mutable `List<ResultadoPesquisaDto>`, `.add(...)` per source (per Pattern 2 below, each source is conditionally skipped), single `ResponseEntity.ok(items)` at the end — no per-branch try/catch, no partial-failure handling (list-building can't throw here since it's plain repository calls + stream ops).
 
 **Reference shape combining both analogs, adjusted for this phase's exact CONTEXT.md decisions** (ARCHITECTURE.md `Pattern 1`, already grounded in the two analogs above — adjust the route/method name per the Naming Note, and the "≥2 chars, ≤200 chars, always 200 OK" validation per CONTEXT.md):
 ```java
@@ -148,7 +148,7 @@ public ResponseEntity<?> pesquisar(@RequestParam(required = false) String q) {
     UUID tenantId = getTenantId();
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-    List<SearchResultDto> resultados = new ArrayList<>();
+    List<ResultadoPesquisaDto> resultados = new ArrayList<>();
     if (hasAuthority(auth, "clientes:view"))   resultados.addAll(pesquisarClientes(tenantId, termo));
     if (hasAuthority(auth, "processos:view"))  resultados.addAll(pesquisarProcessos(tenantId, termo));
     if (hasAuthority(auth, "documentos:view")) resultados.addAll(pesquisarDocumentos(tenantId, termo));
@@ -162,7 +162,7 @@ Note the class-level `@PreAuthorize("hasAnyAuthority(...)")` — this exact mult
 
 ---
 
-### `backend/src/main/java/com/lexcv/dtos/SearchResultDto.java` (model/dto, transform)
+### `backend/src/main/java/com/lexcv/dtos/ResultadoPesquisaDto.java` (model/dto, transform)
 
 **Analog:** `backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java` (full file, 22 lines)
 ```java
@@ -197,7 +197,7 @@ package com.lexcv.dtos;
  * tipo discriminates the source entity: "cliente" | "processo" | "documento" | "parecer".
  * Never includes Honorario/financeiro fields — see PITFALLS.md Pitfall 2.
  */
-public record SearchResultDto(
+public record ResultadoPesquisaDto(
         String tipo,
         String id,
         String titulo,
@@ -373,7 +373,7 @@ Filename: per CONTEXT.md's own example, `111-enable-search-extensions.sql` — p
 
 ---
 
-### `backend/src/test/java/com/lexcv/repositories/SearchRepositoryIT.java` (test, CRUD/tenant-isolation integration — NEW, suggested name)
+### `backend/src/test/java/com/lexcv/repositories/PesquisaRepositoryIT.java` (test, CRUD/tenant-isolation integration — NEW, suggested name)
 
 **Analog:** `backend/src/test/java/com/lexcv/repositories/NotificacaoRepositoryIT.java` (full file, 302 lines) — this is the literal, explicit precedent CONTEXT.md names ("replica o padrão já existente em `NotificacaoRepositoryIT`").
 
@@ -409,7 +409,7 @@ class NotificacaoRepositoryIT {
     @Autowired
     private EntityManager entityManager;
 ```
-For `SearchRepositoryIT`, `@Autowired` all 4 modified repositories (`ClienteRepository`, `ProcessoRepository`, `DocumentoRepository`, `ParecerSolicitacaoRepository`) instead of one; same `@DataJpaTest`/`@AutoConfigureTestDatabase(Replace.NONE)`/`@Testcontainers`/`postgres:16-alpine` container triplet — this is the project's *first* Testcontainers precedent and it works, no reason to deviate.
+For `PesquisaRepositoryIT`, `@Autowired` all 4 modified repositories (`ClienteRepository`, `ProcessoRepository`, `DocumentoRepository`, `ParecerSolicitacaoRepository`) instead of one; same `@DataJpaTest`/`@AutoConfigureTestDatabase(Replace.NONE)`/`@Testcontainers`/`postgres:16-alpine` container triplet — this is the project's *first* Testcontainers precedent and it works, no reason to deviate.
 
 **Representative tenant-isolation test method** (lines 96-113):
 ```java
@@ -438,11 +438,11 @@ CONTEXT.md's exact requirement: *"2 tenants com tokens de pesquisa coincidentes,
 
 ---
 
-### `backend/src/test/java/com/lexcv/controllers/SearchControllerTest.java` (test, request-response unit — NEW, suggested name)
+### `backend/src/test/java/com/lexcv/controllers/PesquisaControllerTest.java` (test, request-response unit — NEW, suggested name)
 
 **Analog:** `backend/src/test/java/com/lexcv/controllers/ResourceControllerUploadDocumentoTest.java` (partial, lines 1-108 read) — the only existing controller-level test in this codebase, and the pattern for testing `@PreAuthorize`-guarded/authority-dependent controller logic **without** a Spring context.
 
-**Why this file, not `SearchRepositoryIT`, for the RBAC role-matrix requirement:** CONTEXT.md's second test requirement ("Teste de matriz por role... confirmando que nenhum campo de `Honorario` aparece") tests the *controller's* per-branch `hasAuthority(auth, "...")` gating logic (Pattern 2 in ARCHITECTURE.md), not a repository query — `@DataJpaTest` (used by `SearchRepositoryIT`) never loads `SecurityConfig`/authorities at all, so it structurally cannot exercise this. This codebase's own convention for testing `@PreAuthorize`/authority-dependent controller code is a **plain Mockito unit test, no Spring context** — confirmed explicitly in this very analog file's own header comment:
+**Why this file, not `PesquisaRepositoryIT`, for the RBAC role-matrix requirement:** CONTEXT.md's second test requirement ("Teste de matriz por role... confirmando que nenhum campo de `Honorario` aparece") tests the *controller's* per-branch `hasAuthority(auth, "...")` gating logic (Pattern 2 in ARCHITECTURE.md), not a repository query — `@DataJpaTest` (used by `PesquisaRepositoryIT`) never loads `SecurityConfig`/authorities at all, so it structurally cannot exercise this. This codebase's own convention for testing `@PreAuthorize`/authority-dependent controller code is a **plain Mockito unit test, no Spring context** — confirmed explicitly in this very analog file's own header comment:
 
 > *"No MockMvc/`@SpringBootTest` harness exists anywhere in this codebase ... every existing test instantiates the class under test directly with Mockito-mocked collaborators and calls the method under test as a plain Java call, with no Spring context ... `@PreAuthorize` annotation is therefore inert here, same as in production unit tests of any other `@PreAuthorize`-guarded method in this codebase."*
 
@@ -474,7 +474,7 @@ class ResourceControllerUploadDocumentoTest {
     }
 }
 ```
-Adapt directly for `SearchControllerTest`: since `SearchController`'s RBAC logic is a **programmatic** `hasAuthority(auth, "...")` check (not `@PreAuthorize`, which this test style can't exercise anyway), the third constructor arg to `UsernamePasswordAuthenticationToken` — `List.of()` in the analog, because that test doesn't need real authorities — must instead be populated with real `SimpleGrantedAuthority` instances per test case, e.g. `List.of(new SimpleGrantedAuthority("clientes:view"), new SimpleGrantedAuthority("processos:view"))` for an ADVOGADO-shaped caller missing `financeiro:view`-adjacent scopes, mirroring the exact per-role scope sets in `DatabaseSeeder.seedRbac()` (`backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:293-353`, see **Shared Patterns > RBAC Matrix** below). One test method per role (ADMIN/ADVOGADO/TECNICO/ASSISTENTE) or one parameterized test over the 4 scope sets; assert the returned `List<SearchResultDto>` never contains a `tipo` outside `{"cliente","processo","documento","parecer"}` and, per CONTEXT.md, that `Honorario`/`financeiro` fields are structurally impossible to appear (true by construction if `SearchResultDto` has no financial fields at all — see Anti-Pattern 2/PITFALLS.md Pitfall 2).
+Adapt directly for `PesquisaControllerTest`: since `PesquisaController`'s RBAC logic is a **programmatic** `hasAuthority(auth, "...")` check (not `@PreAuthorize`, which this test style can't exercise anyway), the third constructor arg to `UsernamePasswordAuthenticationToken` — `List.of()` in the analog, because that test doesn't need real authorities — must instead be populated with real `SimpleGrantedAuthority` instances per test case, e.g. `List.of(new SimpleGrantedAuthority("clientes:view"), new SimpleGrantedAuthority("processos:view"))` for an ADVOGADO-shaped caller missing `financeiro:view`-adjacent scopes, mirroring the exact per-role scope sets in `DatabaseSeeder.seedRbac()` (`backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:293-353`, see **Shared Patterns > RBAC Matrix** below). One test method per role (ADMIN/ADVOGADO/TECNICO/ASSISTENTE) or one parameterized test over the 4 scope sets; assert the returned `List<ResultadoPesquisaDto>` never contains a `tipo` outside `{"cliente","processo","documento","parecer"}` and, per CONTEXT.md, that `Honorario`/`financeiro` fields are structurally impossible to appear (true by construction if `ResultadoPesquisaDto` has no financial fields at all — see Anti-Pattern 2/PITFALLS.md Pitfall 2).
 
 ---
 
@@ -489,7 +489,7 @@ private UUID getTenantId() {
     return principal.getTenantId();
 }
 ```
-**Apply to:** `SearchController` — a 4th duplication of this exact method is the established, accepted style in this codebase (ARCHITECTURE.md explicitly notes this is "accepted, pre-existing style, not a new cost introduced here").
+**Apply to:** `PesquisaController` — a 4th duplication of this exact method is the established, accepted style in this codebase (ARCHITECTURE.md explicitly notes this is "accepted, pre-existing style, not a new cost introduced here").
 
 ### Per-branch RBAC gating (net-new helper — first use in this codebase)
 **Source:** ARCHITECTURE.md Pattern 2 (synthesized reference, not lifted from an existing file — confirmed via grep across `backend/src/main/java` for `hasAuthority(Authentication` / `private boolean hasAuthority`: zero existing matches)
@@ -499,7 +499,7 @@ private boolean hasAuthority(Authentication auth, String authority) {
             .anyMatch(a -> a.getAuthority().equals(authority));
 }
 ```
-**Apply to:** `SearchController` only, guarding each of the 4 `if (hasAuthority(auth, "<scope>:view")) resultados.addAll(...)` branches (Anti-Pattern 2: never fetch-then-filter, always gate-before-fetch). `Authentication.getAuthorities()` returns the same `Set<SimpleGrantedAuthority>` `UserPrincipal.create(...)` builds from DB permissions (`backend/src/main/java/com/lexcv/config/UserPrincipal.java:27-51`) — no new security primitive, just a programmatic read of the same authority set `@PreAuthorize`'s SpEL evaluates declaratively.
+**Apply to:** `PesquisaController` only, guarding each of the 4 `if (hasAuthority(auth, "<scope>:view")) resultados.addAll(...)` branches (Anti-Pattern 2: never fetch-then-filter, always gate-before-fetch). `Authentication.getAuthorities()` returns the same `Set<SimpleGrantedAuthority>` `UserPrincipal.create(...)` builds from DB permissions (`backend/src/main/java/com/lexcv/config/UserPrincipal.java:27-51`) — no new security primitive, just a programmatic read of the same authority set `@PreAuthorize`'s SpEL evaluates declaratively.
 
 ### CAST-null-guard native `@Query` idiom
 **Source:** `ParecerSolicitacaoRepository.pesquisar()` (`backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java:41-58`) and `NotificacaoRepository.buscarPorFiltros()` (`backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java:26-42`)
@@ -525,15 +525,15 @@ private boolean hasAuthority(Authentication auth, String authority) {
 | `pareceres:view` | Y | Y | Y | Y |
 | `financeiro:view` | Y | Y | Y | **N** |
 
-**Apply to:** `SearchController`'s 4 branch gates use only the first 4 rows. `financeiro:view` is listed here only as the negative-control scope for the RBAC-matrix test — `Honorario`/`financeiro` must never be queried by `SearchController` at all (no branch exists for it), so this scope's presence/absence should have **zero** observable effect on any search response, for any role. All 4 seeded roles currently hold all 4 real target scopes — the per-branch gate is correctness-for-the-future (custom DB-managed roles via `rbac:manage`), not something today's fixtures alone would catch a regression in.
+**Apply to:** `PesquisaController`'s 4 branch gates use only the first 4 rows. `financeiro:view` is listed here only as the negative-control scope for the RBAC-matrix test — `Honorario`/`financeiro` must never be queried by `PesquisaController` at all (no branch exists for it), so this scope's presence/absence should have **zero** observable effect on any search response, for any role. All 4 seeded roles currently hold all 4 real target scopes — the per-branch gate is correctness-for-the-future (custom DB-managed roles via `rbac:manage`), not something today's fixtures alone would catch a regression in.
 
 ### Testcontainers IT harness
 **Source:** `NotificacaoRepositoryIT.java:41-54` (class annotations + container declaration)
-**Apply to:** `SearchRepositoryIT` — identical `@DataJpaTest` + `@AutoConfigureTestDatabase(Replace.NONE)` + `@Testcontainers` + `@Container @ServiceConnection static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")` quadruple. This is also where the `111-enable-search-extensions.sql` migration's `CREATE EXTENSION` statements need to actually run against the test container before the new repository methods are exercised — `@DataJpaTest` relies on `ddl-auto` (not the manual migration scripts) to create tables from entity mappings, but `CREATE EXTENSION` has no entity-mapping equivalent, so the test setup must execute those two statements itself (e.g. via `entityManager.createNativeQuery(...)` in a `@BeforeAll`/`@BeforeEach`, mirroring how `forcarCreatedAt` in the analog already uses `entityManager.createNativeQuery(...)` for out-of-band SQL, lines 192-197) — otherwise `unaccent()`/`ILIKE` calls in the new queries will fail against the fresh Testcontainers database with "function unaccent(text) does not exist."
+**Apply to:** `PesquisaRepositoryIT` — identical `@DataJpaTest` + `@AutoConfigureTestDatabase(Replace.NONE)` + `@Testcontainers` + `@Container @ServiceConnection static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")` quadruple. This is also where the `111-enable-search-extensions.sql` migration's `CREATE EXTENSION` statements need to actually run against the test container before the new repository methods are exercised — `@DataJpaTest` relies on `ddl-auto` (not the manual migration scripts) to create tables from entity mappings, but `CREATE EXTENSION` has no entity-mapping equivalent, so the test setup must execute those two statements itself (e.g. via `entityManager.createNativeQuery(...)` in a `@BeforeAll`/`@BeforeEach`, mirroring how `forcarCreatedAt` in the analog already uses `entityManager.createNativeQuery(...)` for out-of-band SQL, lines 192-197) — otherwise `unaccent()`/`ILIKE` calls in the new queries will fail against the fresh Testcontainers database with "function unaccent(text) does not exist."
 
 ### Controller unit test without Spring context
 **Source:** `ResourceControllerUploadDocumentoTest.java` header comment + lines 57-108 (see full excerpt above)
-**Apply to:** `SearchControllerTest` — `@ExtendWith(MockitoExtension.class)`, `@Mock` per repository, direct `new SearchController(...)` construction, `SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userPrincipal, null, authorities))` before each call, `@AfterEach SecurityContextHolder.clearContext()` — this is the only controller-unit-test convention this codebase has; do not introduce MockMvc/`@SpringBootTest` for this (confirmed explicitly absent, and out of step with existing style).
+**Apply to:** `PesquisaControllerTest` — `@ExtendWith(MockitoExtension.class)`, `@Mock` per repository, direct `new PesquisaController(...)` construction, `SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userPrincipal, null, authorities))` before each call, `@AfterEach SecurityContextHolder.clearContext()` — this is the only controller-unit-test convention this codebase has; do not introduce MockMvc/`@SpringBootTest` for this (confirmed explicitly absent, and out of step with existing style).
 
 ---
 
