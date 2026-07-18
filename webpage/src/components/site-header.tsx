@@ -18,6 +18,15 @@ const NAV_LINKS = [
 export function SiteHeader({ branding }: { branding: BrandingResponse }) {
   const [open, setOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setOpen(false);
+    };
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
   return (
     <header className="sticky top-0 z-10 h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-[#020617]/80">
       <div className="mx-auto flex h-full max-w-7xl items-center gap-4 px-6">
