@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: ready_to_plan
-stopped_at: Phase 109 complete (3/3) — ready to discuss Phase 110
-last_updated: "2026-07-17T16:35:00.000Z"
-last_activity: 2026-07-17 -- Phase 109 closed
+status: ready_for_milestone_close
+stopped_at: Phase 110 complete (3/3) — milestone v2.13 fully executed, ready for audit-milestone
+last_updated: "2026-07-18T12:30:00.000Z"
+last_activity: 2026-07-18 -- Phase 110 closed (final phase of v2.13)
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 39
-  completed_plans: 39
-  percent: 90
+  completed_phases: 10
+  total_plans: 42
+  completed_plans: 42
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-15)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 110 — refinamento da landing (webpage/)
+**Current focus:** Milestone v2.13 close-out (audit → complete → cleanup)
 
 ## Current Position
 
-Phase: 110 of 110 (refinamento da landing — webpage/)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-17 -- Phase 109 closed
+Phase: 110 of 110 (refinamento da landing — webpage/) — COMPLETE
+Plan: All 3 plans complete
+Status: Milestone v2.13 fully executed — ready for gsd-audit-milestone
+Last activity: 2026-07-18 -- Phase 110 closed
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Last activity: 2026-07-17 -- Phase 109 closed
 | 107 | 6 | ~90 min | ~15 min |
 | 108 | 4 | ~150 min | ~38 min |
 | 109 | 3 | ~200 min | ~67 min |
+| 110 | 3 | ~90 min | ~30 min |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
@@ -132,6 +133,7 @@ Recent decisions affecting current work:
 - [Phase 106]: Full quality pipeline closed — code-review fix/re-review loop ran 3 iterations (WR-01/02/03 fixed → re-review found a NEW Critical regression, CR-01: the WR-01 fix made DatePickerField's Calendar silently reset to today on a same-day reclick, since react-day-picker's optional single-select mode fires `onSelect(undefined)` on reclick → fixed by adding `required` to the Calendar element, which react-day-picker's own source confirms disables the deselect-on-reclick branch entirely → final re-review APPROVED, 0 critical/0 warning). Goal-backward verification passed 5/5 against current source (not just SUMMARY.md claims). UI audit scored 21/24; one genuine new-composition accessibility gap (DatePickerField's time input had no label) was fixed (added an optional `label` prop, wired to `aria-label`); two other findings (submit-button `disabled` still using `isLoading` not `isFetched`; editar's `onSubmit` missing a defense-in-depth `canEditAgenda` guard `novo`'s has) were confirmed pre-existing/deliberately out-of-scope and left documented in `deferred-items.md`, not fixed.
 - [Phase 109]: Full quality pipeline closed — code-review fix/re-review loop ran all 3 allowed iterations (iteration 1 fixed 5 Warnings, most notably WR-01: the notification-bell's `Badge` migration silently lost its red/gray color in dark mode because `Badge`'s default `secondary` variant injects `dark:bg-neutral-800`, and `tailwind-merge` doesn't dedupe across different modifier prefixes — fixed by adding explicit `dark:bg-red-500`/`dark:bg-slate-400` counterparts; also WR-03, a genuine scope-consistent extraction of a new shared `SidebarNav` component from a byte-for-byte duplicated nav block the phase's own `UserMenu` dedup left unaddressed. Iteration 2's re-review confirmed all 5 fixes clean but found 1 NEW Warning: the mobile drawer's only close mechanism (`useEffect` on `pathname` change) never fires when a nav link matching the current route is tapped — fixed via a new `onNavigate` callback threaded through `SidebarNav`. Iteration 3 confirmed clean, 0 critical/0 warning, 10 Info intentionally left open. One of the fix iterations (iteration 1) hit a genuine "Windows stdio hang" pattern — the code-fixer's actual work (all 5 commits) completed and was verified via direct worktree git inspection, but its final return never arrived; recovered by committing its orphaned REVIEW-FIX.md report directly and merging manually, rather than waiting indefinitely.). Goal-backward verification scored 13/14 and routed `human_needed` for the same Wave-2 live-checkpoint gap pattern as Phases 105/108 (the checkpoint was closed by the executor agent itself via a mix of live clicks and source reading, not a literal human). UI audit scored 18/24 and found 3 genuine accessibility gaps in phase-109-shipped code (no `aria-label`/focus-visible ring on the new `UserMenu` triggers; the newly-extracted `SidebarNav`'s "Suporte" link missing the just-introduced `onNavigate` drawer-close callback; the adjacent, pre-existing `NotificationBell` trigger missing an `aria-label`) — all 3 fixed directly (cheap, safe, in-scope) rather than deferred.
 - [Phase 108]: Full quality pipeline closed — code-review fix/re-review loop ran all 3 allowed iterations (iteration 1 fixed 1 Critical + 7 Warnings — most notably CR-01: `EntregarParecerDialog`'s "final version" default was derived from the raw, unsorted `versoes.data` array (`versoes[versoes.length-1]`) instead of the already-sorted `sortedVersoes`, risking silently delivering the wrong version as final for an explicitly irreversible action, since the backing repository query has no `ORDER BY`; iteration 2's re-review confirmed all 8 fixes clean with zero regressions but found 1 NEW Warning, WR-08: the dialog's manually-picked version state was never reset on cancel, so a stale pick could silently reappear as the default next time the dialog opened — same risk class as CR-01, reached via leftover state instead of array order; iteration 3 fixed WR-08 and confirmed clean, 0 critical/0 warning, 5 Info intentionally left open). Goal-backward verification scored 10/11 must-haves and routed to `human_needed` (not `passed`) — 2 of the Wave-2 checkpoint's 8 UAT items (dark-mode Accordion/Tooltip rendering; RBAC no-flash check for a role lacking `pareceres:view`) were substituted with source/pattern analysis after a persistent Browser-pane environment issue (JS interactivity stopped responding app-wide, survived cache-clear + dev-server restart + fresh tabs + a nonexistent-ID isolation test) — same disposition as Phase 105's own `human_needed` routing for an analogous residual live-check gap; REQUIREMENTS.md still marks PARC-18/19/20 Complete per that same precedent. UI audit scored 19/24; the 2 first-of-kind patterns (Accordion default-open, Tooltip-on-non-focusable-marker) were both confirmed rigorously correct with zero in-repo precedent to copy from. A genuine live bug was found in the audit (`prioridade` NativeSelect silently defaults to "Alta" not the documented "Média" on unedited submission) but confirmed via direct `git show` diff against the pre-Phase-108 base commit to be pre-existing (present in the original raw `<select>` too, not introduced by the NativeSelect swap) — deferred, not fixed, per the Scope Boundary rule, and flagged as a background task given its real data-integrity impact. A second pre-existing bug was found during UAT: `useAdminUsers()` (ADMIN-only endpoint) called unconditionally across all 3 Pareceres files, throwing a spurious 500 toast and leaving the Advogado NativeSelect permanently unpopulated for any non-ADMIN role — also deferred/flagged, not fixed (data-layer/endpoint-choice bug, outside this component-migration phase's scope).
+- [Phase 110, final phase of v2.13]: Wave 1 (110-01 mobile Sheet nav on `webpage/`'s SiteHeader + 110-02 Hero/Contacto Card/Badge recomposition) ran as 2 parallel worktree-isolated plans with zero file overlap, both merged clean apart from the expected `REQUIREMENTS.md` dual-checkbox conflict (both plans marking their own requirement on the same lines — resolved by marking both `[x]`, same pattern as Phase 109's Wave 1). Wave 2 (110-03) ran a holistic build/lint gate plus a live human-verify checkpoint that the orchestrator itself performed in-browser (mobile 390×844 + desktop 1280×800, light + dark) before presenting results for the user's sign-off — approved with zero fixes needed. Full quality pipeline closed: code-review found 0 Critical/1 Warning (WR-01: the mobile Sheet drawer never closed itself if the viewport was resized past the `md` breakpoint while open, leaving the drawer's overlay + its own "Entrar" CTA rendered on top of the now-visible desktop nav — fixed with a `matchMedia("(min-width: 768px)")` listener that force-closes the sheet, commit `27b45fb`); re-review (iteration 2) confirmed the fix correct and found 0 Critical/0 Warning remaining (7 Info-level items, out of `--fix` scope) — the auto-loop was deliberately stopped at iteration 2 rather than running iterations 3 for zero benefit, since Info-only findings can never satisfy the loop's literal "clean" exit condition. Goal-backward verification scored 15/15 (`passed`, not `human_needed` — the two human-verification truths were satisfied by the orchestrator's own already-completed live checkpoint, not re-asked of the user a second time). UI audit scored 19/24; the clearest, most concrete finding (Badge eyebrow padding shipping at the component's default `px-2.5 py-0.5` instead of the UI-SPEC's declared `px-3 py-1` — a visible regression next to `TrustSection`'s/`FeaturesSection`'s still-manual eyebrows using the old padding) was fixed directly (commit `31d8ac4`, verified via `getComputedStyle` in-browser); the other 2 priority findings (Card's `hover:shadow-md` false-affordance on a large non-interactive block; keyboard focus stranding when the resize-auto-close fires at the exact breakpoint where the trigger itself becomes `display:none`) were deliberately left as documented, deferred debt — the first because `card.tsx` is explicitly out of this phase's scope per a locked `CONTEXT.md` decision to replicate `TrustSection`'s styling verbatim, the second because it was already Info-level (not Warning) in code review and is a narrow edge case.
 
 ### Pending Todos
 
@@ -198,14 +200,13 @@ Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-U
 
 ## Session Continuity
 
-Last session: 2026-07-17T16:35:00.000Z
-Stopped at: Completed 109-03-PLAN.md (holistic gate + human-verify checkpoint) + full code-review/verify/UI-audit pipeline — Phase 109 (Notificações / Settings / Setup Wizard) closed, all 3 plans done
+Last session: 2026-07-18T12:30:00.000Z
+Stopped at: Completed 110-03-PLAN.md (holistic gate + human-verify checkpoint) + full code-review/verify/UI-audit pipeline — Phase 110 (Refinamento da Landing webpage/) closed, all 3 plans done. This was the LAST phase of milestone v2.13 (101–110) — milestone execution is now 100% complete (10/10 phases).
 Resume file: None
 
 ## Operator Next Steps
 
-- Phase 109 (Notificações / Settings / Setup Wizard) is complete — topbar/sidebar/mobile-Sheet user menu consolidated into a shared `UserMenu` (the project's first real `DropdownMenu` consumer), notification-bell unread counter migrated to `Badge` (with a genuine dark-mode color bug caught and fixed by code review), `/setup` wizard's Checklist replaced by a `Progress` bar. A bonus `SidebarNav` shared component was extracted during code review to close a duplication gap the reviewer found. NTF-28/29/30 marked Complete in REQUIREMENTS.md. Full pipeline closed: code-review (3 iterations, 7 warning-level findings fixed across the loop, 0 remaining critical/warning), goal-backward verification (13/14, routed `human_needed` for the live-checkpoint gap — see below), UI audit (18/24, all 3 findings fixed directly).
-- **One item needs a human live-check to fully close (routed `human_needed`, not blocking):** most of the Wave-2 checkpoint's live-interaction items (Perfil nav, full logout, the 2 footer UserMenu instances, the Badge with real data, the Progress bar through a real submit, light theme) were substituted with source-code verification after live testing hit a genuine, now-root-caused Browser-pane instability (see next bullet). A quick manual click-through with the seeded test accounts would close this — see `.planning/phases/LEXCV-109-notifica-es-settings-setup-wizard/deferred-items.md`.
-- **Root cause found for this session's recurring Browser-pane testing instability (across both Phase 108 and 109):** a real React hydration-mismatch bug in `dashboard/page.tsx`'s `AtividadeRecenteCard` (Phase 103) — confirmed via browser console logs, unrelated to any v2.13 migration work. **Already fixed in an independent session** (branch `claude/sad-fermat-78bc39`, verified live with zero hydration errors) but not yet merged into `master` — see Blockers/Concerns above.
-- **Two other pre-existing bugs found in earlier phases also already have completed independent fixes, not yet merged** — see Blockers/Concerns above for both (Pareceres Prioridade default, document upload crash).
-- Start planning with /gsd:plan-phase 110 (Refinamento da Landing `webpage/`) — mobile nav via `Sheet`, Hero/Contacto via `Card`/`Badge`; only depends on Phase 101 (already complete), zero dependency on any `web/` module phase. This is the final phase of the v2.13 milestone — after it closes, the milestone lifecycle (audit → complete → cleanup) is next.
+- Phase 110 (Refinamento da Landing `webpage/`) is complete — mobile Sheet nav drawer added to `webpage/`'s SiteHeader (LDG-17), Hero/Contacto sections recomposed onto `Card`/`Badge` matching `TrustSection`'s idiomatic pattern (LDG-18). LDG-17/LDG-18 marked Complete in REQUIREMENTS.md. Full pipeline closed: code-review (2 iterations, 1 warning fixed — Sheet not closing on viewport resize past `md`, 0 remaining critical/warning), goal-backward verification (15/15, `passed`), UI audit (19/24, 1 of 3 priority findings fixed — Badge eyebrow padding regression — the other 2 deliberately deferred as pre-existing/out-of-scope or narrow-edge-case debt).
+- **Milestone v2.13 (Refactor UI/UX shadcn/ui) is now 100% executed (10/10 phases, 42/42 plans).** Next step: run the milestone close-out lifecycle — `gsd-audit-milestone` → `gsd-complete-milestone` → `gsd-cleanup` — per the standing autonomous-execution instruction for this session.
+- **Three previously-flagged background bugs still have completed-but-unmerged independent fixes** (document upload crash, Pareceres Prioridade default, dashboard hydration mismatch) — see Blockers/Concerns above. These predate and are unrelated to any v2.13 phase's own work; merging them is the user's call, not something to fold into this milestone's close-out.
+- Two other pre-existing, deferred (not yet fixed) bugs remain flagged from Phase 107/108 UAT — see Blockers/Concerns above (Pareceres `useAdminUsers()` 500/unpopulated picker; consider whether the milestone audit should re-surface these as carry-forward items for a future milestone).

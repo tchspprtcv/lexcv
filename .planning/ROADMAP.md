@@ -441,9 +441,9 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
   1. O `SiteHeader` mostra navegação mobile funcional via o `Sheet` reutilizado (atualmente zero navegação em mobile — um gap funcional real, não cosmético).
   2. As secções Hero e Contacto estão recompostas com `Card`/`Badge`, replicando o padrão já idiomático do `TrustSection`.
 **Plans**: 3 plans (2 waves)
-- [ ] 110-01-PLAN.md — LDG-17: Sheet mobile nav no SiteHeader (copiar Sheet + hamburger drawer, click-to-close direto)
-- [ ] 110-02-PLAN.md — LDG-18: Hero + Contacto recompostos com Card/Badge (copiar Badge; <h1>/<h2> preservados)
-- [ ] 110-03-PLAN.md — Gate holístico (build/lint webpage/) + checkpoint visual humano (mobile Sheet + 2 temas)
+- [x] 110-01-PLAN.md — LDG-17: Sheet mobile nav no SiteHeader (copiar Sheet + hamburger drawer, click-to-close direto)
+- [x] 110-02-PLAN.md — LDG-18: Hero + Contacto recompostos com Card/Badge (copiar Badge; <h1>/<h2> preservados)
+- [x] 110-03-PLAN.md — Gate holístico (build/lint webpage/) + checkpoint visual humano (mobile Sheet + 2 temas)
 
 ## Progress
 
@@ -517,6 +517,6 @@ A pesquisa de arquitetura desta milestone confirma que este não é um adoption 
 | 107. Módulos Documentos + Financeiro | v2.13 | 6/6 | Complete    | 2026-07-17 |
 | 108. Módulo Pareceres | v2.13 | 4/4 | Complete    | 2026-07-17 |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
-| 110. Refinamento da Landing (webpage/) | v2.13 | 0/3 | Not started | - |
+| 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
 
-**Next:** Phase 109 (Notificações / Settings / Setup Wizard) concluída — menu de utilizador da topbar/sidebar/Sheet consolidado num `UserMenu` partilhado (1º consumidor real de `DropdownMenu`), contador de não-lidas do sino migrado para `Badge` (com um bug genuíno de cor em dark mode apanhado e corrigido pela revisão de código), wizard `/setup` com `Progress` a substituir o Checklist estático. Um componente `SidebarNav` partilhado adicional foi extraído durante a revisão de código para fechar um gap de duplicação que o revisor encontrou. NTF-28/29/30 fechados. Pipeline completo fechado: revisão de código (3 iterações, 7 findings de nível warning corrigidos), verificação goal-backward (13/14), auditoria de UI (18/24, 3 achados corrigidos). Causa-raiz encontrada para a instabilidade recorrente do Browser-pane nesta sessão (um bug real de hydration mismatch em `dashboard/page.tsx`, Phase 103) — já corrigido numa sessão independente, ainda não integrado no `master`. Run `/gsd:plan-phase 110` to continue (última fase do milestone v2.13).
+**Next:** Phase 110 (Refinamento da Landing webpage/) concluída — Sheet mobile nav adicionado ao `SiteHeader` da `webpage/` (LDG-17), secções Hero/Contacto recompostas com `Card`/`Badge` replicando o padrão idiomático do `TrustSection` (LDG-18). LDG-17/LDG-18 fechados. Pipeline completo fechado: revisão de código (2 iterações, 1 warning corrigido — Sheet não fechava ao redimensionar a viewport além do breakpoint `md`), verificação goal-backward (15/15, `passed`), auditoria de UI (19/24, 1 de 3 achados prioritários corrigido — padding do Badge eyebrow — os outros 2 deliberadamente deferidos como dívida pré-existente/fora de âmbito). **Milestone v2.13 (Refactor UI/UX shadcn/ui) 100% executado (10/10 fases, 42/42 plans).** Run `/gsd:audit-milestone` to continue (encerramento do milestone).
