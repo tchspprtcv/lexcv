@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
 status: planning
-last_updated: "2026-07-18T15:51:10.642Z"
+last_updated: "2026-07-18T16:30:00.000Z"
 last_activity: 2026-07-18
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Nenhum milestone em execução — v2.13 fechado. Próximo milestone por definir via `/gsd:new-milestone`.
+**Current focus:** v2.14 UI/UX Melhorias — ROADMAP.md criado (5 fases, 111–115), aguarda aprovação antes de iniciar `/gsd:plan-phase 111`.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-18 — Milestone v2.14 started
+Phase: 111 of 115 (Backend — Pesquisa Global Cross-Entity (API))
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-07-18 — ROADMAP.md e REQUIREMENTS.md (traceability) criados para v2.14: 5 fases (111–115), 15/15 requisitos mapeados, 100% cobertura
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -176,10 +178,11 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-18T12:30:00.000Z
-Stopped at: Completed 110-03-PLAN.md (holistic gate + human-verify checkpoint) + full code-review/verify/UI-audit pipeline — Phase 110 (Refinamento da Landing webpage/) closed, all 3 plans done. This was the LAST phase of milestone v2.13 (101–110) — milestone execution is now 100% complete (10/10 phases).
+Last session: 2026-07-18
+Stopped at: ROADMAP.md criado para v2.14 (UI/UX Melhorias) — 5 fases derivadas dos 15 requisitos v1 (SRCH-01..11 → Phases 111-112, PEST-01 → Phase 113, RAD-01 → Phase 114, ICON-01+FICO-01 → Phase 115), 100% cobertura validada. REQUIREMENTS.md traceability atualizado. Aguarda aprovação do roadmap.
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Rever e aprovar `.planning/ROADMAP.md` (milestone v2.14, Phases 111–115)
+- Após aprovação, iniciar planeamento com `/gsd:plan-phase 111`

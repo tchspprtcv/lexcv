@@ -16,6 +16,7 @@
 - ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
 - ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
 - ✅ **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (complete 2026-07-18)
+- 📋 **v2.14 UI/UX Melhorias** — Phases 111–115 (planned)
 
 ## Phases
 
@@ -301,6 +302,81 @@ See archive: [milestones/v2.13-ROADMAP.md](milestones/v2.13-ROADMAP.md) · [mile
 
 </details>
 
+### 📋 v2.14 UI/UX Melhorias (Planned)
+
+**Milestone Goal:** Fechar gaps de UX deixados pela v2.13 (pesquisa decorativa, sem filtro de estado) e dar o próximo passo na linguagem visual (ícones, cantos arredondados) — uma segunda fase de refinamento orientada a comportamento, não só a troca de biblioteca de componentes.
+
+A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa global cross-entity já tem toda a base técnica instalada (primitivos `cmdk`/`CommandDialog` desde a Phase 107, dois precedentes de pesquisa `ILIKE` tenant-scoped já no backend) — falta só ligar as peças. O backend (Phase 111) tem de existir e estar testado (isolamento de tenant, RBAC por branch de entidade, ranking exato/prefixo antes de substring) antes do frontend (Phase 112) o consumir — a mesma sequência já usada neste projeto para Pareceres (v2.5→v2.6) e Notificações (Phase 86→89), e evita construir UI contra um contrato de dados ainda instável. O filtro de estado de Processos (Phase 113) é aditivo e tecnicamente independente da pesquisa (módulo e ficheiros distintos), mas agrupado tematicamente com as Phases 111-112 por ambos fecharem os mesmos gaps de UX identificados no fecho da v2.13. As duas fases de linguagem visual fecham a milestone: cantos arredondados (Phase 114, mudança de um único token CSS já isolado em `web/src/app/globals.css`) corre antes do levantamento de ícones (Phase 115) para que a verificação visual não tenha de rever os mesmos ecrãs duas vezes, e para que o levantamento de ícones já cubra os botões novos introduzidos pelas Phases 111-114 (trigger de pesquisa, filtro de estado). Targets #2-#5 não tiveram research dedicado (fora do âmbito desta ronda de pesquisa) — as Phases 113-115 aplicam padrões já estabelecidos no código (Select de filtros da Phase 106, `lucide-react`/`Tooltip` já instalados) com risco avaliado como baixo.
+
+- [ ] **Phase 111: Backend — Pesquisa Global Cross-Entity (API)** - Endpoint novo, seguro e bem ordenado (Cliente/Processo/Documento/Parecer, tenant+RBAC por branch)
+- [ ] **Phase 112: Frontend — Pesquisa Global (Paleta de Comando)** - Paleta Ctrl+K/⌘K no topbar, ligada ao endpoint da Phase 111
+- [ ] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado
+- [ ] **Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)** - Reversão deliberada do radius reto da v2.13
+- [ ] **Phase 115: Linguagem Visual — Ícones + Filtros Ícone-Only** - Ícones em todos os botões; filtros aplicar/limpar/exportar passam a ícone-only com tooltip
+
+#### Phase 111: Backend — Pesquisa Global Cross-Entity (API)
+
+**Goal**: Existe um endpoint backend que devolve, de forma segura e corretamente ordenada, resultados de Clientes, Processos, Documentos e Pareceres do tenant do utilizador autenticado — a fundação sobre a qual a experiência de pesquisa do utilizador (Phase 112) é construída.
+**Depends on**: Nothing (primeira fase da milestone)
+**Requirements**: SRCH-01, SRCH-02, SRCH-06, SRCH-07
+**Success Criteria** (what must be TRUE):
+  1. Uma chamada autenticada a `GET /api/v1/search?q=<termo>` devolve resultados de Cliente, Processo, Documento e ParecerSolicitacao pertencentes ao tenant do utilizador, cada resultado identificável pelo seu tipo (SRCH-01)
+  2. Dois tenants com registos e termos de pesquisa coincidentes nunca veem resultados um do outro em nenhum dos 4 tipos — cada sub-query parte do `tenant_id` da própria entidade, nunca de um filtro aplicado depois de obter os dados (SRCH-07)
+  3. Correspondências exatas ou por prefixo em identificadores estruturados (`numero_cliente`, `numero_processo`, `nif`, `documento_numero`) aparecem ordenadas antes de correspondências por substring simples, no mesmo conjunto de resultados (SRCH-02)
+  4. Um tipo de entidade só é consultado quando o utilizador autenticado detém o scope de visualização correspondente (`clientes:view`/`processos:view`/`documentos:view`/`pareceres:view`) — nunca obtido e escondido depois; dados de `Honorario`/financeiro nunca surgem em nenhum resultado, independentemente do perfil do utilizador (SRCH-06)
+**Plans**: TBD
+
+#### Phase 112: Frontend — Pesquisa Global (Paleta de Comando)
+
+**Goal**: O utilizador encontra e navega para qualquer Cliente/Processo/Documento/Parecer do seu tenant a partir de qualquer página, através de uma paleta de pesquisa acessível pelo topbar ou por atalho de teclado.
+**Depends on**: Phase 111 (o contrato do backend tem de estar estável e testado antes da UI o consumir)
+**Requirements**: SRCH-03, SRCH-04, SRCH-05, SRCH-08, SRCH-09, SRCH-10, SRCH-11
+**Success Criteria** (what must be TRUE):
+  1. Utilizador abre a paleta de pesquisa a partir do campo já existente no topbar ou via atalho Ctrl+K/⌘K, a partir de qualquer página autenticada (SRCH-05)
+  2. Ao escrever 2 ou mais caracteres, a pesquisa dispara automaticamente ao fim de ~300ms de pausa (debounce), sem um pedido novo a cada tecla premida (SRCH-03)
+  3. Os resultados aparecem agrupados por tipo de entidade, cada um com um subtítulo desambiguador (ex: número + NIF para Cliente) e com o texto correspondente à pesquisa destacado visualmente; clicar num resultado navega para a rota de detalhe existente e fecha a paleta (SRCH-04, SRCH-11)
+  4. O utilizador vê 3 estados distintos consoante o momento: antes de escrever (últimos registos visitados, guardados apenas no cliente/sessão, nunca no servidor), a carregar, e sem resultados (SRCH-08, SRCH-10)
+  5. Cada grupo de resultados mostra um link "Ver todos" que abre a lista completa desse tipo, já filtrada pelo termo pesquisado (SRCH-09)
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 113: Processos — Filtro por Estado
+
+**Goal**: O utilizador filtra a lista de Processos por estado, sem perder os outros filtros já aplicados.
+**Depends on**: Nothing (paralelizável com as Phases 111-112 — módulo e ficheiros distintos da pesquisa global)
+**Requirements**: PEST-01
+**Success Criteria** (what must be TRUE):
+  1. Utilizador seleciona um estado num controlo dedicado na lista de Processos e a lista atualiza para mostrar apenas processos nesse estado
+  2. Utilizador limpa o filtro de estado e a lista volta a mostrar todos os processos, respeitando os outros filtros já aplicados
+  3. O filtro de estado funciona em conjunto com os filtros já existentes na lista de Processos, sem se substituírem mutuamente
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)
+
+**Goal**: A aplicação deixa de ter cantos retos e passa a ter cantos arredondados, de forma consistente em todos os componentes e em ambos os temas — reversão deliberada da identidade "documento institucional" estabelecida na v2.13.
+**Depends on**: Nothing tecnicamente (mudança de um único token CSS já isolado) — sequenciada depois das Phases 111-113 nesta milestone para que a verificação visual cubra também os ecrãs novos que essas fases introduzem (diálogo de pesquisa, filtro de estado), evitando duplicar o QA visual quando a Phase 115 (ícones) tocar os mesmos ecrãs
+**Requirements**: RAD-01
+**Success Criteria** (what must be TRUE):
+  1. O token `--radius` (e os derivados `--radius-sm/md/lg/xl`) deixa de ser `0` e passa a um valor arredondado, definido uma única vez e consumido por todos os componentes que já usam a variável
+  2. Cartões, botões, inputs, badges, diálogos e a sidebar mostram cantos arredondados de forma visualmente consistente, tanto no tema claro como no escuro
+  3. Todos os ecrãs da aplicação — incluindo os novos introduzidos pelas Phases 111-113 desta milestone (paleta de pesquisa, filtro de estado) — mostram o mesmo raio de canto consistente, sem exceções visuais nem cantos retos remanescentes
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 115: Linguagem Visual — Ícones em Todos os Botões + Filtros Ícone-Only
+
+**Goal**: Todos os botões da aplicação comunicam a sua ação através de um ícone consistente, e os botões de ação de filtro em todos os módulos tornam-se ícone-only com tooltip — o próximo passo da linguagem visual, depois de fechados os gaps de UX (Phases 111-113) e da fundação de cantos arredondados (Phase 114).
+**Depends on**: Phase 111, Phase 112, Phase 113, Phase 114 (o levantamento de ícones tem de cobrir os botões novos introduzidos por todas as fases anteriores desta milestone — trigger de pesquisa, filtro de estado — e correr depois da Phase 114 evita duplicar o QA visual)
+**Requirements**: ICON-01, FICO-01
+**Success Criteria** (what must be TRUE):
+  1. Todo o botão de ação primária ou secundária na aplicação — incluindo os introduzidos por esta milestone (paleta de pesquisa, filtro de estado) — apresenta um ícone consistente com a sua ação (ICON-01)
+  2. Botões de ação de filtro (aplicar/limpar/exportar) em Clientes, Processos, Agenda, Documentos e Financeiro passam a mostrar apenas o ícone, sem texto visível ao lado (FICO-01)
+  3. Ao passar o rato sobre um botão de filtro ícone-only, aparece um tooltip a identificar a ação, reutilizando o primitivo `Tooltip` já instalado desde a v2.13 (FICO-01)
+  4. Um utilizador que navegue por teclado (foco, sem rato) ainda consegue identificar a ação de cada botão ícone-only através de um nome acessível (`aria-label`), preservando a acessibilidade já corrigida noutros pontos da aplicação (FICO-01)
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -374,5 +450,10 @@ See archive: [milestones/v2.13-ROADMAP.md](milestones/v2.13-ROADMAP.md) · [mile
 | 108. Módulo Pareceres | v2.13 | 4/4 | Complete    | 2026-07-17 |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
+| 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 0/TBD | Not started | - |
+| 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 0/TBD | Not started | - |
+| 113. Processos — Filtro por Estado | v2.14 | 0/TBD | Not started | - |
+| 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
+| 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
 
-**Next:** Phase 110 (Refinamento da Landing webpage/) concluída — Sheet mobile nav adicionado ao `SiteHeader` da `webpage/` (LDG-17), secções Hero/Contacto recompostas com `Card`/`Badge` replicando o padrão idiomático do `TrustSection` (LDG-18). LDG-17/LDG-18 fechados. Pipeline completo fechado: revisão de código (2 iterações, 1 warning corrigido — Sheet não fechava ao redimensionar a viewport além do breakpoint `md`), verificação goal-backward (15/15, `passed`), auditoria de UI (19/24, 1 de 3 achados prioritários corrigido — padding do Badge eyebrow — os outros 2 deliberadamente deferidos como dívida pré-existente/fora de âmbito). **Milestone v2.13 (Refactor UI/UX shadcn/ui) 100% executado (10/10 fases, 42/42 plans).** Run `/gsd:audit-milestone` to continue (encerramento do milestone).
+**Next:** Milestone v2.14 (UI/UX Melhorias) — ROADMAP criado: 5 fases (111–115), 15/15 requisitos mapeados (SRCH-01 a SRCH-11, PEST-01, ICON-01, RAD-01, FICO-01), cobertura 100%. Run `/gsd:plan-phase 111` to begin execution (aguarda aprovação do roadmap).

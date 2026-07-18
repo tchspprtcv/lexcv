@@ -48,21 +48,31 @@ Explicitamente excluído do research (`PITFALLS.md`/`FEATURES.md`) e da conversa
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
+Mapeamento requisito → fase, atribuído durante a criação do roadmap (100% cobertura, cada requisito mapeado a exatamente uma fase).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRCH-01 a SRCH-11 | — | Pending |
-| PEST-01 | — | Pending |
-| ICON-01 | — | Pending |
-| RAD-01 | — | Pending |
-| FICO-01 | — | Pending |
+| SRCH-01 | Phase 111 | Pending |
+| SRCH-02 | Phase 111 | Pending |
+| SRCH-03 | Phase 112 | Pending |
+| SRCH-04 | Phase 112 | Pending |
+| SRCH-05 | Phase 112 | Pending |
+| SRCH-06 | Phase 111 | Pending |
+| SRCH-07 | Phase 111 | Pending |
+| SRCH-08 | Phase 112 | Pending |
+| SRCH-09 | Phase 112 | Pending |
+| SRCH-10 | Phase 112 | Pending |
+| SRCH-11 | Phase 112 | Pending |
+| PEST-01 | Phase 113 | Pending |
+| ICON-01 | Phase 115 | Pending |
+| RAD-01 | Phase 114 | Pending |
+| FICO-01 | Phase 115 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️ (aguarda roadmap)
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-18*
-*Last updated: 2026-07-18 after initial definition*
+*Last updated: 2026-07-18 after roadmap creation (5 phases, 111–115, 100% coverage)*
