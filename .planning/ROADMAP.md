@@ -308,7 +308,7 @@ See archive: [milestones/v2.13-ROADMAP.md](milestones/v2.13-ROADMAP.md) · [mile
 
 A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa global cross-entity já tem toda a base técnica instalada (primitivos `cmdk`/`CommandDialog` desde a Phase 107, dois precedentes de pesquisa `ILIKE` tenant-scoped já no backend) — falta só ligar as peças. O backend (Phase 111) tem de existir e estar testado (isolamento de tenant, RBAC por branch de entidade, ranking exato/prefixo antes de substring) antes do frontend (Phase 112) o consumir — a mesma sequência já usada neste projeto para Pareceres (v2.5→v2.6) e Notificações (Phase 86→89), e evita construir UI contra um contrato de dados ainda instável. O filtro de estado de Processos (Phase 113) é aditivo e tecnicamente independente da pesquisa (módulo e ficheiros distintos), mas agrupado tematicamente com as Phases 111-112 por ambos fecharem os mesmos gaps de UX identificados no fecho da v2.13. As duas fases de linguagem visual fecham a milestone: cantos arredondados (Phase 114, mudança de um único token CSS já isolado em `web/src/app/globals.css`) corre antes do levantamento de ícones (Phase 115) para que a verificação visual não tenha de rever os mesmos ecrãs duas vezes, e para que o levantamento de ícones já cubra os botões novos introduzidos pelas Phases 111-114 (trigger de pesquisa, filtro de estado). Targets #2-#5 não tiveram research dedicado (fora do âmbito desta ronda de pesquisa) — as Phases 113-115 aplicam padrões já estabelecidos no código (Select de filtros da Phase 106, `lucide-react`/`Tooltip` já instalados) com risco avaliado como baixo.
 
-- [ ] **Phase 111: Backend — Pesquisa Global Cross-Entity (API)** - Endpoint novo, seguro e bem ordenado (Cliente/Processo/Documento/Parecer, tenant+RBAC por branch)
+- [x] **Phase 111: Backend — Pesquisa Global Cross-Entity (API)** - Endpoint novo, seguro e bem ordenado (Cliente/Processo/Documento/Parecer, tenant+RBAC por branch) (completed 2026-07-18)
 - [ ] **Phase 112: Frontend — Pesquisa Global (Paleta de Comando)** - Paleta Ctrl+K/⌘K no topbar, ligada ao endpoint da Phase 111
 - [ ] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado
 - [ ] **Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)** - Reversão deliberada do radius reto da v2.13
@@ -326,7 +326,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
   4. Um tipo de entidade só é consultado quando o utilizador autenticado detém o scope de visualização correspondente (`clientes:view`/`processos:view`/`documentos:view`/`pareceres:view`) — nunca obtido e escondido depois; dados de `Honorario`/financeiro nunca surgem em nenhum resultado, independentemente do perfil do utilizador (SRCH-06)
 **Plans**: 2 plans (2 waves)
 - [x] 111-01-PLAN.md — Data layer: 4 queries nativas pesquisarGlobal (tenant-first, unaccent+ILIKE, ranking exato/prefixo>substring, LIMIT 5) + migração unaccent/pg_trgm + Testcontainers IT de isolamento cross-tenant e ranking
-- [ ] 111-02-PLAN.md — API: ResultadoPesquisaDto + PesquisaController (GET /api/v1/pesquisa, isAuthenticated, RBAC por ramo, sem ramo Honorario, validação de q) + teste de matriz RBAC
+- [x] 111-02-PLAN.md — API: ResultadoPesquisaDto + PesquisaController (GET /api/v1/pesquisa, isAuthenticated, RBAC por ramo, sem ramo Honorario, validação de q) + teste de matriz RBAC
 
 #### Phase 112: Frontend — Pesquisa Global (Paleta de Comando)
 
@@ -452,7 +452,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 108. Módulo Pareceres | v2.13 | 4/4 | Complete    | 2026-07-17 |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
-| 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 1/2 | In Progress  | - |
+| 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete   | 2026-07-18 |
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 0/TBD | Not started | - |
 | 113. Processos — Filtro por Estado | v2.14 | 0/TBD | Not started | - |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
