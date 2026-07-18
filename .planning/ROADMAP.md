@@ -320,11 +320,13 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 **Depends on**: Nothing (primeira fase da milestone)
 **Requirements**: SRCH-01, SRCH-02, SRCH-06, SRCH-07
 **Success Criteria** (what must be TRUE):
-  1. Uma chamada autenticada a `GET /api/v1/search?q=<termo>` devolve resultados de Cliente, Processo, Documento e ParecerSolicitacao pertencentes ao tenant do utilizador, cada resultado identificável pelo seu tipo (SRCH-01)
+  1. Uma chamada autenticada a `GET /api/v1/pesquisa?q=<termo>` devolve resultados de Cliente, Processo, Documento e ParecerSolicitacao pertencentes ao tenant do utilizador, cada resultado identificável pelo seu tipo (SRCH-01)
   2. Dois tenants com registos e termos de pesquisa coincidentes nunca veem resultados um do outro em nenhum dos 4 tipos — cada sub-query parte do `tenant_id` da própria entidade, nunca de um filtro aplicado depois de obter os dados (SRCH-07)
   3. Correspondências exatas ou por prefixo em identificadores estruturados (`numero_cliente`, `numero_processo`, `nif`, `documento_numero`) aparecem ordenadas antes de correspondências por substring simples, no mesmo conjunto de resultados (SRCH-02)
   4. Um tipo de entidade só é consultado quando o utilizador autenticado detém o scope de visualização correspondente (`clientes:view`/`processos:view`/`documentos:view`/`pareceres:view`) — nunca obtido e escondido depois; dados de `Honorario`/financeiro nunca surgem em nenhum resultado, independentemente do perfil do utilizador (SRCH-06)
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+- [ ] 111-01-PLAN.md — Data layer: 4 queries nativas pesquisarGlobal (tenant-first, unaccent+ILIKE, ranking exato/prefixo>substring, LIMIT 5) + migração unaccent/pg_trgm + Testcontainers IT de isolamento cross-tenant e ranking
+- [ ] 111-02-PLAN.md — API: ResultadoPesquisaDto + PesquisaController (GET /api/v1/pesquisa, isAuthenticated, RBAC por ramo, sem ramo Honorario, validação de q) + teste de matriz RBAC
 
 #### Phase 112: Frontend — Pesquisa Global (Paleta de Comando)
 
@@ -450,7 +452,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 108. Módulo Pareceres | v2.13 | 4/4 | Complete    | 2026-07-17 |
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
-| 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 0/TBD | Not started | - |
+| 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 0/2 | Not started | - |
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 0/TBD | Not started | - |
 | 113. Processos — Filtro por Estado | v2.14 | 0/TBD | Not started | - |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
