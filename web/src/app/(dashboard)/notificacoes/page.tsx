@@ -42,7 +42,7 @@ export default function NotificacoesPage() {
   const permissions = usePermissions();
   const canView = permissions.can.view("notificacoes");
 
-  if (!permissions.isLoading && !canView) {
+  if (permissions.isFetched && !canView) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar notificações."
