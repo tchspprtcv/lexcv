@@ -13,7 +13,7 @@ export function HeroSection({ branding }: { branding: BrandingResponse }) {
         <div className="mb-4 h-px w-12 bg-blue-600 dark:bg-blue-400" />
         <Card>
           <CardHeader>
-            <Badge variant="secondary" className="text-sm font-semibold uppercase tracking-[0.2em]">
+            <Badge variant="secondary" className="px-3 py-1 text-sm font-semibold uppercase tracking-[0.2em]">
               PLATAFORMA DE GESTÃO JURÍDICA
             </Badge>
           </CardHeader>

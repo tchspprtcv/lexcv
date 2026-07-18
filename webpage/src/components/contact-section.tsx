@@ -9,7 +9,7 @@ export function ContactSection() {
       <div className="mx-auto max-w-3xl px-6 text-center">
         <Card>
           <CardHeader>
-            <Badge variant="secondary" className="text-sm font-semibold uppercase tracking-[0.2em]">
+            <Badge variant="secondary" className="px-3 py-1 text-sm font-semibold uppercase tracking-[0.2em]">
               CONTACTO
             </Badge>
           </CardHeader>
