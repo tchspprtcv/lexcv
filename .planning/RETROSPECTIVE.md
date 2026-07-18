@@ -401,6 +401,49 @@ The application's first real public, unauthenticated surface. A new `GET /api/v1
 
 ---
 
+## Milestone: v2.13 — Refactor UI/UX (shadcn/ui)
+
+**Shipped:** 2026-07-18
+**Phases:** 10 (101–110) | **Plans:** 42 | **Tasks:** 86
+
+### What Was Built
+
+A full retrofit of the design system across both apps (`web/` and `webpage/`) onto official shadcn/ui primitives, replacing 15 categories of hand-rolled UI accumulated since v1.1. Foundation (Phase 101) formally initialized the shadcn CLI on both apps, merged the semantic token set, added ~16 missing primitives, unified all Radix packages onto the single `radix-ui` package, and swapped the deprecated Toast for Sonner. Reconciliation (Phase 102) diffed 14 pre-existing hand-rolled components against the official registry with zero variant/prop loss. Seven module-migration phases (103–109) then swapped toggle-button tabs, native selects, ad hoc progress bars, manual dropdowns, custom tooltips, a hand-rolled notification badge, and a static setup checklist for their shadcn equivalents across Dashboard, a newly-built shared DataTable pattern (adopted once, reused by 5 list screens), Clientes+Processos, Agenda, Documentos+Financeiro, Pareceres, and Notificações/Settings/Setup. The public landing `webpage/` (Phase 110) gained functional mobile navigation via `Sheet` and a Hero/Contacto recomposition onto `Card`/`Badge`. 33/33 requirements satisfied; every phase closed a full code-review + goal-backward-verification + 6-pillar UI-audit pipeline.
+
+### What Worked
+
+- **The Foundation→Reconciliation sequential gate held exactly as designed**: no module phase started until both were fully complete, avoiding the "visibly half-migrated app" pitfall the milestone's own research flagged as the top risk.
+- **The shared DataTable pattern (Phase 104), built once, was genuinely reused (not reimplemented) by all 5 declared list screens** — confirmed independently by the milestone-close integration audit, which specifically checked for per-module reinvention and found none.
+- **Live human visual checkpoints kept finding real, code-review-invisible bugs before code review even started**: a `flex-wrap` layout bug on a single-child `TabsList` (Phase 105, found via measured computed layout, not code reading), a repeated `!isLoading` RBAC race across 10 page guards (Phase 105, same bug class as Phase 103's own fix), a CSS cascade tie-break that would have silently broken dark mode the moment any component started consuming the new tokens (Phase 101).
+- **The Windows "stdio hang" background-agent failure pattern (first diagnosed in Phase 109) was recognized and recovered from cleanly on its second occurrence (Phase 110)** — direct git-state inspection of the stuck agent's worktree, rather than trusting the agent's own report or waiting indefinitely.
+- **A milestone-close cross-phase integration audit earned its keep even after every individual phase had already passed its own verification** — it found 2 real gaps invisible to any single phase's own scoped verifier by design (a stale RBAC guard on the one screen no module phase's declared scope included; a 4th upload-progress site that fell between two phases' declared boundaries).
+
+### What Was Inefficient
+
+- **The `permissions.isFetched` RBAC-race fix had to be independently rediscovered and reapplied phase-by-phase** (103, then again at a 10-page scale in 105, then 106, 107, 108) rather than being fixed once centrally and grepped for project-wide — and even after 5 rounds of rediscovery, `notificacoes/page.tsx` still slipped through every phase's scope and was only caught by the milestone-close audit.
+- **Worktree branches created from stale/ancient bases (documented Claude Code issue #2015) recurred across nearly every phase's parallel wave executions**, each requiring the same manual "confirm strict ancestor, then fast-forward/reset" recovery — a known, recurring tooling friction never fixed at the source.
+- **Extended Browser-pane environment instability spanning Phases 105, 108, and 109's live UAT sessions was initially misattributed to tooling flakiness** across multiple phases before being root-caused (via `preview_logs({level:"error"})`, not assumed) to 2 genuine, unrelated, pre-existing React hydration-mismatch bugs — the diagnosis took until Phase 109 to land, after 3 phases' worth of UAT had already worked around the symptom rather than the cause.
+
+### Patterns Established
+
+- **Mobile nav drawers close via a direct `onClick` per item, never a `usePathname`/`useEffect` watcher** — established after Phase 109 found the watcher pattern misses same-route and same-page-anchor clicks; correctly reused and extended (a `matchMedia` resize-close listener, a materially different concern) in Phase 110 without regressing the same bug.
+- **`Card` used as a pure layout/spacing wrapper around a raw heading, never `CardTitle`** — consistently applied across every phase that composed a new section onto `Card`, avoiding a silent `<h1>`/`<h2>`→`<h3>` heading-semantic demotion.
+- **`tailwind-merge` does not deduplicate across different Tailwind modifier groups** — a bare utility and its `dark:` counterpart both survive merge and the `dark:` variant wins at runtime by CSS specificity, so any override of a shadcn primitive's default variant colors must explicitly restate the `dark:` counterpart for every color utility, never just the light-mode value.
+
+### Key Lessons
+
+1. **A cross-phase integration audit at milestone close is not redundant with per-phase verification, even when every phase individually passed** — each phase's verifier only checks its own declared scope by design; only a dedicated cross-phase pass catches gaps that fall between two phases' boundaries.
+2. **A recurring "mysterious tooling flakiness" complaint deserves a direct root-cause pass against actual error logs before being written off as environment noise** — 2 real, fixable bugs hid behind that assumption for 2+ phases before someone checked `preview_logs` instead of just retrying.
+3. **A pattern fix discovered mid-milestone (RBAC race, Phase 103) needs a project-wide grep sweep at the moment it's fixed, not a phase-by-phase rediscovery** — 5 separate phases independently found and fixed the same bug class in their own files; a single sweep at Phase 103's own close would have caught most of them for the cost of one grep.
+
+### Cost Observations
+
+- Model mix: sonnet throughout — planning, parallel worktree-isolated execution, code review/fix loops, goal-backward verification, and 6-pillar UI audits on every one of the 10 phases.
+- Sessions: one extended, continuous autonomous session covering all 10 phases' full discuss→UI-spec→plan→execute→code-review→verify→UI-audit pipelines plus the complete milestone close-out lifecycle (audit→complete→cleanup), spanning 2026-07-15 to 2026-07-18.
+- Notable: the largest phase-count milestone to date (10 phases, 42 plans, 86 tasks) with zero phases skipping any pipeline stage — every phase, including the smallest (103, 1 plan), closed a full code-review + verification + UI-audit cycle.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -414,5 +457,6 @@ The application's first real public, unauthenticated surface. A new `GET /api/v1
 | v2.10 Notificações e Alertas | 5 | 14 | 3 | 29 (backend+web+migrations) | 16/16 (0 audit gaps) |
 | v2.11 Auditoria Técnica e Notificações Avançadas | 8 | 21 | 3 | 133 | 15/15 (1 integration gap found+fixed at audit) |
 | v2.12 Landing Page | 3 | 9 | 1 | 79 | 16/16 (0 audit gaps; 3 runtime bugs found+fixed live during execution) |
+| v2.13 Refactor UI/UX (shadcn/ui) | 10 | 42 | 3 | 97 | 33/33 (2 integration gaps found at audit — 1 fixed, 1 deferred as small tech debt) |
 
 *Table grows with each milestone*
