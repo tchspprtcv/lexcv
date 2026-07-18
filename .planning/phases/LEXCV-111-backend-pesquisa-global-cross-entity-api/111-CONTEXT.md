@@ -15,9 +15,10 @@ Existe um endpoint backend que devolve, de forma segura e corretamente ordenada,
 
 ### Contrato de Resposta
 - Endpoint: `GET /api/v1/pesquisa?q=<termo>` — rota em português, consistente com o resto da API deste projeto (`/clientes`, `/processos`, `/pareceres`); o precedente mais próximo (`ParecerPesquisaController`) já usa "Pesquisa" no nome
-- Resposta: lista plana discriminada por tipo, um novo `record SearchResultDto` (tipo, id, titulo, subtitulo, rota), mirroring o padrão já existente de `TimelineItemDto` — nunca um objeto pré-agrupado no backend; o agrupamento por tipo acontece no frontend (Phase 112)
+- Resposta: lista plana discriminada por tipo, um novo `record ResultadoPesquisaDto` (tipo, id, titulo, subtitulo, rota), mirroring o padrão já existente de `TimelineItemDto` — nunca um objeto pré-agrupado no backend; o agrupamento por tipo acontece no frontend (Phase 112)
 - Limite: 5 resultados por tipo de entidade nesta fase
-- Novo `SearchController` dedicado (`backend/.../controllers/`), nunca um método adicional no já enorme `ResourceController`
+- Novo `PesquisaController` dedicado (`backend/.../controllers/`), nunca um método adicional no já enorme `ResourceController`
+- **Nomenclatura**: `PesquisaController`/`ResultadoPesquisaDto`, não `SearchController`/`SearchResultDto` — CLAUDE.md exige nomes em português para entidades, rotas e DTOs (`TimelineItemDto` é uma exceção pré-existente no código antigo, não um precedente a seguir para código novo)
 
 ### Ranking & Matching
 - Sem resultados mas query válida (>=2 chars) → 200 OK, lista vazia (nunca erro)
@@ -56,8 +57,8 @@ Existe um endpoint backend que devolve, de forma segura e corretamente ordenada,
 - `ParecerPesquisaController` já documenta (no seu próprio comentário de cabeçalho) um bug histórico de concatenação de path class-level/method-level — evitar repetir
 
 ### Integration Points
-- Novo `SearchController` em `backend/src/main/java/com/lexcv/controllers/`
-- Novo `SearchResultDto` (record) em `backend/src/main/java/com/lexcv/dtos/`
+- Novo `PesquisaController` em `backend/src/main/java/com/lexcv/controllers/`
+- Novo `ResultadoPesquisaDto` (record) em `backend/src/main/java/com/lexcv/dtos/`
 - Nova migração SQL em `backend/migrations/` habilitando `unaccent`+`pg_trgm`
 - Novo teste IT em `backend/src/test/.../` replicando `NotificacaoRepositoryIT`
 
