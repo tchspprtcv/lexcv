@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.13
 milestone_name: Refactor UI/UX (shadcn/ui)
-status: ready_for_milestone_close
-stopped_at: Phase 110 complete (3/3) — milestone v2.13 fully executed, ready for audit-milestone
-last_updated: "2026-07-18T12:30:00.000Z"
-last_activity: 2026-07-18 -- Phase 110 closed (final phase of v2.13)
+status: Awaiting next milestone
+stopped_at: Completed 110-03-PLAN.md (holistic gate + human-verify checkpoint) + full code-review/verify/UI-audit pipeline — Phase 110 (Refinamento da Landing webpage/) closed, all 3 plans done. This was the LAST phase of milestone v2.13 (101–110) — milestone execution is now 100% complete (10/10 phases).
+last_updated: "2026-07-18T10:49:21.042Z"
+last_activity: 2026-07-18 — Milestone v2.13 completed and archived
 progress:
   total_phases: 10
   completed_phases: 10
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-15)
 
 ## Current Position
 
-Phase: 110 of 110 (refinamento da landing — webpage/) — COMPLETE
-Plan: All 3 plans complete
-Status: Milestone v2.13 fully executed — ready for gsd-audit-milestone
-Last activity: 2026-07-18 -- Phase 110 closed
+Phase: Milestone v2.13 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-18 — Milestone v2.13 completed and archived
 
 ## Performance Metrics
 
@@ -198,6 +198,21 @@ Pre-close `audit-open` scan found 11 open items across 5 phases, all `human_need
 
 Known deferred items count at close: 11 (5 verification_gaps + 6 uat_gaps, `97-UAT.md` itself already closed with 0 pending).
 
+### Items acknowledged and deferred at milestone v2.13 close (2026-07-18)
+
+Pre-close `audit-open` scan found 6 open items across 4 phases, all `human_needed`/residual UAT-gap — none BLOCKER-level (see `.planning/v2.13-MILESTONE-AUDIT.md` for full detail). Acknowledged and deferred rather than blocking close:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 103 (103-VERIFICATION.md) — `human_needed`, 5/5 must-haves verified | non-blocking — residual live-checkpoint substitution after the Browser-pane instability later root-caused (hydration mismatch) this session; already independently fixed (branch `claude/sad-fermat-78bc39`), not yet merged |
+| verification_gap | Phase 105 (105-VERIFICATION.md) — `human_needed`, 8/9 must-haves verified | non-blocking — same residual live-checkpoint pattern |
+| verification_gap | Phase 108 (108-VERIFICATION.md) — `human_needed`, 10/11 must-haves verified | non-blocking — 2 of 8 Wave-2 UAT items substituted with source/pattern analysis after the same Browser-pane issue; see Phase 108 decision entry above |
+| verification_gap | Phase 109 (109-VERIFICATION.md) — `human_needed`, 13/14 must-haves verified | non-blocking — same residual live-checkpoint pattern; see Phase 109 decision entry above |
+| uat_gap | Phase 103 (103-HUMAN-UAT.md) — flagged `resolved`, 0 pending scenarios | closed, flagged only by the scan's own status label |
+| uat_gap | Phase 105 (105-HUMAN-UAT.md) — flagged `unknown`, 0 pending scenarios | non-blocking — 0 pending scenarios recorded despite the ambiguous status label |
+
+Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps), none functional defects, none blocking. Milestone-level cross-phase integration audit additionally found and fixed 1 stale RBAC guard (`notificacoes/page.tsx`, commit `7a8f28e`) and flagged 1 narrow DOF-01 scope-completeness gap (Pareceres upload progress bar, background task `task_af5aaa48`) — see `.planning/v2.13-MILESTONE-AUDIT.md`.
+
 ## Session Continuity
 
 Last session: 2026-07-18T12:30:00.000Z
@@ -206,7 +221,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phase 110 (Refinamento da Landing `webpage/`) is complete — mobile Sheet nav drawer added to `webpage/`'s SiteHeader (LDG-17), Hero/Contacto sections recomposed onto `Card`/`Badge` matching `TrustSection`'s idiomatic pattern (LDG-18). LDG-17/LDG-18 marked Complete in REQUIREMENTS.md. Full pipeline closed: code-review (2 iterations, 1 warning fixed — Sheet not closing on viewport resize past `md`, 0 remaining critical/warning), goal-backward verification (15/15, `passed`), UI audit (19/24, 1 of 3 priority findings fixed — Badge eyebrow padding regression — the other 2 deliberately deferred as pre-existing/out-of-scope or narrow-edge-case debt).
-- **Milestone v2.13 (Refactor UI/UX shadcn/ui) is now 100% executed (10/10 phases, 42/42 plans).** Next step: run the milestone close-out lifecycle — `gsd-audit-milestone` → `gsd-complete-milestone` → `gsd-cleanup` — per the standing autonomous-execution instruction for this session.
-- **Three previously-flagged background bugs still have completed-but-unmerged independent fixes** (document upload crash, Pareceres Prioridade default, dashboard hydration mismatch) — see Blockers/Concerns above. These predate and are unrelated to any v2.13 phase's own work; merging them is the user's call, not something to fold into this milestone's close-out.
-- Two other pre-existing, deferred (not yet fixed) bugs remain flagged from Phase 107/108 UAT — see Blockers/Concerns above (Pareceres `useAdminUsers()` 500/unpopulated picker; consider whether the milestone audit should re-surface these as carry-forward items for a future milestone).
+- Start the next milestone with /gsd-new-milestone

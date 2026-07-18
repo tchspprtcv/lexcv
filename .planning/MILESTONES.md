@@ -1,5 +1,30 @@
 # Milestones
 
+## v2.13 Refactor UI/UX (shadcn/ui) (Shipped: 2026-07-18)
+
+**Phases completed:** 10 phases, 42 plans, 86 tasks
+
+**Key accomplishments:**
+
+- Package legitimacy gate cleared: all 15 net-new npm packages verified legitimate (real publishers, no typosquats) and approved for install
+- shadcn CLI formally initialized in web/ on the Radix base (preset Vega), full semantic token set merged into a single, correctly-ordered :root/.dark block with the institutional colors restored, tw-animate-css swapped in, and a genuine CSS-cascade tie-break bug (wrong `.dark`/`:root` declaration order) found by human visual QA and fixed before sign-off.
+- Sonner replaces the deprecated Radix Toast stack behind an unchanged toast.success("Sucesso")/toast.error("Erro") contract (richColors green/red), and `shadcn migrate radix` unifies all 8 remaining hand-rolled components plus the 16 new primitives onto the single `radix-ui` package — closing the milestone's last dual-Radix-tree bridge state in `web/`.
+- Whole-app `pnpm build` gate green (badge-gray surface enumerated across 8 files, magic-hex removed, radix unified, radius tokenized, tooltip provider confirmed) plus a live browser + getComputedStyle human sign-off confirming the Rule-B dark-mode elevation change renders correctly and no Rule-C identity/DSR-03 tooltip regression occurred — Phase 102 closes with DSR-01/02/03 satisfied.
+- Wired the already-installed `Skeleton`/`Empty` primitives into the institutional Dashboard's KPI cards, Atividade Recente, Prazos Urgentes, and Processos Recentes — replacing a discarded `.isLoading` field and one ad hoc "Sem urgências." string with the official loading/zero-data primitives.
+- Package legitimacy gate cleared: @tanstack/react-table approved (same maintainer/org as already-trusted @tanstack/react-query)
+- Shared TanStack Table v8 DataTable composition (client-side sort/paginate only, never re-filters) plus the official shadcn Pagination primitive, both built once under `web/src/components/shared/data-table/` for the 5 list-screen adoption plans to consume
+- Holistic build + regression-grep gate green; human visual checkpoint performed live across all 5 screens in both light and dark themes — phase approved, closing DTB-01/02/03
+- Partes/Fases/Testemunhas tabs converted from raw `<table>` markup to reconciled `Table` primitives (Testemunhas gains an `Avatar` in the Nome cell), and the Documentos tab's `<ul>` list replaced by the shared `DataTable` fed by a new `documentos-columns.tsx` factory.
+- Holistic build/lint/regression sweep passed; live human checkpoint found and fixed 2 real regressions (a mobile tab-overflow bug and a repeat of Phase 103's `isLoading` RBAC race, now fixed across all 10 Clientes/Processos page guards); ADVOGADO/ASSISTENTE-specific role checks could not be completed live due to browser-tooling instability late in the session — documented transparently below
+- First Popover+Calendar date-picker composition in the project (Portuguese locale, Sunday-first), plus Radix Select migration of the 3 Agenda list filters and the isFetched RBAC race fix on the list/detail pages.
+- Popover+Calendar DatePickerField (first in project) driving Agenda's date/time fields, Radix Select list filters, and a bundled RBAC isFetched fix across all 4 Agenda pages — verified live in both themes and across 2 roles.
+- Progress/NativeSelect/Select migrations plus a new shared creatable+closed-list Combobox (Popover+Command) across Documentos and Financeiro — verified live, with a severe pre-existing upload bug discovered and flagged separately.
+- Build/lint/regression gate plus an 8-point live UAT of Select/NativeSelect/Tooltip/Accordion across the Pareceres module — 6 of 8 checks fully live-verified with concrete evidence, the remaining 2 confirmed via source/pattern analysis after a Browser-pane environment issue emerged mid-session.
+- Build/lint regression gate plus a live+source-verified UAT of DropdownMenu/Badge/Progress across the topbar, notification bell, and setup wizard — with the session's recurring Browser-pane instability finally root-caused to a real, pre-existing, unrelated hydration bug rather than accepted as unexplained flakiness.
+- Ran the combined Wave-1 (110-01 + 110-02) change set through a holistic build/lint gate and a human-verified mobile-nav + Card/Badge visual checkpoint on `webpage/`'s dev server (port 3001); both passed with no fixes required.
+
+---
+
 ## v2.12 Landing Page (Shipped: 2026-07-15)
 
 **Phases completed:** 3 phases, 9 plans, 21 tasks
