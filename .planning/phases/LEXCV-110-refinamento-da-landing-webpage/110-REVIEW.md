@@ -1,6 +1,6 @@
 ---
 phase: LEXCV-110-refinamento-da-landing-webpage
-reviewed: 2026-07-18T00:00:00Z
+reviewed: 2026-07-18T01:00:00Z
 depth: standard
 files_reviewed: 5
 files_reviewed_list:
@@ -11,81 +11,95 @@ files_reviewed_list:
   - webpage/src/components/contact-section.tsx
 findings:
   critical: 0
-  warning: 1
-  info: 5
-  total: 6
+  warning: 0
+  info: 7
+  total: 7
 status: issues_found
 ---
 
 # Phase LEXCV-110: Code Review Report
 
-**Reviewed:** 2026-07-18T00:00:00Z
+**Reviewed:** 2026-07-18T01:00:00Z
 **Depth:** standard
 **Files Reviewed:** 5
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the mobile Sheet nav drawer added to `SiteHeader` (LDG-17) and the Hero/Contacto recomposition onto a Card+Badge pattern (LDG-18) in `webpage/` (the standalone marketing app — no auth/tenant/data concerns apply). Verified against `tsc --noEmit` (clean) and `eslint` (clean) for all 5 files, and cross-checked `Card`/`Button`/`cn`/`BrandMark` (the components these files call) for defects they might introduce.
+Iteration 2. Re-reviewed the full 5-file set fresh (not a rubber-stamp of the prior report) and specifically verified the WR-01 fix landed in commit `27b45fb` (`webpage/src/components/site-header.tsx`, +9/-0).
 
-Both known anti-patterns called out for this phase were correctly avoided:
-- `site-header.tsx` closes the drawer via a direct `onClick={() => setOpen(false)}` on every nav link/CTA (lines 59, 66) — it does **not** use the `usePathname`/`useEffect` pattern that was flagged as an anti-pattern in an earlier phase.
-- `hero-section.tsx`/`contact-section.tsx` use `Card`/`CardHeader`/`CardContent` as pure layout wrappers and keep the real `<h1>`/`<h2>` as raw tags — neither uses `CardTitle` (which would render an `<h3>` and demote the page heading).
+**WR-01 verification result: fix is correct and resolves the reported defect.** The new `useEffect` registers a `window.matchMedia("(min-width: 768px)")` `"change"` listener that calls `setOpen(false)` whenever `e.matches` becomes `true`, with a proper cleanup (`removeEventListener`) on unmount and an empty dependency array (registers once, no stale-closure risk — `setOpen` is a stable `useState` setter). Traced through the scenario from the original finding: mobile drawer open (`open === true`) below the `md` breakpoint → viewport crosses 768px upward → `matchMedia` fires with `matches: true` → `setOpen(false)` → `Sheet`'s `onOpenChange` prop is wired to `setOpen`, so the Radix `Dialog` closes → duplicated desktop nav/CTA + stray overlay no longer coexists with the visible desktop layout. The fix does not resize-close in the other direction (`matches: false` is ignored), which is correct — the drawer should only ever be force-closed, never force-opened. Confirmed `tsc --noEmit` and `eslint` both pass clean on all 5 files with this change in place, and confirmed via `git diff` that the change touches only lines 21-28 (the new effect) with no other edits.
 
-No Critical/Blocker issues were found — no injection, XSS, hardcoded-secret, or crash-risk patterns in any of the 5 files. One genuine unhandled-edge-case Warning was found (Sheet does not close itself when the viewport is resized past the `md` breakpoint while open), plus several minor Info-level items (dead/redundant Tailwind classes, a missing `SheetDescription`, and one documented-spec-vs-code padding drift in the new `Badge` usage).
+While tracing the fix I found one new, narrower edge case it introduces (IN-07 below) and one pre-existing-style quality nit in the same new code (IN-06). Neither rises to Warning: both are minor, low-probability-of-observation issues that don't reproduce the duplicated-UI bug WR-01 described, and neither causes a crash, data loss, or broken core functionality.
 
-## Warnings
-
-### WR-01: Mobile Sheet drawer does not close when the viewport crosses the `md` breakpoint while open
-
-**File:** `webpage/src/components/site-header.tsx:19-52`
-**Issue:** `open`/`setOpen` state is only ever changed by the trigger click, `onOpenChange`, or an item's `onClick`. There is no listener for viewport-width changes. If a user opens the drawer below `md` (768px) and then the viewport grows past `md` without the drawer being explicitly closed (window resize, DevTools responsive-mode drag, tablet rotation, split-screen/foldable resize), `open` remains `true`. At that point the desktop `<nav>` (`hidden md:flex`) and the desktop "Entrar" button (`hidden md:inline-flex`) both become visible again *while the Sheet's overlay + panel + its own "Entrar" CTA are still rendered on top of them* (`SheetContent`'s `open` state is independent of the `md:` CSS breakpoints gating the trigger/desktop nav). The result is a genuinely broken UI state: duplicated nav links and duplicated "Entrar" CTAs visible simultaneously, with the drawer's overlay still capturing pointer events over the desktop layout.
-**Fix:** Add a `matchMedia` listener (not a `pathname` effect — this is a distinct, legitimate use of `useEffect` and does not reintroduce the previously-fixed anti-pattern) that force-closes the sheet once the viewport reaches the desktop breakpoint:
-```tsx
-React.useEffect(() => {
-  const mq = window.matchMedia("(min-width: 768px)");
-  const handleChange = (e: MediaQueryListEvent) => {
-    if (e.matches) setOpen(false);
-  };
-  mq.addEventListener("change", handleChange);
-  return () => mq.removeEventListener("change", handleChange);
-}, []);
-```
+The other 4 files (`sheet.tsx`, `badge.tsx`, `hero-section.tsx`, `contact-section.tsx`) are unchanged since the iteration-1 review (confirmed via `git log` — no commits touch them since `1643350`/`d0b464a`/`bd9e015`), so the 5 previously-reported Info items were re-verified against current file contents and remain valid as-is (renumbered IN-01 through IN-05 below for a self-contained artifact). No Critical or Warning issues were found in this pass — no injection, XSS, hardcoded-secret, or crash-risk patterns in any of the 5 files, and no unresolved logic errors.
 
 ## Info
 
 ### IN-01: Redundant `dark:bg-popover` class (dead code)
 
 **File:** `webpage/src/components/ui/sheet.tsx:55`
-**Issue:** `className` includes both `bg-popover` and `dark:bg-popover`. `bg-popover` maps to a CSS variable (`--popover`) that already resolves to a different value under `.dark`, so the `dark:` variant re-declares the exact same utility with no behavioral effect — it's inert, copy-paste leftover.
-**Fix:** Drop the redundant `dark:bg-popover` (or, if the file is meant to stay byte-identical to the `web/` source it was verbatim-copied from, note it as accepted debt rather than something to "fix" independently in `webpage/`).
+**Issue:** `className` includes both `bg-popover` and `dark:bg-popover`. `bg-popover` maps to a CSS variable (`--popover`) that already resolves to a different value under `.dark`, so the `dark:` variant re-declares the exact same utility with no behavioral effect — inert, copy-paste leftover.
+**Fix:** Drop the redundant `dark:bg-popover` (or, if the file is meant to stay byte-identical to the `web/` source it was verbatim-copied from, note it as accepted debt).
 
 ### IN-02: `sm:max-w-sm` is a no-op given the fixed `w-72` width
 
-**File:** `webpage/src/components/site-header.tsx:52`
-**Issue:** `className="w-72 sm:max-w-sm"` sets an unconditional `width: 18rem` (288px) via `w-72`, and `max-w-sm` caps width at `24rem` (384px) from the `sm` breakpoint up. Since 288px < 384px, the `max-width` constraint can never bind — the class combination is dead weight. (This mirrors the shadcn default `w-3/4 sm:max-w-sm`, where `w-3/4` can exceed 384px on larger phones, making the cap meaningful there; that reasoning does not carry over to a fixed `w-72`.)
+**File:** `webpage/src/components/site-header.tsx:61`
+**Issue:** `className="w-72 sm:max-w-sm"` sets an unconditional `width: 18rem` (288px) via `w-72`, and `max-w-sm` caps width at `24rem` (384px) from the `sm` breakpoint up. Since 288px < 384px, the `max-width` constraint can never bind — dead weight.
 **Fix:** Either drop `sm:max-w-sm` or replace `w-72` with a percentage-based width if a genuine mobile/tablet cap is intended.
 
 ### IN-03: Mobile nav Sheet has no `SheetDescription` / `aria-describedby`
 
-**File:** `webpage/src/components/site-header.tsx:52-53`
-**Issue:** `SheetContent` renders a visually-hidden `SheetTitle` but no `SheetDescription`, so Radix's `aria-describedby` on the dialog content points at an id with no corresponding element in the DOM. Functionally harmless in the installed Radix version (verified in `@radix-ui/react-dialog@1.1.x`'s compiled output — the dev-mode "missing Description" warning path is now a no-op `WarningProvider`), but it is a minor screen-reader UX gap: users get no supplementary context beyond the sr-only "Menu" title.
-**Fix:** Add a visually-hidden description, e.g. `<SheetDescription className="sr-only">Links de navegação do site</SheetDescription>` as the second child of `SheetContent`, or explicitly set `aria-describedby={undefined}` on `SheetContent` to document the omission as intentional.
+**File:** `webpage/src/components/site-header.tsx:61-62`
+**Issue:** `SheetContent` renders a visually-hidden `SheetTitle` but no `SheetDescription`, so Radix's `aria-describedby` on the dialog content points at an id with no corresponding element in the DOM. Functionally harmless in the installed Radix version, but a minor screen-reader UX gap.
+**Fix:** Add `<SheetDescription className="sr-only">Links de navegação do site</SheetDescription>` as a child of `SheetContent`, or explicitly set `aria-describedby={undefined}` to document the omission as intentional.
 
-### IN-04: New `Badge` eyebrow padding doesn't match this phase's own approved Spacing Scale
+### IN-04: `Badge` eyebrow padding doesn't match this phase's own approved Spacing Scale
 
 **File:** `webpage/src/components/hero-section.tsx:16`, `webpage/src/components/contact-section.tsx:12` (base class in `webpage/src/components/ui/badge.tsx:7`)
-**Issue:** `110-UI-SPEC.md`'s Spacing Scale table documents `px-3 py-1` for "Badge/eyebrow padding" (matching the original hand-rolled `<span>` this replaced), and explicitly calls out overriding `Badge`'s default type scale (`text-xs font-medium` → `text-sm font-semibold`) at both call sites. Both call sites do override font-size/weight, but neither overrides padding — `Badge`'s un-overridden base class (`px-2.5 py-0.5`, i.e. 10px/2px) is what actually ships, not the documented `px-3 py-1` (12px/4px). Small, but a real, provable drift between the approved design contract and the shipped markup.
-**Fix:** If pixel parity with the spec matters, add `px-3 py-1` to the `className` override on both `Badge` instances; otherwise update `110-UI-SPEC.md` to reflect the accepted default padding.
+**Issue:** `110-UI-SPEC.md`'s Spacing Scale documents `px-3 py-1` for "Badge/eyebrow padding". Both call sites override font-size/weight (`text-sm font-semibold`) but not padding, so `Badge`'s un-overridden base class (`px-2.5 py-0.5`) is what actually ships, not the documented `px-3 py-1`.
+**Fix:** Add `px-3 py-1` to the `className` override on both `Badge` instances, or update `110-UI-SPEC.md` to reflect the accepted default padding.
 
 ### IN-05: Reused `Card`'s `hover:shadow-md` now applies to a large, non-interactive content block
 
-**File:** `webpage/src/components/ui/card.tsx:10`, used by `webpage/src/components/hero-section.tsx:14` and `webpage/src/components/contact-section.tsx:10`
-**Issue:** `Card`'s shared classes include `transition-all hover:shadow-md`, intended for `TrustSection`'s small grid-item cards. In Hero/Contacto, `Card` now wraps the entire eyebrow+heading+CTA block (a large fraction of the viewport), so hovering anywhere over that block triggers a shadow-elevation change even though the block itself isn't clickable — a hover affordance implying interactivity where none exists. This was an accepted trade-off per `110-UI-SPEC.md` (deliberately replicating `TrustSection`'s exact surface treatment), so it is not a defect to fix under this phase's scope, but worth flagging for future polish.
-**Fix (optional, out of phase scope):** If this reads as misleading in practice, override with `className="hover:shadow-none"` (or a `Card`-variant prop) on the Hero/Contacto instances only.
+**File:** `webpage/src/components/hero-section.tsx:14`, `webpage/src/components/contact-section.tsx:10` (shared class in `webpage/src/components/ui/card.tsx`, not in this iteration's file set)
+**Issue:** `Card`'s shared classes include `transition-all hover:shadow-md`. In Hero/Contacto, `Card` now wraps the entire eyebrow+heading+CTA block, so hovering anywhere over that large region triggers a shadow-elevation change even though the block itself isn't clickable — implying interactivity where none exists. Accepted trade-off per `110-UI-SPEC.md`, not a defect to fix under this phase's scope.
+**Fix (optional):** Override with `className="hover:shadow-none"` on the Hero/Contacto `Card` instances only, if this reads as misleading in practice.
+
+### IN-06: New matchMedia breakpoint (`768px`) hardcodes a magic number that duplicates the Tailwind `md` token
+
+**File:** `webpage/src/components/site-header.tsx:22`
+**Issue:** The WR-01 fix's `window.matchMedia("(min-width: 768px)")` re-encodes Tailwind's `md` breakpoint (currently 768px by default, per `webpage/src/app/globals.css` — no custom breakpoint overrides found) as a separate literal, independent from the `md:` utility classes used throughout the same file (`hidden md:flex`, `hidden md:inline-flex`, `md:hidden`). If the design system's breakpoint scale is ever customized (a `@theme` breakpoint override, or Tailwind config change), this JS literal would silently drift out of sync with the CSS breakpoint it's meant to track, reintroducing the exact duplicated-nav bug WR-01 just fixed — but only in JS, invisible to anyone auditing the Tailwind classes.
+**Fix:** Extract the value to a named constant colocated with a comment tying it to Tailwind's `md` breakpoint, e.g.:
+```tsx
+// Keep in sync with Tailwind's `md:` breakpoint (globals.css / tailwind theme).
+const MD_BREAKPOINT_QUERY = "(min-width: 768px)";
+...
+const mq = window.matchMedia(MD_BREAKPOINT_QUERY);
+```
+or centralize in a shared `src/lib/breakpoints.ts` if other components grow the same need.
+
+### IN-07: Auto-close-on-resize can leave keyboard focus stranded because the trigger becomes hidden at the exact same breakpoint
+
+**File:** `webpage/src/components/site-header.tsx:21-28` (new effect) interacting with `:53-60` (trigger button, `className="md:hidden ..."`)
+**Issue:** Radix `Dialog.Content`'s default `onCloseAutoFocus` behavior returns focus to the element that had focus when the dialog opened (normally the `SheetTrigger` button) once the dialog closes, regardless of whether the close was user-initiated or programmatic (`setOpen(false)`). The new matchMedia handler only calls `setOpen(false)` at exactly the same viewport-width crossing (`>= 768px`) where the trigger button itself gains the `md:hidden` (`display:none`) class. A `.focus()` call on a `display:none` element is a browser-spec no-op, so for a keyboard-only user who has the drawer open and then crosses the breakpoint (browser resize, zoom, DevTools responsive-mode drag, orientation change on a foldable), focus silently falls through to `document.body` instead of landing on a sensible, visible element — the user's keyboard focus position is lost and they must re-tab from the top of the page. This is a new reachable state directly created by the WR-01 fix (previously the bug meant the drawer just stayed open with focus intact inside it); it does not crash or corrupt anything, and only affects keyboard/screen-reader users during a live breakpoint crossing while the drawer is open, so it is Info- rather than Warning-level.
+**Fix:** Use Radix's `onCloseAutoFocus` escape hatch on `SheetContent` to suppress the default focus-return when the trigger is about to be hidden, and let focus land somewhere intentional instead:
+```tsx
+<SheetContent
+  side="right"
+  className="w-72 sm:max-w-sm"
+  onCloseAutoFocus={(event) => {
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      event.preventDefault();
+      // trigger is display:none at this breakpoint; focus a stable landmark instead
+      headerRef.current?.focus();
+    }
+  }}
+>
+```
 
 ---
 
-_Reviewed: 2026-07-18T00:00:00Z_
+_Reviewed: 2026-07-18T01:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
