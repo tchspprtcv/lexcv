@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: planning
-last_updated: "2026-07-18T16:30:00.000Z"
-last_activity: 2026-07-18
+status: executing
+stopped_at: "Plan 111-01 (data layer) executado: 4 pesquisarGlobal native queries tenant-first/ranked/accent-folded + migracao 111-enable-search-extensions.sql + PesquisaRepositoryIT (Testcontainers, zero vazamento cross-tenant provado). Proximo: Plan 111-02 (PesquisaController)."
+last_updated: "2026-07-18T23:26:35.696Z"
+last_activity: "2026-07-18 — Plan 111-01 executado: 4 pesquisarGlobal native queries tenant-first/ranked/accent-folded + migração 111-enable-search-extensions.sql + PesquisaRepositoryIT (Testcontainers, zero vazamento cross-tenant provado)"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** v2.14 UI/UX Melhorias — ROADMAP.md criado (5 fases, 111–115), aguarda aprovação antes de iniciar `/gsd:plan-phase 111`.
+**Current focus:** v2.14 UI/UX Melhorias — Phase 111 (Pesquisa Global, backend) em execução: Plan 111-01 (data layer) completo, Plan 111-02 (PesquisaController) pendente.
 
 ## Current Position
 
 Phase: 111 of 115 (Backend — Pesquisa Global Cross-Entity (API))
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-07-18 — ROADMAP.md e REQUIREMENTS.md (traceability) criados para v2.14: 5 fases (111–115), 15/15 requisitos mapeados, 100% cobertura
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-18 — Plan 111-01 executado: 4 pesquisarGlobal native queries tenant-first/ranked/accent-folded + migração 111-enable-search-extensions.sql + PesquisaRepositoryIT (Testcontainers, zero vazamento cross-tenant provado)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -85,6 +86,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
 | Phase 104 P02 | ~25min | 3 tasks | 7 files |
 | Phase 105 P03 | ~25min | 2 tasks | 2 files |
+| Phase 111 P01 | 15min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -97,6 +99,8 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 ### Decisions
 
 Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full per-phase decision log has been cleared here at the v2.13 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.13-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
+
+- [Phase 111]: ParecerSolicitacaoRepository.pesquisarGlobal e um metodo novo e separado (nao reutiliza pesquisar(), nao LEFT JOIN t_parecer_versao) - match raso so em descricao — Resolve a tensao STACK.md-vs-PATTERNS.md a favor do Anti-Pattern 6: pesquisa profunda de conteudo (ParecerVersao.conteudo) fica exclusiva de /pareceres/pesquisa
 
 ### Pending Todos
 
@@ -178,8 +182,8 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-18
-Stopped at: ROADMAP.md criado para v2.14 (UI/UX Melhorias) — 5 fases derivadas dos 15 requisitos v1 (SRCH-01..11 → Phases 111-112, PEST-01 → Phase 113, RAD-01 → Phase 114, ICON-01+FICO-01 → Phase 115), 100% cobertura validada. REQUIREMENTS.md traceability atualizado. Aguarda aprovação do roadmap.
+Last session: 2026-07-18T23:26:25.801Z
+Stopped at: Plan 111-01 (data layer) executado: 4 pesquisarGlobal native queries tenant-first/ranked/accent-folded + migracao 111-enable-search-extensions.sql + PesquisaRepositoryIT (Testcontainers, zero vazamento cross-tenant provado). Proximo: Plan 111-02 (PesquisaController).
 Resume file: None
 
 ## Operator Next Steps

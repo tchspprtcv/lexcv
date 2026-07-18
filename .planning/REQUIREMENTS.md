@@ -8,12 +8,12 @@
 ### Pesquisa Global (SRCH)
 
 - [ ] **SRCH-01**: Utilizador pesquisa por texto/identificador e obtém resultados de Clientes, Processos, Documentos e Pareceres do seu tenant, agrupados por tipo
-- [ ] **SRCH-02**: Resultados priorizam correspondências exatas/prefixo em identificadores estruturados (`numero_cliente`, `numero_processo`, NIF, `documento_numero`) acima de correspondências por substring
+- [x] **SRCH-02**: Resultados priorizam correspondências exatas/prefixo em identificadores estruturados (`numero_cliente`, `numero_processo`, NIF, `documento_numero`) acima de correspondências por substring
 - [ ] **SRCH-03**: A pesquisa dispara automaticamente com debounce (~300ms) a partir de 2 caracteres
 - [ ] **SRCH-04**: Cada resultado mostra um subtítulo desambiguador (ex: Cliente → número + NIF) e navega para a rota de detalhe existente ao clicar
 - [ ] **SRCH-05**: Utilizador abre a pesquisa pelo campo já existente no topbar ou pelo atalho Ctrl+K/⌘K
 - [ ] **SRCH-06**: Resultados só incluem tipos de entidade para os quais o utilizador tem permissão de visualização (`clientes:view`/`processos:view`/`documentos:view`/`pareceres:view`), verificado por ramo de query, nunca por filtro posterior
-- [ ] **SRCH-07**: Toda a pesquisa é isolada por tenant, incluindo em cada sub-query por tipo de entidade
+- [x] **SRCH-07**: Toda a pesquisa é isolada por tenant, incluindo em cada sub-query por tipo de entidade
 - [ ] **SRCH-08**: Utilizador vê estados de vazio (sem pesquisa), a carregar, e sem resultados
 - [ ] **SRCH-09**: Cada grupo de resultados tem um link "Ver todos" que abre a lista completa desse tipo, já filtrada pela pesquisa
 - [ ] **SRCH-10**: No estado vazio (antes de escrever), o utilizador vê os últimos registos que visitou (não pesquisas anteriores) — guardado apenas no cliente/sessão, nunca no servidor
@@ -53,12 +53,12 @@ Mapeamento requisito → fase, atribuído durante a criação do roadmap (100% c
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SRCH-01 | Phase 111 | Pending |
-| SRCH-02 | Phase 111 | Pending |
+| SRCH-02 | Phase 111 | Complete |
 | SRCH-03 | Phase 112 | Pending |
 | SRCH-04 | Phase 112 | Pending |
 | SRCH-05 | Phase 112 | Pending |
 | SRCH-06 | Phase 111 | Pending |
-| SRCH-07 | Phase 111 | Pending |
+| SRCH-07 | Phase 111 | Complete |
 | SRCH-08 | Phase 112 | Pending |
 | SRCH-09 | Phase 112 | Pending |
 | SRCH-10 | Phase 112 | Pending |
