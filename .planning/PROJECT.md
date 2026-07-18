@@ -8,6 +8,21 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecos
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.14 UI/UX Melhorias
+
+**Goal:** Fechar gaps de UX deixados pela v2.13 (pesquisa decorativa, sem filtro de estado) e dar o próximo passo na linguagem visual (ícones, cantos arredondados) — uma segunda fase de refinamento orientada a comportamento, não só a troca de biblioteca de componentes.
+
+**Target features:**
+- Pesquisa global funcional cross-entity (clientes, processos, documentos, pareceres), com endpoint novo no backend + botão "Pesquisar" + atalho de teclado no frontend
+- Filtro por estado na lista de Processos
+- Ícones em todos os botões da aplicação
+- Cantos arredondados — mudança do token `--radius` global (reverte o `radius: 0` da v2.13 em todo o design system)
+- Botões de ação de filtro (aplicar/limpar/exportar) em todos os módulos passam a ícone-only com tooltip ao hover
+
+**Key context:**
+- Cantos arredondados reverte deliberadamente a identidade "documento institucional" estabelecida na v2.13 — decisão consciente do utilizador, não esquecimento.
+- A pesquisa global é hoje 100% decorativa (`dashboard-shell.tsx:121-127`, `<Input>` sem `onChange`) — vai precisar de trabalho novo no backend, não só frontend.
+
 ## Requirements
 
 ### Validated
@@ -92,7 +107,12 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-Nenhum milestone em execução — v2.13 (Refactor UI/UX shadcn/ui) fechado em 2026-07-18. Próximo milestone por definir via `/gsd:new-milestone`.
+v2.14 UI/UX Melhorias (em definição de requisitos):
+- [ ] Pesquisa global funcional cross-entity (backend + frontend + padrão visual botão/atalho)
+- [ ] Filtro por estado na lista de Processos
+- [ ] Ícones em todos os botões da aplicação
+- [ ] Cantos arredondados — mudança do token `--radius` global
+- [ ] Botões de ação de filtro ícone-only com tooltip, em todos os módulos
 
 ### Out of Scope
 
@@ -247,7 +267,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Nenhum milestone em execução — v2.13 fechado. Próximo milestone por definir via `/gsd:new-milestone`.
+**Current focus:** v2.14 UI/UX Melhorias — em definição de requisitos e roadmap via `/gsd:new-milestone`.
 
 ## Evolution
 
@@ -267,4 +287,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-18 after v2.13 milestone*
+*Last updated: 2026-07-18 after starting v2.14 milestone*
