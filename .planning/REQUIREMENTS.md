@@ -68,7 +68,7 @@ Requisitos para este milestone. Cada um mapeia para uma fase do roadmap.
 ### Landing (webpage/)
 
 - [x] **LDG-17**: Navegação mobile adicionada ao `SiteHeader` via `Sheet` reutilizado (atualmente zero navegação em mobile — gap funcional real)
-- [ ] **LDG-18**: Secções Hero e Contacto reestruturadas com composição `Card`/`Badge`, replicando o padrão já idiomático do `TrustSection`
+- [x] **LDG-18**: Secções Hero e Contacto reestruturadas com composição `Card`/`Badge`, replicando o padrão já idiomático do `TrustSection`
 
 ## v2 Requirements
 
@@ -134,7 +134,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | NTF-29 | Phase 109 | Complete |
 | NTF-30 | Phase 109 | Complete |
 | LDG-17 | Phase 110 | Complete |
-| LDG-18 | Phase 110 | Pending |
+| LDG-18 | Phase 110 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total
