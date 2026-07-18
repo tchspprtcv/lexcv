@@ -1,254 +1,234 @@
 
 # Feature Research
 
-**Domain:** shadcn/ui-driven UI/UX refactor of an existing multi-tenant legal practice management app (LexCV) — internal dashboard `web/` + public landing `webpage/`
-**Researched:** 2026-07-15
-**Confidence:** HIGH for component APIs/patterns (verified live against ui.shadcn.com this session, July 2026) / MEDIUM-HIGH for LexCV-specific fit (grounded by reading actual current source) / flagged inline where lower
+**Domain:** Cross-entity global search for an institutional legal practice management platform (LexCV v2.14 — "Pesquisa global funcional cross-entity")
+**Researched:** 2026-07-18
+**Confidence:** HIGH for codebase-grounded findings (verified by reading actual current source) and for general B2B SaaS/command-palette UX patterns (multiple independent sources agree) / MEDIUM for domain-specific reasoning about legal/institutional search behavior (inferred from the data model + general enterprise-search literature, not from verified named-competitor documentation — see Sources) / LOW confidence items flagged inline
 
-> Supersedes the v2.12-dated `FEATURES.md` previously at this path (that research covered the `webpage/` landing-page content milestone; this one is scoped entirely to the new v2.13 shadcn/ui UI/UX refactor milestone).
+> Scope note: this file covers **only** milestone target #1 ("Pesquisa global funcional cross-entity"). Targets #2–#5 (estado filter on Processos, icon-only buttons, `--radius` token, icon-only filter actions) are pure UI polish inside the already-migrated shadcn/ui design system and are deliberately **not** researched here per the orchestrator's scoping instructions.
 
 ## Critical Cross-Cutting Finding (read this before the per-area tables)
 
-**shadcn/ui defaulted to Base UI on new `init` this month (July 2026 changelog: "New projects default to Base UI").** Base UI replaces Radix's `asChild` composition prop with a `render` prop. Radix is not deprecated and remains fully supported via an explicit CLI flag (`shadcn init -b radix`), but it is no longer the default. This matters enormously for LexCV specifically:
+**The frontend primitive needed for the idiomatic version of this feature already exists and is unused for this purpose.** `web/src/components/ui/command.tsx` (added in v2.13 Phase 101 as the `shadcn` `Command` primitive, backed by `cmdk@1.1.1`) already exports `CommandDialog` — a fully-styled, accessible, keyboard-navigable modal search palette (built on the existing `Dialog` primitive), complete with `CommandInput`, `CommandList`, `CommandGroup` (auto-hides empty groups), `CommandItem`, and `CommandEmpty`. Today it is only consumed indirectly via `Combobox` (a single-select dropdown), never as a top-level ⌘K-style palette. This means the industry-standard command-palette pattern (see below) is close to a **wiring exercise on the frontend**, not a new-component build — the real net-new work is the backend endpoint and the data it returns. This substantially lowers the complexity ratings below versus what they'd be in a codebase without shadcn's Command already installed.
 
-- `web/package.json` already depends directly on `@radix-ui/react-dialog`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-popover`, `@radix-ui/react-radio-group`, `@radix-ui/react-switch`, `@radix-ui/react-slot`, `@radix-ui/react-toast` — every hand-built primitive in `web/src/components/ui/` (dialog, alert-dialog, sheet, popover, radio-group, switch) is Radix-based.
-- The codebase uses the Radix `asChild` composition pattern pervasively already (`<Button asChild><Link href="...">...</Link></Button>` appears dozens of times across Clientes/Processos/Dashboard/webpage).
-- If the shadcn CLI is initialized with its new default (Base UI) and used to add new primitives (Tabs, Select, DropdownMenu, Command, Tooltip, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu — all currently missing per PROJECT.md), those new components would compose via `render` instead of `asChild`, producing a **mixed-primitive-library codebase** with two different composition idioms living side by side.
-- **This is a foundation-phase decision, not mine to make, but it gates every item below**: initializing with `shadcn init -b radix` keeps 100% API/composition consistency with everything already built and is the only choice that doesn't silently introduce a second paradigm. Flagging as HIGH confidence, directly sourced from the official [July 2026 Base UI changelog](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default).
-- The changelog also surfaces a `pnpm dlx skills add shadcn/ui` migration skill for progressively moving components from Radix to Base UI — this is almost certainly the exact mechanism PROJECT.md's "Fora de âmbito" line is pre-emptively excluding ("instalação de skills/pacotes externos não verificados (ex.: 'skills add shadcn/ui') — apenas a CLI oficial `shadcn@latest`"). That decision is validated by this research: it correctly avoids an unverified/fast-moving mechanism in favor of the stable, explicit `-b radix` init flag.
+The existing search `<Input>` at `web/src/components/shared/dashboard-shell.tsx:121-127` is positioned exactly where a command-palette **trigger** conventionally lives in this pattern (a header search box with a keyboard-shortcut hint, e.g. GitHub/Linear/Vercel's `⌘K` badge inside the input). Recommendation: convert this element into the trigger for `CommandDialog` (click or focus opens the palette; add a `kbd` hint showing `Ctrl K`/`⌘K`) rather than building a second, separate search affordance.
 
-**Toast is officially deprecated in favor of Sonner** ("The toast component has been deprecated. Use the sonner component instead" — `ui.shadcn.com/docs/components/toast`). LexCV's `web/src/components/ui/toast.tsx` + `toaster.tsx` + `@radix-ui/react-toast` are the old, deprecated shape. Notably, the app's own `useToast`/`toast` wrapper (`toast.success(...)`, `toast.error(...)`) already mirrors Sonner's exact call-site API (`toast.success()`, `toast.error()`), which makes a swap to Sonner a **near-zero-diff call-site migration** — only the underlying hook implementation and the root `<Toaster />` mount need to change; every existing `toast.success("...")` call in Clientes/Processos/Pareceres/Documentos forms keeps working unmodified.
+**No debounce hook or global keyboard-shortcut listener exists anywhere in `web/src/`** (confirmed by search) — both are small, new, and have no existing pattern to reconcile with, unlike almost everything else in this milestone.
 
-**Official blocks (`ui.shadcn.com/blocks`) are app/dashboard-oriented only** — categories confirmed: Dashboard, Sidebar (variants), Login, Signup, Calendar. **There is no official marketing/landing category** (no Hero, Features grid, Testimonials, Pricing, Contact/CTA blocks on ui.shadcn.com). All "shadcn hero/marketing blocks" surfaced by search (shadcnblocks.com, shadcndesign.com, shadcnuikit.com, shadcnstudio.com) are **third-party paid/community registries**, explicitly out of scope per PROJECT.md's "apenas a CLI oficial" constraint. This directly shapes the `webpage/` recommendation below: compose landing sections from official atomic primitives (Button, Card, Badge, Avatar, Separator, NavigationMenu) rather than importing a "block."
+**Existing per-entity search is inconsistent and mostly unsuitable to reuse as-is for a fan-out query:**
+
+| Entity | Existing search today | Mechanism | Searchable fields |
+|--------|----------------------|-----------|--------------------|
+| Cliente | `GET /clientes?q=` | In-memory Java stream filter over `findByTenantId()` (loads the whole tenant table) | `nome`, `nif`, `email`, `telefone` |
+| Processo | `GET /processos?q=` | Same in-memory stream pattern | `numeroProcesso`, `tipoProcesso`, `descricao`, `tribunal`, `areaJuridica`, `estado` |
+| Documento | `GET /documentos` | **No filter parameters at all today** — returns the entire tenant's documents, a pre-existing gap already flagged in `.planning/PROJECT.md`'s decision log (`GET /documentos` also ignores `cliente_id`/`processo_id`) | none |
+| ParecerSolicitacao | `GET /pareceres/pesquisa?texto=` (separate `ParecerPesquisaController`) | **Native SQL query** (`@Query(nativeQuery = true)`) with `ILIKE` on the latest `ParecerVersao.conteudo`, plus exact filters for `clienteId`/`advogadoId`/`status`/date range | `conteudo` of most recent version only (via correlated subquery), not `descricao` |
+
+Only the Pareceres implementation uses a real SQL-level query; Clientes/Processos load full tables into JVM memory. For a **fan-out search that hits 4 tables on every keystroke**, the in-memory approach doesn't scale as a pattern to copy — the new endpoint should use targeted, `LIMIT`-capped SQL queries per entity (closer to the Pareceres precedent than the Clientes/Processos one). This is an implementation detail more properly owned by architecture/backend research, but it directly affects the complexity rating of "cross-entity search" below, so it's flagged here.
+
+**Structured identifiers exist for 2 of the 4 entities, not all 4** — this matters a great deal for the domain-specific part of the question:
+
+| Entity | Structured identifier(s) | Format | Notes |
+|--------|---------------------------|--------|-------|
+| Cliente | `numero_cliente` | `CLI-0001` (sequential per tenant, DB-unique) | Also `nif` (9 digits, DB-unique per tenant) and `documento_numero` (BI/passaporte/registo comercial) |
+| Processo | `numero_processo` | e.g. `PROC-2026-0001` (free-text `String` column, **not** DB-unique/required — no constraint on it, unlike `numero_cliente`) | |
+| Documento | none | — | Only `nome` (filename-ish string) and `tipo` (free-text category) |
+| ParecerSolicitacao | **none** | — | No reference-number field exists anywhere in the model; only findable via `cliente_id`, `descricao` text, `advogado_id`, `status` |
+
+This confirms the question's premise directly: institutional users (advogados, técnicos, assistentes) genuinely can and will type `CLI-0001`, a NIF, or a `PROC-...` string as often as a name — but only for Clientes and Processos. Documentos and Pareceres have no equivalent, so their entries in the result set will always be reached via free-text/relational matching, never an exact-code lookup. The ranking strategy needs to account for this asymmetry (see Table Stakes below).
+
+All 4 entities already have a canonical detail route to deep-link a search result to: `/clientes/[id]`, `/processos/[id]`, `/documentos/[id]`, `/pareceres/[id]` — navigation-on-select is trivial, no new routing needed.
+
+**RBAC is per-entity-scope, not a single "can search" permission**, and this is non-negotiable given the codebase's own established doctrine (CLAUDE.md: "both layers must agree"; and the identical pattern already implemented in v2.8 Phase 77, where the Ficha de Cliente's Processos/Pareceres tabs are independently gated by `processos:view`/`pareceres:view`). The 4 seeded roles (ADMIN, ADVOGADO, TECNICO, ASSISTENTE) all currently hold all of `clientes:view`, `processos:view`, `documentos:view`, `pareceres:view` — but RBAC in this system is dynamically configurable (`AdminController`), so a custom role with only 2 of the 4 scopes is a real, testable case the search feature must handle correctly, not a hypothetical. The seed data will not surface this bug by accident.
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Do This)
+### Table Stakes (Users Expect These)
 
-#### Data-heavy list/CRUD screens — Clientes, Processos, Pareceres, Financeiro, Documentos
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| DataTable pattern (TanStack Table + shadcn `<Table>`) for the main list screens (`/clientes`, `/processos`, `/pareceres`, `/financeiro`) | shadcn ships **no single installable DataTable component** — it's an official copy-paste recipe (`columns.tsx` + `data-table.tsx` + `DataTableColumnHeader`/`DataTablePagination`/`DataTableViewOptions`) built on `@tanstack/react-table`, which is a **new dependency** (confirmed absent from `web/package.json` today — only `@tanstack/react-query` is present) | MEDIUM | Composes on top of shadcn's existing `Table`/`TableBody`/`TableRow`/`TableCell` (already in `web/src/components/ui/table.tsx`) + needs `Button`, `DropdownMenu`, `Checkbox`, `Input` (Checkbox/DropdownMenu are on PROJECT.md's missing-primitive list). This is the single biggest net-new pattern the milestone needs to stand up once, then reuse across 5 screens. |
-| Sortable column headers (`DataTableColumnHeader`, `getSortedRowModel`) | Users expect clicking "Nome"/"Estado"/"Data" to sort; today the tables (e.g. `ClienteProcessosTab`, `ClienteParecerTab`) are static, unsorted | LOW (once DataTable exists) | Purely additive on top of the DataTable foundation — no data-shape changes needed since sorting happens client-side per page. |
-| Toolbar filtering (search input + faceted filters using existing dropdown of statuses) | Clientes/Processos/Pareceres/Financeiro all already have hand-rolled filter UIs (per PROJECT.md's history: "filtros críticos", "pesquisa avançada") — DataTable's toolbar recipe formalizes this into a consistent shape | MEDIUM | `getFilteredRowModel()`; faceted filters need `Popover`+`Command`+`Checkbox` (Command is on the missing list). Riskiest part is preserving server-side filter semantics already wired to TanStack Query hooks — client-side TanStack Table filtering must not silently duplicate/conflict with server-side query params already in use. |
-| Row-selection + column-visibility toggle (`DataTableViewOptions`) | Standard DataTable affordance; useful for bulk actions if any exist (none currently in LexCV — see Anti-Features) | LOW-MEDIUM | Needs `Checkbox` (missing primitive) + `DropdownMenu` (missing primitive). Skip row-selection checkboxes on screens with no bulk action to keep scope honest (see Anti-Features). |
-| Official `Pagination` component (`Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, `PaginationEllipsis`) for server-paginated lists | `/notificacoes` already implements "paginação real" per PROJECT.md (Phase 89) — almost certainly hand-rolled prev/next buttons today. This is exactly the kind of "amateur/inconsistent element" the milestone goal calls out. | LOW | Renders `<a>` by default; must swap to Next.js `<Link>`-based `PaginationLink` (documented pattern) to keep client-side routing. Good target for Notificações page + any other server-paginated list. |
-| Dialog-based create/edit forms (`Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`, `DialogTrigger`) | **Already in place and already idiomatic** — `dialog.tsx` exists, and Clientes/Processos already use exactly this pattern for "Adicionar" flows (Partes, Fases, Decisões, Factos, Testemunhas, Documentos a Tratar, Deslocações, Documento Entregue upload all use `Dialog`+`DialogTrigger`+`DialogFooter` today) | N/A — already done | This is a genuine strength to preserve, not rebuild. The only real gap is the raw `<select>`/`<textarea>` elements with hand-maintained Tailwind class strings inside those dialogs (see `selectClassName`/`textareaClassName` consts in `clientes/[id]/page.tsx`) — swap these for shadcn `Select`/`NativeSelect`/`Textarea` primitives once available, not a dialog-pattern change. |
-| `NativeSelect` for short static option lists inside forms (tipo de documento, ramo de atividade, tipo de decisão, etc.) | Confirmed official component (`ui.shadcn.com/docs/components/native-select`): "a styled native HTML select element with consistent design system integration," explicitly positioned as the right choice over the popover-based `Select` for simple, short, mobile-friendly dropdowns — exactly what today's raw `<select className={selectClassName}>` instances are | LOW | Nearly a drop-in swap: same native semantics/keyboard/mobile behavior, just shadcn design tokens instead of a hand-maintained className string duplicated across files. Lower risk than migrating these same dropdowns to the heavier Radix/Base `Select`. |
-| `Checkbox`, `Switch` for boolean toggles | `Switch` already exists (`avençado` toggle uses it correctly today); `Checkbox` does not exist yet and DataTable row-selection requires it | LOW | Standard Radix/Base primitive, no surprises. |
-
-#### Ficha de Cliente 7-tab pattern (and Processos' equivalent Partes/Fases/Decisões/Factos/Testemunhas/Documentos tabs)
+These are the non-negotiable pieces of "pesquisa global funcional cross-entity" as scoped by the milestone. Missing any of these makes the feature feel broken or, worse, insecure.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Migrate the manual toggle-`Button` tab bar to real shadcn `Tabs` (`Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`) | **This is a genuine, verifiable accessibility gap today, not a style preference.** The current implementation (`clientes/[id]/page.tsx`) is a `<div className="flex gap-2">` of plain `<Button variant={tab===x?"secondary":"outline"}>` elements with a `tab` state ternary below — it has no `role="tablist"`/`role="tab"`/`role="tabpanel"`, no `aria-selected`, and no arrow-key roving-tabindex navigation. Radix/Base `Tabs` provides all of this for free, which is precisely the milestone's own stated goal ("substituir elementos amadores/inconsistentes por primitivos shadcn/Radix acessíveis"). | MEDIUM | See dedicated verdict below. |
+| Search across all 4 named entities (Cliente, Processo, Documento, ParecerSolicitacao) from one input | This is the literal, explicit ask — replaces the currently-decorative `<Input>` that has no `onChange` at all | MEDIUM | Backend: **one new unified endpoint** (matches PROJECT.md's phrasing "endpoint novo", singular) that internally fans out to 4 tenant-scoped, `LIMIT`-capped queries and returns a single discriminated/grouped payload — not 4 separate frontend calls. Frontend: one new TanStack Query hook. |
+| Search-as-you-type with debounce | Baseline expectation for any modern search box; without it, an endpoint that fans out to 4 tables gets hit on every keystroke, which is 4x the query cost of a normal single-list filter | LOW | ~300ms is the established sweet spot (250–500ms range) for desktop; no library needed, a small custom hook or `useDeferredValue` suffices. No debounce utility exists in the codebase today — new, small (~10–20 lines). |
+| Minimum query length before firing (e.g. 2 characters) | Prevents a 1-character keystroke from firing 4 broad `ILIKE '%a%'` queries simultaneously; doubly important here because of the fan-out | LOW | Simple guard in the hook/controller. Combine with debounce, not instead of it. |
+| Results grouped visually by entity type (Clientes / Processos / Documentos / Pareceres) | This is the standard, expected shape for any multi-source search (see Cross-Cutting Finding + Sources) | LOW | `CommandGroup` already auto-hides a group with zero matches — no extra empty-state logic needed per group. |
+| Each result shows enough context to disambiguate, not just a bare name | Clientes/Processos lists elsewhere in the app already show secondary fields (número, NIF, estado); a search result with only a name would be a visible regression from the rest of the app's conventions | LOW | Suggested subtitle per type: Cliente → `CLI-0001 · NIF 123456789`; Processo → `PROC-2026-0001 · ATIVO`; Documento → `tipo · nome do cliente/processo associado`; Parecer → `cliente · status`. |
+| Structured-identifier-aware matching: `numero_cliente`, `numero_processo`, `nif`, `documento_numero` must be matched, not just free-text name/description fields | This is the domain-specific crux of the question — institutional users type exact codes as often as names, and 2 of the 4 entities have no other reliable lookup path | LOW–MEDIUM | Straightforward to add columns to the existing `ILIKE`-style pattern (see Pareceres precedent). Becomes MEDIUM if paired with exact-match-first ranking (next row) rather than shipped as "just another ILIKE column." |
+| Exact/prefix matches on structured identifiers rank at or above fuzzy substring matches on names | Standard enterprise-search practice (see Sources): a user who types `CLI-0001` or a full NIF wants that one record, not a Clientes group buried under 8 fuzzy name hits | LOW–MEDIUM | Doesn't require a scoring engine — a simple `ORDER BY` that puts exact/`starts-with` identifier matches first, then substring matches, is sufficient at this data scale (single-tenant, hundreds–low-thousands of rows per table, not millions). |
+| Click a result → navigate to its existing detail route, palette closes | Zero new routing work — `/clientes/[id]`, `/processos/[id]`, `/documentos/[id]`, `/pareceres/[id]` already exist | LOW | |
+| Visible trigger (button/input) **and** keyboard shortcut (`Ctrl+K` / `⌘K`) to open | PROJECT.md explicitly asks for both ("botão 'Pesquisar' + atalho de teclado"); this also matches the near-universal convention of pairing a labeled search affordance with a shortcut hint, since shortcut-only discovery is poor UX for less power-user staff (técnicos/assistentes) | LOW | Reuse/convert the existing header `<Input>` as the trigger; add a small new global `keydown` listener (no existing pattern to reuse, but trivial: one `useEffect` checking `(e.metaKey \|\| e.ctrlKey) && e.key === "k"`). |
+| Per-entity-type RBAC gating inside the search itself, not a single blanket check | Directly follows CLAUDE.md's RBAC doctrine and the already-established Phase 77 precedent (Cliente ficha tabs gated per scope); a user without `pareceres:view` must never see Pareceres results or trigger a Pareceres query at all, independent of whatever other scopes they hold | MEDIUM | Mechanically simple per branch (`@PreAuthorize`-equivalent check or an early skip before that sub-query runs) but must be **explicitly tested with a partial-scope role**, since all 4 seeded roles currently have all 4 scopes and won't catch a regression here by accident. Also decide the "zero matching scopes" case (e.g. a hypothetical future role with none of the 4): the trigger/palette should degrade gracefully (empty, not a 403 or console error), not crash. |
+| Tenant isolation on every sub-query | The project's stated primary data-isolation boundary (CLAUDE.md) — every existing query in this codebase filters by `tenant_id`; a global search endpoint touching 4 tables at once is exactly the kind of surface where a copy-paste omission on one branch would be easy to miss and severe if missed | LOW effort / HIGH consequence | Mirror the pattern already used everywhere else (`tenantId = getTenantId()` passed into every repository call). Call out explicitly in code review for this feature — cross-tenant leakage in a legal document/case-file product is a serious confidentiality failure, not a cosmetic bug. |
+| Empty / loading / no-results states | Standard UX baseline | LOW | `CommandEmpty` already provides most of this "for free" per the installed primitive; just needs copy (e.g. "Comece a escrever para pesquisar" vs. "Nenhum resultado encontrado"). |
 
-**Dedicated verdict on the Tabs question:** The original PROJECT.md rationale for the manual pattern ("evita introduzir um componente novo; shadcn Tabs nunca foi inicializado no projeto") is **no longer valid as a blocker**, because this milestone's entire foundation phase is initializing the CLI and adding exactly this kind of missing primitive anyway — the cost of "introducing Tabs" is being paid regardless, for other components. Two things actually reduce risk further:
-1. **Lifecycle compatibility is good, not bad.** Verified: both Radix `Tabs.Content` and Base UI `Tabs.Panel` **unmount inactive panels by default** (no `forceMount`/`keepMounted`) — i.e., the exact same "only the active tab's subtree exists in the DOM" semantics the current ternary-based `tab === "dados" ? (...) : ...` already relies on (including the `useEffect` that resets in-tab dialog state when navigating away from "documentosATratar"/"deslocacoes"). Migrating does not change this contract.
-2. **Scope is 2x, not 1x**: Clientes' ficha AND Processos' ficha both use the identical hand-rolled pattern by deliberate design ("Partes e Fases... refatoradas para o mesmo padrão... para consistência visual" — PROJECT.md). Consistency demands migrating both together or neither; treat this as one roadmap item covering both fichas, not two.
+### Differentiators (Competitive Advantage)
 
-Recommendation: **table-stakes for this milestone**, MEDIUM complexity, but do it as a single dedicated phase covering both fichas together, after `Tabs` is added to the primitive library in the foundation phase.
-
-#### Dashboard KPIs
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Stat cards (icon + label + big number + trend badge) | **Already built and already structurally matches shadcn's own `dashboard-01` block `SectionCards` pattern** (Card → icon chip → trend Badge → uppercase label → large number). Confirmed by reading `dashboard/page.tsx`: KPI cards already compose `Card`/`CardContent`/`Badge` almost exactly like the official block. | N/A — mostly already done | Only real gap: the trend badges (`+12%`, `Estável`, `Urgente`, `+8%`) are **hardcoded strings**, not derived from `useDashboardKpis()` data (no delta/trend fields exist in the KPI payload). That's a data/business-logic gap, explicitly out of scope for a visual-only milestone — flag it as a known limitation, don't silently "fix" it under a UI refactor banner. |
-| Loading skeleton for KPI cards / Atividade Recente / list tables while `isLoading` | Every list screen currently renders a bare `"A carregar..."` text string during loading (`isLoading ? <div>A carregar...</div> : ...` appears throughout Clientes/Processos/Pareceres/Documentos) | LOW | Official `Skeleton` component (on the missing-primitive list) is a trivial swap: `<Skeleton className="h-4 w-32" />` compositions matching each card/row shape. High visual-polish return for very low effort — good "quick win" candidate early in the module rollout. |
-| `Empty` component for zero-result states | shadcn ships an official `Empty`/`EmptyHeader`/`EmptyMedia`/`EmptyTitle`/`EmptyDescription`/`EmptyContent` composition explicitly designed for "no data found in lists/tables," "notification centers with no items" — directly matches LexCV's many hand-rolled `"Nenhum ... registado."` one-line messages scattered across Clientes tabs, Processos tabs, Documentos, and the notification bell/page | LOW | Confirmed official component (not a recipe). Good candidate to standardize the ~10+ different "no data" messages currently written ad hoc as plain `<p>` tags. |
-
-#### Notificações (bell + `/notificacoes` page)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Keep `Popover`-based bell — **do not switch to `DropdownMenu`** | Read `notification-bell.tsx` directly: it's **already built on shadcn's `Popover`/`PopoverTrigger`/`PopoverContent`** (already installed), not a hand-rolled dropdown. This is the *correct* choice already, not a gap: `DropdownMenu`'s `DropdownMenuItem` assumes simple `menuitem`-role entries and manages focus/typeahead accordingly — each notification row here has multiple independent interactive controls (mark-as-read button, snooze control, internal link), which is a known Radix/Base a11y anti-pattern inside `DropdownMenuItem`. `Popover` correctly leaves the internal content's semantics up to the app. | N/A — already correct | Table-stakes item here is *recognizing this is already right*, so the roadmap doesn't waste a phase "fixing" something that isn't broken. |
-| Swap the manual unread-count `<span>` badge for the official `Badge` component | Currently a bespoke `absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full ...` span, functionally a badge but not using the `Badge` primitive already used everywhere else in the app | LOW | Purely cosmetic consistency win; trivial. |
-
-#### Setup wizard / multi-step forms
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| shadcn's newer `<Field>`/`FieldLabel`/`FieldDescription`/`FieldError` composition (current official form-integration docs, `/docs/forms/react-hook-form`) as the presentational layer over the app's existing raw `react-hook-form` + `zod` usage | **Confirmed non-breaking**: shadcn's current docs explicitly frame `Field` as a purely presentational wrapper around `Controller`/`useForm`+`zodResolver` — "there's no wrapper abstraction requiring migration... you can adopt shadcn's Field components incrementally without refactoring existing form logic." LexCV's forms are 100% react-hook-form + zod already (`buildClienteFormSchema`, `zodResolver`, `useForm` throughout). | LOW-MEDIUM (per form, additive) | Note: shadcn's docs have moved away from the classic `Form`/`FormField`/`FormItem` naming I might otherwise assume from older training data — the current official surface is `Field`-based. Verify exact import names against the live CLI output at implementation time, not from memory. |
-| `Progress` component for a simple linear "step X of N" indicator in `/setup` | Official primitive (on the missing-primitive list), simplest possible way to add a wizard-progress affordance | LOW | See Anti-Features for what NOT to reach for. |
-
-#### Landing (`webpage/`)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Mobile navigation menu for `SiteHeader` | Read `site-header.tsx` directly: nav links are `<nav className="hidden md:flex">` — **on mobile there is currently no navigation at all**, not even a hamburger fallback. This is a genuine, verifiable gap, not a style nitpick. | LOW-MEDIUM | LexCV's own `web/src/components/ui/sheet.tsx` already exists (built manually per Key Decisions log, "seguiu padrão de dialog.tsx com @radix-ui/react-dialog") — reuse it for a slide-in mobile nav instead of introducing anything new. Good "shared primitive across both apps" candidate if `webpage/` and `web/` end up sharing a `ui/` package, otherwise duplicate the same small file. |
-| Keep `TrustSection`'s existing `Card`/`CardHeader`/`CardTitle`/`CardDescription` composition | Already idiomatic shadcn usage today — no change needed | N/A | Good reference example for how Hero/Contact sections should also be restructured (see Differentiators). |
-
----
-
-### Differentiators (Nice Visual Upgrade, Optional)
+Genuinely valuable, but none of these are implied by the milestone's literal wording ("endpoint novo + botão + atalho") — flagged so the roadmap can make a deliberate include/defer call rather than silently absorbing them into v1.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Recharts-backed `Chart` (`ChartContainer`, `ChartConfig`, `ChartTooltip`, `ChartLegend`) for a Dashboard trend chart (e.g. an area chart of processos/honorários over time, mirroring the official `dashboard-01` block's `ChartAreaInteractive`) | Visually elevates the Dashboard from "cards + static list" to the same shape as shadcn's flagship dashboard block; shadcn explicitly does not lock you into an abstraction ("we do not wrap Recharts") | HIGH | **New dependency** (`recharts` — confirmed absent from `web/package.json` today). Needs a real time-series KPI endpoint from the backend (currently `useDashboardKpis()` returns point-in-time totals only, no history) — this is a genuine cross-layer dependency, likely too large for a "visual-only" milestone unless the backend already has the data. Flag as a strong candidate to **defer to a future milestone** rather than force into this one. |
-| `ScrollArea` inside the notification bell's list (replacing the current `max-h-72 overflow-y-auto` on a plain `<ul>`) | Consistent cross-browser scrollbar styling | LOW | Cosmetic only; current native-scroll approach already works fine, so this is genuinely optional polish, not a fix. |
-| Official `Combobox` (either the classic `Command`+`Popover` recipe, or the newer Base UI-powered `docs/components/base/combobox` with `ComboboxInput`/`ComboboxContent`/`ComboboxList`) for the "tipo de documento" free-text-or-pick field in Documentos Entregues upload | Today this is a raw `<input list="..."><datalist>` — functional and accessible, but visually inconsistent with the rest of the design system | MEDIUM | Two different official implementations exist depending on which primitive style (Radix-recipe vs Base UI component) the foundation phase settles on — confirm which is available once `-b radix` vs default is decided, since the Base UI-specific `/docs/components/base/combobox` variant is separate from the classic `Command`+`Popover` recipe. |
-| `Breadcrumb` for ficha detail pages ("Clientes / [Nome do Cliente]", "Processos / [Número]") | Currently hand-built as a `<div>` with a `<Link>` + literal `/` character + current name (`clientes/[id]/page.tsx` header) — functional, but exactly the kind of ad hoc pattern that should become the official `Breadcrumb`/`BreadcrumbList`/`BreadcrumbItem`/`BreadcrumbLink`/`BreadcrumbPage`/`BreadcrumbSeparator` composition | LOW | Purely presentational upgrade of something that already works. |
-| `Tooltip` on icon-only/collapsed-sidebar buttons | Accessibility/discoverability polish for any icon-only affordances (collapsed sidebar icons, icon-only row actions) | LOW | Requires `TooltipProvider` once at the root. |
-| `Avatar` for advogado/administrativo pickers and any user-representing UI (Advogados/Administrativos cards in Clientes ficha, Testemunhas, notification "atribuído" flows) | Small but real visual upgrade over plain text names in lists | LOW | No functional change, cosmetic identity for "this row represents a person." |
-| Restructure Hero/Contact sections in `webpage/` around `Card`/`Badge`/`Avatar`(for a testimonial-style trust element) composition, matching `TrustSection`'s already-good pattern | Visual consistency across all 4 landing sections (today Hero/Contact are plain `<section>`+`<div>` while Trust already uses `Card`) | LOW-MEDIUM | No official "Hero block" exists to copy (see cross-cutting finding) — this is genuinely original composition work using only atomic primitives, not a block-adoption task. |
-| `NavigationMenu` for `webpage/`'s desktop nav (currently plain `<a>` anchor tags) | `NavigationMenu` is explicitly documented as being for marketing/website navigation (not app sidebars — see Anti-Features) — a legitimate, on-label use here, unlike in `web/`'s app shell | LOW-MEDIUM | Only worth it if a dropdown/mega-menu structure emerges; for 3 flat anchor links (`#funcionalidades`, `#confianca`, `#contacto`) plain styled links may remain simpler — judgment call, not obviously required. |
+| Recently-viewed records shown in the empty/pre-query state | Well-documented pattern in Notion/Linear-style palettes (recent pages/items surfaced before any typing) — genuinely useful for lawyers who reopen the same handful of active processos/clientes repeatedly through a workday | LOW–MEDIUM | Cheapest version: client-side only (e.g. `localStorage`, last N detail-page visits, session/browser-scoped). Explicitly **not** the same feature as persisted "recent searches" (see Anti-Features) — recording which *records* were opened is safer and more useful than recording what *query strings* were typed. |
+| "Ver todos os resultados de [Tipo]" overflow link per group, deep-linking into that entity's own list page with the query pre-filled | Bridges the new quick-jump palette with the app's existing rich per-entity filter pages instead of the search feeling like a disconnected bolt-on; also gives users a path past whatever per-group result cap the palette enforces (e.g. top 5) | LOW for Clientes/Processos (their list pages already accept `?q=`), MEDIUM for Documentos/Pareceres (Documentos has no list-level `q` today; Pareceres' existing search lives at a different route/param shape — `/pareceres/pesquisa?texto=` — than its own list page uses) | Worth including specifically because it's nearly free for 2 of the 4 entities today; flags a small pre-existing inconsistency (Pareceres search endpoint's `texto` param vs. a hypothetical `/pareceres?q=`) worth resolving as part of this work rather than adding a third param convention. |
+| Matched-substring highlighting in result labels | Classic search-UX polish, helps users trust *why* a result matched | LOW–MEDIUM | Pure frontend; no backend change needed beyond returning the raw match. |
+| Smart "jump straight to record" on Enter when the query is an unambiguous exact identifier match (e.g. a full `CLI-0001` or 9-digit NIF with exactly one hit) | Power-user shortcut — skips the results list entirely for the highest-confidence case | MEDIUM | Requires detecting "exactly one exact match" server- or client-side and special-casing Enter; real but bounded complexity. Reasonable to defer to a later pass once the base palette ships and usage patterns are observed. |
+| Cross-entity relevance ranking (e.g., weighting Cliente/Processo above Documento when match quality is similar) | Could reduce noise if result volume grows | MEDIUM–HIGH for uncertain payoff | Given this is a single-institution, per-tenant deployment (not a multi-million-row SaaS), the realistic result volumes are small; a real ranking model is likely solving a problem that doesn't exist yet at this scale. Reasonable to skip entirely rather than defer — revisit only if a specific tenant's data volume makes plain grouping+identifier-priority insufficient. |
+| Searching Processo by assigned lawyer's name (`responsavelId` → `User.nome`) | Natural query institutional staff might try ("processos da Dra. Maria") | MEDIUM | Requires a join the existing `/processos?q=` doesn't do today; real value but not implied by the milestone's literal scope — good v1.x candidate, not v1. |
 
----
+### Anti-Features (Commonly Requested, Often Problematic)
 
-### Anti-Features (Don't Do This)
+Explicitly called out per the milestone's own framing risk: this is a "pesquisa global funcional" UI-polish item, not a search-platform initiative. Every item below is a plausible-sounding scope-creep vector for exactly this kind of feature.
 
-| Feature | Why It Seems Appealing | Why Problematic | Alternative |
-|---------|------------------------|------------------|-------------|
-| Adopting shadcn's official `Sidebar` block/component (`SidebarProvider`, `Sidebar`, `SidebarContent`, `SidebarMenu`, collapsible-icon mode) to replace `dashboard-shell.tsx`/`bottom-nav.tsx` | It's the "official" way to build an app shell in shadcn, and the milestone is about adopting official components | Confirmed via direct comparison: adopting it would require **replacing the current sidebar markup structure wholesale** and would conflict with the already-validated Figma-aligned sidebar/topbar design. PROJECT.md is explicit that this milestone is **not a redesign** ("Preservar identidade visual... redesenho estrutural do layout institucional" is out of scope). This is a textbook large-disruption-for-no-clear-benefit swap. | Keep `dashboard-shell.tsx`/`bottom-nav.tsx` exactly as they are; only spot-upgrade their *internals* with proper primitives where genuinely missing (e.g. `Tooltip` on collapsed icon buttons, `Sheet` already used correctly for mobile drawer). |
-| Installing a third-party "shadcn Stepper" package/registry (ReUI, Shadcn Studio, allshadcn.com, shadcnblocks.com, etc.) for the Setup wizard | Multiple polished-looking multi-step-form component libraries exist and are heavily marketed as "shadcn stepper" | **Confirmed: shadcn/ui has no official Stepper/Steps/Wizard component** (verified against the full official components index — not present). Every "shadcn stepper" result is a third-party registry/community package, which directly violates PROJECT.md's explicit scope boundary ("apenas a CLI oficial `shadcn@latest`; fora de âmbito instalação de skills/pacotes externos não verificados"). | Hand-build the wizard's step indicator from official primitives already in scope: `Progress` for a simple linear bar, or a small custom "step pills" row (same visual idiom as the already-existing Clientes/Processos tab-toggle buttons) — no new dependency, no unverified package. |
-| Replacing the already-correct `Popover`-based notification bell with `DropdownMenu` "for consistency with other menus" | `DropdownMenu` sounds like the more "correct" semantic component name for a bell menu | Would be a regression: `DropdownMenuItem` assumes single-action menu-item semantics and manages roving focus/typeahead on that assumption; the notification list has multiple independent interactive controls per row (mark-as-read, snooze, navigate) — a known accessibility anti-pattern for menu primitives | Leave the `Popover`-based implementation as-is; it's already the right primitive choice. |
-| Adopting a general-purpose third-party "shadcn blocks" marketplace (shadcnblocks.com, shadcndesign.com, shadcnuikit.com) for the `webpage/` Hero/Features/Testimonials/Pricing sections | These sites have hundreds of polished, ready-made marketing sections that would visually "look like shadcn" | Confirmed these are **not part of `ui.shadcn.com`** — they're commercial/community registries outside the official CLI, explicitly excluded by PROJECT.md's scope boundary; they'd also introduce inconsistent code style/dependencies not vetted for this codebase | Compose landing sections from official atomic primitives only (`Button`, `Card`, `Badge`, `Avatar`, `Separator`, `NavigationMenu`) — more original work, but stays inside the explicit CLI-only constraint. |
-| Adding row-selection checkboxes + bulk-action toolbar to every DataTable "because the recipe includes it" | The official DataTable recipe demonstrates row selection as a core feature, so it's tempting to include it everywhere for "completeness" | LexCV currently has **no bulk actions anywhere** (no bulk-delete clientes, no bulk-status-change processos, etc.) — shipping selection checkboxes with nothing to do with the selection is dead UI and scope creep beyond a visual refactor | Only add row-selection where a genuine bulk action exists today or is explicitly requested; otherwise ship DataTable without the selection column. |
-| Migrating `webpage/`'s `SiteHeader` desktop nav or `web/`'s app sidebar links to `NavigationMenu` uniformly "since it's the official nav component" | Consistency instinct: use the same nav primitive everywhere | `NavigationMenu` is explicitly documented as designed for **website navigation with dropdown mega-menus**, not app sidebar/topbar navigation — using it inside `web/`'s dashboard shell would be a semantic misuse of the component, and the app shell is explicitly out of scope for restructuring anyway | Use `NavigationMenu` only inside `webpage/` (if/when a dropdown structure is actually needed); leave `web/`'s sidebar/topbar untouched. |
-| Migrating the deprecated `Toast`/`@radix-ui/react-toast` to Sonner as a "quick foundation win" without checking `Toaster` placement across both apps | The call-site API match (`toast.success`, `toast.error`) makes it look trivially safe | Still requires removing `@radix-ui/react-toast` and its current `toast.tsx`/`toaster.tsx`, and re-mounting a new `<Toaster />` (from `sonner`) at the correct root layout(s) for **both** `web/` and (if used there) `webpage/` — a small foundation-scope task, not a zero-risk one; sequence it deliberately in the foundation phase, not as an incidental drive-by change inside an unrelated module phase | Treat as its own small, explicit foundation-phase item; verify `Toaster` mounts correctly in both apps' root layouts before touching call sites. |
-
----
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|------------------|-------------|
+| Search analytics / dashboards (tracking query volume, click-through, "top searches") | Feels like an obvious companion to "add search" in a mature product | No stakeholder has asked for it; nothing in this milestone or product consumes it; pure speculative infrastructure for a first release of the feature itself | If ever needed later, ordinary DB/application logs are sufficient forensics — don't build a reporting surface pre-emptively |
+| Saved searches / stored queries | Looks like a natural "power user" feature once any search exists | Duplicates what the entity-specific advanced filter pages already do (Pareceres already ships its own dedicated advanced search with filters — `clienteId`, `advogadoId`, `estado`, `tipo`, date range, full-text; Processos is gaining a state filter in this same milestone). A *global quick-jump* palette and a *saved, reusable structured query* are different feature classes; conflating them roughly doubles scope (new persistence entity, CRUD, UI) for a handful of internal institutional users who haven't asked for it | Rely on the existing entity-specific filter/list pages (which already support building and, via URL, effectively "bookmarking" a filtered view) |
+| Persisted "recent searches" (storing/displaying past **query strings**, not opened records) | Seems like the same feature as "recently viewed items" (a genuine differentiator above) | For a legal practice tool, a visible list of recently-typed search strings on a shared or unlocked workstation is a mild confidentiality leak (e.g., a receptionist's screen showing a colleague's search for a sensitive client/case name) — a real concern given the domain, not a hypothetical one | Recently-**viewed records** (see Differentiators) is safer and more useful; even that should stay session/browser-local, not synced or backend-persisted, given the same confidentiality reasoning |
+| Full-text / OCR search inside uploaded document **contents** (PDF/DOCX body text) | The most literal reading of "search documentos" a user might expect | `Documento` today stores only metadata (`nome`, `tipo`) — no extracted text exists anywhere in the system. Building content extraction + indexing (e.g. Tika, a dedicated search engine, embeddings) is a genuine infrastructure project on its own, orders of magnitude larger than a UI-polish milestone item, and was not what was scoped ("pesquisa global... com endpoint novo... botão... atalho") | Ship metadata-only search for Documentos in this milestone (`nome`, `tipo`, and its linked cliente/processo); treat content search as a legitimate **future, separately-scoped** milestone if users ask for it |
+| Dedicated search infrastructure (Elasticsearch, Meilisearch, Algolia, a separate search microservice) | "Real" search products use dedicated search engines | Overkill relative to this product's actual scale (single-institution tenants, hundreds–low-thousands of rows, one Postgres instance already serving as the source of truth for everything including notifications and audit) and inconsistent with the project's own consistent zero-new-infra bias (no message queue, no separate search stack anywhere in the stack today) | Plain SQL (`ILIKE`, optionally `pg_trgm` for fuzzy matching later) against existing Postgres tables — same tool already used for the one real search implementation in the codebase (`ParecerSolicitacaoRepository.pesquisar`) |
+| Natural-language / AI-powered semantic search (e.g. "processos parecidos com despejo do ano passado") | Trendy, and the model already has a `Notificacao`/AI-adjacent-sounding surface nearby | Enormous scope and cost relative to the ask; also raises new data-handling questions for confidential legal content that the rest of this product has deliberately avoided (no AI/LLM integration exists anywhere in LexCV today) | Not needed; literal/structured search already fits how institutional users actually query (by exact identifiers, names, and known filters) |
+| Cross-tenant / platform-wide search | Sounds like a natural extension of "search everything" | Would directly violate the single inviolable architectural boundary of this product — every domain entity is `tenant_id`-scoped, and CLAUDE.md is explicit that this is the primary data-isolation mechanism, never to be bypassed | Every sub-query must filter by the caller's own `tenant_id`, exactly like every other endpoint in the codebase — flagged here because a generically-written "search everything" implementation is precisely the kind of code that could accidentally drop a `WHERE tenant_id = ?` clause if not deliberately checked |
+| Command-palette-as-action-launcher (typing "criar novo cliente" to trigger actions, not just find records) | `CommandDialog`/cmdk is exactly the component Raycast/Linear use for *both* search and actions, so it's an easy scope-adjacent feature to reach for once the palette exists | Roughly doubles the feature's scope (needs a permission-gated action registry, not just a query fan-out) for something the milestone never asked for; conflates two different feature classes the way "saved searches" does above | Keep v1 to record search + navigate only. The palette's structure would technically support an action-launcher later without rework — worth noting as a clean **future** extension point, not part of this milestone |
+| Sophisticated fuzzy/typo-tolerant matching (edit-distance, phonetic matching) beyond simple substring `ILIKE` | Feels like "better search" | For professional/institutional users who type exact structured identifiers (`CLI-0001`, 9-digit NIF, `numero_processo`) most of the time, plain substring/prefix matching already covers the dominant real query pattern in this domain; fuzzy-matching infrastructure (e.g. `pg_trgm` similarity scoring) is disproportionate investment for a first release with no evidence of a typo-driven miss problem | Ship `ILIKE` substring/prefix matching first (consistent with the one existing precedent in the codebase); revisit only if real usage shows a measurable typo-related miss rate |
 
 ## Feature Dependencies
 
 ```
-[shadcn CLI init: `-b radix`]
-    └──gates──> [All new primitives added via CLI keep `asChild` composition parity]
-                    └──requires for──> [DataTable pattern] (Table + @tanstack/react-table + Checkbox + DropdownMenu + Input)
-                    └──requires for──> [Tabs migration] (Tabs primitive)
-                    └──requires for──> [Combobox] (Command + Popover, OR Base UI `base/combobox` — pick one, don't mix)
-                    └──requires for──> [Mobile nav in webpage/] (reuses existing Sheet — no new primitive needed)
+Cross-entity global search (core, v1)
+    ├──requires──> Cliente entity + `clientes:view` scope (existing)
+    ├──requires──> Processo entity + `processos:view` scope (existing)
+    ├──requires──> Documento entity + `documentos:view` scope (existing entity/scope,
+    │                but NEW backend filter capability — GET /documentos has zero
+    │                query params today)
+    ├──requires──> ParecerSolicitacao (+ latest ParecerVersao.conteudo)
+    │                + `pareceres:view` scope (existing; can extend the proven
+    │                native-SQL-query pattern already in ParecerSolicitacaoRepository)
+    ├──requires──> ONE new unified backend endpoint that fans out to 4 tenant-scoped,
+    │                RBAC-gated, LIMIT-capped sub-queries and returns a single
+    │                grouped/discriminated response (matches PROJECT.md's singular
+    │                "endpoint novo")
+    ├──requires──> New frontend debounce mechanism (does not exist yet)
+    ├──requires──> New frontend global Ctrl/Cmd+K keydown listener (does not exist yet)
+    └──reuses────> Existing `CommandDialog`/`Command*` primitives (web/src/components/ui/command.tsx,
+                     installed v2.13 Phase 101, currently only used inside Combobox)
 
-[Sonner adoption] ──replaces──> [Toast / @radix-ui/react-toast / toast.tsx / toaster.tsx]
-    └──requires──> [Toaster re-mounted at root layout(s) of web/ (and webpage/ if used there)]
+Per-entity-type RBAC gating ──is prerequisite for──> Cross-entity global search
+    (must ship together — a version of "search everything" that doesn't check each
+    entity's own scope independently is a security regression, not a smaller v1)
 
-[Chart component] ──requires──> [recharts dependency] ──requires──> [Backend: time-series KPI endpoint]
-    (currently absent; likely out of scope for a visual-only milestone — see Differentiators)
+Tenant isolation on every sub-query ──is prerequisite for──> Cross-entity global search
+    (same reasoning — not a separable/deferrable piece)
 
-[Tabs migration: Clientes ficha] ──must ship together with──> [Tabs migration: Processos ficha]
-    (both use the identical hand-rolled toggle-button pattern by deliberate design; migrating only one breaks the intentional visual consistency between them)
+Structured-identifier matching (numero_cliente, numero_processo, nif, documento_numero)
+    ──enhances──> Cross-entity global search
+    (Documento and ParecerSolicitacao have no equivalent identifier field — those two
+    entity groups in the result set are always free-text/relational-only, which the
+    ranking logic must account for rather than assume every group behaves the same)
 
-[DataTable pattern] ──enhances──> [Clientes list, Processos list, Pareceres list, Financeiro list, Documentos list]
-    (build once as a shared pattern/recipe, then apply per screen — not 5 independent builds)
+"Ver todos os resultados de X" overflow link ──enhances──> Cross-entity global search
+    └──requires──> Clientes/Processos list pages' existing `?q=` param (already present)
+    └──requires (new, small)──> equivalent `q`-style param added to Documentos list
+                                   (currently has none) and reconciled with Pareceres'
+                                   existing but differently-shaped `/pareceres/pesquisa?texto=`
 
-[NativeSelect swap] ──independent of──> [DataTable, Tabs, Chart]
-    (can ship in parallel/early — lowest risk, no shared foundation dependency beyond CLI init itself)
+Recently-viewed records (empty-state) ──enhances──> Cross-entity global search
+    (independent, can ship before/after/without it — no hard dependency either direction)
+
+Saved searches ──conflicts with / is superseded by──> Pareceres' existing dedicated
+    advanced search page (and Processos' new estado filter, same milestone) — building
+    both a global "save this search" feature and per-entity advanced filter pages is
+    redundant scope for the same underlying need
+
+Full-text document content search ──blocked by──> Documento having no extracted-text
+    storage anywhere today (a genuine prerequisite gap, not a v1-scope decision)
 ```
 
-### Dependency Notes
+## MVP Definition
 
-- **Everything in this document depends on the foundation phase's CLI init decision (`-b radix` vs default Base UI).** This is the single highest-leverage decision the Stack/Architecture researcher's foundation work makes — every component-level recommendation above assumes `-b radix` is chosen to preserve `asChild` parity with existing code. If the foundation phase chooses the new Base UI default instead, every "Complexity" rating above involving a *new* primitive (Tabs, DropdownMenu, Command, Checkbox, Select-family, Calendar, Breadcrumb, Accordion, NavigationMenu) should be reassessed upward, since it would introduce a second composition idiom into a codebase that currently has only one.
-- **DataTable is the largest single lift and should be built once, generically, before being applied to 5 screens.** Treat "stand up the DataTable pattern" as its own roadmap phase/step, with the 5 screen-specific adoptions as smaller follow-on steps that reuse it.
-- **Tabs migration only makes sense after Tabs exists in the foundation**, and must cover Clientes + Processos fichas together (see above) — don't split into two separate roadmap phases that could ship inconsistently.
-- **Chart conflicts with "visual-only" milestone framing** if it requires new backend history data — flag this dependency explicitly to whoever scopes the roadmap so it isn't silently promised as an easy KPI upgrade.
+### Launch With (v1)
 
----
+Matches the milestone's explicit, literal scope ("endpoint novo no backend + botão 'Pesquisar' + atalho de teclado no frontend").
 
-## MVP Definition (for this milestone)
+- [ ] One new backend endpoint that searches Cliente, Processo, Documento, and ParecerSolicitacao for the caller's tenant, gating each entity branch independently by its own RBAC scope (`clientes:view`, `processos:view`, `documentos:view`, `pareceres:view`) — essential: this *is* the feature, and the security gating is inseparable from it
+- [ ] Structured-identifier matching (`numero_cliente`, `numero_processo`, `nif`, `documento_numero`) alongside free-text name/description matching, with exact/prefix identifier matches ranked at or above fuzzy substring matches — essential: this is the specific domain requirement the question raises, and skipping it would ship a search that fails on the query pattern institutional users will actually use most
+- [ ] Frontend: convert the existing decorative header `<Input>` into a trigger (click) for a `CommandDialog`-based palette, reusing the already-installed `Command`/`CommandDialog`/`CommandGroup`/`CommandItem`/`CommandEmpty` primitives — essential: this is the "botão 'Pesquisar'" half of the ask, and reuses existing components rather than building new UI
+- [ ] Global `Ctrl+K` / `⌘K` keyboard shortcut to open the same palette — essential: this is the explicit "atalho de teclado" half of the ask
+- [ ] Search-as-you-type with ~300ms debounce and a minimum query length (e.g. 2 characters) before firing — essential given the fan-out cost of hitting 4 tables per query
+- [ ] Results grouped by entity type with a short disambiguating subtitle per result, capped per group (e.g. top 5) — essential baseline UX, and cheap given `CommandGroup` already handles empty-group hiding
+- [ ] Click a result → navigate to its existing detail route (`/clientes/[id]`, `/processos/[id]`, `/documentos/[id]`, `/pareceres/[id]`), closing the palette — essential, and free (routes already exist)
+- [ ] Empty state and no-results state — essential baseline, mostly provided by `CommandEmpty` already
+- [ ] Tenant isolation verified on all 4 sub-queries — essential, non-negotiable given the product's core multi-tenancy boundary
 
-### Launch With (Foundation — must exist before any module work)
+### Add After Validation (v1.x)
 
-- [ ] `shadcn init` run for real in both `web/` and `webpage/` (`components.json` created), with the `-b radix` flag — preserves 100% composition-pattern parity with existing Radix-based primitives and the pervasive `asChild` usage already in the codebase
-- [ ] Missing primitives added via CLI: `Select`, `NativeSelect`, `Tabs`, `DropdownMenu`, `Command`, `Tooltip`, `Checkbox`, `Avatar`, `Separator`, `Skeleton`, `Progress`, `Calendar`, `Breadcrumb`, `Accordion`, `NavigationMenu`, `Empty` — matches PROJECT.md's own list plus `Empty` (a genuinely good fit found this session, not on the original list)
-- [ ] `@tanstack/react-table` added as a dependency; one shared DataTable recipe (`columns.tsx` pattern + `data-table.tsx` + toolbar/pagination helpers) built once
-- [ ] Sonner swap-in for the deprecated Toast (own small foundation item, sequenced deliberately — see Anti-Features)
+- [ ] "Ver todos os resultados de [Tipo]" overflow link per group, deep-linked into that entity's list page with the query pre-filled — add once the base palette is live and a per-group cap (e.g. top 5) is actually being hit in practice; also a natural moment to reconcile Documentos'/Pareceres' list-level query params with Clientes'/Processos' existing `?q=` convention
+- [ ] Recently-viewed records (client-side/session-local) shown in the empty/pre-query state — add if usage shows people reopening the same records repeatedly; keep it record-based (not query-string-based) and local, not backend-persisted, for the confidentiality reasons noted above
+- [ ] Matched-substring highlighting in result labels — cheap polish, not essential to function
 
-### Add After Foundation (per-module rollout, within this milestone)
+### Future Consideration (v2+)
 
-- [ ] Clientes/Processos/Pareceres/Financeiro/Documentos lists migrated onto the shared DataTable pattern (sort + filter toolbar + official `Pagination`)
-- [ ] Clientes ficha + Processos ficha both migrated from toggle-`Button` tabs to real `Tabs` (single combined roadmap item, not two)
-- [ ] `NativeSelect`/`Select` swap for all raw `<select className={selectClassName}>` instances across Clientes/Processos/Setup forms
-- [ ] `Skeleton` loading states + `Empty` zero-result states standardized across all list/tab screens
-- [ ] `webpage/` mobile nav (reusing existing `Sheet`) + Hero/Contact restructured around `Card`/`Badge` composition to match `TrustSection`
-
-### Future Consideration (explicitly defer)
-
-- [ ] Recharts-backed `Chart` for Dashboard trend visualization — blocked on backend time-series KPI data, not just a frontend component swap
-- [ ] Real trend-delta computation for KPI badges (`+12%` etc. are currently hardcoded) — business-logic/backend work, not visual refactor
-- [ ] `NavigationMenu` mega-menu structure for `webpage/` — only worth it if nav grows beyond 3 flat anchor links
-- [ ] Bulk row-selection/actions on any DataTable — no bulk actions exist in the product today; don't invent UI for a capability that doesn't exist
-
----
+- [ ] Full-text/OCR search inside uploaded document contents — genuinely large scope (content extraction + indexing), defer until explicitly requested and separately scoped
+- [ ] Fuzzy/typo-tolerant matching (`pg_trgm` similarity or equivalent) — defer until real usage shows a measurable typo-driven miss rate; unlikely to matter given how identifier-heavy this domain's queries are
+- [ ] "Smart jump" on Enter for an unambiguous single exact-identifier match — nice power-user touch, but a distinct, boundable follow-up rather than part of the initial ship
+- [ ] Command-palette-as-action-launcher (create/navigate actions beyond record search) — the installed primitives would structurally support this later without rework, but it's a different feature class from "pesquisa global" and would roughly double this milestone's scope if pulled forward
+- [ ] Any form of saved search, persisted search history, or search analytics — explicitly not warranted for a focused v1 in an internal institutional tool with a handful of users per tenant (see Anti-Features)
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|------------|----------------------|----------|
-| CLI init with `-b radix` + missing primitives | HIGH (unblocks everything else) | LOW | P1 |
-| Shared DataTable pattern (build once) | HIGH | MEDIUM | P1 |
-| DataTable adoption × 5 screens | HIGH | MEDIUM (per screen, after pattern exists) | P1 |
-| Tabs migration (Clientes + Processos fichas, combined) | HIGH (real a11y fix) | MEDIUM | P1 |
-| `NativeSelect`/`Select` swap on raw `<select>` | MEDIUM | LOW | P1 |
-| Official `Pagination` on `/notificacoes` and any other server-paginated list | MEDIUM | LOW | P1 |
-| `Skeleton` + `Empty` standardization | MEDIUM (polish) | LOW | P2 |
-| Sonner swap for deprecated Toast | LOW-MEDIUM (mostly invisible to users, real for maintainability) | LOW-MEDIUM | P2 |
-| `Breadcrumb`, `Tooltip`, `Avatar` cosmetic swaps | LOW-MEDIUM | LOW | P2 |
-| `webpage/` mobile nav via `Sheet` | HIGH (real functional gap on mobile today) | LOW-MEDIUM | P1 |
-| `webpage/` Hero/Contact restructuring | MEDIUM (visual consistency) | LOW-MEDIUM | P2 |
-| Recharts `Chart` for Dashboard | MEDIUM-HIGH (visual wow factor) | HIGH (new dependency + backend data) | P3 / deferred |
-| `Combobox` for tipo-de-documento field | LOW (already functional today) | MEDIUM | P3 |
+|---------|------------|---------------------|----------|
+| Unified backend endpoint (4-entity fan-out, RBAC + tenant scoped) | HIGH | MEDIUM | P1 |
+| Structured-identifier matching + exact-match-first ranking | HIGH | LOW-MEDIUM | P1 |
+| `CommandDialog` palette wired to header trigger | HIGH | LOW | P1 |
+| Ctrl/Cmd+K shortcut | MEDIUM-HIGH | LOW | P1 |
+| Debounce + minimum query length | HIGH (infra necessity) | LOW | P1 |
+| Grouped results with disambiguating subtitles | HIGH | LOW | P1 |
+| Click-through navigation to detail routes | HIGH | LOW | P1 |
+| Per-entity RBAC gating + tenant isolation | HIGH (non-negotiable) | LOW-MEDIUM | P1 |
+| "Ver todos os resultados" overflow links | MEDIUM | LOW (Clientes/Processos) – MEDIUM (Documentos/Pareceres) | P2 |
+| Recently-viewed records in empty state | MEDIUM | LOW-MEDIUM | P2 |
+| Matched-substring highlighting | LOW-MEDIUM | LOW-MEDIUM | P2 |
+| Search by Processo's assigned lawyer name | MEDIUM | MEDIUM | P2/P3 |
+| Smart exact-match jump on Enter | LOW-MEDIUM | MEDIUM | P3 |
+| Document content (OCR) search | MEDIUM (if ever requested) | HIGH | P3 / out of this milestone |
+| Fuzzy/typo-tolerant matching | LOW (at current scale) | MEDIUM | P3 |
+| Saved searches / search history / search analytics | LOW (unrequested) | MEDIUM-HIGH | Do not build |
 
-**Priority key:** P1: do in this milestone. P2: do in this milestone if time allows, otherwise fine to slip. P3: explicitly defer to a future milestone.
+**Priority key:**
+- P1: Must have for this milestone's launch (matches PROJECT.md's literal target)
+- P2: Should have, natural next iteration once v1 usage is observed
+- P3: Nice to have, future consideration only if explicitly requested later
 
----
+## Competitor Feature Analysis
 
-## Reference: Official shadcn Blocks vs LexCV's Current Implementation
+General web research on named legal-practice-management competitors (Clio, MyCase, PracticePanther) did not surface concrete, verifiable documentation of their internal global-search UX — their public marketing/comparison content doesn't document this level of interaction detail, and going deeper (their own help centers, which typically sit behind a login) was out of reach for this research pass. This is flagged honestly rather than presented as verified: any specific claim about how a named legal-software competitor implements search should be treated as **LOW confidence / unverified** if it appears elsewhere.
 
-| Pattern | Official shadcn reference | LexCV today | Gap |
-|---------|---------------------------|--------------|-----|
-| Dashboard KPI + chart + table layout | `dashboard-01` block: `SectionCards` (stat cards) + `ChartAreaInteractive` + `DataTable` | Stat cards already match `SectionCards` shape closely; no chart; table uses plain `Table`, no sort/filter | Chart is the only structurally missing piece (and it's the deferred one); table needs the DataTable upgrade |
-| App shell (sidebar + topbar) | `sidebar-01`..`sidebar-16` blocks, `SidebarProvider`/`Sidebar`/`SidebarContent` | Custom `dashboard-shell.tsx` + `bottom-nav.tsx`, validated against Figma | Deliberately **not** adopting the official block (see Anti-Features) — this is correct, not a gap |
-| Login/auth pages | `login-01`..`login-05` blocks (muted background, form+image split, etc.) | Not read this session (out of this question's scope) — flagged as a gap in coverage, not a finding | Low priority for this research pass; likely low-risk if revisited, since login is typically a single simple form |
-| Marketing landing page (hero/features/testimonials/pricing) | **None exist officially** | Hand-built Hero/Features/Trust/Contact in `webpage/` | Not a gap against shadcn (nothing to copy) — the work here is original composition from primitives, not block-adoption |
+What **is** well-documented (HIGH confidence, multiple independent sources) is the general B2B SaaS command-palette pattern this feature should follow, which happens to be exactly what LexCV's already-installed primitives (`cmdk`/shadcn `Command`) are built for:
 
----
+| Pattern element | How Linear/Notion/GitHub/Vercel/Slack do it | Our approach |
+|---|---|---|
+| Trigger | Visible search input/button in the header + `Ctrl+K`/`⌘K` shortcut, often shown as a `kbd` hint inside the trigger | Convert the existing (currently decorative) header search `<Input>` into this exact trigger; matches PROJECT.md's explicit ask for both a button and a shortcut |
+| Modal | A centered/upper-screen modal overlay, not an inline dropdown | `CommandDialog` (already installed, unused) is precisely this |
+| Grouping | Results grouped under labeled sections by type/source | `CommandGroup` (already installed) auto-hides empty groups |
+| Empty state | Recent/frequently-used items shown before any typing | Recommended as a v1.x differentiator here (client-side, record-based, not query-string-based — see Anti-Features for why the distinction matters in a legal-confidentiality context) |
+| Debounce | ~300ms is the reported industry sweet spot for desktop search-as-you-type | Adopted directly (Table Stakes) |
 
 ## Sources
 
-**Official shadcn/ui documentation (fetched live this session, July 2026 — HIGH confidence):**
-- [Data Table](https://ui.shadcn.com/docs/components/data-table) — recipe pattern, not an installable component; requires `@tanstack/react-table`
-- [Tabs](https://ui.shadcn.com/docs/components/tabs) — API, Radix-based accessibility
-- [Chart](https://ui.shadcn.com/docs/components/chart) — Recharts wrapper, `ChartContainer`/`ChartConfig`
-- [Dropdown Menu](https://ui.shadcn.com/docs/components/dropdown-menu)
-- [Forms (React Hook Form)](https://ui.shadcn.com/docs/forms/react-hook-form) — current `Field`-based composition, non-breaking over raw RHF+Zod
-- [Pagination](https://ui.shadcn.com/docs/components/pagination)
-- [Combobox](https://ui.shadcn.com/docs/components/combobox) and [Base UI Combobox](https://ui.shadcn.com/docs/components/base/combobox)
-- [Command](https://ui.shadcn.com/docs/components/command)
-- [Select](https://ui.shadcn.com/docs/components/select)
-- [Native Select](https://ui.shadcn.com/docs/components/native-select)
-- [Calendar](https://ui.shadcn.com/docs/components/calendar)
-- [Toast (deprecated)](https://ui.shadcn.com/docs/components/toast) → [Sonner](https://ui.shadcn.com/docs/components/sonner)
-- [Skeleton](https://ui.shadcn.com/docs/components/skeleton)
-- [Empty](https://ui.shadcn.com/docs/components/empty)
-- [Scroll Area](https://ui.shadcn.com/docs/components/scroll-area)
-- [Breadcrumb](https://ui.shadcn.com/docs/components/breadcrumb)
-- [Accordion](https://ui.shadcn.com/docs/components/accordion)
-- [Tooltip](https://ui.shadcn.com/docs/components/tooltip)
-- [Navigation Menu](https://ui.shadcn.com/docs/components/navigation-menu)
-- [Sidebar](https://ui.shadcn.com/docs/components/sidebar)
-- [Blocks index](https://ui.shadcn.com/blocks) — confirmed app/dashboard-only categories
-- [Dashboard block](https://ui.shadcn.com/blocks/dashboard)
-- [Components index](https://ui.shadcn.com/docs/components) — full official component inventory, confirms no Stepper/Steps/Wizard
-- [July 2026 changelog: Base UI as default](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default) — CLI default change, `-b radix` flag, `asChild`→`render`, `skills add shadcn/ui` migration tool
-
-**Community/third-party (used only to confirm absence of an official equivalent — LOW confidence as sources, not used as recommendations):**
-- [shadcn-ui/ui Discussion #3263: Multi-step form block request](https://github.com/shadcn-ui/ui/discussions/3263) and [#6353](https://github.com/shadcn-ui/ui/discussions/6353) — confirms Stepper is a repeatedly-requested but never-shipped official block
-- shadcnblocks.com, shadcndesign.com, shadcnuikit.com, shadcnstudio.com — third-party marketing block/stepper registries, cited only to demonstrate they are *not* part of the official CLI (out of scope per PROJECT.md)
-- [radix-ui/primitives #855, #1155, #2359](https://github.com/radix-ui/primitives) and [mui/base-ui #4822](https://github.com/mui/base-ui/issues/4822) — used to verify default mount/unmount behavior of Tabs content in both Radix and Base UI (both unmount inactive panels by default, matching LexCV's current ternary-based tab content pattern)
-
-**LexCV source files read directly this session (grounding, not shadcn docs):**
-- `.planning/PROJECT.md` — milestone scope, explicit out-of-scope decisions, prior Key Decisions log
-- `web/src/app/(dashboard)/clientes/[id]/page.tsx` — manual tab pattern, raw `<select>`/`<textarea>` styling, Dialog-based CRUD pattern, `toast.success`/`toast.error` call-site shape
-- `web/src/app/(dashboard)/dashboard/page.tsx` — KPI stat card structure, hardcoded trend badges
-- `web/src/components/shared/notification-bell.tsx` — confirmed already `Popover`-based, manual badge/scroll
-- `webpage/src/components/hero-section.tsx`, `trust-section.tsx`, `contact-section.tsx`, `site-header.tsx` — confirmed no mobile nav, confirmed `TrustSection` already uses `Card` well
-- `web/package.json` — confirmed current Radix packages (`@radix-ui/react-dialog`, `-alert-dialog`, `-popover`, `-radio-group`, `-slot`, `-switch`, `-toast`), confirmed absence of `@tanstack/react-table`, `recharts`, `cmdk`, `react-day-picker`, `sonner`
-- `web/src/components/ui/` directory listing — confirmed exactly which primitives already exist (alert-dialog, badge, button, card, dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast, toaster)
-- `webpage/src/components/ui/` directory listing — confirmed only `button.tsx`/`card.tsx` exist there today
+- Direct code inspection (this session): `web/src/components/ui/command.tsx`, `web/src/components/shared/dashboard-shell.tsx`, `web/src/components/shared/combobox.tsx`, `web/src/lib/permissions.ts`, `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (Clientes/Processos/Documentos list endpoints), `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java`, `backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java`, `backend/src/main/java/com/lexcv/models/{Cliente,Processo,Documento,ParecerSolicitacao,ParecerVersao}.java`, `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (role→scope assignments), `web/package.json` (`cmdk@1.1.1` confirmed present), `.planning/PROJECT.md` (milestone target wording, decision log re: `GET /documentos` gap)
+- [Command Palette Pattern — UX Patterns for Developers](https://uxpatterns.dev/patterns/advanced/command-palette) — grouping, empty-state, recent-items conventions
+- [Designing Command Palettes — Sam Solomon](https://solomon.io/designing-command-palettes/) — Linear/Notion/Vercel convention analysis
+- [Destiner's notes — Designing a Command Palette](https://destiner.io/blog/post/designing-a-command-palette/)
+- [Mobbin — Command Palette UI Design](https://mobbin.com/glossary/command-palette)
+- [SaaSUI — Command Palette glossary entry](https://www.saasui.design/glossary/command-palette)
+- [Algolia — Debounce sources](https://www.algolia.com/doc/ui-libraries/autocomplete/guides/debouncing-sources) — debounce timing guidance
+- [Atomic Object — Improve Your Search Autocomplete Timing with Debouncing](https://spin.atomicobject.com/2018/06/04/automplete-timing-debouncing/)
+- [Algolia Engineering — Fuzzy search 101](https://www.algolia.com/blog/engineering/fuzzy-search-101) — exact-match vs. fuzzy-match ranking principles
+- [Redis — What is fuzzy matching?](https://redis.io/blog/what-is-fuzzy-matching/) — exact-match-ranks-first principle in hybrid search
+- Legal-practice-management competitor search (Clio, MyCase, PracticePanther) — WebSearch surfaced only marketing/comparison pages, no verifiable UX documentation; treated as a gap, not a claim (LOW confidence where referenced above)
 
 ---
-*Feature research for: shadcn/ui UI/UX refactor milestone (LexCV v2.13)*
-*Researched: 2026-07-15*
+*Feature research for: Cross-entity global search, LexCV v2.14*
+*Researched: 2026-07-18*

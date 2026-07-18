@@ -1,12 +1,14 @@
-# Stack Research: shadcn/ui CLI Adoption
+# Stack Research: Cross-Entity ("Pesquisa Global") Search
 
-**Domain:** Formal shadcn/ui CLI adoption in an existing two-app Next.js 16 / Tailwind v4 codebase (LexCV `web/` + `webpage/`)
-**Researched:** 2026-07-15
-**Confidence:** HIGH (verified against ui.shadcn.com official docs/changelogs, npm registry, and GitHub issues — this area changed significantly in the last 8 months and training data alone would have been wrong on several points below)
+**Domain:** Unified/cross-entity search (clientes, processos, documentos, pareceres) for a multi-tenant Spring Boot 3.4.1 + PostgreSQL legal-practice SaaS, exposed to a Next.js 16 + TanStack Query frontend
+**Researched:** 2026-07-18
+**Confidence:** HIGH — every claim below is grounded either in this repository's own code (file:line citations) or in the official PostgreSQL 16 docs / official `docker-library/postgres` build source, not training-data recall alone.
 
-## Critical timing note
+## Bottom line
 
-**shadcn's CLI defaults changed *this month* (July 2026).** As of the `2026-07-base-ui-default` changelog, `pnpm dlx shadcn@latest init` now defaults new projects to **Base UI** primitives instead of Radix. This repo already has 9 `@radix-ui/react-*` runtime dependencies and every hand-rolled `web/src/components/ui/*` primitive is built on Radix's `asChild`/`Slot` composition pattern (verified in `button.tsx`). Running plain `init` today would silently start scaffolding Base UI components (different composition API — render props, no `asChild`, no `data-[state=...]` selectors) next to the existing Radix ones. **This is the single highest-risk gotcha for this milestone** and must be called out explicitly, not left to CLI defaults.
+**No new backend dependency is warranted.** LexCV already has everything needed: `spring-boot-starter-data-jpa` + the `org.postgresql:postgresql` driver already do native SQL passthrough, and PostgreSQL 16 (the exact `postgres:16-alpine` image already in `docker-compose.yml`) ships the two relevant contrib extensions (`pg_trgm`, `unaccent`) compiled into the image already — enabling them is a one-line `CREATE EXTENSION` migration, not a new library or a new container. The frontend is in the same position: `cmdk@1.1.1` and shadcn's `Command`/`CommandDialog`/`CommandGroup` primitives are already installed (`web/src/components/ui/command.tsx`, shipped in v2.13 Phase 107) and are a near-perfect fit for "grouped by entity type, behind a keyboard shortcut."
+
+The real decision isn't *which library* — it's **which PostgreSQL search technique** (plain `ILIKE`, `pg_trgm` similarity, or `tsvector`/`tsquery` full-text search) fits LexCV's actual scale. Given "a handful of institutional tenants, thousands not millions of rows per tenant," and every query mandatorily led by an indexed `tenant_id` equality predicate, **plain multi-column `ILIKE` (wrapped in `unaccent()`) is the correct MVP technique** — it is the same technique this codebase already uses twice, at a data volume where it is not a performance risk. `pg_trgm` and `tsvector` are documented below as the correct *next* steps, not as things to build now.
 
 ## Recommended Stack
 
@@ -14,170 +16,112 @@
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| `shadcn` (CLI package) | `4.13.0` (current on npm, `@latest` tag) | Official scaffolding CLI (`init`/`add`/`diff`) | This is the actual product being adopted this milestone. Note: the CLI package is published as `shadcn`, **not** `shadcn-ui` (that name is deprecated/legacy, matches project's stated exclusion of unverified "skills" tooling) |
-| `-b radix` flag on `init` | n/a | Forces Radix-based primitives instead of the new Base UI default | Matches 9 existing `@radix-ui/react-*` deps and every hand-rolled component's `asChild` pattern already in use across ~15 modules. Radix is explicitly stated as "not being deprecated" — every future shadcn component ships for both libraries |
-| Tailwind CSS v4 | `^4` (already installed) | CSS-first theming, no `tailwind.config.ts` | Already in place in both apps via `@tailwindcss/postcss`; shadcn's `init` fully supports v4 today and, per `components.json` schema, expects `tailwind.config` to be **left blank** for v4 projects |
-| `tw-animate-css` | `1.4.0` | CSS-first replacement for the `tailwindcss-animate` plugin | Official shadcn docs: "shadcn/ui has deprecated `tailwindcss-animate` in favor of `tw-animate-css`... new projects have `tw-animate-css` installed by default." Pure `@import`, no JS plugin loader needed — fits Tailwind v4's CSS-first model exactly |
+| PostgreSQL `unaccent` (contrib extension) | Bundled with PostgreSQL 16 — same version as the already-deployed `postgres:16-alpine` image (`docker-compose.yml:3`); no independent version number | Strip diacritics (´ ç ã õ etc.) before comparison, on both the stored column and the search term | LexCV's data is Portuguese: client names ("Conceição"), localities ("São Vicente"), etc. A user who types "Conceicao" (no cedilla/tilde) gets zero matches under plain `ILIKE` today — this is a real, concrete UX gap, not hypothetical. `unaccent()` closes it in one function call, no schema change required for the MVP query shape (see caveat under Version Compatibility about functional-index use later) |
+| `ILIKE` inside a native `@Query` (`spring-boot-starter-data-jpa`, already in `backend/pom.xml`) | Already present — Spring Boot 3.4.1 parent BOM, no version bump | Case-insensitive substring match across `t_cliente`, `t_processo`, `t_documento`, `t_parecer_solicitacao` | This is not a new pattern — it is the **exact same idiom already proven twice** in this codebase: `ParecerSolicitacaoRepository.pesquisar()` (`backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java:41-58`) and `NotificacaoRepository.buscarPorFiltros()` (`backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java:26-42`), both native `@Query`, both `CAST(:param AS type) IS NULL OR col ILIKE '%' \|\| CAST(:param AS text) \|\| '%'`. A new global-search query should reuse this literal idiom, not invent a second search paradigm |
+| `pg_trgm` (contrib extension) | Bundled with PostgreSQL 16, same image | Trigram similarity (`similarity()`, `%` operator) and, later, `GIN (col gin_trgm_ops)` indexes that transparently accelerate `ILIKE '%term%'` | Recommend enabling it **now** (cost: zero — it's already compiled into the image, `CREATE EXTENSION` is instant) but **not using it for anything in v1**. Enabling it up front means the future "add a trigram index" or "add typo-tolerance" step is a pure index/query addition later, never a re-provisioning exercise |
 
-### Supporting Libraries (component-by-component, for the 15 missing primitives)
+### Supporting Libraries (frontend — already installed, zero new packages)
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `@radix-ui/react-select` | `2.3.3` | Select primitive | `shadcn add select` |
-| `@radix-ui/react-tabs` | `1.1.17` | Tabs primitive | `shadcn add tabs` — note: project has a deliberate decision to keep the client-detail page on hand-rolled toggle buttons, not `Tabs` (see PROJECT.md Key Decisions); only add where a *new* tabbed UI is genuinely wanted |
-| `@radix-ui/react-dropdown-menu` | `2.1.20` | DropdownMenu primitive | `shadcn add dropdown-menu` |
-| `@radix-ui/react-tooltip` | `1.2.12` | Tooltip primitive | `shadcn add tooltip` |
-| `@radix-ui/react-checkbox` | `1.3.7` | Checkbox primitive | `shadcn add checkbox` |
-| `@radix-ui/react-avatar` | `1.2.2` | Avatar primitive | `shadcn add avatar` |
-| `@radix-ui/react-separator` | `1.1.11` | Separator primitive | `shadcn add separator` |
-| `@radix-ui/react-progress` | `1.1.12` | Progress primitive | `shadcn add progress` |
-| `@radix-ui/react-accordion` | `1.2.16` | Accordion primitive | `shadcn add accordion` |
-| `@radix-ui/react-navigation-menu` | `1.2.18` | NavigationMenu primitive | `shadcn add navigation-menu` — likely only needed in `webpage/` (landing nav), `web/` already has a bespoke sidebar/topbar (explicitly preserved, out of scope for redesign) |
-| `cmdk` | `1.1.1` | Command palette primitive (no Radix equivalent) | `shadcn add command` |
-| `react-day-picker` | **pin to `9.14.0`, NOT `@latest`** | Calendar primitive | See "What NOT to Use" below — the registry currently requests `@latest`, which resolves to a broken v10 |
-| `date-fns` | `4.4.0` | Date formatting for Calendar | Installed automatically alongside `react-day-picker` by `shadcn add calendar` |
-| Skeleton, Breadcrumb | n/a (no new dependency) | Pure Tailwind/`Slot`-based components | Both ship as plain `.tsx` files with zero extra npm packages — `shadcn add skeleton breadcrumb` just drops files using deps you already have (`@radix-ui/react-slot`, `cva`, `cn`) |
-| Form (react-hook-form integration) | n/a (no *new* dependency — you already have `react-hook-form ^7.62.0`, `@hookform/resolvers ^5.2.2`, `zod ^4.1.5`) | Accessible field wiring around your existing RHF+Zod stack | `shadcn add form` — note current shadcn docs describe **zod v3** in their Form examples (`docs/forms/react-hook-form`); this repo is on `zod ^4.1.5`. Verify the generated `zodResolver` call compiles against Zod 4's API before wiring it into real forms (Zod 4 changed some error-map internals) |
+| `cmdk` | `^1.1.1` (`web/package.json:18`, already installed since v2.13 Phase 107) | Headless command-palette primitive powering shadcn's `Command` | Already the base of `web/src/components/ui/command.tsx` |
+| shadcn `CommandDialog` / `CommandInput` / `CommandList` / `CommandGroup` / `CommandItem` | Already generated in `web/src/components/ui/command.tsx:36-192` | Dialog-wrapped, keyboard-navigable palette with **built-in per-group headings** | `CommandGroup heading="Clientes"` (etc.) maps directly onto "results grouped … by entity type" — this is not an approximation, it's the literal feature the primitive exists for. Trigger with a `keydown` listener for Cmd/Ctrl+K (no library needed, ~10 lines) |
+| `@tanstack/react-query` | `^5.87.4` (`web/package.json:14`, already installed) | Data-fetching hook for the new search endpoint | A new `useGlobalSearch(query)` hook, same shape as every other `use-*.ts` hook in `web/src/hooks/` |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| `pnpm dlx shadcn@latest init -b radix` | One-time formal adoption per app | Run once in `web/`, once in `webpage/` (two independent pnpm projects — see Monorepo Decision below). Non-interactive equivalent: add `-y` (accept defaults) or answer prompts explicitly for style/base-color |
-| `pnpm dlx shadcn@latest add <component> --diff` | Preview before touching existing files | Use this **every time** before adding a component whose name collides with an existing hand-rolled file (button, card, dialog, alert-dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast) |
-| `pnpm dlx shadcn@latest add <component> --dry-run` | Preview file list/deps without writing anything | Cheaper first pass than `--diff` when you just want to see what would be touched |
+| `backend/migrations/*.sql` manual-migration convention | Ship the two `CREATE EXTENSION` statements | This repo has no Flyway/Liquibase (`ddl-auto=update` in dev / `validate` in prod, per `CLAUDE.md`); every schema-adjacent change ships as a hand-numbered script in `backend/migrations/` (see `86-create-notificacao-table.sql`, `96-add-notificacao-snoozed-until.sql`). A `CREATE EXTENSION IF NOT EXISTS unaccent;` / `pg_trgm;` script follows the exact same convention and must be run manually at deploy time like the others — it is *not* something Hibernate's `ddl-auto` will do for you |
 
 ## Installation
 
-```bash
-# In web/ (existing 14 hand-rolled primitives + Radix deps already present)
-cd web
-pnpm dlx shadcn@latest init -b radix
+There is nothing to add to `pom.xml` and nothing to `mvn`/`pnpm install`. The only "installation" step is a SQL migration, run once per environment (matching the existing manual-migration deploy step already documented for every prior `backend/migrations/*.sql` file):
 
-# In webpage/ (only button.tsx/card.tsx hand-rolled so far)
-cd ../webpage
-pnpm dlx shadcn@latest init -b radix
-
-# Then, per app, add only the NEW primitives (do not touch existing hand-rolled files yet — see Migration Risk)
-pnpm dlx shadcn@latest add select tabs dropdown-menu command tooltip checkbox avatar separator progress accordion breadcrumb skeleton form
-
-# Calendar needs a version pin BEFORE/AFTER add (registry currently requests react-day-picker@latest, which is broken — see below)
-pnpm dlx shadcn@latest add calendar
-pnpm add react-day-picker@9.14.0   # re-pin immediately after, per-app
-
-# Animation plugin swap (do in both apps' package.json + globals.css)
-pnpm remove tailwindcss-animate
-pnpm add tw-animate-css
-# globals.css: replace `@plugin "tailwindcss-animate";` with `@import "tw-animate-css";`
-
-# webpage/ only — will pull in the Radix deps web/ already has, on first add
-pnpm dlx shadcn@latest add button card   # --diff first, since hand-rolled versions already exist
+```sql
+-- backend/migrations/NN-enable-search-extensions.sql
+-- Both are PostgreSQL contrib modules, already compiled into the postgres:16-alpine
+-- image (docker-library/postgres builds `make -C contrib install` for every Alpine
+-- variant) — this is a metadata-only operation, not a package install.
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
+
+Illustrative shape of the actual search query (per entity, reusing the exact `CAST(:param AS type) IS NULL OR …` + `ILIKE` idiom already in `ParecerSolicitacaoRepository`/`NotificacaoRepository`):
+
+```sql
+SELECT c.* FROM t_cliente c
+WHERE c.tenant_id = :tenantId
+  AND unaccent(c.nome) ILIKE unaccent('%' || CAST(:texto AS text) || '%')
+ORDER BY
+  CASE WHEN lower(c.nome) = lower(CAST(:texto AS text)) THEN 0
+       WHEN lower(c.nome) LIKE lower(CAST(:texto AS text)) || '%' THEN 1
+       ELSE 2 END,
+  c.created_at DESC
+LIMIT :limit
+```
+
+`tenant_id = :tenantId` must be the leading predicate in every one of the four per-entity queries — see Integration Notes below.
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|--------------------------|
-| `init -b radix` | `init` (Base UI, new July-2026 default) | Only for a brand-new app with zero existing Radix investment. Migrating this repo's 15 modules to Base UI's render-prop composition (no `asChild`, `checked` strict-boolean Checkbox, array-only `ToggleGroup` value, Floating UI instead of Radix's `data-[state]` selectors) is a large, unrequested architectural change — explicitly not what this milestone asked for |
-| Per-app `components.json` (one in `web/`, one in `webpage/`) | Shared internal `packages/ui` workspace package (shadcn's official monorepo pattern, ui.shadcn.com/docs/monorepo) | Only if the repo is *actually* restructured into a real pnpm workspace first (root `pnpm-workspace.yaml` + `apps/`/`packages/` layout). Verified: this repo has **no root `pnpm-workspace.yaml` and no root `package.json`** — `web/` and `webpage/` are two fully independent pnpm projects (separate lockfiles, `webpage/pnpm-workspace.yaml` is scoped only to itself for an unrelated supply-chain reason) that happen to live in one git repo, not a technical monorepo. Retrofitting real workspace tooling is a legitimate future option (would remove component/token duplication permanently) but is a separate, larger infrastructure decision outside "formally adopt the CLI" |
-| `pnpm dlx shadcn@latest` (official CLI, run per-app) | `pnpm dlx skills add shadcn/ui` (shadcn's own new skill-based migration/adoption tool, mentioned in the 2026-07 changelog) | Never for this milestone — PROJECT.md explicitly excludes "instalação de skills/pacotes externos não verificados" as an out-of-scope decision. Do not use it even though shadcn's own docs now suggest it |
-| `--diff` review before `add` | Blind `add --overwrite` | Never on the 14 already-hand-rolled `web/src/components/ui/*` files without reading the diff first — see Migration Risk below |
+| Plain `ILIKE` + `unaccent()`, no index | `pg_trgm` `GIN (col gin_trgm_ops)` index, same `ILIKE` query | Once a single tenant's searched table(s) grow well past the "thousands of rows" range described for this milestone (rough order of magnitude: tens of thousands+ rows in one table) and search latency becomes user-visible. The index is purely additive — it accelerates the *same* `ILIKE '%term%'` query verbatim, no query rewrite. Enable `pg_trgm` now (free) so this is a future index-creation migration, not a future extension-provisioning exercise |
+| Plain `ILIKE` ordering (`CASE WHEN exact/prefix THEN 0/1 ELSE 2`, then recency) | `tsvector`/`tsquery` + `ts_rank` full-text search | If/when a genuine cross-row relevance-ranking requirement appears (e.g. ranking hits *within* a long free-text field like `Processo.descricao` or `ParecerVersao.conteudo` by term frequency/proximity, or supporting boolean query syntax) rather than the "grouped by entity type, exact-match-first" behavior this milestone actually asks for. Requires a `GENERATED ALWAYS AS (to_tsvector('portuguese', …)) STORED` column + `GIN` index per searched table (PostgreSQL ships a built-in `'portuguese'` text-search configuration, no extra dictionary install) — a real schema change across 4 tables, not warranted pre-emptively |
+| 4 independent tenant-scoped native queries (one per existing repository), merged in a small service/controller | A single `UNION ALL` native query spanning all 4 tables | Only if a single DB round-trip genuinely matters (it won't, at this row count) or a single global `LIMIT`/pagination cutoff across all types is required. A `UNION ALL` across 4 differently-shaped tables needs every branch individually `CAST`-aligned to a common column shape and, critically, needs `tenant_id = :tenantId` correctly repeated in *every* branch — this repo's own milestone audit history has twice caught a filter silently missing from one query while "looking correct" in isolation (`GET /honorarios?processo_id=X`, `GET /documentos?processo_id=X`, both fixed in the v2.9 milestone audit). Four separate, independently-reviewable repository calls — one per existing `ClienteRepository`/`ProcessoRepository`/`DocumentoRepository`/`ParecerSolicitacaoRepository` — are lower-risk for the one invariant that must never break here (tenant isolation) |
+| Reuse `TimelineItemDto`-style discriminated `record` for the response shape | A generic/polymorphic JSON shape per entity type | This codebase already solved "merge heterogeneous entities into one normalized list" once, for `GET /processos/{id}/timeline` (`backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java`: `record TimelineItemDto(String tipo, String id, LocalDateTime timestamp, String titulo, String descricao, String autorNome)`, merging `Movimentacao`/`Evento`/`Documento`/`ConflictCheckDecisao`). A `PesquisaGlobalResultDto(String tipo, String id, String titulo, String subtitulo, String url)` is the same pattern applied tenant-wide instead of processo-scoped — no new architectural concept |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| Plain `pnpm dlx shadcn@latest init` (no `-b` flag) | Defaults to Base UI as of the 2026-07 changelog — would scaffold a second, incompatible primitive library alongside your 9 existing `@radix-ui/*` packages | `init -b radix` |
-| `tailwindcss-animate` (currently installed, loaded via `@plugin "tailwindcss-animate"` in `globals.css`) | Officially deprecated by shadcn in favor of a CSS-first package; it still technically works today (Tailwind v4's `@plugin` directive can load legacy JS-config plugins), but every new shadcn component generated from here on assumes `tw-animate-css`'s animation utility names/keyframes are present | `tw-animate-css` via `@import "tw-animate-css";` in `globals.css` |
-| `react-day-picker@latest` (what the shadcn `calendar` registry item currently pins to `@latest`) | v10.0.0 was released with breaking changes to the `classNames`/`table` type shape; confirmed **open, unresolved GitHub issue** shadcn-ui/ui#10914 ("calendar component build failure with react-day-picker v10+"), opened June 2026 | Pin to `react-day-picker@9.14.0` (last stable v9.x) immediately after running `shadcn add calendar`, in both `web/` and `webpage/` if either needs it |
-| `pnpm dlx skills add shadcn/ui` | Explicitly out of scope per this milestone's PROJECT.md ("Fora de âmbito... instalação de skills/pacotes externos não verificados") — this is shadcn's own new AI-agent migration skill, not the CLI itself | `pnpm dlx shadcn@latest init` / `add` only |
-| Running `add button card dialog alert-dialog input label popover radio-group sheet switch table textarea toast` with `--overwrite` as a first step | These 14 files already carry custom styling/props battle-tested across ~15 modules (e.g. `button.tsx`'s hardcoded `neutral-900`/`neutral-50` palette, not shadcn's semantic `bg-primary` tokens). A silent overwrite would revert real, in-production visual identity that PROJECT.md explicitly says must be preserved | Run `add <name> --diff` first (or `--dry-run`), review manually, and hand-merge only what's genuinely missing (e.g. new variant, better a11y attribute) — treat the CLI output as a reference diff, not a source of truth to blindly apply |
-| Assuming `shadcn diff <component>` exists as a standalone top-level command (older docs/training data pattern) | Confirmed: in the current CLI (v4.x), diffing is a flag on `add` (`add <component> --diff`), not a separate top-level `diff` subcommand | `shadcn add <component> --diff` |
+| Elasticsearch / OpenSearch / Meilisearch / Algolia / Typesense | Wrong tool at this scale. LexCV is a single-VPS `docker-compose` deployment (Postgres + MinIO + backend + `web` + `webpage` + Caddy already share one host, per `docker-compose.yml`) serving "a handful of institutional tenants" with thousands of rows each — nowhere near where a dedicated search engine pays for itself. It would add a whole second service to operate (indexing pipeline, dual-write consistency between Postgres and the index, extra container/RAM on a VPS that isn't provisioned for it) and, worse, creates a **second place `tenant_id` scoping has to be correctly re-implemented outside SQL** — exactly the kind of cross-cutting isolation risk this project's `CLAUDE.md` calls out as the primary constraint to never bypass | PostgreSQL `ILIKE`/`unaccent` now; `pg_trgm`/`tsvector` later if row counts genuinely grow (see Stack Patterns by Variant) |
+| Hibernate Search (Lucene or Elasticsearch-backed) | Same objection as above, plus a heavier in-code commitment: `@Indexed`/`@FullTextField` annotations across 4 entities, an index lifecycle to manage (rebuild-on-deploy strategy for an embedded Lucene index, or an external Elasticsearch dependency for a remote one) — solving a problem plain SQL already solves at this row count | Native `@Query` on existing Spring Data JPA repositories (already proven in this codebase) |
+| Apache Tika / OCR / any document-content-extraction library | This solves a *different, larger* feature — full-text search **inside uploaded file bytes** (PDF/DOCX/scanned-image content) — than what's requested. `Documento` (`backend/src/main/java/com/lexcv/models/Documento.java`) stores `nome`/`tipo`/`caminhoArquivo` (a MinIO object key), not extracted text; "documentos" in the milestone brief reads as searching that metadata, exactly parallel to how Pareceres search already works against a stored text column (`ParecerVersao.conteudo`), never against binary content. Do not conflate the two — content-extraction search is a legitimately larger feature that would need its own research and explicit product sign-off | `ILIKE`/`unaccent` against `Documento.nome`/`Documento.tipo` |
+| QueryDSL / jOOQ / Blaze-Persistence or any other SQL-building abstraction | Four independent tenant-scoped native/JPQL `@Query` methods sit entirely inside the vocabulary Spring Data JPA already provides, and this codebase already exercises (two working examples cited above). Introducing a query-builder library for a 4-table search adds a new abstraction with no problem left for it to solve | Plain `@Query(nativeQuery = true)` methods on existing repositories |
+| A new frontend debounce package (e.g. `use-debounce`, `lodash.debounce`) | Trivial to implement locally (`useState` + `useEffect` + `setTimeout`, ~10 lines) and the codebase has zero existing debounce dependency to justify pulling one in for this alone | A small local `useDebouncedValue` hook colocated with the new `useGlobalSearch` hook |
+| A dedicated full paginated "resultados" page/`Pageable` machinery for v1 | The milestone brief describes a "botão 'Pesquisar' + atalho de teclado" — a command-palette/typeahead pattern (top-N-per-type, dismissable), not a browsable results page. Building `Page`/count-query ceremony (the `NotificacaoRepository.buscarPorFiltros` pattern) for a UI that never needs to page through results is premature | A plain `LIMIT :limit` bind parameter per entity query (e.g. top 5-8), native-query `Pageable`/`Page` reserved for if/when a "ver todos os resultados" page is explicitly requested later — reusing the exact `NotificacaoRepository` precedent at that point |
 
 ## Stack Patterns by Variant
 
-**If adding a component that already exists hand-rolled (button, card, dialog, alert-dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast):**
-- Run `add <name> --diff` first, read the output
-- The CLI's own non-interactive behavior: files with **identical** content are auto-skipped ("Skipped N files... use --overwrite to overwrite"); files that **differ** prompt "The file xxx already exists. Would you like to overwrite?" unless `-o/--overwrite` (force yes) or a skip flag is passed
-- Because your hand-rolled files intentionally deviate from upstream (custom color literals, `sheet.tsx` built manually per your own Key Decisions log — "CLI `npx shadcn` exige setup interativo; seguiu padrão de dialog.tsx"), treat every prompt as "no" by default and hand-port only specific missing pieces (e.g., a new size variant) into the existing file
+**If row counts per tenant stay in the thousands (current, stated expectation):**
+- Use plain `ILIKE` wrapped in `unaccent()`, no index beyond whatever B-tree already backs `tenant_id` lookups.
+- Because a `tenant_id = ?` equality filter followed by a substring scan over a few thousand rows is, in practice, a low-single-digit-millisecond operation on typical hardware — there is no measured or expected performance problem to solve yet, so building index/ranking infrastructure now would be solving a problem LexCV doesn't have.
 
-**If adding a genuinely new component (Select, Tabs, DropdownMenu, Command, Tooltip, Form, Checkbox, Avatar, Separator, Skeleton, Progress, Calendar, Breadcrumb, Accordion, NavigationMenu):**
-- Safe to `add` directly, no existing file to collide with
-- Immediately re-pin `react-day-picker` after `add calendar` (see above)
-- For `add form`, double check the generated code's Zod usage against your `zod ^4.1.5` (docs currently describe zod v3 patterns)
+**If a searched table for one tenant grows past roughly tens of thousands of rows and search latency becomes noticeable:**
+- Add `CREATE INDEX … USING GIN (unaccent(col) gin_trgm_ops)` (trigram GIN index) on the specific `ILIKE`-searched columns.
+- Because `pg_trgm`'s GIN/GiST operator classes accelerate `LIKE`/`ILIKE`/regex queries directly (confirmed in PostgreSQL 16 docs: "these indexes support similarity operators as well as trigram-based searches for LIKE, ILIKE, regular expressions, and equality queries") — **no query rewrite is required**, since `pg_trgm` was already enabled in the MVP migration. This is the reason to enable the extension on day one even though nothing uses its indexing capability yet.
 
-**If working in `webpage/` (only `button.tsx`/`card.tsx` hand-rolled so far):**
-- Same `-b radix` init is still correct — `webpage/` already depends on `@radix-ui/react-slot`, `class-variance-authority`, `tailwindcss-animate`, matching `web/`'s conventions, just fewer components deep
-- Both apps' `tsconfig.json` already use `@/*` → `./src/*` and both have `src/components/ui/*` + `src/lib/utils.ts` in the same relative locations — the shadcn Next.js default aliases (see below) will resolve correctly in **both** apps with zero remapping
-- `webpage`'s own `pnpm-workspace.yaml` (added in Phase 100 for a `minimumReleaseAgeExclude` scoping reason) is **not** a shadcn monorepo workspace — it's an unrelated pnpm supply-chain config local to that single package. Don't conflate the two when deciding aliasing
-
-**If later deciding to de-duplicate `web/` and `webpage/` component trees:**
-- That requires first creating a real root `pnpm-workspace.yaml` + moving both apps under e.g. `apps/`, then following ui.shadcn.com/docs/monorepo's `packages/ui` pattern with matching `style`/`iconLibrary`/`baseColor` in both `components.json` files
-- Treat as a separate future milestone, not part of "formally adopt the CLI"
-
-## `components.json` — expected shape for this repo (per app)
-
-Because Tailwind v4 is already in place (no `tailwind.config.ts` in either app) and both apps' `tsconfig.json` already define `"@/*": ["./src/*"]`, the CLI-generated file should look like this in **both** `web/` and `webpage/` — no alias customization needed to match existing conventions:
-
-```json
-{
-  "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "new-york",
-  "rsc": true,
-  "tsx": true,
-  "tailwind": {
-    "config": "",
-    "css": "src/app/globals.css",
-    "baseColor": "neutral",
-    "cssVariables": true
-  },
-  "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
-  },
-  "iconLibrary": "lucide"
-}
-```
-
-Notes:
-- `"style": "new-york"` is the correct choice to visually match the existing hand-rolled `button.tsx` (rounded-md, `h-9`/`px-4`, `gap-2`, focus-visible ring) — this legacy value still resolves internally to `radix-vega` (see Version Compatibility)
-- `"baseColor": "neutral"` matches the literal `neutral-900`/`neutral-50`/`neutral-100` classes already hardcoded throughout `button.tsx` and the other 13 primitives
-- `"cssVariables": true` is the shadcn default and is **recommended**, but flag this as an integration item: today's `globals.css` only defines `--background`/`--foreground` (mapped via `@theme inline`), not the full shadcn semantic token set (`--primary`, `--secondary`, `--muted`, `--accent`, `--destructive`, `--border`, `--input`, `--ring`, `--card`, `--popover`, `--radius`, etc.). `init` will add the missing tokens to `globals.css`; the *existing* 14 hand-rolled components will keep using their hardcoded `neutral-*` literals until each is deliberately migrated to the new semantic classes during the module-by-module visual audit — the two systems can coexist visually (since `neutral` base color ≈ the same literal palette) but should not be treated as already unified
-- `webpage/` has no `hooks/` directory yet — that's fine, the CLI only creates the folder when a component that needs it (e.g., a future `use-mobile` hook) is actually added
+**If genuine relevance-ranking or typo-tolerance becomes an explicit user request (not assumed pre-emptively):**
+- For ranking/stemming on long free-text fields (`Processo.descricao`, `ParecerVersao.conteudo`): add a `GENERATED ALWAYS AS (to_tsvector('portuguese', …)) STORED` column + `GIN` index on that column, query with `@@ to_tsquery('portuguese', …)`, order with `ts_rank`. PostgreSQL ships a built-in `'portuguese'` search configuration (stemming/stopwords), no dictionary installation needed.
+- For typo-tolerance (e.g. a misspelled client surname): use `pg_trgm`'s `similarity()`/`%` operator against the already-enabled extension — again additive, no re-provisioning.
+- Do **not** build either pre-emptively: the milestone's explicit requirement is "grouped … by entity type," not a single flat cross-entity relevance-ranked list — grouping sidesteps the hardest part of "ranking" (making relevance scores comparable across four differently-shaped entities), so within-group ordering only needs the simple heuristic already shown in Installation (exact/prefix match first, then recency), which plain SQL handles today.
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|------------------|-------|
-| `shadcn@4.13.0` (CLI) | Tailwind v4, Next.js 16, React 19 | Confirmed current; CLI auto-detects Tailwind v4 and leaves `tailwind.config` blank in generated `components.json` |
-| `components.json` `tailwind.config` field | Tailwind v4 projects | Per official schema/docs: **leave blank** for v4 (no `tailwind.config.ts` needed — this repo already has none, only `@tailwindcss/postcss` + CSS-first `globals.css`, which is exactly what the CLI expects) |
-| `components.json` `style` field | `"new-york"` (legacy) resolves to `"radix-vega"` internally | The style taxonomy changed to `{library}-{style}` (e.g. `radix-vega`, `base-vega`, `radix-nova`...) as of the Dec-2025 `shadcn create` release; old `new-york`/`default`/`new-york-v4` values still resolve correctly for backward compat, so explicitly requesting `new-york` during `init` is fine |
-| `react-day-picker@10.x` | shadcn `calendar` registry item | **Currently broken** (open issue #10914) — do not let `pnpm add` resolve to `^10` for this package until upstream fixes are confirmed |
-| `zod@4.1.5` (already installed) | shadcn's `Form` component docs | Docs currently show `zod` v3 idioms; test the generated `zodResolver`/schema wiring against v4 before shipping a real form |
-| `tw-animate-css@1.4.0` | Tailwind v4 `@import` (no plugin config) | Drop-in for `@plugin "tailwindcss-animate"` — same animate-in/out class vocabulary (`accordion-down`, etc.), pure CSS, no JS plugin system dependency |
-| Existing `tsconfig.json` `@/*` → `./src/*` in both apps | shadcn Next.js App Router defaults | Already an exact match — no alias remapping needed. Default `components.json` aliases (`@/components`, `@/lib/utils`, `@/components/ui`, `@/lib`, `@/hooks`) will resolve correctly against both apps' existing folder layout with zero changes |
+| `postgres:16-alpine` (already `docker-compose.yml:3`) | `pg_trgm`, `unaccent` contrib modules | Verified directly against the official `docker-library/postgres` build source (`16/alpine3.23/Dockerfile`, GitHub): the Alpine build runs `make -C contrib install` after the core build, compiling **all** contrib modules — including `pg_trgm` and `unaccent` — into the image. `CREATE EXTENSION` therefore works immediately against the existing image; no Dockerfile change, no image swap, no `apk add` step |
+| `unaccent(text)` | Functional indexes / generated columns | **Caveat for later, not for the v1 MVP query:** the built-in `unaccent(text)` function is `STABLE`, not `IMMUTABLE` (its behavior depends on `search_path` and external dictionary files) — PostgreSQL will refuse to use it directly inside an index expression or a `GENERATED … STORED` column (`ERROR: functions in index expression must be marked IMMUTABLE`). It works fine as-is inside a plain `WHERE` clause (the v1 recommendation above), where no immutability requirement applies. If a functional index on `unaccent(col)` is added later (per Stack Patterns by Variant), wrap it first: `CREATE FUNCTION immutable_unaccent(text) RETURNS text AS $$ SELECT unaccent('unaccent', $1) $$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE STRICT;` and index/generate on `immutable_unaccent(col)` instead |
+| `spring-boot-starter-data-jpa` (Spring Boot 3.4.1 parent BOM) | `nativeQuery = true` + `Pageable`/`LIMIT` bind params | Already proven end-to-end in this exact codebase and covered by CI: `NotificacaoRepository.buscarPorFiltros` (native `@Query` + `Pageable` + separate `countQuery`) is exercised by a real Testcontainers-PostgreSQL integration test (`NotificacaoRepositoryIT`) gated in `deploy.yml`'s `test` job. No version-compatibility risk here — this is not new ground for the project |
+| `cmdk@1.1.1` / shadcn `Command*` primitives | React 19 / Next.js 16 (already the frontend stack) | Already installed and in production use since v2.13 Phase 107 (the `Combobox` component) — no compatibility question to resolve |
+
+## Integration Notes (tenant isolation — the quality gate for this feature)
+
+- Every one of the four per-entity queries must lead with `tenant_id = :tenantId` (or the entity's transitive-tenant pattern already used for `Decisao`/`Facto`/`Testemunha`, where applicable) — bound the same way `getTenantId()` is already read from `UserPrincipal`/`SecurityContextHolder` in every existing controller (`ParecerPesquisaController.java:37-41` is the smallest reference example). No exceptions, no entity type skipped.
+- Follow the existing dedicated-controller precedent, not the mega-controller one: `ParecerPesquisaController` exists specifically *because* a cross-cutting search route couldn't safely live inside the entity's main ~1000-line controller (`ResourceController`) — the same reasoning applies more strongly to a search that spans four entities at once. A new `GlobalSearchController`/`PesquisaGlobalController` at its own top-level `@RequestMapping` avoids `ResourceController` growing further and avoids the exact routing bug `ParecerPesquisaController`'s own header comment documents (Spring concatenates class-level + method-level `@RequestMapping` regardless of a leading `/`, so this must be its own class, never a method appended to an existing `/api/v1/...`-mapped controller in a way that double-prefixes).
+- RBAC must be applied **per entity slice**, not all-or-nothing on the whole endpoint: a caller without `pareceres:view` should see zero Pareceres results (silently omit that slice) rather than get a 403 for the entire search, mirroring how the app already treats partial-permission surfaces elsewhere (e.g. Financeiro visible only to ADMIN/TECNICO). Concretely: check each scope (`clientes:view`, `processos:view`, `documentos:view`, `pareceres:view`) before running that entity's query, inside the one endpoint.
+- Reuse existing repositories rather than building parallel ones: add one new `@Query(nativeQuery = true)` "quick search" method each to `ClienteRepository`/`ProcessoRepository`/`DocumentoRepository` (mirroring the `ParecerSolicitacaoRepository.pesquisar` CAST-guard + `ILIKE` idiom), and for Pareceres, prefer calling the **existing** `ParecerSolicitacaoRepository.pesquisar(...)` (already does exactly this search, LEFT JOIN to latest `ParecerVersao` included) rather than writing a second parallel query against the same table.
+- Never string-concatenate the search term into SQL in Java before binding it — the safe idiom already in use is to bind `:texto` as a parameter and do the `'%' || CAST(:texto AS text) || '%'` wildcard-wrapping *inside* the SQL string, exactly as both existing native queries do. A new query must follow this literally, given this project's ASVS-level-1 security gate on new backend code.
 
 ## Sources
 
-- https://ui.shadcn.com/docs/tailwind-v4 — Tailwind v4 init behavior, `@theme inline` pattern, migration notes (HIGH confidence, official docs)
-- https://ui.shadcn.com/docs/monorepo — official monorepo guidance, `packages/ui` pattern, per-workspace `components.json` requirement (HIGH confidence, official docs)
-- https://ui.shadcn.com/docs/components-json — full field reference for `components.json` (HIGH confidence, official docs)
-- https://ui.shadcn.com/docs/cli — CLI flags for `init`/`add`, `--overwrite`/`--diff`/`--dry-run` behavior (HIGH confidence, official docs)
-- https://ui.shadcn.com/schema.json — raw JSON Schema for `components.json`, confirms `style` enum values (`default`, `new-york`, `radix-vega`...`base-rhea`) (HIGH confidence, primary source)
-- https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default — Base UI becoming default, `-b radix` opt-out flag, "no migration required" confirmation (HIGH confidence, official changelog, dated this month)
-- https://ui.shadcn.com/docs/changelog/2025-12-shadcn-create — style-preset taxonomy (Vega/Nova/Maia/Lyra/Mira) introduction (MEDIUM-HIGH, official changelog + corroborated by WebSearch)
-- https://github.com/shadcn-ui/ui/discussions/9562 — Radix→Base UI migration guide, breaking-change inventory (MEDIUM, community discussion, cross-checked against official changelog's "no forced migration" stance)
-- https://ui.shadcn.com/docs/forms/react-hook-form — Form + RHF + Zod integration pattern (MEDIUM, docs show zod v3 idiom, flagged as a compatibility check item against this repo's zod v4)
-- https://ui.shadcn.com/docs/components/command — `cmdk` dependency confirmation (MEDIUM, version not stated on page, cross-checked via npm)
-- https://ui.shadcn.com/r/styles/new-york/calendar.json — registry manifest confirming `react-day-picker@latest` + `date-fns` deps and `button` registry dependency (HIGH confidence, primary source)
-- npm registry (`npm view <pkg> version`) — current versions for all `@radix-ui/react-*`, `cmdk`, `react-day-picker`, `date-fns`, `tailwindcss-animate`, `tw-animate-css`, `shadcn` (HIGH confidence, primary source, checked live)
-- https://github.com/shadcn-ui/ui/issues/10914 — open bug, `react-day-picker@10.0.1` build failure in Calendar component (HIGH confidence for "issue exists and is open", primary source; MEDIUM confidence on exact resolution status since not confirmed closed)
-- https://github.com/shadcn-ui/ui/discussions/7739 — `add` command overwrite/skip/prompt behavior details (MEDIUM, community discussion corroborating official `--overwrite`/`-y` flag docs)
-- Repo inspection: `web/package.json`, `webpage/package.json`, `web/src/app/globals.css`, `web/src/components/ui/button.tsx`, `web/src/lib/utils.ts`, `web/tsconfig.json`, `webpage/tsconfig.json`, `webpage/src/lib/utils.ts`, absence of root `pnpm-workspace.yaml`/`package.json`, presence of independent `web/pnpm-lock.yaml` + `webpage/pnpm-lock.yaml` (HIGH confidence, direct file reads)
+- Context7 `/websites/postgresql_16` — `textsearch-tables.html`, `textsearch-indexes.html`, `functions-textsearch.html`, `textsearch-controls.html` (tsvector generated column, GIN index, `ts_rank`); `pgtrgm.html` (trigram GIN/GiST index support, including for `ILIKE`); `unaccent.html` (function signature, text-search-configuration integration) — HIGH confidence, official PostgreSQL 16 docs, version-matched to the deployed image
+- WebSearch, corroborated by PostgreSQL mailing list thread (`postgresql.org/message-id/CABRT9RAxL5nL-34WeigFiGHWi+P-kpgbGO=iK70o6us1Jr4rfw@mail.gmail.com`) — `unaccent()` is `STABLE` not `IMMUTABLE`, and the standard `IMMUTABLE STRICT` SQL-wrapper workaround for functional-index use — MEDIUM-HIGH confidence (community-verified, consistent explanation across multiple independent threads, aligns with documented PostgreSQL immutability rules for index expressions)
+- WebFetch, `raw.githubusercontent.com/docker-library/postgres/master/16/alpine3.23/Dockerfile` — confirms `make -C contrib install` compiles `pg_trgm`/`unaccent`/etc. into the official `postgres:16-alpine` image — HIGH confidence, primary source (the actual build script for the exact image LexCV already runs)
+- In-repo evidence (HIGH confidence, read directly): `backend/pom.xml`, `docker-compose.yml`, `backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java`, `backend/src/main/java/com/lexcv/repositories/NotificacaoRepository.java`, `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java`, `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (lines ~155-230, ~930-970 — the current in-memory-stream filtering pattern for Clientes/Processos lists), `backend/src/main/java/com/lexcv/models/{Cliente,Processo,Documento,ParecerSolicitacao}.java`, `backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java`, `web/package.json`, `web/src/components/ui/command.tsx`, `web/src/components/shared/dashboard-shell.tsx` (the current decorative search input, lines 121-127)
 
 ---
-*Stack research for: shadcn/ui CLI formal adoption, LexCV v2.13 milestone*
-*Researched: 2026-07-15*
+*Stack research for: Cross-entity global search backend (LexCV v2.14 milestone)*
+*Researched: 2026-07-18*

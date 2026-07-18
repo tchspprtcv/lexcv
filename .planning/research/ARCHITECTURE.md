@@ -1,274 +1,315 @@
-# Architecture Research
+# Architecture Research: Cross-Entity Global Search
 
-**Domain:** shadcn/ui CLI integration into an existing two-app Next.js 16 (App Router, Tailwind v4) monorepo-style repo
-**Researched:** 2026-07-15
-**Confidence:** HIGH for CLI mechanics (verified against current shadcn/ui CLI source via Context7, 2026-07-15 snapshot) / HIGH for repo facts (read directly from working tree) / MEDIUM for exact CLI flag defaults at execution time (upstream CLI evolves; re-verify with `npx shadcn@latest init --help` when the Foundation phase actually runs)
+**Domain:** Feature integration into an existing multi-tenant Spring Boot 3.4.1 / Java 23 + Next.js 16 legal-practice platform (LexCV, v2.14 milestone)
+**Researched:** 2026-07-18
+**Confidence:** HIGH — every claim below is grounded in direct reads of the current `backend/` and `web/` source tree (files enumerated in Sources), cross-checked against 2 external validations (Microsoft Graph Search API authorization model, shadcn `CommandDialog` Cmd+K convention).
 
-## Correction to Milestone Framing (load-bearing for Q2)
+## Scope Note
 
-The milestone context states `web/` and `webpage/` are "both pnpm workspace members." **This is not what the repository currently contains.** Verified directly:
-
-- No root `package.json` and no root `pnpm-workspace.yaml` exist anywhere in the repo root.
-- `web/pnpm-lock.yaml` (192KB) and `webpage/pnpm-lock.yaml` (140KB) are two **independent** lockfiles — not a single workspace lockfile.
-- `webpage/pnpm-workspace.yaml` exists, but it is a **single-package** workspace file used only to scope a pnpm 11 supply-chain guard (`minimumReleaseAgeExclude: [electron-to-chromium]`, per the Phase 100 decision log) — it is not evidence of a multi-package monorepo.
-- `.github/workflows/deploy.yml` builds three fully separate Docker contexts: `context: ./backend`, `context: ./web`, `context: ./webpage`. Each app's `Dockerfile` does `COPY package.json pnpm-lock.yaml ./` (and, for webpage, its own single-package `pnpm-workspace.yaml`) and installs independently. Neither Dockerfile's build context can see files outside its own app directory.
-
-**Conclusion:** `web/` and `webpage/` are two fully standalone Next.js apps that happen to live in the same git repo, not pnpm workspace members today. This directly changes the cost/benefit of a shared `packages/ui` package (see Integration Points below) — it is not a config tweak, it is a new structural investment.
+This document answers exactly the three integration questions posed for target feature 1 ("Pesquisa global funcional cross-entity"): (a) one backend endpoint vs. N client-side calls, (b) RBAC-safe per-entity-type filtering within a single search response, (c) where the endpoint lives in the existing controller structure. Items 2–5 of the v2.14 milestone (estado filter, icon buttons, `--radius`, icon-only filter buttons) are pure shadcn/ui UI work with no new architecture and are intentionally out of scope here, per the orchestrator's framing.
 
 ## Standard Architecture
 
-### System Overview (target end-state for this milestone)
+### System Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────┐
-│  repo root (no shared workspace today — each app self-contained)          │
-├───────────────────────────────┬───────────────────────────────────────────┤
-│  web/ (dashboard app)          │  webpage/ (public landing app)             │
-│  ├─ components.json  (NEW)    │  ├─ components.json  (NEW)                 │
-│  ├─ src/app/globals.css       │  ├─ src/app/globals.css                    │
-│  │   (Tailwind v4 @theme,     │  │   (Tailwind v4 @theme, byte-identical   │
-│  │    tokens EXTENDED here)   │  │    today — extend in lockstep)          │
-│  ├─ src/lib/utils.ts (cn())   │  ├─ src/lib/utils.ts (cn()) — already      │
-│  │   already canonical        │  │   canonical, untouched                  │
-│  ├─ src/components/ui/*.tsx   │  ├─ src/components/ui/*.tsx                │
-│  │   14 existing + ~15 new    │  │   2 existing (button, card) — CLI-      │
-│  │   CLI-scaffolded           │  │   regenerate or leave, no new needs     │
-│  └─ src/components/shared/*   │  └─ src/components/* (marketing sections)  │
-├───────────────────────────────┴───────────────────────────────────────────┤
-│  CI/CD: .github/workflows/deploy.yml — 3 independent build-push-action    │
-│  blocks (context: ./web, ./webpage). UNCHANGED by this milestone if the   │
-│  "two components.json, no shared package" path is taken (recommended).    │
-└───────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│  web/ (Next.js 16, dashboard app)                                              │
+│                                                                                  │
+│  dashboard-shell.tsx (topbar)                                                  │
+│    └─ [MODIFIED] decorative <Input> (line 121-127) replaced by:                │
+│       GlobalSearchDialog  ── self-contained, mounted once ──┐                  │
+│         ├─ owns open-state + Cmd/Ctrl+K keydown listener    │ (same shape as   │
+│         ├─ CommandDialog / CommandInput / CommandGroup      │  NotificationBell│
+│         │  (shadcn primitives — already installed)          │  precedent)      │
+│         └─ useGlobalSearch(debouncedQ) ──► apiFetch ─────────┘                 │
+│                        │ GET /api/v1/search?q=...                              │
+├────────────────────────┼────────────────────────────────────────────────────────┤
+│  backend/ (Spring Boot) │  JwtAuthenticationFilter → SecurityContext            │
+│                        ▼   (UserPrincipal: tenantId + authorities)              │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │ SearchController  [NEW]  @RequestMapping("/api/v1/search")               │  │
+│  │ @PreAuthorize("hasAnyAuthority('clientes:view','processos:view',        │  │
+│  │                                 'documentos:view','pareceres:view')")    │  │
+│  │                                                                            │  │
+│  │  UUID tenantId = getTenantId();       (existing per-controller pattern)  │  │
+│  │  for each of 4 categories:                                               │  │
+│  │    if (hasAuthority(auth, "<scope>:view"))  ──┐                          │  │
+│  │        results.addAll(searchX(tenantId, q))   │  branch SKIPPED (never   │  │
+│  │                                                 │  queried) when scope    │  │
+│  │                                                 │  is absent              │  │
+│  └────────┬───────────────┬───────────────┬───────────────┬─────────────────┘  │
+│           ▼               ▼               ▼               ▼                    │
+│  ClienteRepository ProcessoRepository DocumentoRepository ParecerSolicitacao-   │
+│  .findByTenantId   .findByTenantId    .findByTenantId     Repository           │
+│  (existing)        (existing)         (existing)          .findByTenantId      │
+│                                                             (existing)          │
+│  → merged into a single List<SearchResultDto> (tipo-discriminated, capped      │
+│    per category), same shape family as TimelineItemDto (getTimeline, L2273)    │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Current State (verified) |
-|-----------|-----------------|---------------------------|
-| `web/src/app/globals.css` | Tailwind v4 CSS-first theme config (`@theme inline`, `:root`/`.dark` variables) | Only defines `--background`/`--foreground` + font vars. No `--primary`/`--secondary`/`--muted`/`--accent`/`--destructive`/`--border`/`--input`/`--ring`/`--card`/`--popover`/`--radius` — the full shadcn semantic token set is **absent**, not just unthemed. |
-| `web/src/lib/utils.ts` | `cn()` helper (`clsx` + `tailwind-merge`) | Byte-for-byte matches canonical shadcn CLI output already. Zero risk on `init`. |
-| `web/src/components/ui/*.tsx` | Hand-rolled Radix-based primitives (14 files: alert-dialog, badge, button, card, dialog, input, label, popover, radio-group, sheet, switch, table, textarea, toast, toaster) | All built on `@radix-ui/react-*` (already installed), use `data-slot` attributes and CVA — structurally matches the **current** (data-slot era) shadcn source, not the older forwardRef era. Colors are hardcoded Tailwind palette utilities (`neutral-900`, `slate-950`, `blue-600`) instead of semantic tokens, because those tokens don't exist yet. |
-| `web/src/components/shared/dashboard-shell.tsx` | App shell: sidebar, topbar, mobile drawer (`Sheet`), bottom-nav | Hardcodes `bg-slate-950`, `text-blue-400`, `bg-blue-600/10` etc. directly for the "Anti-Safe Harbor" identity — none of this is token-driven today. This is the biggest visual-identity-preservation risk surface, not `globals.css`. |
-| `webpage/src/app/globals.css`, `webpage/src/lib/utils.ts`, `webpage/src/components/ui/{button,card}.tsx` | Same Tailwind v4 CSS-first setup, same `cn()`, and a **byte-identical** `button.tsx` to `web/`'s | Confirms both apps were hand-authored against the same (uninitialized) shadcn conventions from the start — no drift yet, cheap to keep in sync manually. |
-| `.github/workflows/deploy.yml` | CI: test → build-and-push 3 independent Docker images | `context: ./web`/`./webpage`, no shared context. A shared `packages/ui` would require changing this. |
+| Component | Responsibility | Typical Implementation |
+|-----------|-----------------|-------------------------|
+| `SearchController` (new) | Owns `GET /api/v1/search`; resolves tenant + authorities once; branches per entity type; merges results | New `@RestController`, `@RequiredArgsConstructor`, injects the 4 existing repositories — no new repository classes needed |
+| `SearchResultDto` (new) | Unified shape for a search hit across all 4 entity types | `record` in `com.lexcv.dtos`, mirrors `TimelineItemDto`'s discriminated-union shape |
+| `ClienteRepository` / `ProcessoRepository` / `DocumentoRepository` / `ParecerSolicitacaoRepository` (existing, unmodified) | Tenant-scoped data access | Already expose `findByTenantId(UUID)`, reused as-is |
+| `UserPrincipal` / `Authentication` (existing, unmodified) | Carries `tenantId` + `authorities` (the `scope:action` `SimpleGrantedAuthority` set) into the request | Populated by `JwtAuthenticationFilter`/`JwtTokenProvider` at login; read via `SecurityContextHolder` exactly as every other controller does |
+| `GlobalSearchDialog` (new) | Self-contained UI: Cmd/Ctrl+K listener, trigger button, `CommandDialog` overlay, grouped result rendering, click-to-navigate | `web/src/components/shared/global-search-dialog.tsx`, mounted once from `dashboard-shell.tsx`, same "own its state" shape as `NotificationBell` |
+| `useGlobalSearch` (new hook) | TanStack Query wrapper for `GET /api/v1/search`, debounced | `web/src/hooks/use-global-search.ts`, same shape as `usePesquisarPareceres` |
+| `dashboard-shell.tsx` (modified) | Hosts the search trigger in the topbar in place of the decorative `<Input>` | Lines 121-127 replaced with `<GlobalSearchDialog />` |
 
 ## Recommended Project Structure
 
-### Q2 — Two `components.json` (recommended) vs. shared `packages/ui` (rejected for this milestone)
-
-**Decision: keep two independent `components.json` + `ui/` folders, one per app. Do not introduce `packages/ui` in this milestone.**
-
-This matches what PROJECT.md's target features literally say: *"inicializar shadcn CLI oficialmente (`components.json`) em `web/` e `webpage/`"* — plural config files, not a shared package. Concrete rationale:
-
-| | Two `components.json` (recommended) | Shared `packages/ui` (shadcn's official monorepo pattern) |
-|---|---|---|
-| **Prerequisite work** | None — each app already has its own `package.json`/lockfile/tsconfig with `@/*` → `./src/*` aliases already matching shadcn's default alias shape | Must first create root `package.json` (with `"workspaces"`/pnpm equivalent) + root `pnpm-workspace.yaml` (`packages: [web, webpage, packages/*]`), **merge** `web/pnpm-lock.yaml` + `webpage/pnpm-lock.yaml` into one root lockfile, add `packages/ui/{package.json, components.json, src/components, src/lib/utils.ts, src/styles/globals.css}` |
-| **CI/Docker impact** | Zero. `context: ./web` / `context: ./webpage` in `deploy.yml` keep working unmodified | Both Dockerfiles must change build `context` from `./web`/`./webpage` to repo root (`context: .`, add `dockerfile: web/Dockerfile`) so `COPY . .` can see `../packages/ui`; both `deps` stages must `COPY` the root `pnpm-workspace.yaml` and run a workspace-aware install; both apps' `next.config.ts` likely need `transpilePackages: ["@workspace/ui"]`. This touches the exact pipeline that Phase 100 just finished hardening (3 Caddy config sources, Multi-Zones `assetPrefix`) — high blast radius for a milestone explicitly scoped as "not a redesign." |
-| **Component alias plumbing** | Default shadcn aliases work as-is: `"ui": "@/components/ui"`, `"utils": "@/lib/utils"` — no change to `tsconfig.json` paths | Requires cross-package aliases (`"ui": "@workspace/ui/components"`, `"utils": "@workspace/ui/lib/utils"`) plus package.json `imports`/`exports` maps in the new `packages/ui`, per shadcn's own documented monorepo `components.json` shape |
-| **Duplication cost today** | Low: `webpage/` currently has only 2 UI files (`button.tsx`, `card.tsx`), and `button.tsx` is already byte-identical to `web/`'s. `webpage/` needs almost none of the 15 new primitives targeted for `web/` (Select/Tabs/DropdownMenu/Command/Form/Table-heavy modules don't exist on a static marketing page) | N/A — this is the whole point of a shared package, but the two apps' actual current+planned component needs barely overlap, so the sharing benefit is small |
-| **Sync mechanism** | Manual: when a primitive changes in both apps (rare — only Button/Card apply to both), re-run `npx shadcn add <name> --overwrite` in the second app, or hand-copy the file | Automatic via `workspace:*` dependency — but only pays off once 3+ apps or heavy component churn exists |
-| **Reversibility** | Fully reversible; each `components.json` is app-local, safe to add/remove independently | Harder to reverse once lockfiles are merged and Dockerfiles rewritten |
-
-**When to revisit:** if a third internal app is added, or if `webpage/` starts needing the same heavy primitive set as `web/` (Select, Tabs, Form, Table), promote to `packages/ui` in a dedicated future milestone — not as a side effect of this one.
-
-### Recommended file layout after Foundation phase
-
 ```
-web/
-├── components.json              # NEW — style: nova (or new-york-v4 legacy, see Patterns), base: radix
-├── src/
-│   ├── app/globals.css          # MODIFIED — additive tokens merged in by `shadcn init`
-│   ├── lib/utils.ts             # UNCHANGED (already canonical)
-│   └── components/
-│       ├── ui/                  # 14 existing files UNCHANGED (unless explicit CLI re-add) +
-│       │                        #   ~15 NEW: select, tabs, dropdown-menu, command, tooltip,
-│       │                        #   form, checkbox, avatar, separator, skeleton, progress,
-│       │                        #   calendar, breadcrumb, accordion, navigation-menu
-│       └── shared/               # UNCHANGED by Foundation; touched later, per-module, to swap
-│                                 #   hardcoded slate-*/blue-* utilities for semantic tokens
-│                                 #   ONLY where a module phase explicitly does so
-webpage/
-├── components.json              # NEW — same base/style choice as web/ for visual consistency
-├── src/
-│   ├── app/globals.css          # MODIFIED in lockstep with web/'s token additions
-│   └── components/ui/
-│       ├── button.tsx           # OPTION: re-add via CLI (`shadcn add button --overwrite`) —
-│       │                        #   safe, since it's already near-identical to canonical output
-│       └── card.tsx             # same treatment
+backend/src/main/java/com/lexcv/
+├── controllers/
+│   └── SearchController.java          # NEW — dedicated, ~80-120 lines
+├── dtos/
+│   └── SearchResultDto.java           # NEW — record, mirrors TimelineItemDto
+└── (no repository or model changes — all 4 repositories already exist)
+
+web/src/
+├── components/shared/
+│   ├── dashboard-shell.tsx            # MODIFIED — swap decorative Input for trigger
+│   └── global-search-dialog.tsx       # NEW — CommandDialog + Cmd/Ctrl+K listener
+├── hooks/
+│   └── use-global-search.ts           # NEW — TanStack Query, debounced
+├── lib/
+│   └── use-debounced-value.ts         # NEW — small hook, ~10 lines, zero new deps
+└── types/
+    └── search.ts                      # NEW — SearchResult, SearchTipo types
 ```
 
 ### Structure Rationale
 
-- **`components.json` per app, not shared:** matches the literal target feature text in PROJECT.md and avoids restructuring a CI/Docker pipeline that was only just stabilized in the immediately-prior milestone (v2.12, Phase 100).
-- **`globals.css` changes stay additive:** the CLI's CSS updater (`update-css.ts`) merges at the declaration level via a PostCSS AST — it replaces individual `--variable: value;` lines and `@apply` bodies, it does not delete or replace unrelated content. Only `--background` and `--foreground` will have their *values* touched (name collision with the CLI's baseColor palette); every other token it adds (`--primary`, `--card`, etc.) is net-new.
-- **`components/shared/*` deliberately left out of Foundation:** these are the highest-hardcoded-color files (`dashboard-shell.tsx` especially) and are exactly where "preserve identity, not a redesign" risk concentrates. Token normalization there should be a deliberate, reviewed per-module change, not an automatic side effect of running `shadcn init`.
+- **`SearchController.java` as its own file**, not a method added to `ResourceController` (3,296 lines as of this milestone — see Anti-Patterns) or to any single-entity controller. Matches the precedent already set twice: `ParecerController`/`ParecerPesquisaController` split (v2.5/v2.6) and `NotificacaoController` (v2.10) — both introduced as dedicated controllers rather than appended to `ResourceController`, specifically because the feature spans/aggregates concerns that don't belong to one entity's CRUD surface.
+- **No new repository or service layer.** All 4 repositories already expose `findByTenantId(UUID)` (verified directly in `ClienteRepository`, `ProcessoRepository`, `DocumentoRepository`, `ParecerSolicitacaoRepository`, and already used exactly this way in `ResourceController`). A `GlobalSearchService` extraction is explicitly *not* recommended for v1 — see Patterns below.
+- **`SearchResultDto` in `dtos/`**, not a `Map<String,Object>`. The codebase has both conventions (`listProcessos` hand-builds a `Map<String,Object>`; `getTimeline`/`getDashboard` use typed DTOs). For a brand-new, purpose-built, non-legacy contract, the typed-record convention is the correct one to follow — it also sidesteps the camelCase/snake_case drift documented in PROJECT.md's Key Decisions (see Anti-Patterns).
+- **Frontend hook/component split mirrors `use-pareceres.ts` + `notification-bell.tsx`**: a thin TanStack Query hook, and a self-contained shell component that owns its own open/closed state and side effects (keyboard listener), consistent with how `NotificationBell` is already mounted once in `dashboard-shell.tsx` and manages its own popover state and polling.
 
 ## Architectural Patterns
 
-### Pattern 1: Tailwind v4 CSS-first token merge on `shadcn init`
+### Pattern 1: Server-side merge into a single discriminated-union DTO (not client-side merge)
 
-**What:** Current shadcn CLI (verified against the CLI's own `get-project-info.ts` and `preflight-init.ts` via Context7) detects Tailwind v4 by an **empty** `tailwind.config` field in `components.json` and requires only a CSS file (no `tailwind.config.ts`) — exactly this repo's setup. It reads `web/src/app/globals.css`, confirms it has `@import "tailwindcss"`, and merges shadcn's token block into the existing `@theme inline` / `:root` / `.dark` rules using a PostCSS-based updater that **replaces matching declarations by name, does not truncate/overwrite the file.**
+**What:** One backend endpoint queries the 4 repositories itself and returns one flat, already-merged `List<SearchResultDto>`, each item tagged with a `tipo` field (`"cliente" | "processo" | "documento" | "parecer"`).
 
-**When to use:** Run once per app, at the very start of the Foundation phase, before any module work.
+**When to use:** Whenever the UI needs "one view across several entity types" — this is not a new pattern being invented for search, it is the **exact pattern this codebase already uses** for `GET /processos/{id}/timeline`, which merges `Movimentacao` + `Evento` + `Documento` + `ConflictCheckDecisao` into a single sorted `List<TimelineItemDto>` server-side (`ResourceController.java:2273-2322`).
 
-**Trade-offs:** Safe and additive for all-new tokens. The two pre-existing tokens (`--background`, `--foreground`) WILL have their light/dark hex values overwritten by the CLI's chosen `baseColor` (default `"neutral"`, oklch-based) unless immediately restored post-init. This is a 4-line diff (2 values × light/dark), trivially caught in `git diff` right after running `init` — not a real risk if reviewed, but will silently regress the exact institutional colors (`#f8fafc`/`#020617`) if the init commit is not diffed carefully.
+**Trade-offs:**
+- (+) One HTTP round-trip per keystroke instead of 4; one TanStack Query key to debounce/cancel instead of 4.
+- (+) `GET /documentos` currently has **no free-text query parameter at all** (only `processo_id`/`cliente_id` filters — verified in `ResourceController.java:2803-2805` and `use-documentos.ts`). A client-merge approach would need this endpoint changed anyway, so "no backend work" is not actually on the table for option (b) — the true comparison is "one new endpoint" vs. "modify `GET /documentos` + write 4-way client merge/loading-state logic," and the former is strictly less total work.
+- (+) Every one of the 4 existing list/search endpoints already independently enforces its own `@PreAuthorize` scope. A user without `documentos:view` calling `GET /documentos` gets a 403. `apiFetch` (`web/src/lib/api.ts:43`) silently swallows 401/403 (no toast) but still `throw`s, so a client-merge implementation would need **4 separate try/catch-and-ignore blocks**, one per category, just to avoid a broken/errored UI state for the categories a given role can't see. A single backend endpoint makes this a non-issue: the category is simply absent from the response, same as `getTimeline` never including a `ConflictCheckDecisao` entry when none exists.
+- (−) None significant for this codebase's actual data volumes (see Scaling Considerations).
 
-**Example (concrete restoration step after `init`):**
-```css
-/* After `shadcn init`, verify these two blocks still read exactly: */
-:root {
-  --background: #f8fafc;   /* restore if CLI replaced with oklch neutral */
-  --foreground: #020617;
-}
-.dark {
-  --background: #020617;
-  --foreground: #f8fafc;
+**Example** (backend — mirrors `getTimeline`'s structure directly):
+```java
+@PreAuthorize("hasAnyAuthority('clientes:view','processos:view','documentos:view','pareceres:view')")
+@GetMapping("/search")
+public ResponseEntity<?> search(@RequestParam String q) {
+    String term = q == null ? "" : q.trim();
+    if (term.length() < 2) return ResponseEntity.ok(List.of());
+
+    UUID tenantId = getTenantId();
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    String termLower = term.toLowerCase();
+
+    List<SearchResultDto> results = new ArrayList<>();
+    if (hasAuthority(auth, "clientes:view"))   results.addAll(searchClientes(tenantId, termLower));
+    if (hasAuthority(auth, "processos:view"))  results.addAll(searchProcessos(tenantId, termLower));
+    if (hasAuthority(auth, "documentos:view")) results.addAll(searchDocumentos(tenantId, termLower));
+    if (hasAuthority(auth, "pareceres:view"))  results.addAll(searchPareceres(tenantId, termLower));
+    return ResponseEntity.ok(results);
 }
 ```
 
-### Pattern 2: Explicit `--base radix` on init (critical, non-obvious)
+### Pattern 2: Gate at the query branch, never filter after fetch (the RBAC-per-result-type answer)
 
-**What:** The current shadcn CLI (v3.x line, confirmed via the CLI's `init.ts` option schema) supports **two component-primitive backends**: `radix` (`@radix-ui/react-*`, what this repo already uses in all 14 hand-rolled primitives) and `base` (the newer Base UI library). Critically, `-d/--defaults` and the CLI's own preset defaults resolve to `base: "base"` (Base UI) with the `"nova"`/`"base-nova"` preset — **not** Radix. `-y/--yes` alone does not force a base; it only skips confirmation prompts using whatever base is otherwise selected/defaulted.
+**What:** For each of the 4 categories, check `authentication.getAuthorities()` for that category's `:view` scope **before** calling its repository method. If the scope is absent, that category's repository is never queried and never contributes rows to `results` — not "fetched then hidden," but "never fetched."
 
-**When to use:** Every `init` and every `add` invocation in this repo, for both apps.
+**When to use:** Any endpoint that aggregates multiple permission-gated resource types into one response. This is also the industry-standard shape: Microsoft Graph Search API's authorization model states search results "are scoped to enforce any access control applied to the items... users cannot access more items in a search than they can otherwise obtain from a corresponding GET operation with the same permissions" — i.e., the search endpoint must re-derive the same per-type gate its single-entity `GET` endpoints already enforce, not a separate/weaker one.
 
-**Trade-offs:** Get this wrong once and every newly-scaffolded component (Select, Tabs, DropdownMenu, etc.) will be built on a *different, incompatible* underlying primitives library than the 14 existing hand-rolled components — two parallel component ecosystems in one `ui/` folder, silent architectural drift, and wasted new dependencies (`@base-ui/react` alongside the already-installed `@radix-ui/react-*` packages) that don't interoperate.
+**Why this is the correct (and only safe) answer to "how does partial-permission filtering work in the SAME response":**
+- The 4 target entities (clientes, processos, documentos, pareceres) each already have their own `@PreAuthorize("hasAuthority('<scope>:view')")` gate on their respective list endpoint. `SearchController` must reproduce that **same** per-scope gate, once per category, inside one method — because a single class/method-level `@PreAuthorize` can only express "all of," "any of," or "none," never "this subset, computed per branch."
+- **Concrete, verified finding on current impact:** every one of the 4 seeded roles (`ASSISTENTE`, `TECNICO`, `ADVOGADO`, `ADMIN` — read directly from `DatabaseSeeder.seedRbac()`) already holds **all four** of `clientes:view`, `processos:view`, `documentos:view`, `pareceres:view`. `ASSISTENTE` is missing `financeiro:*` entirely (matching the milestone's illustrative example), but **financeiro/honorarios is not one of the 4 entities this search feature targets** per PROJECT.md ("Pesquisa global funcional cross-entity (clientes, processos, documentos, pareceres)"). So with today's seed data, no role will ever actually see a category silently omitted.
+- **Why the mechanism is still mandatory, not optional:** roles/permissions in this system are DB-managed and administrable (`rbac:manage` scope, `AdminController` `GET/POST /admin/rbac`), not hardcoded to the 4 seeded roles. A tenant admin can create a custom role holding, say, `clientes:view` + `processos:view` but not `documentos:view`. The per-category gate must be correct independent of what today's fixtures happen to contain — this is exactly the class of latent bug this codebase's own audit history repeatedly catches (e.g., Phase 87's `GET /admin/users` vs. `processos:manage` mismatch, Phase 79's missing ownership check on `POST /documentos/upload`). Building the gate correctly now, even though it is inert against current seed data, is the responsible default — and it is nearly free (4 boolean checks against an already-populated `Authentication.getAuthorities()`).
+- The check is a programmatic read of the same authority set Spring Security's `hasAuthority()` SpEL evaluates declaratively — no new security primitive, no risk of drifting from the `@PreAuthorize` convention used on every other endpoint in this codebase.
+
+**Trade-offs:**
+- (+) Data the requester cannot view is never materialized in the JVM for this request — strictly stronger than "fetch everything, filter the DTO list before serializing," which momentarily holds forbidden data in memory and is one careless refactor away from a leak (e.g., a future contributor reordering the filter to run after `ResponseEntity.ok(results)` is built, or a debug log statement dumping `results` before filtering).
+- (+) Composes cleanly: adding a 5th searchable entity later (e.g., `honorarios`) is one more `if (hasAuthority(...)) results.addAll(searchHonorarios(...))` line, not a redesign.
+- (−) A few lines of boilerplate (`hasAuthority` helper + 4 `if` branches) vs. a single declarative annotation — an acceptable, explicit cost for correctness that can't otherwise be expressed declaratively at this granularity.
 
 **Example:**
-```bash
-# Correct — matches existing @radix-ui/react-* dependencies already in package.json
-npx shadcn@latest init --base radix --yes
-
-# Wrong — silently pulls in Base UI instead of Radix
-npx shadcn@latest init --defaults
-```
-
-*(Confidence: HIGH on the mechanism per current CLI source read via Context7; MEDIUM on exact flag names remaining stable by execution time — re-verify `npx shadcn@latest init --help` output when the Foundation phase actually runs, since this CLI area is under active naming churn: e.g., "new-york"/"default" styles from the 2023-era CLI have already been superseded by the "nova"/"sera" + "base"/"radix" preset system this milestone will encounter.)*
-
-### Pattern 3: `--radius` and `--primary` must be set deliberately, not left at preset defaults
-
-**What:** The repo's own history (v1.1 Phase 10: *"design Anti-Safe Harbor (sharp edges, cores específicas)"*) already hardcodes `rounded-none` overrides in `dialog.tsx` and uses `blue-600`/`blue-500` ad hoc as the institutional accent color throughout `dashboard-shell.tsx` — but neither "sharp edges" nor "institutional blue" exist as a token today. The CLI's default preset (`nova`) ships a non-zero `--radius` (~0.625rem, rounded) and a neutral `baseColor` (no blue). Left untouched, every newly CLI-scaffolded component (Select, Tabs, etc.) will render with rounded corners and a neutral/gray active-state color that visually clashes with the rest of the already-sharp, blue-accented app.
-
-**When to use:** Immediately after `init`, before adding any new primitive.
-
-**Trade-offs:** A few extra minutes of manual token editing in Foundation avoids every subsequent module phase having to override radius/accent per-component ad hoc (which is exactly the inconsistency this milestone exists to remove).
-
-**Example:**
-```css
-:root {
-  --radius: 0rem;                 /* matches existing rounded-none identity */
-  --primary: oklch(...)/#2563eb;  /* matches existing hardcoded blue-600 accent */
-  --primary-foreground: #ffffff;
+```java
+private boolean hasAuthority(Authentication auth, String authority) {
+    return auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals(authority));
 }
 ```
 
-### Pattern 4: `sheet.tsx` is already CLI-shape-compatible — normalize, don't re-scaffold
+### Pattern 3: Dedicated top-level controller, not an addition to `ResourceController`
 
-**What:** Direct comparison of `web/src/components/ui/sheet.tsx` against the current shadcn registry source (fetched via Context7) shows the **same** component shape: `Sheet`/`SheetTrigger`/`SheetClose`/`SheetPortal`/`SheetOverlay`/`SheetContent`/`SheetHeader`/`SheetFooter`/`SheetTitle`/`SheetDescription`, all built on `@radix-ui/react-dialog` (current shadcn also builds `Sheet` on Radix Dialog, not `vaul`/Drawer — that's a separate `drawer.tsx` component this repo doesn't have and doesn't need). The only differences are cosmetic: hardcoded `bg-white`/`dark:bg-neutral-950`, `ring-neutral-950`, `text-neutral-500` instead of the semantic `bg-background`, `ring-ring`, `text-muted-foreground` — because those tokens didn't exist when it was written.
+**What:** `SearchController` gets its own class with `@RequestMapping("/api/v1/search")` at the class level and a single bare `@GetMapping` (no sub-path) on the one method.
 
-**When to use:** Leave `sheet.tsx` (and `dialog.tsx`, same situation) as-is structurally in the Foundation phase. Optionally fold a one-line-per-file cosmetic normalization (swap hardcoded `neutral-*`/`white` literals for the new semantic classes) into the same Foundation phase's token-consolidation work, since by then the tokens exist and the swap is a pure find-replace with no behavior change.
+**When to use:** Any new endpoint whose natural REST "owner" doesn't map to one of `ResourceController`'s existing entity families, mirroring how `ParecerPesquisaController` and `NotificacaoController` were split out rather than folded in.
 
-**Trade-offs:** Re-scaffolding via `shadcn add sheet --overwrite` adds no capability (already equivalent) and risks losing the app-specific `className` compositions already passed at call sites (e.g., `dashboard-shell.tsx`'s `<SheetContent side="left" className="w-[270px] p-0 bg-slate-950...">`) if the regenerated base variant structure shifts even slightly — those overrides are merged via `cn()` today regardless of base implementation, so keeping the hand-written file is strictly lower-risk than regenerating for zero gain.
+**Why this specific shape (class-level top-level path + bare method mapping) matters here — a documented codebase pitfall:** `ParecerPesquisaController`'s own header comment explains it was extracted from `ParecerController` specifically because Spring **concatenates class-level and method-level `@RequestMapping`/`@GetMapping` paths regardless of a leading `/`** — `ParecerController` is mapped at `/api/v1/pareceres/solicitacoes`, so a method there written as `@GetMapping("/api/v1/pareceres/pesquisa")` (looks absolute, but isn't) actually resolved to `/api/v1/pareceres/solicitacoes/api/v1/pareceres/pesquisa`, making the route unreachable from v2.5 (Phase 64) until caught in the v2.6 milestone audit (Phase 69). Giving `SearchController` its own flat class-level mapping with a single argument-less method mapping sidesteps this entire bug class by construction — there is nothing to concatenate incorrectly.
 
-**Note on the original decision rationale:** the logged reason ("CLI exige setup interativo") is checked against the current CLI and found **outdated as a blocker for future work** — `shadcn init`/`add` both support fully non-interactive execution today (`-y/--yes` defaults to `true`; `add <component> --overwrite` skips the overwrite prompt). This doesn't retroactively matter for `sheet.tsx` (already correct), but it does mean nothing blocks running `init` non-interactively now, which is exactly what the Foundation phase should do.
-
-### Pattern 5: `table.tsx` ≠ `DataTable` — don't conflate the two in module phases
-
-**What:** `web/src/components/ui/table.tsx` (used already in `clientes/[id]/page.tsx`, `processos/page.tsx`, `financeiro/page.tsx`, `documentos/page.tsx`, `pareceres/page.tsx`) is the plain semantic-HTML wrapper set shadcn ships (`Table`/`TableHeader`/`TableBody`/`TableRow`/`TableHead`/`TableCell`/`TableCaption`, all `data-slot`-tagged) — it matches canonical output exactly and needs no change. Shadcn's documented "Data Table" (sortable/filterable/paginated) is a separate **pattern**, not a CLI-added file — it requires adding `@tanstack/react-table` as a new dependency (not currently installed) and building a composition on top of the existing `Table` primitive.
-
-**When to use:** Only introduce the `@tanstack/react-table` DataTable pattern if a module phase *explicitly* calls for client-side sort/filter/pagination beyond what the existing hand-rolled `useState` filters already provide (confirmed present in `clientes/page.tsx`, `processos/page.tsx` today).
-
-**Trade-offs:** Treating "the lists need Table" as satisfied by the *existing* `table.tsx` (zero new work) is very different from "the lists need a DataTable" (new dependency + real component-architecture work) — conflating the two would silently expand scope in a milestone explicitly bounded as "not a redesign."
+**Trade-offs:**
+- (+) Zero risk of the Phase 69 class of routing bug.
+- (+) Keeps `ResourceController` from growing past its already-considerable size (3,296 lines).
+- (+) `SearchController` has a single, clear reason to change (the search contract), independent of clientes/processos/documentos/pareceres CRUD churn.
+- (−) One more controller class + one more `getTenantId()` private-method duplication (already duplicated 3× in this codebase — `ResourceController`, `ParecerPesquisaController`, `NotificacaoController` — so this is accepted, pre-existing style, not a new cost introduced here).
 
 ## Data Flow
 
-### CLI scaffolding flow (Foundation phase)
+### Request Flow
 
 ```
-npx shadcn@latest init --base radix --yes   (run in web/, then webpage/)
+User types in GlobalSearchDialog's CommandInput
     ↓
-writes web/components.json (style/base/aliases/cssVariables)
+useDebouncedValue(q, ~300ms)
+    ↓ (only fires once query stabilizes AND length >= 2)
+useGlobalSearch(debouncedQ) — TanStack Query, queryKey: ["search", debouncedQ]
     ↓
-merges tokens into web/src/app/globals.css (@theme inline + :root/.dark)
-    ↓ (git diff review — restore --background/--foreground, set --radius/--primary)
-npx shadcn add select tabs dropdown-menu command tooltip form checkbox
-        avatar separator skeleton progress calendar breadcrumb accordion navigation-menu
+apiFetch("/search?q=...")  — credentials: "include", cookie-based JWT
     ↓
-writes new files into web/src/components/ui/*.tsx (pure adds, no collisions —
-    none of these 15 names exist in the current 14-file ui/ folder)
+JwtAuthenticationFilter → SecurityContext populated with UserPrincipal
     ↓
-module phases import from @/components/ui/* as usual (existing alias, unchanged)
+SearchController.search()
+    ├─ @PreAuthorize gate: reject outright if caller has NONE of the 4 view scopes
+    ├─ getTenantId() — same private-method pattern as every other controller
+    ├─ per-category: hasAuthority(auth, "<scope>:view") ? query : skip
+    │     each branch: repository.findByTenantId(tenantId) → stream filter (contains) → limit(N) → map to SearchResultDto
+    └─ merge all 4 branches into one List<SearchResultDto>, return as-is (unsorted-by-relevance is fine; grouped by tipo client-side)
+    ↓
+GlobalSearchDialog groups results by `tipo` into CommandGroup sections ("Clientes", "Processos", "Documentos", "Pareceres")
+    ↓
+User selects a result → router.push(`/${ROUTE_SEGMENT[tipo]}/${id}`) — every one of the 4 entities already has a `[id]` detail route (`/clientes/[id]`, `/processos/[id]`, `/documentos/[id]`, `/pareceres/[id]`, all verified to exist)
 ```
 
 ### Key Data Flows
 
-1. **Token flow:** `globals.css` (`:root`/`.dark` custom properties) → `@theme inline` (maps `--background` → `--color-background` etc., making them available as Tailwind utility classes `bg-background`, `text-foreground`) → consumed by both CLI-scaffolded components (which use semantic classes like `bg-primary` out of the box) and, optionally, by existing hand-rolled components once normalized in a later cleanup pass.
-2. **Per-app independence:** `web/` and `webpage/` each read their own `globals.css`/`components.json`/`lib/utils.ts` — there is no runtime or build-time sharing between them today (confirmed: separate lockfiles, separate Docker contexts, separate Next.js processes joined only via Caddy + Multi-Zones `assetPrefix` at the reverse-proxy layer). Keeping tokens *conceptually* in sync (same hex/oklch values in both files) is a manual discipline this milestone should establish, not something the tooling enforces.
+1. **Search-as-you-type:** keystroke → debounce → single GET → single merged response → client-side grouping for display only (never client-side permission filtering — permission filtering already happened server-side per Pattern 2).
+2. **Tenant isolation (must hold in every branch):** each of the 4 per-category search methods calls the same `repository.findByTenantId(tenantId)` (or an equivalent tenant-scoped finder) already used by that entity's own list endpoint — never a cross-tenant query, never a `findAll()`. This is identical to the isolation boundary every other endpoint in `ResourceController` already relies on.
+3. **RBAC gate (2 layers, deliberately redundant):** (1) method-level `@PreAuthorize("hasAnyAuthority(...)")` rejects a caller with zero relevant scopes before the method body runs; (2) per-category `hasAuthority()` checks inside the method decide which of the 4 repositories are actually queried. Both layers read the same `Authentication.getAuthorities()` populated once per request by `JwtAuthenticationFilter` — no caching, no staleness risk, consistent with `SessionCreationPolicy.STATELESS`.
 
-## Scaling Considerations (module rollout order)
+## Scaling Considerations
 
-| Phase | What it needs from Foundation | New-vs-modified file impact |
-|-------|-------------------------------|------------------------------|
-| **Foundation** | N/A — this phase produces the primitives everything else needs | NEW: `web/components.json`, `webpage/components.json`, ~15 files in `web/src/components/ui/` (select, tabs, dropdown-menu, command, tooltip, form, checkbox, avatar, separator, skeleton, progress, calendar, breadcrumb, accordion, navigation-menu). MODIFIED: `web/src/app/globals.css`, `webpage/src/app/globals.css` (token additions + restoration of `--background`/`--foreground`), `package.json`/`pnpm-lock.yaml` in both apps (new Radix packages: `@radix-ui/react-select`, `-tabs`, `-dropdown-menu`, `-tooltip`, `-checkbox`, `-avatar`, `-separator`, `-accordion`, `-navigation-menu`; plus `cmdk`, `react-day-picker`, non-Radix `react-hook-form`-adjacent Form wiring which is already installed). Optionally MODIFIED: `webpage/src/components/ui/button.tsx`, `card.tsx` (re-added via CLI for provenance, low risk since already near-identical). |
-| **Dashboard** | Skeleton (KPI loading — currently ad hoc `animate-pulse` divs), Badge/Card/Table (already exist) | Lowest primitive need of any module — good first module phase to validate the token layer visually with minimal risk before deeper modules commit to it. MODIFIED: dashboard page only. |
-| **Clientes** | Select (replaces the `selectClassName`-styled native `<select>` used throughout the 7-tab ficha, confirmed in `clientes/[id]/page.tsx`), Avatar (client-initials circle, currently a hardcoded div), optionally Command/Combobox (advogado/administrativo user-pickers) | **Tabs is explicitly NOT needed here** — PROJECT.md already logged the decision to keep the 7-tab ficha as toggle-buttons, not Radix Tabs, for visual consistency with Processos; adding the Tabs primitive to the registry does not reopen that decision unless the user asks to. MODIFIED: `clientes/[id]/page.tsx` (heaviest native-`<select>` surface in the app), `clientes/novo/page.tsx`, `clientes/merge/page.tsx`. |
-| **Processos** | Select (juízo/origem/tipo-decisão enums, currently native `<select>`), Table (already exists, no DataTable needed unless explicitly requested — see Pattern 5), Tooltip (risco-prazo badges) | MODIFIED: `processos/page.tsx`, `processos/[id]/page.tsx`, `processos/novo/page.tsx`, `processos/[id]/editar/page.tsx`. |
-| **Agenda** | Calendar (react-day-picker) **for date-picker form inputs only** — the existing hand-rolled month-grid view (`grid-cols-7`, manual date math in `agenda/page.tsx`) is a distinct, richer component and stays untouched; Select (categoria/status filters); Popover (already used) | Do not conflate "add Calendar primitive" with "replace the Agenda month view" — confirmed the latter is fully custom and out of this milestone's "not a redesign" scope. MODIFIED: `agenda/novo/page.tsx`, `agenda/[id]/editar/page.tsx` (date inputs only). |
-| **Documentos** | Progress (upload progress — `useUploadDocumentoComProgresso` hook name implies existing custom progress UI to migrate), Select (tipo combobox — Phase 79 decision used a native `datalist`, a candidate for Command/Combobox upgrade, but that's a scope call for the roadmap, not assumed here) | MODIFIED: `documentos/page.tsx`, `documentos/novo/page.tsx`. |
-| **Financeiro** | Select (honorário/pagamento forms), Table/Badge (already exist) | MODIFIED: `financeiro/page.tsx`, `financeiro/[id]/page.tsx`, `financeiro/novo/page.tsx`. |
-| **Pareceres** | Select, Tooltip (timeline events), Accordion (versioning history collapse candidate) | MODIFIED: `pareceres/page.tsx`, `pareceres/[id]/page.tsx`, `pareceres/nova/page.tsx`. |
-| **Notificações / Settings / Setup wizard** | DropdownMenu is more relevant here (topbar avatar currently a plain `<Link>`, no menu) than for the notification bell, which **already uses `Popover`** (confirmed in `notification-bell.tsx` — not a gap); Breadcrumb/NavigationMenu are candidates for Settings sub-navigation (no breadcrumb component exists anywhere in the app today) | Smallest surface area, safe to do last. MODIFIED: `settings/page.tsx`, `components/shared/dashboard-shell.tsx` (if a user-menu is added), `app/setup/*`. |
-| **webpage refinement** | Whatever subset of the same primitives the marketing sections need (likely just re-added Button/Card via CLI; Accordion if an FAQ pattern is added) | Independent `components.json`, no dependency on `web/`'s module phases — can run in parallel with any module phase after Foundation, not necessarily last. |
+This product is a single-institution, multi-tenant practice-management tool (per PROJECT.md's Out of Scope: "Onboarding self-service multi-institituição... este deployment continua a servir uma única instituição"). The relevant scaling axis is **records per tenant accumulated over years**, not concurrent user count — reframing the template's "users" axis accordingly:
+
+| Scale (records/tenant) | Architecture Adjustment |
+|---|---|
+| Current reality (dozens–low hundreds per entity type, per seed data and product stage) | The recommended in-memory `findByTenantId(tenantId)` + Java `Stream.filter(contains(...))` + `.limit(N)` approach — i.e., **exactly the same pattern already used by `listClientes`/`listProcessos`/`listDocumentos` today** — is correct and requires zero new infrastructure. |
+| Thousands per entity type | Same risk profile as the *existing* `listClientes`/`listProcessos` endpoints already have today (they load the full tenant table before filtering) — not a risk newly introduced by search. No action needed specifically for search; if/when this is addressed, it should be addressed for the underlying list endpoints too, not search in isolation. |
+| Tens of thousands+ per entity type | Convert the 4 in-memory filters into native `ILIKE`-with-`LIMIT` `@Query` methods, following the **already-proven pattern in this exact codebase**: `ParecerSolicitacaoRepository.pesquisar()` (nullable-param `CAST`, `ILIKE '%' \|\| :term \|\| '%'`, `nativeQuery = true`). Pair with a PostgreSQL `pg_trgm` extension + `GIN` index per searched column, added via a new numbered file in `backend/migrations/` (the project's established manual-migration convention — no Flyway/Liquibase exists; see `74-cleanup-nif-documento-tipo.sql`, `86-create-notificacao-table.sql`, etc. for the exact style). |
 
 ### Scaling Priorities
 
-1. **First bottleneck: token/identity drift.** The real risk in this milestone isn't the CLI mechanics (well-defined, additive) — it's that `dashboard-shell.tsx` and other `components/shared/*` files hardcode `slate-*`/`blue-*` utilities directly rather than consuming tokens. If module phases each independently decide whether/how to normalize these, the "consistency" goal of the milestone will regress into a second inconsistency. Mitigate by deciding, in Foundation, a single explicit rule: *new* CLI-scaffolded components always use semantic tokens (`bg-primary`, etc.) by default (nothing to do — that's how the CLI generates them); *existing* hardcoded files are normalized only when a module phase explicitly touches that file for a stated reason, never as a blanket find-replace across the whole app in one commit.
-2. **Second bottleneck: primitive scope creep.** `Select`, `Command`, `Calendar`, and `Table`→`DataTable` are all "just add the CLI component" until they're not (Command implies rebuilding pickers as comboboxes, DataTable implies a new dependency and real refactor). Each module phase should default to the narrowest primitive that satisfies the existing native-`<select>`/native-`<input type=date>` gap, and treat richer patterns (Combobox, DataTable) as separate, explicitly-scoped follow-up decisions.
+1. **First real bottleneck (if it ever arrives):** unindexed `ILIKE`/substring scans across full tenant tables — same bottleneck the rest of the app already has, search just adds 2 more entity types (documentos, a lightweight parecer pass) to a list that already includes clientes and processos today.
+2. **Not a concern for v1:** result ranking/relevance scoring, full-text search engines (Postgres `tsvector`, Elasticsearch, etc.) — substantial over-engineering for an institutional tool of this size; simple substring `contains()` matching (already the app's own established UX for every existing quick-filter) is the right level of sophistication.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Running `shadcn init`/`add` with CLI defaults unexamined
+### Anti-Pattern 1: N parallel client-side calls merged in the browser
 
-**What people do:** Run `npx shadcn@latest init -d` (or accept whatever the CLI's interactive/default prompt picks) trusting it will "just match" the existing setup.
-**Why it's wrong:** Current CLI defaults resolve to the `base: "base"` (Base UI) primitives library and the `"nova"` preset's rounded, neutral-accent styling — both of which conflict with this repo's actual state (`@radix-ui/react-*` already installed everywhere; sharp-edged, blue-accented "Anti-Safe Harbor" identity already established). Silent drift here is exactly the kind of inconsistency this milestone exists to remove.
-**Instead:** Always pass `--base radix` explicitly; always diff `globals.css` after `init` and restore `--background`/`--foreground`/set `--radius`/`--primary` deliberately before adding any component.
+**What people do:** Fire `GET /clientes?q=`, `GET /processos?q=`, `GET /documentos?...`, `GET /pareceres/pesquisa?texto=` in parallel from a `Promise.all` in a new hook, merge/sort the 4 arrays client-side.
+**Why it's wrong here:** (1) `GET /documentos` has no free-text parameter today — this doesn't even work out of the box, so "no backend change" isn't actually true. (2) Each endpoint 403s independently for a role missing that scope; `apiFetch` throws on non-2xx, so the merge hook needs 4 separate try/catch-and-treat-as-empty blocks just to avoid a broken UI section — logic a single backend endpoint eliminates entirely by only including categories the caller can see. (3) 4× the request volume per keystroke. (4) Breaks with the codebase's own established precedent (`getTimeline`) for "multiple entity types, one view."
+**Do this instead:** One `SearchController` endpoint, per Pattern 1.
 
-### Anti-Pattern 2: Treating "two `components.json`" as requiring `packages/ui` to "do it properly"
+### Anti-Pattern 2: Fetch everything, then strip forbidden categories before responding
 
-**What people do:** See shadcn's official monorepo docs (`apps/*` + `packages/ui` + root `pnpm-workspace.yaml`/`turbo.json`) and assume that's the "correct" way to run shadcn across two apps, then build a root workspace as a prerequisite.
-**Why it's wrong:** That pattern exists for genuine monorepos with an established shared workspace and multiple apps that need heavy component overlap. This repo has neither today (no root workspace exists at all) — introducing one is a structural change to a CI/Docker pipeline that was only just stabilized (v2.12/Phase 100), for a sharing benefit that's minimal given `webpage/`'s actual (tiny, already near-duplicate) component footprint.
-**Instead:** Two independent `components.json`, synced manually on the rare occasions both apps need the same primitive. Revisit only if a third app or heavy overlap emerges.
+**What people do:** Query all 4 repositories unconditionally inside `SearchController`, then filter the merged `List<SearchResultDto>` by `tipo` right before `return ResponseEntity.ok(...)`, based on the caller's scopes.
+**Why it's wrong:** Data the requester has no authority to view is briefly materialized in the JVM for that request — weaker than never querying it. One careless future refactor (a reordered filter call, a debug log of the unfiltered list, an early return added before the filter) silently reintroduces a leak. This is exactly the shape of bug this codebase's own phase-review history has repeatedly caught in other endpoints (unauthorized data reachable through a code path nobody re-checked).
+**Do this instead:** Gate at the query branch — never call `searchDocumentos(...)` at all when `documentos:view` is absent (Pattern 2).
 
-### Anti-Pattern 3: Reopening already-logged component decisions as a side effect of Foundation
+### Anti-Pattern 3: A single blanket `@PreAuthorize` scope (or AND of all 4) on the endpoint
 
-**What people do:** Add the `Tabs` primitive in Foundation, then "since it exists now," swap the Clientes 7-tab ficha's toggle-button pattern over to it in the Clientes module phase.
-**Why it's wrong:** PROJECT.md already logged an explicit decision (Phase 76) to keep the toggle-button pattern for visual consistency with Processos, specifically *because* Tabs wasn't initialized — but the reason given was consistency with an existing pattern, not merely CLI availability. Silently reopening this without a fresh user decision expands scope beyond "consistency of components, spacing, accessibility."
-**Instead:** Foundation adds `Tabs` to the registry for use in NET NEW tabbed UI (if any module needs one); it does not, by itself, authorize revisiting already-shipped, explicitly-decided patterns.
+**What people do:** `@PreAuthorize("hasAuthority('processos:view')")` on the whole method (too loose — silently lets a `processos:view`-only caller's search implicitly touch clientes/documentos/pareceres data with no declared authorization for those types), or `@PreAuthorize("hasAuthority('clientes:view') and hasAuthority('processos:view') and hasAuthority('documentos:view') and hasAuthority('pareceres:view')")` (too strict — a role holding 3 of 4 scopes gets a hard 403 and can't search at all, even for the 3 categories it *can* see).
+**Why it's wrong:** Declarative `@PreAuthorize` can only express one gate for the whole method; this feature structurally needs per-category gates that only a programmatic check inside the method body can express (Pattern 2). The class-level annotation should only guard the coarse "can this caller use search at all" question (`hasAnyAuthority` of the 4 scopes).
+**Do this instead:** `hasAnyAuthority(...)` at the method level as a fast-fail, then 4 independent `hasAuthority()` checks inside the body.
+
+### Anti-Pattern 4: Adding a `search:view` permission scope
+
+**What people do:** Introduce a new standalone permission (`search:view`) and gate the endpoint on that instead of reusing the 4 existing entity scopes.
+**Why it's wrong:** Search has no independent authorization meaning of its own — it is a lens over data that is already independently permission-gated per entity type. A `search:view` scope would either be redundant (granted alongside all 4 real scopes, adding nothing) or actively confusing (granted without any of the 4 real scopes, in which case what would it even return?). It would also require updating `DatabaseSeeder.seedRbac()` and every role's permission set for a capability that should just fall out of scopes that already exist.
+**Do this instead:** Derive search access entirely from the 4 existing `<entity>:view` scopes, exactly as `getTimeline` derives its cross-entity view from `processos:view` alone without inventing a `timeline:view`.
+
+### Anti-Pattern 5: Cramming the endpoint into `ResourceController`
+
+**What people do:** Add one more `@GetMapping("/search")` method to the already-3,296-line `ResourceController`, reusing its already-injected repositories.
+**Why it's wrong:** `ResourceController` already spans clientes/processos/partes/fases/movimentações/eventos/documentos/honorários/pagamentos/dashboard — search is not a natural extension of any single one of those families, it's an aggregate over several. The two most recent instances of "a feature spans concerns" in this exact codebase (Pareceres, Notificações) were both given their own controllers rather than appended here.
+**Do this instead:** New `SearchController` (Pattern 3).
+
+### Anti-Pattern 6: Re-implementing Pareceres' deep-content search inside global search
+
+**What people do:** Join `ParecerVersao.conteudo` (like `ParecerSolicitacaoRepository.pesquisar()` already does for the dedicated advanced-search page) inside the new global search's parecer branch, to make global search "as powerful" as the existing advanced search.
+**Why it's wrong:** Duplicates business logic that already exists and is already reachable at `/pareceres/pesquisa` (`ParecerPesquisaController`, `usePesquisarPareceres` on the frontend). Two independent implementations of "search inside parecer content" will drift over time (this codebase already has direct experience with exactly this class of divergence — see PROJECT.md's "5ª implementação divergente de prazo crítico" saga that took 4 milestones to fully consolidate).
+**Do this instead:** Global search's `parecer` category does a shallow match on `ParecerSolicitacao.descricao` only (fast, consistent with a "quick filter" UX). A "ver mais resultados em Pareceres" affordance in the results UI can deep-link to `/pareceres/pesquisa?texto=...`, the already-existing, already-correct advanced-search surface — reuse, not duplication.
+
+### Anti-Pattern 7 (naming, not logic): letting the new DTO drift into snake_case/camelCase mismatch
+
+**What people do:** Build `SearchResultDto` as a `Map<String,Object>` with hand-picked snake_case keys (like `listProcessos` does) "for consistency" with the older list endpoints.
+**Why it's wrong:** PROJECT.md's own Key Decisions log documents this exact bug class from the v2.4 milestone (backend emitting camelCase, frontend reading snake_case on new fields) as something that required a surgical, field-by-field `@JsonProperty` fix and was explicitly flagged as recurring technical debt. This is a brand-new contract with no legacy consumers — there is no reason to inherit the older, inconsistent convention.
+**Do this instead:** `SearchResultDto` as a plain Java `record` (Jackson serializes camelCase fields as camelCase JSON by default, zero `@JsonProperty` needed) — exactly matching `TimelineItemDto` and `ParecerSolicitacao`'s existing, already-consistent camelCase contracts. The frontend `SearchResult` TS type mirrors those same field names verbatim.
 
 ## Integration Points
 
 ### External Services
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| shadcn/ui registry (`ui.shadcn.com`) | `npx shadcn@latest init` / `add <component>` fetch registry JSON over the network at scaffold time | No runtime dependency — components are copied into the repo, not installed as a library. Requires network access at scaffold time only (CI never needs to reach the registry, since scaffolded files are committed). |
-| npm registry (new Radix packages) | `pnpm install` picks up new `@radix-ui/react-select`, `-tabs`, `-dropdown-menu`, `-tooltip`, `-checkbox`, `-avatar`, `-separator`, `-accordion`, `-navigation-menu`, plus `cmdk` (Command) and `react-day-picker` (Calendar) | All are well-established, small, MIT-licensed packages consistent with the 7 Radix packages already in `web/package.json`. No SAST/license concerns beyond the existing pattern. |
+None. This feature touches no external service — it is a purely internal aggregation over 4 repositories already backed by the same PostgreSQL database every other endpoint uses.
 
 ### Internal Boundaries
 
-| Boundary | Communication | Considerations |
-|----------|----------------|-----------------|
-| `web/components.json` ↔ `web/src/app/globals.css` | CLI reads/writes the CSS file named in `components.json`'s `tailwind.css` field | Must point to `src/app/globals.css` (the actual, already-Tailwind-v4 file) — verify this path in `components.json` immediately after `init`, since CLI auto-detection could pick a different candidate if one exists. |
-| `web/` ↔ `webpage/` | None at build/runtime (separate lockfiles, separate Docker images, separate Next.js processes joined only via Caddy + Multi-Zones `assetPrefix` at the reverse-proxy layer) | Keeping their two `globals.css`/`components.json` *conceptually* aligned (same token values, same `--base radix` choice) is a manual discipline for this milestone, not something enforced by any shared config. |
-| `components/ui/*` (CLI-owned) ↔ `components/shared/*` (hand-written app shells) | One-directional import only (`shared/*` imports from `ui/*`, never the reverse) | This is exactly the boundary where token-adoption risk concentrates (`dashboard-shell.tsx` hardcodes colors instead of consuming `ui/*`'s tokens) — normalize deliberately, per-module, not in Foundation. |
-| Foundation phase ↔ every module phase | Module phases assume the ~15 new primitives already exist in `web/src/components/ui/` | Foundation must run to completion (both apps) before any module phase starts; a module phase discovering a missing primitive mid-flight should be treated as a Foundation gap, not patched ad hoc within the module phase. |
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `SearchController` ↔ `ClienteRepository` / `ProcessoRepository` / `DocumentoRepository` / `ParecerSolicitacaoRepository` | Direct Spring `@RequiredArgsConstructor` injection, same as `ResourceController` | No new repository methods strictly required — all 4 already expose `findByTenantId(UUID)`. If capping via SQL `LIMIT` is later desired (post-v1, per Scaling), add native `@Query` methods mirroring `ParecerSolicitacaoRepository.pesquisar()`. |
+| `SearchController` ↔ `SecurityContextHolder` / `UserPrincipal` | Read-only, per-request | Same `getTenantId()` idiom duplicated in `ResourceController`/`ParecerPesquisaController`/`NotificacaoController`; add a second small `hasAuthority(Authentication, String)` private helper (net new, ~3 lines) for the per-category gate. |
+| `GlobalSearchDialog` ↔ `useGlobalSearch` ↔ `apiFetch` | TanStack Query → fetch wrapper, cookie-based JWT (`credentials: "include"`) | Identical to every other `use-*.ts` hook; no new auth mechanism, no bearer tokens introduced. |
+| `GlobalSearchDialog` ↔ Next.js router | `router.push()` on result click, using a small client-side `tipo → route segment` map (`cliente→/clientes`, `processo→/processos`, `documento→/documentos`, `parecer→/pareceres`) | All 4 `[id]` detail routes already exist and were verified directly in `web/src/app/(dashboard)/{clientes,processos,documentos,pareceres}/[id]/page.tsx`. |
+| `dashboard-shell.tsx` ↔ `GlobalSearchDialog` | Mount point only — shell passes nothing in, dialog is fully self-contained | Same relationship `dashboard-shell.tsx` already has with `NotificationBell` and `UserMenu`. |
+
+## Recommendation Summary (for roadmap/phase planning)
+
+**(a) One backend endpoint** — `GET /api/v1/search?q=`, returning a flat `List<SearchResultDto>` (tipo-discriminated, capped per category, e.g. 5-8 results/category). Rejects N-parallel-client-calls for concrete, codebase-specific reasons (Anti-Pattern 1), not just general preference.
+
+**(b) RBAC-per-result-type** — method-level `@PreAuthorize("hasAnyAuthority('clientes:view','processos:view','documentos:view','pareceres:view')")` as a coarse gate, plus 4 independent `hasAuthority(auth, "<scope>:view")` checks inside the method body, each guarding whether that category's repository is queried **at all** (never "query then hide"). Verified finding: no currently-seeded role is actually restricted across these 4 specific entities today (all of ASSISTENTE/TECNICO/ADVOGADO/ADMIN hold all 4 `:view` scopes) — but the mechanism must be built correctly regardless, because roles are DB-managed via `rbac:manage` and future/custom roles are not guaranteed to hold all 4.
+
+**(c) New dedicated `SearchController`**, not a method on `ResourceController`. Own top-level `@RequestMapping("/api/v1/search")` with one bare `@GetMapping`, deliberately avoiding the class-level/method-level path-concatenation bug this codebase already hit once (`ParecerPesquisaController`'s header comment, Phase 69). Matches the established precedent of giving cross-cutting/aggregate features (Pareceres, Notificações) their own controller rather than growing `ResourceController` further.
+
+**Build order: backend before frontend.** This mirrors how every comparable feature in this codebase's own history was sequenced — Parecer Jurídico shipped backend-only in v2.5 (Phase 64ish) then frontend in v2.6; the Notificações system built its persistence/API/alert-triggers in v2.10 Phases 85-88 before the bell/page UI landed in Phase 89. There is no mock-API layer left in this project to build the frontend against speculatively (`web/src/app/_api-backup/` and `web/src/server/` are explicitly legacy/superseded per `CLAUDE.md`). Concretely: implement and verify `SearchController` + `SearchResultDto` (with at least one test per RBAC branch — a caller missing one of the 4 scopes must get that category omitted, not a 403 for the whole request) before wiring `GlobalSearchDialog`/`useGlobalSearch`/the `dashboard-shell.tsx` trigger. Whether that split becomes one phase or two is a roadmap-granularity decision, not an architecture one — but the backend contract should exist and be stable before frontend work starts.
 
 ## Sources
 
-- shadcn/ui CLI source (`packages/shadcn/src/commands/init.ts`, `src/utils/get-project-info.ts`, `src/preflights/preflight-init.ts`, `src/utils/updaters/update-css.ts`) — fetched via Context7 (`/shadcn-ui/ui`), 2026-07-15. HIGH confidence on mechanics; MEDIUM on flag/preset naming stability given active churn (multiple indexed versions from `shadcn@2.9.0` through `shadcn_3.5.0` show the preset system renamed at least once — "default"/"new-york" → "nova"/"sera" + "base"/"radix" — since older CLI docs).
-- shadcn/ui official monorepo doc (`apps/v4/content/docs/(root)/monorepo.mdx`) — fetched via Context7. HIGH confidence on the documented `packages/ui` pattern itself; used here to establish why it's a mismatch for this repo's *current* state, not to recommend adopting it now.
-- Direct repository reads (2026-07-15): `.planning/PROJECT.md`, `web/src/app/globals.css`, `webpage/src/app/globals.css`, `web/src/lib/utils.ts`, `web/src/components/ui/*.tsx` (all 14 files inventoried, `button.tsx`/`table.tsx`/`sheet.tsx`/`dialog.tsx` read in full), `webpage/src/components/ui/button.tsx`, `web/package.json`, `webpage/package.json`, `web/pnpm-lock.yaml`/`webpage/pnpm-lock.yaml` (existence/independence confirmed), `webpage/pnpm-workspace.yaml`, `web/tsconfig.json`, `webpage/tsconfig.json`, `web/postcss.config.mjs`, `web/next.config.ts`, `webpage/next.config.ts`, `.github/workflows/deploy.yml`, `web/Dockerfile`, `webpage/Dockerfile`, `web/src/components/shared/dashboard-shell.tsx`, `web/src/components/shared/notification-bell.tsx`, `web/src/app/providers.tsx`, `web/src/app/(dashboard)/clientes/[id]/page.tsx`, `web/src/app/(dashboard)/agenda/page.tsx`. HIGH confidence — these are primary-source facts about the actual codebase, not inference.
+**Backend (read directly, this session):**
+- `backend/src/main/java/com/lexcv/controllers/ResourceController.java` (3,296 lines — `getTenantId()` L127, `listClientes` L169-232, `listProcessos` L930-1059, `listDocumentos`/`listProcessoDocumentos`/`listClienteDocumentos` L2802-2826, `getDashboard` L3104-3127, `getTimeline` L2272-2322)
+- `backend/src/main/java/com/lexcv/controllers/ParecerPesquisaController.java` (full — dedicated-controller + routing-bug precedent)
+- `backend/src/main/java/com/lexcv/controllers/AdminController.java` (RBAC management confirmation — `@PreAuthorize("hasRole('ADMIN')")`, `GET/POST /admin/rbac`)
+- `backend/src/main/java/com/lexcv/controllers/NotificacaoController.java` (L55-89 — the one existing `Pageable`/`Page<T>` precedent in this codebase, and its response envelope shape)
+- `backend/src/main/java/com/lexcv/config/{UserPrincipal,SecurityConfig}.java` (authorities population, `@EnableMethodSecurity`, stateless session policy)
+- `backend/src/main/java/com/lexcv/repositories/ParecerSolicitacaoRepository.java` (native ILIKE query precedent for future scaling)
+- `backend/src/main/java/com/lexcv/models/{Cliente,Processo,Documento,ParecerSolicitacao}.java` (field inventory for per-category search-field mapping)
+- `backend/src/main/java/com/lexcv/dtos/TimelineItemDto.java` (the discriminated-union DTO precedent this design mirrors)
+- `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` (L293-353 — exact per-role permission grants, verifying the ASSISTENTE/TECNICO/ADVOGADO/ADMIN scope matrix)
+- `backend/migrations/*.sql` (manual-migration convention, no Flyway/Liquibase)
+
+**Frontend (read directly, this session):**
+- `web/src/components/shared/dashboard-shell.tsx` (decorative search input to be replaced, L121-127; `NotificationBell` mount precedent)
+- `web/src/components/shared/notification-bell.tsx` (self-contained shell-component precedent)
+- `web/src/components/ui/command.tsx` (confirms `Command`/`CommandDialog`/`CommandGroup`/`CommandInput` already installed via `cmdk`, added in v2.13 Phase 107 for the `Combobox` component — zero new dependency needed)
+- `web/src/lib/api.ts` (`apiFetch` — 401/403 toast-suppression behavior, relevant to Anti-Pattern 1)
+- `web/src/lib/permissions.ts`, `web/src/hooks/use-permissions.ts`, `web/src/hooks/use-me.ts` (frontend RBAC mirror)
+- `web/src/hooks/use-pareceres.ts`, `web/src/hooks/use-clientes.ts`, `web/src/hooks/use-documentos.ts` (existing hook conventions, and confirmation `GET /documentos` has no `q` param today)
+- `web/src/app/(dashboard)/{clientes,processos,documentos,pareceres}/[id]/page.tsx` (confirmed all 4 entities have a working detail route for result-click navigation)
+- `.planning/PROJECT.md` (milestone scope, Key Decisions log — camelCase/snake_case drift precedent, "5ª implementação divergente" precedent, single-institution deployment scope)
+
+**External validation (WebSearch, 2026-07-18):**
+- Microsoft Graph Search API authorization model — confirms "gate before fetch, not after" as the industry-standard shape for multi-entity search authorization: [Use the Microsoft Search API to query data](https://learn.microsoft.com/en-us/graph/api/resources/search-api-overview?view=graph-rest-1.0)
+- shadcn `CommandDialog` + global Cmd/Ctrl+K listener pattern — confirms the recommended frontend shape is the standard, documented convention for this exact primitive: [Command - shadcn/ui](https://ui.shadcn.com/docs/components/radix/command), [Shadcn KBD UI: Build a Powerful ⌘K Command Menu](https://shadcnstudio.com/blog/shadcn-kbd-ui-component/)
 
 ---
-*Architecture research for: shadcn/ui CLI integration into LexCV's `web/` + `webpage/` frontend*
-*Researched: 2026-07-15*
+*Architecture research for: LexCV v2.14 — Pesquisa global funcional cross-entity*
+*Researched: 2026-07-18*
