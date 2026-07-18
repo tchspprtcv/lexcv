@@ -1,0 +1,32 @@
+-- Phase 111 (SRCH-02/SRCH-07): enable the unaccent + pg_trgm PostgreSQL contrib
+-- extensions required by the new cross-entity global search (Pesquisa Global)
+-- native queries (ClienteRepository/ProcessoRepository/DocumentoRepository/
+-- ParecerSolicitacaoRepository#pesquisarGlobal).
+--
+-- IMPORTANT: This is a REQUIRED manual migration script — and unlike every other
+-- migration in this directory, it must be run manually in EVERY environment,
+-- including local dev, not only staging/prod. `CREATE EXTENSION` is not part of
+-- Hibernate's schema model at all, so neither `ddl-auto: update` (dev/CI) nor
+-- `ddl-auto: validate` (prod) ever issues it — there is no `ddl-auto` setting that
+-- creates a PostgreSQL extension. Without running this script first, every
+-- pesquisarGlobal() query that calls unaccent(...) will fail at runtime with:
+-- "ERROR: function unaccent(text) does not exist".
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase --
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (local dev,
+-- staging, prod) before running/deploying the code that introduces the
+-- pesquisarGlobal() repository methods.
+--
+-- Both extensions are PostgreSQL contrib modules already compiled into the deployed
+-- postgres:16-alpine image (docker-compose.yml) — this is a metadata-only operation,
+-- no image/Dockerfile/pom.xml change required.
+--
+-- unaccent: strips diacritics for case-/accent-insensitive matching (e.g. a search for
+-- "Conceicao" must also match a stored "Conceição").
+-- pg_trgm: enabled now for future GIN-index headroom (trigram similarity search /
+-- accelerating ILIKE '%term%' at larger row counts) — intentionally unused by any
+-- query in this phase.
+
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;

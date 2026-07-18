@@ -56,4 +56,23 @@ public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolic
                                         @Param("status") String status,
                                         @Param("dataInicio") LocalDateTime dataInicio,
                                         @Param("dataFim") LocalDateTime dataFim);
+
+    // Phase 111 (SRCH-02/SRCH-07): NEW, separate, shallow quick-search for
+    // GET /api/v1/pesquisa (PesquisaController, Plan 111-02) — deliberately does NOT
+    // reuse pesquisar() above and does NOT LEFT JOIN t_parecer_versao. pesquisar()'s
+    // texto param matches only the latest ParecerVersao.conteudo (deep content search,
+    // reserved for the existing /pareceres/pesquisa surface); this method matches
+    // ParecerSolicitacao.descricao only (shallow match, appropriate for a quick
+    // cross-entity global-search preview). tenant_id = :tenantId is always the first,
+    // non-optional predicate. termo is bound via @Param and wildcard-wrapped INSIDE
+    // the SQL string, never Java string-concatenated (SQLi surface + ASVS L1 gate).
+    // No structured-ID tier: ParecerSolicitacao has no user-facing identifier field
+    // comparable to numero_cliente/numero_processo. Ordered by created_at DESC only.
+    @Query(value = "SELECT s.* FROM t_parecer_solicitacao s " +
+            "WHERE s.tenant_id = :tenantId " +
+            "AND unaccent(s.descricao) ILIKE unaccent('%' || CAST(:termo AS text) || '%') " +
+            "ORDER BY s.created_at DESC " +
+            "LIMIT :limit",
+            nativeQuery = true)
+    List<ParecerSolicitacao> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termo") String termo, @Param("limit") int limit);
 }
