@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -266,5 +267,59 @@ class PesquisaControllerTest {
 
         assertEquals(1, body.size());
         assertEquals("processo", body.get(0).tipo());
+    }
+
+    /**
+     * WR-01 (re-review): reproduces the reviewer's exact 79 'a' + 1 emoji case (80
+     * codepoints / 81 UTF-16 units). Before this fix, truncarDescricao's guard compared
+     * UTF-16 length against the 80-codepoint limit (81 is over the limit) while
+     * truncateSafely decides by codepoint count (80 is at, not over, the limit — no
+     * truncation needed), so the guard fired even though nothing was actually removed,
+     * appending a spurious "..." to the full, untruncated text. The fixed guard derives
+     * "was it truncated" by comparing the post-truncation string directly against the
+     * pre-truncation string, so it can never fire when truncateSafely is a no-op.
+     */
+    @Test
+    void pesquisar_comDescricaoDeOitentaCodepointsIncluindoEmoji_naoTruncaENaoAdicionaReticencias() {
+        autenticarComo(List.of("pareceres:view"));
+        // Built from the raw codepoint (not a source-literal glyph) to stay encoding-independent:
+        // U+1F600 GRINNING FACE, 1 codepoint, 2 UTF-16 units (a surrogate pair).
+        String emoji = new String(Character.toChars(0x1F600));
+        String descricao = "a".repeat(79) + emoji;
+        assertEquals(80, descricao.codePointCount(0, descricao.length()));
+        assertEquals(81, descricao.length());
+
+        when(parecerSolicitacaoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+                .thenReturn(List.of(ParecerSolicitacao.builder().id(UUID.randomUUID()).descricao(descricao).build()));
+
+        ResponseEntity<?> response = novoController().pesquisar("termo");
+        List<ResultadoPesquisaDto> body = corpo(response);
+
+        assertEquals(1, body.size());
+        String titulo = body.get(0).titulo();
+        assertEquals(descricao, titulo);
+        assertFalse(titulo.endsWith("..."));
+    }
+
+    /**
+     * Companion to the above: proves genuine truncation (codepoint count over the 80 limit)
+     * still removes characters and appends "..." after the WR-01 guard rewrite — the fix
+     * corrects the false-positive case above without breaking the true-positive case.
+     */
+    @Test
+    void pesquisar_comDescricaoAcimaDoLimiteDeOitentaCodepoints_truncaEAdicionaReticencias() {
+        autenticarComo(List.of("pareceres:view"));
+        String descricao = "b".repeat(85);
+
+        when(parecerSolicitacaoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+                .thenReturn(List.of(ParecerSolicitacao.builder().id(UUID.randomUUID()).descricao(descricao).build()));
+
+        ResponseEntity<?> response = novoController().pesquisar("termo");
+        List<ResultadoPesquisaDto> body = corpo(response);
+
+        assertEquals(1, body.size());
+        String titulo = body.get(0).titulo();
+        assertTrue(titulo.endsWith("..."));
+        assertEquals("b".repeat(80) + "...", titulo);
     }
 }

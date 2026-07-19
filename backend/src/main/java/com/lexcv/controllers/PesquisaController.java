@@ -238,13 +238,22 @@ public class PesquisaController {
         return resultados;
     }
 
+    /**
+     * WR-01 (re-review): the truncation decision must be derived from the same
+     * codepoint-aware call that performs the truncation, not from a separately-computed
+     * {@code String.length()} (UTF-16 code units) pre-check. The two units disagree whenever
+     * the text contains a supplementary-plane character (e.g. an emoji) among the first
+     * {@code DESCRICAO_PREVIEW_LENGTH} codepoints — a UTF-16-length guard can fire (text
+     * "looks" too long) even though {@code truncateSafely} legitimately decides no codepoints
+     * need removing, which used to append a spurious "..." to unmodified text. Comparing
+     * {@code truncado} against {@code trimmed} directly is unit-consistent by construction.
+     */
     private String truncarDescricao(String descricao) {
         if (descricao == null) {
             return "";
         }
         String trimmed = descricao.trim();
-        return trimmed.length() > DESCRICAO_PREVIEW_LENGTH
-                ? truncateSafely(trimmed, DESCRICAO_PREVIEW_LENGTH) + "..."
-                : trimmed;
+        String truncado = truncateSafely(trimmed, DESCRICAO_PREVIEW_LENGTH);
+        return truncado.length() < trimmed.length() ? truncado + "..." : truncado;
     }
 }
