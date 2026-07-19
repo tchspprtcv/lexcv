@@ -226,4 +226,90 @@ class PesquisaRepositoryIT {
 
         assertEquals(5, resultados.size());
     }
+
+    /**
+     * WR-02 (re-review): none of the tests above use a termo containing '%', '_', or '\\', so
+     * they cannot distinguish a correctly-escaped {@code ILIKE ... ESCAPE '\'} implementation
+     * from a subtly broken one (e.g. a dropped {@code ESCAPE} clause, or
+     * {@code PesquisaController#escapeLike} no longer being applied before the repository
+     * call reaches this query) — raw and escaped values are identical whenever the input has
+     * no wildcard metacharacters, which is all the coverage above exercises. Seeds, per entity
+     * type, a "decoy" row that would ONLY be matched if '_' were interpreted as ILIKE's
+     * built-in "any single character" wildcard, alongside a target row that genuinely contains
+     * the literal underscore. Cross-entity shape mirrors
+     * pesquisarGlobal_isolaPorTenant_zeroVazamentoEmTodosOsQuatroTipos above.
+     */
+    @Test
+    void pesquisarGlobal_termoComUnderscoreLiteral_naoAgeComoCoringaDeUmCaractereEmNenhumDosQuatroTipos() {
+        UUID tenantId = UUID.randomUUID();
+        String termo = "ESC_9k";
+        String termoEscapado = "ESC\\_9k"; // mirrors PesquisaController#escapeLike("ESC_9k")
+
+        Cliente clienteAncora = persistirCliente(tenantId, "Cliente Ancora", "CLI-U-ANC", "700800909", "DOC-U-ANC");
+
+        // 'X' stands in for the position a bare (unescaped) '_' would treat as "any single
+        // character" — under correct escaping this decoy must NOT match a search for "ESC_9k".
+        Cliente clienteDecoy = persistirCliente(tenantId, "Cliente Decoy", "ESCX9k", "700800900", "DOC-U-C1");
+        Cliente clienteAlvo = persistirCliente(tenantId, "Cliente Alvo", "ESC_9k", "700800901", "DOC-U-C2");
+
+        Processo processoDecoy = persistirProcesso(tenantId, clienteAncora.getId(), "ESCX9k", "Processo comum");
+        Processo processoAlvo = persistirProcesso(tenantId, clienteAncora.getId(), "ESC_9k", "Processo comum");
+
+        Documento documentoDecoy = persistirDocumento(tenantId, clienteAncora.getId(), "ESCX9k.pdf", "CONTRATO");
+        Documento documentoAlvo = persistirDocumento(tenantId, clienteAncora.getId(), "ESC_9k.pdf", "CONTRATO");
+
+        ParecerSolicitacao parecerDecoy = persistirParecer(tenantId, clienteAncora.getId(), "Parecer ESCX9k final");
+        ParecerSolicitacao parecerAlvo = persistirParecer(tenantId, clienteAncora.getId(), "Parecer ESC_9k final");
+
+        List<Cliente> clientes = clienteRepository.pesquisarGlobal(tenantId, termo, termoEscapado, 5);
+        assertEquals(1, clientes.size());
+        assertEquals(clienteAlvo.getId(), clientes.get(0).getId());
+        assertFalse(clientes.stream().anyMatch(c -> c.getId().equals(clienteDecoy.getId())));
+
+        List<Processo> processos = processoRepository.pesquisarGlobal(tenantId, termo, termoEscapado, 5);
+        assertEquals(1, processos.size());
+        assertEquals(processoAlvo.getId(), processos.get(0).getId());
+        assertFalse(processos.stream().anyMatch(p -> p.getId().equals(processoDecoy.getId())));
+
+        List<Documento> documentos = documentoRepository.pesquisarGlobal(tenantId, termoEscapado, 5);
+        assertEquals(1, documentos.size());
+        assertEquals(documentoAlvo.getId(), documentos.get(0).getId());
+        assertFalse(documentos.stream().anyMatch(d -> d.getId().equals(documentoDecoy.getId())));
+
+        List<ParecerSolicitacao> pareceres = parecerSolicitacaoRepository.pesquisarGlobal(tenantId, termoEscapado, 5);
+        assertEquals(1, pareceres.size());
+        assertEquals(parecerAlvo.getId(), pareceres.get(0).getId());
+        assertFalse(pareceres.stream().anyMatch(p -> p.getId().equals(parecerDecoy.getId())));
+    }
+
+    /**
+     * WR-02 (re-review): proves the tier-0 exact-match {@code CASE WHEN} genuinely needs the
+     * raw, unescaped {@code :termo} for its equality check, not {@code :termoEscapado}.
+     * numero_cliente stores the literal value "100%" — a '%' character as plain data, not a
+     * pattern. If tier-0 ever compared against {@code :termoEscapado} instead ("100\%"), the
+     * equality would never hold (the escaped value's literal backslash never appears in stored
+     * data), silently demoting 'exato' to the tier-1 prefix branch — where it ties with
+     * 'prefixo' (whose numero_cliente also starts with "100%") on tier, and the created_at
+     * DESC tie-break would then put the later-created 'prefixo' first, flipping
+     * resultados.get(0) away from 'exato'. Under the current, correct implementation, 'exato'
+     * is tier 0 and 'prefixo' is tier 1, so 'exato' sorts first regardless of creation order.
+     */
+    @Test
+    void pesquisarGlobal_cliente_correspondenciaExataComPercentLiteral_usaTermoBrutoNaoEscapadoNoCaseWhen() throws InterruptedException {
+        UUID tenantId = UUID.randomUUID();
+        String termo = "100%";
+        String termoEscapado = "100\\%"; // mirrors PesquisaController#escapeLike("100%")
+
+        Cliente exato = persistirCliente(tenantId, "Maria Silva", termo, "100200300", "DOC-PCT-EXATO");
+        // Guarantees a strictly later created_at for 'prefixo' regardless of clock resolution,
+        // so the created_at DESC tie-break this test relies on (see Javadoc above) is
+        // deterministic rather than flaky.
+        Thread.sleep(5);
+        Cliente prefixo = persistirCliente(tenantId, "Prefixo Decoy", termo + "EXTRA", "100200301", "DOC-PCT-PREFIXO");
+
+        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, termo, termoEscapado, 5);
+
+        assertEquals(2, resultados.size());
+        assertEquals(exato.getId(), resultados.get(0).getId());
+    }
 }
