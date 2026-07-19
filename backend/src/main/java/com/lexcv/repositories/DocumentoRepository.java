@@ -14,22 +14,26 @@ public interface DocumentoRepository extends JpaRepository<Documento, UUID> {
 
     // Phase 111 (SRCH-02/SRCH-07): tenant-first, accent-folded, ranked, LIMIT-capped
     // quick-search for GET /api/v1/pesquisa (PesquisaController, Plan 111-02).
-    // tenant_id = :tenantId is always the first, non-optional predicate. termo is
+    // tenant_id = :tenantId is always the first, non-optional predicate. termoEscapado is
     // bound via @Param and wildcard-wrapped INSIDE the SQL string, never Java
     // string-concatenated (SQLi surface + ASVS L1 gate).
     // Searches nome/tipo metadata ONLY — never caminho_arquivo (a MinIO object key,
     // not text content); Documento has no structured-ID field to rank ahead of these.
+    // WR-02: termoEscapado has ILIKE's wildcard metacharacters (%, _, \) pre-escaped by
+    // PesquisaController#escapeLike (paired with ESCAPE '\' below) so a literal %/_ typed by
+    // the user is matched literally. Unlike ClienteRepository/ProcessoRepository, Documento has
+    // no exact-match (=) ranking tier, so there is no need for a second, unescaped termo param.
     // ORDER BY tiers: 0 = prefix match on unaccent(nome); 1 = everything else
     // (substring match), tie-broken by created_at DESC.
     @Query(value = "SELECT d.* FROM t_documento d " +
             "WHERE d.tenant_id = :tenantId " +
-            "AND (unaccent(d.nome) ILIKE unaccent('%' || CAST(:termo AS text) || '%') " +
-            "OR unaccent(d.tipo) ILIKE unaccent('%' || CAST(:termo AS text) || '%')) " +
+            "AND (unaccent(d.nome) ILIKE unaccent('%' || CAST(:termoEscapado AS text) || '%') ESCAPE '\\' " +
+            "OR unaccent(d.tipo) ILIKE unaccent('%' || CAST(:termoEscapado AS text) || '%') ESCAPE '\\') " +
             "ORDER BY " +
-            "CASE WHEN unaccent(d.nome) ILIKE unaccent(CAST(:termo AS text) || '%') THEN 0 " +
+            "CASE WHEN unaccent(d.nome) ILIKE unaccent(CAST(:termoEscapado AS text) || '%') ESCAPE '\\' THEN 0 " +
             "ELSE 1 END, " +
             "d.created_at DESC " +
             "LIMIT :limit",
             nativeQuery = true)
-    List<Documento> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termo") String termo, @Param("limit") int limit);
+    List<Documento> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termoEscapado") String termoEscapado, @Param("limit") int limit);
 }

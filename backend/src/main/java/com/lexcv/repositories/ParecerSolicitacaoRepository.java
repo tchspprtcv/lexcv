@@ -64,15 +64,19 @@ public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolic
     // reserved for the existing /pareceres/pesquisa surface); this method matches
     // ParecerSolicitacao.descricao only (shallow match, appropriate for a quick
     // cross-entity global-search preview). tenant_id = :tenantId is always the first,
-    // non-optional predicate. termo is bound via @Param and wildcard-wrapped INSIDE
+    // non-optional predicate. termoEscapado is bound via @Param and wildcard-wrapped INSIDE
     // the SQL string, never Java string-concatenated (SQLi surface + ASVS L1 gate).
     // No structured-ID tier: ParecerSolicitacao has no user-facing identifier field
     // comparable to numero_cliente/numero_processo. Ordered by created_at DESC only.
+    // WR-02: termoEscapado has ILIKE's wildcard metacharacters (%, _, \) pre-escaped by
+    // PesquisaController#escapeLike (paired with ESCAPE '\' below) so a literal %/_ typed by
+    // the user is matched literally instead of as a wildcard. No exact-match tier here, so no
+    // need for a second, unescaped termo param (same reasoning as DocumentoRepository).
     @Query(value = "SELECT s.* FROM t_parecer_solicitacao s " +
             "WHERE s.tenant_id = :tenantId " +
-            "AND unaccent(s.descricao) ILIKE unaccent('%' || CAST(:termo AS text) || '%') " +
+            "AND unaccent(s.descricao) ILIKE unaccent('%' || CAST(:termoEscapado AS text) || '%') ESCAPE '\\' " +
             "ORDER BY s.created_at DESC " +
             "LIMIT :limit",
             nativeQuery = true)
-    List<ParecerSolicitacao> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termo") String termo, @Param("limit") int limit);
+    List<ParecerSolicitacao> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termoEscapado") String termoEscapado, @Param("limit") int limit);
 }

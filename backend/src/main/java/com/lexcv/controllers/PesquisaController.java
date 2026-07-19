@@ -84,6 +84,21 @@ public class PesquisaController {
         return s.substring(0, endIndex);
     }
 
+    /**
+     * WR-02: escapes the two ILIKE wildcard metacharacters ({@code %}, {@code _}) plus the
+     * escape character itself ({@code \}) in a user-supplied search term, so a literal
+     * {@code %}/{@code _} typed by the user is matched literally instead of being interpreted
+     * as a wildcard (e.g. a termo of exactly {@code %%} would otherwise match every row). Must
+     * be paired with an explicit {@code ESCAPE '\'} clause on every ILIKE comparison that wraps
+     * the escaped value in wildcards. Only applies to the wildcard-wrapped ILIKE comparisons —
+     * the raw, unescaped termo is still used for the exact-match ({@code =}) ranking tiers in
+     * ClienteRepository/ProcessoRepository, since escaping would corrupt a literal equality
+     * comparison.
+     */
+    private static String escapeLike(String termo) {
+        return termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<?> pesquisar(@RequestParam(required = false) String q) {
@@ -95,19 +110,20 @@ public class PesquisaController {
 
         UUID tenantId = getTenantId();
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String termoEscapado = escapeLike(termo);
 
         List<ResultadoPesquisaDto> resultados = new ArrayList<>();
         if (hasAuthority(auth, "clientes:view")) {
-            resultados.addAll(mapearClientes(clienteRepository.pesquisarGlobal(tenantId, termo, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearClientes(clienteRepository.pesquisarGlobal(tenantId, termo, termoEscapado, LIMITE_POR_TIPO)));
         }
         if (hasAuthority(auth, "processos:view")) {
-            resultados.addAll(mapearProcessos(processoRepository.pesquisarGlobal(tenantId, termo, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearProcessos(processoRepository.pesquisarGlobal(tenantId, termo, termoEscapado, LIMITE_POR_TIPO)));
         }
         if (hasAuthority(auth, "documentos:view")) {
-            resultados.addAll(mapearDocumentos(documentoRepository.pesquisarGlobal(tenantId, termo, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearDocumentos(documentoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO)));
         }
         if (hasAuthority(auth, "pareceres:view")) {
-            resultados.addAll(mapearPareceres(parecerSolicitacaoRepository.pesquisarGlobal(tenantId, termo, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearPareceres(parecerSolicitacaoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO)));
         }
 
         return ResponseEntity.ok(resultados);

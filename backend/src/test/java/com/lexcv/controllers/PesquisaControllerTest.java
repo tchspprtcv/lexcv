@@ -86,9 +86,9 @@ class PesquisaControllerTest {
     void pesquisar_comTodosOsQuatroScopes_consultaTodosOsQuatroRamos() {
         autenticarComo(List.of("clientes:view", "processos:view", "documentos:view", "pareceres:view"));
 
-        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                 .thenReturn(List.of(Cliente.builder().id(UUID.randomUUID()).nome("Cliente Teste").build()));
-        when(processoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+        when(processoRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                 .thenReturn(List.of(Processo.builder().id(UUID.randomUUID()).numeroProcesso("PROC-001").build()));
         when(documentoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
                 .thenReturn(List.of(Documento.builder().id(UUID.randomUUID()).nome("Doc Teste").build()));
@@ -102,8 +102,8 @@ class PesquisaControllerTest {
         Set<String> tipos = body.stream().map(ResultadoPesquisaDto::tipo).collect(Collectors.toSet());
         assertEquals(TIPOS_VALIDOS, tipos);
 
-        verify(clienteRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
-        verify(processoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
+        verify(clienteRepository, times(1)).pesquisarGlobal(any(), anyString(), anyString(), anyInt());
+        verify(processoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyString(), anyInt());
         verify(documentoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
         verify(parecerSolicitacaoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
     }
@@ -112,9 +112,9 @@ class PesquisaControllerTest {
     void pesquisar_comScopeParcial_omiteRamosSemScopeEmVezDeEsconderResultados() {
         autenticarComo(List.of("clientes:view", "processos:view"));
 
-        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                 .thenReturn(List.of(Cliente.builder().id(UUID.randomUUID()).nome("Cliente A").build()));
-        when(processoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+        when(processoRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                 .thenReturn(List.of(Processo.builder().id(UUID.randomUUID()).numeroProcesso("PROC-002").build()));
 
         ResponseEntity<?> response = novoController().pesquisar("termo");
@@ -123,8 +123,8 @@ class PesquisaControllerTest {
         assertTrue(body.stream().map(ResultadoPesquisaDto::tipo)
                 .allMatch(tipo -> tipo.equals("cliente") || tipo.equals("processo")));
 
-        verify(clienteRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
-        verify(processoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyInt());
+        verify(clienteRepository, times(1)).pesquisarGlobal(any(), anyString(), anyString(), anyInt());
+        verify(processoRepository, times(1)).pesquisarGlobal(any(), anyString(), anyString(), anyInt());
         verify(documentoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
         verify(parecerSolicitacaoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
     }
@@ -138,8 +138,8 @@ class PesquisaControllerTest {
 
         assertTrue(body.isEmpty());
 
-        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), anyInt());
-        verify(processoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
+        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
+        verify(processoRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
         verify(documentoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
         verify(parecerSolicitacaoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
     }
@@ -164,9 +164,9 @@ class PesquisaControllerTest {
         for (Map.Entry<String, List<String>> perfil : scopesPorPerfil.entrySet()) {
             autenticarComo(perfil.getValue());
 
-            when(clienteRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+            when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                     .thenReturn(List.of(Cliente.builder().id(UUID.randomUUID()).nome("Cliente " + perfil.getKey()).build()));
-            when(processoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
+            when(processoRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
                     .thenReturn(List.of(Processo.builder().id(UUID.randomUUID()).numeroProcesso("PROC-" + perfil.getKey()).build()));
             when(documentoRepository.pesquisarGlobal(any(), anyString(), anyInt()))
                     .thenReturn(List.of(Documento.builder().id(UUID.randomUUID()).nome("Doc " + perfil.getKey()).build()));
@@ -190,8 +190,8 @@ class PesquisaControllerTest {
         ResponseEntity<?> response = novoController().pesquisar(null);
         assertTrue(corpo(response).isEmpty());
 
-        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), anyInt());
-        verify(processoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
+        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
+        verify(processoRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
         verify(documentoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
         verify(parecerSolicitacaoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
     }
@@ -203,8 +203,8 @@ class PesquisaControllerTest {
         ResponseEntity<?> response = novoController().pesquisar("a");
         assertTrue(corpo(response).isEmpty());
 
-        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), anyInt());
-        verify(processoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
+        verify(clienteRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
+        verify(processoRepository, never()).pesquisarGlobal(any(), any(), any(), anyInt());
         verify(documentoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
         verify(parecerSolicitacaoRepository, never()).pesquisarGlobal(any(), any(), anyInt());
     }
@@ -213,13 +213,36 @@ class PesquisaControllerTest {
     void pesquisar_comQAcimaDoLimite_truncaTermoA200CaracteresAntesDeConsultar() {
         autenticarComo(List.of("clientes:view"));
 
-        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyInt())).thenReturn(List.of());
+        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt())).thenReturn(List.of());
 
         String termoLongo = "a".repeat(201);
         novoController().pesquisar(termoLongo);
 
         ArgumentCaptor<String> termoCaptor = ArgumentCaptor.forClass(String.class);
-        verify(clienteRepository).pesquisarGlobal(any(), termoCaptor.capture(), anyInt());
+        verify(clienteRepository).pesquisarGlobal(any(), termoCaptor.capture(), anyString(), anyInt());
         assertEquals(200, termoCaptor.getValue().length());
+    }
+
+    /**
+     * WR-02 regression test: '%' and '_' are ILIKE wildcard metacharacters. The escaped
+     * variant passed to the repositories must have them (and the escape character itself)
+     * backslash-escaped so a literal '%'/'_' typed by the user is matched literally, while the
+     * original, unescaped termo must still reach the repository unchanged — it is separately
+     * required for ClienteRepository/ProcessoRepository's exact-match ranking tier, where
+     * escaping would corrupt a literal equality comparison.
+     */
+    @Test
+    void pesquisar_comCoringasIlikeNoTermo_escapaTermoParaRepositoriosMasPreservaOriginalParaRanking() {
+        autenticarComo(List.of("clientes:view"));
+        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt())).thenReturn(List.of());
+
+        novoController().pesquisar("100%_off");
+
+        ArgumentCaptor<String> termoCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> termoEscapadoCaptor = ArgumentCaptor.forClass(String.class);
+        verify(clienteRepository).pesquisarGlobal(any(), termoCaptor.capture(), termoEscapadoCaptor.capture(), anyInt());
+
+        assertEquals("100%_off", termoCaptor.getValue());
+        assertEquals("100\\%\\_off", termoEscapadoCaptor.getValue());
     }
 }

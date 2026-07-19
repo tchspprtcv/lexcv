@@ -130,13 +130,13 @@ class PesquisaRepositoryIT {
         ParecerSolicitacao parecerA = persistirParecer(tenantA, clienteA.getId(), "Parecer sobre " + token);
         ParecerSolicitacao parecerB = persistirParecer(tenantB, clienteB.getId(), "Parecer sobre " + token);
 
-        List<Cliente> clientes = clienteRepository.pesquisarGlobal(tenantA, token, 5);
+        List<Cliente> clientes = clienteRepository.pesquisarGlobal(tenantA, token, token, 5);
         assertEquals(1, clientes.size());
         assertEquals(clienteA.getId(), clientes.get(0).getId());
         assertEquals(tenantA, clientes.get(0).getTenantId());
         assertFalse(clientes.stream().anyMatch(c -> c.getId().equals(clienteB.getId())));
 
-        List<Processo> processos = processoRepository.pesquisarGlobal(tenantA, token, 5);
+        List<Processo> processos = processoRepository.pesquisarGlobal(tenantA, token, token, 5);
         assertEquals(1, processos.size());
         assertEquals(processoA.getId(), processos.get(0).getId());
         assertEquals(tenantA, processos.get(0).getTenantId());
@@ -168,7 +168,7 @@ class PesquisaRepositoryIT {
         persistirCliente(tenantId, "Empresa 0042 Serviços Lda", "CLI-1000", "200300400", "DOC-SUB-1");
         persistirCliente(tenantId, "Sociedade Zero0042Zero", "CLI-1001", "300400500", "DOC-SUB-2");
 
-        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, termo, 5);
+        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, termo, termo, 5);
 
         assertFalse(resultados.isEmpty());
         assertEquals(exato.getId(), resultados.get(0).getId());
@@ -188,7 +188,7 @@ class PesquisaRepositoryIT {
         persistirProcesso(tenantId, cliente.getId(), "PROC-0001", "Ação referente ao caso " + termo + " arquivado");
         persistirProcesso(tenantId, cliente.getId(), "PROC-0002", "Recurso " + termo + " em segunda instância");
 
-        List<Processo> resultados = processoRepository.pesquisarGlobal(tenantId, termo, 5);
+        List<Processo> resultados = processoRepository.pesquisarGlobal(tenantId, termo, termo, 5);
 
         assertFalse(resultados.isEmpty());
         assertEquals(exato.getId(), resultados.get(0).getId());
@@ -204,7 +204,7 @@ class PesquisaRepositoryIT {
         UUID tenantId = UUID.randomUUID();
         Cliente conceicao = persistirCliente(tenantId, "Maria da Conceição", "CLI-3000", "500600700", "DOC-ACC-1");
 
-        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, "Conceicao", 5);
+        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, "Conceicao", "Conceicao", 5);
 
         assertEquals(1, resultados.size());
         assertEquals(conceicao.getId(), resultados.get(0).getId());
@@ -222,7 +222,7 @@ class PesquisaRepositoryIT {
             persistirCliente(tenantId, "Cliente " + termo + " " + i, "CLI-40" + i, "60070080" + i, "DOC-LIM-" + i);
         }
 
-        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, termo, 5);
+        List<Cliente> resultados = clienteRepository.pesquisarGlobal(tenantId, termo, termo, 5);
 
         assertEquals(5, resultados.size());
     }
