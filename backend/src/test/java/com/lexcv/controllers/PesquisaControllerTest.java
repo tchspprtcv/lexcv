@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -244,5 +245,26 @@ class PesquisaControllerTest {
 
         assertEquals("100%_off", termoCaptor.getValue());
         assertEquals("100\\%\\_off", termoEscapadoCaptor.getValue());
+    }
+
+    /**
+     * WR-03 regression test: a DataAccessException from one branch (e.g. the unaccent
+     * PostgreSQL extension not being installed) must not propagate out of pesquisar() and must
+     * not prevent the other, unaffected branches from returning their results.
+     */
+    @Test
+    void pesquisar_comFalhaDeConsultaEmUmRamo_isolaFalhaEContinuaConsultandoOsDemaisRamos() {
+        autenticarComo(List.of("clientes:view", "processos:view"));
+
+        when(clienteRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
+                .thenThrow(new InvalidDataAccessResourceUsageException("ERROR: function unaccent(text) does not exist"));
+        when(processoRepository.pesquisarGlobal(any(), anyString(), anyString(), anyInt()))
+                .thenReturn(List.of(Processo.builder().id(UUID.randomUUID()).numeroProcesso("PROC-OK").build()));
+
+        ResponseEntity<?> response = novoController().pesquisar("termo");
+        List<ResultadoPesquisaDto> body = corpo(response);
+
+        assertEquals(1, body.size());
+        assertEquals("processo", body.get(0).tipo());
     }
 }

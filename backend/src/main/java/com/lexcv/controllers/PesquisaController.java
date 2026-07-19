@@ -11,6 +11,9 @@ import com.lexcv.repositories.DocumentoRepository;
 import com.lexcv.repositories.ParecerSolicitacaoRepository;
 import com.lexcv.repositories.ProcessoRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Dedicated controller for the top-level GET /api/v1/pesquisa cross-entity global search
@@ -46,6 +50,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/pesquisa")
 @RequiredArgsConstructor
 public class PesquisaController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PesquisaController.class);
 
     private static final int LIMITE_POR_TIPO = 5;
     private static final int TERMO_MAX_LENGTH = 200;
@@ -107,26 +113,57 @@ public class PesquisaController {
         if (termo.length() < TERMO_MIN_LENGTH) {
             return ResponseEntity.ok(List.of());
         }
+        // termo is reassigned above (truncation), so it is not effectively final and cannot be
+        // captured by the lambdas below. termoFinal is assigned exactly once and stands in for
+        // termo from this point on.
+        final String termoFinal = termo;
 
         UUID tenantId = getTenantId();
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String termoEscapado = escapeLike(termo);
+        String termoEscapado = escapeLike(termoFinal);
 
         List<ResultadoPesquisaDto> resultados = new ArrayList<>();
         if (hasAuthority(auth, "clientes:view")) {
-            resultados.addAll(mapearClientes(clienteRepository.pesquisarGlobal(tenantId, termo, termoEscapado, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearClientes(pesquisarComIsolamentoDeFalhas("cliente",
+                    () -> clienteRepository.pesquisarGlobal(tenantId, termoFinal, termoEscapado, LIMITE_POR_TIPO))));
         }
         if (hasAuthority(auth, "processos:view")) {
-            resultados.addAll(mapearProcessos(processoRepository.pesquisarGlobal(tenantId, termo, termoEscapado, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearProcessos(pesquisarComIsolamentoDeFalhas("processo",
+                    () -> processoRepository.pesquisarGlobal(tenantId, termoFinal, termoEscapado, LIMITE_POR_TIPO))));
         }
         if (hasAuthority(auth, "documentos:view")) {
-            resultados.addAll(mapearDocumentos(documentoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearDocumentos(pesquisarComIsolamentoDeFalhas("documento",
+                    () -> documentoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO))));
         }
         if (hasAuthority(auth, "pareceres:view")) {
-            resultados.addAll(mapearPareceres(parecerSolicitacaoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO)));
+            resultados.addAll(mapearPareceres(pesquisarComIsolamentoDeFalhas("parecer",
+                    () -> parecerSolicitacaoRepository.pesquisarGlobal(tenantId, termoEscapado, LIMITE_POR_TIPO))));
         }
 
         return ResponseEntity.ok(resultados);
+    }
+
+    /**
+     * WR-03: isolates each of the 4 entity branches above so a single failing query — most
+     * plausibly the required-but-manual {@code unaccent} PostgreSQL extension
+     * (backend/migrations/111-enable-search-extensions.sql) not having been applied to this
+     * environment — does not take down the other three branches. Logs a specific, actionable
+     * diagnostic (naming the likely cause and the migration file) instead of letting only the
+     * generic 500 from {@code GlobalExceptionHandler}'s catch-all reach the caller. A failing
+     * branch degrades to an empty result for that entity type rather than failing the whole
+     * request — consistent with how a caller lacking the branch's RBAC scope already gets an
+     * empty result for that branch rather than an error.
+     */
+    private <T> List<T> pesquisarComIsolamentoDeFalhas(String tipo, Supplier<List<T>> consulta) {
+        try {
+            return consulta.get();
+        } catch (DataAccessException ex) {
+            logger.error("Search failed for entity type '{}' in GET /api/v1/pesquisa (branch isolated " +
+                    "from the other three). Most likely cause: the PostgreSQL 'unaccent' extension is not " +
+                    "installed (see backend/migrations/111-enable-search-extensions.sql). Original exception: {}",
+                    tipo, ex.toString(), ex);
+            return List.of();
+        }
     }
 
     private List<ResultadoPesquisaDto> mapearClientes(List<Cliente> clientes) {
