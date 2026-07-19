@@ -68,13 +68,27 @@ public class PesquisaController {
                 .anyMatch(a -> a.getAuthority().equals(authority));
     }
 
+    /**
+     * WR-01: codepoint-safe truncation. Plain {@code String.substring(0, maxLength)} cuts at a
+     * UTF-16 code-unit boundary, which can split a supplementary-plane character's surrogate
+     * pair in half and leave an unpaired surrogate in the result — silently corrupting the JDBC
+     * bind parameter on the input side (line ~76), and causing Jackson to reject the JSON output
+     * on the {@code truncarDescricao()} side (line ~180). {@code offsetByCodePoints} walks whole
+     * codepoints, so the returned index can never land inside a surrogate pair.
+     */
+    private static String truncateSafely(String s, int maxLength) {
+        if (s.codePointCount(0, s.length()) <= maxLength) {
+            return s;
+        }
+        int endIndex = s.offsetByCodePoints(0, maxLength);
+        return s.substring(0, endIndex);
+    }
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<?> pesquisar(@RequestParam(required = false) String q) {
         String termo = q == null ? "" : q.trim();
-        if (termo.length() > TERMO_MAX_LENGTH) {
-            termo = termo.substring(0, TERMO_MAX_LENGTH);
-        }
+        termo = truncateSafely(termo, TERMO_MAX_LENGTH);
         if (termo.length() < TERMO_MIN_LENGTH) {
             return ResponseEntity.ok(List.of());
         }
@@ -177,7 +191,7 @@ public class PesquisaController {
         }
         String trimmed = descricao.trim();
         return trimmed.length() > DESCRICAO_PREVIEW_LENGTH
-                ? trimmed.substring(0, DESCRICAO_PREVIEW_LENGTH) + "..."
+                ? truncateSafely(trimmed, DESCRICAO_PREVIEW_LENGTH) + "..."
                 : trimmed;
     }
 }
