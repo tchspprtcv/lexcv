@@ -21,7 +21,7 @@
 
 ### Processos (PEST)
 
-- [ ] **PEST-01**: Utilizador filtra a lista de Processos por estado através de um controlo dedicado
+- [x] **PEST-01**: Utilizador filtra a lista de Processos por estado através de um controlo dedicado
 
 ### Linguagem Visual (ICON, RAD, FICO)
 
@@ -63,7 +63,7 @@ Mapeamento requisito → fase, atribuído durante a criação do roadmap (100% c
 | SRCH-09 | Phase 112 | Complete |
 | SRCH-10 | Phase 112 | Complete |
 | SRCH-11 | Phase 112 | Complete |
-| PEST-01 | Phase 113 | Pending |
+| PEST-01 | Phase 113 | Complete |
 | ICON-01 | Phase 115 | Pending |
 | RAD-01 | Phase 114 | Pending |
 | FICO-01 | Phase 115 | Pending |

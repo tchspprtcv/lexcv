@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: ready_to_plan
-stopped_at: Phase 112 complete (5/5) — ready to discuss Phase 113
-last_updated: 2026-07-21T19:25:58.599Z
+status: verifying
+stopped_at: Completed 113-01-PLAN.md
+last_updated: "2026-07-21T21:02:07.844Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 40
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 60
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 113
-Plan: Not started
-Status: Ready to plan
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-07-21
 
 Progress: [██████████] 100%
@@ -92,6 +92,7 @@ Progress: [██████████] 100%
 | Phase 111 P02 | 15min | 2 tasks | 3 files |
 | Phase 112 P02 | ~30min | 2 tasks | 1 files |
 | Phase 112 P03 | 12min | 1 tasks | 1 files |
+| Phase 113 P01 | ~15min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full pe
 - [Phase 112]: 112-02: query reset on dialog close moved into onOpenChange instead of a useEffect, to satisfy react-hooks/set-state-in-effect (configured as an ESLint error in this repo)
 - [Phase 112]: 112-02: recents list read directly at render time instead of React.useMemo keyed on open, avoiding an exhaustive-deps warning about an intentional cache-invalidation dependency
 - [Phase 112]: 112-03: kbd shortcut-hint platform detection uses React.useSyncExternalStore instead of useState+useEffect, avoiding react-hooks/set-state-in-effect (configured as an ESLint error in this repo) while preserving the identical SSR-safe default-then-upgrade contract
+- [Phase 113]: 113-01: kept the existing draft + Aplicar submission model for the promoted Estado field (no onChange-immediate-apply) — 113-UI-SPEC.md Apply-behavior resolution: this was a layout change, not a logic change per 113-CONTEXT.md
 
 ### Pending Todos
 
@@ -192,8 +194,8 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-21T17:39:37.810Z
-Stopped at: Completed 112-03-PLAN.md
+Last session: 2026-07-21T21:02:07.822Z
+Stopped at: Completed 113-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

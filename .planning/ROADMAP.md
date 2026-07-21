@@ -310,7 +310,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 
 - [x] **Phase 111: Backend — Pesquisa Global Cross-Entity (API)** - Endpoint novo, seguro e bem ordenado (Cliente/Processo/Documento/Parecer, tenant+RBAC por branch) (completed 2026-07-21)
 - [x] **Phase 112: Frontend — Pesquisa Global (Paleta de Comando)** - Paleta Ctrl+K/⌘K no topbar, ligada ao endpoint da Phase 111 (completed 2026-07-21)
-- [ ] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado
+- [x] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado (completed 2026-07-21)
 - [ ] **Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)** - Reversão deliberada do radius reto da v2.13
 - [ ] **Phase 115: Linguagem Visual — Ícones + Filtros Ícone-Only** - Ícones em todos os botões; filtros aplicar/limpar/exportar passam a ícone-only com tooltip
 
@@ -357,7 +357,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
   2. Utilizador limpa o filtro de estado e a lista volta a mostrar todos os processos, respeitando os outros filtros já aplicados
   3. O filtro de estado funciona em conjunto com os filtros já existentes na lista de Processos, sem se substituírem mutuamente
 **Plans**: 1 plan (1 wave)
-- [ ] 113-01-PLAN.md — Promover o filtro de Estado (NativeSelect) do painel avançado colapsado para a barra principal sempre visível (+ rebalancear a grelha avançada para lg:col-span-4)
+- [x] 113-01-PLAN.md — Promover o filtro de Estado (NativeSelect) do painel avançado colapsado para a barra principal sempre visível (+ rebalancear a grelha avançada para lg:col-span-4)
 **UI hint**: yes
 
 #### Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)
@@ -460,7 +460,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
 | 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete    | 2026-07-21 |
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 5/5 | Complete    | 2026-07-21 |
-| 113. Processos — Filtro por Estado | v2.14 | 0/1 | Planned | - |
+| 113. Processos — Filtro por Estado | v2.14 | 1/1 | Complete   | 2026-07-21 |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
 
