@@ -1,10 +1,11 @@
 ---
 phase: 114
 slug: linguagem-visual-cantos-arredondados-radius
-status: draft
+status: approved
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, cssVariables true) — pre-existing in both apps, unchanged by this phase
 created: 2026-07-21
+reviewed_at: 2026-07-21
 ---
 
 # Phase 114 — UI Design Contract
@@ -167,13 +168,17 @@ A minority of `rounded-none` occurrences are intentional and unrelated to the "r
 
 ### Mechanical acceptance check
 
-After remediation, this should return **only** the legitimate-exception lines listed above (11 lines total: calendar.tsx ×3, input-group.tsx ×2, tabs.tsx ×1, the two `max-sm:rounded-b-none` lines, checkbox.tsx's unrelated `rounded-[4px]` if pattern-matched loosely) — nothing else:
+**Correction (UI-checker, 2026-07-21):** the literal substring `rounded-none` does NOT appear in `max-sm:rounded-b-none` (the `-b-` infix breaks the match) or in `rounded-[4px]` (checkbox.tsx) at all — those two exceptions are invisible to this exact grep, not "matched loosely." Verify them separately, by direct file/line check, not via this command.
+
+After remediation, this exact command should return **6 lines total** — calendar.tsx ×3 (124, 130, 238), input-group.tsx ×2 (125, 141), tabs.tsx ×1 (28) — nothing else:
 
 ```
 grep -rn "rounded-none" web/src webpage/src
 ```
 
-Re-run this exact command at execution time rather than trusting the counts above verbatim — the codebase will have moved between this research pass and implementation.
+Separately, confirm these 2 legitimate exceptions remain untouched by direct line check (they will NOT show up in the grep above): `processos/[id]/page.tsx:1030,1177` (`max-sm:rounded-b-none`) and `checkbox.tsx:17` (`rounded-[4px]`).
+
+Re-run both checks at execution time rather than trusting the counts above verbatim — the codebase will have moved between this research pass and implementation.
 
 ---
 
@@ -289,11 +294,13 @@ This is the operative acceptance test for Phase 114. Two dimensions cross: **rep
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS (trivial — no new copy introduced this phase)
-- [ ] Dimension 2 Visuals: **the operative check** — validate against the Verification/QA Plan above, both apps, both themes, and confirm the Critical Scope Finding's remediation inventory was actually applied (not just the two `globals.css` edits)
-- [ ] Dimension 3 Color: PASS (trivial — no color token touched; spot-check nothing shifted)
-- [ ] Dimension 4 Typography: PASS (trivial — no typography token touched)
-- [ ] Dimension 5 Spacing: PASS (trivial — no spacing token touched)
-- [ ] Dimension 6 Registry Safety: PASS (trivial — no registry content introduced)
+- [x] Dimension 1 Copywriting: PASS (trivial — no new copy introduced this phase)
+- [x] Dimension 2 Visuals: FLAG (non-blocking) — fixed: corrected the Mechanical acceptance check's wrong predicted grep output (was "11 lines", actually 6; the 2 Dialog lines + checkbox.tsx don't match the literal grep pattern and must be verified separately). Remediation inventory itself (271/7 occurrences, 33 files, 9 exception citations) independently re-verified accurate by the checker.
+- [x] Dimension 3 Color: PASS (trivial — no color token touched)
+- [x] Dimension 4 Typography: PASS (trivial — no typography token touched)
+- [x] Dimension 5 Spacing: PASS (trivial — no spacing token touched)
+- [x] Dimension 6 Registry Safety: PASS (trivial — no registry content introduced)
+
+**Approval:** approved-with-recommendations (recommendation applied 2026-07-21)
 
 **Approval:** pending
