@@ -2,12 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
@@ -59,10 +61,20 @@ function DocumentosContent({
   canEditDocumentos: boolean;
   form: ReturnType<typeof useForm<DocumentosFiltersFormValues>>;
 }) {
+  const searchParams = useSearchParams();
+  const seededQ = searchParams.get("q");
+
   const [filters, setFilters] = React.useState<DocumentosListFilters>({});
+  const [nomeFiltro, setNomeFiltro] = React.useState("");
+  const [nomeFiltroSeedKey, setNomeFiltroSeedKey] = React.useState<string | null>(null);
   const list = useDocumentos(filters);
   const processos = useProcessos();
   const clientes = useClientes({});
+
+  if (seededQ && seededQ !== nomeFiltroSeedKey) {
+    setNomeFiltroSeedKey(seededQ);
+    setNomeFiltro(seededQ);
+  }
 
   const processoById = React.useMemo(
     () => new Map((processos.data ?? []).map((p) => [p.id, p] as const)),
@@ -93,6 +105,12 @@ function DocumentosContent({
     () => columns(canEditDocumentos, processoById, clienteNomeById),
     [canEditDocumentos, processoById, clienteNomeById],
   );
+
+  const documentosVisiveis = React.useMemo(() => {
+    const termo = nomeFiltro.trim().toLowerCase();
+    const base = list.data ?? [];
+    return termo ? base.filter((d) => (d.nome ?? "").toLowerCase().includes(termo)) : base;
+  }, [list.data, nomeFiltro]);
 
   const onSubmit = (values: DocumentosFiltersFormValues) => {
     setFilters({ processo_id: values.processo_id, cliente_id: values.cliente_id });
@@ -125,6 +143,15 @@ function DocumentosContent({
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 max-w-sm space-y-2">
+            <Label htmlFor="nome_filtro">Pesquisar</Label>
+            <Input
+              id="nome_filtro"
+              value={nomeFiltro}
+              onChange={(e) => setNomeFiltro(e.target.value)}
+              placeholder="Pesquisar por nome..."
+            />
+          </div>
           <form className="grid gap-4 sm:grid-cols-3" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="processo_id">Processo ID</Label>
@@ -195,17 +222,17 @@ function DocumentosContent({
             <div className="text-sm text-red-600">
               {list.error instanceof Error ? list.error.message : "Erro ao carregar"}
             </div>
-          ) : !list.data?.length ? (
+          ) : !documentosVisiveis.length ? (
             <div className="text-sm text-neutral-500 dark:text-neutral-400">
               Nenhum documento encontrado.
             </div>
           ) : (
             <>
             <div className="hidden md:block">
-              <DataTable columns={tableColumns} data={list.data} getRowId={(d) => d.id} />
+              <DataTable columns={tableColumns} data={documentosVisiveis} getRowId={(d) => d.id} />
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
-              {list.data.map((d) => {
+              {documentosVisiveis.map((d) => {
                 const processo = d.processo_id ? processoById.get(d.processo_id) : undefined;
                 const processoLabel = d.processo_id
                   ? (processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processo_id)
