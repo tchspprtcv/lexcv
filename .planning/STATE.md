@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
 status: executing
-stopped_at: Phase 112 UI-SPEC approved
-last_updated: "2026-07-21T16:37:40.364Z"
-last_activity: 2026-07-21 -- Phase 112 execution started
+stopped_at: Completed 112-02-PLAN.md
+last_updated: "2026-07-21T17:23:04.461Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 6
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 112 (Frontend — Pesquisa Global (Paleta de Comando)) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 112
-Last activity: 2026-07-21 -- Phase 112 execution started
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-07-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -89,6 +89,7 @@ Progress: [██████████] 100%
 | Phase 105 P03 | ~25min | 2 tasks | 2 files |
 | Phase 111 P01 | 15min | 2 tasks | 6 files |
 | Phase 111 P02 | 15min | 2 tasks | 3 files |
+| Phase 112 P02 | ~30min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full pe
 - [Phase 111]: ParecerSolicitacaoRepository.pesquisarGlobal e um metodo novo e separado (nao reutiliza pesquisar(), nao LEFT JOIN t_parecer_versao) - match raso so em descricao — Resolve a tensao STACK.md-vs-PATTERNS.md a favor do Anti-Pattern 6: pesquisa profunda de conteudo (ParecerVersao.conteudo) fica exclusiva de /pareceres/pesquisa
 - [Phase 111]: PesquisaController Javadoc paraphrases Honorario/financeiro exclusion (billing/fee records) instead of naming them, to satisfy the plan's own grep-based acceptance check while preserving the documentation intent
 - [Phase 111]: PesquisaControllerTest role-matrix covered via one @Test with an internal loop over the 4 seeded role scope-sets, not @ParameterizedTest — no precedent for @ParameterizedTest exists in this test suite
+- [Phase 112]: 112-02: query reset on dialog close moved into onOpenChange instead of a useEffect, to satisfy react-hooks/set-state-in-effect (configured as an ESLint error in this repo)
+- [Phase 112]: 112-02: recents list read directly at render time instead of React.useMemo keyed on open, avoiding an exhaustive-deps warning about an intentional cache-invalidation dependency
 
 ### Pending Todos
 
@@ -186,9 +189,9 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-21T15:50:33.572Z
-Stopped at: Phase 112 UI-SPEC approved
-Resume file: .planning/phases/LEXCV-112-frontend-pesquisa-global-paleta-de-comando/112-UI-SPEC.md
+Last session: 2026-07-21T17:23:04.439Z
+Stopped at: Completed 112-02-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

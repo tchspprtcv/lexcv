@@ -9,15 +9,15 @@
 
 - [x] **SRCH-01**: Utilizador pesquisa por texto/identificador e obtém resultados de Clientes, Processos, Documentos e Pareceres do seu tenant, agrupados por tipo
 - [x] **SRCH-02**: Resultados priorizam correspondências exatas/prefixo em identificadores estruturados (`numero_cliente`, `numero_processo`, NIF, `documento_numero`) acima de correspondências por substring
-- [ ] **SRCH-03**: A pesquisa dispara automaticamente com debounce (~300ms) a partir de 2 caracteres
-- [ ] **SRCH-04**: Cada resultado mostra um subtítulo desambiguador (ex: Cliente → número + NIF) e navega para a rota de detalhe existente ao clicar
-- [ ] **SRCH-05**: Utilizador abre a pesquisa pelo campo já existente no topbar ou pelo atalho Ctrl+K/⌘K
+- [x] **SRCH-03**: A pesquisa dispara automaticamente com debounce (~300ms) a partir de 2 caracteres
+- [x] **SRCH-04**: Cada resultado mostra um subtítulo desambiguador (ex: Cliente → número + NIF) e navega para a rota de detalhe existente ao clicar
+- [x] **SRCH-05**: Utilizador abre a pesquisa pelo campo já existente no topbar ou pelo atalho Ctrl+K/⌘K
 - [x] **SRCH-06**: Resultados só incluem tipos de entidade para os quais o utilizador tem permissão de visualização (`clientes:view`/`processos:view`/`documentos:view`/`pareceres:view`), verificado por ramo de query, nunca por filtro posterior
 - [x] **SRCH-07**: Toda a pesquisa é isolada por tenant, incluindo em cada sub-query por tipo de entidade
-- [ ] **SRCH-08**: Utilizador vê estados de vazio (sem pesquisa), a carregar, e sem resultados
-- [ ] **SRCH-09**: Cada grupo de resultados tem um link "Ver todos" que abre a lista completa desse tipo, já filtrada pela pesquisa
-- [ ] **SRCH-10**: No estado vazio (antes de escrever), o utilizador vê os últimos registos que visitou (não pesquisas anteriores) — guardado apenas no cliente/sessão, nunca no servidor
-- [ ] **SRCH-11**: O texto correspondente à pesquisa é destacado visualmente em cada resultado
+- [x] **SRCH-08**: Utilizador vê estados de vazio (sem pesquisa), a carregar, e sem resultados
+- [x] **SRCH-09**: Cada grupo de resultados tem um link "Ver todos" que abre a lista completa desse tipo, já filtrada pela pesquisa
+- [x] **SRCH-10**: No estado vazio (antes de escrever), o utilizador vê os últimos registos que visitou (não pesquisas anteriores) — guardado apenas no cliente/sessão, nunca no servidor
+- [x] **SRCH-11**: O texto correspondente à pesquisa é destacado visualmente em cada resultado
 
 ### Processos (PEST)
 
@@ -54,15 +54,15 @@ Mapeamento requisito → fase, atribuído durante a criação do roadmap (100% c
 |-------------|-------|--------|
 | SRCH-01 | Phase 111 | Complete |
 | SRCH-02 | Phase 111 | Complete |
-| SRCH-03 | Phase 112 | Pending |
-| SRCH-04 | Phase 112 | Pending |
-| SRCH-05 | Phase 112 | Pending |
+| SRCH-03 | Phase 112 | Complete |
+| SRCH-04 | Phase 112 | Complete |
+| SRCH-05 | Phase 112 | Complete |
 | SRCH-06 | Phase 111 | Complete |
 | SRCH-07 | Phase 111 | Complete |
-| SRCH-08 | Phase 112 | Pending |
-| SRCH-09 | Phase 112 | Pending |
-| SRCH-10 | Phase 112 | Pending |
-| SRCH-11 | Phase 112 | Pending |
+| SRCH-08 | Phase 112 | Complete |
+| SRCH-09 | Phase 112 | Complete |
+| SRCH-10 | Phase 112 | Complete |
+| SRCH-11 | Phase 112 | Complete |
 | PEST-01 | Phase 113 | Pending |
 | ICON-01 | Phase 115 | Pending |
 | RAD-01 | Phase 114 | Pending |
