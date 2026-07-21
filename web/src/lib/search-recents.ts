@@ -9,6 +9,14 @@ const RECENT_ELIGIBLE_TIPOS: PesquisaResultadoTipo[] = [
   "parecer",
 ];
 
+// WR-02 (Phase 112 code review): readRecents() validates every stored item's `tipo` against
+// this set on read. sessionStorage persists across soft navigations within an open tab and is
+// never versioned, so a tab left open across a deploy that renames/removes a
+// PesquisaResultadoTipo value can have a stale, now-invalid `tipo` sitting in storage — without
+// this check, TIPO_META[recente.tipo] in the render path would be undefined and crash the page
+// (there is no error boundary anywhere in this app to contain it).
+const VALID_TIPOS = new Set<PesquisaResultadoTipo>(["cliente", "processo", "documento", "parecer"]);
+
 export function readRecents(): ResultadoPesquisa[] {
   if (typeof window === "undefined") {
     return [];
@@ -16,11 +24,19 @@ export function readRecents(): ResultadoPesquisa[] {
 
   try {
     const raw = sessionStorage.getItem(RECENTS_KEY) ?? "[]";
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed as ResultadoPesquisa[];
+    return parsed.filter(
+      (item): item is ResultadoPesquisa =>
+        !!item &&
+        typeof item === "object" &&
+        VALID_TIPOS.has((item as ResultadoPesquisa).tipo) &&
+        typeof (item as ResultadoPesquisa).id === "string" &&
+        typeof (item as ResultadoPesquisa).titulo === "string" &&
+        typeof (item as ResultadoPesquisa).rota === "string",
+    );
   } catch {
     return [];
   }
