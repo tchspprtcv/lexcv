@@ -369,7 +369,8 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
   1. O token `--radius` (e os derivados `--radius-sm/md/lg/xl`) deixa de ser `0` e passa a um valor arredondado, definido uma única vez e consumido por todos os componentes que já usam a variável
   2. Cartões, botões, inputs, badges, diálogos e a sidebar mostram cantos arredondados de forma visualmente consistente, tanto no tema claro como no escuro
   3. Todos os ecrãs da aplicação — incluindo os novos introduzidos pelas Phases 111-113 desta milestone (paleta de pesquisa, filtro de estado) — mostram o mesmo raio de canto consistente, sem exceções visuais nem cantos retos remanescentes
-**Plans**: TBD
+**Plans**: 1 plan (1 wave)
+- [ ] 114-01-PLAN.md — Flip `--radius` 0rem→0.5rem em ambas as apps (web + webpage) + remover os ~264 (web) + 7 (webpage) overrides `rounded-none` ilegítimos, preservando as 6 exceções legítimas; primitivo Card da webpage → `rounded-lg`
 **UI hint**: yes
 
 #### Phase 115: Linguagem Visual — Ícones em Todos os Botões + Filtros Ícone-Only
@@ -461,7 +462,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete    | 2026-07-21 |
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 5/5 | Complete    | 2026-07-21 |
 | 113. Processos — Filtro por Estado | v2.14 | 1/1 | Complete    | 2026-07-21 |
-| 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
+| 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/1 | Planned | - |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.14 (UI/UX Melhorias) — ROADMAP criado: 5 fases (111–115), 15/15 requisitos mapeados (SRCH-01 a SRCH-11, PEST-01, ICON-01, RAD-01, FICO-01), cobertura 100%. Run `/gsd:plan-phase 111` to begin execution (aguarda aprovação do roadmap).
