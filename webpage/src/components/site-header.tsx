@@ -45,7 +45,7 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button asChild variant="secondary" className="rounded-none hidden md:inline-flex">
+            <Button asChild variant="secondary" className="hidden md:inline-flex">
               <a href="/login">Entrar</a>
             </Button>
             <Sheet open={open} onOpenChange={setOpen}>
@@ -71,7 +71,7 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
                       {link.label}
                     </a>
                   ))}
-                  <Button asChild variant="secondary" className="mt-4 rounded-none">
+                  <Button asChild variant="secondary" className="mt-4">
                     <a href="/login" onClick={() => setOpen(false)}>
                       Entrar
                     </a>

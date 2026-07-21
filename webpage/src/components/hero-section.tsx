@@ -25,10 +25,10 @@ export function HeroSection({ branding }: { branding: BrandingResponse }) {
               Clientes, processos, prazos e documentos — tudo num único painel, com isolamento total por tenant.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <Button asChild variant="secondary" className="rounded-none">
+              <Button asChild variant="secondary" className="">
                 <a href="/login">Entrar</a>
               </Button>
-              <Button asChild variant="ghost" className="rounded-none">
+              <Button asChild variant="ghost" className="">
                 <a href="#funcionalidades">Ver Funcionalidades<ArrowRight className="h-4 w-4" /></a>
               </Button>
             </div>
