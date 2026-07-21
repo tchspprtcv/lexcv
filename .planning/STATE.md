@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: ready_to_plan
-stopped_at: Phase 113 complete (1/1) — ready to discuss Phase 114
-last_updated: 2026-07-21T21:18:21.558Z
+status: verifying
+stopped_at: Completed 114-01-PLAN.md — Phase 114 complete (1/1)
+last_updated: "2026-07-21T22:56:58.441Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 60
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 80
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 114 — linguagem visual — cantos arredondados (`  radius`)
+**Current focus:** Phase 114 — linguagem-visual-cantos-arredondados-radius
 
 ## Current Position
 
-Phase: 114
-Plan: Not started
-Status: Ready to plan
+Phase: 114 (linguagem-visual-cantos-arredondados-radius) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-07-21
 
 Progress: [██████████] 100%
@@ -94,6 +94,7 @@ Progress: [██████████] 100%
 | Phase 112 P02 | ~30min | 2 tasks | 1 files |
 | Phase 112 P03 | 12min | 1 tasks | 1 files |
 | Phase 113 P01 | ~15min | 1 tasks | 1 files |
+| Phase 114 P01 | 18min | 3 tasks | 32 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full pe
 - [Phase 112]: 112-02: recents list read directly at render time instead of React.useMemo keyed on open, avoiding an exhaustive-deps warning about an intentional cache-invalidation dependency
 - [Phase 112]: 112-03: kbd shortcut-hint platform detection uses React.useSyncExternalStore instead of useState+useEffect, avoiding react-hooks/set-state-in-effect (configured as an ESLint error in this repo) while preserving the identical SSR-safe default-then-upgrade contract
 - [Phase 113]: 113-01: kept the existing draft + Aplicar submission model for the promoted Estado field (no onChange-immediate-apply) — 113-UI-SPEC.md Apply-behavior resolution: this was a layout change, not a logic change per 113-CONTEXT.md
+- [Phase 114]: Full 271-occurrence rounded-none remediation delivered (271 across 29 files), not just the 2-file token edit — tailwind-merge (cn()) lets a literal rounded-none className deterministically win over a primitive's own token-derived default — the token flip alone would have been invisible on most screens
+- [Phase 114]: settings/page.tsx's 4 Cards changed from rounded-none lg:rounded-xl to plain rounded-xl — gives uniform rounding at every breakpoint instead of flat-on-mobile/rounded-on-desktop
+- [Phase 114]: the shared --radius design token flips to 0.5rem (shadcn Default) in both web/ and webpage/ globals.css, identical value — 114-CONTEXT.md locked decision — reverts the v2.13 institutional 0rem look; a single-app value would make the public landing site visually inconsistent with the internal app
 
 ### Pending Todos
 
@@ -195,8 +199,8 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-21T21:02:07.822Z
-Stopped at: Completed 113-01-PLAN.md
+Last session: 2026-07-21T22:56:58.419Z
+Stopped at: Completed 114-01-PLAN.md — Phase 114 complete (1/1)
 Resume file: None
 
 ## Operator Next Steps

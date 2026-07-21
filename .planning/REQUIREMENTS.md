@@ -26,7 +26,7 @@
 ### Linguagem Visual (ICON, RAD, FICO)
 
 - [ ] **ICON-01**: Todos os botões da aplicação (ações primárias e secundárias) apresentam um ícone consistente com a sua ação
-- [ ] **RAD-01**: O token `--radius` global passa de reto (`0`) para arredondado, aplicado de forma consistente em todos os componentes (cartões, botões, inputs, badges, sidebar) em ambos os temas (claro/escuro)
+- [x] **RAD-01**: O token `--radius` global passa de reto (`0`) para arredondado, aplicado de forma consistente em todos os componentes (cartões, botões, inputs, badges, sidebar) em ambos os temas (claro/escuro)
 - [ ] **FICO-01**: Botões de ação de filtro (aplicar/limpar/exportar) em todos os módulos (Clientes, Processos, Agenda, Documentos, Financeiro) apresentam-se apenas com ícone, com tooltip ao passar o rato
 
 ## v2 Requirements
@@ -65,7 +65,7 @@ Mapeamento requisito → fase, atribuído durante a criação do roadmap (100% c
 | SRCH-11 | Phase 112 | Complete |
 | PEST-01 | Phase 113 | Complete |
 | ICON-01 | Phase 115 | Pending |
-| RAD-01 | Phase 114 | Pending |
+| RAD-01 | Phase 114 | Complete |
 | FICO-01 | Phase 115 | Pending |
 
 **Coverage:**
