@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Scale, ScrollText, Users, type LucideIcon } from "lucide-react";
+import { FileText, Scale, ScrollText, Search, Users, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -12,10 +12,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useGlobalSearch } from "@/hooks/use-global-search";
+import { usePermissions } from "@/hooks/use-permissions";
 import { highlightMatch } from "@/lib/highlight-match";
 import { isInternalLinkUrl } from "@/lib/notificacao-categoria";
-import { pushRecent } from "@/lib/search-recents";
+import { pushRecent, readRecents } from "@/lib/search-recents";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import type { PesquisaResultadoTipo, ResultadoPesquisa } from "@/types/search";
 
@@ -92,6 +101,7 @@ function ResultRow({
 
 export function GlobalSearchDialog() {
   const router = useRouter();
+  const permissions = usePermissions();
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -119,12 +129,15 @@ export function GlobalSearchDialog() {
     return () => window.removeEventListener(SEARCH_OPEN_EVENT, onSearchOpen);
   }, []);
 
-  // Reset the query whenever the dialog closes, so reopening starts fresh (no stale-result flash).
-  React.useEffect(() => {
-    if (!open) {
+  // Reset the query whenever the dialog closes, so reopening starts fresh (no stale-result
+  // flash). Handled here (not a useEffect) so setState isn't called synchronously from an
+  // effect body — react-hooks/set-state-in-effect flags that pattern.
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
       setQuery("");
     }
-  }, [open]);
+  }
 
   function navigate(rota: string) {
     // T-112-04 mitigation: server-provided `rota` must resolve as an internal path before navigating.
@@ -145,11 +158,14 @@ export function GlobalSearchDialog() {
   const termo = debouncedQuery.trim();
   const hasQuery = termo.length >= 2;
   const resultados = search.data ?? [];
+  // Read directly during render (no effect/memo needed) — sessionStorage reads are cheap for a
+  // 5-item cap, and this guarantees the list always reflects the latest recents on every open.
+  const recents = readRecents();
 
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
       title="Pesquisa global"
       description="Pesquisar clientes, processos, documentos e pareceres da sua instituição"
     >
@@ -160,44 +176,105 @@ export function GlobalSearchDialog() {
           onValueChange={setQuery}
         />
         <CommandList>
-          {hasQuery && !search.isFetching && !search.isError && resultados.length > 0
-            ? // The Command root's filtering is disabled above (see T-112-06 in the plan's threat
-              // model), which already stops cmdk from re-ranking this list — group by tipo in
-              // TIPO_ORDER, preserving the backend's own within-type order (no client re-sort).
-              TIPO_ORDER.map((tipo) => {
-                const items = resultados.filter((resultado) => resultado.tipo === tipo);
-                if (items.length === 0) return null;
-                const meta = TIPO_META[tipo];
-                return (
-                  <CommandGroup key={tipo} heading={meta.grupoLabel}>
-                    {items.map((resultado) => (
-                      <CommandItem
-                        key={`${resultado.tipo}:${resultado.id}`}
-                        value={`${resultado.tipo}:${resultado.id}`}
-                        onSelect={() => onSelectResult(resultado)}
-                      >
-                        <ResultRow
-                          icon={meta.icon}
-                          titulo={highlightMatch(resultado.titulo, query)}
-                          subtitulo={
-                            resultado.subtitulo
-                              ? highlightMatch(resultado.subtitulo, query)
-                              : undefined
-                          }
-                        />
-                      </CommandItem>
-                    ))}
+          {!hasQuery ? (
+            recents.length > 0 ? (
+              <CommandGroup heading="Visitados recentemente">
+                {recents.map((recente) => (
+                  <CommandItem
+                    key={`recent:${recente.tipo}:${recente.id}`}
+                    value={`recent:${recente.tipo}:${recente.id}`}
+                    onSelect={() => onSelectResult(recente)}
+                  >
+                    <ResultRow
+                      icon={TIPO_META[recente.tipo].icon}
+                      titulo={recente.titulo}
+                      subtitulo={recente.subtitulo}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Search />
+                  </EmptyMedia>
+                  <EmptyTitle>Comece a escrever para pesquisar</EmptyTitle>
+                  <EmptyDescription>
+                    Encontre Clientes, Processos, Documentos e Pareceres da sua instituição por
+                    nome, número ou NIF.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )
+          ) : search.isFetching ? (
+            // T-112-07 mitigation: display-only skeleton gate — never the real RBAC boundary
+            // (that stays 100% server-side, Phase 111). Must gate on isFetched, never !isLoading.
+            TIPO_ORDER.filter(
+              (tipo) => permissions.isFetched && permissions.can.view(TIPO_META[tipo].scope),
+            ).map((tipo) => (
+              <CommandGroup key={tipo} heading={TIPO_META[tipo].grupoLabel}>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="px-2 py-1.5">
+                    <Skeleton className="h-8 w-full rounded-md" />
+                  </div>
+                ))}
+              </CommandGroup>
+            ))
+          ) : search.isError ? (
+            <p className="px-4 py-6 text-center text-sm text-red-600">
+              Não foi possível pesquisar. Verifique a ligação e tente novamente.
+            </p>
+          ) : resultados.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Search />
+                </EmptyMedia>
+                <EmptyTitle>Sem resultados</EmptyTitle>
+                <EmptyDescription>
+                  Não foram encontrados registos para “{termo}”. Tente outro termo.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            // The Command root's filtering is disabled above (T-112-06), which already stops
+            // cmdk from re-ranking this list — group by tipo in TIPO_ORDER, preserving the
+            // backend's own within-type order (no client re-sort).
+            TIPO_ORDER.map((tipo) => {
+              const items = resultados.filter((resultado) => resultado.tipo === tipo);
+              if (items.length === 0) return null;
+              const meta = TIPO_META[tipo];
+              return (
+                <CommandGroup key={tipo} heading={meta.grupoLabel}>
+                  {items.map((resultado) => (
                     <CommandItem
-                      value={`vertodos:${tipo}`}
-                      onSelect={() => onSelectVerTodos(meta.segment)}
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                      key={`${resultado.tipo}:${resultado.id}`}
+                      value={`${resultado.tipo}:${resultado.id}`}
+                      onSelect={() => onSelectResult(resultado)}
                     >
-                      {meta.verTodosLabel}
+                      <ResultRow
+                        icon={meta.icon}
+                        titulo={highlightMatch(resultado.titulo, query)}
+                        subtitulo={
+                          resultado.subtitulo
+                            ? highlightMatch(resultado.subtitulo, query)
+                            : undefined
+                        }
+                      />
                     </CommandItem>
-                  </CommandGroup>
-                );
-              })
-            : null}
+                  ))}
+                  <CommandItem
+                    value={`vertodos:${tipo}`}
+                    onSelect={() => onSelectVerTodos(meta.segment)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  >
+                    {meta.verTodosLabel}
+                  </CommandItem>
+                </CommandGroup>
+              );
+            })
+          )}
         </CommandList>
       </Command>
     </CommandDialog>
