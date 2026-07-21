@@ -58,11 +58,18 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
   const seededQ = searchParams.get("q");
   // Seed draftQuery from ?q= without a useEffect (avoids react-hooks/set-state-in-effect):
   // React's documented "adjusting state during render" pattern — setDraftQuery only fires
-  // when seededQ actually changes (tracked via lastSeededQ), so it re-seeds on a new ?q=
+  // when the seed key actually changes (tracked via lastSeededQ), so it re-seeds on a new ?q=
   // navigation but never fights the user's own edits to the search box.
+  // WR-04 (Phase 112 code review): keyed on the palette's one-shot `_seed` nonce, falling back
+  // to the raw `q` value when no nonce is present (e.g. a hand-typed/bookmarked URL), instead of
+  // `q` alone — otherwise re-clicking "Ver Todos Processos" with the same search term would not
+  // re-seed if the user had manually cleared the box in between (same `q` value compares equal
+  // to the last seed).
+  const seedNonce = searchParams.get("_seed");
+  const seedKey = seedNonce ?? seededQ;
   const [lastSeededQ, setLastSeededQ] = React.useState<string | null>(null);
-  if (seededQ && seededQ !== lastSeededQ) {
-    setLastSeededQ(seededQ);
+  if (seededQ && seedKey !== lastSeededQ) {
+    setLastSeededQ(seedKey);
     setDraftQuery(seededQ);
   }
 

@@ -167,7 +167,11 @@ export function GlobalSearchDialog() {
   }
 
   function onSelectVerTodos(segment: string) {
-    navigate(`/${segment}?q=${encodeURIComponent(query.trim())}`);
+    // WR-04 (Phase 112 code review): a one-shot `_seed` nonce, not just `q`, so the destination
+    // list page can tell repeated "Ver Todos" clicks apart even when the search text is
+    // unchanged (e.g. the user cleared the list's own search box in between) — see each list
+    // page's seeding guard, keyed off this nonce.
+    navigate(`/${segment}?q=${encodeURIComponent(query.trim())}&_seed=${Date.now()}`);
   }
 
   const termo = debouncedQuery.trim();

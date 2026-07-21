@@ -61,10 +61,17 @@ function ParecerPageContent() {
 
   const searchParams = useSearchParams();
   const seededQ = searchParams.get("q");
+  // WR-04 (Phase 112 code review): keyed on the palette's one-shot `_seed` nonce, falling back
+  // to the raw `q` value when no nonce is present (e.g. a hand-typed/bookmarked URL), instead of
+  // `q` alone — otherwise re-clicking "Ver Todos Pareceres" with the same search term would not
+  // re-seed if the user had manually closed/cleared the search in between (same `q` value
+  // compares equal to the last seed).
+  const seedNonce = searchParams.get("_seed");
+  const seedKey = seedNonce ?? seededQ;
   const [pesquisaSeedKey, setPesquisaSeedKey] = React.useState<string | null>(null);
 
-  if (seededQ && seededQ !== pesquisaSeedKey) {
-    setPesquisaSeedKey(seededQ);
+  if (seededQ && seedKey !== pesquisaSeedKey) {
+    setPesquisaSeedKey(seedKey);
     setPesquisaTexto(seededQ);
     setPesquisaFilters({ texto: seededQ });
     setPesquisaSubmitted(true);

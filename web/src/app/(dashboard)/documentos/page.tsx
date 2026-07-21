@@ -63,6 +63,13 @@ function DocumentosContent({
 }) {
   const searchParams = useSearchParams();
   const seededQ = searchParams.get("q");
+  // WR-04 (Phase 112 code review): keyed on the palette's one-shot `_seed` nonce, falling back
+  // to the raw `q` value when no nonce is present (e.g. a hand-typed/bookmarked URL), instead of
+  // `q` alone — otherwise re-clicking "Ver Todos Documentos" with the same search term would not
+  // re-seed if the user had manually cleared the box in between (same `q` value compares equal
+  // to the last seed).
+  const seedNonce = searchParams.get("_seed");
+  const seedKey = seedNonce ?? seededQ;
 
   const [filters, setFilters] = React.useState<DocumentosListFilters>({});
   const [nomeFiltro, setNomeFiltro] = React.useState("");
@@ -71,8 +78,8 @@ function DocumentosContent({
   const processos = useProcessos();
   const clientes = useClientes({});
 
-  if (seededQ && seededQ !== nomeFiltroSeedKey) {
-    setNomeFiltroSeedKey(seededQ);
+  if (seededQ && seedKey !== nomeFiltroSeedKey) {
+    setNomeFiltroSeedKey(seedKey);
     setNomeFiltro(seededQ);
   }
 
