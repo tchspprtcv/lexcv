@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Download, Filter, Plus, Scale, Search, Sparkles } from "lucide-react";
 
@@ -52,6 +53,18 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
     sortDir: "desc" as const,
   });
   const processos = useProcessos(filters);
+
+  const searchParams = useSearchParams();
+  const seededQ = searchParams.get("q");
+  // Seed draftQuery from ?q= without a useEffect (avoids react-hooks/set-state-in-effect):
+  // React's documented "adjusting state during render" pattern — setDraftQuery only fires
+  // when seededQ actually changes (tracked via lastSeededQ), so it re-seeds on a new ?q=
+  // navigation but never fights the user's own edits to the search box.
+  const [lastSeededQ, setLastSeededQ] = React.useState<string | null>(null);
+  if (seededQ && seededQ !== lastSeededQ) {
+    setLastSeededQ(seededQ);
+    setDraftQuery(seededQ);
+  }
 
   const clienteNomeById = React.useMemo(
     () => new Map((clientes.data ?? []).map((c) => [c.id, c.nome] as const)),
