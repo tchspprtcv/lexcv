@@ -229,7 +229,7 @@ function ProcessoEditContent({ id }: { id: string }) {
                 <Label htmlFor="juizo">Juízo</Label>
                 <Input
                   id="juizo"
-                  className="rounded-none"
+                  className=""
                   {...form.register("juizo")}
                   placeholder="Ex.: 1º Juízo Cível"
                 />

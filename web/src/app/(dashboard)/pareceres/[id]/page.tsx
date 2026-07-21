@@ -122,7 +122,7 @@ function AnexoLink({ solicitacaoId, versaoId, caminhoAnexo }: { solicitacaoId: s
       type="button"
       size="sm"
       variant="outline"
-      className="h-7 rounded-none text-xs font-bold"
+      className="h-7 text-xs font-bold"
       onClick={onDownload}
       disabled={download.isPending}
     >
@@ -222,7 +222,7 @@ function ParecerDetailContent({
 
                   <dt className="text-slate-500 dark:text-slate-400">Estado</dt>
                   <dd className="col-span-2">
-                    <Badge variant={statusVariant(parecer.data.status)} className="rounded-none font-bold tracking-wide">
+                    <Badge variant={statusVariant(parecer.data.status)} className="font-bold tracking-wide">
                       {parecer.data.status}
                     </Badge>
                   </dd>
@@ -596,7 +596,7 @@ function ParecerEntregueBlock({
           <p className="text-sm text-red-600">Não foi possível localizar a versão final entregue.</p>
         ) : (
           <div className="space-y-3">
-            <Badge variant="green" className="rounded-none font-bold tracking-wide">
+            <Badge variant="green" className="font-bold tracking-wide">
               CONCLUIDO
             </Badge>
             <p className="text-sm font-medium text-slate-900 dark:text-white">

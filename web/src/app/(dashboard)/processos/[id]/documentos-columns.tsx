@@ -136,7 +136,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
       cell: ({ row }) =>
         row.original.tipo ? (
-          <Badge variant="blue" className="rounded-none font-bold">
+          <Badge variant="blue" className="font-bold">
             {row.original.tipo}
           </Badge>
         ) : (
@@ -150,7 +150,7 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
       cell: ({ row }) => {
         const value = row.original.confidencialidade ?? "PUBLICO";
         return (
-          <Badge variant={confidencialidadeVariant(value)} className="rounded-none font-bold">
+          <Badge variant={confidencialidadeVariant(value)} className="font-bold">
             {value}
           </Badge>
         );

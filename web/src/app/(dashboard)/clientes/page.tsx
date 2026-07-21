@@ -262,11 +262,11 @@ function ClientesPageContent({
               await onImportFile(file);
             }}
           />
-          <Button type="button" variant="outline" className="rounded-none" onClick={onExportCsv}>
+          <Button type="button" variant="outline" className="" onClick={onExportCsv}>
             Exportar CSV
           </Button>
           {canEditClientes ? (
-            <Button asChild type="button" variant="outline" className="rounded-none">
+            <Button asChild type="button" variant="outline" className="">
               <Link href="/clientes/merge">Merge</Link>
             </Button>
           ) : null}
@@ -274,7 +274,7 @@ function ClientesPageContent({
             <Button
               type="button"
               variant="secondary"
-              className="rounded-none"
+              className=""
               onClick={onImportCsv}
               disabled={isImporting}
             >
@@ -282,7 +282,7 @@ function ClientesPageContent({
             </Button>
           ) : null}
           {canCreateClientes ? (
-            <Button asChild className="rounded-none font-bold tracking-wide shadow-none">
+            <Button asChild className="font-bold tracking-wide shadow-none">
               <Link href="/clientes/novo">
                 <Plus className="h-4 w-4" />
                 Adicionar Novo Cliente
@@ -333,7 +333,7 @@ function ClientesPageContent({
                   value={draftQuery}
                   onChange={(e) => setDraftQuery(e.target.value)}
                   placeholder="Nome, NIF, telefone ou email..."
-                  className="pl-9 bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                  className="pl-9 bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                 />
               </div>
             </div>
@@ -345,7 +345,7 @@ function ClientesPageContent({
                   value={draftNif}
                   onChange={(e) => setDraftNif(e.target.value)}
                   placeholder="Ex: 123456789"
-                  className="pl-9 bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                  className="pl-9 bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                 />
               </div>
             </div>
@@ -353,7 +353,7 @@ function ClientesPageContent({
               <Button
                 type="button"
                 variant="secondary"
-                className="w-full justify-center rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300"
+                className="w-full justify-center border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300"
                 onClick={() => setAdvancedOpen((v) => !v)}
               >
                 <Filter className="h-4 w-4" />
@@ -361,8 +361,8 @@ function ClientesPageContent({
               </Button>
             </div>
             <div className="lg:col-span-2 flex gap-2">
-              <Button type="submit" className="w-full rounded-none font-bold">Aplicar</Button>
-              <Button type="button" variant="ghost" className="w-full rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
+              <Button type="submit" className="w-full font-bold">Aplicar</Button>
+              <Button type="button" variant="ghost" className="w-full text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
                 Limpar
               </Button>
             </div>
@@ -405,7 +405,7 @@ function ClientesPageContent({
                       value={draftLocalidade}
                       onChange={(e) => setDraftLocalidade(e.target.value)}
                       placeholder="Ex.: Praia"
-                      className="bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                      className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -417,7 +417,7 @@ function ClientesPageContent({
                         type="date"
                         value={draftCreatedFrom}
                         onChange={(e) => setDraftCreatedFrom(e.target.value)}
-                        className="bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                        className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -428,7 +428,7 @@ function ClientesPageContent({
                         type="date"
                         value={draftCreatedTo}
                         onChange={(e) => setDraftCreatedTo(e.target.value)}
-                        className="bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                        className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -458,7 +458,7 @@ function ClientesPageContent({
                   return (
                     <div key={c.id} className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 flex-shrink-0 rounded-none bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold">
+                        <div className="h-10 w-10 flex-shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold">
                           {initials}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -470,17 +470,17 @@ function ClientesPageContent({
                           )}
                         </div>
                         {c.ativo !== undefined && (
-                          <Badge variant={c.ativo ? "green" : "gray"} className="rounded-none font-bold text-[10px] flex-shrink-0">
+                          <Badge variant={c.ativo ? "green" : "gray"} className="font-bold text-[10px] flex-shrink-0">
                             {c.ativo ? "Ativo" : "Inativo"}
                           </Badge>
                         )}
                         {c.numero_cliente && (
-                          <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px] flex-shrink-0">
+                          <Badge variant="blue" className="font-mono font-bold text-[10px] flex-shrink-0">
                             {c.numero_cliente}
                           </Badge>
                         )}
                         {c.avencado && (
-                          <Badge variant="green" className="rounded-none font-bold text-[10px] flex-shrink-0">
+                          <Badge variant="green" className="font-bold text-[10px] flex-shrink-0">
                             Avençado
                           </Badge>
                         )}

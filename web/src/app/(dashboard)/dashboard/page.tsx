@@ -137,7 +137,7 @@ const ATIVIDADE_RECENTE_ENTRIES: AtividadeRecenteEntry[] = [
     id: "documento-submetido",
     icon: <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
     iconWrapperClassName:
-      "h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors",
+      "h-10 w-10 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors",
     titulo: "Documento Submetido",
     timestamp: "Há 45 minutos",
   },
@@ -145,7 +145,7 @@ const ATIVIDADE_RECENTE_ENTRIES: AtividadeRecenteEntry[] = [
     id: "novo-cliente",
     icon: "+",
     iconWrapperClassName:
-      "h-10 w-10 rounded-none bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-lg font-light group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors",
+      "h-10 w-10 bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-lg font-light group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-colors",
     titulo: "Novo Cliente",
     timestamp: "Há 2 horas",
   },
@@ -153,7 +153,7 @@ const ATIVIDADE_RECENTE_ENTRIES: AtividadeRecenteEntry[] = [
     id: "processo-concluido",
     icon: "✓",
     iconWrapperClassName:
-      "h-10 w-10 rounded-none bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors",
+      "h-10 w-10 bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-bold group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors",
     titulo: "Processo Concluído",
     timestamp: "Ontem, 17:40",
   },
@@ -252,10 +252,10 @@ function DashboardKpis({
       <Card key="clientes">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
+            <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
               <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <Badge variant="green" className="rounded-none font-bold tracking-wide">
+            <Badge variant="green" className="font-bold tracking-wide">
               +12%
             </Badge>
           </div>
@@ -272,10 +272,10 @@ function DashboardKpis({
       <Card key="processos">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="h-10 w-10 rounded-none bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+            <div className="h-10 w-10 bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
               <Scale className="h-5 w-5 text-slate-700 dark:text-slate-300" />
             </div>
-            <Badge variant="gray" className="rounded-none font-bold tracking-wide">
+            <Badge variant="gray" className="font-bold tracking-wide">
               Estável
             </Badge>
           </div>
@@ -292,10 +292,10 @@ function DashboardKpis({
       <Card key="agenda">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="h-10 w-10 rounded-none bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20">
+            <div className="h-10 w-10 bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20">
               <Timer className="h-5 w-5 text-red-600 dark:text-red-400" />
             </div>
-            <Badge variant="red" className="rounded-none font-bold tracking-wide">
+            <Badge variant="red" className="font-bold tracking-wide">
               Urgente
             </Badge>
           </div>
@@ -312,10 +312,10 @@ function DashboardKpis({
       <Card key="financeiro">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="h-10 w-10 rounded-none bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20">
+            <div className="h-10 w-10 bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center border border-emerald-100 dark:border-emerald-500/20">
               <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <Badge variant="green" className="rounded-none font-bold tracking-wide">
+            <Badge variant="green" className="font-bold tracking-wide">
               +8%
             </Badge>
           </div>
@@ -359,7 +359,7 @@ function ProcessosStatusCard() {
           <Scale className="h-4 w-4 text-blue-500" />
           Status dos Processos
         </CardTitle>
-        <Badge variant="secondary" className="rounded-none font-medium">
+        <Badge variant="secondary" className="font-medium">
           Últimos 6 meses
         </Badge>
       </CardHeader>
@@ -430,7 +430,7 @@ function PrazosUrgentesCard() {
                   <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                     {e.titulo}
                   </div>
-                  <Badge variant="red" className="rounded-none">
+                  <Badge variant="red" className="">
                     {isSameCalendarDay(dataInicio, new Date())
                       ? "HOJE"
                       : dataInicio.toLocaleDateString("pt-CV", { day: "2-digit", month: "2-digit" })}
@@ -460,7 +460,7 @@ function PrazosUrgentesCard() {
         <Button
           asChild
           variant="outline"
-          className="w-full rounded-none border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500"
+          className="w-full border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500"
         >
           <Link href="/agenda">Ver Agenda Completa</Link>
         </Button>
@@ -579,7 +579,7 @@ function RecentProcessosCard({
                   {clienteNomeById?.get(p.cliente_id) ?? "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="green" className="rounded-none">
+                  <Badge variant="green" className="">
                     {p.estado ?? "Ativo"}
                   </Badge>
                 </TableCell>

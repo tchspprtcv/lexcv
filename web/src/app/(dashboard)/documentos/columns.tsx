@@ -139,7 +139,7 @@ export function columns(
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tipo" />,
       cell: ({ row }) =>
         row.original.tipo ? (
-          <Badge variant="blue" className="rounded-none font-bold">
+          <Badge variant="blue" className="font-bold">
             {row.original.tipo}
           </Badge>
         ) : (
@@ -191,7 +191,7 @@ export function columns(
         return (
           <Badge
             variant={confidencialidadeVariant(value)}
-            className="rounded-none font-bold"
+            className="font-bold"
           >
             {value}
           </Badge>

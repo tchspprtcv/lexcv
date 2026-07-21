@@ -137,7 +137,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
 
         return (
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold shadow-sm">
+            <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold shadow-sm">
               {initials}
             </div>
             <div className="min-w-0">
@@ -150,12 +150,12 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
               {(cliente.numero_cliente || cliente.avencado) && (
                 <div className="flex items-center gap-1 mt-1">
                   {cliente.numero_cliente && (
-                    <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
+                    <Badge variant="blue" className="font-mono font-bold text-[10px]">
                       {cliente.numero_cliente}
                     </Badge>
                   )}
                   {cliente.avencado && (
-                    <Badge variant="green" className="rounded-none font-bold text-[10px]">
+                    <Badge variant="green" className="font-bold text-[10px]">
                       Avençado
                     </Badge>
                   )}
@@ -175,7 +175,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
         const tipo = (row.original.tipo ?? "").toUpperCase();
         const badgeVariant = tipo === "PARTICULAR" ? "blue" : tipo === "EMPRESA" ? "purple" : "gray";
         return (
-          <Badge variant={badgeVariant as "blue" | "purple" | "gray"} className="rounded-none font-bold tracking-wide">
+          <Badge variant={badgeVariant as "blue" | "purple" | "gray"} className="font-bold tracking-wide">
             {tipo || "—"}
           </Badge>
         );

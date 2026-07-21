@@ -42,7 +42,7 @@ import {
 import type { ConflictCheckDecisaoRequest, ConflictCheckResponse, Processo } from "@/types/processos";
 
 const textareaClassName =
-  "flex min-h-24 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
+  "flex min-h-24 w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
 
 export default function ProcessoCreatePage() {
   const permissions = usePermissions();
@@ -222,7 +222,7 @@ function ProcessoWizardContent() {
             Registe os dados de intake, execute o conflict check e formalize a abertura.
           </p>
         </div>
-        <Button asChild variant="outline" className="rounded-none">
+        <Button asChild variant="outline" className="">
           <Link href="/processos">Voltar</Link>
         </Button>
       </div>
@@ -234,10 +234,10 @@ function ProcessoWizardContent() {
           <div
             className={`h-8 w-8 flex items-center justify-center text-sm font-bold shrink-0 ${
               step === 1
-                ? "bg-blue-600 text-white rounded-none"
+                ? "bg-blue-600 text-white"
                 : step > 1
-                  ? "bg-emerald-600 text-white rounded-none"
-                  : "border border-slate-300 dark:border-slate-700 text-slate-400 rounded-none"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-300 dark:border-slate-700 text-slate-400"
             }`}
           >
             {step > 1 ? <Check className="h-[14px] w-[14px]" /> : "1"}
@@ -254,10 +254,10 @@ function ProcessoWizardContent() {
           <div
             className={`h-8 w-8 flex items-center justify-center text-sm font-bold shrink-0 ${
               step === 2
-                ? "bg-blue-600 text-white rounded-none"
+                ? "bg-blue-600 text-white"
                 : step > 2
-                  ? "bg-emerald-600 text-white rounded-none"
-                  : "border border-slate-300 dark:border-slate-700 text-slate-400 rounded-none"
+                  ? "bg-emerald-600 text-white"
+                  : "border border-slate-300 dark:border-slate-700 text-slate-400"
             }`}
           >
             {step > 2 ? <Check className="h-[14px] w-[14px]" /> : "2"}
@@ -274,8 +274,8 @@ function ProcessoWizardContent() {
           <div
             className={`h-8 w-8 flex items-center justify-center text-sm font-bold shrink-0 ${
               step === 3
-                ? "bg-blue-600 text-white rounded-none"
-                : "border border-slate-300 dark:border-slate-700 text-slate-400 rounded-none"
+                ? "bg-blue-600 text-white"
+                : "border border-slate-300 dark:border-slate-700 text-slate-400"
             }`}
           >
             3
@@ -369,7 +369,7 @@ function ProcessoWizardContent() {
                   <Label htmlFor="numero">Número</Label>
                   <Input
                     id="numero"
-                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                    className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     placeholder="Ex.: 123/2026"
                     {...intakeForm.register("numero")}
                   />
@@ -382,7 +382,7 @@ function ProcessoWizardContent() {
                   <Label htmlFor="area_juridica">Área Jurídica</Label>
                   <Input
                     id="area_juridica"
-                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                    className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     placeholder="Ex.: Cível"
                     {...intakeForm.register("area_juridica")}
                   />
@@ -397,7 +397,7 @@ function ProcessoWizardContent() {
                 <Label htmlFor="tribunal">Tribunal</Label>
                 <Input
                   id="tribunal"
-                  className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                  className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                   placeholder="Ex.: Tribunal da Comarca da Praia"
                   {...intakeForm.register("tribunal")}
                 />
@@ -413,7 +413,7 @@ function ProcessoWizardContent() {
                   <Input
                     id="data_inicio"
                     type="date"
-                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                    className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     {...intakeForm.register("data_inicio")}
                   />
                   {intakeForm.formState.errors.data_inicio ? (
@@ -426,7 +426,7 @@ function ProcessoWizardContent() {
                   <Input
                     id="data_fim"
                     type="date"
-                    className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                    className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                     {...intakeForm.register("data_fim")}
                   />
                   {intakeForm.formState.errors.data_fim ? (
@@ -454,12 +454,12 @@ function ProcessoWizardContent() {
               <div className="flex gap-2">
                 <Button
                   type="submit"
-                  className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
+                  className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
                   disabled={intakeForm.formState.isSubmitting || createIntake.isPending || permissions.isLoading || !canCreateProcessos}
                 >
                   {intakeForm.formState.isSubmitting || createIntake.isPending ? "A guardar..." : "Continuar para Conflict Check"}
                 </Button>
-                <Button asChild type="button" variant="outline" className="rounded-none">
+                <Button asChild type="button" variant="outline" className="">
                   <Link href="/processos">Voltar</Link>
                 </Button>
               </div>
@@ -482,7 +482,7 @@ function ProcessoWizardContent() {
               </p>
               <Button
                 type="button"
-                className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
+                className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={!canCreateProcessos || runCheck.isPending}
                 onClick={onRunConflictCheck}
               >
@@ -501,9 +501,9 @@ function ProcessoWizardContent() {
                 </div>
 
                 {conflictResult.matches.length === 0 ? (
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-none p-4 space-y-1">
+                  <div className="border border-slate-200 dark:border-slate-800 p-4 space-y-1">
                     <div className="flex items-center gap-2">
-                      <Badge variant="green" className="rounded-none font-bold tracking-wide">
+                      <Badge variant="green" className="font-bold tracking-wide">
                         SEM CONFLITO
                       </Badge>
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Sem conflitos detectados</span>
@@ -517,12 +517,12 @@ function ProcessoWizardContent() {
                     {conflictResult.matches.map((match) => (
                       <div
                         key={`${match.entidadeTipo}-${match.entidadeId}`}
-                        className="border border-slate-200 dark:border-slate-800 rounded-none p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
+                        className="border border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-wrap">
                           <Badge
                             variant={conflictNivelToVariant(match.nivelConflito)}
-                            className="rounded-none font-bold tracking-wide"
+                            className="font-bold tracking-wide"
                           >
                             {conflictNivelToLabel(match.nivelConflito)}
                           </Badge>
@@ -590,7 +590,7 @@ function ProcessoWizardContent() {
                       <Label htmlFor="referencia_evidencia">Referência a evidência</Label>
                       <Input
                         id="referencia_evidencia"
-                        className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                        className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                         placeholder="Ref. opcional"
                         {...decisaoForm.register("referenciaEvidencia")}
                       />
@@ -602,7 +602,7 @@ function ProcessoWizardContent() {
                     <div className="space-y-2">
                       <Label>Decisor</Label>
                       <Input
-                        className="rounded-none focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-900 cursor-not-allowed"
+                        className="focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-900 cursor-not-allowed"
                         value={permissions.data?.nome ?? "—"}
                         disabled
                         readOnly
@@ -612,7 +612,7 @@ function ProcessoWizardContent() {
                     <div className="space-y-2">
                       <Label>Data</Label>
                       <Input
-                        className="rounded-none focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-900 cursor-not-allowed"
+                        className="focus-visible:ring-blue-500 bg-slate-50 dark:bg-slate-900 cursor-not-allowed"
                         value={new Date().toLocaleDateString("pt-CV")}
                         disabled
                         readOnly
@@ -623,7 +623,7 @@ function ProcessoWizardContent() {
 
                     <Button
                       type="submit"
-                      className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
+                      className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
                       disabled={decisaoForm.formState.isSubmitting || registarDecisao.isPending}
                     >
                       {decisaoForm.formState.isSubmitting || registarDecisao.isPending ? "A guardar..." : "Registar Decisão"}
@@ -633,7 +633,7 @@ function ProcessoWizardContent() {
                   <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
                     <Button
                       type="button"
-                      className="rounded-none font-bold shadow-none opacity-50 cursor-not-allowed"
+                      className="font-bold shadow-none opacity-50 cursor-not-allowed"
                       disabled
                     >
                       Registar Decisão
@@ -648,7 +648,7 @@ function ProcessoWizardContent() {
                 {decisaoData ? (
                   <div className="pt-4 space-y-3">
                     {decisaoData.nivel === "impeditivo" ? (
-                      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-none p-4">
+                      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 p-4">
                         <p className="text-sm text-amber-800 dark:text-amber-400">
                           Conflito impeditivo registado. A abertura formal do processo está bloqueada até esta decisão ser revista por um utilizador com permissão de gestão.
                         </p>
@@ -657,7 +657,7 @@ function ProcessoWizardContent() {
 
                     <Button
                       type="button"
-                      className={`rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${!canAdvanceToStep3 ? "opacity-50 cursor-not-allowed" : ""}`}
+                      className={`font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${!canAdvanceToStep3 ? "opacity-50 cursor-not-allowed" : ""}`}
                       disabled={!canAdvanceToStep3}
                       onClick={() => canAdvanceToStep3 && setStep(3)}
                     >
@@ -711,7 +711,7 @@ function ProcessoWizardContent() {
 
                 <dt className="text-neutral-500 dark:text-neutral-400">Estado</dt>
                 <dd className="col-span-2">
-                  <Badge variant="purple" className="rounded-none font-bold tracking-wide">
+                  <Badge variant="purple" className="font-bold tracking-wide">
                     EM TRIAGEM
                   </Badge>
                 </dd>
@@ -728,7 +728,7 @@ function ProcessoWizardContent() {
                   <dd className="col-span-2">
                     <Badge
                       variant={conflictNivelToVariant(decisaoData.nivel as Parameters<typeof conflictNivelToVariant>[0])}
-                      className="rounded-none font-bold tracking-wide"
+                      className="font-bold tracking-wide"
                     >
                       {conflictNivelToLabel(decisaoData.nivel as Parameters<typeof conflictNivelToLabel>[0])}
                     </Badge>
@@ -764,7 +764,7 @@ function ProcessoWizardContent() {
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  className={`rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${isFormalizarBlocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${isFormalizarBlocked ? "opacity-50 cursor-not-allowed" : ""}`}
                   disabled={isFormalizarBlocked || formalizarProcesso.isPending}
                   onClick={onFormalizar}
                 >
@@ -773,7 +773,7 @@ function ProcessoWizardContent() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-none"
+                  className=""
                   onClick={() => setStep(2)}
                 >
                   Voltar

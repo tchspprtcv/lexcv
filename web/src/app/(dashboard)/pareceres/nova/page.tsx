@@ -24,7 +24,7 @@ import {
 } from "@/schemas/pareceres";
 
 const textareaClassName =
-  "flex min-h-24 w-full rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
+  "flex min-h-24 w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-3 py-2 text-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:placeholder:text-neutral-400";
 
 export default function ParecerCreatePage() {
   const permissions = usePermissions();
@@ -109,7 +109,7 @@ function ParecerCreateFormContent() {
             Registe os dados da solicitação para encaminhar ao advogado responsável.
           </p>
         </div>
-        <Button asChild variant="outline" className="rounded-none">
+        <Button asChild variant="outline" className="">
           <Link href="/pareceres">Cancelar</Link>
         </Button>
       </div>
@@ -122,7 +122,7 @@ function ParecerCreateFormContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="clienteId">Cliente</Label>
-              <NativeSelect id="clienteId" size="default" className="w-full rounded-none" disabled={clientes.isPending || clientes.isError} {...form.register("clienteId")}>
+              <NativeSelect id="clienteId" size="default" className="w-full" disabled={clientes.isPending || clientes.isError} {...form.register("clienteId")}>
                 <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
                 {(clientes.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
@@ -142,7 +142,7 @@ function ParecerCreateFormContent() {
 
             <div className="space-y-2">
               <Label htmlFor="processoId">Processo (opcional)</Label>
-              <NativeSelect id="processoId" size="default" className="w-full rounded-none" {...form.register("processoId")}>
+              <NativeSelect id="processoId" size="default" className="w-full" {...form.register("processoId")}>
                 <option value="">Nenhum processo associado</option>
                 {(processos.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
@@ -170,14 +170,14 @@ function ParecerCreateFormContent() {
               <Input
                 id="prazo"
                 type="date"
-                className="rounded-none focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
+                className="focus-visible:ring-blue-500 max-sm:h-12 max-sm:text-base"
                 {...form.register("prazo")}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="prioridade">Prioridade</Label>
-              <NativeSelect id="prioridade" size="default" className="w-full rounded-none" {...form.register("prioridade")}>
+              <NativeSelect id="prioridade" size="default" className="w-full" {...form.register("prioridade")}>
                 <option value="ALTA">Alta</option>
                 <option value="MEDIA">Média</option>
                 <option value="BAIXA">Baixa</option>
@@ -186,7 +186,7 @@ function ParecerCreateFormContent() {
 
             <div className="space-y-2">
               <Label htmlFor="advogadoId">Advogado responsável (opcional)</Label>
-              <NativeSelect id="advogadoId" size="default" className="w-full rounded-none" {...form.register("advogadoId")}>
+              <NativeSelect id="advogadoId" size="default" className="w-full" {...form.register("advogadoId")}>
                 <option value="">Atribuir mais tarde</option>
                 {advogados.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -201,7 +201,7 @@ function ParecerCreateFormContent() {
             <div className="flex gap-2">
               <Button
                 type="submit"
-                className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
+                className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
                 disabled={
                   form.formState.isSubmitting ||
                   createParecer.isPending ||
@@ -211,7 +211,7 @@ function ParecerCreateFormContent() {
               >
                 {form.formState.isSubmitting || createParecer.isPending ? "A criar..." : "Criar Solicitação"}
               </Button>
-              <Button asChild type="button" variant="outline" className="rounded-none">
+              <Button asChild type="button" variant="outline" className="">
                 <Link href="/pareceres">Cancelar</Link>
               </Button>
             </div>

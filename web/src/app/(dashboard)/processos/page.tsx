@@ -140,12 +140,12 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
         </div>
         {canCreateProcessos ? (
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="rounded-none font-bold tracking-wide shadow-none border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900">
+            <Button asChild variant="outline" className="font-bold tracking-wide shadow-none border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900">
               <Link href="/processos/dashboard">
                 Dashboard
               </Link>
             </Button>
-            <Button asChild className="rounded-none font-bold tracking-wide shadow-none">
+            <Button asChild className="font-bold tracking-wide shadow-none">
               <Link href="/processos/novo">
                 <Plus className="h-4 w-4" />
                 Novo Processo
@@ -161,10 +161,10 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             <Card className="border-slate-200 dark:border-slate-800">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 rounded-none bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
+                  <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
                     <Scale className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <Badge variant="green" className="rounded-none font-bold tracking-wide">+12%</Badge>
+                  <Badge variant="green" className="font-bold tracking-wide">+12%</Badge>
                 </div>
                 <div className="mt-5 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">TOTAL ATIVOS</div>
                 <div className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{totalAtivos.toLocaleString("pt-CV")}</div>
@@ -173,10 +173,10 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             <Card className="border-slate-200 dark:border-slate-800">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 rounded-none bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20">
+                  <div className="h-10 w-10 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20">
                     <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <Badge variant="gray" className="rounded-none font-bold tracking-wide">Estável</Badge>
+                  <Badge variant="gray" className="font-bold tracking-wide">Estável</Badge>
                 </div>
                 <div className="mt-5 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">SUSPENSOS</div>
                 <div className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{totalSuspensos.toLocaleString("pt-CV")}</div>
@@ -192,7 +192,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             <p className="mt-3 text-[13px] leading-relaxed text-slate-300">
               <strong className="text-white text-lg">{proximasAudiencias} audiências</strong> agendadas para os próximos 7 dias.
             </p>
-            <Button asChild className="mt-6 w-full rounded-none bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-none">
+            <Button asChild className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-none">
               <Link href="/agenda">Ver Agenda Completa</Link>
             </Button>
           </CardContent>
@@ -213,7 +213,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                     value={draftQuery}
                     onChange={(e) => setDraftQuery(e.target.value)}
                     placeholder="Número, cliente, tribunal, área, estado..."
-                    className="pl-9 bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                    className="pl-9 bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                   />
                 </div>
               </div>
@@ -240,7 +240,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               <Button
                 type="button"
                 variant="secondary"
-                className="rounded-none font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
+                className="font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
                 onClick={() => setAdvancedOpen((v) => !v)}
               >
                 <Filter className="h-4 w-4" />
@@ -248,17 +248,17 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" className="h-9 w-9 p-0 rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white" disabled>
+              <Button type="button" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white" disabled>
                 <Download className="h-4 w-4" />
               </Button>
-              <Button type="submit" className="rounded-none font-bold shadow-none">
+              <Button type="submit" className="font-bold shadow-none">
                 Aplicar
               </Button>
-              <Button type="button" variant="ghost" className="rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
+              <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
                 Limpar
               </Button>
               {canCreateProcessos ? (
-                <Button asChild className="rounded-none font-bold shadow-none">
+                <Button asChild className="font-bold shadow-none">
                   <Link href="/processos/novo">
                     <Plus className="h-4 w-4" />
                     Novo Processo
@@ -277,7 +277,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                       value={draftTribunal}
                       onChange={(e) => setDraftTribunal(e.target.value)}
                       placeholder="Ex.: Tribunal da Praia"
-                      className="bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                      className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -290,7 +290,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                       value={draftArea}
                       onChange={(e) => setDraftArea(e.target.value)}
                       placeholder="Ex.: Cível"
-                      className="bg-white dark:bg-[#020617] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                      className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                     />
                   </div>
                 </div>

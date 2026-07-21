@@ -807,7 +807,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 <dt className="text-neutral-500 dark:text-neutral-400">Legal Hold</dt>
                 <dd className="col-span-2">
                   {processo.data.legal_hold ? (
-                    <Badge variant="red" className="rounded-none font-bold tracking-wide">
+                    <Badge variant="red" className="font-bold tracking-wide">
                       ATIVO
                     </Badge>
                   ) : (
@@ -827,7 +827,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
               {processo.data?.estado === "ATIVO" ? (
                 <div className="pt-4">
-                  <Button asChild className="rounded-none font-bold bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button asChild className="font-bold bg-blue-600 hover:bg-blue-700 text-white">
                     <Link
                       href={`/processos/${encodeURIComponent(id)}/termo-honorarios`}
                       target="_blank"
@@ -850,7 +850,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   {decisao.data ? (
                     <Badge
                       variant={conflictNivelToVariant(decisao.data.nivel)}
-                      className="rounded-none font-bold tracking-wide"
+                      className="font-bold tracking-wide"
                     >
                       {conflictNivelToLabel(decisao.data.nivel)}
                     </Badge>
@@ -865,7 +865,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       <dd className="col-span-2 font-medium">
                         <Badge
                           variant={conflictNivelToVariant(decisao.data.nivel)}
-                          className="rounded-none font-bold tracking-wide"
+                          className="font-bold tracking-wide"
                         >
                           {conflictNivelToLabel(decisao.data.nivel)}
                         </Badge>
@@ -905,7 +905,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <div className="pt-2 space-y-2">
                     <Button
                       type="button"
-                      className={`rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${isFormalizarBlocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                      className={`font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white ${isFormalizarBlocked ? "opacity-50 cursor-not-allowed" : ""}`}
                       disabled={isFormalizarBlocked || formalizarProcesso.isPending}
                       onClick={onFormalizar}
                     >
@@ -930,7 +930,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 <CardTitle>Workflow</CardTitle>
                 <Badge
                   variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"}
-                  className="rounded-none font-bold tracking-wide"
+                  className="font-bold tracking-wide"
                 >
                   {estadoLabel}
                 </Badge>
@@ -949,7 +949,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <dd className="col-span-2 font-medium">
                       <Badge
                         variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"}
-                        className="rounded-none font-bold tracking-wide"
+                        className="font-bold tracking-wide"
                       >
                         {estadoLabel}
                       </Badge>
@@ -1007,8 +1007,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               }
                               className={
                                 isCritical
-                                  ? "border-slate-300 dark:border-slate-700 rounded-none font-bold h-10 px-4 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                                  : "bg-blue-600 hover:bg-blue-700 text-white rounded-none font-bold h-10 px-4"
+                                  ? "border-slate-300 dark:border-slate-700 font-bold h-10 px-4 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  : "bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 px-4"
                               }
                               onClick={() => onTransicaoClick(t)}
                             >
@@ -1027,7 +1027,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
           {/* ── Justification Dialog (critical transitions) ── */}
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setTransicaoError(null); }}>
-            <DialogContent className="rounded-none shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
+            <DialogContent className="shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
               <DialogHeader>
                 <DialogTitle className="font-bold">{activeTransicao?.label} Processo</DialogTitle>
                 <DialogDescription>
@@ -1041,7 +1041,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <Textarea
                       id="justificativa"
                       placeholder="Descreva o motivo desta transição (mínimo 10 caracteres)..."
-                      className="min-h-[100px] rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                      className="min-h-[100px] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       {...justificativaForm.register("justificativa")}
                     />
                     {justificativaForm.formState.errors.justificativa ? (
@@ -1055,7 +1055,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <Button
                     type="button"
                     variant="ghost"
-                    className="rounded-none"
+                    className=""
                     onClick={() => setDialogOpen(false)}
                   >
                     Cancelar
@@ -1063,7 +1063,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <Button
                     type="submit"
                     disabled={transicao.isPending}
-                    className="rounded-none font-bold bg-blue-600 hover:bg-blue-700"
+                    className="font-bold bg-blue-600 hover:bg-blue-700"
                   >
                     {transicao.isPending ? "A processar..." : "Confirmar"}
                   </Button>
@@ -1080,7 +1080,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                 {canEditProcessos ? (
                   <Button
                     type="button"
-                    className="rounded-none font-bold bg-blue-600 hover:bg-blue-700 text-white h-10 px-4"
+                    className="font-bold bg-blue-600 hover:bg-blue-700 text-white h-10 px-4"
                     onClick={() => {
                       setPrazoError(null);
                       prazoForm.reset({ descricao: "", dataLimite: "", prioridade: "MEDIA", responsavelId: undefined });
@@ -1138,7 +1138,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge
                           variant={prazosRiscoToVariant(p.risco)}
-                          className="rounded-none font-bold tracking-wide text-[11px]"
+                          className="font-bold tracking-wide text-[11px]"
                         >
                           {prazosRiscoToLabel(p.risco)}
                         </Badge>
@@ -1174,7 +1174,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
           {/* ── Novo Prazo Dialog ── */}
           <Dialog open={prazoDialogOpen} onOpenChange={setPrazoDialogOpen}>
-            <DialogContent className="rounded-none shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
+            <DialogContent className="shadow-2xl max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
               <DialogHeader>
                 <DialogTitle className="font-bold">Novo Prazo</DialogTitle>
               </DialogHeader>
@@ -1185,7 +1185,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <Label htmlFor="prazo_descricao">Descrição</Label>
                     <Input
                       id="prazo_descricao"
-                      className="rounded-none border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
+                      className="border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       {...prazoForm.register("descricao")}
                     />
                     {prazoForm.formState.errors.descricao ? (
@@ -1200,7 +1200,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <input
                       id="prazo_dataLimite"
                       type="date"
-                      className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="h-10 w-full bg-white dark:bg-input/30 border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                       {...prazoForm.register("dataLimite")}
                     />
                     {prazoForm.formState.errors.dataLimite ? (
@@ -1251,7 +1251,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <Button
                     type="button"
                     variant="ghost"
-                    className="rounded-none"
+                    className=""
                     onClick={() => setPrazoDialogOpen(false)}
                   >
                     Cancelar
@@ -1259,7 +1259,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <Button
                     type="submit"
                     disabled={createPrazo.isPending}
-                    className="rounded-none font-bold bg-blue-600 hover:bg-blue-700"
+                    className="font-bold bg-blue-600 hover:bg-blue-700"
                   >
                     {createPrazo.isPending ? "A processar..." : "Guardar Prazo"}
                   </Button>
@@ -1292,8 +1292,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     aria-pressed={selectedTipos.has("movimentacao")}
                     className={
                       selectedTipos.has("movimentacao")
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-none h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-none h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() =>
                       setSelectedTipos((prev) => {
@@ -1314,8 +1314,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     aria-pressed={selectedTipos.has("transicao")}
                     className={
                       selectedTipos.has("transicao")
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-none h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-none h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() =>
                       setSelectedTipos((prev) => {
@@ -1336,8 +1336,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     aria-pressed={selectedTipos.has("evento")}
                     className={
                       selectedTipos.has("evento")
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-none h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-none h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() =>
                       setSelectedTipos((prev) => {
@@ -1358,8 +1358,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     aria-pressed={selectedTipos.has("documento")}
                     className={
                       selectedTipos.has("documento")
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-none h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-none h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() =>
                       setSelectedTipos((prev) => {
@@ -1380,8 +1380,8 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     aria-pressed={selectedTipos.has("decisao")}
                     className={
                       selectedTipos.has("decisao")
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-none h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-none h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() =>
                       setSelectedTipos((prev) => {
@@ -1405,7 +1405,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <Input
                       id="timeline_date_from"
                       type="date"
-                      className="h-8 text-xs rounded-none w-36"
+                      className="h-8 text-xs w-36"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
                     />
@@ -1417,7 +1417,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     <Input
                       id="timeline_date_to"
                       type="date"
-                      className="h-8 text-xs rounded-none w-36"
+                      className="h-8 text-xs w-36"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
                     />
@@ -1425,7 +1425,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-8 px-3 text-xs rounded-none"
+                    className="h-8 px-3 text-xs"
                     onClick={() => {
                       setSelectedTipos(new Set(["movimentacao", "transicao", "evento", "documento", "decisao"]));
                       setDateFrom("");
@@ -1552,7 +1552,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="rounded-none"
+                          className=""
                           onClick={onOpenAddParte}
                         >
                           Adicionar Parte
@@ -1565,7 +1565,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                         <form className="space-y-4" onSubmit={parteForm.handleSubmit(onSubmitParte)}>
                           <div className="space-y-2">
                             <Label htmlFor="parte_nome">Nome</Label>
-                            <Input id="parte_nome" className="rounded-none" {...parteForm.register("nome")} />
+                            <Input id="parte_nome" className="" {...parteForm.register("nome")} />
                             {parteForm.formState.errors.nome ? (
                               <p className="text-sm text-red-600">{parteForm.formState.errors.nome.message}</p>
                             ) : null}
@@ -1576,7 +1576,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               <Label htmlFor="parte_tipo">Tipo</Label>
                               <Input
                                 id="parte_tipo"
-                                className="rounded-none"
+                                className=""
                                 {...parteForm.register("tipo")}
                                 placeholder="Ex.: Autor / Réu"
                               />
@@ -1586,7 +1586,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="parte_nif">NIF</Label>
-                              <Input id="parte_nif" className="rounded-none" {...parteForm.register("nif")} />
+                              <Input id="parte_nif" className="" {...parteForm.register("nif")} />
                               {parteForm.formState.errors.nif ? (
                                 <p className="text-sm text-red-600">{parteForm.formState.errors.nif.message}</p>
                               ) : null}
@@ -1599,14 +1599,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-none"
+                              className=""
                               onClick={() => setAddParteModal(false)}
                             >
                               Cancelar
                             </Button>
                             <Button
                               type="submit"
-                              className="rounded-none"
+                              className=""
                               disabled={parteForm.formState.isSubmitting || addParte.isPending}
                             >
                               {parteForm.formState.isSubmitting || addParte.isPending ? "A guardar..." : "Adicionar"}
@@ -1659,7 +1659,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="rounded-none"
+                          className=""
                           onClick={onOpenAddFase}
                         >
                           Adicionar Fase
@@ -1674,7 +1674,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="fase_nome">Nome da fase</Label>
                             <Input
                               id="fase_nome"
-                              className="rounded-none"
+                              className=""
                               {...faseForm.register("nome")}
                               placeholder="Ex.: Petição Inicial"
                             />
@@ -1689,14 +1689,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-none"
+                              className=""
                               onClick={() => setAddFaseModal(false)}
                             >
                               Cancelar
                             </Button>
                             <Button
                               type="submit"
-                              className="rounded-none"
+                              className=""
                               disabled={faseForm.formState.isSubmitting || addFase.isPending}
                             >
                               {faseForm.formState.isSubmitting || addFase.isPending ? "A guardar..." : "Adicionar"}
@@ -1776,7 +1776,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="rounded-none"
+                          className=""
                           onClick={onOpenAddDecisao}
                         >
                           Adicionar Decisão
@@ -1794,7 +1794,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <input
                               id="decisao_data"
                               type="date"
-                              className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                              className="h-10 w-full bg-white dark:bg-input/30 border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                               {...decisaoForm.register("data")}
                             />
                             {decisaoForm.formState.errors.data ? (
@@ -1826,7 +1826,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="decisao_resumo">Resumo</Label>
                             <Textarea
                               id="decisao_resumo"
-                              className="rounded-none"
+                              className=""
                               {...decisaoForm.register("resumo")}
                             />
                             {decisaoForm.formState.errors.resumo ? (
@@ -1840,7 +1840,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               <input
                                 id="decisao_file"
                                 type="file"
-                                className="rounded-none block w-full text-sm text-neutral-600 file:mr-3 file:rounded-none file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:text-neutral-400 dark:file:bg-slate-800"
+                                className="block w-full text-sm text-neutral-600 file:mr-3 file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:text-neutral-400 dark:file:bg-slate-800"
                                 {...decisaoForm.register("file")}
                               />
                               {decisaoForm.formState.errors.file ? (
@@ -1855,14 +1855,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-none"
+                              className=""
                               onClick={() => setAddDecisaoModal(false)}
                             >
                               Cancelar
                             </Button>
                             <Button
                               type="submit"
-                              className="rounded-none"
+                              className=""
                               disabled={
                                 decisaoForm.formState.isSubmitting || addDecisao.isPending || updateDecisao.isPending
                               }
@@ -1946,7 +1946,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="rounded-none"
+                          className=""
                           onClick={onOpenAddFacto}
                         >
                           Adicionar Facto
@@ -1963,7 +1963,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="facto_descricao">Descrição</Label>
                             <Textarea
                               id="facto_descricao"
-                              className="rounded-none"
+                              className=""
                               {...factoForm.register("descricao")}
                             />
                             {factoForm.formState.errors.descricao ? (
@@ -1978,7 +1978,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <input
                               id="facto_data"
                               type="date"
-                              className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                              className="h-10 w-full bg-white dark:bg-input/30 border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                               {...factoForm.register("data")}
                             />
                             {factoForm.formState.errors.data ? (
@@ -1993,7 +1993,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 id="facto_ordem"
                                 type="number"
                                 min={1}
-                                className="h-10 w-full bg-white dark:bg-input/30 rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                className="h-10 w-full bg-white dark:bg-input/30 border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                                 value={factoOrdemDraft}
                                 onChange={(e) =>
                                   setFactoOrdemDraft(Math.max(1, Math.trunc(Number(e.target.value) || 1)))
@@ -2008,14 +2008,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-none"
+                              className=""
                               onClick={() => setAddFactoModal(false)}
                             >
                               Cancelar
                             </Button>
                             <Button
                               type="submit"
-                              className="rounded-none"
+                              className=""
                               disabled={
                                 factoForm.formState.isSubmitting || addFacto.isPending || updateFacto.isPending
                               }
@@ -2099,7 +2099,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="rounded-none"
+                          className=""
                           onClick={onOpenAddTestemunha}
                         >
                           Adicionar Testemunha
@@ -2116,7 +2116,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="testemunha_nome">Nome</Label>
                             <Input
                               id="testemunha_nome"
-                              className="rounded-none"
+                              className=""
                               {...testemunhaForm.register("nome")}
                             />
                             {testemunhaForm.formState.errors.nome ? (
@@ -2152,7 +2152,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="testemunha_contacto">Contacto</Label>
                             <Input
                               id="testemunha_contacto"
-                              className="rounded-none"
+                              className=""
                               {...testemunhaForm.register("contacto")}
                             />
                             {testemunhaForm.formState.errors.contacto ? (
@@ -2166,7 +2166,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Label htmlFor="testemunha_notas">Notas</Label>
                             <Textarea
                               id="testemunha_notas"
-                              className="rounded-none"
+                              className=""
                               {...testemunhaForm.register("notas")}
                             />
                             {testemunhaForm.formState.errors.notas ? (
@@ -2184,14 +2184,14 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-none"
+                              className=""
                               onClick={() => setAddTestemunhaModal(false)}
                             >
                               Cancelar
                             </Button>
                             <Button
                               type="submit"
-                              className="rounded-none"
+                              className=""
                               disabled={
                                 testemunhaForm.formState.isSubmitting ||
                                 addTestemunha.isPending ||
@@ -2314,7 +2314,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           </span>
                           <Badge
                             variant={acaoBadgeVariant}
-                            className="rounded-none font-bold tracking-wide text-[11px]"
+                            className="font-bold tracking-wide text-[11px]"
                           >
                             {entry.acao}
                           </Badge>
@@ -2397,7 +2397,7 @@ function ReatribuirResponsavelControl({
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-none"
+            className=""
             onClick={() => {
               setSelectedUserId(currentResponsavelId ?? "");
               setReatribuirError(null);
@@ -2442,14 +2442,14 @@ function ReatribuirResponsavelControl({
             <Button
               type="button"
               variant="outline"
-              className="rounded-none"
+              className=""
               onClick={() => setDialogOpen(false)}
             >
               Cancelar
             </Button>
             <Button
               type="button"
-              className="rounded-none"
+              className=""
               disabled={!selectedUserId || selectedUserId === currentResponsavelId || tenantUsers.isLoading}
               onClick={() => {
                 setDialogOpen(false);
@@ -2570,7 +2570,7 @@ function ProcessoDocumentosTab({
               }}
             >
               <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="rounded-none">
+                <Button type="button" variant="outline" size="sm" className="">
                   Adicionar Documento
                 </Button>
               </DialogTrigger>
@@ -2601,7 +2601,7 @@ function ProcessoDocumentosTab({
                       emptyMessage="Nenhuma sugestão."
                       placeholder="Selecionar ou escrever tipo..."
                       searchPlaceholder="Pesquisar ou escrever novo tipo..."
-                      triggerClassName="rounded-none"
+                      triggerClassName=""
                       disabled={upload.isPending}
                     />
                   </div>
@@ -2620,7 +2620,7 @@ function ProcessoDocumentosTab({
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-none"
+                    className=""
                     onClick={() => {
                       setAddDocumentoModal(false);
                       resetUploadState();
@@ -2630,7 +2630,7 @@ function ProcessoDocumentosTab({
                   </Button>
                   <Button
                     type="button"
-                    className="rounded-none"
+                    className=""
                     onClick={onConfirmarUpload}
                     disabled={!novoFicheiro || upload.isPending}
                   >

@@ -26,7 +26,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Parecer
       meta: { label: "Estado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
       cell: ({ row }) => (
-        <Badge variant={statusVariant(row.original.status)} className="rounded-none font-bold tracking-wide">
+        <Badge variant={statusVariant(row.original.status)} className="font-bold tracking-wide">
           {row.original.status}
         </Badge>
       ),

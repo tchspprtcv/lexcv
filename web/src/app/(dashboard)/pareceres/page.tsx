@@ -152,7 +152,7 @@ function ParecerPageContent() {
           Pareceres Jurídicos
         </h1>
         {canCreatePareceres ? (
-          <Button asChild className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white">
+          <Button asChild className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white">
             <Link href="/pareceres/nova">Nova Solicitação</Link>
           </Button>
         ) : null}
@@ -165,7 +165,7 @@ function ParecerPageContent() {
               <Button
                 type="button"
                 variant="secondary"
-                className="rounded-none font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
+                className="font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
                 onClick={() => setAdvancedOpen((v) => !v)}
               >
                 <Filter className="h-4 w-4" />
@@ -174,7 +174,7 @@ function ParecerPageContent() {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-none font-medium border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
+                className="font-medium border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900"
                 onClick={() => setPesquisaOpen((v) => !v)}
               >
                 <Search className="h-4 w-4" />
@@ -182,10 +182,10 @@ function ParecerPageContent() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button type="submit" className="rounded-none font-bold shadow-none">
+              <Button type="submit" className="font-bold shadow-none">
                 Aplicar
               </Button>
-              <Button type="button" variant="ghost" className="rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
+              <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
                 Limpar
               </Button>
             </div>
@@ -197,7 +197,7 @@ function ParecerPageContent() {
                   </div>
                   <div className="mt-2">
                     <Select value={draftStatus} onValueChange={setDraftStatus}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -216,7 +216,7 @@ function ParecerPageContent() {
                   </div>
                   <div className="mt-2">
                     <Select value={draftAdvogadoId} onValueChange={setDraftAdvogadoId}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -236,7 +236,7 @@ function ParecerPageContent() {
                   </div>
                   <div className="mt-2">
                     <Select value={draftClienteId} onValueChange={setDraftClienteId}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -275,7 +275,7 @@ function ParecerPageContent() {
                       value={pesquisaTexto}
                       onChange={(e) => setPesquisaTexto(e.target.value)}
                       placeholder="Pesquisar por conteúdo do parecer..."
-                      className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -285,7 +285,7 @@ function ParecerPageContent() {
                   </label>
                   <div className="mt-2">
                     <Select value={pesquisaClienteId} onValueChange={setPesquisaClienteId}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -305,7 +305,7 @@ function ParecerPageContent() {
                   </label>
                   <div className="mt-2">
                     <Select value={pesquisaAdvogadoId} onValueChange={setPesquisaAdvogadoId}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -325,7 +325,7 @@ function ParecerPageContent() {
                   </label>
                   <div className="mt-2">
                     <Select value={pesquisaStatus} onValueChange={setPesquisaStatus}>
-                      <SelectTrigger size="default" className="w-full rounded-none">
+                      <SelectTrigger size="default" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -350,7 +350,7 @@ function ParecerPageContent() {
                         type="date"
                         value={pesquisaDataInicio}
                         onChange={(e) => setPesquisaDataInicio(e.target.value)}
-                        className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -360,7 +360,7 @@ function ParecerPageContent() {
                         type="date"
                         value={pesquisaDataFim}
                         onChange={(e) => setPesquisaDataFim(e.target.value)}
-                        className="h-10 w-full bg-white dark:bg-[#020617] rounded-none border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -370,14 +370,14 @@ function ParecerPageContent() {
                 <Button
                   type="submit"
                   disabled={pesquisa.isFetching}
-                  className="rounded-none font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
+                  className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {pesquisa.isFetching ? "A pesquisar..." : "Pesquisar"}
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  className="rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
                   onClick={onLimparPesquisa}
                 >
                   Limpar Filtros
@@ -433,7 +433,7 @@ function ParecerPageContent() {
                       <span className="font-bold text-slate-900 dark:text-white">
                         {clienteNomeById.get(s.clienteId) ?? s.clienteId}
                       </span>
-                      <Badge variant={statusVariant(s.status)} className="rounded-none font-bold tracking-wide">
+                      <Badge variant={statusVariant(s.status)} className="font-bold tracking-wide">
                         {s.status}
                       </Badge>
                     </div>

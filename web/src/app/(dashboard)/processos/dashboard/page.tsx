@@ -27,7 +27,7 @@ export default function ProcessosDashboardPage() {
   return (
     <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
       <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" className="h-9 w-9 p-0 rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white">
+        <Button asChild variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white">
           <Link href="/processos">
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -68,10 +68,10 @@ export default function ProcessosDashboardPage() {
               <Card className="border-slate-200 dark:border-slate-800 hover:border-red-500/50 dark:hover:border-red-500/50 transition-colors group cursor-pointer bg-white dark:bg-[#020617]">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="h-12 w-12 rounded-none bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20 group-hover:scale-110 transition-transform">
                       <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
-                    <Badge variant="red" className="rounded-none font-bold tracking-wide">Ação Imediata</Badge>
+                    <Badge variant="red" className="font-bold tracking-wide">Ação Imediata</Badge>
                   </div>
                   <div className="mt-6 text-[12px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Prazos Críticos (&lt; 7 dias)</div>
                   <div className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">{data.operacional.prazos_criticos_count}</div>
@@ -84,10 +84,10 @@ export default function ProcessosDashboardPage() {
               <Card className="border-slate-200 dark:border-slate-800 hover:border-amber-500/50 dark:hover:border-amber-500/50 transition-colors group cursor-pointer bg-white dark:bg-[#020617]">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="h-12 w-12 rounded-none bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20 group-hover:scale-110 transition-transform">
                       <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <Badge variant="amber" className="rounded-none font-bold tracking-wide">Atenção</Badge>
+                    <Badge variant="amber" className="font-bold tracking-wide">Atenção</Badge>
                   </div>
                   <div className="mt-6 text-[12px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Processos Inativos (&gt; 30 dias)</div>
                   <div className="mt-2 text-4xl font-bold text-slate-900 dark:text-white">{data.operacional.processos_inativos_count}</div>
@@ -97,7 +97,7 @@ export default function ProcessosDashboardPage() {
             </Link>
           </div>
 
-          <Card className="border-slate-200 dark:border-slate-800 rounded-none bg-white dark:bg-[#020617]">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617]">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="h-5 w-5 text-blue-600" />
@@ -181,7 +181,7 @@ export default function ProcessosDashboardPage() {
             </Card>
           </div>
 
-          <Card className="border-slate-200 dark:border-slate-800 rounded-none bg-white dark:bg-[#020617]">
+          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617]">
             <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Briefcase className="h-5 w-5 text-indigo-600" />

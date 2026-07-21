@@ -346,7 +346,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 
       {/* Desktop user list Card */}
       {!isFormOpen || !editingUser ? (
-        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-none lg:rounded-xl">
+        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-xl font-semibold">Utilizadores Registados</CardTitle>
@@ -502,7 +502,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
         </Card>
       ) : (
         /* Edit/Create Form Panel */
-        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-none lg:rounded-xl">
+        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
           <form onSubmit={handleFormSubmit}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
@@ -755,7 +755,7 @@ function RbacTab() {
   const modules = Array.from(new Set(systemPermissions.map((p) => p.modulo)));
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-none lg:rounded-xl">
+    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div>
           <CardTitle className="text-xl font-semibold flex items-center gap-2">
@@ -917,7 +917,7 @@ function NotificationPreferencesTab() {
   };
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-none lg:rounded-xl">
+    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
       <CardHeader>
         <CardTitle className="text-xl font-semibold flex items-center gap-2">
           <Bell className="h-5 w-5 text-blue-500" />

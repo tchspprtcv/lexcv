@@ -87,7 +87,7 @@ function TermoHonorariosContent({ id }: { id: string }) {
         </Link>
         <Button
           type="button"
-          className="ficha-print-btn rounded-none"
+          className="ficha-print-btn"
           data-print-hide
           disabled={isBlocked}
           onClick={() => window.print()}

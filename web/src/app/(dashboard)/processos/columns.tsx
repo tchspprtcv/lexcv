@@ -71,7 +71,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
       meta: { label: "Área Jurídica" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Área Jurídica" />,
       cell: ({ row }) => (
-        <Badge variant="blue" className="rounded-none font-bold tracking-wide">
+        <Badge variant="blue" className="font-bold tracking-wide">
           {row.original.area_juridica ?? "—"}
         </Badge>
       ),
@@ -100,7 +100,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
           <div>
             <Badge
               variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"}
-              className="rounded-none font-bold tracking-wide"
+              className="font-bold tracking-wide"
             >
               {estadoLabel}
             </Badge>
@@ -109,7 +109,7 @@ export function columns(clienteNomeById: Map<string, string>): ColumnDef<Process
               <div className="mt-1 flex items-center gap-1">
                 <Badge
                   variant={prazosRiscoToVariant(p.risco_mais_critico)}
-                  className="rounded-none font-bold tracking-wide text-[11px]"
+                  className="font-bold tracking-wide text-[11px]"
                 >
                   {prazosRiscoToLabel(p.risco_mais_critico)}
                 </Badge>

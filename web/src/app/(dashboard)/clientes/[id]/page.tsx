@@ -121,7 +121,7 @@ function deriveInitials(nome: string) {
 }
 
 const textareaClassName =
-  "flex min-h-24 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
+  "flex min-h-24 w-full border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
 
 export default function ClienteDetailPage({ params }: PageProps) {
   const { id } = React.use(params);
@@ -474,7 +474,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="nome">{nomeLabel}</Label>
-                      <Input id="nome" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
+                      <Input id="nome" className="max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
                       {form.formState.errors.nome ? (
                         <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
                       ) : null}
@@ -510,14 +510,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("email")} />
+                        <Input id="email" className="max-sm:h-12 max-sm:text-base" {...form.register("email")} />
                         {form.formState.errors.email ? (
                           <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
                         ) : null}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="telefone">Telefone</Label>
-                        <Input id="telefone" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
+                        <Input id="telefone" className="max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
                         {form.formState.errors.telefone ? (
                           <p className="text-sm text-red-600">{form.formState.errors.telefone.message}</p>
                         ) : null}
@@ -527,14 +527,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="localidade">Localidade</Label>
-                        <Input id="localidade" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
+                        <Input id="localidade" className="max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
                         {form.formState.errors.localidade ? (
                           <p className="text-sm text-red-600">{form.formState.errors.localidade.message}</p>
                         ) : null}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="morada">{moradaLabel}</Label>
-                        <Input id="morada" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
+                        <Input id="morada" className="max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
                         {form.formState.errors.morada ? (
                           <p className="text-sm text-red-600">{form.formState.errors.morada.message}</p>
                         ) : null}
@@ -562,7 +562,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="nif">NIF</Label>
-                          <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
+                          <Input id="nif" className="max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
                           {form.formState.errors.nif ? (
                             <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
                           ) : null}
@@ -606,7 +606,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           <Label htmlFor="documento_numero">Número do Documento</Label>
                           <Input
                             id="documento_numero"
-                            className="rounded-none max-sm:h-12 max-sm:text-base"
+                            className="max-sm:h-12 max-sm:text-base"
                             placeholder="Introduza o número do documento"
                             {...form.register("documento_numero")}
                           />
@@ -623,12 +623,12 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                     <dd className="col-span-2 font-medium flex items-center gap-2 flex-wrap">
                       {cliente.data.nome}
                       {cliente.data.numero_cliente ? (
-                        <Badge variant="blue" className="rounded-none font-mono font-bold text-[10px]">
+                        <Badge variant="blue" className="font-mono font-bold text-[10px]">
                           {cliente.data.numero_cliente}
                         </Badge>
                       ) : null}
                       {cliente.data.avencado ? (
-                        <Badge variant="green" className="rounded-none font-bold text-[10px]">
+                        <Badge variant="green" className="font-bold text-[10px]">
                           Avençado
                         </Badge>
                       ) : null}
@@ -696,7 +696,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 </CardContent>
               </Card>
 
-              <Card className="rounded-none">
+              <Card className="">
                 <CardHeader>
                   <CardTitle>Informações Adicionais</CardTitle>
                 </CardHeader>
@@ -785,7 +785,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                         id="honorarios_propostos.total"
                         type="number"
                         step="0.01"
-                        className="rounded-none"
+                        className=""
                         {...form.register("honorarios_propostos.total", { valueAsNumber: true })}
                       />
                     </div>
@@ -793,7 +793,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       <Label htmlFor="honorarios_propostos.totalPorExtenso">Valor por Extenso</Label>
                       <Input
                         id="honorarios_propostos.totalPorExtenso"
-                        className="rounded-none"
+                        className=""
                         {...form.register("honorarios_propostos.totalPorExtenso")}
                       />
                     </div>
@@ -801,7 +801,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                       <Label htmlFor="honorarios_propostos.previsao">Previsão</Label>
                       <Input
                         id="honorarios_propostos.previsao"
-                        className="rounded-none"
+                        className=""
                         placeholder="Ex.: 6 meses"
                         {...form.register("honorarios_propostos.previsao")}
                       />
@@ -916,7 +916,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                             <Label htmlFor="new-doc-tratar-descricao">Descrição</Label>
                             <Input
                               id="new-doc-tratar-descricao"
-                              className="rounded-none"
+                              className=""
                               value={newDocATratar.descricao}
                               onChange={(e) => setNewDocATratar({ descricao: e.target.value })}
                             />
@@ -974,7 +974,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                             <Label htmlFor="new-deslocacao-descricao">Descrição</Label>
                             <Input
                               id="new-deslocacao-descricao"
-                              className="rounded-none"
+                              className=""
                               value={newDeslocacao.descricao}
                               onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, descricao: e.target.value }))}
                             />
@@ -983,7 +983,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                             <Label htmlFor="new-deslocacao-local">Local</Label>
                             <Input
                               id="new-deslocacao-local"
-                              className="rounded-none"
+                              className=""
                               value={newDeslocacao.local}
                               onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, local: e.target.value }))}
                             />
@@ -993,7 +993,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                             <Input
                               id="new-deslocacao-data"
                               type="date"
-                              className="rounded-none"
+                              className=""
                               value={newDeslocacao.data}
                               onChange={(e) => setNewDeslocacao((prev) => ({ ...prev, data: e.target.value }))}
                             />
@@ -1111,7 +1111,7 @@ function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"} className="rounded-none font-bold tracking-wide">
+                      <Badge variant={estadoVariant as "green" | "amber" | "gray" | "purple" | "secondary"} className="font-bold tracking-wide">
                         {estadoLabel}
                       </Badge>
                     </TableCell>
@@ -1198,7 +1198,7 @@ function ClienteParecerTab({ clienteId }: { clienteId: string }) {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={parecerStatusVariant(s.status)} className="rounded-none font-bold tracking-wide">
+                    <Badge variant={parecerStatusVariant(s.status)} className="font-bold tracking-wide">
                       {s.status}
                     </Badge>
                   </TableCell>
@@ -1304,7 +1304,7 @@ function ClienteDocumentosEntreguesTab({
               }}
             >
               <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="rounded-none">Adicionar</Button>
+                <Button type="button" variant="outline" size="sm" className="">Adicionar</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -1333,7 +1333,7 @@ function ClienteDocumentosEntreguesTab({
                       emptyMessage="Nenhuma sugestão."
                       placeholder="Selecionar ou escrever tipo..."
                       searchPlaceholder="Pesquisar ou escrever novo tipo..."
-                      triggerClassName="rounded-none"
+                      triggerClassName=""
                       disabled={upload.isPending}
                     />
                   </div>
@@ -1352,7 +1352,7 @@ function ClienteDocumentosEntreguesTab({
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-none"
+                    className=""
                     onClick={() => {
                       setAddDocumentoModal(false);
                       resetUploadState();
@@ -1362,7 +1362,7 @@ function ClienteDocumentosEntreguesTab({
                   </Button>
                   <Button
                     type="button"
-                    className="rounded-none"
+                    className=""
                     onClick={onConfirmarUpload}
                     disabled={!novoFicheiro || upload.isPending}
                   >
@@ -1532,7 +1532,7 @@ function ProcuracaoCard({
         <CardTitle className="flex items-center gap-2">
           Procuração
           {!hasProcuracao ? (
-            <Badge variant="amber" className="rounded-none font-normal">Procuração em falta</Badge>
+            <Badge variant="amber" className="font-normal">Procuração em falta</Badge>
           ) : null}
         </CardTitle>
       </CardHeader>
@@ -1540,7 +1540,7 @@ function ProcuracaoCard({
         {hasProcuracao ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
-              <Badge variant="green" className="rounded-none">Carregada</Badge>
+              <Badge variant="green" className="">Carregada</Badge>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" onClick={onView} disabled={download.isPending}>

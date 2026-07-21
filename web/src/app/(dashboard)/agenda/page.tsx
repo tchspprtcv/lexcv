@@ -192,11 +192,11 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 rounded-none border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-1 py-1 shadow-sm">
+            <div className="flex items-center gap-1 border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#020617] px-1 py-1 shadow-sm">
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 w-8 p-0 rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() =>
                   setCursorMonthOverride((d) => {
                     const base = d ?? initialMonth;
@@ -209,7 +209,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 px-3 rounded-none font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                className="h-8 px-3 font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
                 onClick={() => setCursorMonthOverride(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
               >
                 Hoje
@@ -217,7 +217,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 w-8 p-0 rounded-none text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={() =>
                   setCursorMonthOverride((d) => {
                     const base = d ?? initialMonth;
@@ -230,7 +230,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
             </div>
 
             {canCreateAgenda ? (
-              <Button asChild className="h-10 rounded-none font-bold shadow-none">
+              <Button asChild className="h-10 font-bold shadow-none">
                 <Link href="/agenda/novo">
                   <Plus className="h-4 w-4" />
                   Novo Evento
@@ -240,7 +240,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 p-4 rounded-none flex flex-wrap items-center gap-4 shadow-sm">
+        <div className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 p-4 flex flex-wrap items-center gap-4 shadow-sm">
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Processo</span>
             <Select value={selectedProcessoId} onValueChange={setSelectedProcessoId}>
@@ -291,7 +291,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           <Button
             type="button"
             variant="ghost"
-            className="self-end h-9 px-3 rounded-none font-bold text-slate-500 hover:text-slate-900 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="self-end h-9 px-3 font-bold text-slate-500 hover:text-slate-900 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => {
               setSelectedProcessoId("todos");
               setSelectedCategoria("todos");
@@ -318,7 +318,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               const hora = new Date(e.dataInicio).toLocaleTimeString("pt-CV", { hour: "2-digit", minute: "2-digit" });
               const processoLabel = e.processoId ? `Proc. nº ${processoLabelById.get(e.processoId) ?? e.processoId}` : null;
               return (
-                <div key={e.id} className={cn("rounded-none border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm", cat.borderClassName)}>
+                <div key={e.id} className={cn("border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm", cat.borderClassName)}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: cat.titleColor }}>
                       {cat.label}
@@ -355,7 +355,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               const hora = new Date(e.dataInicio).toLocaleTimeString("pt-CV", { hour: "2-digit", minute: "2-digit" });
               const processoLabel = e.processoId ? `Proc. nº ${processoLabelById.get(e.processoId) ?? e.processoId}` : null;
               return (
-                <div key={e.id} className={cn("rounded-none border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm", cat.borderClassName)}>
+                <div key={e.id} className={cn("border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm", cat.borderClassName)}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: cat.titleColor }}>
                       {cat.label}
@@ -376,7 +376,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
           })()}
         </div>
 
-        <Card className="hidden md:block border-slate-200 dark:border-slate-800 rounded-none overflow-hidden shadow-sm">
+        <Card className="hidden md:block border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
           <CardContent className="p-0">
             <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-[10px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
@@ -477,17 +477,17 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
       </div>
 
       <div className="space-y-6">
-        <Card className="border-t-4 border-t-blue-600 dark:border-t-blue-500 rounded-none shadow-sm border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
+        <Card className="border-t-4 border-t-blue-600 dark:border-t-blue-500 shadow-sm border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20">
           <CardHeader className="flex-row items-center justify-between pb-4">
             <CardTitle className="text-slate-900 dark:text-white">Próximos Eventos</CardTitle>
-            <Badge variant="secondary" className="rounded-none font-bold">BREVEMENTE</Badge>
+            <Badge variant="secondary" className="font-bold">BREVEMENTE</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
             {upcoming.length ? (
               upcoming.map((e) => {
                 const cat = getCategoria(e);
                 return (
-                  <div key={e.id} className={cn("rounded-none border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm hover:shadow-md transition-all", cat.borderClassName)}>
+                  <div key={e.id} className={cn("border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] p-4 shadow-sm hover:shadow-md transition-all", cat.borderClassName)}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: cat.titleColor }}>
                         {cat.label}
@@ -507,13 +507,13 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
               <div className="text-sm text-slate-500 dark:text-slate-400 italic">Sem eventos futuros.</div>
             )}
 
-            <Button asChild variant="outline" className="w-full rounded-none border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 bg-transparent font-bold">
+            <Button asChild variant="outline" className="w-full border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 bg-transparent font-bold">
               <Link href="/agenda">Ver Lista Completa</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-950 dark:bg-[#020617] text-white border-slate-900 dark:border-slate-800 rounded-none shadow-xl relative overflow-hidden group">
+        <Card className="bg-slate-950 dark:bg-[#020617] text-white border-slate-900 dark:border-slate-800 shadow-xl relative overflow-hidden group">
           <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
           <CardContent className="p-6 relative z-10">
             <div className="text-[11px] font-bold tracking-wider uppercase text-blue-400">Visão Geral da Semana</div>
@@ -584,8 +584,8 @@ function buildMonthGrid(monthStart: Date) {
 
 function LegendChip({ label, dotClassName }: { label: string; dotClassName: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-none border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 shadow-sm">
-      <span className={cn("h-2 w-2 rounded-none", dotClassName)} />
+    <div className="inline-flex items-center gap-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300 shadow-sm">
+      <span className={cn("h-2 w-2", dotClassName)} />
       {label}
     </div>
   );

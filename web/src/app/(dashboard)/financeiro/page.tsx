@@ -321,7 +321,7 @@ function FinanceiroContent({
                       </div>
                       <Badge
                         variant={status === "Pago" ? "green" : status === "Parcialmente Pago" ? "blue" : "amber"}
-                        className="rounded-none font-bold text-[10px] flex-shrink-0"
+                        className="font-bold text-[10px] flex-shrink-0"
                       >
                         {status}
                       </Badge>

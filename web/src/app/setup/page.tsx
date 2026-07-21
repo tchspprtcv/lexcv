@@ -171,7 +171,7 @@ export default function SetupPage() {
                     <Input
                       id="clientName"
                       placeholder="Ex.: Sociedade Exemplo, Lda."
-                      className="h-11 rounded-none"
+                      className="h-11"
                       {...form.register("clientName")}
                     />
                     {form.formState.errors.clientName ? (
@@ -225,7 +225,7 @@ export default function SetupPage() {
                       type="email"
                       autoComplete="email"
                       placeholder="admin@empresa.cv"
-                      className="h-11 rounded-none"
+                      className="h-11"
                       {...form.register("adminEmail")}
                     />
                     {form.formState.errors.adminEmail ? (
@@ -239,7 +239,7 @@ export default function SetupPage() {
                       id="adminPassword"
                       type="password"
                       autoComplete="new-password"
-                      className="h-11 rounded-none"
+                      className="h-11"
                       {...form.register("adminPassword")}
                     />
                     {form.formState.errors.adminPassword ? (
@@ -253,7 +253,7 @@ export default function SetupPage() {
                       id="confirmPassword"
                       type="password"
                       autoComplete="new-password"
-                      className="h-11 rounded-none"
+                      className="h-11"
                       {...form.register("confirmPassword")}
                     />
                     {form.formState.errors.confirmPassword ? (
@@ -300,7 +300,7 @@ export default function SetupPage() {
 
                 <Button
                   type="submit"
-                  className="h-11 w-full rounded-none bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
+                  className="h-11 w-full bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200"
                   disabled={form.formState.isSubmitting || wizardPhase !== "idle"}
                 >
                   {form.formState.isSubmitting ? "A configurar ambiente..." : "Concluir configuração"}

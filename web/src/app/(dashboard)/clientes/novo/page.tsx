@@ -38,7 +38,7 @@ import { clienteFormSchema, type ClienteFormValues } from "@/schemas/clientes";
 import type { ClienteCreateRequest } from "@/types/clientes";
 
 const textareaClassName =
-  "flex min-h-24 w-full rounded-none border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
+  "flex min-h-24 w-full border border-neutral-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950 dark:placeholder:text-neutral-400 dark:focus-visible:ring-neutral-300";
 
 export default function ClienteCreatePage() {
   const router = useRouter();
@@ -191,7 +191,7 @@ export default function ClienteCreatePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="nome">{nomeLabel}</Label>
-                <Input id="nome" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
+                <Input id="nome" className="max-sm:h-12 max-sm:text-base" {...form.register("nome")} />
                 {form.formState.errors.nome ? (
                   <p className="text-sm text-red-600">{form.formState.errors.nome.message}</p>
                 ) : null}
@@ -200,7 +200,7 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="nif">NIF</Label>
-                  <Input id="nif" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
+                  <Input id="nif" className="max-sm:h-12 max-sm:text-base" {...form.register("nif")} />
                   {form.formState.errors.nif ? (
                     <p className="text-sm text-red-600">{form.formState.errors.nif.message}</p>
                   ) : null}
@@ -210,14 +210,14 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("email")} />
+                  <Input id="email" className="max-sm:h-12 max-sm:text-base" {...form.register("email")} />
                   {form.formState.errors.email ? (
                     <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
+                  <Input id="telefone" className="max-sm:h-12 max-sm:text-base" {...form.register("telefone")} />
                   {form.formState.errors.telefone ? (
                     <p className="text-sm text-red-600">{form.formState.errors.telefone.message}</p>
                   ) : null}
@@ -227,14 +227,14 @@ export default function ClienteCreatePage() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="localidade">Localidade</Label>
-                  <Input id="localidade" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
+                  <Input id="localidade" className="max-sm:h-12 max-sm:text-base" {...form.register("localidade")} />
                   {form.formState.errors.localidade ? (
                     <p className="text-sm text-red-600">{form.formState.errors.localidade.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="morada">{moradaLabel}</Label>
-                  <Input id="morada" className="rounded-none max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
+                  <Input id="morada" className="max-sm:h-12 max-sm:text-base" {...form.register("morada")} />
                   {form.formState.errors.morada ? (
                     <p className="text-sm text-red-600">{form.formState.errors.morada.message}</p>
                   ) : null}
@@ -274,7 +274,7 @@ export default function ClienteCreatePage() {
                     <Label htmlFor="documento_numero">Número do Documento</Label>
                     <Input
                       id="documento_numero"
-                      className="rounded-none max-sm:h-12 max-sm:text-base"
+                      className="max-sm:h-12 max-sm:text-base"
                       placeholder="Introduza o número do documento"
                       {...form.register("documento_numero")}
                     />

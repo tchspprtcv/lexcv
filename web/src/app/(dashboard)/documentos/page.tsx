@@ -316,7 +316,7 @@ function DocumentoMobileCard({
           {nome}
         </Link>
         {tipo && (
-          <Badge variant="blue" className="rounded-none font-bold text-[10px] flex-shrink-0">
+          <Badge variant="blue" className="font-bold text-[10px] flex-shrink-0">
             {tipo}
           </Badge>
         )}
