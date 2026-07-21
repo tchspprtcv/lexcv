@@ -109,7 +109,16 @@ function DocumentosContent({
   const documentosVisiveis = React.useMemo(() => {
     const termo = nomeFiltro.trim().toLowerCase();
     const base = list.data ?? [];
-    return termo ? base.filter((d) => (d.nome ?? "").toLowerCase().includes(termo)) : base;
+    // WR-01 (Phase 112 code review): also match `tipo`, mirroring the global search's documento
+    // branch (DocumentoRepository#pesquisarGlobal matches d.nome OR d.tipo) — otherwise a palette
+    // hit that matched on tipo (not nome) would vanish on "Ver todos os Documentos".
+    return termo
+      ? base.filter(
+          (d) =>
+            (d.nome ?? "").toLowerCase().includes(termo) ||
+            (d.tipo ?? "").toLowerCase().includes(termo),
+        )
+      : base;
   }, [list.data, nomeFiltro]);
 
   const onSubmit = (values: DocumentosFiltersFormValues) => {
