@@ -38,6 +38,18 @@ public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolic
     // Every nullable param is wrapped in an explicit CAST — PostgreSQL cannot infer the type of
     // a bare null bind inside "(:param IS NULL OR ...)" and fails with "could not determine data
     // type of parameter" at runtime.
+    // CR-01 (Phase 112 code review): texto must also match s.descricao (unaccent-folded), not
+    // just v.conteudo — this mirrors what the /pesquisa global search's shallow
+    // ParecerSolicitacaoRepository#pesquisarGlobal already matches on. Without this OR branch, a
+    // solicitacao with no submitted version yet (v.conteudo IS NULL — a large, common PENDENTE
+    // fraction of real data) could never reappear here after a "Ver Todos os Pareceres"
+    // click-through from a palette hit that matched on descricao, and an accented match found via
+    // pesquisarGlobal's unaccent(descricao) could silently disappear against this endpoint's
+    // previously plain, non-unaccent v.conteudo ILIKE. The caller (ParecerPesquisaController) is
+    // responsible for pre-escaping texto's ILIKE metacharacters (%, _, \) via its own escapeLike
+    // helper (mirroring PesquisaController#escapeLike) before calling this method — texto here is
+    // expected already-escaped, matching the termoEscapado convention used by every other
+    // *Repository#pesquisarGlobal in this package.
     @Query(value = "SELECT s.* FROM t_parecer_solicitacao s " +
             "LEFT JOIN t_parecer_versao v ON v.solicitacao_id = s.id " +
             "AND v.numero_versao = (SELECT MAX(v2.numero_versao) FROM t_parecer_versao v2 WHERE v2.solicitacao_id = s.id) " +
@@ -47,7 +59,9 @@ public interface ParecerSolicitacaoRepository extends JpaRepository<ParecerSolic
             "AND (CAST(:status AS text) IS NULL OR s.status = CAST(:status AS text)) " +
             "AND (CAST(:dataInicio AS timestamp) IS NULL OR s.created_at >= CAST(:dataInicio AS timestamp)) " +
             "AND (CAST(:dataFim AS timestamp) IS NULL OR s.created_at <= CAST(:dataFim AS timestamp)) " +
-            "AND (CAST(:texto AS text) IS NULL OR v.conteudo ILIKE '%' || CAST(:texto AS text) || '%')",
+            "AND (CAST(:texto AS text) IS NULL OR " +
+            "unaccent(v.conteudo) ILIKE unaccent('%' || CAST(:texto AS text) || '%') ESCAPE '\\' OR " +
+            "unaccent(s.descricao) ILIKE unaccent('%' || CAST(:texto AS text) || '%') ESCAPE '\\')",
             nativeQuery = true)
     List<ParecerSolicitacao> pesquisar(@Param("tenantId") UUID tenantId,
                                         @Param("texto") String texto,

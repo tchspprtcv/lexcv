@@ -40,6 +40,17 @@ public class ParecerPesquisaController {
         return principal.getTenantId();
     }
 
+    /**
+     * CR-01 (Phase 112 code review): escapes ILIKE's wildcard metacharacters ({@code %},
+     * {@code _}) plus the escape character itself ({@code \}) in the user-supplied {@code texto},
+     * mirroring {@code PesquisaController#escapeLike} — paired with
+     * {@code ParecerSolicitacaoRepository#pesquisar}'s {@code ESCAPE '\'} clause so a literal
+     * %/_ typed by the user matches literally instead of being interpreted as a wildcard.
+     */
+    private static String escapeLike(String termo) {
+        return termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     @PreAuthorize("hasAuthority('pareceres:view')")
     @GetMapping
     public ResponseEntity<?> pesquisarSolicitacoes(
@@ -51,8 +62,9 @@ public class ParecerPesquisaController {
             @RequestParam(required = false) LocalDateTime dataFim
     ) {
         UUID tenantId = getTenantId();
+        String textoEscapado = texto == null ? null : escapeLike(texto);
         List<ParecerSolicitacao> result = parecerSolicitacaoRepository.pesquisar(
-                tenantId, texto, clienteId, advogadoId, status, dataInicio, dataFim);
+                tenantId, textoEscapado, clienteId, advogadoId, status, dataInicio, dataFim);
         return ResponseEntity.ok(result);
     }
 }
