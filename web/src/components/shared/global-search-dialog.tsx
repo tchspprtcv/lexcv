@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGlobalSearch } from "@/hooks/use-global-search";
 import { usePermissions } from "@/hooks/use-permissions";
+import { toast } from "@/hooks/use-toast";
 import { highlightMatch } from "@/lib/highlight-match";
 import { isInternalLinkUrl } from "@/lib/notificacao-categoria";
 import { pushRecent, readRecents } from "@/lib/search-recents";
@@ -141,12 +142,26 @@ export function GlobalSearchDialog() {
 
   function navigate(rota: string) {
     // T-112-04 mitigation: server-provided `rota` must resolve as an internal path before navigating.
-    if (!isInternalLinkUrl(rota)) return;
+    // WR-03 (Phase 112 code review): surface a toast on rejection instead of failing silently —
+    // today's backend always produces internal-looking `rota` values so this branch isn't
+    // currently reachable, but a silent no-op is bad defense-in-depth against a future
+    // compromised/buggy backend or DTO change.
+    if (!isInternalLinkUrl(rota)) {
+      toast.error("Não foi possível abrir este resultado.");
+      return;
+    }
     router.push(rota);
     setOpen(false);
   }
 
   function onSelectResult(resultado: ResultadoPesquisa) {
+    // WR-03 (Phase 112 code review): don't record a blocked result as a "recent" — otherwise
+    // selecting it again from "Visitados recentemente" would repeat the same silent-to-the-user
+    // no-op (navigate() still shows the toast, but the item stays polluting recents forever).
+    if (!isInternalLinkUrl(resultado.rota)) {
+      navigate(resultado.rota);
+      return;
+    }
     pushRecent(resultado);
     navigate(resultado.rota);
   }
