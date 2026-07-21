@@ -217,6 +217,26 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                   />
                 </div>
               </div>
+              <div className="w-40 max-w-full">
+                <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  Estado
+                </div>
+                <div className="mt-2">
+                  <NativeSelect
+                    value={draftEstado}
+                    onChange={(e) => setDraftEstado(e.target.value)}
+                    size="default"
+                    className="w-full"
+                  >
+                    <option value="">Todos</option>
+                    <option value="TRIAGEM">Em triagem</option>
+                    <option value="ATIVO">Ativo</option>
+                    <option value="SUSPENSO">Suspenso</option>
+                    <option value="ENCERRADO">Encerrado</option>
+                    <option value="CONCLUIDO">Concluído</option>
+                  </NativeSelect>
+                </div>
+              </div>
               <Button
                 type="button"
                 variant="secondary"
@@ -248,27 +268,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             </div>
             {advancedOpen ? (
               <div className="w-full grid gap-3 lg:grid-cols-12 pt-2 border-t border-slate-200/70 dark:border-slate-800/70">
-                <div className="lg:col-span-3">
-                  <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
-                    Estado
-                  </div>
-                  <div className="mt-2">
-                    <NativeSelect
-                      value={draftEstado}
-                      onChange={(e) => setDraftEstado(e.target.value)}
-                      size="default"
-                      className="w-full"
-                    >
-                      <option value="">Todos</option>
-                      <option value="TRIAGEM">Em triagem</option>
-                      <option value="ATIVO">Ativo</option>
-                      <option value="SUSPENSO">Suspenso</option>
-                      <option value="ENCERRADO">Encerrado</option>
-                      <option value="CONCLUIDO">Concluído</option>
-                    </NativeSelect>
-                  </div>
-                </div>
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-4">
                   <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Tribunal
                   </div>
@@ -281,7 +281,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                     />
                   </div>
                 </div>
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-4">
                   <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Área jurídica
                   </div>
@@ -294,7 +294,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
                     />
                   </div>
                 </div>
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-4">
                   <div className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Cliente
                   </div>
