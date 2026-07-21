@@ -1,10 +1,11 @@
 ---
 phase: 112
 slug: frontend-pesquisa-global-paleta-de-comando
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "bIkeynI (style=vega/radix-vega, baseColor=neutral, iconLibrary=lucide, radius=none) — https://ui.shadcn.com/create?preset=bIkeynI"
 created: 2026-07-21
+reviewed_at: 2026-07-21
 ---
 
 # Phase 112 — UI Design Contract
@@ -114,6 +115,8 @@ All rows above except the two locked-by-`112-CONTEXT.md` items (bold-highlight r
 
 *(Supplementary to the template's required sections — the planner/executor consume this directly per the downstream-consumer contract; the checker maps it to Dimension 2 "Visuals".)*
 
+**Primary focal point:** on dialog open, `CommandInput` is the sole focal point (auto-focused, nothing else competes for attention). Once results render, the secondary hierarchy cue is the bold-highlighted matched substring within each result's título/subtítulo — no other visual weight (color, size, icon emphasis) competes with it inside a result row.
+
 ### Files (mirrors `ARCHITECTURE.md`'s recommended structure exactly)
 
 | File | Change | Notes |
@@ -153,7 +156,7 @@ All rows above except the two locked-by-`112-CONTEXT.md` items (bold-highlight r
 | Debounce window (0–300ms after a keystroke) | User typing, request not yet fired | **No loading indicator at all** — locked decision, `112-CONTEXT.md`: "Nenhum indicador durante os ~300ms de debounce" |
 | Loading | Debounced query ≥2 chars, request in flight | Skeleton rows per group — `h-8 w-full rounded-md` (matches `Skeleton`'s own `bg-muted animate-pulse`), 3 rows/group, only for the entity groups the caller's **client-side-known** permissions (`hasScopedPermission(me.permissions, scope, "view")`, same check `NAV` already uses) indicate will appear — a display-only optimization to prevent layout shift once the real (server-side-RBAC-filtered) response lands; this is never the actual security boundary, which remains 100% server-side per Phase 111 |
 | Results | Response returned, ≥1 result | Grouped `CommandGroup`s in the locked order, each capped at what the backend already returned (≤5/type, no further frontend truncation) |
-| No results | Response returned, 0 results across all groups | `CommandEmpty` — "Sem resultados" / "Não foram encontrados registos para..." copy |
+| No results | Response returned, 0 results across all groups | `Empty`/`EmptyTitle`/`EmptyDescription` (not `CommandEmpty`) — matches `112-CONTEXT.md`'s locked decision verbatim ("reutiliza Empty/EmptyTitle/EmptyDescription com mensagem simples"); "Sem resultados" / "Não foram encontrados registos para..." copy, rendered inside `CommandList` in place of `CommandGroup`s |
 | Error | Request rejected/network failure | Inline text inside the dialog (mirrors `NotificationBell`'s inline-error precedent, in addition to `apiFetch`'s automatic toast) |
 
 ### Keyboard & focus behavior
@@ -175,11 +178,11 @@ All rows above except the two locked-by-`112-CONTEXT.md` items (bold-highlight r
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: FLAG (non-blocking) — fixed: added explicit focal-point statement; reconciled "No results" state to `Empty`/`EmptyTitle`/`EmptyDescription` matching `112-CONTEXT.md`'s lock (was incorrectly `CommandEmpty`)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved-with-recommendations (both recommendations applied 2026-07-21)
