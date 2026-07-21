@@ -193,10 +193,16 @@ public class ResourceController {
                 .filter(c -> c.getTenantId().equals(tenantId))
                 .filter(c -> {
                     if (qNorm == null || qNorm.isEmpty()) return true;
+                    // CR-02 (Phase 112 code review): numero_cliente/documento_numero added so this
+                    // predicate is a superset of ClienteRepository#pesquisarGlobal's field set —
+                    // otherwise a palette hit that matched on either (both rank tier 0/1, the
+                    // *highest*-priority match type there) would vanish on "Ver Todos os Clientes".
                     return contains(c.getNome(), qNorm)
                             || contains(c.getNif(), qNorm)
                             || contains(c.getEmail(), qNorm)
-                            || contains(c.getTelefone(), qNorm);
+                            || contains(c.getTelefone(), qNorm)
+                            || contains(c.getNumeroCliente(), qNorm)
+                            || contains(c.getDocumentoNumero(), qNorm);
                 })
                 .filter(c -> {
                     if (nomeNorm == null || nomeNorm.isEmpty()) return true;
