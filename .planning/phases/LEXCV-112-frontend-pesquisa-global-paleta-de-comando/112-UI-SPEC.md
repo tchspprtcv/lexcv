@@ -171,7 +171,7 @@ All rows above except the two locked-by-`112-CONTEXT.md` items (bold-highlight r
 ### Recent items (`sessionStorage`, session-only per SRCH-10)
 
 - Cap: 5 items, most-recent-first, deduplicated by `(tipo, id)` — revisiting a record moves it to the front rather than duplicating.
-- Only `cliente`/`processo`/`parecer` types are eligible (Documento has no detail route, excluded per `112-CONTEXT.md`).
+- All 4 types (`cliente`/`processo`/`documento`/`parecer`) are eligible — corrected per plan-checker finding: Documento does have a working detail route (`documentos/[id]/page.tsx`) and Phase 111's `PesquisaController` already returns it.
 - Session-only storage (`sessionStorage`, not `localStorage`) — never persists across sessions, never sent to the server; this is the confidentiality-driven choice already locked in `112-CONTEXT.md` and `REQUIREMENTS.md` (SRCH-10) for a shared institutional workstation.
 
 ---

@@ -27,7 +27,7 @@ O utilizador encontra e navega para qualquer Cliente/Processo/Documento/Parecer 
 - Link "Ver todos" por grupo pré-preenche o termo pesquisado — lê `?q=` do URL no mount de cada lista e semeia o estado de filtro já existente (confirmado: `Clientes` já tem `filters.q` em `clientes/page.tsx:63,82`; replicar o mesmo padrão em Processos/Documentos/Pareceres)
 
 ### Estados (vazio/loading/sem-resultados) & Recentes
-- "Visitar um registo" = navegação para `/clientes/[id]`, `/processos/[id]` ou `/pareceres/[id]`; Documento não tem rota de detalhe própria, fica fora da lista de recentes
+- "Visitar um registo" = navegação para `/clientes/[id]`, `/processos/[id]`, `/documentos/[id]` ou `/pareceres/[id]` — **correção (plan-checker Phase 112): a premissa original de que "Documento não tem rota de detalhe própria" estava errada** (`web/src/app/(dashboard)/documentos/[id]/page.tsx` existe e é uma página de detalhe funcional; o próprio `PesquisaController` da Phase 111 já devolve `rota: "/documentos/" + id`). Os 4 tipos de entidade são igualmente elegíveis para a lista de recentes.
 - Recentes guardados em `sessionStorage` (session-only, nunca persiste entre sessões — cumpre SRCH-10 e é mais conservador que `localStorage` num posto de trabalho partilhado)
 - Loading: linhas skeleton por grupo, reutilizando o primitivo `Skeleton` (já usado no Dashboard desde a Phase 103)
 - Sem resultados: reutiliza `Empty`/`EmptyTitle`/`EmptyDescription` com mensagem simples
