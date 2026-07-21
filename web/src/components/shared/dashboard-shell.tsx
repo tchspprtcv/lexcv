@@ -1,5 +1,6 @@
 "use client";
 
+import { GlobalSearchDialog, SEARCH_OPEN_EVENT } from "@/components/shared/global-search-dialog";
 import { NotificationBell } from "@/components/shared/notification-bell";
 import { SidebarNav, type NavItem } from "@/components/shared/sidebar-nav";
 import { UserMenu } from "@/components/shared/user-menu";
@@ -19,12 +20,42 @@ import {
 } from "lucide-react";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { clearTokens } from "@/lib/auth";
 import { useMe } from "@/hooks/use-me";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BottomNav } from "@/components/shared/bottom-nav";
+
+// Shared trigger used by both the desktop fake-input and the mobile icon button —
+// dispatches the same window event GlobalSearchDialog listens for (Plan 112-02).
+function openSearch() {
+  window.dispatchEvent(new Event(SEARCH_OPEN_EVENT));
+}
+
+// Platform-aware ⌘K/Ctrl K hint via useSyncExternalStore (not useState+useEffect —
+// this repo's react-hooks/set-state-in-effect lint rule is configured as an error,
+// same constraint 112-02-SUMMARY.md already hit). getServerSnapshot keeps the SSR
+// and first-hydration render on the stable "Ctrl K" default; React swaps in the
+// real client value (getSnapshot) only after mount, so there is no mismatch — the
+// exact contract `navigator`-derived values need, matching React's own docs example
+// for subscribing to a browser API (navigator.onLine).
+function subscribeToNothing() {
+  return () => {};
+}
+
+function getShortcutLabelSnapshot() {
+  if (
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
+  ) {
+    return "⌘K";
+  }
+  return "Ctrl K";
+}
+
+function getShortcutLabelServerSnapshot() {
+  return "Ctrl K";
+}
 
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -43,6 +74,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const me = useMe();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  const shortcutLabel = React.useSyncExternalStore(
+    subscribeToNothing,
+    getShortcutLabelSnapshot,
+    getShortcutLabelServerSnapshot,
+  );
 
   React.useEffect(() => {
     if (me.isError) {
@@ -119,11 +156,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="hidden md:flex flex-1 max-w-md relative group">
-            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-blue-500" />
-            <Input
-              placeholder="Pesquisar processos, entidades..."
-              className="pl-9 bg-slate-100/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus-visible:ring-1 focus-visible:ring-blue-500/50 rounded-full text-sm h-9 shadow-sm transition-all"
-            />
+            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-blue-500 pointer-events-none" />
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Pesquisar"
+              className="flex w-full items-center pl-9 pr-3 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus-visible:ring-1 focus-visible:ring-blue-500/50 focus-visible:outline-none rounded-full text-sm h-9 shadow-sm transition-all"
+            >
+              <span className="flex-1 truncate text-left text-slate-400 dark:text-slate-500">
+                Pesquisar...
+              </span>
+              <kbd className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
+                {shortcutLabel}
+              </kbd>
+            </button>
           </div>
 
           <div className="text-[13px] font-medium text-slate-500 dark:text-slate-400 hidden md:flex items-center gap-2">
@@ -145,8 +191,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Pesquisar"
+              className="md:hidden flex items-center justify-center h-9 w-9 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Search className="h-5 w-5" />
+            </button>
             <ThemeToggle />
             <NotificationBell />
+            <GlobalSearchDialog />
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
             <UserMenu variant="topbar" me={me.data} onLogout={onLogout} />
           </div>
