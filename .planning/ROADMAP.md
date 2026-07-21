@@ -340,11 +340,11 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
   4. O utilizador vê 3 estados distintos consoante o momento: antes de escrever (últimos registos visitados, guardados apenas no cliente/sessão, nunca no servidor), a carregar, e sem resultados (SRCH-08, SRCH-10)
   5. Cada grupo de resultados mostra um link "Ver todos" que abre a lista completa desse tipo, já filtrada pelo termo pesquisado (SRCH-09)
 **Plans**: 5 plans (3 waves)
-- [ ] 112-01-PLAN.md — Fundação: tipo ResultadoPesquisa, useDebouncedValue (300ms), hook useGlobalSearch (/pesquisa, ≥2 chars), helpers search-recents (sessionStorage) + highlightMatch
+- [x] 112-01-PLAN.md — Fundação: tipo ResultadoPesquisa, useDebouncedValue (300ms), hook useGlobalSearch (/pesquisa, ≥2 chars), helpers search-recents (sessionStorage) + highlightMatch
 - [ ] 112-02-PLAN.md — GlobalSearchDialog: paleta Ctrl+K/⌘K (CommandDialog, shouldFilter=false, resultados agrupados, destaque, recentes, estados, "Ver todos", navegação guardada por isInternalLinkUrl)
 - [ ] 112-03-PLAN.md — Topbar: trigger desktop (fake-input + kbd hint) + trigger ícone mobile, monta GlobalSearchDialog uma vez (SRCH-05)
-- [ ] 112-04-PLAN.md — Semear ?q= nas listas Clientes + Processos (SRCH-09)
-- [ ] 112-05-PLAN.md — Semear ?q= em Documentos (novo filtro client-side) + Pareceres (via pesquisa avançada) (SRCH-09)
+- [x] 112-04-PLAN.md — Semear ?q= nas listas Clientes + Processos (SRCH-09)
+- [x] 112-05-PLAN.md — Semear ?q= em Documentos (novo filtro client-side) + Pareceres (via pesquisa avançada) (SRCH-09)
 **UI hint**: yes
 
 #### Phase 113: Processos — Filtro por Estado
@@ -458,7 +458,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
 | 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete    | 2026-07-21 |
-| 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 0/5 | Not started | - |
+| 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 3/5 | In Progress|  |
 | 113. Processos — Filtro por Estado | v2.14 | 0/TBD | Not started | - |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
