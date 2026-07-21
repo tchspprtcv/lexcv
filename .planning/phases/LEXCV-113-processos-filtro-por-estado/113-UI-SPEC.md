@@ -1,10 +1,11 @@
 ---
 phase: 113
 slug: processos-filtro-por-estado
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "bIkeynI — style vega/radix-vega, baseColor neutral, iconLibrary lucide, radius none — https://ui.shadcn.com/create?preset=bIkeynI"
 created: 2026-07-21
+reviewed_at: 2026-07-21
 ---
 
 # Phase 113 — UI Design Contract
@@ -116,6 +117,8 @@ The 6 Estado option labels themselves (`Todos` / `Em triagem` / `Ativo` / `Suspe
 
 *(Supplementary to the template's required sections — this is the concrete, line-level contract the planner/executor need for a JSX-move phase; the checker maps it to Dimensions 2/5 "Visuals"/"Spacing".)*
 
+**Primary focal point:** the search field remains the primary visual anchor of the filter bar (unchanged); the promoted Estado control is a secondary, equal-weight filter sitting alongside it — it does not compete for or take over visual priority.
+
 **Source (remove):** the entire Estado block currently at `processos/page.tsx:251-270` — the `<div className="lg:col-span-3">` wrapping the "Estado" label + `NativeSelect`, currently the first child inside `{advancedOpen ? (...) : null}` (`page.tsx:249-250`).
 
 **Destination (insert):** as a new sibling `<div>` inside the existing `<div className="flex flex-wrap items-end gap-2">` (`page.tsx:205-229`), positioned between the Pesquisar field's closing `</div>` (`page.tsx:219`) and the "Filtros" `<Button>` (`page.tsx:220`) — matching `113-CONTEXT.md`'s locked position ("logo a seguir ao campo de pesquisa, antes do botão 'Filtros'").
@@ -160,11 +163,11 @@ The 6 Estado option labels themselves (`Todos` / `Em triagem` / `Ativo` / `Suspe
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: FLAG (non-blocking) — fixed: added explicit focal-point statement
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved-with-recommendations (recommendation applied 2026-07-21)
