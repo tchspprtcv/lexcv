@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: ready_to_plan
-stopped_at: Phase 111 complete (2/2) — ready to discuss Phase 112
-last_updated: 2026-07-21T15:15:09.647Z
-last_activity: 2026-07-18
+status: planning
+stopped_at: Phase 112 UI-SPEC approved
+last_updated: "2026-07-21T15:50:33.609Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 5
   completed_phases: 1
@@ -186,9 +186,9 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-18T23:46:13.365Z
-Stopped at: Plan 111-02 (PesquisaController API layer) executado: GET /api/v1/pesquisa com gate-before-fetch RBAC por ramo, ResultadoPesquisaDto, 7 testes Mockito (RBAC matrix + validacao). Fase 111 completa (2/2 plans) — pronta para verificacao.
-Resume file: None
+Last session: 2026-07-21T15:50:33.572Z
+Stopped at: Phase 112 UI-SPEC approved
+Resume file: .planning/phases/LEXCV-112-frontend-pesquisa-global-paleta-de-comando/112-UI-SPEC.md
 
 ## Operator Next Steps
 
