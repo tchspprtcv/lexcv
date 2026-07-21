@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Eye, Filter, Pencil, Plus, Search } from "lucide-react";
 
@@ -61,6 +62,18 @@ function ClientesPageContent({
   const [draftCreatedTo, setDraftCreatedTo] = React.useState("");
 
   const [filters, setFilters] = React.useState<ClientesListFilters>({});
+
+  const searchParams = useSearchParams();
+  const seededQ = searchParams.get("q");
+  // Seed draftQuery from ?q= without a useEffect (avoids react-hooks/set-state-in-effect):
+  // this is React's documented "adjusting state during render" pattern — setDraftQuery is
+  // only called when seededQ actually changes (tracked via lastSeededQ), so it re-seeds on a
+  // new ?q= navigation but never fights the user's own edits to the search box.
+  const [lastSeededQ, setLastSeededQ] = React.useState<string | null>(null);
+  if (seededQ && seededQ !== lastSeededQ) {
+    setLastSeededQ(seededQ);
+    setDraftQuery(seededQ);
+  }
 
   const clienteColumns = React.useMemo(() => columns(canEditClientes), [canEditClientes]);
 
