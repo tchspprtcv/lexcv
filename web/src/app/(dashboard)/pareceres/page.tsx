@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Filter, Search } from "lucide-react";
 
@@ -57,6 +58,18 @@ function ParecerPageContent() {
   const [pesquisaDataFim, setPesquisaDataFim] = React.useState("");
   const [pesquisaFilters, setPesquisaFilters] = React.useState<ParecerPesquisaFilters>({});
   const [pesquisaSubmitted, setPesquisaSubmitted] = React.useState(false);
+
+  const searchParams = useSearchParams();
+  const seededQ = searchParams.get("q");
+  const [pesquisaSeedKey, setPesquisaSeedKey] = React.useState<string | null>(null);
+
+  if (seededQ && seededQ !== pesquisaSeedKey) {
+    setPesquisaSeedKey(seededQ);
+    setPesquisaTexto(seededQ);
+    setPesquisaFilters({ texto: seededQ });
+    setPesquisaSubmitted(true);
+    setPesquisaOpen(true);
+  }
 
   const clientes = useClientes({});
   const adminUsers = useAdminUsers();
