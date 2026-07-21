@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
 status: executing
-stopped_at: Completed 112-02-PLAN.md
-last_updated: "2026-07-21T17:23:04.461Z"
+stopped_at: Completed 112-03-PLAN.md
+last_updated: "2026-07-21T17:39:37.828Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 20
+  completed_plans: 7
+  percent: 40
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 ## Current Position
 
 Phase: 112 (Frontend — Pesquisa Global (Paleta de Comando)) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-07-21
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Progress: [█████████░] 86%
 | Phase 111 P01 | 15min | 2 tasks | 6 files |
 | Phase 111 P02 | 15min | 2 tasks | 3 files |
 | Phase 112 P02 | ~30min | 2 tasks | 1 files |
+| Phase 112 P03 | 12min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full pe
 - [Phase 111]: PesquisaControllerTest role-matrix covered via one @Test with an internal loop over the 4 seeded role scope-sets, not @ParameterizedTest — no precedent for @ParameterizedTest exists in this test suite
 - [Phase 112]: 112-02: query reset on dialog close moved into onOpenChange instead of a useEffect, to satisfy react-hooks/set-state-in-effect (configured as an ESLint error in this repo)
 - [Phase 112]: 112-02: recents list read directly at render time instead of React.useMemo keyed on open, avoiding an exhaustive-deps warning about an intentional cache-invalidation dependency
+- [Phase 112]: 112-03: kbd shortcut-hint platform detection uses React.useSyncExternalStore instead of useState+useEffect, avoiding react-hooks/set-state-in-effect (configured as an ESLint error in this repo) while preserving the identical SSR-safe default-then-upgrade contract
 
 ### Pending Todos
 
@@ -189,8 +191,8 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-21T17:23:04.439Z
-Stopped at: Completed 112-02-PLAN.md
+Last session: 2026-07-21T17:39:37.810Z
+Stopped at: Completed 112-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

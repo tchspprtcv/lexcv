@@ -309,7 +309,7 @@ See archive: [milestones/v2.13-ROADMAP.md](milestones/v2.13-ROADMAP.md) · [mile
 A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa global cross-entity já tem toda a base técnica instalada (primitivos `cmdk`/`CommandDialog` desde a Phase 107, dois precedentes de pesquisa `ILIKE` tenant-scoped já no backend) — falta só ligar as peças. O backend (Phase 111) tem de existir e estar testado (isolamento de tenant, RBAC por branch de entidade, ranking exato/prefixo antes de substring) antes do frontend (Phase 112) o consumir — a mesma sequência já usada neste projeto para Pareceres (v2.5→v2.6) e Notificações (Phase 86→89), e evita construir UI contra um contrato de dados ainda instável. O filtro de estado de Processos (Phase 113) é aditivo e tecnicamente independente da pesquisa (módulo e ficheiros distintos), mas agrupado tematicamente com as Phases 111-112 por ambos fecharem os mesmos gaps de UX identificados no fecho da v2.13. As duas fases de linguagem visual fecham a milestone: cantos arredondados (Phase 114, mudança de um único token CSS já isolado em `web/src/app/globals.css`) corre antes do levantamento de ícones (Phase 115) para que a verificação visual não tenha de rever os mesmos ecrãs duas vezes, e para que o levantamento de ícones já cubra os botões novos introduzidos pelas Phases 111-114 (trigger de pesquisa, filtro de estado). Targets #2-#5 não tiveram research dedicado (fora do âmbito desta ronda de pesquisa) — as Phases 113-115 aplicam padrões já estabelecidos no código (Select de filtros da Phase 106, `lucide-react`/`Tooltip` já instalados) com risco avaliado como baixo.
 
 - [x] **Phase 111: Backend — Pesquisa Global Cross-Entity (API)** - Endpoint novo, seguro e bem ordenado (Cliente/Processo/Documento/Parecer, tenant+RBAC por branch) (completed 2026-07-21)
-- [ ] **Phase 112: Frontend — Pesquisa Global (Paleta de Comando)** - Paleta Ctrl+K/⌘K no topbar, ligada ao endpoint da Phase 111
+- [x] **Phase 112: Frontend — Pesquisa Global (Paleta de Comando)** - Paleta Ctrl+K/⌘K no topbar, ligada ao endpoint da Phase 111 (completed 2026-07-21)
 - [ ] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado
 - [ ] **Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)** - Reversão deliberada do radius reto da v2.13
 - [ ] **Phase 115: Linguagem Visual — Ícones + Filtros Ícone-Only** - Ícones em todos os botões; filtros aplicar/limpar/exportar passam a ícone-only com tooltip
@@ -342,7 +342,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 **Plans**: 5 plans (3 waves)
 - [x] 112-01-PLAN.md — Fundação: tipo ResultadoPesquisa, useDebouncedValue (300ms), hook useGlobalSearch (/pesquisa, ≥2 chars), helpers search-recents (sessionStorage) + highlightMatch
 - [x] 112-02-PLAN.md — GlobalSearchDialog: paleta Ctrl+K/⌘K (CommandDialog, shouldFilter=false, resultados agrupados, destaque, recentes, estados, "Ver todos", navegação guardada por isInternalLinkUrl)
-- [ ] 112-03-PLAN.md — Topbar: trigger desktop (fake-input + kbd hint) + trigger ícone mobile, monta GlobalSearchDialog uma vez (SRCH-05)
+- [x] 112-03-PLAN.md — Topbar: trigger desktop (fake-input + kbd hint) + trigger ícone mobile, monta GlobalSearchDialog uma vez (SRCH-05)
 - [x] 112-04-PLAN.md — Semear ?q= nas listas Clientes + Processos (SRCH-09)
 - [x] 112-05-PLAN.md — Semear ?q= em Documentos (novo filtro client-side) + Pareceres (via pesquisa avançada) (SRCH-09)
 **UI hint**: yes
@@ -458,7 +458,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 109. Notificações / Settings / Setup Wizard | v2.13 | 3/3 | Complete    | 2026-07-17 |
 | 110. Refinamento da Landing (webpage/) | v2.13 | 3/3 | Complete    | 2026-07-18 |
 | 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete    | 2026-07-21 |
-| 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 4/5 | In Progress|  |
+| 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 5/5 | Complete   | 2026-07-21 |
 | 113. Processos — Filtro por Estado | v2.14 | 0/TBD | Not started | - |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 0/TBD | Not started | - |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
