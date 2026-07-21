@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: verifying
-stopped_at: Completed 113-01-PLAN.md
-last_updated: "2026-07-21T21:02:07.844Z"
+status: ready_to_plan
+stopped_at: Phase 113 complete (1/1) — ready to discuss Phase 114
+last_updated: 2026-07-21T21:18:21.558Z
 last_activity: 2026-07-21
 progress:
   total_phases: 5
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 113 — processos — filtro por estado
+**Current focus:** Phase 114 — linguagem visual — cantos arredondados (`  radius`)
 
 ## Current Position
 
-Phase: 113
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 114
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-21
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 101
+- Total plans completed: 102
 - Average duration: —
 - Total execution time: —
 
@@ -83,6 +83,7 @@ Progress: [██████████] 100%
 | 110 | 3 | ~90 min | ~30 min |
 | 111 | 2 | - | - |
 | 112 | 5 | - | - |
+| 113 | 1 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
