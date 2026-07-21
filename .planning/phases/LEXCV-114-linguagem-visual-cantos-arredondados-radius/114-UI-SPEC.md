@@ -302,5 +302,3 @@ This is the operative acceptance test for Phase 114. Two dimensions cross: **rep
 - [x] Dimension 6 Registry Safety: PASS (trivial — no registry content introduced)
 
 **Approval:** approved-with-recommendations (recommendation applied 2026-07-21)
-
-**Approval:** pending
