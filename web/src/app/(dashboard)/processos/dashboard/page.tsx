@@ -68,7 +68,7 @@ export default function ProcessosDashboardPage() {
               <Card className="border-slate-200 dark:border-slate-800 hover:border-red-500/50 dark:hover:border-red-500/50 transition-colors group cursor-pointer bg-white dark:bg-[#020617]">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="h-12 w-12 bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded-md bg-red-50 dark:bg-red-500/10 flex items-center justify-center border border-red-100 dark:border-red-500/20 group-hover:scale-110 transition-transform">
                       <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                     <Badge variant="red" className="font-bold tracking-wide">Ação Imediata</Badge>
@@ -84,7 +84,7 @@ export default function ProcessosDashboardPage() {
               <Card className="border-slate-200 dark:border-slate-800 hover:border-amber-500/50 dark:hover:border-amber-500/50 transition-colors group cursor-pointer bg-white dark:bg-[#020617]">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
-                    <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20 group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded-md bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20 group-hover:scale-110 transition-transform">
                       <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <Badge variant="amber" className="font-bold tracking-wide">Atenção</Badge>

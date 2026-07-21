@@ -458,7 +458,7 @@ function ClientesPageContent({
                   return (
                     <div key={c.id} className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 flex-shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold">
+                        <div className="h-10 w-10 rounded-md flex-shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold">
                           {initials}
                         </div>
                         <div className="min-w-0 flex-1">

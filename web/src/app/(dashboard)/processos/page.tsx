@@ -161,7 +161,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             <Card className="border-slate-200 dark:border-slate-800">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
+                  <div className="h-10 w-10 rounded-md bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center border border-blue-100 dark:border-blue-500/20">
                     <Scale className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <Badge variant="green" className="font-bold tracking-wide">+12%</Badge>
@@ -173,7 +173,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
             <Card className="border-slate-200 dark:border-slate-800">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20">
+                  <div className="h-10 w-10 rounded-md bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center border border-amber-100 dark:border-amber-500/20">
                     <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <Badge variant="gray" className="font-bold tracking-wide">Estável</Badge>

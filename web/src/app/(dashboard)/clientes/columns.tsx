@@ -137,7 +137,7 @@ export function columns(canEditClientes: boolean): ColumnDef<Cliente>[] {
 
         return (
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold shadow-sm">
+            <div className="h-10 w-10 rounded-md bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-xs font-bold shadow-sm">
               {initials}
             </div>
             <div className="min-w-0">

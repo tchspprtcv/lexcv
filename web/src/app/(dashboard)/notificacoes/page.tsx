@@ -176,8 +176,8 @@ function NotificacoesContent() {
                     aria-pressed={active}
                     className={
                       active
-                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 h-8 px-3 text-xs"
-                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-md h-8 px-3 text-xs"
+                        : "border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300 rounded-md h-8 px-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
                     }
                     onClick={() => onLidaFilterChange(chip.value)}
                   >
