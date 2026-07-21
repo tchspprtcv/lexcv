@@ -125,6 +125,10 @@ None - no external service configuration required.
 
 Plan 112-02 (the `GlobalSearchDialog` command palette) can now import and compose all 5 units built here (`ResultadoPesquisa`, `useDebouncedValue`, `useGlobalSearch`, `readRecents`/`pushRecent`, `highlightMatch`) exactly per the `<interfaces>` contract locked in `112-01-PLAN.md`. No blockers for 112-02. The two deferred pre-existing issues (vitest gap, lint debt) are unrelated to this dependency chain and do not block any Phase 112 plan.
 
+## Self-Check: PASSED
+
+All 5 created source files confirmed present on disk; all 4 commits (`a987d2e`, `9248068`, `9b1d2d2`, `e996826`) confirmed present in `git log --all`. No missing items.
+
 ---
 *Phase: LEXCV-112-frontend-pesquisa-global-paleta-de-comando*
 *Completed: 2026-07-21*
