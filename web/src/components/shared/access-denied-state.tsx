@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,10 @@ export function AccessDeniedState({
         <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
         {backHref ? (
           <Button asChild variant="outline">
-            <Link href={backHref}>{backLabel}</Link>
+            <Link href={backHref}>
+              <ArrowLeft className="h-4 w-4" />
+              {backLabel}
+            </Link>
           </Button>
         ) : null}
       </CardContent>
