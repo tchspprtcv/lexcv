@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: executing
-stopped_at: Phase 115.1 UI-SPEC approved
-last_updated: "2026-07-22T07:39:40.574Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 115.1 was final phase)
+last_updated: 2026-07-22T10:47:37.776Z
 last_activity: 2026-07-22 -- Phase 115.1 execution started
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 23
-  completed_plans: 20
+  completed_plans: 23
   percent: 83
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 115.1 — Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 115.1 (Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 115.1
-Last activity: 2026-07-22 -- Phase 115.1 execution started
+Phase: 115.1
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-07-22
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 114
+- Total plans completed: 117
 - Average duration: —
 - Total execution time: —
 
@@ -86,6 +86,7 @@ Progress: [██████████] 100%
 | 113 | 1 | - | - |
 | 114 | 1 | - | - |
 | 115 | 11 | - | - |
+| 115.1 | 3 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
