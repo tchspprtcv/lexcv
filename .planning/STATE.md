@@ -4,8 +4,8 @@ milestone: v2.14
 milestone_name: UI/UX Melhorias
 status: executing
 stopped_at: Phase 115.1 UI-SPEC approved
-last_updated: "2026-07-22T07:37:31.233Z"
-last_activity: 2026-07-22 -- Phase 115.1 planning complete
+last_updated: "2026-07-22T07:39:40.574Z"
+last_activity: 2026-07-22 -- Phase 115.1 execution started
 progress:
   total_phases: 6
   completed_phases: 5
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone complete
+**Current focus:** Phase 115.1 — Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres
 
 ## Current Position
 
-Phase: 115.1
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-22 -- Phase 115.1 planning complete
+Phase: 115.1 (Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 115.1
+Last activity: 2026-07-22 -- Phase 115.1 execution started
 
 Progress: [██████████] 100%
 
