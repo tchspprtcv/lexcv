@@ -3,7 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,9 +92,21 @@ function DocumentoAcoesCell({
           <TooltipContent>Download</TooltipContent>
         </Tooltip>
         {canEditDocumentos ? (
-          <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
-            {del.isPending ? "A apagar..." : "Apagar"}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Apagar"
+                onClick={onDelete}
+                disabled={del.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Apagar</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
       {error ? <div className="text-xs text-red-600">{error}</div> : null}
