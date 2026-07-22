@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LogIn, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Suspense } from "react";
@@ -87,6 +88,11 @@ function LoginForm() {
           {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
 
           <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogIn className="h-4 w-4" />
+            )}
             {form.formState.isSubmitting ? "A entrar..." : "Entrar"}
           </Button>
         </form>

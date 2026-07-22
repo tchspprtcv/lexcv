@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   Save,
   Bell,
-  AlertCircle
+  AlertCircle,
+  RotateCcw
 } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
@@ -518,6 +519,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 variant="ghost"
                 onClick={() => setIsFormOpen(false)}
                 className="h-8 w-8 p-0 rounded-full border border-slate-200 dark:border-slate-800"
+                aria-label="Fechar"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -669,12 +671,14 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 onClick={() => setIsFormOpen(false)}
                 className="border-slate-200 dark:border-slate-700"
               >
+                <X className="h-4 w-4" />
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
               >
+                <Save className="h-4 w-4" />
                 Guardar Utilizador
               </Button>
             </CardFooter>
@@ -893,6 +897,7 @@ function NotificationPreferencesTab() {
           Não foi possível carregar as preferências de notificação.
         </p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RotateCcw className="h-4 w-4" />
           Tentar novamente
         </Button>
       </div>
