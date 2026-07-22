@@ -462,7 +462,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 111. Backend — Pesquisa Global Cross-Entity (API) | v2.14 | 2/2 | Complete    | 2026-07-21 |
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 5/5 | Complete    | 2026-07-21 |
 | 113. Processos — Filtro por Estado | v2.14 | 1/1 | Complete    | 2026-07-21 |
-| 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete   | 2026-07-21 |
+| 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete    | 2026-07-22 |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
 
 **Next:** Milestone v2.14 (UI/UX Melhorias) — ROADMAP criado: 5 fases (111–115), 15/15 requisitos mapeados (SRCH-01 a SRCH-11, PEST-01, ICON-01, RAD-01, FICO-01), cobertura 100%. Run `/gsd:plan-phase 111` to begin execution (aguarda aprovação do roadmap).
