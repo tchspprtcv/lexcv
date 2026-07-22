@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { Loader2, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,7 +111,10 @@ function ParecerCreateFormContent() {
           </p>
         </div>
         <Button asChild variant="outline" className="">
-          <Link href="/pareceres">Cancelar</Link>
+          <Link href="/pareceres">
+            <X className="h-4 w-4" />
+            Cancelar
+          </Link>
         </Button>
       </div>
 
@@ -209,10 +213,18 @@ function ParecerCreateFormContent() {
                   !canCreatePareceres
                 }
               >
+                {form.formState.isSubmitting || createParecer.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
                 {form.formState.isSubmitting || createParecer.isPending ? "A criar..." : "Criar Solicitação"}
               </Button>
               <Button asChild type="button" variant="outline" className="">
-                <Link href="/pareceres">Cancelar</Link>
+                <Link href="/pareceres">
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Link>
               </Button>
             </div>
           </form>
