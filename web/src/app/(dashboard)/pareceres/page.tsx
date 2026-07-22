@@ -8,6 +8,8 @@ import { Check, Filter, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
@@ -252,29 +254,29 @@ function ParecerPageContent() {
             <form className="space-y-4" onSubmit={onPesquisar}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label
+                  <Label
                     htmlFor="pesquisa-texto"
                     className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400"
                   >
                     Pesquisar
-                  </label>
+                  </Label>
                   <div className="mt-2">
-                    <input
+                    <Input
                       id="pesquisa-texto"
                       type="text"
                       value={pesquisaTexto}
                       onChange={(e) => setPesquisaTexto(e.target.value)}
                       placeholder="Pesquisar por conteúdo do parecer..."
-                      className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  <Label htmlFor="pesquisa-avancada-cliente" className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Cliente
-                  </label>
+                  </Label>
                   <div className="mt-2">
-                    <NativeSelect value={pesquisaClienteId} onChange={(e) => setPesquisaClienteId(e.target.value)} size="default" className="w-full">
+                    <NativeSelect id="pesquisa-avancada-cliente" value={pesquisaClienteId} onChange={(e) => setPesquisaClienteId(e.target.value)} size="default" className="w-full">
                       <option value="todos">Todos</option>
                       {(clientes.data ?? []).map((c) => (
                         <option key={c.id} value={c.id}>
@@ -285,11 +287,11 @@ function ParecerPageContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  <Label htmlFor="pesquisa-avancada-advogado" className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Advogado
-                  </label>
+                  </Label>
                   <div className="mt-2">
-                    <NativeSelect value={pesquisaAdvogadoId} onChange={(e) => setPesquisaAdvogadoId(e.target.value)} size="default" className="w-full">
+                    <NativeSelect id="pesquisa-avancada-advogado" value={pesquisaAdvogadoId} onChange={(e) => setPesquisaAdvogadoId(e.target.value)} size="default" className="w-full">
                       <option value="todos">Todos</option>
                       {advogados.map((u) => (
                         <option key={u.id} value={u.id}>
@@ -300,11 +302,11 @@ function ParecerPageContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  <Label htmlFor="pesquisa-avancada-status" className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Estado
-                  </label>
+                  </Label>
                   <div className="mt-2">
-                    <NativeSelect value={pesquisaStatus} onChange={(e) => setPesquisaStatus(e.target.value)} size="default" className="w-full">
+                    <NativeSelect id="pesquisa-avancada-status" value={pesquisaStatus} onChange={(e) => setPesquisaStatus(e.target.value)} size="default" className="w-full">
                       <option value="todos">Todos</option>
                       <option value="PENDENTE">Pendente</option>
                       <option value="EM_ELABORACAO">Em elaboração</option>
@@ -314,28 +316,28 @@ function ParecerPageContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+                  <Label className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400">
                     Período
-                  </label>
+                  </Label>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
-                      <label htmlFor="pesquisa-data-inicio" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Início</label>
-                      <input
+                      <Label htmlFor="pesquisa-data-inicio" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Início</Label>
+                      <Input
                         id="pesquisa-data-inicio"
                         type="date"
                         value={pesquisaDataInicio}
                         onChange={(e) => setPesquisaDataInicio(e.target.value)}
-                        className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label htmlFor="pesquisa-data-fim" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Fim</label>
-                      <input
+                      <Label htmlFor="pesquisa-data-fim" className="text-xs font-medium text-slate-500 dark:text-slate-400">Data Fim</Label>
+                      <Input
                         id="pesquisa-data-fim"
                         type="date"
                         value={pesquisaDataFim}
                         onChange={(e) => setPesquisaDataFim(e.target.value)}
-                        className="h-10 w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        className="bg-white dark:bg-[#020617] border-slate-300 dark:border-slate-700 focus-visible:ring-blue-500"
                       />
                     </div>
                   </div>
