@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { ArrowLeft, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,7 +140,10 @@ export default function DocumentoUploadPage() {
         </div>
 
         <Button asChild variant="outline">
-          <Link href="/documentos">Voltar</Link>
+          <Link href="/documentos">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -253,10 +257,14 @@ export default function DocumentoUploadPage() {
                 type="submit"
                 disabled={form.formState.isSubmitting || upload.isPending || permissions.isLoading || !canCreateDocumentos}
               >
+                <Upload className="h-4 w-4" />
                 {form.formState.isSubmitting || upload.isPending ? "A enviar..." : "Enviar"}
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link href="/documentos">Cancelar</Link>
+                <Link href="/documentos">
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Link>
               </Button>
             </div>
           </form>
