@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { Paperclip } from "lucide-react";
+import { Paperclip, Send } from "lucide-react";
 
 import {
   AlertDialog,
@@ -459,6 +459,7 @@ function NovaVersaoForm({ solicitacaoId }: { solicitacaoId: string }) {
           {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}
 
           <Button type="submit" disabled={form.formState.isSubmitting || versaoUpload.isPending}>
+            <Send className="h-4 w-4" />
             {form.formState.isSubmitting || versaoUpload.isPending
               ? "A submeter..."
               : "Submeter Versão"}
@@ -516,6 +517,7 @@ function EntregarParecerDialog({
           type="button"
           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
         >
+          <Send className="h-4 w-4" />
           Entregar Parecer
         </Button>
       </AlertDialogTrigger>
