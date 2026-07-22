@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 
@@ -62,6 +62,8 @@ export default function ProcessoCreatePage() {
 
 function ProcessoWizardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lockedClienteId = searchParams.get("clienteId");
   const permissions = usePermissions();
   const canCreateProcessos = permissions.can.create("processos");
   const canManageProcessos = permissions.can.manage("processos");
@@ -86,7 +88,7 @@ function ProcessoWizardContent() {
   const intakeForm = useForm<ProcessoIntakeFormValues>({
     resolver: zodResolver(processoIntakeFormSchema),
     defaultValues: {
-      cliente_id: "",
+      cliente_id: lockedClienteId ?? "",
       numero: undefined,
       titulo: undefined,
       tipo_processo: undefined,
@@ -305,7 +307,7 @@ function ProcessoWizardContent() {
                     id="cliente_id"
                     size="default"
                     className="w-full"
-                    disabled={clientes.isPending || clientes.isError}
+                    disabled={clientes.isPending || clientes.isError || Boolean(lockedClienteId)}
                     {...intakeForm.register("cliente_id")}
                   >
                     <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
@@ -315,6 +317,11 @@ function ProcessoWizardContent() {
                       </option>
                     ))}
                   </NativeSelect>
+                  {lockedClienteId ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Cliente pré-preenchido a partir da ficha de cliente — não pode ser alterado aqui.
+                    </p>
+                  ) : null}
                   {clientes.isError ? (
                     <p className="text-sm text-red-600">
                       {clientes.error instanceof Error ? clientes.error.message : "Erro ao carregar clientes"}
