@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { Loader2, Plus, X } from "lucide-react";
@@ -45,6 +45,8 @@ export default function ParecerCreatePage() {
 
 function ParecerCreateFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const lockedClienteId = searchParams.get("clienteId");
   const permissions = usePermissions();
   const canCreatePareceres = permissions.can.create("pareceres");
 
@@ -55,7 +57,7 @@ function ParecerCreateFormContent() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(parecerCreateFormSchema) as any,
     defaultValues: {
-      clienteId: "",
+      clienteId: lockedClienteId ?? "",
       processoId: undefined,
       descricao: "",
       prazo: undefined,
@@ -126,7 +128,7 @@ function ParecerCreateFormContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="clienteId">Cliente</Label>
-              <NativeSelect id="clienteId" size="default" className="w-full" disabled={clientes.isPending || clientes.isError} {...form.register("clienteId")}>
+              <NativeSelect id="clienteId" size="default" className="w-full" disabled={clientes.isPending || clientes.isError || Boolean(lockedClienteId)} {...form.register("clienteId")}>
                 <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
                 {(clientes.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
@@ -134,6 +136,11 @@ function ParecerCreateFormContent() {
                   </option>
                 ))}
               </NativeSelect>
+              {lockedClienteId ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Cliente pré-preenchido a partir da ficha de cliente — não pode ser alterado aqui.
+                </p>
+              ) : null}
               {clientes.isError ? (
                 <p className="text-sm text-red-600">
                   {clientes.error instanceof Error ? clientes.error.message : "Erro ao carregar clientes"}
