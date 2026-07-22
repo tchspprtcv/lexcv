@@ -383,7 +383,18 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
   2. Botões de ação de filtro (aplicar/limpar/exportar) em Clientes, Processos, Agenda, Documentos e Financeiro passam a mostrar apenas o ícone, sem texto visível ao lado (FICO-01)
   3. Ao passar o rato sobre um botão de filtro ícone-only, aparece um tooltip a identificar a ação, reutilizando o primitivo `Tooltip` já instalado desde a v2.13 (FICO-01)
   4. Um utilizador que navegue por teclado (foco, sem rato) ainda consegue identificar a ação de cada botão ícone-only através de um nome acessível (`aria-label`), preservando a acessibilidade já corrigida noutros pontos da aplicação (FICO-01)
-**Plans**: TBD
+**Plans**: 11 plans (2 waves) — decomposto por módulo/cluster de ficheiros (posse exclusiva de ficheiros → 10 planos de implementação paralelos na Wave 1), com os dois ficheiros-mega de 31 gaps (`clientes/[id]` e `processos/[id]`) isolados cada um no seu plano
+- [ ] 115-01-PLAN.md — Componentes partilhados/leaf (paginação chevrons, access-denied, snooze, formulários de perfil) — 8 gaps ICON-01, maior alavancagem
+- [ ] 115-02-PLAN.md — Clientes lista/novo/merge — FICO-01 (Aplicar/Limpar/Exportar ícone-only) + ICON-01
+- [ ] 115-03-PLAN.md — Ficha de Cliente (`clientes/[id]`) — 31 gaps ICON-01 (ficheiro-mega, 2 tarefas)
+- [ ] 115-04-PLAN.md — Processos lista/novo/editar/doc-columns — FICO-01 + ICON-01 (inclui completar a11y do Exportar já ícone-only)
+- [ ] 115-05-PLAN.md — Ficha de Processo (`processos/[id]`) — 31 gaps, incl. 1 FICO-01 (ficheiro-mega, 2 tarefas)
+- [ ] 115-06-PLAN.md — Agenda (lista/detalhe/novo/editar) — FICO-01 (Limpar) + ICON-01; não inventar Aplicar/Exportar
+- [ ] 115-07-PLAN.md — Documentos (lista/columns/novo/detalhe) — FICO-01 (Filtrar/Limpar) + ICON-01
+- [ ] 115-08-PLAN.md — Financeiro (lista/novo/detalhe) — FICO-01 (Exportar/Limpar) + ICON-01 (módulo sem imports lucide hoje)
+- [ ] 115-09-PLAN.md — Pareceres + Notificações — ICON-01 apenas, MANTÉM TEXTO (FICO-01 excluído por CONTEXT.md)
+- [ ] 115-10-PLAN.md — Páginas diversas (settings/dashboard/login) — ICON-01
+- [ ] 115-11-PLAN.md — Verificação de fase: gate build+lint cross-cutting + checkpoint humano FICO-01 (Wave 2, depende de 01-10)
 **UI hint**: yes
 
 ## Progress
@@ -463,6 +474,6 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 | 112. Frontend — Pesquisa Global (Paleta de Comando) | v2.14 | 5/5 | Complete    | 2026-07-21 |
 | 113. Processos — Filtro por Estado | v2.14 | 1/1 | Complete    | 2026-07-21 |
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete    | 2026-07-22 |
-| 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/TBD | Not started | - |
+| 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 0/11 | Planned | - |
 
-**Next:** Milestone v2.14 (UI/UX Melhorias) — ROADMAP criado: 5 fases (111–115), 15/15 requisitos mapeados (SRCH-01 a SRCH-11, PEST-01, ICON-01, RAD-01, FICO-01), cobertura 100%. Run `/gsd:plan-phase 111` to begin execution (aguarda aprovação do roadmap).
+**Next:** Phase 115 planeada — 11 planos (Wave 1: 10 planos de implementação paralelos por módulo; Wave 2: checkpoint de verificação). Última fase da milestone v2.14. Run `/gsd:execute-phase 115` to build (fecha ICON-01 + FICO-01, 100% de cobertura da milestone).
