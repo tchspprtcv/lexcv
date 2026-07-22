@@ -40,7 +40,7 @@ The frontend never calls the backend host directly. `next.config.ts` rewrites `/
 - Auth is **JWT in httpOnly cookies**. `POST /api/v1/auth/login` sets `access_token` + `refresh_token` cookies; `JwtAuthenticationFilter` reads them per request. There are no bearer tokens in JS.
 - Backend authorization is method-level: `@EnableMethodSecurity` + `@PreAuthorize("hasAuthority('<scope>:<action>')")` on each endpoint (e.g. `clientes:view`, `processos:edit`). `AdminController` is gated `@PreAuthorize("hasRole('ADMIN')")` at the class level.
 - Permissions follow a `scope:action` convention where `action ∈ {view, create, edit, manage}`. The frontend mirrors this in `web/src/lib/permissions.ts` with a fallback chain (`manage` implies `edit` implies `create`; all imply nothing weaker for `view`). Use `hasScopedPermission(perms, scope, action)` in the UI, and gate the backend with a matching `@PreAuthorize` — **both layers must agree**.
-- Roles/permissions/default users are seeded in `backend/.../seed/DatabaseSeeder.java` (roles: ADMIN, ADVOGADO, TECNICO, ASSISTENTE). Default admin: `admin@lexcv.cv` / `admin123`.
+- Roles/permissions/default users are seeded in `backend/.../seed/DatabaseSeeder.java` (roles: ADMIN, ADVOGADO, TECNICO, ASSISTENTE). Default admin: `admin@lexcv.cv` / `Pa$$w0rd`.
 
 ### Multi-tenancy (must not be bypassed)
 Every domain entity carries a `tenant_id`. Controllers derive the current tenant via `getTenantId()` (reads `UserPrincipal.getTenantId()` from the security context) and **must** scope all reads/writes by it. Unique constraints are per-tenant (e.g. `(tenant_id, documento_numero)`). When adding endpoints or queries, always filter by tenant id — this is the primary data-isolation boundary.

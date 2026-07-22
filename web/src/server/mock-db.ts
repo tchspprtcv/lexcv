@@ -196,7 +196,7 @@ const users: MockUser[] = [
     tenant_id: tenantDemo.id,
     nome: "Administrador",
     email: "admin@lexcv.cv",
-    password: "admin123",
+    password: "Pa$$w0rd",
     roles: ["ADMIN"],
     ativo: true,
   },

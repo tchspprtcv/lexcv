@@ -69,6 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else if (user == null) {
+                    logger.warn("JWT valid but user " + userId + " not found");
+                } else {
+                    logger.warn("JWT valid but user " + userId + " is deactivated");
                 }
             }
         } catch (Exception ex) {
