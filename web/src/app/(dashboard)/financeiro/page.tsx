@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Download, Plus, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
@@ -172,16 +174,26 @@ function FinanceiroContent({
 
         <div className="flex items-center gap-2">
           {canViewFinanceiro && filteredList.length > 0 ? (
-            <Button
-              variant="outline"
-              onClick={() => exportHonorariosCsv(filteredList, processoById, clienteNomeById)}
-            >
-              Exportar CSV
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Exportar CSV"
+                  onClick={() => exportHonorariosCsv(filteredList, processoById, clienteNomeById)}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Exportar CSV</TooltipContent>
+            </Tooltip>
           ) : null}
           {canCreateFinanceiro ? (
             <Button asChild>
-              <Link href="/financeiro/novo">Novo honorário</Link>
+              <Link href="/financeiro/novo">
+                <Plus className="h-4 w-4" />
+                Novo honorário
+              </Link>
             </Button>
           ) : null}
         </div>
@@ -261,17 +273,24 @@ function FinanceiroContent({
         </div>
 
         {(filtroProcesso !== "todos" || filtroStatus !== "todos" || filtroDataDe || filtroDataAte) ? (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setFiltroProcesso("todos");
-              setFiltroStatus("todos");
-              setFiltroDataDe("");
-              setFiltroDataAte("");
-            }}
-          >
-            Limpar filtros
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Limpar filtros"
+                onClick={() => {
+                  setFiltroProcesso("todos");
+                  setFiltroStatus("todos");
+                  setFiltroDataDe("");
+                  setFiltroDataAte("");
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Limpar filtros</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
 
