@@ -125,6 +125,15 @@ function ProcessoWizardContent() {
     !clientes.isError &&
     !clientes.data?.some((c) => c.id === lockedClienteId);
 
+  // Once the user has actually picked a replacement from the now-enabled select (or the
+  // originally-locked id resolves normally), the "cliente já não está disponível" message
+  // above must stop being shown — otherwise it sits indefinitely, directly beneath the
+  // user's own valid selection (WR-01 round 3 review fix). Only the *message* uses this
+  // narrower value; `disabled` below intentionally keeps reading the plain
+  // `lockedClienteMissing` so the field never re-locks itself once truly missing.
+  const currentClienteId = intakeForm.watch("cliente_id");
+  const lockedClienteMissingUnresolved = lockedClienteMissing && !currentClienteId;
+
   // Step 2 decisao form
   const decisaoForm = useForm<ConflictCheckDecisaoFormValues>({
     resolver: zodResolver(conflictCheckDecisaoFormSchema),
@@ -344,11 +353,11 @@ function ProcessoWizardContent() {
                       </option>
                     ))}
                   </NativeSelect>
-                  {lockedClienteMissing ? (
+                  {lockedClienteMissingUnresolved ? (
                     <p className="text-sm text-red-600">
                       O cliente associado a este link já não está disponível. Selecione um cliente na lista abaixo ou volte à ficha do cliente.
                     </p>
-                  ) : lockedClienteId ? (
+                  ) : lockedClienteId && !lockedClienteMissing ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       Cliente pré-preenchido a partir da ficha de cliente — não pode ser alterado aqui.
                     </p>
