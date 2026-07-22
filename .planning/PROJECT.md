@@ -104,6 +104,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Módulo Pareceres — Campos de formulário usam `Select`/`NativeSelect`; timeline usa `Tooltip`; histórico de versionamento colapsa versões antigas via `Accordion` (primeiro consumidor deste primitivo no projeto) — v2.13 (Phase 108)
 - ✓ Notificações / Settings / Setup Wizard — Novo `UserMenu` partilhado (`DropdownMenu`, primeiro consumidor real deste primitivo) consolida 3 pontos de menu de utilizador duplicados (topbar, rodapé da sidebar, rodapé do Sheet mobile); contador de não-lidas do sino migrado para `Badge` oficial; wizard `/setup` usa `Progress` linear em vez do Checklist estático anterior — v2.13 (Phase 109)
 - ✓ Refinamento da Landing `webpage/` — Navegação mobile funcional adicionada ao `SiteHeader` via `Sheet` reutilizado (gap funcional real, zero navegação mobile antes); secções Hero e Contacto recompostas com `Card`/`Badge`, replicando o padrão já idiomático do `TrustSection` — v2.13 (Phase 110)
+- ✓ Melhorias Técnicas pós-v2.14 (fase inserida, sem REQ-IDs formais) — criação de Processo/Parecer diretamente a partir da ficha de cliente (botões RBAC-gated + `?clienteId=` pré-preenchido/bloqueado nos formulários de criação); redirect da ação "Entrar" do `webpage/` público corrigido para o login de `web/` via `getLoginUrl()`/`NEXT_PUBLIC_WEB_APP_URL` (funciona em dev local com portas separadas, sem alterar o comportamento já correto em produção via Caddy); filtros de Pareceres alinhados aos primitivos `NativeSelect`/`Input`/`Label` já usados em Processos/Clientes. UAT ao vivo (backend+web+webpage a correr em conjunto) encontrou e corrigiu 1 bug real não detetado em 3 rondas de revisão de código estática: a mensagem de recuperação "cliente já não está disponível" nunca era renderizada porque `watch()` num campo RHF não controlado nunca observava o fallback visual do browser quando o id bloqueado não resolvia — corrigido limpando o campo explicitamente assim que a ausência é confirmada — v2.14 (Phase 115.1)
 
 ### Active
 
@@ -287,4 +288,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-18 after starting v2.14 milestone*
+*Last updated: 2026-07-22 after Phase 115.1 completion*
