@@ -1812,6 +1812,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddDecisao}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Decisão
                         </Button>
                       </DialogTrigger>
@@ -1891,6 +1892,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddDecisaoModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -1900,6 +1902,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 decisaoForm.formState.isSubmitting || addDecisao.isPending || updateDecisao.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -1982,6 +1985,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddFacto}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Facto
                         </Button>
                       </DialogTrigger>
@@ -2044,6 +2048,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddFactoModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -2053,6 +2058,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 factoForm.formState.isSubmitting || addFacto.isPending || updateFacto.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -2135,6 +2141,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddTestemunha}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Testemunha
                         </Button>
                       </DialogTrigger>
@@ -2220,6 +2227,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddTestemunhaModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -2231,6 +2239,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 updateTestemunha.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -2437,6 +2446,7 @@ function ReatribuirResponsavelControl({
               setDialogOpen(true);
             }}
           >
+            <UserCog className="h-4 w-4" />
             Reatribuir
           </Button>
         </DialogTrigger>
@@ -2478,6 +2488,7 @@ function ReatribuirResponsavelControl({
               className=""
               onClick={() => setDialogOpen(false)}
             >
+              <X className="h-4 w-4" />
               Cancelar
             </Button>
             <Button
@@ -2489,6 +2500,7 @@ function ReatribuirResponsavelControl({
                 setConfirmOpen(true);
               }}
             >
+              <Check className="h-4 w-4" />
               Reatribuir
             </Button>
           </DialogFooter>
@@ -2604,6 +2616,7 @@ function ProcessoDocumentosTab({
             >
               <DialogTrigger asChild>
                 <Button type="button" variant="outline" size="sm" className="">
+                  <Plus className="h-4 w-4" />
                   Adicionar Documento
                 </Button>
               </DialogTrigger>
@@ -2659,6 +2672,7 @@ function ProcessoDocumentosTab({
                       resetUploadState();
                     }}
                   >
+                    <X className="h-4 w-4" />
                     Cancelar
                   </Button>
                   <Button
@@ -2667,6 +2681,7 @@ function ProcessoDocumentosTab({
                     onClick={onConfirmarUpload}
                     disabled={!novoFicheiro || upload.isPending}
                   >
+                    <Upload className="h-4 w-4" />
                     Confirmar
                   </Button>
                 </DialogFooter>
