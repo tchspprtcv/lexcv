@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { Eye, Filter, Pencil, Plus, Search } from "lucide-react";
+import { Check, Download, Eye, Filter, Merge, Pencil, Plus, Search, Upload, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -262,12 +262,20 @@ function ClientesPageContent({
               await onImportFile(file);
             }}
           />
-          <Button type="button" variant="outline" className="" onClick={onExportCsv}>
-            Exportar CSV
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="outline" size="icon" aria-label="Exportar CSV" onClick={onExportCsv}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Exportar CSV</TooltipContent>
+          </Tooltip>
           {canEditClientes ? (
             <Button asChild type="button" variant="outline" className="">
-              <Link href="/clientes/merge">Merge</Link>
+              <Link href="/clientes/merge">
+                <Merge className="h-4 w-4" />
+                Merge
+              </Link>
             </Button>
           ) : null}
           {canCreateClientes ? (
@@ -278,6 +286,7 @@ function ClientesPageContent({
               onClick={onImportCsv}
               disabled={isImporting}
             >
+              <Upload className="h-4 w-4" />
               {isImporting ? "A importar..." : "Importar CSV"}
             </Button>
           ) : null}
@@ -361,10 +370,22 @@ function ClientesPageContent({
               </Button>
             </div>
             <div className="lg:col-span-2 flex gap-2">
-              <Button type="submit" className="w-full font-bold">Aplicar</Button>
-              <Button type="button" variant="ghost" className="w-full text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
-                Limpar
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" size="icon" aria-label="Aplicar filtros">
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Aplicar filtros</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Limpar filtros" onClick={onClear}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Limpar filtros</TooltipContent>
+              </Tooltip>
             </div>
             {advancedOpen ? (
               <div className="lg:col-span-12 grid gap-3 lg:grid-cols-12 pt-2 border-t border-slate-200/70 dark:border-slate-800/70">
