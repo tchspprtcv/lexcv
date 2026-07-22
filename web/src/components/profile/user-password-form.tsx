@@ -162,9 +162,9 @@ export function UserPasswordForm() {
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
             {mutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-4 w-4" />
             )}
             Atualizar Palavra-passe
           </Button>
