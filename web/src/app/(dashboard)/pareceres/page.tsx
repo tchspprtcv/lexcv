@@ -8,7 +8,7 @@ import { Check, Filter, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
@@ -201,18 +201,13 @@ function ParecerPageContent() {
                     Estado
                   </div>
                   <div className="mt-2">
-                    <Select value={draftStatus} onValueChange={setDraftStatus}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="PENDENTE">Pendente</SelectItem>
-                        <SelectItem value="EM_ELABORACAO">Em elaboração</SelectItem>
-                        <SelectItem value="EM_REVISAO">Em revisão</SelectItem>
-                        <SelectItem value="CONCLUIDO">Concluído</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={draftStatus} onChange={(e) => setDraftStatus(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="EM_ELABORACAO">Em elaboração</option>
+                      <option value="EM_REVISAO">Em revisão</option>
+                      <option value="CONCLUIDO">Concluído</option>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div className="lg:col-span-4">
@@ -220,19 +215,14 @@ function ParecerPageContent() {
                     Advogado
                   </div>
                   <div className="mt-2">
-                    <Select value={draftAdvogadoId} onValueChange={setDraftAdvogadoId}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        {advogados.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={draftAdvogadoId} onChange={(e) => setDraftAdvogadoId(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      {advogados.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nome}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
                 </div>
                 <div className="lg:col-span-4">
@@ -240,19 +230,14 @@ function ParecerPageContent() {
                     Cliente
                   </div>
                   <div className="mt-2">
-                    <Select value={draftClienteId} onValueChange={setDraftClienteId}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        {(clientes.data ?? []).map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={draftClienteId} onChange={(e) => setDraftClienteId(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      {(clientes.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
                 </div>
               </div>
@@ -289,19 +274,14 @@ function ParecerPageContent() {
                     Cliente
                   </label>
                   <div className="mt-2">
-                    <Select value={pesquisaClienteId} onValueChange={setPesquisaClienteId}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        {(clientes.data ?? []).map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={pesquisaClienteId} onChange={(e) => setPesquisaClienteId(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      {(clientes.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
                 </div>
                 <div>
@@ -309,19 +289,14 @@ function ParecerPageContent() {
                     Advogado
                   </label>
                   <div className="mt-2">
-                    <Select value={pesquisaAdvogadoId} onValueChange={setPesquisaAdvogadoId}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        {advogados.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={pesquisaAdvogadoId} onChange={(e) => setPesquisaAdvogadoId(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      {advogados.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nome}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </div>
                 </div>
                 <div>
@@ -329,18 +304,13 @@ function ParecerPageContent() {
                     Estado
                   </label>
                   <div className="mt-2">
-                    <Select value={pesquisaStatus} onValueChange={setPesquisaStatus}>
-                      <SelectTrigger size="default" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="PENDENTE">Pendente</SelectItem>
-                        <SelectItem value="EM_ELABORACAO">Em elaboração</SelectItem>
-                        <SelectItem value="EM_REVISAO">Em revisão</SelectItem>
-                        <SelectItem value="CONCLUIDO">Concluído</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <NativeSelect value={pesquisaStatus} onChange={(e) => setPesquisaStatus(e.target.value)} size="default" className="w-full">
+                      <option value="todos">Todos</option>
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="EM_ELABORACAO">Em elaboração</option>
+                      <option value="EM_REVISAO">Em revisão</option>
+                      <option value="CONCLUIDO">Concluído</option>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div>
