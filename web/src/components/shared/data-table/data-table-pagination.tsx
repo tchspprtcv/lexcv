@@ -1,6 +1,7 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +65,7 @@ export function DataTablePagination<TData>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
+            <ChevronLeft className="h-4 w-4" />
             Anterior
           </Button>
           <Button
@@ -74,6 +76,7 @@ export function DataTablePagination<TData>({
             disabled={!table.getCanNextPage()}
           >
             Seguinte
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

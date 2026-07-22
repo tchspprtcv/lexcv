@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Loader2, Save } from "lucide-react";
+import { Camera, Loader2, Save, X } from "lucide-react";
 
 import { useMe } from "@/hooks/use-me";
 import { apiFetch } from "@/lib/api";
@@ -186,6 +186,7 @@ export function UserProfileForm() {
             disabled={!form.formState.isDirty || mutation.isPending}
             className="border-slate-200 dark:border-slate-700"
           >
+            <X className="h-4 w-4" />
             Cancelar
           </Button>
           <Button
