@@ -444,6 +444,48 @@ A full retrofit of the design system across both apps (`web/` and `webpage/`) on
 
 ---
 
+## Milestone: v2.14 — UI/UX Melhorias
+
+**Shipped:** 2026-07-22
+**Phases:** 6 (111–115, plus 115.1 inserted post-close) | **Plans:** 23 | **Tasks:** 49
+
+### What Was Built
+
+A behavior-oriented second refinement pass on top of v2.13's component-library retrofit. Global cross-entity search went from 100% decorative to fully functional: a new tenant+RBAC-scoped backend endpoint (`GET /api/v1/pesquisa`, Phase 111) feeding a Ctrl+K/⌘K command palette (Phase 112) with debounce, highlight, recents, and query-seeding into all 4 entity list pages. A dedicated Estado filter was promoted out of Processos' collapsed advanced panel into the always-visible bar (Phase 113). The `--radius` design token flipped from a deliberately institutional `0` back to a rounded `0.5rem` across both apps, with a 271-occurrence sweep of hardcoded overrides that had been silently masking the token change (Phase 114). Icons landed on every button project-wide, with filter action buttons going icon-only in 5 of 7 modules — Pareceres and Notificações explicitly excluded by a locked CONTEXT.md decision (Phase 115, decomposed into 11 file-ownership-scoped parallel plans). After the milestone's 5 planned phases closed and were audited, the user reported 3 fresh, unrelated gaps in production use; these were triaged, inserted as a single urgent decimal phase (115.1) rather than deferred to a future milestone, and closed the same session — including a live UAT pass that found and fixed a real bug none of 3 code-review iterations or a full code-level verification had caught.
+
+### What Worked
+
+- **The insert-phase mechanism for urgent post-close work performed exactly as designed**: 115.1 was triaged, scoped, planned, executed, and verified inside the same session as the original 5-phase milestone, without needing a new milestone cycle for 3 small, unrelated fixes.
+- **Live UAT (running backend + both frontend apps together) caught a real bug that 3 rounds of static code review, a full code-level verification (15/15 must-haves), and an independent verifier pass all missed**: a recovery-message-never-renders defect rooted in `watch()` on an uncontrolled react-hook-form field never observing a browser-only visual fallback. This validates running live UAT whenever browser tooling is available, rather than treating a clean static-verification pass as sufficient for anything touching async data timing.
+- **The Phase 114→115 sequencing (radius token before icon sweep) avoided double-reviewing the same screens for two unrelated visual changes**, and held even after 115.1 was inserted afterward — the milestone-close integration re-audit specifically re-checked this and found zero regressions.
+- **File-ownership-based parallel decomposition (Phase 115's 11 plans, Phase 115.1's 3 plans) continued to produce zero merge conflicts across this milestone**, including the highest-risk case: 115.1's Pareceres filter-primitive swap landed on the exact file Phase 115's own icon pass had touched, and both survived cleanly.
+- **A milestone audit re-run (not just a fresh one) correctly incorporated a phase inserted after the original audit already ran** — re-scoping the integration checker specifically to the insertion's highest-risk seams rather than blindly re-running the full original check saved effort while still catching what mattered.
+
+### What Was Inefficient
+
+- **The Browser-pane environment exhibited transient instability again this milestone** (screenshot timeouts, clicks not registering until a follow-up read, `read_page` returning empty then recovering) — consistent with the same class of issue diagnosed in v2.13, but this time worked around via `get_page_text`/`javascript_tool` DOM inspection and direct event dispatch rather than blocking on screenshots, without needing a full root-cause detour.
+- **A seeded non-admin test account's password had silently drifted from its `DatabaseSeeder.java` source value** after 115+ phases of cumulative manual testing against the same long-lived dev database, blocking live verification of 2 non-privileged-role UAT items (both remained source-verified-only, not a functional gap).
+- **Phase 115.1's own `AREA-1`/`AREA-2`/`AREA-3` requirement tags were never backfilled into `REQUIREMENTS.md`'s traceability table** — an ad hoc phase inserted after milestone close falls outside the normal requirements-definition step's reach, and no workflow step exists to retrofit one afterward. Purely a traceability gap (all 3 items were still verified and live-UAT-confirmed), but worth a lighter-weight path for future ad hoc insertions.
+
+### Patterns Established
+
+- **Client-safe env-var-with-fallback for cross-app local dev**: `NEXT_PUBLIC_WEB_APP_URL` (optional, defaults to a same-origin relative path) let `webpage/`'s login redirect work correctly in local dev (separate ports, no shared proxy) without touching the behavior already correct in production via Caddy — same shape as the pre-existing `BACKEND_API_ORIGIN` pattern, now proven for a second cross-app link.
+- **Locked-field-from-query-param pattern for "create child entity from parent record"**: `useSearchParams()` → seed `defaultValues` → `Boolean(lockedId)` folded into the field's `disabled` expression → conditional helper text — plus, discovered only via live UAT, a *required* counterpart effect that explicitly clears the field once the locked id is confirmed missing, since an uncontrolled RHF field's `watch()` never observes a browser-only display fallback on its own.
+
+### Key Lessons
+
+1. **A clean code-level verification (even 15/15, even with a live-look-alike test suite) is not the same guarantee as an actual live session for anything involving async data timing or uncontrolled-field DOM/state divergence** — this milestone's one real bug was exactly that class, and was invisible to every static pass by construction, not by reviewer oversight.
+2. **Inserting urgent post-close work as a decimal phase in the same session beats deferring it to "start of next milestone"** when the scope is small and unrelated to the next milestone's own theme — it closes the loop while full context is still warm, and the milestone audit/complete/cleanup lifecycle handles it transparently as long as the audit is re-run (not skipped) after insertion.
+3. **When a milestone audit needs to incorporate a late-inserted phase, re-scope the integration check to that insertion's specific highest-risk seams rather than blindly re-running the original check from scratch** — the original 5-phase result doesn't need re-verifying; only the new phase's actual points of contact with prior phases do.
+
+### Cost Observations
+
+- Model mix: sonnet throughout — planning, parallel worktree-isolated execution, code review/fix loops (3 iterations on 115.1 alone), goal-backward verification, live UAT, and the full audit→complete→cleanup lifecycle.
+- Sessions: one extended, continuous autonomous session covering all 5 planned phases plus the inserted 115.1 phase's full discuss→UI-spec→plan→execute→code-review→verify→UI-audit pipeline, live UAT with a real bug found and fixed, and the complete milestone close-out lifecycle, spanning 2026-07-18 to 2026-07-22.
+- Notable: first milestone this project where a live UAT pass (not code review, not the verifier) was the one to catch and drive the fix for a genuine functional bug — the earlier stages did their job (found and fixed 4 other real issues across 3 review iterations) but this specific defect class was structurally outside their reach.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -458,5 +500,6 @@ A full retrofit of the design system across both apps (`web/` and `webpage/`) on
 | v2.11 Auditoria Técnica e Notificações Avançadas | 8 | 21 | 3 | 133 | 15/15 (1 integration gap found+fixed at audit) |
 | v2.12 Landing Page | 3 | 9 | 1 | 79 | 16/16 (0 audit gaps; 3 runtime bugs found+fixed live during execution) |
 | v2.13 Refactor UI/UX (shadcn/ui) | 10 | 42 | 3 | 97 | 33/33 (2 integration gaps found at audit — 1 fixed, 1 deferred as small tech debt) |
+| v2.14 UI/UX Melhorias | 6 (incl. 1 urgent decimal insertion) | 23 | 4 | 68 | 15/15 + 3 informal (0 integration gaps at re-audit; 1 phase human_needed on rendering-only criteria, substantively de-risked; 1 real bug found+fixed via live UAT) |
 
 *Table grows with each milestone*
