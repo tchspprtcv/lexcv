@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
+import { getLoginUrl } from "@/lib/get-login-url";
 import type { BrandingResponse } from "@/types/branding";
 
 export function SiteFooter({ branding }: { branding: BrandingResponse }) {
@@ -10,7 +11,7 @@ export function SiteFooter({ branding }: { branding: BrandingResponse }) {
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-6 text-center">
         <BrandMark branding={branding} />
         <Button asChild size="lg" className="">
-          <a href="/login">Entrar<ArrowRight className="h-4 w-4" /></a>
+          <a href={getLoginUrl()}>Entrar<ArrowRight className="h-4 w-4" /></a>
         </Button>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           © {ano} LexCV. Plataforma institucional de gestão jurídica.

@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { getLoginUrl } from "@/lib/get-login-url";
 import type { BrandingResponse } from "@/types/branding";
 
 const NAV_LINKS = [
@@ -46,7 +47,7 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Button asChild variant="secondary" className="hidden md:inline-flex">
-              <a href="/login">Entrar</a>
+              <a href={getLoginUrl()}>Entrar</a>
             </Button>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
@@ -72,7 +73,7 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
                     </a>
                   ))}
                   <Button asChild variant="secondary" className="mt-4">
-                    <a href="/login" onClick={() => setOpen(false)}>
+                    <a href={getLoginUrl()} onClick={() => setOpen(false)}>
                       Entrar
                     </a>
                   </Button>
