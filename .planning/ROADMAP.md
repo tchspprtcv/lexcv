@@ -313,6 +313,7 @@ A pesquisa de milestone (alvo #1, confiança HIGH) confirma que a pesquisa globa
 - [x] **Phase 113: Processos — Filtro por Estado** - Controlo dedicado para filtrar a lista de Processos por estado (completed 2026-07-21)
 - [x] **Phase 114: Linguagem Visual — Cantos Arredondados (`--radius`)** - Reversão deliberada do radius reto da v2.13 (completed 2026-07-21)
 - [x] **Phase 115: Linguagem Visual — Ícones + Filtros Ícone-Only** - Ícones em todos os botões; filtros aplicar/limpar/exportar passam a ícone-only com tooltip (completed 2026-07-22)
+- [x] **Phase 115.1: Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres** (INSERTED) - Criar Processo/Parecer a partir da ficha de cliente; corrigir redirect "Entrar" do webpage; alinhar filtros de Pareceres (completed 2026-07-22)
 
 #### Phase 111: Backend — Pesquisa Global Cross-Entity (API)
 
