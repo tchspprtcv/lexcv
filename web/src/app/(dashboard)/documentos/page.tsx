@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
+import { Check, Trash2, Upload, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
 import { useDeleteDocumento, useDocumentos } from "@/hooks/use-documentos";
@@ -149,7 +151,10 @@ function DocumentosContent({
 
         {canCreateDocumentos ? (
           <Button asChild>
-            <Link href="/documentos/novo">Upload</Link>
+            <Link href="/documentos/novo">
+              <Upload className="h-4 w-4" />
+              Upload
+            </Link>
           </Button>
         ) : null}
       </div>
@@ -216,12 +221,28 @@ function DocumentosContent({
             </div>
 
             <div className="flex items-end gap-2">
-              <Button type="submit" variant="secondary" className="w-full">
-                Filtrar
-              </Button>
-              <Button type="button" variant="outline" className="w-full" onClick={onClear}>
-                Limpar
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" variant="secondary" size="icon" aria-label="Aplicar filtros">
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Aplicar filtros</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Limpar filtros"
+                    onClick={onClear}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Limpar filtros</TooltipContent>
+              </Tooltip>
             </div>
           </form>
         </CardContent>
@@ -348,6 +369,7 @@ function DocumentoMobileCard({
             disabled={del.isPending}
             className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 min-h-[44px]"
           >
+            <Trash2 className="h-4 w-4" />
             {del.isPending ? "A apagar..." : "Apagar"}
           </Button>
         )}

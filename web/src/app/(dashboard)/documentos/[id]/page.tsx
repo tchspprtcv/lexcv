@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { ArrowLeft, Download, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,7 +87,10 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
 
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/documentos">Voltar</Link>
+            <Link href="/documentos">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
           </Button>
           <Button
             type="button"
@@ -94,10 +98,12 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
             onClick={onDownload}
             disabled={download.isPending || doc.isLoading}
           >
+            <Download className="h-4 w-4" />
             {download.isPending ? "A preparar..." : "Download"}
           </Button>
           {canEditDocumentos ? (
             <Button type="button" variant="outline" onClick={onDelete} disabled={del.isPending}>
+              <Trash2 className="h-4 w-4" />
               {del.isPending ? "A apagar..." : "Apagar"}
             </Button>
           ) : null}
