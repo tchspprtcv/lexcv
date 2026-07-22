@@ -8,18 +8,25 @@ import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import {
   AlertCircle,
+  ArrowLeft,
   Calendar,
+  Check,
   CheckCircle2,
   Circle,
   FileText,
   GitBranch,
   Paperclip,
   Pause,
+  Pencil,
   Play,
   Plus,
   RotateCcw,
+  Save,
   ShieldCheck,
+  Upload,
   User,
+  UserCog,
+  X,
   XCircle,
 } from "lucide-react";
 
@@ -68,6 +75,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
@@ -738,11 +746,17 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
 
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/processos">Voltar</Link>
+            <Link href="/processos">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
           </Button>
           {canEditProcessos ? (
             <Button asChild>
-              <Link href={`/processos/${encodeURIComponent(id)}/editar`}>Editar</Link>
+              <Link href={`/processos/${encodeURIComponent(id)}/editar`}>
+                <Pencil className="h-4 w-4" />
+                Editar
+              </Link>
             </Button>
           ) : null}
         </div>
@@ -833,6 +847,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       target="_blank"
                       rel="noopener noreferrer"
                     >
+                      <FileText className="h-4 w-4" />
                       Gerar Termo de Honorários
                     </Link>
                   </Button>
@@ -909,6 +924,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       disabled={isFormalizarBlocked || formalizarProcesso.isPending}
                       onClick={onFormalizar}
                     >
+                      <CheckCircle2 className="h-4 w-4" />
                       {formalizarProcesso.isPending ? "A formalizar..." : "Formalizar Processo"}
                     </Button>
                     {isFormalizarBlocked && formalizarBlockReason ? (
@@ -1058,6 +1074,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     className=""
                     onClick={() => setDialogOpen(false)}
                   >
+                    <X className="h-4 w-4" />
                     Cancelar
                   </Button>
                   <Button
@@ -1065,6 +1082,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     disabled={transicao.isPending}
                     className="font-bold bg-blue-600 hover:bg-blue-700"
                   >
+                    <Check className="h-4 w-4" />
                     {transicao.isPending ? "A processar..." : "Confirmar"}
                   </Button>
                 </DialogFooter>
@@ -1254,6 +1272,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     className=""
                     onClick={() => setPrazoDialogOpen(false)}
                   >
+                    <X className="h-4 w-4" />
                     Cancelar
                   </Button>
                   <Button
@@ -1261,6 +1280,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                     disabled={createPrazo.isPending}
                     className="font-bold bg-blue-600 hover:bg-blue-700"
                   >
+                    <Save className="h-4 w-4" />
                     {createPrazo.isPending ? "A processar..." : "Guardar Prazo"}
                   </Button>
                 </DialogFooter>
@@ -1422,18 +1442,24 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                       onChange={(e) => setDateTo(e.target.value)}
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => {
-                      setSelectedTipos(new Set(["movimentacao", "transicao", "evento", "documento", "decisao"]));
-                      setDateFrom("");
-                      setDateTo("");
-                    }}
-                  >
-                    Limpar filtros
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Limpar filtros"
+                        onClick={() => {
+                          setSelectedTipos(new Set(["movimentacao", "transicao", "evento", "documento", "decisao"]));
+                          setDateFrom("");
+                          setDateTo("");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Limpar filtros</TooltipContent>
+                  </Tooltip>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1555,6 +1581,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddParte}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Parte
                         </Button>
                       </DialogTrigger>
@@ -1602,6 +1629,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddParteModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -1609,6 +1637,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               disabled={parteForm.formState.isSubmitting || addParte.isPending}
                             >
+                              <Check className="h-4 w-4" />
                               {parteForm.formState.isSubmitting || addParte.isPending ? "A guardar..." : "Adicionar"}
                             </Button>
                           </DialogFooter>
@@ -1662,6 +1691,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddFase}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Fase
                         </Button>
                       </DialogTrigger>
@@ -1692,6 +1722,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddFaseModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -1699,6 +1730,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               disabled={faseForm.formState.isSubmitting || addFase.isPending}
                             >
+                              <Check className="h-4 w-4" />
                               {faseForm.formState.isSubmitting || addFase.isPending ? "A guardar..." : "Adicionar"}
                             </Button>
                           </DialogFooter>
@@ -1751,6 +1783,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                   onClick={() => onUpdateFaseStatus(f.id, f.status)}
                                   disabled={!canEditProcessos || updateFaseStatus.isPending}
                                 >
+                                  <Save className="h-4 w-4" />
                                   Guardar
                                 </Button>
                               </TableCell>
@@ -1779,6 +1812,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddDecisao}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Decisão
                         </Button>
                       </DialogTrigger>
@@ -1858,6 +1892,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddDecisaoModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -1867,6 +1902,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 decisaoForm.formState.isSubmitting || addDecisao.isPending || updateDecisao.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -1949,6 +1985,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddFacto}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Facto
                         </Button>
                       </DialogTrigger>
@@ -2011,6 +2048,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddFactoModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -2020,6 +2058,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 factoForm.formState.isSubmitting || addFacto.isPending || updateFacto.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -2102,6 +2141,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                           className=""
                           onClick={onOpenAddTestemunha}
                         >
+                          <Plus className="h-4 w-4" />
                           Adicionar Testemunha
                         </Button>
                       </DialogTrigger>
@@ -2187,6 +2227,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                               className=""
                               onClick={() => setAddTestemunhaModal(false)}
                             >
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                             <Button
@@ -2198,6 +2239,7 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
                                 updateTestemunha.isPending
                               }
                             >
+                              <Check className="h-4 w-4" />
                               Confirmar
                             </Button>
                           </DialogFooter>
@@ -2404,6 +2446,7 @@ function ReatribuirResponsavelControl({
               setDialogOpen(true);
             }}
           >
+            <UserCog className="h-4 w-4" />
             Reatribuir
           </Button>
         </DialogTrigger>
@@ -2445,6 +2488,7 @@ function ReatribuirResponsavelControl({
               className=""
               onClick={() => setDialogOpen(false)}
             >
+              <X className="h-4 w-4" />
               Cancelar
             </Button>
             <Button
@@ -2456,6 +2500,7 @@ function ReatribuirResponsavelControl({
                 setConfirmOpen(true);
               }}
             >
+              <Check className="h-4 w-4" />
               Reatribuir
             </Button>
           </DialogFooter>
@@ -2571,6 +2616,7 @@ function ProcessoDocumentosTab({
             >
               <DialogTrigger asChild>
                 <Button type="button" variant="outline" size="sm" className="">
+                  <Plus className="h-4 w-4" />
                   Adicionar Documento
                 </Button>
               </DialogTrigger>
@@ -2626,6 +2672,7 @@ function ProcessoDocumentosTab({
                       resetUploadState();
                     }}
                   >
+                    <X className="h-4 w-4" />
                     Cancelar
                   </Button>
                   <Button
@@ -2634,6 +2681,7 @@ function ProcessoDocumentosTab({
                     onClick={onConfirmarUpload}
                     disabled={!novoFicheiro || upload.isPending}
                   >
+                    <Upload className="h-4 w-4" />
                     Confirmar
                   </Button>
                 </DialogFooter>
