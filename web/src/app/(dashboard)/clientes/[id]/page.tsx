@@ -147,6 +147,8 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const canViewPareceres = permissions.can.view("pareceres");
   const canViewDocumentos = permissions.can.view("documentos");
   const canEditDocumentos = permissions.can.edit("documentos");
+  const canCreateProcessos = permissions.can.create("processos");
+  const canCreatePareceres = permissions.can.create("pareceres");
   const cliente = useCliente(id);
   const conta = useClienteContaCorrente(id);
   const contactos = useClienteContactos(id);
@@ -873,7 +875,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             {!permissions.isFetched ? (
               <div className="p-6 text-sm text-neutral-500">A carregar...</div>
             ) : canViewProcessos ? (
-              <ClienteProcessosTab clienteId={id} />
+              <ClienteProcessosTab clienteId={id} canCreateProcessos={canCreateProcessos} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os processos deste cliente." />
             )}
@@ -883,7 +885,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             {!permissions.isFetched ? (
               <div className="p-6 text-sm text-neutral-500">A carregar...</div>
             ) : canViewPareceres ? (
-              <ClienteParecerTab clienteId={id} />
+              <ClienteParecerTab clienteId={id} canCreatePareceres={canCreatePareceres} />
             ) : (
               <AccessDeniedState description="Não tem permissão para consultar os pareceres deste cliente." />
             )}
@@ -1091,11 +1093,28 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   );
 }
 
-function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
+function ClienteProcessosTab({
+  clienteId,
+  canCreateProcessos,
+}: {
+  clienteId: string;
+  canCreateProcessos: boolean;
+}) {
   const processos = useProcessos({ cliente_id: clienteId });
 
   return (
-    <Card>
+    <div className="space-y-2">
+      {canCreateProcessos ? (
+        <div className="flex items-center justify-end">
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link href={`/processos/novo?clienteId=${encodeURIComponent(clienteId)}`}>
+              <Plus className="h-4 w-4" />
+              Novo Processo
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+      <Card>
       <CardContent className="p-0 bg-white dark:bg-[#020617]">
         {processos.isLoading ? (
           <div className="p-6 text-sm text-slate-500">A carregar...</div>
@@ -1159,6 +1178,7 @@ function ClienteProcessosTab({ clienteId }: { clienteId: string }) {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
 
@@ -1181,7 +1201,13 @@ function formatParecerDate(v: string | undefined) {
   return d.toLocaleDateString("pt-CV");
 }
 
-function ClienteParecerTab({ clienteId }: { clienteId: string }) {
+function ClienteParecerTab({
+  clienteId,
+  canCreatePareceres,
+}: {
+  clienteId: string;
+  canCreatePareceres: boolean;
+}) {
   const pareceres = usePareceres({ clienteId: clienteId });
   const permissions = usePermissions();
   const isAdmin = Boolean(permissions.data?.roles?.includes("ADMIN"));
@@ -1196,7 +1222,18 @@ function ClienteParecerTab({ clienteId }: { clienteId: string }) {
   );
 
   return (
-    <Card>
+    <div className="space-y-2">
+      {canCreatePareceres ? (
+        <div className="flex items-center justify-end">
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link href={`/pareceres/nova?clienteId=${encodeURIComponent(clienteId)}`}>
+              <Plus className="h-4 w-4" />
+              Novo Parecer
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+      <Card>
       <CardContent className="p-0 bg-white dark:bg-[#020617]">
         {pareceres.isLoading ? (
           <div className="p-6 text-sm text-slate-500">A carregar...</div>
@@ -1245,6 +1282,7 @@ function ClienteParecerTab({ clienteId }: { clienteId: string }) {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
 
