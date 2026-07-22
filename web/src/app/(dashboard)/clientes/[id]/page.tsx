@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import * as React from "react";
-import { Printer } from "lucide-react";
+import { ArrowLeft, Check, Download, Pencil, Plus, Printer, Save, Trash2, Upload, X } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -399,7 +399,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
 
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/clientes">Voltar</Link>
+            <Link href="/clientes">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
           </Button>
           <Button asChild variant="outline">
             <Link
@@ -414,6 +417,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
           {isEditing ? (
             <>
               <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
+                <X className="h-4 w-4" />
                 Cancelar
               </Button>
               <Button
@@ -427,11 +431,13 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                 })}
                 disabled={isSaving}
               >
+                <Save className="h-4 w-4" />
                 {isSaving ? "A guardar..." : "Guardar"}
               </Button>
             </>
           ) : canEditClientes ? (
             <Button type="button" onClick={() => { setIsEditing(true); setTab("dados"); }}>
+              <Pencil className="h-4 w-4" />
               Editar
             </Button>
           ) : null}
@@ -905,7 +911,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   {canEditClientes && isEditing ? (
                     <Dialog open={addDocATratarModal} onOpenChange={setAddDocATratarModal}>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                        <Button type="button" variant="outline" size="sm">
+                          <Plus className="h-4 w-4" />
+                          Adicionar
+                        </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
@@ -923,8 +932,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setAddDocATratarModal(false)}>Cancelar</Button>
-                          <Button type="button" onClick={confirmAddDocATratar}>Confirmar</Button>
+                          <Button type="button" variant="outline" onClick={() => setAddDocATratarModal(false)}>
+                            <X className="h-4 w-4" />
+                            Cancelar
+                          </Button>
+                          <Button type="button" onClick={confirmAddDocATratar}>
+                            <Check className="h-4 w-4" />
+                            Confirmar
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -963,7 +978,10 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                   {canEditClientes && isEditing ? (
                     <Dialog open={addDeslocacaoModal} onOpenChange={setAddDeslocacaoModal}>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm">Adicionar</Button>
+                        <Button type="button" variant="outline" size="sm">
+                          <Plus className="h-4 w-4" />
+                          Adicionar
+                        </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
@@ -1000,8 +1018,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setAddDeslocacaoModal(false)}>Cancelar</Button>
-                          <Button type="button" onClick={confirmAddDeslocacao}>Confirmar</Button>
+                          <Button type="button" variant="outline" onClick={() => setAddDeslocacaoModal(false)}>
+                            <X className="h-4 w-4" />
+                            Cancelar
+                          </Button>
+                          <Button type="button" onClick={confirmAddDeslocacao}>
+                            <Check className="h-4 w-4" />
+                            Confirmar
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -1052,8 +1076,14 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingTipo(null)}>Cancelar</Button>
-            <Button onClick={confirmTipoChange}>Continuar</Button>
+            <Button variant="outline" onClick={() => setPendingTipo(null)}>
+              <X className="h-4 w-4" />
+              Cancelar
+            </Button>
+            <Button onClick={confirmTipoChange}>
+              <Check className="h-4 w-4" />
+              Continuar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1304,7 +1334,10 @@ function ClienteDocumentosEntreguesTab({
               }}
             >
               <DialogTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="">Adicionar</Button>
+                <Button type="button" variant="outline" size="sm" className="">
+                  <Plus className="h-4 w-4" />
+                  Adicionar
+                </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -1358,6 +1391,7 @@ function ClienteDocumentosEntreguesTab({
                       resetUploadState();
                     }}
                   >
+                    <X className="h-4 w-4" />
                     Cancelar
                   </Button>
                   <Button
@@ -1366,6 +1400,7 @@ function ClienteDocumentosEntreguesTab({
                     onClick={onConfirmarUpload}
                     disabled={!novoFicheiro || upload.isPending}
                   >
+                    <Upload className="h-4 w-4" />
                     Confirmar
                   </Button>
                 </DialogFooter>
