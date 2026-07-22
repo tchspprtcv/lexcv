@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import Link from "next/link";
 import {
+  ArrowRight,
   CalendarCheck,
   FileText,
   FolderOpen,
@@ -462,7 +463,10 @@ function PrazosUrgentesCard() {
           variant="outline"
           className="w-full border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500"
         >
-          <Link href="/agenda">Ver Agenda Completa</Link>
+          <Link href="/agenda">
+            Ver Agenda Completa
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </Button>
       </CardContent>
     </Card>
