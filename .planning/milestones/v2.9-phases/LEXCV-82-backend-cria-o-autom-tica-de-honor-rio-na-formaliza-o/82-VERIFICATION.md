@@ -7,7 +7,7 @@ re_verification: false
 human_verification:
   - test: "Formalize a real processo (TRIAGEM→ATIVO) via `POST /api/v1/processos/{id}/formalizar` against a running backend with valid credentials, then immediately open `/financeiro` and `/financeiro/{honorarioId}` in a browser"
     expected: "Both pages render without crashing; the auto-created Honorário's total shows 'A confirmar' (not a thrown TypeError, not a blank/broken page); the 'Editar' dialog on the detail page opens with an empty (not literal 'null') Valor Total field"
-    why_human: "No executor in this milestone (Phase 80/81/82) has been able to complete an authenticated HTTP round-trip against the local dev DB — admin@lexcv.cv/admin123 returns 401 because this DB already contains real, non-seed data, and further password attempts risk an account lockout. CR-01's fix (null-guarded formatMoneyCVE in both financeiro pages) was verified by direct code read and a clean `tsc --noEmit`, but nobody has observed the actual rendered page after a live formalizar call."
+    why_human: "No executor in this milestone (Phase 80/81/82) has been able to complete an authenticated HTTP round-trip against the local dev DB — admin@lexcv.cv/Pa$$w0rd returns 401 because this DB already contains real, non-seed data, and further password attempts risk an account lockout. CR-01's fix (null-guarded formatMoneyCVE in both financeiro pages) was verified by direct code read and a clean `tsc --noEmit`, but nobody has observed the actual rendered page after a live formalizar call."
   - test: "Formalize the same processo a second time (retry/replay) → expect HTTP 409 (pre-existing estado guard); then query `SELECT processo_id, COUNT(*) FROM t_honorario GROUP BY processo_id HAVING COUNT(*) > 1` against the dev DB"
     expected: "Second call returns 409; the detection query returns zero rows; exactly one Honorario row exists for that processo_id with valorTotal literally JSON null"
     why_human: "Same credential/lockout constraint as above. The idempotency guard (`honorarioRepository.findByProcessoId(id).isEmpty()`) and the estado guard were both confirmed present and correctly ordered by code review, but the actual duplicate-prevention behavior has never been exercised against a live server."
@@ -108,7 +108,7 @@ See YAML frontmatter `human_verification` for full detail. Summary:
 3. **Live concurrency race check** — fire two genuinely simultaneous `formalizar` requests and confirm the DB unique constraint + exception-catch actually prevents a duplicate row at runtime (not just in code).
 4. **Prod migration dry-run** — apply `82-add-honorario-processo-unique-constraint.sql` against a `ddl-auto=validate`-style schema and confirm it applies cleanly.
 
-All four items are blocked by the same environment constraint already documented and accepted as non-blocking in Phase 80/81 verifications: the local dev database contains real project data, the default admin credentials (`admin@lexcv.cv`/`admin123`) return 401, and further password attempts risk an account lockout, so no executor or verifier in this session could complete an authenticated HTTP round-trip.
+All four items are blocked by the same environment constraint already documented and accepted as non-blocking in Phase 80/81 verifications: the local dev database contains real project data, the default admin credentials (`admin@lexcv.cv`/`Pa$$w0rd`) return 401, and further password attempts risk an account lockout, so no executor or verifier in this session could complete an authenticated HTTP round-trip.
 
 ### Gaps Summary
 

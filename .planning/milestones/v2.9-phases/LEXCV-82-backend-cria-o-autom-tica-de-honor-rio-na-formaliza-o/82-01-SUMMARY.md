@@ -77,12 +77,12 @@ None — plan executed exactly as written. The `<interfaces>` block's exact curr
 
 ## Issues Encountered
 
-**Task 2's live authenticated HTTP round-trip could not complete, for the same reason documented in Phase 80/81 plans/summaries.** The plan's Task 2 `<action>` specifies a live double-formalize test (login as `admin@lexcv.cv`/`admin123`, formalize twice, inspect `t_honorario` for duplicates) with an explicit fallback clause: "If local Postgres/MinIO are unreachable in the execution environment, fall back to `mvn -DskipTests package` success plus a live `mvn spring-boot:run` startup confirmation."
+**Task 2's live authenticated HTTP round-trip could not complete, for the same reason documented in Phase 80/81 plans/summaries.** The plan's Task 2 `<action>` specifies a live double-formalize test (login as `admin@lexcv.cv`/`Pa$$w0rd`, formalize twice, inspect `t_honorario` for duplicates) with an explicit fallback clause: "If local Postgres/MinIO are unreachable in the execution environment, fall back to `mvn -DskipTests package` success plus a live `mvn spring-boot:run` startup confirmation."
 
 What was done:
 - `mvn -DskipTests package` — exits 0, confirmed after Task 1's edit
 - Started the backend locally via `mvn spring-boot:run` with MinIO env vars supplied at the process level (same fallback approach as Phase 80/81, `backend/.env` not edited) — startup succeeded cleanly (`HikariPool-1 - Start completed`, `Tomcat started on port 8080`, `Started BackendApplication in 16.563 seconds`), confirming Task 1's compiled code loads and the Spring context (including the modified `formalizarProcesso` bean graph) initializes with no errors against real PostgreSQL
-- Attempted `POST /api/v1/auth/login` with the documented default admin credentials (`admin@lexcv.cv` / `admin123`) — received `401 Credenciais inválidas`, the same outcome documented in 81-01-SUMMARY.md and 81-02-SUMMARY.md (this local database already contains real project data from active use, not a fresh seed; the admin password has likely diverged from the default)
+- Attempted `POST /api/v1/auth/login` with the documented default admin credentials (`admin@lexcv.cv` / `Pa$$w0rd`) — received `401 Credenciais inválidas`, the same outcome documented in 81-01-SUMMARY.md and 81-02-SUMMARY.md (this local database already contains real project data from active use, not a fresh seed; the admin password has likely diverged from the default)
 - Did not attempt further password guesses or brute-force, consistent with the lockout-avoidance rationale already established in Phase 81's summaries
 - Stopped the backend cleanly afterward (`taskkill` on the JVM PID bound to port 8080)
 

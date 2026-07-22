@@ -80,12 +80,12 @@ None - plan executed exactly as written. Both edit points matched the plan's `<i
 
 ## Issues Encountered
 
-**Live round-trip verification (Task 2) was attempted but could not complete authentication.** The plan's Task 2 `<action>` specifies a live HTTP round-trip (login as `admin@lexcv.cv`/`admin123`, then exercise intake/update/list) with an explicit fallback: "If local Postgres/MinIO are unreachable... fall back to `mvn -DskipTests package` success as the acceptance gate."
+**Live round-trip verification (Task 2) was attempted but could not complete authentication.** The plan's Task 2 `<action>` specifies a live HTTP round-trip (login as `admin@lexcv.cv`/`Pa$$w0rd`, then exercise intake/update/list) with an explicit fallback: "If local Postgres/MinIO are unreachable... fall back to `mvn -DskipTests package` success as the acceptance gate."
 
 What was done:
 - Confirmed local PostgreSQL reachable (`localhost:5432`, TCP probe succeeded)
 - Started the backend locally via `mvn spring-boot:run` with MinIO env vars supplied at the process level (same fallback approach as Phase 80, `backend/.env` not edited) — startup succeeded cleanly (`Started BackendApplication`, `MinIO bucket 'lexcv-documentos' verified.`), confirming both Task 1 and Task 2's compiled code loads and runs with no Spring context errors
-- Attempted `POST /api/v1/auth/login` with the documented default admin credentials (`admin@lexcv.cv` / `admin123`) — received `401 Credenciais inválidas`. The `DatabaseSeeder` skips seeding entirely once any tenant/user/cliente row exists (`DatabaseSeeder.java:54`), and this local database already contains data from prior phase work and/or real project use (the repo root contains real business documents from active use of this LexCV instance) — the admin password may have been changed since the original seed, or a different account is now the active admin
+- Attempted `POST /api/v1/auth/login` with the documented default admin credentials (`admin@lexcv.cv` / `Pa$$w0rd`) — received `401 Credenciais inválidas`. The `DatabaseSeeder` skips seeding entirely once any tenant/user/cliente row exists (`DatabaseSeeder.java:54`), and this local database already contains data from prior phase work and/or real project use (the repo root contains real business documents from active use of this LexCV instance) — the admin password may have been changed since the original seed, or a different account is now the active admin
 - Did not attempt further password guesses: `AuthController` has a 5-attempt lockout (15 min) per email+session, and this is a live development database with real data, not an ephemeral test fixture — brute-forcing credentials against it was judged out of scope and risky
 - Stopped the backend cleanly after confirming the build/startup gate (killed the JVM process bound to port 8080; confirmed via failed `curl` connection afterward)
 

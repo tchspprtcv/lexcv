@@ -7,7 +7,7 @@ re_verification: false
 human_verification:
   - test: "POST /api/v1/processos/intake without 'origem' in body"
     expected: "HTTP 422 with camposEmFalta containing 'origem', no row persisted"
-    why_human: "No executor (across 81-01/02/03) could complete an authenticated HTTP round-trip against the local dev DB — admin@lexcv.cv/admin123 returns 401 because this DB already contains real, non-seed data and AuthController enforces a 5-attempt lockout. All evidence for this behavior is code-level (direct read of the 422 gate in createProcessoIntake) plus a successful mvn package + spring-boot:run startup, not a live curl/Postman assertion."
+    why_human: "No executor (across 81-01/02/03) could complete an authenticated HTTP round-trip against the local dev DB — admin@lexcv.cv/Pa$$w0rd returns 401 because this DB already contains real, non-seed data and AuthController enforces a 5-attempt lockout. All evidence for this behavior is code-level (direct read of the 422 gate in createProcessoIntake) plus a successful mvn package + spring-boot:run startup, not a live curl/Postman assertion."
   - test: "POST /api/v1/processos/intake with valid origem, then PUT /api/v1/processos/{id} with a different origem + a juizo value, then GET both /processos/{id} and /processos (list)"
     expected: "origem unchanged after PUT (immutability), juizo updated, and GET /processos (list) surfaces juizo/origem matching the detail view"
     why_human: "Same credential/lockout constraint as above — verified by code review of updateProcesso's field-copy exclusion and listProcessos' enriched map only, not exercised live."

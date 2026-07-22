@@ -91,7 +91,7 @@ None — both tasks executed as written. The dev server needing two restart atte
 
 ## Issues Encountered
 - The Browser pane's `preview_start`/`navigate` combination silently produced an untracked, dead Next.js process on the first two attempts (port never came up, `preview_list` didn't show a "web" entry). Resolved by restarting via `preview_start {name: "web"}` a third time and confirming via `preview_list` that its status reached `"running"` before navigating.
-- The seeded default admin (`admin@lexcv.cv` / `admin123`) no longer works on this long-lived dev DB (`DatabaseSeeder` only seeds a fresh, empty database; this tenant has accumulated real test data across Phases 101-103). Asked the user for the current dev credentials rather than guessing or resetting the password directly.
+- The seeded default admin (`admin@lexcv.cv` / `Pa$$w0rd`) no longer works on this long-lived dev DB (`DatabaseSeeder` only seeds a fresh, empty database; this tenant has accumulated real test data across Phases 101-103). Asked the user for the current dev credentials rather than guessing or resetting the password directly.
 
 ## User Setup Required
 None.

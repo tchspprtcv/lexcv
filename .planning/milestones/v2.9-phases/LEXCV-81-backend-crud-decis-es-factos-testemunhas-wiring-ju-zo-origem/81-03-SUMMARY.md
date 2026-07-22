@@ -83,7 +83,7 @@ None - plan executed exactly as written.
 
 ## Issues Encountered
 
-**Live HTTP verification blocked (same as `81-01`/`81-02`):** The local dev database contains real project data rather than a fresh seed; `admin@lexcv.cv`/`admin123` login was not attempted against it to avoid lockout risk (consistent with prior waves' documented finding of a 401 against this non-fresh dataset). Per the plan's explicit fallback clause ("If local Postgres/MinIO are unreachable in the execution environment, fall back to `mvn -DskipTests package` success as the acceptance gate"), verification was performed via:
+**Live HTTP verification blocked (same as `81-01`/`81-02`):** The local dev database contains real project data rather than a fresh seed; `admin@lexcv.cv`/`Pa$$w0rd` login was not attempted against it to avoid lockout risk (consistent with prior waves' documented finding of a 401 against this non-fresh dataset). Per the plan's explicit fallback clause ("If local Postgres/MinIO are unreachable in the execution environment, fall back to `mvn -DskipTests package` success as the acceptance gate"), verification was performed via:
 1. `cd backend && mvn -DskipTests package -q` — exit code 0 (BUILD SUCCESS), confirmed twice.
 2. Direct code review against every acceptance criterion in the plan:
    - `findMaxOrdemByProcessoId` is present, `@Query`-annotated, returns `Optional<Integer>` — confirmed by reading `FactoRepository.java`.

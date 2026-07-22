@@ -102,7 +102,7 @@ Per project config (`.planning/config.json` → `parallelization.skip_checkpoint
 - Because live backend startup was blocked, the browser-based steps in the plan's `<how-to-verify>` (opening `/agenda`, visually confirming the "Urgentes" count reflects risco-by-proximity, confirming no `/eventos/upcoming` network calls) were **not** performed live. These remain genuinely pending human verification.
 
 **What still needs a human's eyes:**
-1. Start backend with a working `MINIO_ENDPOINT` (or local MinIO/S3-compatible stub) + frontend (`pnpm dev`), log in as `admin@lexcv.cv` / `admin123`, open `/agenda`.
+1. Start backend with a working `MINIO_ENDPOINT` (or local MinIO/S3-compatible stub) + frontend (`pnpm dev`), log in as `admin@lexcv.cv` / `Pa$$w0rd`, open `/agenda`.
 2. Confirm the calendar/list load without console errors and Prazos/Eventos render normally.
 3. Confirm the "Urgentes" number in the "Visão Geral da Semana" card reflects proximity-based risk (a distant ALTA-priority prazo no longer counts; a near-term MEDIA-priority prazo now does) rather than the old ALTA-only count.
 4. Confirm the Network tab shows zero requests to `/eventos/upcoming`.

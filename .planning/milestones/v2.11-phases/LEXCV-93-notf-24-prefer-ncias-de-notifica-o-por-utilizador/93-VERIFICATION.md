@@ -117,7 +117,7 @@ The following items are genuine runtime/live-browser behaviors that static analy
 
 ### 1. UI shows exactly 8 toggles, "Prazo vencido" absent
 
-**Test:** Login (e.g. admin@lexcv.cv / admin123), navigate to `/settings` → "Notificações" tab.
+**Test:** Login (e.g. admin@lexcv.cv / Pa$$w0rd), navigate to `/settings` → "Notificações" tab.
 **Expected:** 8 category toggles visible; "Prazo vencido" (PRAZO_VENCIDO) does not appear anywhere in the list.
 **Why human:** Requires a running backend + reachable Postgres + real browser session — blocked by the MINIO_ENDPOINT gap.
 

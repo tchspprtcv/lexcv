@@ -2,7 +2,7 @@
 
 **Audited:** 2026-07-16
 **Baseline:** 103-UI-SPEC.md (approved, revision 2/2)
-**Screenshots:** not captured — dev server at `localhost:3003` was live and responded 200 (confirmed via login page render), but the authenticated `/dashboard` route could not be reached this session: automated Playwright login with the documented credentials (`admin@lexcv.cv` / `admin123`) was rejected by the backend (`API 401: Credenciais inválidas`, confirmed via screenshot of the login form's error toast). This matches `103-HUMAN-UAT.md`'s own note that live browser verification of this phase was already attempted and only partially conclusive; audit below is code-level, cross-referenced against the 3 prior review passes (`103-REVIEW.md`, `103-REVIEW-FIX.md`, `103-HUMAN-UAT.md`) and direct reading of the shipped source.
+**Screenshots:** not captured — dev server at `localhost:3003` was live and responded 200 (confirmed via login page render), but the authenticated `/dashboard` route could not be reached this session: automated Playwright login with the documented credentials (`admin@lexcv.cv` / `Pa$$w0rd`) was rejected by the backend (`API 401: Credenciais inválidas`, confirmed via screenshot of the login form's error toast). This matches `103-HUMAN-UAT.md`'s own note that live browser verification of this phase was already attempted and only partially conclusive; audit below is code-level, cross-referenced against the 3 prior review passes (`103-REVIEW.md`, `103-REVIEW-FIX.md`, `103-HUMAN-UAT.md`) and direct reading of the shipped source.
 
 ---
 

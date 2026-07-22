@@ -80,9 +80,9 @@ None - plan executed exactly as written. Both tasks matched the plan's `<interfa
 
 ## Issues Encountered
 
-**Live round-trip verification (Task 2) could not complete authentication, same constraint documented by 81-01.** The plan's Task 2 `<action>` specifies a live HTTP round-trip (login as `admin@lexcv.cv`/`admin123`, exercise create/list/update/cross-processo-404/delete for both Decisão and Testemunha) with an explicit fallback clause: "If local Postgres/MinIO are unreachable... fall back to `mvn -DskipTests package` success as the acceptance gate."
+**Live round-trip verification (Task 2) could not complete authentication, same constraint documented by 81-01.** The plan's Task 2 `<action>` specifies a live HTTP round-trip (login as `admin@lexcv.cv`/`Pa$$w0rd`, exercise create/list/update/cross-processo-404/delete for both Decisão and Testemunha) with an explicit fallback clause: "If local Postgres/MinIO are unreachable... fall back to `mvn -DskipTests package` success as the acceptance gate."
 
-81-01-SUMMARY.md already documented that this local database's `admin@lexcv.cv`/`admin123` login returns `401 Credenciais inválidas` because `DatabaseSeeder` skipped seeding (the DB already contains real project data, not an ephemeral fixture) and `AuthController` enforces a 5-attempt lockout per email+session. Per this plan's `<known_note>`, guessing alternate credentials was judged out of scope and risky (lockout), so no new login attempt was made — repeating the same known-failing attempt would only consume lockout budget with no new information.
+81-01-SUMMARY.md already documented that this local database's `admin@lexcv.cv`/`Pa$$w0rd` login returns `401 Credenciais inválidas` because `DatabaseSeeder` skipped seeding (the DB already contains real project data, not an ephemeral fixture) and `AuthController` enforces a 5-attempt lockout per email+session. Per this plan's `<known_note>`, guessing alternate credentials was judged out of scope and risky (lockout), so no new login attempt was made — repeating the same known-failing attempt would only consume lockout budget with no new information.
 
 **Resolution:** Used the plan's explicitly documented fallback gate:
 - `mvn -DskipTests package` exits 0 after both tasks (confirmed twice, once per task)
