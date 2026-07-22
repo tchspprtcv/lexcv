@@ -152,7 +152,11 @@ export default function DocumentoUploadPage() {
           <CardTitle>Dados</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+          {/* handleSubmit(onSubmit) is called inside this wrapper (not inline as the onSubmit
+              value itself) so it runs at submit time, not at render time — onSubmit reads
+              previewUrlRef.current, and calling it eagerly during render would violate
+              react-hooks/refs ("Cannot access refs during render"). */}
+          <form className="space-y-4" onSubmit={(event) => form.handleSubmit(onSubmit)(event)}>
             <div className="space-y-2">
               <Label>Ficheiro</Label>
               <FileDropZone

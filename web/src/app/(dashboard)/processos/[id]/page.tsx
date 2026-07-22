@@ -259,14 +259,17 @@ function ProcessoDetailContent({ id, canEditProcessos, canManageProcessos }: { i
   // mount, so a client-side navigation that changes only ?tab= on this same
   // route (e.g. following a FASE_ENTRADA notification link while already on
   // this processo's page) updates the URL/searchParams but not `tab`. Re-sync
-  // whenever searchParams changes so ?tab= deep-links keep working post-mount.
-  React.useEffect(() => {
-    const p = searchParams.get("tab");
-    if (p && (TAB_KEYS as string[]).includes(p) && p !== tab) {
-      setTab(p as TabKey);
+  // so ?tab= deep-links keep working post-mount. Adjusted synchronously during
+  // render (React's documented replacement for a setState-in-effect prop sync,
+  // see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than in an effect, since tabParam is just a reactive value derived from the router.
+  const [prevTabParam, setPrevTabParam] = React.useState(tabParam);
+  if (tabParam !== prevTabParam) {
+    setPrevTabParam(tabParam);
+    if (tabParam && (TAB_KEYS as string[]).includes(tabParam) && tabParam !== tab) {
+      setTab(tabParam as TabKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }
 
   const [formalizarError, setFormalizarError] = React.useState<string | null>(null);
 
