@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, ShieldCheck, KeyRound } from "lucide-react";
+import { Loader2, ShieldCheck, KeyRound, Save, X } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -153,18 +153,20 @@ export function UserPasswordForm() {
             disabled={mutation.isPending}
             className="border-slate-200 dark:border-slate-700"
           >
+            <X className="h-4 w-4" />
             Limpar
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={mutation.isPending}
             className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
             {mutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              "Atualizar Palavra-passe"
+              <Save className="h-4 w-4 mr-2" />
             )}
+            Atualizar Palavra-passe
           </Button>
         </CardFooter>
       </form>

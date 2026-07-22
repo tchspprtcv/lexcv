@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,7 @@ export function NotificacaoSnoozeControl({ notificacao }: { notificacao: Notific
           disabled={snooze.isPending}
           onClick={handleConfirm}
         >
+          <Check className="h-4 w-4" />
           {snooze.isPending ? "A adiar..." : "Adiar"}
         </Button>
       </PopoverContent>
