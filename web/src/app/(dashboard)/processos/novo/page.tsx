@@ -114,6 +114,17 @@ function ProcessoWizardContent() {
     }
   }, [lockedClienteId, clientes.data, intakeForm]);
 
+  // Once the clientes query has actually settled (not pending, not errored), if the locked id
+  // still isn't in the list — e.g. the client was deleted or merged away since the "Novo
+  // Processo" link was generated — the re-sync effect above can never fire. Surface that
+  // explicitly instead of leaving the field permanently disabled with stale "não pode ser
+  // alterado" copy (WR-01 review fix).
+  const lockedClienteMissing =
+    Boolean(lockedClienteId) &&
+    !clientes.isPending &&
+    !clientes.isError &&
+    !clientes.data?.some((c) => c.id === lockedClienteId);
+
   // Step 2 decisao form
   const decisaoForm = useForm<ConflictCheckDecisaoFormValues>({
     resolver: zodResolver(conflictCheckDecisaoFormSchema),
@@ -319,7 +330,11 @@ function ProcessoWizardContent() {
                     id="cliente_id"
                     size="default"
                     className="w-full"
-                    disabled={clientes.isPending || clientes.isError || Boolean(lockedClienteId)}
+                    disabled={
+                      clientes.isPending ||
+                      clientes.isError ||
+                      (Boolean(lockedClienteId) && !lockedClienteMissing)
+                    }
                     {...intakeForm.register("cliente_id")}
                   >
                     <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
@@ -329,7 +344,11 @@ function ProcessoWizardContent() {
                       </option>
                     ))}
                   </NativeSelect>
-                  {lockedClienteId ? (
+                  {lockedClienteMissing ? (
+                    <p className="text-sm text-red-600">
+                      O cliente associado a este link já não está disponível. Selecione um cliente na lista abaixo ou volte à ficha do cliente.
+                    </p>
+                  ) : lockedClienteId ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       Cliente pré-preenchido a partir da ficha de cliente — não pode ser alterado aqui.
                     </p>

@@ -81,6 +81,17 @@ function ParecerCreateFormContent() {
     }
   }, [lockedClienteId, clientes.data, form]);
 
+  // Once the clientes query has actually settled (not pending, not errored), if the locked id
+  // still isn't in the list — e.g. the client was deleted or merged away since the "Novo
+  // Parecer" link was generated — the re-sync effect above can never fire. Surface that
+  // explicitly instead of leaving the field permanently disabled with stale "não pode ser
+  // alterado" copy (WR-01 review fix).
+  const lockedClienteMissing =
+    Boolean(lockedClienteId) &&
+    !clientes.isPending &&
+    !clientes.isError &&
+    !clientes.data?.some((c) => c.id === lockedClienteId);
+
   React.useEffect(() => {
     form.setValue("processoId", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,7 +149,17 @@ function ParecerCreateFormContent() {
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="clienteId">Cliente</Label>
-              <NativeSelect id="clienteId" size="default" className="w-full" disabled={clientes.isPending || clientes.isError || Boolean(lockedClienteId)} {...form.register("clienteId")}>
+              <NativeSelect
+                id="clienteId"
+                size="default"
+                className="w-full"
+                disabled={
+                  clientes.isPending ||
+                  clientes.isError ||
+                  (Boolean(lockedClienteId) && !lockedClienteMissing)
+                }
+                {...form.register("clienteId")}
+              >
                 <option value="">{clientes.isPending ? "A carregar..." : "Selecionar cliente"}</option>
                 {(clientes.data ?? []).map((c) => (
                   <option key={c.id} value={c.id}>
@@ -146,7 +167,11 @@ function ParecerCreateFormContent() {
                   </option>
                 ))}
               </NativeSelect>
-              {lockedClienteId ? (
+              {lockedClienteMissing ? (
+                <p className="text-sm text-red-600">
+                  O cliente associado a este link já não está disponível. Selecione um cliente na lista abaixo ou volte à ficha do cliente.
+                </p>
+              ) : lockedClienteId ? (
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Cliente pré-preenchido a partir da ficha de cliente — não pode ser alterado aqui.
                 </p>
