@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, X, ArrowRight } from "lucide-react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useEventos } from "@/hooks/use-eventos";
@@ -197,6 +198,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                 type="button"
                 variant="ghost"
                 className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Mês anterior"
                 onClick={() =>
                   setCursorMonthOverride((d) => {
                     const base = d ?? initialMonth;
@@ -218,6 +220,7 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
                 type="button"
                 variant="ghost"
                 className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Mês seguinte"
                 onClick={() =>
                   setCursorMonthOverride((d) => {
                     const base = d ?? initialMonth;
@@ -288,18 +291,25 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
             </Select>
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            className="self-end h-9 px-3 font-bold text-slate-500 hover:text-slate-900 text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
-            onClick={() => {
-              setSelectedProcessoId("todos");
-              setSelectedCategoria("todos");
-              setSelectedConcluido("todos");
-            }}
-          >
-            Limpar Filtros
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="self-end text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Limpar filtros"
+                onClick={() => {
+                  setSelectedProcessoId("todos");
+                  setSelectedCategoria("todos");
+                  setSelectedConcluido("todos");
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Limpar filtros</TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -508,7 +518,10 @@ function AgendaPageContent({ canCreateAgenda }: { canCreateAgenda: boolean }) {
             )}
 
             <Button asChild variant="outline" className="w-full border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 bg-transparent font-bold">
-              <Link href="/agenda">Ver Lista Completa</Link>
+              <Link href="/agenda">
+                Ver Lista Completa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           </CardContent>
         </Card>

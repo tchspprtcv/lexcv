@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { ArrowLeft, CheckCircle2, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -53,7 +54,10 @@ export default function EventoDetailPage(props: PageProps) {
         <h1 className="text-2xl font-semibold">Evento</h1>
         <p className="text-sm text-red-600">Id inválido.</p>
         <Button asChild variant="outline">
-          <Link href="/agenda">Voltar</Link>
+          <Link href="/agenda">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
     );
@@ -146,11 +150,17 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
 
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href="/agenda">Voltar</Link>
+            <Link href="/agenda">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
           </Button>
           {canEditAgenda ? (
             <Button asChild variant="outline">
-              <Link href={`/agenda/${encodeURIComponent(String(id))}/editar`}>Editar</Link>
+              <Link href={`/agenda/${encodeURIComponent(String(id))}/editar`}>
+                <Pencil className="h-4 w-4" />
+                Editar
+              </Link>
             </Button>
           ) : null}
           {canEditAgenda ? (
@@ -160,13 +170,24 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
               variant={evento.data?.concluido ? "secondary" : "default"}
               onClick={onToggle}
             >
-              {evento.data?.concluido ? "Reabrir" : "Concluir"}
+              {evento.data?.concluido ? (
+                <>
+                  <RotateCcw className="h-4 w-4" />
+                  Reabrir
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Concluir
+                </>
+              )}
             </Button>
           ) : null}
           {canEditAgenda && evento.data ? (
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
               <AlertDialogTrigger asChild>
                 <Button type="button" variant="secondary" className="border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950" disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4" />
                   Apagar
                 </Button>
               </AlertDialogTrigger>
@@ -192,6 +213,7 @@ function EventoDetailContent({ id, canEditAgenda }: { id: number; canEditAgenda:
                         disabled={isDeleting}
                         onClick={handleDeleteInstance}
                       >
+                        <Trash2 className="h-4 w-4" />
                         {delInstance.isPending ? "A apagar..." : "Apagar esta instância"}
                       </Button>
                       <AlertDialogAction

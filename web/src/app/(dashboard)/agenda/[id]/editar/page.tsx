@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Controller, useForm, type FieldErrors } from "react-hook-form";
+import { ArrowLeft, Save, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +56,10 @@ export default function EventoEditPage(props: PageProps) {
         <h1 className="text-2xl font-semibold">Editar evento</h1>
         <p className="text-sm text-red-600">Id inválido.</p>
         <Button asChild variant="outline">
-          <Link href="/agenda">Voltar</Link>
+          <Link href="/agenda">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
     );
@@ -156,7 +160,10 @@ function EventoEditContent({ id }: { id: number }) {
         </div>
 
         <Button asChild variant="outline">
-          <Link href={`/agenda/${encodeURIComponent(String(id))}`}>Cancelar</Link>
+          <Link href={`/agenda/${encodeURIComponent(String(id))}`}>
+            <X className="h-4 w-4" />
+            Cancelar
+          </Link>
         </Button>
       </div>
 
@@ -296,10 +303,14 @@ function EventoEditContent({ id }: { id: number }) {
                   type="submit"
                   disabled={form.formState.isSubmitting || update.isPending || permissions.isLoading || !canEditAgenda}
                 >
+                  <Save className="h-4 w-4" />
                   {form.formState.isSubmitting || update.isPending ? "A guardar..." : "Guardar"}
                 </Button>
                 <Button asChild type="button" variant="outline">
-                  <Link href={`/agenda/${encodeURIComponent(String(id))}`}>Cancelar</Link>
+                  <Link href={`/agenda/${encodeURIComponent(String(id))}`}>
+                    <X className="h-4 w-4" />
+                    Cancelar
+                  </Link>
                 </Button>
               </div>
             </form>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
+import { ArrowLeft, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,7 +104,10 @@ function EventoCreateContent() {
         </div>
 
         <Button asChild variant="outline">
-          <Link href="/agenda">Voltar</Link>
+          <Link href="/agenda">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -275,10 +279,14 @@ function EventoCreateContent() {
                 type="submit"
                 disabled={form.formState.isSubmitting || create.isPending || permissions.isLoading || !canCreateAgenda}
               >
+                <Plus className="h-4 w-4" />
                 {form.formState.isSubmitting || create.isPending ? "A guardar..." : "Criar"}
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link href="/agenda">Cancelar</Link>
+                <Link href="/agenda">
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Link>
               </Button>
             </div>
           </form>
