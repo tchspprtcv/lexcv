@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { ArrowLeft, ArrowRight, Pencil, Save, X, Trash2, Plus } from "lucide-react";
 
 import {
   AlertDialog,
@@ -92,7 +93,10 @@ export default function HonorarioDetailPage(props: PageProps) {
         <h1 className="text-2xl font-semibold">Honorário</h1>
         <p className="text-sm text-red-600">Id inválido.</p>
         <Button asChild variant="outline">
-          <Link href="/financeiro">Voltar</Link>
+          <Link href="/financeiro">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
     );
@@ -254,23 +258,35 @@ function HonorarioDetailContent({
 
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link href="/financeiro">Voltar</Link>
+            <Link href="/financeiro">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Link>
           </Button>
           {clienteId && canViewClientes ? (
             <Button asChild variant="outline">
-              <Link href={`/clientes/${encodeURIComponent(clienteId)}`}>Conta-corrente do cliente</Link>
+              <Link href={`/clientes/${encodeURIComponent(clienteId)}`}>
+                Conta-corrente do cliente
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           ) : null}
           {honorario.data?.processoId && canViewProcessos ? (
             <Button asChild>
-              <Link href={`/processos/${encodeURIComponent(honorario.data.processoId)}`}>Ver processo</Link>
+              <Link href={`/processos/${encodeURIComponent(honorario.data.processoId)}`}>
+                Ver processo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           ) : null}
 
           {canEditFinanceiro && honorario.data ? (
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">Editar</Button>
+                <Button variant="outline">
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
                 <DialogHeader>
@@ -314,12 +330,16 @@ function HonorarioDetailContent({
 
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button type="button" variant="outline">Cancelar</Button>
+                      <Button type="button" variant="outline">
+                        <X className="h-4 w-4" />
+                        Cancelar
+                      </Button>
                     </DialogClose>
                     <Button
                       type="submit"
                       disabled={editForm.formState.isSubmitting || updateHonorario.isPending}
                     >
+                      <Save className="h-4 w-4" />
                       {editForm.formState.isSubmitting || updateHonorario.isPending ? "A guardar..." : "Guardar"}
                     </Button>
                   </DialogFooter>
@@ -332,7 +352,10 @@ function HonorarioDetailContent({
             <>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button className="bg-red-600 hover:bg-red-700 text-white">Apagar</Button>
+                  <Button className="bg-red-600 hover:bg-red-700 text-white">
+                    <Trash2 className="h-4 w-4" />
+                    Apagar
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -477,6 +500,7 @@ function HonorarioDetailContent({
                     type="submit"
                     disabled={form.formState.isSubmitting || createPagamento.isPending || permissions.isLoading || !canEditFinanceiro}
                   >
+                    <Plus className="h-4 w-4" />
                     {form.formState.isSubmitting || createPagamento.isPending ? "A guardar..." : "Adicionar"}
                   </Button>
                 </form>
@@ -522,6 +546,7 @@ function HonorarioDetailContent({
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-4 w-4" />
                                     Apagar
                                   </Button>
                                 </AlertDialogTrigger>

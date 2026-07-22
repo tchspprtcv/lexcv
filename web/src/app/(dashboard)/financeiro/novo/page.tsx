@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useForm } from "react-hook-form";
+import { ArrowLeft, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,7 +88,10 @@ function HonorarioCreateContent() {
         </div>
 
         <Button asChild variant="outline">
-          <Link href="/financeiro">Voltar</Link>
+          <Link href="/financeiro">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -172,10 +176,14 @@ function HonorarioCreateContent() {
                 className="max-sm:min-h-[48px]"
                 disabled={form.formState.isSubmitting || create.isPending || permissions.isLoading || !canCreateFinanceiro}
               >
+                <Plus className="h-4 w-4" />
                 {form.formState.isSubmitting || create.isPending ? "A guardar..." : "Criar"}
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link href="/financeiro">Cancelar</Link>
+                <Link href="/financeiro">
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Link>
               </Button>
             </div>
           </form>
