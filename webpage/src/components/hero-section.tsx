@@ -3,6 +3,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getLoginUrl } from "@/lib/get-login-url";
 import type { BrandingResponse } from "@/types/branding";
 
 export function HeroSection({ branding }: { branding: BrandingResponse }) {
@@ -26,7 +27,7 @@ export function HeroSection({ branding }: { branding: BrandingResponse }) {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Button asChild variant="secondary" className="">
-                <a href="/login">Entrar</a>
+                <a href={getLoginUrl()}>Entrar</a>
               </Button>
               <Button asChild variant="ghost" className="">
                 <a href="#funcionalidades">Ver Funcionalidades<ArrowRight className="h-4 w-4" /></a>
