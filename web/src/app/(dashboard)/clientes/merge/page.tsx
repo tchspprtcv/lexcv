@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Merge } from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import {
@@ -94,7 +95,10 @@ export default function ClientesMergePage() {
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href="/clientes">Voltar</Link>
+          <Link href="/clientes">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -151,6 +155,7 @@ export default function ClientesMergePage() {
               onClick={onMerge}
               disabled={!primaryId || !secondaryId || merge.isPending}
             >
+              <Merge className="h-4 w-4" />
               Fazer merge
             </Button>
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
+import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -151,7 +152,10 @@ export default function ClienteCreatePage() {
         </div>
 
         <Button asChild variant="outline">
-          <Link href="/clientes">Voltar</Link>
+          <Link href="/clientes">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -346,10 +350,14 @@ export default function ClienteCreatePage() {
                 className="max-sm:min-h-[48px]"
                 disabled={form.formState.isSubmitting || create.isPending || permissions.isLoading || !canCreateClientes}
               >
+                <Plus className="h-4 w-4" />
                 {form.formState.isSubmitting || create.isPending ? "A guardar..." : "Criar"}
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link href="/clientes">Cancelar</Link>
+                <Link href="/clientes">
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </Link>
               </Button>
             </div>
           </form>
@@ -366,9 +374,13 @@ export default function ClienteCreatePage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingTipo(null)}>
+              <X className="h-4 w-4" />
               Cancelar
             </Button>
-            <Button onClick={confirmTipoChange}>Continuar</Button>
+            <Button onClick={confirmTipoChange}>
+              <ArrowRight className="h-4 w-4" />
+              Continuar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
