@@ -1579,10 +1579,12 @@ function ProcuracaoCard({
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" onClick={onView} disabled={download.isPending}>
+                <Download className="h-4 w-4" />
                 {download.isPending ? "A preparar..." : "Ver / Download"}
               </Button>
               {canEditClientes && editable ? (
                 <Button type="button" variant="outline" onClick={onRemove} disabled={del.isPending}>
+                  <Trash2 className="h-4 w-4" />
                   Remover
                 </Button>
               ) : null}
@@ -1688,6 +1690,7 @@ function ResponsaveisCard({
       <CardContent className="space-y-3">
         {canEditClientes && editable ? (
           <Button type="button" variant="secondary" onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4" />
             Adicionar
           </Button>
         ) : null}
@@ -1725,6 +1728,7 @@ function ResponsaveisCard({
                     onClick={() => onRemove(u.id)}
                     disabled={remove.isPending}
                   >
+                    <Trash2 className="h-4 w-4" />
                     Remover
                   </Button>
                 ) : null}
@@ -1757,9 +1761,11 @@ function ResponsaveisCard({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
+              <X className="h-4 w-4" />
               Cancelar
             </Button>
             <Button type="button" onClick={onAdd} disabled={!selectedUserId || add.isPending}>
+              <Plus className="h-4 w-4" />
               Adicionar
             </Button>
           </DialogFooter>
@@ -1882,6 +1888,7 @@ function ClienteContactosCard({
               className="h-10 w-full bg-white dark:bg-neutral-950 rounded-md border border-neutral-200 dark:border-neutral-800 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 dark:focus-visible:ring-neutral-300"
             />
             <Button type="button" onClick={onCreate} disabled={create.isPending || !newValor.trim()}>
+              <Plus className="h-4 w-4" />
               Adicionar
             </Button>
           </div>
@@ -1945,18 +1952,22 @@ function ClienteContactosCard({
                             onClick={onSaveEdit}
                             disabled={update.isPending || !editValor.trim()}
                           >
+                            <Save className="h-4 w-4" />
                             Guardar
                           </Button>
                           <Button type="button" variant="outline" onClick={onCancelEdit}>
+                            <X className="h-4 w-4" />
                             Cancelar
                           </Button>
                         </>
                       ) : (
                         <>
                           <Button type="button" variant="secondary" onClick={() => onStartEdit(c)}>
+                            <Pencil className="h-4 w-4" />
                             Editar
                           </Button>
                           <Button type="button" variant="outline" onClick={() => onDelete(c.id)} disabled={del.isPending}>
+                            <Trash2 className="h-4 w-4" />
                             Remover
                           </Button>
                         </>
@@ -2084,6 +2095,7 @@ function ClienteNotasCard({
             />
             <div className="flex justify-end">
               <Button type="button" onClick={onCreate} disabled={create.isPending || !newConteudo.trim()}>
+                <Plus className="h-4 w-4" />
                 Adicionar nota
               </Button>
             </div>
@@ -2134,18 +2146,22 @@ function ClienteNotasCard({
                               onClick={onSaveEdit}
                               disabled={update.isPending || !editConteudo.trim()}
                             >
+                              <Save className="h-4 w-4" />
                               Guardar
                             </Button>
                             <Button type="button" variant="outline" onClick={onCancelEdit}>
+                              <X className="h-4 w-4" />
                               Cancelar
                             </Button>
                           </>
                         ) : (
                           <>
                             <Button type="button" variant="secondary" onClick={() => onStartEdit(n)}>
+                              <Pencil className="h-4 w-4" />
                               Editar
                             </Button>
                             <Button type="button" variant="outline" onClick={() => onDelete(n.id)} disabled={del.isPending}>
+                              <Trash2 className="h-4 w-4" />
                               Remover
                             </Button>
                           </>
