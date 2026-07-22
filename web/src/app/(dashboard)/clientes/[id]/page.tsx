@@ -1691,10 +1691,15 @@ function ResponsaveisCard({
   const [selectedUserId, setSelectedUserId] = React.useState("");
 
   // Close the add-modal if it was open when the parent exits edit mode, so an action that is no
-  // longer permitted doesn't remain visibly open with no explanation.
-  React.useEffect(() => {
+  // longer permitted doesn't remain visibly open with no explanation. Adjusted synchronously
+  // during render (React's documented replacement for a setState-in-effect prop sync, see
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than in an effect, since `editable` is just a prop this component reacts to.
+  const [prevEditable, setPrevEditable] = React.useState(editable);
+  if (editable !== prevEditable) {
+    setPrevEditable(editable);
     if (!editable) setModalOpen(false);
-  }, [editable]);
+  }
 
   const existingIds = new Set((list.data ?? []).map((u) => u.id));
   const candidateUsers = (adminUsers.data ?? []).filter(
@@ -1846,13 +1851,18 @@ function ClienteContactosCard({
 
   // Reset any in-progress row edit when the parent exits edit mode (Save or Cancel), so stale
   // editingId/editTipo/editValor never resurface if the parent re-enters edit mode later.
-  React.useEffect(() => {
+  // Adjusted synchronously during render (React's documented replacement for a setState-in-effect
+  // prop sync, see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than in an effect, since `editable` is just a prop this component reacts to.
+  const [prevEditable, setPrevEditable] = React.useState(editable);
+  if (editable !== prevEditable) {
+    setPrevEditable(editable);
     if (!editable) {
       setEditingId(null);
       setEditTipo("");
       setEditValor("");
     }
-  }, [editable]);
+  }
 
   const onCreate = async () => {
     if (!canEditClientes || !editable) return;
@@ -2055,13 +2065,18 @@ function ClienteNotasCard({
 
   // Reset any in-progress row edit when the parent exits edit mode (Save or Cancel), so stale
   // editingId/editTitulo/editConteudo never resurface if the parent re-enters edit mode later.
-  React.useEffect(() => {
+  // Adjusted synchronously during render (React's documented replacement for a setState-in-effect
+  // prop sync, see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than in an effect, since `editable` is just a prop this component reacts to.
+  const [prevEditable, setPrevEditable] = React.useState(editable);
+  if (editable !== prevEditable) {
+    setPrevEditable(editable);
     if (!editable) {
       setEditingId(null);
       setEditTitulo("");
       setEditConteudo("");
     }
-  }, [editable]);
+  }
 
   const onCreate = async () => {
     if (!canEditClientes || !editable) return;

@@ -88,9 +88,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [router, pathname, searchParams, me.isError]);
 
-  React.useEffect(() => {
+  // Close the mobile drawer on any navigation — not just the SidebarNav links that already call
+  // setDrawerOpen(false) via onNavigate, but also UserMenu's Perfil/Configurações links rendered
+  // inside the same drawer. Adjusted synchronously during render (React's documented replacement
+  // for a setState-in-effect prop sync, see
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // rather than in an effect, since pathname is just a reactive value derived from the router.
+  const [prevPathname, setPrevPathname] = React.useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setDrawerOpen(false);
-  }, [pathname]);
+  }
 
   const onLogout = async () => {
     await clearTokens();
