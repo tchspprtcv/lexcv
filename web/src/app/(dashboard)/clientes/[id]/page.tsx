@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ArrowLeft, Check, Download, Pencil, Plus, Printer, Save, Trash2, Upload, X } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
@@ -156,7 +157,12 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
 
   const update = useUpdateCliente(id);
 
-  const [isEditing, setIsEditing] = React.useState(false);
+  const searchParams = useSearchParams();
+  // Deep-link into edit mode via ?edit=1 (Clientes list mobile "Editar" quick action).
+  // Gated on canEditClientes so a view-only user can never have the edit form forced open.
+  const [isEditing, setIsEditing] = React.useState(
+    () => canEditClientes && searchParams.get("edit") === "1",
+  );
   const [tab, setTab] = React.useState<TabKey>("dados");
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [legacyDocumentoTipo, setLegacyDocumentoTipo] = React.useState<string | null>(null);

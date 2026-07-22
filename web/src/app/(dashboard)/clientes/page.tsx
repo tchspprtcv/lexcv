@@ -524,7 +524,7 @@ function ClientesPageContent({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button asChild size="sm" variant="ghost" aria-label="Editar" className="h-12 w-12 p-0 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                                <Link href={`/clientes/${encodeURIComponent(c.id)}`}>
+                                <Link href={`/clientes/${encodeURIComponent(c.id)}?edit=1`}>
                                   <Pencil className="h-4 w-4" />
                                 </Link>
                               </Button>
