@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarCheck,
+  Eye,
   FileText,
   FolderOpen,
   Inbox,
@@ -594,7 +595,10 @@ function RecentProcessosCard({
                     variant="ghost"
                     className="h-8 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                   >
-                    <Link href={`/processos/${encodeURIComponent(p.id)}`}>Abrir</Link>
+                    <Link href={`/processos/${encodeURIComponent(p.id)}`}>
+                      <Eye className="h-3.5 w-3.5" />
+                      Abrir
+                    </Link>
                   </Button>
                 </TableCell>
               </TableRow>
