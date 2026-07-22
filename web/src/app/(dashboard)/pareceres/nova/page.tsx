@@ -92,6 +92,21 @@ function ParecerCreateFormContent() {
     !clientes.isError &&
     !clientes.data?.some((c) => c.id === lockedClienteId);
 
+  // `clienteId` is a registered (uncontrolled) field: its RHF value only changes on a real
+  // DOM change event. When the locked id turns out missing, the native <select> falls back
+  // to displaying the empty placeholder (no matching <option>), but RHF's internal value —
+  // and therefore `clienteIdValue`/`processos` above, which is still querying with the
+  // stale/non-existent id — still holds the original `lockedClienteId` until something
+  // explicitly clears it. Clear it once, the moment `lockedClienteMissing` flips true
+  // (review fix — found live, not by static analysis: 3 prior review iterations traced
+  // `disabled` correctly but missed that `watch()` on an uncontrolled field never observes
+  // this browser-only visual fallback; mirrors the same fix in processos/novo/page.tsx).
+  React.useEffect(() => {
+    if (lockedClienteMissing) {
+      form.setValue("clienteId", "", { shouldValidate: false });
+    }
+  }, [lockedClienteMissing, form]);
+
   // Once the user has actually picked a replacement from the now-enabled select (or the
   // originally-locked id resolves normally), the "cliente já não está disponível" message
   // above must stop being shown — otherwise it sits indefinitely, directly beneath the

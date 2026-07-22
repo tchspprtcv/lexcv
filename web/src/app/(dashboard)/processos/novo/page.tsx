@@ -125,6 +125,21 @@ function ProcessoWizardContent() {
     !clientes.isError &&
     !clientes.data?.some((c) => c.id === lockedClienteId);
 
+  // `cliente_id` is a registered (uncontrolled) field: its RHF value only changes on a real
+  // DOM change event. When the locked id turns out missing, the native <select> falls back
+  // to displaying the empty placeholder (no matching <option>), but RHF's internal value
+  // still holds the original, non-existent `lockedClienteId` until something explicitly
+  // clears it — silently risking a submit with a stale/deleted client id, and keeping
+  // `currentClienteId` below truthy so the recovery message below never rendered. Clear it
+  // once, the moment `lockedClienteMissing` flips true (review fix — found live, not by
+  // static analysis: 3 prior review iterations traced `disabled` correctly but missed that
+  // `watch()` on an uncontrolled field never observes this browser-only visual fallback).
+  React.useEffect(() => {
+    if (lockedClienteMissing) {
+      intakeForm.setValue("cliente_id", "", { shouldValidate: false });
+    }
+  }, [lockedClienteMissing, intakeForm]);
+
   // Once the user has actually picked a replacement from the now-enabled select (or the
   // originally-locked id resolves normally), the "cliente já não está disponível" message
   // above must stop being shown — otherwise it sits indefinitely, directly beneath the
