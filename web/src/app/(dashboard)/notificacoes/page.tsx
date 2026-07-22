@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, X } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -208,6 +208,7 @@ function NotificacoesContent() {
                   Nenhuma notificação encontrada para os filtros selecionados.
                 </p>
                 <Button type="button" variant="ghost" size="sm" onClick={onLimparFiltros}>
+                  <X className="h-4 w-4" />
                   Limpar filtros
                 </Button>
               </div>

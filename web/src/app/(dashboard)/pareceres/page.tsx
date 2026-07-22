@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { Filter, Search } from "lucide-react";
+import { Check, Filter, Plus, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,7 +153,10 @@ function ParecerPageContent() {
         </h1>
         {canCreatePareceres ? (
           <Button asChild className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white">
-            <Link href="/pareceres/nova">Nova Solicitação</Link>
+            <Link href="/pareceres/nova">
+              <Plus className="h-4 w-4" />
+              Nova Solicitação
+            </Link>
           </Button>
         ) : null}
       </div>
@@ -183,9 +186,11 @@ function ParecerPageContent() {
             </div>
             <div className="flex items-center gap-2">
               <Button type="submit" className="font-bold shadow-none">
+                <Check className="h-4 w-4" />
                 Aplicar
               </Button>
               <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
+                <X className="h-4 w-4" />
                 Limpar
               </Button>
             </div>
@@ -372,6 +377,7 @@ function ParecerPageContent() {
                   disabled={pesquisa.isFetching}
                   className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
                 >
+                  <Check className="h-4 w-4" />
                   {pesquisa.isFetching ? "A pesquisar..." : "Pesquisar"}
                 </Button>
                 <Button
@@ -380,6 +386,7 @@ function ParecerPageContent() {
                   className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
                   onClick={onLimparPesquisa}
                 >
+                  <X className="h-4 w-4" />
                   Limpar Filtros
                 </Button>
               </div>
