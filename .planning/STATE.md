@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: ready_to_plan
-stopped_at: Phase 114 complete (1/1) — ready to discuss Phase 115
-last_updated: 2026-07-22T00:14:58.162Z
-last_activity: 2026-07-21
+status: executing
+stopped_at: Phase 115.1 UI-SPEC approved
+last_updated: "2026-07-22T07:37:31.233Z"
+last_activity: 2026-07-22 -- Phase 115.1 planning complete
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 80
+  total_phases: 6
+  completed_phases: 5
+  total_plans: 23
+  completed_plans: 20
+  percent: 83
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 115 — linguagem visual — ícones em todos os botões + filtros ícone only
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 115
+Phase: 115.1
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-22
+Status: Ready to execute
+Last activity: 2026-07-22 -- Phase 115.1 planning complete
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 103
+- Total plans completed: 114
 - Average duration: —
 - Total execution time: —
 
@@ -85,6 +85,7 @@ Progress: [██████████] 100%
 | 112 | 5 | - | - |
 | 113 | 1 | - | - |
 | 114 | 1 | - | - |
+| 115 | 11 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |
@@ -104,6 +105,8 @@ Progress: [██████████] 100%
 v2.10–v2.12 roadmap rationale trimmed here at milestone boundary — full detail preserved in `.planning/milestones/v2.10-ROADMAP.md`, `v2.11-ROADMAP.md`, `v2.12-ROADMAP.md`.
 
 v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its full per-phase decision/lesson log are now archived at `.planning/milestones/v2.13-ROADMAP.md` and `v2.13-REQUIREMENTS.md`; condensed accomplishments and outcomes live in `PROJECT.md`'s Validated requirements and Key Decisions; narrative lessons live in `RETROSPECTIVE.md`'s "Milestone: v2.13" section.
+
+- Phase 115.1 inserted after Phase 115: Permitir criar Processo/Parecer a partir da ficha de cliente; corrigir redirect de Entrar no webpage para o login da app; alinhar visual dos filtros de Pareceres com Processos/Clientes (URGENT)
 
 ### Decisions
 
@@ -200,9 +203,9 @@ Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps),
 
 ## Session Continuity
 
-Last session: 2026-07-21T22:56:58.419Z
-Stopped at: Completed 114-01-PLAN.md — Phase 114 complete (1/1)
-Resume file: None
+Last session: 2026-07-22T07:02:05.916Z
+Stopped at: Phase 115.1 UI-SPEC approved
+Resume file: .planning/phases/LEXCV-115.1-melhorias-t-cnicas-ficha-de-cliente-login-do-webpage-e-filtr/115.1-UI-SPEC.md
 
 ## Operator Next Steps
 
