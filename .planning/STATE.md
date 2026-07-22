@@ -4,7 +4,7 @@ milestone: v2.14
 milestone_name: UI/UX Melhorias
 status: Awaiting next milestone
 stopped_at: Phase 115.1 UI-SPEC approved
-last_updated: "2026-07-22T11:25:24.337Z"
+last_updated: "2026-07-22T11:30:36.402Z"
 last_activity: 2026-07-22 — Milestone v2.14 completed and archived
 progress:
   total_phases: 6
@@ -18,7 +18,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-18)
+See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
 **Current focus:** Milestone complete
