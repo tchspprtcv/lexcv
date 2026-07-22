@@ -1,10 +1,11 @@
 ---
 phase: 115
 slug: linguagem-visual-icones-em-todos-os-botoes-filtros-icone-only
-status: draft
+status: approved
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, cssVariables true) — pre-existing, unchanged by this phase
 created: 2026-07-21
+reviewed_at: 2026-07-21
 ---
 
 # Phase 115 — UI Design Contract
@@ -111,7 +112,7 @@ This is the literal, current JSX for every Aplicar/Limpar/Exportar-class button 
 | Documentos | `web/src/app/(dashboard)/documentos/page.tsx` | L219-221: `<Button type="submit" variant="secondary" className="w-full">Filtrar</Button>` — **label is "Filtrar", not "Aplicar"; same semantic action, same `Check` icon** | L222-224: `<Button type="button" variant="outline" className="w-full" onClick={onClear}>Limpar</Button>` | — none |
 | Financeiro | `web/src/app/(dashboard)/financeiro/page.tsx` | — none (Processo/Estado filters auto-apply via `Select onValueChange`) | L264-274: `<Button variant="outline" onClick={...}>Limpar filtros</Button>` — **conditionally rendered**, only shows when a filter is active | L175-180: `<Button variant="outline" onClick={() => exportHonorariosCsv(...)}>Exportar CSV</Button>` |
 
-**Total: 12 button instances to convert to icon-only+Tooltip** (3 Clientes + 2 Processos-page + 1 Processos-[id] + 1 Agenda + 2 Documentos + 2 Financeiro — wait, recount: Clientes 3, Processos-page 2 text-conversions + 1 already-icon completion, Processos-[id] 1, Agenda 1, Documentos 2, Financeiro 2 = **9 text→icon conversions + 1 already-icon a11y completion = 10 buttons touched**, across 6 files).
+**Total: 12 button instances touched** (3 Clientes + 3 Processos-page + 1 Processos-[id] + 1 Agenda + 2 Documentos + 2 Financeiro, across 6 files) — 11 text→icon conversions + 1 already-icon a11y-only completion (Processos-page's Exportar special case, see table below).
 
 ### Special case: Processos' Exportar button (L251-253)
 
@@ -157,7 +158,7 @@ Of the 158 gaps, **9 are also FICO-01 conversions** (counted in both this table 
 | `clientes/page.tsx` | 9 | 4 (L285 Plus, L353 Filter, L494 Eye+Tooltip, L505 Pencil+Tooltip) | 5 | L265 Exportar CSV*, L269 Merge, L274 Importar CSV, L364 Aplicar*, L365 Limpar* (*=FICO-01) |
 | `clientes/columns.tsx` | 4 | 4 (Eye/Printer/Pencil/Trash2, all icon-only + Tooltip) | 0 | Fully compliant row-actions — reference pattern for everything else |
 | `clientes/novo/page.tsx` | 5 | 0 | 5 | L153 Voltar, L344 submit, L351 Cancelar, L368 Cancelar (dialog), L371 Continuar (dialog) |
-| `clientes/[id]/page.tsx` | 32 | 1 (L404 Printer, "Ver Ficha") | 31 | Heaviest single-gap file. L401 Voltar, L416 Cancelar, L419 Guardar, L434 Editar (top toolbar), then **6 repeated Adicionar-trigger + Cancelar + Confirmar/Guardar dialog-footer groups** across Doc-a-Tratar (L908/926/927), Deslocação (L966/1003/1004), tipo-change confirm (L1055/1056), Documento upload (L1307/1352/1363), inline Contactos edit (L1546/1550/1655/1687/1724/1727/1907/1915/1921/1924), inline Notas edit (L1849/2051/2096/2104/2110/2113) |
+| `clientes/[id]/page.tsx` | 32 | 1 (L404 Printer, "Imprimir Ficha") | 31 | Heaviest single-gap file. L401 Voltar, L416 Cancelar, L419 Guardar, L434 Editar (top toolbar), then **6 repeated Adicionar-trigger + Cancelar + Confirmar/Guardar dialog-footer groups** across Doc-a-Tratar (L908/926/927), Deslocação (L966/1003/1004), tipo-change confirm (L1055/1056), Documento upload (L1307/1352/1363), inline Contactos edit (L1546/1550/1655/1687/1724/1727/1907/1915/1921/1924), inline Notas edit (L1849/2051/2096/2104/2110/2113) |
 | `clientes/[id]/ficha/page.tsx` | 1 | 1 (Printer, "Imprimir") | 0 | |
 | `clientes/merge/page.tsx` | 2 | 0 | 2 | L96 Voltar, L149 "Fazer merge" |
 
@@ -165,7 +166,7 @@ Of the 158 gaps, **9 are also FICO-01 conversions** (counted in both this table 
 
 | File | Total | Compliant | Gaps | Notes |
 |---|---|---|---|---|
-| `processos/page.tsx` | 8 | 3 (L148 Plus, L240 Filter, L260 Plus) | 4 (+1 special) | L143 Dashboard link, L195 "Ver Agenda Completa", L254 Aplicar*, L257 Limpar* (*=FICO-01). L251 Exportar = special case, see FICO-01 table |
+| `processos/page.tsx` | 8 | 3 (L148 Plus, L240 Filter, L261 Plus) | 4 (+1 special) | L143 Dashboard link, L195 "Ver Agenda Completa", L254 Aplicar*, L257 Limpar* (*=FICO-01). L251 Exportar = special case, see FICO-01 table |
 | `processos/dashboard/page.tsx` | 1 | 1 (ArrowLeft, icon-only "Voltar") | 0 | |
 | `processos/novo/page.tsx` | 9 | 0 | 9 | Multi-step intake wizard: L225 Voltar, L455 submit, L462 Voltar, L483 "Executar Conflict Check", L624 submit decisão, L634 disabled placeholder, L658 seguinte, L765 Formalizar Processo, L773 Voltar (step nav) |
 | `processos/columns.tsx` | 1 | 1 (Eye+Tooltip, "Ver detalhes") | 0 | |
@@ -328,7 +329,7 @@ Unchanged by this phase — icons inherit `currentColor` from their parent `Butt
 
 ## Verification / QA Plan
 
-### FICO-01 — per module (6 files, 10 buttons touched)
+### FICO-01 — per module (6 files, 12 buttons touched)
 
 - [ ] Clientes filter bar: Aplicar/Limpar/Exportar show only an icon, each wrapped in `Tooltip`, hover reveals the unified copy from the Copywriting Contract above
 - [ ] Processos filter bar: Aplicar/Limpar converted; Exportar (already icon-only) gains `aria-label`+`Tooltip`, stays `disabled`
@@ -359,11 +360,11 @@ Unchanged by this phase — icons inherit `currentColor` from their parent `Butt
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved-with-recommendations — fixed: FICO-01 count self-contradiction (12 vs 10, corrected to 12 throughout) and 2 trivial do-not-touch citation drifts (2026-07-21)
