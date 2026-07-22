@@ -225,6 +225,11 @@ function ParecerPageContent() {
                         </option>
                       ))}
                     </NativeSelect>
+                    {adminUsers.isError ? (
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Lista de advogados indisponível.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="lg:col-span-4">
@@ -299,6 +304,11 @@ function ParecerPageContent() {
                         </option>
                       ))}
                     </NativeSelect>
+                    {adminUsers.isError ? (
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Lista de advogados indisponível.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div>

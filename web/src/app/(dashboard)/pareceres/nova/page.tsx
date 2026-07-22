@@ -215,6 +215,11 @@ function ParecerCreateFormContent() {
                   </option>
                 ))}
               </NativeSelect>
+              {adminUsers.isError ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Não foi possível carregar a lista de advogados — pode atribuir mais tarde a partir do parecer.
+                </p>
+              ) : null}
             </div>
 
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}

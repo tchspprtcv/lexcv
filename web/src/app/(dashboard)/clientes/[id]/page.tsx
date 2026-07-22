@@ -1270,7 +1270,12 @@ function ClienteParecerTab({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-slate-500 dark:text-slate-400 font-medium">
-                    {advogadoNomeById.get(s.advogadoId ?? "") ?? "—"}
+                    {/* WR-01 review fix: advogadoNomeById is only ever populated for ADMIN
+                        viewers (useAdminUsers is gated on isAdmin above), so a non-ADMIN user
+                        with pareceres:view previously saw a bare "—" even when s.advogadoId was
+                        set. Fall back to the raw id — some signal beats silently-missing data —
+                        mirroring the clienteNomeById.get(...) ?? id idiom used elsewhere. */}
+                    {s.advogadoId ? (advogadoNomeById.get(s.advogadoId) ?? s.advogadoId) : "—"}
                   </TableCell>
                   <TableCell className="text-slate-500 dark:text-slate-400 font-medium">
                     {formatParecerDate(s.createdAt)}
