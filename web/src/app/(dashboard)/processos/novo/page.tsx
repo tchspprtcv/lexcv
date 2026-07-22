@@ -102,6 +102,18 @@ function ProcessoWizardContent() {
     },
   });
 
+  // Re-sync the locked cliente once the (initially cold) clientes query resolves. The
+  // `defaultValues.cliente_id` seed above only wins the race if `clientes.data` already
+  // contains `lockedClienteId` at mount time, which isn't guaranteed for un-prefetched
+  // TanStack Query data — on a cold cache, no matching <option> exists yet when this
+  // NativeSelect mounts, so the browser silently falls back to the empty placeholder
+  // (CR-01 review fix).
+  React.useEffect(() => {
+    if (lockedClienteId && clientes.data?.some((c) => c.id === lockedClienteId)) {
+      intakeForm.setValue("cliente_id", lockedClienteId, { shouldValidate: true });
+    }
+  }, [lockedClienteId, clientes.data, intakeForm]);
+
   // Step 2 decisao form
   const decisaoForm = useForm<ConflictCheckDecisaoFormValues>({
     resolver: zodResolver(conflictCheckDecisaoFormSchema),

@@ -71,6 +71,16 @@ function ParecerCreateFormContent() {
   const processos = useProcessos(clienteIdValue ? { cliente_id: clienteIdValue } : {});
   const adminUsers = useAdminUsers();
 
+  // Re-sync the locked cliente once the (initially cold) clientes query resolves — mirrors
+  // the fix in processos/novo/page.tsx (CR-01 review fix). Without this, a cold-cache mount
+  // (e.g. navigating here directly from the cliente ficha's "Novo Parecer" button) leaves the
+  // disabled NativeSelect showing its empty placeholder even though `clienteId` is required.
+  React.useEffect(() => {
+    if (lockedClienteId && clientes.data?.some((c) => c.id === lockedClienteId)) {
+      form.setValue("clienteId", lockedClienteId, { shouldValidate: true });
+    }
+  }, [lockedClienteId, clientes.data, form]);
+
   React.useEffect(() => {
     form.setValue("processoId", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
