@@ -1,5 +1,21 @@
 # Milestones
 
+## v2.14 UI/UX Melhorias (Shipped: 2026-07-22)
+
+**Phases completed:** 6 phases, 23 plans, 49 tasks
+
+**Key accomplishments:**
+
+- Four tenant-scoped, accent-folded, exact-match-first native `pesquisarGlobal` queries (Cliente/Processo/Documento/ParecerSolicitacao) plus the `unaccent`/`pg_trgm` extension migration and a Testcontainers IT proving zero cross-tenant leakage against real PostgreSQL
+- `GET /api/v1/pesquisa` dedicated controller merging 4 tenant-scoped `pesquisarGlobal` repository calls into one flat `ResultadoPesquisaDto` list, gated per entity type via a net-new programmatic `hasAuthority` helper so a scopeless caller gets 200+[] never 403, with zero Honorario/financeiro branch and a 7-test Mockito RBAC-matrix proof
+- Self-contained Ctrl+K/⌘K command palette (cmdk `Command`/`CommandDialog`, `shouldFilter={false}`) consuming Phase 111's `GET /api/v1/pesquisa`, with tipo-grouped bold-highlighted results, sessionStorage recents across all 4 entity types, and permission-gated loading skeletons.
+- Decorative topbar `<Input>` replaced with a fake-input trigger button (⌘K/Ctrl K hint) plus a mobile Search icon trigger, both dispatching `SEARCH_OPEN_EVENT` to the single mounted `GlobalSearchDialog`.
+- Relocated the existing Estado NativeSelect filter from inside the collapsed "Filtros" advanced panel to the always-visible main filter bar on the Processos list page, closing PEST-01 with a pure JSX move (zero logic/state/handler changes).
+- Flipped `--radius` from `0rem` to `0.5rem` in both apps and swept 271 hardcoded `rounded-none` className overrides (271 occurrences across 29 files) that were silently overriding the token via `tailwind-merge`, so the rounded-corner look is now actually visible everywhere except 4 documented legitimate exceptions.
+- Whole-app build+lint icon-import gate green, do-not-touch guard clean, and all 11 FICO-01/ICON-01 live interactive acceptance criteria independently verified against a running app — phase ready to close.
+
+---
+
 ## v2.13 Refactor UI/UX (shadcn/ui) (Shipped: 2026-07-18)
 
 **Phases completed:** 10 phases, 42 plans, 86 tasks

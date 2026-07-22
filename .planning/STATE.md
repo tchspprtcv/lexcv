@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.14
 milestone_name: UI/UX Melhorias
-status: milestone_complete
-stopped_at: Milestone complete (Phase 115.1 was final phase)
-last_updated: 2026-07-22T10:47:37.776Z
-last_activity: 2026-07-22 -- Phase 115.1 execution started
+status: Awaiting next milestone
+stopped_at: Phase 115.1 UI-SPEC approved
+last_updated: "2026-07-22T11:25:24.337Z"
+last_activity: 2026-07-22 — Milestone v2.14 completed and archived
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 23
   completed_plans: 23
-  percent: 83
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-18)
 
 ## Current Position
 
-Phase: 115.1
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-22
-
-Progress: [██████████] 100%
+Phase: Milestone v2.14 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-22 — Milestone v2.14 completed and archived
 
 ## Performance Metrics
 
@@ -202,6 +200,17 @@ Pre-close `audit-open` scan found 6 open items across 4 phases, all `human_neede
 
 Known deferred items count at v2.13 close: 6 (4 verification_gaps + 2 uat_gaps), none functional defects, none blocking. Milestone-level cross-phase integration audit additionally found and fixed 1 stale RBAC guard (`notificacoes/page.tsx`, commit `7a8f28e`) and flagged 1 narrow DOF-01 scope-completeness gap (Pareceres upload progress bar, background task `task_af5aaa48`) — see `.planning/v2.13-MILESTONE-AUDIT.md`.
 
+### Items acknowledged and deferred at milestone v2.14 close (2026-07-22)
+
+Pre-close `audit-open` scan found 2 open items, neither BLOCKER-level (see `.planning/v2.14-MILESTONE-AUDIT.md` for full detail). Acknowledged and deferred rather than blocking close:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification_gap | Phase 114 (114-VERIFICATION.md) — `human_needed`, 7/7 code-level must-haves verified | non-blocking — 2 of 3 ROADMAP success criteria are rendering claims; substantively (not fully) de-risked by Phase 115's own incidental live checkpoint (6 screens/themes confirmed, see `114-VERIFICATION.md` Post-Verification Addendum); Badge cross-app divergence sub-item already resolved by explicit user decision |
+| uat_gap | Phase 115.1 (115.1-HUMAN-UAT.md) — flagged `resolved`, 0 pending scenarios | closed — flagged only by the scan's own status label; 4/6 items live-confirmed this session (backend+web+webpage run together), including finding and fixing a real bug (recovery message never rendering, commit `ccd1b80`); 2 items (non-privileged-role rendering) remain source-verified only, blocked by a stale seeded test-account password in this long-lived dev DB, not by code doubt |
+
+Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, the latter already resolved per its own 0-pending count), none functional defects, none blocking. Milestone audit (re-run to incorporate the inserted Phase 115.1) additionally re-confirmed 0 cross-phase integration regressions across all 6 phases — see `.planning/v2.14-MILESTONE-AUDIT.md`.
+
 ## Session Continuity
 
 Last session: 2026-07-22T07:02:05.916Z
@@ -210,5 +219,4 @@ Resume file: .planning/phases/LEXCV-115.1-melhorias-t-cnicas-ficha-de-cliente-lo
 
 ## Operator Next Steps
 
-- Rever e aprovar `.planning/ROADMAP.md` (milestone v2.14, Phases 111–115)
-- Após aprovação, iniciar planeamento com `/gsd:plan-phase 111`
+- Start the next milestone with /gsd-new-milestone
