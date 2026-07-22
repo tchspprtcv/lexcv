@@ -167,6 +167,23 @@ The 9 checklist items below are carried forward directly from `114-01-PLAN.md`'s
 
 **Recommendation:** proceed to human/CI visual QA using the 9+1 item checklist above (ideally once the backend dependency that blocks both dev servers is resolved) before formally closing Phase 114. No code changes are indicated by this verification pass.
 
+## Post-Verification Addendum (2026-07-22, during Phase 115 milestone audit)
+
+The backend dependency that blocked live visual QA above was resolved this session (user started Postgres/backend for Phase 115's own live checkpoint). While independently walking Phase 115's 11-point FICO-01/ICON-01 checklist against the running app (see `115-11-SUMMARY.md`), 6 screens were incidentally screenshotted, giving real — though partial — rendering confirmation for this phase's open checklist items:
+
+| Checklist item | Screen | Theme observed | Result |
+|---|---|---|---|
+| 1. `/dashboard` | Dashboard | Light only | ✓ KPI cards, buttons, badges all show rounded corners, no sharp edges |
+| 2. `/clientes` | Clientes list | **Both** light and dark | ✓ Filter bar, row-action icon buttons, badges consistently rounded in both themes |
+| 3. `/processos` | Processos list (incl. Estado filter) | Dark only | ✓ KPI cards, filter bar (incl. Estado `NativeSelect`), badges consistently rounded |
+| 7. `/login` | Login | Light only | ✓ Form fields, submit button rounded |
+| (not in original list) | Financeiro list | Dark only | ✓ Date inputs, filter buttons rounded (bonus corroboration) |
+| (not in original list) | Cliente ficha edit form | Dark only | ✓ Text inputs, tabs, Guardar/Cancelar buttons rounded (bonus corroboration) |
+
+**Still not visually confirmed:** item 4 (mobile bottom-sheet Dialog, both breakpoints), item 5 (Ctrl+K/⌘K palette — the search trigger button was seen but the dialog itself was never opened), item 6 (mobile hamburger Sheet), item 8 (`/settings`), item 9 (`webpage/` landing page — a separate app, not visited this session), and item 10 (Badge divergence sign-off — already resolved separately via direct user decision, see the Post-Verification Closure Note above, not a rendering check).
+
+This does not upgrade phase status to `passed` — the remaining items are real gaps in coverage, not just theoretical — but it substantively de-risks the two open Success Criteria (SC2, SC3): the highest-traffic screens (Dashboard, Clientes, Processos, plus Login) are now confirmed rendering correctly in at least one theme each, with Clientes confirmed in both. Remaining exposure is concentrated in lower-traffic/edge surfaces (mobile breakpoints, the search palette's own dialog chrome, Settings, and the separate `webpage/` app).
+
 ---
 
 *Verified: 2026-07-21T23:55:55Z*
