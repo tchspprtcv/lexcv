@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -223,7 +223,10 @@ function ProcessoWizardContent() {
           </p>
         </div>
         <Button asChild variant="outline" className="">
-          <Link href="/processos">Voltar</Link>
+          <Link href="/processos">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Link>
         </Button>
       </div>
 
@@ -457,10 +460,14 @@ function ProcessoWizardContent() {
                   className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white max-sm:min-h-[48px]"
                   disabled={intakeForm.formState.isSubmitting || createIntake.isPending || permissions.isLoading || !canCreateProcessos}
                 >
+                  <ArrowRight className="h-4 w-4" />
                   {intakeForm.formState.isSubmitting || createIntake.isPending ? "A guardar..." : "Continuar para Conflict Check"}
                 </Button>
                 <Button asChild type="button" variant="outline" className="">
-                  <Link href="/processos">Voltar</Link>
+                  <Link href="/processos">
+                    <ArrowLeft className="h-4 w-4" />
+                    Voltar
+                  </Link>
                 </Button>
               </div>
             </form>
@@ -486,6 +493,7 @@ function ProcessoWizardContent() {
                 disabled={!canCreateProcessos || runCheck.isPending}
                 onClick={onRunConflictCheck}
               >
+                <Search className="h-4 w-4" />
                 {runCheck.isPending ? "A verificar conflitos..." : "Executar Conflict Check"}
               </Button>
               {!canCreateProcessos ? (
@@ -626,6 +634,7 @@ function ProcessoWizardContent() {
                       className="font-bold shadow-none bg-blue-600 hover:bg-blue-700 text-white"
                       disabled={decisaoForm.formState.isSubmitting || registarDecisao.isPending}
                     >
+                      <Check className="h-4 w-4" />
                       {decisaoForm.formState.isSubmitting || registarDecisao.isPending ? "A guardar..." : "Registar Decisão"}
                     </Button>
                   </form>
@@ -636,6 +645,7 @@ function ProcessoWizardContent() {
                       className="font-bold shadow-none opacity-50 cursor-not-allowed"
                       disabled
                     >
+                      <Check className="h-4 w-4" />
                       Registar Decisão
                     </Button>
                     <p className="text-sm text-slate-500 mt-2">
@@ -661,6 +671,7 @@ function ProcessoWizardContent() {
                       disabled={!canAdvanceToStep3}
                       onClick={() => canAdvanceToStep3 && setStep(3)}
                     >
+                      <ArrowRight className="h-4 w-4" />
                       Continuar para Abertura
                     </Button>
                   </div>
@@ -768,6 +779,7 @@ function ProcessoWizardContent() {
                   disabled={isFormalizarBlocked || formalizarProcesso.isPending}
                   onClick={onFormalizar}
                 >
+                  <CheckCircle2 className="h-4 w-4" />
                   {formalizarProcesso.isPending ? "A formalizar..." : "Formalizar Processo"}
                 </Button>
                 <Button
@@ -776,6 +788,7 @@ function ProcessoWizardContent() {
                   className=""
                   onClick={() => setStep(2)}
                 >
+                  <ArrowLeft className="h-4 w-4" />
                   Voltar
                 </Button>
               </div>

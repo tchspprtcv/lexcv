@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { Download, Filter, Plus, Scale, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Download, Filter, LayoutDashboard, Plus, Scale, Search, Sparkles, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
@@ -142,6 +143,7 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" className="font-bold tracking-wide shadow-none border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900">
               <Link href="/processos/dashboard">
+                <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </Link>
             </Button>
@@ -193,7 +195,10 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               <strong className="text-white text-lg">{proximasAudiencias} audiências</strong> agendadas para os próximos 7 dias.
             </p>
             <Button asChild className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-none">
-              <Link href="/agenda">Ver Agenda Completa</Link>
+              <Link href="/agenda">
+                Ver Agenda Completa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -248,15 +253,30 @@ function ProcessosPageContent({ canCreateProcessos }: { canCreateProcessos: bool
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white" disabled>
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button type="submit" className="font-bold shadow-none">
-                Aplicar
-              </Button>
-              <Button type="button" variant="ghost" className="text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={onClear}>
-                Limpar
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white" aria-label="Exportar CSV" disabled>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Exportar CSV</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="submit" size="icon" aria-label="Aplicar filtros">
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Aplicar filtros</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Limpar filtros" onClick={onClear}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Limpar filtros</TooltipContent>
+              </Tooltip>
               {canCreateProcessos ? (
                 <Button asChild className="font-bold shadow-none">
                   <Link href="/processos/novo">

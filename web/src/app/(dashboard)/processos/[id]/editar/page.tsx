@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Save, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -138,7 +139,10 @@ function ProcessoEditContent({ id }: { id: string }) {
         </div>
 
         <Button asChild variant="outline">
-          <Link href={`/processos/${encodeURIComponent(id)}`}>Cancelar</Link>
+          <Link href={`/processos/${encodeURIComponent(id)}`}>
+            <X className="h-4 w-4" />
+            Cancelar
+          </Link>
         </Button>
       </div>
 
@@ -301,10 +305,14 @@ function ProcessoEditContent({ id }: { id: string }) {
                   type="submit"
                   disabled={form.formState.isSubmitting || update.isPending || permissions.isLoading || !canEditProcessos}
                 >
+                  <Save className="h-4 w-4" />
                   {form.formState.isSubmitting || update.isPending ? "A guardar..." : "Guardar"}
                 </Button>
                 <Button asChild type="button" variant="outline">
-                  <Link href={`/processos/${encodeURIComponent(id)}`}>Cancelar</Link>
+                  <Link href={`/processos/${encodeURIComponent(id)}`}>
+                    <X className="h-4 w-4" />
+                    Cancelar
+                  </Link>
                 </Button>
               </div>
             </form>
