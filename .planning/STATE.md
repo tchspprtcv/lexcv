@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.15
 milestone_name: Reposicionamento SIJ
-status: planning
-last_updated: "2026-07-27T20:15:00.000Z"
-last_activity: 2026-07-27
+status: executing
+stopped_at: ROADMAP.md v2.15 created (Phase 116 defined, awaiting user approval)
+last_updated: "2026-07-27T20:55:45.847Z"
+last_activity: 2026-07-27 -- Phase 116 planning complete
 progress:
   total_phases: 1
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -26,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 Phase: 116 of 116 (Reposicionamento Institucional — Fim das Referências a NOSi)
 Plan: TBD (not yet planned)
-Status: Ready to plan
-Last activity: 2026-07-27 — ROADMAP.md created: 1 phase (116), 4/4 requirements mapped
+Status: Ready to execute
+Last activity: 2026-07-27 -- Phase 116 planning complete
 
 ## Performance Metrics
 
