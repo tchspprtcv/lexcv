@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.15
 milestone_name: Reposicionamento SIJ
-status: verifying
-stopped_at: Completed 116-01-PLAN.md
-last_updated: "2026-07-27T21:08:31.298Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 116 was final phase)
+last_updated: 2026-07-27T21:38:13.467Z
 last_activity: 2026-07-27
 progress:
   total_phases: 1
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 116 — Reposicionamento Institucional — Fim das Referências a NOSi
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 116 (Reposicionamento Institucional — Fim das Referências a NOSi) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 116
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-07-27
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 117
+- Total plans completed: 118
 - Average duration: —
 - Total execution time: —
 
@@ -85,6 +85,7 @@ Last activity: 2026-07-27
 | 114 | 1 | - | - |
 | 115 | 11 | - | - |
 | 115.1 | 3 | - | - |
+| 116 | 1 | - | - |
 
 *(Full per-phase history for v2.0–v2.8 lives in `.planning/milestones/*-ROADMAP.md` archives; table trimmed here per STATE.md size constraint.)*
 | Phase 103 P01 | ~10min | 2 tasks | 1 files |

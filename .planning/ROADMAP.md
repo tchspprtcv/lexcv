@@ -417,6 +417,6 @@ Plans:
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete    | 2026-07-22 |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 11/11 | Complete    | 2026-07-22 |
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
-| 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete   | 2026-07-27 |
+| 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
 
 **Next:** v2.15 em progresso — Phase 116 planeada (1 plano, 1 wave, 3 tarefas, 4/4 requisitos cobertos). Run `/gsd:execute-phase 116` to execute.
