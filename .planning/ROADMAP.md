@@ -417,18 +417,3 @@ Milestone pequena e de baixo risco — correção de posicionamento instituciona
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 0/TBD | Not started | - |
 
 **Next:** v2.15 em progresso — Phase 116 definida (4/4 requisitos mapeados, 100% cobertura). Run `/gsd:plan-phase 116` to plan the phase.
-
-### Phase 115.1: Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres (INSERTED)
-
-**Goal:** Fechar 3 gaps de UX/técnicos identificados após o fecho da v2.14: criação de artefactos a partir da ficha de cliente, redirect de autenticação a partir do webpage público, e consistência visual dos filtros em Pareceres.
-**Requirements**: TBD (a formalizar em `/gsd:discuss-phase 115.1`) — itens reportados pelo utilizador:
-  1. Permitir, a partir da ficha de cliente, introduzir (criar) diretamente os artefactos Processo e Parecer
-  2. A ação "Entrar" no webpage (landing pública) deve redirecionar para o login da aplicação web — atualmente não o faz
-  3. Na página de Pareceres, os filtros não seguem o mesmo padrão visual já usado em Processos e Clientes
-**Depends on:** Phase 115
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 115.1-01-PLAN.md — Área 1: criar Processo/Parecer a partir da ficha de cliente (2 botões RBAC-gated + campo Cliente pré-preenchido/bloqueado nos 2 formulários)
-- [x] 115.1-02-PLAN.md — Área 2: redirect "Entrar" do webpage → login da web (helper getLoginUrl() no-throw + env var NEXT_PUBLIC_WEB_APP_URL + 4 call sites)
-- [x] 115.1-03-PLAN.md — Área 3: alinhar primitivos dos filtros de Pareceres (6x Select->NativeSelect + input/label->Input/Label, sem alterar comportamento)
