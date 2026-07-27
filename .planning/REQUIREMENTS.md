@@ -1,0 +1,46 @@
+# Requirements: LexCV — Milestone v2.15
+
+**Defined:** 2026-07-27
+**Core Value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
+
+## v1 Requirements
+
+Requisitos desta milestone (v2.15 — Reposicionamento SIJ). Cada um mapeia para exatamente uma fase do roadmap.
+
+### Posicionamento Institucional (SIJ)
+
+- [ ] **SIJ-01**: PROJECT.md descreve o LexCV sem menção a "NOSi", referenciando o SIJ (Sistema Judicial de Cabo Verde) como ecossistema-alvo
+- [ ] **SIJ-02**: Landing pública (`webpage/src/components/trust-section.tsx`) já não menciona NOSi no card "Ecossistema Cabo Verde", referenciando o sistema judicial de Cabo Verde
+- [ ] **SIJ-03**: `.trae/documents/SPEC.md` já não descreve o produto com "foco no ecossistema do NOSi"
+- [ ] **SIJ-04**: Tenant de demonstração seedado (`backend/.../seed/DatabaseSeeder.java`) deixa de representar a NOSi — nome, NIF e email passam a genéricos, não associados a nenhuma entidade real
+
+## v2 Requirements
+
+Nenhum item diferido nesta milestone — âmbito pequeno e totalmente coberto em v1.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Reescrever histórico de milestones (`.planning/milestones/*`, `RETROSPECTIVE.md`) | Registo histórico do que foi decidido/entregue em cada momento — não é reescrito retroativamente |
+| `.figma/*` (exports de referência de design) | Não é código vivo/importado pela aplicação, apenas material de referência dumped do Figma |
+| `web/src/server/mock-db.ts` | Mock legado pré-backend, já marcado "ignore unless migrating" em CLAUDE.md — superseded pelo Spring Boot API |
+| Integração técnica real com o SIJ (API, troca de dados, autenticação) | Esta milestone é exclusivamente de posicionamento/copy — corrige como o LexCV se descreve, não constrói nenhuma integração nova com o sistema judicial |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SIJ-01 | TBD | Pending |
+| SIJ-02 | TBD | Pending |
+| SIJ-03 | TBD | Pending |
+| SIJ-04 | TBD | Pending |
+
+**Coverage:**
+- v1 requirements: 4 total
+- Mapped to phases: 0
+- Unmapped: 4 ⚠️ (pending roadmap creation)
+
+---
+*Requirements defined: 2026-07-27*
+*Last updated: 2026-07-27 after initial definition*
