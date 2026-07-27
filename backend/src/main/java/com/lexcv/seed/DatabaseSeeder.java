@@ -62,11 +62,11 @@ public class DatabaseSeeder implements CommandLineRunner {
 
                 // 3. Tenants
                 Tenant tenant = Tenant.builder()
-                                .nome("NOSi (Demonstração)")
-                                .nif("500100200")
-                                .tipoEntidade("PUBLICO")
-                                .email("contacto@nosi.cv")
-                                .telefone("+238 2607900")
+                                .nome("Gabinete Jurídico Demonstração")
+                                .nif("000000000")
+                                .tipoEntidade("PRIVADO")
+                                .email("contacto@lexcv.cv")
+                                .telefone("+238 200 0000")
                                 .build();
                 tenant = tenantRepository.save(tenant);
                 UUID tenantId = tenant.getId();
