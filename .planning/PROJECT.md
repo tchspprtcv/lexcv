@@ -104,13 +104,11 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Cantos arredondados — token `--radius` 0rem→0.5rem em ambos os apps (web/webpage), reversão deliberada da identidade "documento institucional" da v2.13; sweep de 271 overrides `rounded-none` ilegítimos across 29 ficheiros que estavam a mascarar a mudança de token via `tailwind-merge` — v2.14 (Phase 114, `human_needed`: 2 critérios de sucesso são afirmações de renderização visual, parcialmente confirmadas ao vivo durante o checkpoint da Phase 115, não totalmente fechadas — ver STATE.md Deferred Items)
 - ✓ Ícones em todos os botões da aplicação + botões de ação de filtro (aplicar/limpar/exportar) ícone-only com tooltip em Clientes/Processos/Agenda/Documentos/Financeiro (Pareceres/Notificações excluídos deliberadamente, mantêm texto) — decomposto em 11 planos por módulo/ficheiro-mega, checkpoint humano ao vivo confirmou os 11 itens contra a app a correr — v2.14 (Phase 115)
 - ✓ Melhorias Técnicas pós-v2.14 (fase inserida, sem REQ-IDs formais) — criação de Processo/Parecer diretamente a partir da ficha de cliente (botões RBAC-gated + `?clienteId=` pré-preenchido/bloqueado nos formulários de criação); redirect da ação "Entrar" do `webpage/` público corrigido para o login de `web/` via `getLoginUrl()`/`NEXT_PUBLIC_WEB_APP_URL` (funciona em dev local com portas separadas, sem alterar o comportamento já correto em produção via Caddy); filtros de Pareceres alinhados aos primitivos `NativeSelect`/`Input`/`Label` já usados em Processos/Clientes. UAT ao vivo (backend+web+webpage a correr em conjunto) encontrou e corrigiu 1 bug real não detetado em 3 rondas de revisão de código estática: a mensagem de recuperação "cliente já não está disponível" nunca era renderizada porque `watch()` num campo RHF não controlado nunca observava o fallback visual do browser quando o id bloqueado não resolvia — corrigido limpando o campo explicitamente assim que a ausência é confirmada — v2.14 (Phase 115.1)
+- ✓ Reposicionamento institucional SIJ — remoção de todas as referências vivas a "NOSi" (PROJECT.md, landing pública `webpage/trust-section.tsx`, `.trae/documents/SPEC.md`, tenant de demonstração seedado `DatabaseSeeder.java`), substituídas pelo enquadramento correto: LexCV alinhado ao ecossistema do SIJ (Sistema Judicial de Cabo Verde). Tenant seed generalizado (nome/NIF/tipoEntidade/email/telefone) fecha também uma fuga de identidade de terceiro real via o endpoint público `GET /api/v1/public/branding`, que servia o nome "NOSi" sem autenticação — v2.15 (Phase 116)
 
 ### Active
 
-- [ ] PROJECT.md deixa de descrever o LexCV como "(ecossistema NOSi)", referenciando o SIJ/sistema judicial
-- [ ] Landing pública (webpage) deixa de mencionar NOSi como ecossistema-alvo
-- [ ] SPEC.md deixa de descrever o foco do produto como "ecossistema do NOSi"
-- [ ] Tenant de demonstração seedado deixa de representar/nomear a NOSi (nome, NIF, email genéricos)
+(Nenhum requisito ativo — v2.15 fechado. Próxima milestone ainda não definida; ver `/gsd:new-milestone`.)
 
 ### Out of Scope
 
@@ -291,4 +289,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after starting v2.15 milestone (Reposicionamento SIJ)*
+*Last updated: 2026-07-27 after Phase 116 completion (v2.15 Reposicionamento SIJ)*
