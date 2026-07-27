@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.15
 milestone_name: Reposicionamento SIJ
-status: executing
-stopped_at: ROADMAP.md v2.15 created (Phase 116 defined, awaiting user approval)
-last_updated: "2026-07-27T20:55:45.847Z"
-last_activity: 2026-07-27 -- Phase 116 planning complete
+status: verifying
+stopped_at: Completed 116-01-PLAN.md
+last_updated: "2026-07-27T21:08:31.298Z"
+last_activity: 2026-07-27
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 116 of 116 (Reposicionamento Institucional — Fim das Referências a NOSi)
-Plan: TBD (not yet planned)
-Status: Ready to execute
-Last activity: 2026-07-27 -- Phase 116 planning complete
+Phase: 116 (Reposicionamento Institucional — Fim das Referências a NOSi) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-07-27
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ Last activity: 2026-07-27 -- Phase 116 planning complete
 | Phase 112 P03 | 12min | 1 tasks | 1 files |
 | Phase 113 P01 | ~15min | 1 tasks | 1 files |
 | Phase 114 P01 | 18min | 3 tasks | 32 files |
+| Phase 116 P01 | 7min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full pe
 - [Phase 114]: Full 271-occurrence rounded-none remediation delivered (271 across 29 files), not just the 2-file token edit — tailwind-merge (cn()) lets a literal rounded-none className deterministically win over a primitive's own token-derived default — the token flip alone would have been invisible on most screens
 - [Phase 114]: settings/page.tsx's 4 Cards changed from rounded-none lg:rounded-xl to plain rounded-xl — gives uniform rounding at every breakpoint instead of flat-on-mobile/rounded-on-desktop
 - [Phase 114]: the shared --radius design token flips to 0.5rem (shadcn Default) in both web/ and webpage/ globals.css, identical value — 114-CONTEXT.md locked decision — reverts the v2.13 institutional 0rem look; a single-app value would make the public landing site visually inconsistent with the internal app
+- [Phase 116]: SIJ-01 ja estava satisfeito antes desta fase (PROJECT.md editado na abertura da milestone v2.15) - Task 3 verificou formalmente via assertion delimitada por awk a seccao What This Is, sem necessidade de editar PROJECT.md
 
 ### Pending Todos
 
@@ -215,9 +217,9 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-27T20:15:00.000Z
-Stopped at: ROADMAP.md v2.15 created (Phase 116 defined, awaiting user approval)
-Resume file: .planning/ROADMAP.md
+Last session: 2026-07-27T21:08:31.267Z
+Stopped at: Completed 116-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

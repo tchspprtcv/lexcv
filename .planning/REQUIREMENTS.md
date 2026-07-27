@@ -9,10 +9,10 @@ Requisitos desta milestone (v2.15 — Reposicionamento SIJ). Cada um mapeia para
 
 ### Posicionamento Institucional (SIJ)
 
-- [ ] **SIJ-01**: PROJECT.md descreve o LexCV sem menção a "NOSi", referenciando o SIJ (Sistema Judicial de Cabo Verde) como ecossistema-alvo
-- [ ] **SIJ-02**: Landing pública (`webpage/src/components/trust-section.tsx`) já não menciona NOSi no card "Ecossistema Cabo Verde", referenciando o sistema judicial de Cabo Verde
-- [ ] **SIJ-03**: `.trae/documents/SPEC.md` já não descreve o produto com "foco no ecossistema do NOSi"
-- [ ] **SIJ-04**: Tenant de demonstração seedado (`backend/.../seed/DatabaseSeeder.java`) deixa de representar a NOSi — nome, NIF e email passam a genéricos, não associados a nenhuma entidade real
+- [x] **SIJ-01**: PROJECT.md descreve o LexCV sem menção a "NOSi", referenciando o SIJ (Sistema Judicial de Cabo Verde) como ecossistema-alvo
+- [x] **SIJ-02**: Landing pública (`webpage/src/components/trust-section.tsx`) já não menciona NOSi no card "Ecossistema Cabo Verde", referenciando o sistema judicial de Cabo Verde
+- [x] **SIJ-03**: `.trae/documents/SPEC.md` já não descreve o produto com "foco no ecossistema do NOSi"
+- [x] **SIJ-04**: Tenant de demonstração seedado (`backend/.../seed/DatabaseSeeder.java`) deixa de representar a NOSi — nome, NIF e email passam a genéricos, não associados a nenhuma entidade real
 
 ## v2 Requirements
 
@@ -31,10 +31,10 @@ Nenhum item diferido nesta milestone — âmbito pequeno e totalmente coberto em
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIJ-01 | Phase 116 | Pending |
-| SIJ-02 | Phase 116 | Pending |
-| SIJ-03 | Phase 116 | Pending |
-| SIJ-04 | Phase 116 | Pending |
+| SIJ-01 | Phase 116 | Complete |
+| SIJ-02 | Phase 116 | Complete |
+| SIJ-03 | Phase 116 | Complete |
+| SIJ-04 | Phase 116 | Complete |
 
 **Coverage:**
 - v1 requirements: 4 total

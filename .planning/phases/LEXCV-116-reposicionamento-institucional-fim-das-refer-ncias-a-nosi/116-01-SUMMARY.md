@@ -100,6 +100,16 @@ None - no external service configuration required.
 - Zero dependências adicionadas, zero migração de schema criada, zero acentos corrompidos (confirmado por inspeção direta do diff de cada ficheiro).
 - Milestone v2.15 (fase única) fica pronta para fecho — sem bloqueios conhecidos.
 
+## Self-Check: PASSED
+
+- FOUND: webpage/src/components/trust-section.tsx
+- FOUND: .trae/documents/SPEC.md
+- FOUND: backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java
+- FOUND: .planning/phases/LEXCV-116-reposicionamento-institucional-fim-das-refer-ncias-a-nosi/116-01-SUMMARY.md
+- FOUND commit: 204f138 (Task 1)
+- FOUND commit: 226e89e (Task 2)
+- FOUND commit: aa149df (SUMMARY.md)
+
 ---
 *Phase: 116-reposicionamento-institucional-fim-das-referencias-a-nosi*
 *Completed: 2026-07-27*
