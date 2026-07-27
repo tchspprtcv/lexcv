@@ -18,7 +18,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-22)
+See: .planning/PROJECT.md (updated 2026-07-27)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
 **Current focus:** Milestone complete
@@ -112,19 +112,7 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 
 ### Decisions
 
-Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.13's full per-phase decision log has been cleared here at the v2.13 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.13-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
-
-- [Phase 111]: ParecerSolicitacaoRepository.pesquisarGlobal e um metodo novo e separado (nao reutiliza pesquisar(), nao LEFT JOIN t_parecer_versao) - match raso so em descricao — Resolve a tensao STACK.md-vs-PATTERNS.md a favor do Anti-Pattern 6: pesquisa profunda de conteudo (ParecerVersao.conteudo) fica exclusiva de /pareceres/pesquisa
-- [Phase 111]: PesquisaController Javadoc paraphrases Honorario/financeiro exclusion (billing/fee records) instead of naming them, to satisfy the plan's own grep-based acceptance check while preserving the documentation intent
-- [Phase 111]: PesquisaControllerTest role-matrix covered via one @Test with an internal loop over the 4 seeded role scope-sets, not @ParameterizedTest — no precedent for @ParameterizedTest exists in this test suite
-- [Phase 112]: 112-02: query reset on dialog close moved into onOpenChange instead of a useEffect, to satisfy react-hooks/set-state-in-effect (configured as an ESLint error in this repo)
-- [Phase 112]: 112-02: recents list read directly at render time instead of React.useMemo keyed on open, avoiding an exhaustive-deps warning about an intentional cache-invalidation dependency
-- [Phase 112]: 112-03: kbd shortcut-hint platform detection uses React.useSyncExternalStore instead of useState+useEffect, avoiding react-hooks/set-state-in-effect (configured as an ESLint error in this repo) while preserving the identical SSR-safe default-then-upgrade contract
-- [Phase 113]: 113-01: kept the existing draft + Aplicar submission model for the promoted Estado field (no onChange-immediate-apply) — 113-UI-SPEC.md Apply-behavior resolution: this was a layout change, not a logic change per 113-CONTEXT.md
-- [Phase 114]: Full 271-occurrence rounded-none remediation delivered (271 across 29 files), not just the 2-file token edit — tailwind-merge (cn()) lets a literal rounded-none className deterministically win over a primitive's own token-derived default — the token flip alone would have been invisible on most screens
-- [Phase 114]: settings/page.tsx's 4 Cards changed from rounded-none lg:rounded-xl to plain rounded-xl — gives uniform rounding at every breakpoint instead of flat-on-mobile/rounded-on-desktop
-- [Phase 114]: the shared --radius design token flips to 0.5rem (shadcn Default) in both web/ and webpage/ globals.css, identical value — 114-CONTEXT.md locked decision — reverts the v2.13 institutional 0rem look; a single-app value would make the public landing site visually inconsistent with the internal app
-- [Phase 116]: SIJ-01 ja estava satisfeito antes desta fase (PROJECT.md editado na abertura da milestone v2.15) - Task 3 verificou formalmente via assertion delimitada por awk a seccao What This Is, sem necessidade de editar PROJECT.md
+Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full per-phase decision log has been cleared here at the v2.15 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.14-ROADMAP.md`, `.planning/milestones/v2.15-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
 
 ### Pending Todos
 
