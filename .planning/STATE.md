@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.15
 milestone_name: Reposicionamento SIJ
-status: milestone_complete
-stopped_at: Milestone complete (Phase 116 was final phase)
-last_updated: 2026-07-27T21:38:13.467Z
-last_activity: 2026-07-27
+status: Awaiting next milestone
+stopped_at: Completed 116-01-PLAN.md
+last_updated: "2026-07-27T21:55:45.388Z"
+last_activity: 2026-07-27 — Milestone v2.15 completed and archived
 progress:
   total_phases: 1
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 116
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-27
+Phase: Milestone v2.15 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-27 — Milestone v2.15 completed and archived
 
 ## Performance Metrics
 
@@ -224,4 +224,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Review and approve the v2.15 roadmap, then run /gsd:plan-phase 116
+- Start the next milestone with /gsd-new-milestone

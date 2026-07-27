@@ -1,5 +1,15 @@
 # Milestones
 
+## v2.15 Reposicionamento SIJ (Shipped: 2026-07-27)
+
+**Phases completed:** 1 phases, 1 plans, 3 tasks
+
+**Key accomplishments:**
+
+- Copy institucional (landing pública `trust-section.tsx` + `SPEC.md`) e identidade do tenant de demonstração seedado migradas de "NOSi" para "ecossistema do SIJ (Sistema Judicial de Cabo Verde)"; SIJ-01 verificado formalmente sem necessidade de edição adicional.
+
+---
+
 ## v2.14 UI/UX Melhorias (Shipped: 2026-07-22)
 
 **Phases completed:** 6 phases, 23 plans, 49 tasks
