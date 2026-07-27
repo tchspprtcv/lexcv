@@ -17,6 +17,7 @@
 - ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
 - ✅ **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (complete 2026-07-18)
 - ✅ **v2.14 UI/UX Melhorias** — Phases 111–115.1 (complete 2026-07-22)
+- 🚧 **v2.15 Reposicionamento SIJ** — Phase 116 (in progress)
 
 ## Phases
 
@@ -318,6 +319,22 @@ See archive: [milestones/v2.14-ROADMAP.md](milestones/v2.14-ROADMAP.md) · [mile
 
 </details>
 
+### 🚧 v2.15 Reposicionamento SIJ (Em Progresso)
+
+Milestone pequena e de baixo risco — correção de posicionamento institucional, não desenvolvimento de funcionalidade nova. Remove todas as referências vivas a "NOSi" (agência de TI/transformação digital do governo cabo-verdiano) do produto e substitui pelo enquadramento correto: o LexCV serve o ecossistema do SIJ (Sistema Judicial de Cabo Verde). As 4 correções (PROJECT.md, landing pública, SPEC.md, tenant de demonstração seedado) tocam ficheiros inteiramente distintos sem nenhuma dependência técnica entre si, pelo que a milestone é entregue como uma única fase — granularidade "standard" do config.json deliberadamente não aplicada de forma literal, para não preencher artificialmente uma milestone pequena com fases redundantes.
+
+### Phase 116: Reposicionamento Institucional — Fim das Referências a NOSi
+
+**Goal**: O LexCV deixa de se descrever, em toda a sua superfície viva (documentação de projeto, landing pública, documentação técnica de referência e dados de demonstração seedados), como ligado à NOSi — passando a referenciar corretamente o SIJ (Sistema Judicial de Cabo Verde) como o seu ecossistema-alvo.
+**Depends on**: Nothing (primeira fase da milestone)
+**Requirements**: SIJ-01, SIJ-02, SIJ-03, SIJ-04
+**Success Criteria** (o que tem de ser verdade):
+  1. `.planning/PROJECT.md` não contém a string "NOSi" na secção "What This Is" — o texto referencia o SIJ/sistema judicial de Cabo Verde (SIJ-01; edição de conteúdo já aplicada na abertura da milestone, esta fase fecha/verifica formalmente o requisito)
+  2. O card "Ecossistema Cabo Verde" em `webpage/src/components/trust-section.tsx` não contém a string "NOSi" — o texto passa a referenciar o sistema judicial de Cabo Verde (SIJ-02)
+  3. `.trae/documents/SPEC.md` não contém a frase "foco no ecossistema do NOSi" (SIJ-03)
+  4. `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` não contém a string "NOSi" em nenhum campo do tenant seedado — nome, NIF e email do tenant de demonstração passam a valores genéricos, sem associação a nenhuma entidade real (SIJ-04)
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -397,8 +414,9 @@ See archive: [milestones/v2.14-ROADMAP.md](milestones/v2.14-ROADMAP.md) · [mile
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete    | 2026-07-22 |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 11/11 | Complete    | 2026-07-22 |
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
+| 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 0/TBD | Not started | - |
 
-**Next:** v2.14 concluída (Phases 111–115.1, 6/6 fases). Run `/gsd:new-milestone` to start the next milestone.
+**Next:** v2.15 em progresso — Phase 116 definida (4/4 requisitos mapeados, 100% cobertura). Run `/gsd:plan-phase 116` to plan the phase.
 
 ### Phase 115.1: Melhorias Técnicas — Ficha de Cliente, Login do Webpage e Filtros de Pareceres (INSERTED)
 

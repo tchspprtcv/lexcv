@@ -31,16 +31,16 @@ Nenhum item diferido nesta milestone — âmbito pequeno e totalmente coberto em
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIJ-01 | TBD | Pending |
-| SIJ-02 | TBD | Pending |
-| SIJ-03 | TBD | Pending |
-| SIJ-04 | TBD | Pending |
+| SIJ-01 | Phase 116 | Pending |
+| SIJ-02 | Phase 116 | Pending |
+| SIJ-03 | Phase 116 | Pending |
+| SIJ-04 | Phase 116 | Pending |
 
 **Coverage:**
 - v1 requirements: 4 total
-- Mapped to phases: 0
-- Unmapped: 4 ⚠️ (pending roadmap creation)
+- Mapped to phases: 4
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-27*
-*Last updated: 2026-07-27 after initial definition*
+*Last updated: 2026-07-27 after ROADMAP.md creation (Phase 116, 100% coverage)*

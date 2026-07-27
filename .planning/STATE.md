@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.15
 milestone_name: Reposicionamento SIJ
 status: planning
-last_updated: "2026-07-27T19:44:45.185Z"
+last_updated: "2026-07-27T20:15:00.000Z"
 last_activity: 2026-07-27
 progress:
-  total_phases: 0
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone complete
+**Current focus:** Phase 116 — Reposicionamento Institucional — Fim das Referências a NOSi
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-27 — Milestone v2.15 started
+Phase: 116 of 116 (Reposicionamento Institucional — Fim das Referências a NOSi)
+Plan: TBD (not yet planned)
+Status: Ready to plan
+Last activity: 2026-07-27 — ROADMAP.md created: 1 phase (116), 4/4 requirements mapped
 
 ## Performance Metrics
 
@@ -105,6 +105,7 @@ v2.10–v2.12 roadmap rationale trimmed here at milestone boundary — full deta
 v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its full per-phase decision/lesson log are now archived at `.planning/milestones/v2.13-ROADMAP.md` and `v2.13-REQUIREMENTS.md`; condensed accomplishments and outcomes live in `PROJECT.md`'s Validated requirements and Key Decisions; narrative lessons live in `RETROSPECTIVE.md`'s "Milestone: v2.13" section.
 
 - Phase 115.1 inserted after Phase 115: Permitir criar Processo/Parecer a partir da ficha de cliente; corrigir redirect de Entrar no webpage para o login da app; alinhar visual dos filtros de Pareceres com Processos/Clientes (URGENT)
+- v2.15 roadmap created (2026-07-27): 1 phase (116), 4/4 requirements mapped, 100% coverage — deliberately single-phase: the 4 requirements are independent, no-dependency text/data corrections across unrelated files (`PROJECT.md`, `webpage/trust-section.tsx`, `SPEC.md`, `DatabaseSeeder.java`) serving one shared goal (stop describing LexCV via NOSi, correctly frame it around the SIJ ecosystem instead) — config.json's "standard" granularity guidance deliberately not applied literally, per the standing rule against padding a small milestone with artificial phase splits
 
 ### Decisions
 
@@ -213,10 +214,10 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-22T07:02:05.916Z
-Stopped at: Phase 115.1 UI-SPEC approved
-Resume file: .planning/phases/LEXCV-115.1-melhorias-t-cnicas-ficha-de-cliente-login-do-webpage-e-filtr/115.1-UI-SPEC.md
+Last session: 2026-07-27T20:15:00.000Z
+Stopped at: ROADMAP.md v2.15 created (Phase 116 defined, awaiting user approval)
+Resume file: .planning/ROADMAP.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review and approve the v2.15 roadmap, then run /gsd:plan-phase 116
