@@ -5,7 +5,7 @@ const CONFIANCA = [
   { icon: Lock, title: "Isolamento Multi-Tenant", desc: "Cada instituição opera em ambiente de dados totalmente isolado, sem partilha entre clientes da plataforma." },
   { icon: ShieldCheck, title: "RBAC Granular", desc: "Perfis Admin, Advogado, Técnico e Assistente com permissões específicas por módulo e ação." },
   { icon: History, title: "Trilha de Auditoria", desc: "Alterações relevantes — fases, atribuições, documentos — ficam registadas e rastreáveis." },
-  { icon: Building2, title: "Ecossistema Cabo Verde", desc: "Desenhado para a realidade institucional cabo-verdiana, alinhado ao ecossistema NOSi." },
+  { icon: Building2, title: "Ecossistema Cabo Verde", desc: "Desenhado para a realidade institucional cabo-verdiana, alinhado ao ecossistema do SIJ (Sistema Judicial de Cabo Verde)." },
 ];
 
 export function TrustSection() {

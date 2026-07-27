@@ -1,7 +1,7 @@
 # SPEC.md - Frontend LexCV
 
 ## 1. Visão Geral e Requisitos (Clarify Requirements)
-A **LexCV** é uma plataforma institucional de gestão jurídica desenvolvida pela Speed Tech, desenhada para apoiar a governação e transformação digital em Cabo Verde, com foco no ecossistema do NOSi. A plataforma centraliza a gestão de clientes, processos jurídicos, prazos (agenda), documentos e controlo financeiro básico de forma segura e interoperável. 
+A **LexCV** é uma plataforma institucional de gestão jurídica desenvolvida pela Speed Tech, desenhada para apoiar a governação e transformação digital em Cabo Verde, com foco no ecossistema do SIJ (Sistema Judicial de Cabo Verde). A plataforma centraliza a gestão de clientes, processos jurídicos, prazos (agenda), documentos e controlo financeiro básico de forma segura e interoperável. 
 
 O escopo atual foca-se no **Fase 1 (MVP Institucional)**, que tem um prazo de 45 a 75 dias úteis. A plataforma opera num modelo arquitetónico multiplataforma, priorizando a **Web (responsivo/mobile-first)** e o **Desktop (via Tauri)** para contexto institucional seguro, além de adotar **PWA** para uso mobile na fase inicial.
 
