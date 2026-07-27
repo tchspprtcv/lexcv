@@ -333,7 +333,10 @@ Milestone pequena e de baixo risco — correção de posicionamento instituciona
   2. O card "Ecossistema Cabo Verde" em `webpage/src/components/trust-section.tsx` não contém a string "NOSi" — o texto passa a referenciar o sistema judicial de Cabo Verde (SIJ-02)
   3. `.trae/documents/SPEC.md` não contém a frase "foco no ecossistema do NOSi" (SIJ-03)
   4. `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` não contém a string "NOSi" em nenhum campo do tenant seedado — nome, NIF e email do tenant de demonstração passam a valores genéricos, sem associação a nenhuma entidade real (SIJ-04)
-**Plans**: TBD
+**Plans**: 1 plan (1 wave)
+
+Plans:
+- [ ] 116-01-PLAN.md — Substituir a copy institucional (landing `trust-section.tsx` + `.trae/documents/SPEC.md`) pela formulação canónica do SIJ, generalizar a identidade do tenant de demonstração seedado (`DatabaseSeeder.java`: nome/NIF/tipo/email/telefone), e fechar formalmente SIJ-01 com asserção delimitada à secção "What This Is" + varrimento residual de "nosi" em todas as superfícies vivas
 
 ## Progress
 
@@ -414,6 +417,6 @@ Milestone pequena e de baixo risco — correção de posicionamento instituciona
 | 114. Linguagem Visual — Cantos Arredondados (--radius) | v2.14 | 1/1 | Complete    | 2026-07-22 |
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 11/11 | Complete    | 2026-07-22 |
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
-| 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 0/TBD | Not started | - |
+| 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 0/1 | Planned | - |
 
-**Next:** v2.15 em progresso — Phase 116 definida (4/4 requisitos mapeados, 100% cobertura). Run `/gsd:plan-phase 116` to plan the phase.
+**Next:** v2.15 em progresso — Phase 116 planeada (1 plano, 1 wave, 3 tarefas, 4/4 requisitos cobertos). Run `/gsd:execute-phase 116` to execute.
