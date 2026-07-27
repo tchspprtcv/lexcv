@@ -486,6 +486,45 @@ A behavior-oriented second refinement pass on top of v2.13's component-library r
 
 ---
 
+## Milestone: v2.15 — Reposicionamento SIJ
+
+**Shipped:** 2026-07-27
+**Phases:** 1 | **Plans:** 1 | **Tasks:** 3
+
+### What Was Built
+
+A pure positioning/copy correction, not new functionality: the product stopped describing itself as tied to "NOSi" (Cabo Verde's generic government IT/digital-transformation agency) and started correctly framing itself around the SIJ (Sistema Judicial de Cabo Verde) — the actual judicial-system domain a legal practice management tool serves. Three literal text/data edits across entirely independent files: the public landing page's "Ecossistema Cabo Verde" trust card, `.trae/documents/SPEC.md`'s opening paragraph, and the seeded demo tenant's identity (name/NIF/type/email/phone) in `DatabaseSeeder.java`. The milestone's own kickoff (`/gsd:new-milestone`) had already applied the fourth change (`PROJECT.md`), so the single phase's job was to apply the remaining three and formally verify the fourth.
+
+### What Worked
+
+- **Smart-discuss's grey-area batch-table pattern handled a genuinely small milestone proportionately** — 2 areas, 3 questions each, both accepted in full on the first pass, with no artificial padding to hit a "standard" phase count. The milestone was correctly delivered as a single phase despite `config.json`'s default "standard" granularity, because the 4 requirements had zero technical dependencies on each other.
+- **The plan-checker caught a real, would-have-failed-at-runtime self-verification bug before execution**: the planner's own Task 3 acceptance criteria asserted `grep -cF "NOSi" PROJECT.md` = 1, but the milestone's own freshly-written "Current Milestone"/"Active" sections in `PROJECT.md` legitimately used the word "NOSi" 8 more times while *describing the fix itself* — the real count was 9. Caught and fixed in one revision cycle before the executor ever ran, avoiding a spurious mid-execution failure on a plan whose own instructions explicitly forbade the executor from improvising a fix.
+- **A stale duplicate ROADMAP.md block, dormant since a much earlier decimal phase (115.1) was inserted, became a genuine blocker only once this milestone's heading landed next to it** — caught before `/gsd:autonomous` began executing, by inspecting `roadmap.analyze`'s output rather than trusting the phase count at face value. Fixed by removing the now-redundant expanded block (its content was already fully preserved in the v2.14 archive).
+- **The milestone-level integration check found a real, previously-undocumented second flow fixed by the same single code change**: the seeded tenant's name is served not only by the public, unauthenticated landing page but also by `GET /api/v1/auth/me` to every authenticated user, appearing in the app shell and on two printable legal documents. Neither the phase's own threat model nor its plan scoped this — it surfaced only because the audit stage deliberately looked beyond the phase's own declared boundary.
+
+### What Was Inefficient
+
+- **UI-SPEC and pattern-mapper gates both fired on keyword false-positives** (a file path containing the substring "components", not an actual UI-design decision) and had to be manually judged as disproportionate and skipped rather than applying silently. No structural fix made this milestone — worth a lighter-weight "content-only phase" classification in a future planning-workflow revision so these gates don't need per-phase manual override reasoning.
+- **`AskUserQuestion`'s actual option cap (4) is stricter than the smart-discuss reference doc's documented cap (6)** — every grey-area table had to be restructured mid-flight (merging 4 sub-questions into 3) to fit the real tool constraint.
+
+### Patterns Established
+
+- **Section-scoped grep assertions for self-referential planning docs**: when a requirement's own tracking language (a milestone's Goal/Target-features/Active-checklist in `PROJECT.md`) legitimately contains the exact string a phase is meant to remove from the *product*, a whole-file `grep` is a self-invalidating gate — the fix is an `awk`-delimited range assertion scoped to the actual product-description section, with the whole-file count kept as a separate, correctly-valued non-regression guard rather than dropped entirely.
+
+### Key Lessons
+
+1. **A single-phase milestone still benefits from the full plan→check→revise→execute→review→verify→audit pipeline** — this milestone's only genuine defect (the self-verification count bug) was caught by the plan-checker specifically because the pipeline wasn't shortcut for being "small."
+2. **Milestone-level integration auditing should trace a changed data field through *every* consumer, not just the one the phase's own plan named** — the phase's threat model reasoned correctly about the one flow it knew about (`GET /api/v1/public/branding`); it took a dedicated audit pass, scoped explicitly to "does this integrate with the rest of the shipped codebase," to find the second flow through `GET /api/v1/auth/me`.
+3. **A stale planning-doc structural artifact can lie dormant and harmless for an entire milestone, then become live-breaking the moment a new milestone's heading is correctly inserted next to it** — worth spot-checking `roadmap.analyze`'s phase list against expectations immediately after any roadmap edit, not just at milestone start.
+
+### Cost Observations
+
+- Model mix: sonnet throughout — new-milestone questioning, smart-discuss, planning + 1 revision cycle, sequential (non-worktree) execution, code review, phase verification, milestone integration audit, and the full complete-milestone lifecycle.
+- Sessions: one continuous session covering `/gsd:new-milestone` through `/gsd:autonomous`'s full discuss→plan→execute→review→verify→audit→complete→cleanup lifecycle for a single-phase milestone, same day (2026-07-27).
+- Notable: smallest milestone by file/line count in this project's history (3 files, 7 lines changed) but still surfaced 2 genuine findings (a plan self-verification bug, an undocumented second data-exposure flow) that a "just edit the 3 strings" shortcut would have missed — the process overhead was proportionate to what it caught, not wasted on a trivial change.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -501,5 +540,6 @@ A behavior-oriented second refinement pass on top of v2.13's component-library r
 | v2.12 Landing Page | 3 | 9 | 1 | 79 | 16/16 (0 audit gaps; 3 runtime bugs found+fixed live during execution) |
 | v2.13 Refactor UI/UX (shadcn/ui) | 10 | 42 | 3 | 97 | 33/33 (2 integration gaps found at audit — 1 fixed, 1 deferred as small tech debt) |
 | v2.14 UI/UX Melhorias | 6 (incl. 1 urgent decimal insertion) | 23 | 4 | 68 | 15/15 + 3 informal (0 integration gaps at re-audit; 1 phase human_needed on rendering-only criteria, substantively de-risked; 1 real bug found+fixed via live UAT) |
+| v2.15 Reposicionamento SIJ | 1 | 1 | 1 | 3 | 4/4 (0 audit gaps; 1 integration finding — undocumented 2nd data-exposure flow, fixed automatically by the same seed-data change) |
 
 *Table grows with each milestone*
