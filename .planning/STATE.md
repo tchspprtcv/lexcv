@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.14
-milestone_name: UI/UX Melhorias
-status: Awaiting next milestone
-stopped_at: Phase 115.1 UI-SPEC approved
-last_updated: "2026-07-22T11:30:36.402Z"
-last_activity: 2026-07-22 — Milestone v2.14 completed and archived
+milestone: v2.15
+milestone_name: Reposicionamento SIJ
+status: planning
+last_updated: "2026-07-27T19:44:45.185Z"
+last_activity: 2026-07-27
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 ## Current Position
 
-Phase: Milestone v2.14 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-22 — Milestone v2.14 completed and archived
+Status: Defining requirements
+Last activity: 2026-07-27 — Milestone v2.15 started
 
 ## Performance Metrics
 

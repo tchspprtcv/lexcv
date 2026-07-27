@@ -2,11 +2,21 @@
 
 ## What This Is
 
-LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde (ecossistema NOSi), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
+LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
 
 ## Core Value
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
+
+## Current Milestone: v2.15 Reposicionamento SIJ
+
+**Goal:** Corrigir o posicionamento institucional do LexCV — remover todas as referências vivas a "NOSi" (agência de TI/transformação digital do governo cabo-verdiano) e substituir pelo enquadramento correto: o LexCV serve o ecossistema do SIJ (Sistema Judicial de Cabo Verde).
+
+**Target features:**
+- PROJECT.md "What This Is" sem menção a NOSi, referenciando o SIJ/sistema judicial
+- Landing pública (webpage/trust-section.tsx) sem menção a NOSi no card "Ecossistema Cabo Verde"
+- SPEC.md sem "foco no ecossistema do NOSi"
+- Tenant de demonstração seedado (backend/DatabaseSeeder.java) deixa de representar a NOSi (nome/NIF/email genéricos)
 
 ## Requirements
 
@@ -97,7 +107,10 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — v2.14 fechado. Próxima milestone ainda não definida; ver `/gsd:new-milestone`.)
+- [ ] PROJECT.md deixa de descrever o LexCV como "(ecossistema NOSi)", referenciando o SIJ/sistema judicial
+- [ ] Landing pública (webpage) deixa de mencionar NOSi como ecossistema-alvo
+- [ ] SPEC.md deixa de descrever o foco do produto como "ecossistema do NOSi"
+- [ ] Tenant de demonstração seedado deixa de representar/nomear a NOSi (nome, NIF, email genéricos)
 
 ### Out of Scope
 
@@ -278,4 +291,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 after v2.14 milestone completion (full evolution review)*
+*Last updated: 2026-07-27 after starting v2.15 milestone (Reposicionamento SIJ)*
