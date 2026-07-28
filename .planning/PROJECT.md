@@ -8,6 +8,18 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, alin
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.16 Distribuição Multi-Tenant e Faturação por Utilizadores
+
+**Goal:** Evoluir de "1 deployment por escritório" para uma instância partilhada multi-tenant, com limite de utilizadores por tenant e suporte a faturação manual por utilização — reabrindo deliberadamente a decisão da v2.12 de não ter provisionamento multi-tenant. Base: `proposta_multitenancy_distribuicao_faturacao.md` (28 jul 2026).
+
+**Target features:**
+- Limite de utilizadores ativos por tenant (`plano`/`limite_utilizadores` em `Tenant`, bloqueio em `createUser`, indicador "X/Y" no frontend)
+- Provisionamento multi-tenant — papel `PLATAFORMA_ADMIN`, ecrã interno para criar/listar tenants e ver utilização, `SetupService` deixa de ser singleton
+- Fecho das suposições de tenant única (`TenantRepository.findFirstByOrderByCreatedAtAsc`, `PublicController.getBranding`), bloqueio de `PUT /admin/rbac` para deixar de ser editável por tenant, auditoria de isolamento dedicada antes de um 2º tenant pagante real
+- Relatório interno de utilização por tenant (utilizadores ativos) para suportar faturação manual
+
+**Decisões confirmadas para esta milestone:** onboarding assistido (sem self-service público), cobrança manual (sem gateway de pagamento), branding só dentro da app autenticada (sem subdomínio por escritório). Modelo isolado por cliente (infra dedicada, `docker-compose` atual) mantém-se disponível como opção "enterprise/dedicado", não é substituído pelo modelo partilhado.
+
 ## Requirements
 
 ### Validated
@@ -98,7 +110,10 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum requisito ativo — v2.15 fechado. Próxima milestone ainda não definida; ver `/gsd:new-milestone`.)
+- [ ] Limite de utilizadores ativos por tenant (`plano`/`limite_utilizadores`), aplicado na criação de utilizadores, com indicador no frontend
+- [ ] Provisionamento multi-tenant — papel de administrador de plataforma, ecrã interno para criar/listar tenants e ver utilização, substituindo o gate singleton do `SetupService`
+- [ ] Fecho das suposições de tenant única no código (branding público, resolução de "a" tenant) e bloqueio de `PUT /admin/rbac` para deixar de ser editável por tenant, com auditoria de isolamento dedicada
+- [ ] Relatório interno de utilização por tenant para suportar faturação manual
 
 ### Out of Scope
 
@@ -113,7 +128,7 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - Novo campo de data de vencimento em `Honorario` — alerta de prazo de honorário usa dias sem pagamento total desde `dataAcordo` em vez de uma data explícita
 - Expansão do fan-out de equipa (NOTF-25) às categorias do job diário (`PRAZO_*`, `EVENTO_*`, `HONORARIO_ATRASADO`) — deliberadamente fora de âmbito da v2.11, `AlertasDiariosJob` mantém-se `responsavelId`-only; candidato de âmbito futuro
 - Matriz de preferências categoria×canal (NOTF-24) — prematuro com um único canal de entrega (in-app); só revisitar se email/push for adicionado
-- Onboarding self-service multi-instituição, slug/subdomínio por tenant — decisão confirmada na v2.12; este deployment continua a servir uma única instituição, o wizard `/setup` mantém-se singleton
+- Onboarding self-service multi-instituição (signup público sem intervenção) e slug/subdomínio por tenant — decisão original da v2.12 parcialmente revista na v2.16: o deployment passa a suportar múltiplos tenants (provisionamento assistido via administrador de plataforma, o wizard `/setup` deixa de ser singleton), mas mantém-se sem self-service público e sem subdomínio próprio por escritório
 - Instalação de skills/pacotes/registries de terceiros do shadcn (`pnpm dlx skills add shadcn/ui`, shadcnblocks.com, shadcndesign.com) — decisão explícita confirmada na v2.13; apenas a CLI oficial `shadcn@latest`, ferramentas externas não verificadas representam risco de supply-chain
 - Adoção do bloco oficial `Sidebar`/`SidebarProvider` (shadcn) para substituir `dashboard-shell.tsx`/`bottom-nav.tsx` — confirmado na v2.13; redesenho estrutural do layout institucional já validado contra Figma, não é objetivo de um refactor de componentes
 - `NavigationMenu` mega-menu em `webpage/` ou dentro do app shell `web/` — confirmado na v2.13; só compensaria em `webpage/` se a navegação crescesse além de 3 links âncora, e seria uso semanticamente indevido do componente dentro de `web/` (é para navegação de website, não sidebar de app)
@@ -284,4 +299,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after v2.15 milestone completion (full evolution review)*
+*Last updated: 2026-07-28 after starting v2.16 milestone*
