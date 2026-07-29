@@ -477,7 +477,7 @@ Plans:
 **Wave 1**
 
 - [x] 121-01-PLAN.md — Backend: `@PreAuthorize("hasRole('PLATAFORMA_ADMIN')")` no método `updateRbac` e só nele (`getRbac` e o gate de classe ficam intactos), provado RED→GREEN por 5 casos com proxy AOP real — estreia neste codebase da combinação anotação-de-classe + anotação-de-método
-- [ ] 121-02-PLAN.md — Frontend: "Guardar Regras" condicionado a `PLATAFORMA_ADMIN` em `RbacTab`, substituído por Badge `outline` "Gerido pela Plataforma" + Tooltip (rato e teclado), mais o gate executável `pnpm verify:bloqueio-rbac` (11 asserções, com guardas de não-regressão para `hasRbacManage`/`handleSave`/matriz)
+- [x] 121-02-PLAN.md — Frontend: "Guardar Regras" condicionado a `PLATAFORMA_ADMIN` em `RbacTab`, substituído por Badge `outline` "Gerido pela Plataforma" + Tooltip (rato e teclado), mais o gate executável `pnpm verify:bloqueio-rbac` (11 asserções, com guardas de não-regressão para `hasRbacManage`/`handleSave`/matriz)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -597,6 +597,6 @@ Plans:
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
-| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 1/4 | In Progress|  |
+| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 2/4 | In Progress|  |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
