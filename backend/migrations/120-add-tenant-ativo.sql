@@ -1,0 +1,33 @@
+-- Phase 120 (PROV-05): add ativo column to t_tenant
+--
+-- IMPORTANT: This is a REQUIRED manual production migration script. It MUST be run
+-- manually (e.g. via psql or DBeaver) against the database BEFORE or DURING deploying
+-- the code change that adds the `ativo` field to the `Tenant` entity
+-- (backend/src/main/java/com/lexcv/models/Tenant.java).
+--
+-- Why: `application-prod.yml` sets `ddl-auto: validate` in production (dev/CI use
+-- `ddl-auto: update`, which auto-adds this column locally from the entity mapping,
+-- because the entity's `columnDefinition = "boolean not null default true"` lets the
+-- ALTER succeed against an already-populated table). `ddl-auto=validate` never creates
+-- or alters schema -- it only checks the existing schema is compatible at startup.
+-- Without this script, the application will fail to start in production (schema
+-- validation error: missing column `ativo` on table `t_tenant`).
+--
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase --
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is
+-- therefore manual: run it once against each environment's database (staging/prod)
+-- before that environment picks up the deploy that introduces this field.
+--
+-- Semantics: `ativo` = TRUE means the tenant is usable; `ativo` = FALSE means the
+-- tenant is suspended -- no user belonging to that tenant can authenticate (login),
+-- renew a session (refresh), or continue using an already-active session (every
+-- authenticated request is re-validated per-request by JwtAuthenticationFilter, so
+-- suspension takes effect immediately, not just on next login). Same field name and
+-- polarity as `User.ativo` (never `suspenso`).
+--
+-- Backfill: the `DEFAULT TRUE` below makes PostgreSQL backfill every existing row's
+-- `ativo` column to TRUE automatically as part of the ALTER TABLE statement itself --
+-- no tenant that already exists in production is suspended as a side effect of this
+-- migration, and no separate UPDATE statement is required or run below.
+
+ALTER TABLE t_tenant ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT TRUE;

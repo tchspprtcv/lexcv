@@ -44,6 +44,22 @@ public class Tenant {
     @Column(name = "limite_utilizadores")
     private Integer limiteUtilizadores;
 
+    // Phase 120 (PROV-05): campo persistido que decide se o tenant inteiro tem acesso --
+    // `true` = tenant utilizavel; `false` = suspenso, sem acesso (login, refresh e qualquer
+    // pedido autenticado passam a recusar todos os utilizadores deste tenant, mesmo em
+    // sessoes ja ativas -- ver JwtAuthenticationFilter). Mesmo nome e polaridade de
+    // User.ativo (nao "suspenso") por consistencia com o resto do codebase. O
+    // columnDefinition e obrigatorio, nao cosmetico: em dev/CI (ddl-auto=update) o
+    // Hibernate emitiria `alter table t_tenant add column ativo boolean not null` contra
+    // uma tabela ja povoada, que o PostgreSQL rejeita (linhas existentes ficariam sem
+    // valor) -- com o `default true` embutido no DDL, o ALTER passa e preenche as linhas
+    // existentes automaticamente. A tenant reservada "LexCV" (DatabaseSeeder.
+    // seedTenantPlataforma(), que constroi com Tenant.builder().nome("LexCV").build() sem
+    // passar `ativo`) depende do @Builder.Default abaixo para nascer ativa.
+    @Column(name = "ativo", nullable = false, columnDefinition = "boolean not null default true")
+    @Builder.Default
+    private Boolean ativo = true;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
