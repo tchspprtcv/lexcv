@@ -3,6 +3,7 @@ package com.lexcv.controllers;
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
@@ -36,6 +37,11 @@ import static org.mockito.Mockito.when;
  * quando {@code Tenant.limiteUtilizadores} e {@code null}, e libertacao imediata da vaga depois
  * de um utilizador ser desativado (a contagem de ativos e lida ao vivo em cada pedido, nunca
  * memoizada).
+ *
+ * <p>CR-01 (117-REVIEW.md): tambem prova o mesmo limite aplicado em {@code AdminController.updateUser}
+ * na transicao ativo=false -&gt; ativo=true (reativacao), via o helper partilhado
+ * {@code limiteUtilizadoresExcedido} -- 409 ao reativar no limite, 200 ao reativar abaixo do limite, e
+ * confirma que um update que nao mexe em {@code ativo} nunca chama a contagem/tenant lookup.
  *
  * <p>Segue a mesma convencao de todos os testes de controller deste codebase (ver
  * {@code ResourceControllerUploadDocumentoTest}): nao existe harness MockMvc/{@code @SpringBootTest}
@@ -151,5 +157,65 @@ class AdminControllerLimiteUtilizadoresTest {
 
         assertEquals(HttpStatus.CONFLICT, primeiraResposta.getStatusCode());
         assertEquals(HttpStatus.CREATED, segundaResposta.getStatusCode());
+    }
+
+    // CR-01 (117-REVIEW.md): AdminController.updateUser era o segundo caminho capaz de tornar um
+    // utilizador ativo (reativacao) sem qualquer verificacao do limite, tornando-o totalmente
+    // contornavel. Os 3 testes seguintes provam o fix: reativar no limite bloqueia (409, sem save),
+    // reativar abaixo do limite passa (200, com save), e um update que nao mexe em `ativo` nunca
+    // chama a contagem nem o tenant lookup (custo zero para o caminho comum).
+
+    private User utilizadorExistente(boolean ativo) {
+        return User.builder()
+                .id(USER_ID)
+                .tenantId(TENANT_ID)
+                .nome("Utilizador Existente")
+                .email("existente@lexcv.cv")
+                .ativo(ativo)
+                .build();
+    }
+
+    @Test
+    void updateUser_reativarNoLimiteDevolve409ENaoGravaNada() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente(false)));
+        when(tenantRepository.findById(TENANT_ID))
+                .thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).limiteUtilizadores(3).build()));
+        when(userRepository.countByTenantIdAndAtivoTrue(TENANT_ID)).thenReturn(3L);
+
+        ResponseEntity<?> response = novoController().updateUser(USER_ID, Map.of("ativo", true));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals(Map.of("message", "Limite de utilizadores atingido para o vosso plano."), response.getBody());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUser_reativarAbaixoDoLimiteDevolve200EGravaUmaVez() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente(false)));
+        when(tenantRepository.findById(TENANT_ID))
+                .thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).limiteUtilizadores(3).build()));
+        when(userRepository.countByTenantIdAndAtivoTrue(TENANT_ID)).thenReturn(2L);
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController().updateUser(USER_ID, Map.of("ativo", true));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(userRepository, times(1)).save(any());
+    }
+
+    @Test
+    void updateUser_editarUtilizadorAtivoSemTocarEmAtivoNuncaVerificaLimite() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente(true)));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController().updateUser(USER_ID, Map.of("nome", "Nome Atualizado"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(userRepository, times(1)).save(any());
+        verify(tenantRepository, never()).findById(any());
+        verify(userRepository, never()).countByTenantIdAndAtivoTrue(any());
     }
 }

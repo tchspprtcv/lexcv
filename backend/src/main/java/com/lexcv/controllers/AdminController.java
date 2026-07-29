@@ -66,6 +66,29 @@ public class AdminController {
         return ResponseEntity.ok(responses);
     }
 
+    // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant. Tenant.limiteUtilizadores
+    // == null significa sem limite (plano Enterprise "por acordo"); um valor numérico bloqueia a
+    // operação quando os utilizadores já ativos do tenant do chamador (nunca de um tenant forjado a
+    // partir do corpo do pedido) já o igualam. A contagem é sempre lida ao vivo nesta query — nunca em
+    // cache — pelo que desativar um utilizador liberta a vaga de imediato no pedido seguinte.
+    //
+    // CR-01 (117-REVIEW.md): único ponto de verificação do limite no AdminController — chamado tanto
+    // por createUser (o novo utilizador ainda não conta para si próprio, por isso a comparação é >=)
+    // como por updateUser (apenas quando `ativo` transita de false para true — ver updateUser). Antes
+    // desta extração, o limite só era verificado em createUser, o que tornava a regra totalmente
+    // contornável via reativação por PUT /api/v1/admin/users/{id}. Não duplicar esta comparação inline.
+    private Optional<ResponseEntity<?>> limiteUtilizadoresExcedido(UUID tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
+        if (tenant != null && tenant.getLimiteUtilizadores() != null) {
+            long utilizadoresAtivos = userRepository.countByTenantIdAndAtivoTrue(tenantId);
+            if (utilizadoresAtivos >= tenant.getLimiteUtilizadores()) {
+                return Optional.of(ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Limite de utilizadores atingido para o vosso plano.")));
+            }
+        }
+        return Optional.empty();
+    }
+
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> body) {
         if (!body.containsKey("nome") || !body.containsKey("email") || !body.containsKey("password") || !body.containsKey("roles")) {
@@ -96,19 +119,12 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("message", "Pelo menos uma role válida é obrigatória."));
         }
 
-        // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant. Tenant.limiteUtilizadores
-        // == null significa sem limite (plano Enterprise "por acordo"); um valor numérico bloqueia a
-        // criação quando os utilizadores já ativos do tenant do chamador (nunca do corpo do pedido, para
-        // não permitir forjar outro tenant) já o igualam. O novo utilizador ainda não conta para si
-        // próprio, por isso a comparação é >=. A contagem é sempre lida ao vivo nesta query — nunca em
-        // cache — pelo que desativar um utilizador liberta a vaga de imediato no pedido seguinte.
-        Tenant tenant = tenantRepository.findById(principal.getTenantId()).orElse(null);
-        if (tenant != null && tenant.getLimiteUtilizadores() != null) {
-            long utilizadoresAtivos = userRepository.countByTenantIdAndAtivoTrue(principal.getTenantId());
-            if (utilizadoresAtivos >= tenant.getLimiteUtilizadores()) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(Map.of("message", "Limite de utilizadores atingido para o vosso plano."));
-            }
+        // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant, aplicado através do
+        // helper partilhado limiteUtilizadoresExcedido (ver o seu comentário para o contrato completo e
+        // para a nota CR-01 sobre porque este helper existe e é chamado a partir de dois sítios).
+        Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
+        if (limiteExcedido.isPresent()) {
+            return limiteExcedido.get();
         }
 
         List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
@@ -166,7 +182,21 @@ public class AdminController {
         if (body.containsKey("nome")) user.setNome((String) body.get("nome"));
         if (body.containsKey("telefone")) user.setTelefone((String) body.get("telefone"));
         if (body.containsKey("avatar_url")) user.setAvatarUrl((String) body.get("avatar_url"));
-        if (body.containsKey("ativo")) user.setAtivo((Boolean) body.get("ativo"));
+        if (body.containsKey("ativo")) {
+            boolean novoAtivo = (Boolean) body.get("ativo");
+            // CR-01 (117-REVIEW.md): reativar um utilizador (false -> true) é o segundo caminho capaz
+            // de tornar um utilizador ativo, além de createUser — sem esta verificação o limite era
+            // totalmente contornável (criar com ativo=false, que nunca sobe a contagem, e reativar
+            // depois sem qualquer controlo). Só a transição false -> true paga o custo da verificação;
+            // true -> false, ou qualquer update que não mexa em `ativo`, nunca chamam o helper.
+            if (novoAtivo && !Boolean.TRUE.equals(user.getAtivo())) {
+                Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
+                if (limiteExcedido.isPresent()) {
+                    return limiteExcedido.get();
+                }
+            }
+            user.setAtivo(novoAtivo);
+        }
 
         if (body.containsKey("password") && ((String) body.get("password")).trim().length() > 0) {
             String password = (String) body.get("password");
