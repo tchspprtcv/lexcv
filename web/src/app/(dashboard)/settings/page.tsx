@@ -759,6 +759,13 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 // ==========================================
 function RbacTab() {
   const { data: rbac, isLoading, isError, refetch } = useAdminRbac();
+  const me = useMe();
+  // Espelho de UX, nao fronteira de autorizacao: o bloqueio real vive na
+  // anotacao de metodo do backend (Plan 01, AdminController.updateRbac).
+  // Esta verificacao apenas evita expor, na interface, uma acao que hoje
+  // resultaria num 403 confuso para quem ja nao a pode executar — na
+  // linha do comentario equivalente em dashboard-shell.tsx.
+  const isPlatformAdmin = me.isFetched && (me.data?.roles?.includes("PLATAFORMA_ADMIN") ?? false);
   type RolePermissionsMap = Record<MockRole, MockPermission[]>;
 
   const [localRolePermissions, setLocalRolePermissions] = React.useState<RolePermissionsMap | null>(null);
@@ -857,18 +864,31 @@ function RbacTab() {
             Defina quais as permissões atribuídas globalmente a cada perfil profissional.
           </CardDescription>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 self-start sm:self-auto"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Guardar Regras
-        </Button>
+        {isPlatformAdmin ? (
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 self-start sm:self-auto"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Guardar Regras
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={0} className="self-start sm:self-auto">
+                <Badge variant="outline" className="gap-1">
+                  <Lock className="h-3 w-3" />
+                  Gerido pela Plataforma
+                </Badge>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
+              toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+            </TooltipContent>
+          </Tooltip>
+        )}
       </CardHeader>
       
       <CardContent className="space-y-4">
