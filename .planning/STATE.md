@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Criado ROADMAP.md da v2.16 (7 fases, 117–123) — PLAN backend/frontend (117-118), PROV backend/frontend (119-120), fecho de suposições de tenant única + bloqueio de RBAC (121), relatório de utilização (122), auditoria de isolamento dedicada (123). REQUIREMENTS.md traceability atualizado (15/15, 100% cobertura). STATE.md refrescado.
-last_updated: "2026-07-29T01:00:25.185Z"
-last_activity: 2026-07-29 -- Phase 117 execution started
+stopped_at: Completed 117-01-PLAN.md
+last_updated: "2026-07-29T01:14:23.587Z"
+last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 117 (Backend — Limite de Utilizadores por Tenant) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 117
-Last activity: 2026-07-29 -- Phase 117 execution started
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-29
 
 ## Performance Metrics
 
@@ -98,6 +98,7 @@ Last activity: 2026-07-29 -- Phase 117 execution started
 | Phase 113 P01 | ~15min | 1 tasks | 1 files |
 | Phase 114 P01 | 18min | 3 tasks | 32 files |
 | Phase 116 P01 | 7min | 3 tasks | 3 files |
+| Phase 117 P01 | 9min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 ### Decisions
 
 Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full per-phase decision log has been cleared here at the v2.15 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.14-ROADMAP.md`, `.planning/milestones/v2.15-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
+
+- [Phase 117]: Tenant.limiteUtilizadores is a nullable Integer (never int, no -1/MAX_VALUE sentinel) — null is the sole 'sem limite' contract; UserRepository.countByTenantIdAndAtivoTrue is a pure derived query (no @Query), the single reusable active-user count for Plan 02 and later Phases 120/122 — 117-01 data-layer plan (TenantPlano enum, Tenant fields, migration) executed exactly as specified, no deviations
 
 ### Pending Todos
 
@@ -209,8 +212,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-28T23:58:00.000Z
-Stopped at: Criado ROADMAP.md da v2.16 (7 fases, 117–123) — PLAN backend/frontend (117-118), PROV backend/frontend (119-120), fecho de suposições de tenant única + bloqueio de RBAC (121), relatório de utilização (122), auditoria de isolamento dedicada (123). REQUIREMENTS.md traceability atualizado (15/15, 100% cobertura). STATE.md refrescado.
+Last session: 2026-07-29T01:14:23.570Z
+Stopped at: Completed 117-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
