@@ -48,6 +48,25 @@ function stripComments(source) {
   return out;
 }
 
+/**
+ * Delimita o bloco <Tooltip>...</Tooltip> mais proximo que contem `needle`.
+ * Devolve null se nao encontrar abertura/fecho — usado pela assercao
+ * span-wrapper-tooltip para nao confundir este Tooltip novo com os 2 Tooltips
+ * de Editar/Eliminar ja existentes no mesmo ficheiro.
+ */
+function findTooltipBlockContaining(source, needle) {
+  const needleIdx = source.indexOf(needle);
+  if (needleIdx === -1) return null;
+  const openIdx = source.lastIndexOf("<Tooltip>", needleIdx);
+  if (openIdx === -1) return null;
+  const closeIdx = source.indexOf("</Tooltip>", needleIdx);
+  if (closeIdx === -1) return null;
+  return source.slice(openIdx, closeIdx + "</Tooltip>".length);
+}
+
+const TOOLTIP_PHRASE =
+  "Limite de utilizadores atingido. Desative um utilizador para libertar uma vaga.";
+
 async function main() {
   const [authTypesRaw, settingsPageRaw] = await Promise.all([
     fs.readFile(AUTH_TYPES_PATH, "utf-8"),
@@ -78,6 +97,63 @@ async function main() {
       predicate: () =>
         settingsPage.includes('replace(/^API \\d{3}: /, "")') &&
         !settingsPage.includes("API 400: "),
+    },
+    {
+      id: "use-me-auto-fetch",
+      descricao:
+        "settings/page.tsx importa useMe de @/hooks/use-me e chama useMe() dentro do proprio ficheiro (auto-fetch, sem prop-drilling)",
+      predicate: () => {
+        const importsUseMe =
+          /import\s*\{[^}]*\buseMe\b[^}]*\}\s*from\s*"@\/hooks\/use-me"/.test(
+            settingsPage
+          );
+        const callsUseMe = /\buseMe\(\)/.test(settingsPage);
+        return importsUseMe && callsUseMe;
+      },
+    },
+    {
+      id: "contagem-estrita",
+      descricao:
+        "settings/page.tsx contem '.ativo === true' (contagem estrita, espelha countByTenantIdAndAtivoTrue) E continua a conter 'user.ativo !== false' (convencao de exibicao do badge da tabela, inalterada)",
+      predicate: () =>
+        settingsPage.includes(".ativo === true") &&
+        settingsPage.includes("user.ativo !== false"),
+    },
+    {
+      id: "copy-contract",
+      descricao:
+        "settings/page.tsx contem as 3 strings de copy verbatim do UI-SPEC: 'utilizadores', '· limite atingido' e a frase completa do tooltip",
+      predicate: () =>
+        settingsPage.includes("utilizadores") &&
+        settingsPage.includes("· limite atingido") &&
+        settingsPage.includes(TOOLTIP_PHRASE),
+    },
+    {
+      id: "span-wrapper-tooltip",
+      descricao:
+        "o bloco <Tooltip> que contem a frase do tooltip tem <TooltipTrigger asChild> seguido (so espacos/quebras de linha) de <span tabIndex={0}>, contem 'disabled', e tabIndex={0} aparece ANTES de disabled (span focavel envolve o botao desativado)",
+      predicate: () => {
+        const block = findTooltipBlockContaining(settingsPage, TOOLTIP_PHRASE);
+        if (!block) return false;
+        const adjacencyMatch = block.match(
+          /<TooltipTrigger\s+asChild>\s*<span\b([^>]*)>/
+        );
+        if (!adjacencyMatch) return false;
+        const spanAttrs = adjacencyMatch[1];
+        const hasTabIndexOnSpan = /\btabIndex=\{0\}/.test(spanAttrs);
+        const hasDisabled = /\bdisabled\b/.test(block);
+        const tabIndexIdx = block.indexOf("tabIndex={0}");
+        const disabledIdx = block.indexOf("disabled");
+        const orderOk =
+          tabIndexIdx !== -1 && disabledIdx !== -1 && tabIndexIdx < disabledIdx;
+        return hasTabIndexOnSpan && hasDisabled && orderOk;
+      },
+    },
+    {
+      id: "layout-stack",
+      descricao:
+        "settings/page.tsx contem 'flex flex-col items-end gap-2' (empilhamento contador-sobre-botao alinhado a direita)",
+      predicate: () => settingsPage.includes("flex flex-col items-end gap-2"),
     },
   ];
 
