@@ -497,7 +497,7 @@ function EditarTenantForm({
       </div>
       <DialogFooter>
         <DialogClose asChild>
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" disabled={isSubmitting}>
             Cancelar
           </Button>
         </DialogClose>
