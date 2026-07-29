@@ -431,11 +431,28 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 120-01-PLAN.md — `Tenant.ativo` + migração manual `120-add-tenant-ativo.sql` + bloqueio de tenant suspenso nos **3** caminhos de acesso (`/auth/login` 403, `/auth/refresh` 401 — público em `SecurityConfig`, logo fora do filtro — e `JwtAuthenticationFilter` em todas as requisições, que é o que dá efeito imediato sobre sessões já ativas)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 120-02-PLAN.md — `PlatformAdminController`: `GET /platform/tenants` (com `countByTenantIdAndAtivoTrue` da Phase 117), `PUT /platform/tenants/{id}` (plano/limite) e `PATCH /platform/tenants/{id}/ativo` com guarda a impedir a suspensão da tenant reservada "LexCV"; DTOs próprios, handler global para corpo JSON inválido, e teste de gate por handler
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 120-03-PLAN.md — Frontend camada de dados: `types/platform-admin.ts`, união `Role` alargada a `PLATAFORMA_ADMIN`, 4 hooks TanStack Query com `invalidateQueries`, e o item de navegação "Plataforma" gated por papel nos 2 call sites de `SidebarNav`
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 120-04-PLAN.md — `plataforma/columns.tsx` (5 colunas, badge "Plataforma" na linha reservada, suspender desativado com a composição `<span tabIndex={0}>` da Phase 118) e `criar-tenant-panel.tsx` (painel inline reutilizando `setupSchema` verbatim)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 120-05-PLAN.md — Ecrã `/plataforma`: guard RBAC, lista com pesquisa, cards mobile, Dialog "Editar Tenant", AlertDialogs Suspender/Reativar, mais o gate executável `pnpm verify:consola-tenants` (10 asserções)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 120-06-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante, 2 janelas de browser): prova que suspender um tenant corta uma sessão **já aberta** no pedido seguinte, sem logout nem re-login; mais criação de um 2º tenant real pela consola e `403` confirmado para um ADMIN de escritório nos 3 endpoints
 
 **UI hint**: yes

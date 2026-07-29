@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: completed
+status: executing
 stopped_at: Completed 119-04-PLAN.md
-last_updated: "2026-07-29T10:09:32.585Z"
-last_activity: 2026-07-29 -- Phase 119 marked complete
+last_updated: "2026-07-29T11:45:16.886Z"
+last_activity: 2026-07-29 -- Phase 120 planning complete
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 9
+  total_plans: 15
   completed_plans: 9
   percent: 43
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 Phase: 119 — COMPLETE
 Plan: 4 of 4
-Status: Phase 119 complete
-Last activity: 2026-07-29 -- Phase 119 marked complete
+Status: Ready to execute
+Last activity: 2026-07-29 -- Phase 120 planning complete
 
 ## Performance Metrics
 
