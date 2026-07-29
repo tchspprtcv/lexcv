@@ -19,6 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -157,6 +158,31 @@ class AdminControllerLimiteUtilizadoresTest {
 
         assertEquals(HttpStatus.CONFLICT, primeiraResposta.getStatusCode());
         assertEquals(HttpStatus.CREATED, segundaResposta.getStatusCode());
+    }
+
+    // WR-03 (117-REVIEW.md): antes do fix, o limite era verificado incondicionalmente em
+    // createUser, mesmo quando o pedido trazia "ativo": false -- um caso que nunca poderia
+    // aumentar a contagem de ativos, mas ainda assim era rejeitado com 409 quando o tenant
+    // estava no limite. Este teste prova que o helper deixou de ser chamado nesse caso (nem
+    // tenantRepository nem a contagem são tocados), pelo que a criação passa sempre a 201,
+    // independentemente do estado real do limite.
+    @Test
+    void createUser_comAtivoFalseNuncaVerificaLimiteEDevolve201() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Map<String, Object> corpo = new HashMap<>(corpoValido());
+        corpo.put("ativo", false);
+
+        ResponseEntity<?> response = novoController().createUser(corpo);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        verify(userRepository, times(1)).save(any());
+        verify(tenantRepository, never()).findById(any());
+        verify(userRepository, never()).countByTenantIdAndAtivoTrue(any());
     }
 
     // CR-01 (117-REVIEW.md): AdminController.updateUser era o segundo caminho capaz de tornar um

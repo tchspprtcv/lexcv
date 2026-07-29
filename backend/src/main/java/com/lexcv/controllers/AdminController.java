@@ -131,9 +131,15 @@ public class AdminController {
         // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant, aplicado através do
         // helper partilhado limiteUtilizadoresExcedido (ver o seu comentário para o contrato completo e
         // para a nota CR-01 sobre porque este helper existe e é chamado a partir de dois sítios).
-        Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
-        if (limiteExcedido.isPresent()) {
-            return limiteExcedido.get();
+        // WR-03 (117-REVIEW.md): resolver primeiro o valor final de `ativo` e só invocar o helper
+        // quando esse valor é true -- um pedido com "ativo": false nunca aumenta a contagem de
+        // utilizadores ativos, por isso não pode ser bloqueado pelo limite.
+        boolean ativoInicial = body.get("ativo") == null || (Boolean) body.get("ativo");
+        if (ativoInicial) {
+            Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
+            if (limiteExcedido.isPresent()) {
+                return limiteExcedido.get();
+            }
         }
 
         List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
@@ -149,7 +155,7 @@ public class AdminController {
                 .passwordHash(passwordEncoder.encode((String) body.get("password")))
                 .roles(roles)
                 .permissions(permissions)
-                .ativo(body.get("ativo") == null || (Boolean) body.get("ativo"))
+                .ativo(ativoInicial)
                 .telefone(body.containsKey("telefone") ? (String) body.get("telefone") : "")
                 .avatarUrl(body.containsKey("avatar_url") ? (String) body.get("avatar_url") : "")
                 .build();
