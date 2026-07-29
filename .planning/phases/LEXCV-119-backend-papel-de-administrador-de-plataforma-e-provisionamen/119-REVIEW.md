@@ -1,128 +1,234 @@
 ---
 phase: LEXCV-119-backend-papel-de-administrador-de-plataforma-e-provisionamen
-reviewed: 2026-07-29T18:00:00Z
+reviewed: 2026-07-29T19:30:00Z
 depth: deep
 files_reviewed: 7
 files_reviewed_list:
   - backend/src/main/java/com/lexcv/repositories/TenantRepository.java
   - backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java
   - backend/src/main/java/com/lexcv/services/SetupService.java
-  - backend/src/main/java/com/lexcv/dtos/TenantProvisionResponse.java
   - backend/src/main/java/com/lexcv/controllers/AdminController.java
   - backend/src/main/java/com/lexcv/controllers/PlatformAdminController.java
+  - backend/src/main/java/com/lexcv/controllers/PublicController.java
   - backend/src/main/java/com/lexcv/config/GlobalExceptionHandler.java
 findings:
-  critical: 2
-  warning: 2
+  critical: 0
+  warning: 1
   info: 2
-  total: 6
+  total: 3
 status: issues_found
 ---
 
 # Phase LEXCV-119: Code Review Report
 
-**Reviewed:** 2026-07-29T18:00:00Z
+**Reviewed:** 2026-07-29T19:30:00Z
 **Depth:** deep
-**Files Reviewed:** 7
-**Status:** issues_found
+**Files Reviewed:** 7 (`backend/src/main/java/com/lexcv/dtos/TenantProvisionResponse.java` was additionally
+read in full for cross-file context, as `PlatformAdminController` builds it, but is not counted in the
+formal scope below since it wasn't part of the `files` list for this pass)
+**Status:** issues_found (0 blocking — see Final Verdict)
 
 ## Summary
 
-This phase adds a `PLATAFORMA_ADMIN` role, a reserved "LexCV" tenant, and a new
-`POST /api/v1/platform/tenants` endpoint capable of provisioning arbitrary tenants. The five
-specific risk vectors called out for this review were traced end-to-end, across files outside the
-seven under review where necessary (`UserPrincipal`, `JwtAuthenticationFilter`, `AuthController`,
-`SecurityConfig`, `PublicController`, `Tenant`, `User`, plus the actual git diffs for every touched
-commit) rather than relying on the code's own comments:
+This is the fix-verification re-review of Phase 119, covering the same files after a single fix pass that
+addressed all 5 findings from the previous `119-REVIEW.md` (2 Critical, 2 Warning, 1 of 2 Info items). Rather
+than trusting the fix commits' own descriptions, every fix was independently re-derived: I re-read all 7
+files in full plus `TenantProvisionResponse.java`/`UserPrincipal.java`/`SecurityConfig.java`/`AuthController.java`/
+`SetupController.java`/`Tenant.java`/`User.java` for cross-file context, diffed each of the five fix commits
+individually (`git show <hash> --stat`, and the full diff for the two most structurally significant ones),
+re-ran the compiler and the full automated test suite, ran SpotBugs/FindSecBugs, re-audited the whole backend
+for related authorization/repository call sites the fixes depend on, checked both frontend apps (`web/`,
+`webpage/`) for consumers that could be broken by the behavioral change in `PublicController`, and
+cross-referenced this codebase's two most relevant prior reviews (`98-REVIEW.md`, `117-REVIEW.md`) so
+severity judgments stay consistent with precedent rather than re-litigating already-triaged patterns from
+scratch.
 
-1. **`PLATAFORMA_ADMIN` reachability by a regular tenant ADMIN — NOT actually closed.** The four
-   "containment guards" added to `AdminController` (createUser, updateUser, getRbac, updateRbac)
-   correctly block the `roles` array from ever containing `"PLATAFORMA_ADMIN"`. However, they check
-   only `roles`, never the sibling free-form `permissions` array on the same two endpoints. Because
-   `UserPrincipal.create` folds every string in `User.permissions` into `GrantedAuthority` objects
-   verbatim (no prefix stripping, no catalog check), any tenant `ADMIN` can plant the literal string
-   `"ROLE_PLATAFORMA_ADMIN"` into their own (or any user's) `permissions` set via the *existing*
-   `PUT/POST .../admin/users` payload shape and pass `PlatformAdminController`'s
-   `hasRole('PLATAFORMA_ADMIN')` gate on the very next request. See **CR-01**. This is exactly the
-   escalation path the phase's own guard comments describe wanting to prevent, just via a field the
-   guards never inspect.
-2. **`GlobalExceptionHandler`'s new global `AccessDeniedException → 403` handler — verified safe.**
-   Traced how Spring Security's method-security AOP interceptor (the only authorization mechanism in
-   this app — `SecurityConfig` has no URL-level role rules, only `.anyRequest().authenticated()`)
-   surfaces exceptions through `DispatcherServlet`'s exception-resolver chain rather than
-   `ExceptionTranslationFilter`, confirmed no other manual `AccessDeniedException` throw sites exist
-   in `backend/src/main`, and confirmed the frontend (`web/src/lib/api.ts:43`) already special-cases
-   401/403 without a toast. No unintended side effect found; this is a net-positive, correctly scoped
-   fix (closes a `500`-with-internal-message leak on every `@PreAuthorize`-protected endpoint in the
-   app, not just the new one).
-3. **`PlatformAdminController` reachability without the role — verified safe** via the class-level
-   `@PreAuthorize`, confirmed by diffing `SecurityConfig.java` against the pre-phase-119 baseline
-   (zero changes — no new `permitAll()` entry), and by the real AOP-proxy tests in
-   `PlatformAdminControllerTest`. The only way to reach it without holding a genuine
-   `PLATAFORMA_ADMIN`-assigned role is the CR-01 bypass above (a `User.permissions` route, not a
-   `SecurityConfig`/controller-gate route).
-4. **`DatabaseSeeder` startup ordering — the "read counts before inserting" fix is itself correct**
-   (confirmed against the actual pre/post diff: the old live count check is replaced by a boolean
-   captured before `seedTenantPlataforma()` runs, and `seedRbac()` — which runs first — never
-   touches the three counted tables). But making the reserved tenant's seeding **unconditional and
-   first** has two knock-on defects the plan never traced: it permanently breaks
-   `TenantRepository.findFirstByOrderByCreatedAtAsc()`'s "oldest tenant" assumption for every future
-   install (**CR-02**), and its find-or-create-by-name has no protection against a concurrent-boot
-   race across replicas (**WR-01**).
-5. **`/api/v1/setup/initialize` — verified genuinely untouched.** `git diff` of every phase-119
-   commit against `SetupService.java`/`SetupController.java` shows `initializeSystem`,
-   `validateRequest`, and `SetupController` are a pure addition (`provisionTenant` appended after),
-   confirmed further by `SetupControllerSingletonRegressaoTest`.
+**CR-01 — verified FIXED.** Commit `6485fd93` (47 insertions / 8 deletions, `AdminController.java` only — no
+other file touched). `createUser` (`AdminController.java:189-194`) and `updateUser`
+(`AdminController.java:309-314`) now reject a `"permissions"` array containing either the raw string
+`"PLATAFORMA_ADMIN"` (`PAPEL_PLATAFORMA`, `:52`) or the actually-dangerous prefixed form
+`"ROLE_PLATAFORMA_ADMIN"` (`PAPEL_PLATAFORMA_AUTORIDADE`, `:60` = `"ROLE_" + PAPEL_PLATAFORMA`), with a `403`
+returned *before* the pre-existing, still-present `permissions.add((String) pObj)` loop (`:196-199`,
+`:316-319`) ever runs — i.e. before the free-form string can reach `User.permissions` at all. This closes the
+exact reproduction from the original finding (`PUT /api/v1/admin/users/{ownUserId}` with
+`{"permissions": ["ROLE_PLATAFORMA_ADMIN"]}`). Verified via the 14-case `AdminControllerPlataformaAdminContencaoTest`
+(Casos 9–14 are new, added by this same commit, and reproduce the exact bypass plus mixed-array and
+non-regression variants for both `createUser`/`updateUser`); all 14 pass. I also independently re-audited
+`grep -rn "hasRole(" backend/src/main` end-to-end: `hasRole('ADMIN')` (class-level on `AdminController`,
+already held by the only actor who can reach this code) and `hasRole('PLATAFORMA_ADMIN')` (`PlatformAdminController`)
+are the *only two* role-based checks anywhere in this backend — every other `@PreAuthorize` is
+`hasAuthority('scope:action')`, which the free-form `permissions` field is legitimately allowed to grant by
+design. So today, this two-string denylist is a functionally complete closure of the reachable escalation
+surface. See **WR-03** below for a residual, non-blocking observation about how this fix was implemented
+relative to what the original finding recommended.
+
+**CR-02 — verified FIXED**, including the specific double-check requested for this round. Commit `55167365`
+(net −55 lines across `PublicController.java`/`TenantRepository.java`, plus a rewritten `PublicControllerTest.java`).
+`TenantRepository.findFirstByOrderByCreatedAtAsc()` was deleted outright (not deprecated, not left dead) —
+confirmed by reading the current `TenantRepository.java` (25 lines, single method `findFirstByNome`) and by
+`grep -rn "findFirstByOrderByCreatedAtAsc"` across the entire repo: the only remaining hits are historical
+Javadoc prose in `PublicController.java`/`PublicControllerTest.java` explaining *why* the old approach was
+abandoned, and planning/markdown history — zero executable call sites anywhere. `PublicController.getBranding()`
+(`:33-41`) now takes no constructor args, injects no repository, and unconditionally returns
+`TenantPublicInfoResponse{nome="LexCV", logoDataUrl=null}`. Specifically verifying the "no other code path
+depended on this" claim:
+- `webpage/src/lib/branding.ts` is the *only* real consumer of `GET /api/v1/public/branding` in the repo
+  (confirmed via repo-wide grep for `public/branding`/`fetchBranding`). Its own hardcoded
+  `FALLBACK = { nome: "LexCV", logoDataUrl: null }` is now byte-identical to what the backend always returns —
+  so the dynamic fetch became a no-op with respect to output, not a behavior change for this consumer, and its
+  `if (!response.ok) return FALLBACK` branch is simply never taken anymore (the endpoint can no longer 404).
+  `BrandMark`/`HeroSection`/`SiteFooter`/`SiteHeader` all just render whatever `nome`/`logoDataUrl` they're
+  given, with their own `"LexCV"` fallback baked in too — no special-casing anywhere that could misbehave now
+  that the value is always generic.
+- `web/` (the actual tenant-facing app) does **not** call `/public/branding` at all
+  (`grep -rn "public/branding" web/src` → no matches). `web/src/lib/setup.ts`'s setup-redirect gate calls only
+  `/api/v1/setup/status` (`SetupController`, untouched by this phase). Tenant-specific branding inside the
+  authenticated app comes from `GET /auth/me` (`AuthController.java:169-174`):
+  `tenantRepository.findById(principal.getTenantId())` resolves the *caller's actual tenant* from the
+  JWT-derived principal, populating `tenant_nome`/`tenant_logo_data_url` — a genuinely different,
+  tenant-correct code path, completely unaffected by removing the "oldest tenant" heuristic. This directly
+  corroborates the Javadoc's own claim (`PublicController.java:26-27`).
+- One intentional behavior change, not a regression: pre-fix, `getBranding()` returned `404` when no tenant
+  existed yet (system not initialized); post-fix it always returns `200`. Confirmed no consumer depended on
+  that specific `404` — `webpage/`'s fetch treats any non-`200` identically (falls back to the same constant),
+  and nothing in `web/` reads this endpoint at all.
+- `PublicControllerTest.java` was rewritten in the same commit to match (`new PublicController()`, no mocks,
+  two tests asserting the constant response); both pass. `SecurityConfig`'s `permitAll()` allowlist entry for
+  this path is correctly untouched (the endpoint still exists, unauthenticated, so the entry is still needed).
+  The now-unnecessary `@Transactional(readOnly = true)` (added in Phase 100 specifically to stream the `@Lob`
+  `logoDataUrl` column) was also correctly removed along with the `Tenant`/`TenantRepository` imports and the
+  `@Slf4j`/`@RequiredArgsConstructor` annotations — a clean, complete removal, not a partial one.
+
+**WR-01 — verified FIXED.** Commit `27ae731c`. `TenantRepository.findByNome` → `findFirstByNome`
+(`TenantRepository.java:24`), consumed by `DatabaseSeeder.seedTenantPlataforma()` (`:405-408`). Confirmed
+`Tenant.nome` genuinely has no `unique = true` (`Tenant.java:20-21`, only `nullable = false`), so the
+described concurrent-boot duplicate-row race is real, and `findFirst...` (translating to `LIMIT 1`, never
+throwing `IncorrectResultSizeDataAccessException`) is an appropriate, minimal mitigation that converts a
+permanent crash-loop into "ignore the extra row." `DatabaseSeederPlataformaAdminTest`'s
+`run_numSegundoArranqueComSeedEnabled_naoRecriaTenantNemUtilizador` stubs `findFirstByNome` directly and
+passes, along with all 5 cases in that file (including the `InOrder`-verified "read counts before inserting"
+regression guard this same commit also touches, `:51-55`).
+
+**WR-02 — verified FIXED**, and verified more rigorously than the unit test alone proves. Commit `56c2fa8e`
+(14 insertions, 0 deletions — purely additive to `PlatformAdminController.java`). A new
+`catch (DataIntegrityViolationException ex)` (`:55-68`) translates the loser of a concurrent-`adminEmail`
+race into the same `400 {"message": "Já existe um utilizador com este email."}` as the non-racy case. The
+existing Mockito-based test (`PlatformAdminControllerTest.createTenant_comDataIntegrityViolationExceptionDevolve400ComMensagemDeEmailDuplicado`)
+only proves the *controller's* handling once that exception type is thrown — it doesn't prove Spring/Hibernate
+actually throws *that* type (as opposed to, say, `TransactionSystemException`) for a constraint violation that
+only surfaces at commit-time flush, which is the scenario the fix's own comment describes (`User`/`Tenant`
+both use `GenerationType.UUID`, so `INSERT` is deferred past `save()` to the `@Transactional` proxy's
+commit boundary). Because getting this wrong would mean the fix silently doesn't work in the one scenario it
+targets, I went further than reading code: I extracted and disassembled the actual `spring-orm` classes this
+Spring Boot 3.4.1 stack resolves (`JpaTransactionManager`, `HibernateJpaDialect`, via `javap` against the
+locally-cached jar) and confirmed the real bytecode path — `EntityTransaction.commit()` failing at flush time
+throws `jakarta.persistence.RollbackException`; `JpaTransactionManager.doCommit()` unwraps its cause and
+calls `JpaDialect.translateExceptionIfPossible(cause)` before ever falling back to `TransactionSystemException`;
+`HibernateJpaDialect.convertHibernateAccessException(...)` has an unconditional, translator-independent
+`instanceof org.hibernate.exception.ConstraintViolationException` branch that constructs
+`org.springframework.dao.DataIntegrityViolationException` directly. So `DataIntegrityViolationException` is
+indeed what reaches `PlatformAdminController.createTenant`'s new catch block in the real race, not just in
+the mock. All 9 `PlatformAdminControllerTest` cases pass (Group A direct-call cases including this one, and
+Group B's real `@PreAuthorize` AOP-proxy cases).
+
+**IN-02 — verified FIXED.** Commit `2740e41f` (10 insertions, 1 deletion, `DatabaseSeeder.java` only).
+`@Slf4j` added to the class; the platform-admin bootstrap-credential warning
+(`DatabaseSeeder.java:451-453`) now goes through `log.warn(...)` instead of `System.out.println`. Confirmed
+this is the only seed message changed — the file's other `System.out.println`s (`:74`, `:306`) are
+unchanged, consistent with the finding's narrow, deliberately-scoped recommendation.
+
+**IN-01 — unchanged, still open by design.** Not part of this fix pass (the task brief for this round listed
+CR-01/CR-02/WR-01/WR-02/IN-02 only). Re-confirmed `SetupService.provisionTenant` (`:102-131`) still checks
+only `adminEmail` uniqueness (`:106-108`), never `Tenant.nome`, and `Tenant.nome` still has no DB constraint.
+Carried forward unchanged below.
+
+**Regression check — clean, verified with real tool runs, not just reading:**
+- `cd backend && mvn -o -DskipTests compile` and `mvn -o test-compile`: both clean (exit 0), confirming no
+  dangling references anywhere to the deleted `findFirstByOrderByCreatedAtAsc`/renamed `findByNome`, and that
+  `PublicController`'s new no-arg shape and `PlatformAdminController`'s new catch clause compile against
+  every caller/test in the tree.
+- `cd backend && mvn -o test` (full unit suite; Surefire's default `**/*Test.java` inclusion correctly skips
+  the three DB-dependent `*IT.java` integration tests, matching this repo's `maven-failsafe-plugin` convention):
+  **135 tests across 14 classes, 0 failures, 0 errors** — including all 5 fix-targeted test classes
+  (`PublicControllerTest` 2, `DatabaseSeederPlataformaAdminTest` 5, `AdminControllerPlataformaAdminContencaoTest`
+  14, `SetupServiceProvisionTenantTest` 9, `PlatformAdminControllerTest` 9) and the adjacent, same-file
+  regression-risk classes (`AdminControllerLimiteUtilizadoresTest` 9, `SetupControllerSingletonRegressaoTest` 3,
+  `AuthControllerGetMeTenantPlanoTest` 4). `PesquisaControllerTest`'s and `AlertasDiariosJobTest`'s printed
+  stack traces are their own intentional failure-isolation assertions (matches this user's own prior note
+  about the local `unaccent`-extension gap), not failures — both report fully green.
+- `cd backend && mvn -o spotbugs:check` (SpotBugs + FindSecBugs): **0 bug instances, 0 errors** — clean SAST
+  across the whole backend, not just the touched files.
+- `git show --stat` on all five fix commits confirms each is minimal and correctly scoped: CR-01 touches only
+  `AdminController.java` (+its test); CR-02 touches only `PublicController.java`+`TenantRepository.java`
+  (+its test); WR-01 touches only `TenantRepository.java`+`DatabaseSeeder.java` (+its test); WR-02 touches
+  only `PlatformAdminController.java` (+its test); IN-02 touches only `DatabaseSeeder.java`. No fix commit
+  incidentally changed an unrelated file.
+- `GlobalExceptionHandler.java` and `TenantProvisionResponse.java` are untouched by this fix pass; both
+  re-confirmed still correct on their own terms — the `AccessDeniedException → 403` handler
+  (`:65-71`) still requires the parent-class catch (matches Spring Security 6.4's actual thrown subclass) and
+  never echoes `ex.getMessage()`; `TenantProvisionResponse` is still the only thing
+  `PlatformAdminController.createTenant` ever serializes, re-confirmed by
+  `PlatformAdminControllerTest.createTenant_devolve201ComIdENomeSemEntidadeCrua`'s explicit
+  `assertFalse(response.getBody() instanceof Tenant)`.
+
+## Final Verdict
+
+**Phase 119 (backend papel de administrador de plataforma e provisionamento) is APPROVED — no blockers.**
+
+- 0 open Critical findings. Both CR-01 and CR-02 are verified fixed, correct, and complete against their
+  exact original reproductions, re-derived independently (not taken on faith) via source reading, a targeted
+  repo-wide authorization audit, and (for CR-02) explicit verification that no other code path — in either
+  frontend app or elsewhere in the backend — assumed the old "oldest tenant" semantics.
+- 0 open blocking Warnings. WR-01 and WR-02 are verified fixed and complete; WR-02 was additionally verified
+  at the bytecode level against the actual Spring/Hibernate exception-translation chain, since the existing
+  test only proves the fix at the mock boundary. The one Warning still open (**WR-03**, new this round) is a
+  forward-looking hardening suggestion about *how* CR-01 was fixed, not evidence that CR-01 is still
+  exploitable — confirmed today's codebase has no second reachable escalation path this pattern misses.
+- 0 open Info items requiring a code change this phase. IN-02 is verified fixed. IN-01 is explicitly deferred
+  by design (unchanged, tracked for Phase 120). **IN-03** (new this round) is a cross-reference to an
+  already-known, already-accepted pattern (`117-REVIEW.md` IN-05) — not a regression, not new risk, filed only
+  for completeness since this round specifically re-examined every line CR-01 touches.
+- Automated gates re-run fresh, not taken on faith: compile clean, 135/135 unit tests green (including 39
+  tests across the five fix-specific classes plus 16 adjacent regression-risk tests), SpotBugs/FindSecBugs
+  clean, all five fix commits confirmed minimally-scoped via `git show --stat`.
+
+No further fix iteration is required for this phase. WR-03 and IN-03 below are recorded for traceability and
+for whichever phase next touches `AdminController.java`'s permission-handling or role catalog — not as
+pre-conditions for shipping Phase 119.
 
 ## Narrative Findings (AI reviewer)
 
-### Critical Issues
+### Warnings
 
-#### CR-01: `User.permissions` free-form field bypasses every `PLATAFORMA_ADMIN` containment guard — any tenant ADMIN can self-escalate to platform-wide tenant creation
+#### WR-03: CR-01's fix closes the reported bypass with a two-string denylist rather than the systemic validation the original finding recommended
 
-**File:** `backend/src/main/java/com/lexcv/controllers/AdminController.java:168-172` (createUser) and `:275-282` (updateUser)
-**Related:** `backend/src/main/java/com/lexcv/config/UserPrincipal.java:27-62` (specifically 49-51), `backend/src/main/java/com/lexcv/config/JwtAuthenticationFilter.java:42-62` (specifically 48-53), `backend/src/main/java/com/lexcv/controllers/PlatformAdminController.java:35`
+**File:** `backend/src/main/java/com/lexcv/controllers/AdminController.java:189-194` (createUser),
+`:309-314` (updateUser)
+**Related:** `backend/src/main/java/com/lexcv/config/UserPrincipal.java:49-51`, `AdminController.java:52,60`
+(`PAPEL_PLATAFORMA`/`PAPEL_PLATAFORMA_AUTORIDADE`)
 
-**Issue:** The phase's containment design (documented at length in `AdminController.java:32-44`) assumes the only way a user's authorities can ever contain `"ROLE_PLATAFORMA_ADMIN"` is by attaching the `PLATAFORMA_ADMIN` `Role` — so all four guards check the `roles` list. But `UserPrincipal.create` builds `authorities` from **two** independent sources:
+**Issue:** The original CR-01 finding's primary recommended fix was to validate `permissions` against the
+known `Permission` catalog, exactly like `roles` already are (`permissionRepository.findByNome(...)`), with
+stripping any `^ROLE_.*`-shaped string in `UserPrincipal.create` offered as secondary defense-in-depth. The
+fix actually shipped does neither: it adds a literal-string denylist that rejects exactly
+`"PLATAFORMA_ADMIN"` and `"ROLE_PLATAFORMA_ADMIN"` in the `permissions` array, then still accepts *any other*
+arbitrary string into `User.permissions` unchanged (`:196-199`, `:316-319` — pre-existing, untouched by this
+fix). This closes the literal reported exploit — re-confirmed by an exhaustive `hasRole(` audit: today,
+`hasRole('ADMIN')` and `hasRole('PLATAFORMA_ADMIN')` are the *only* role checks in the entire backend, and the
+former is already held by the only actor who can reach this code, so there is currently no third
+`"ROLE_<X>"` an attacker could mint via this field that would grant anything they don't already have. But the
+underlying root cause — `UserPrincipal.create` turning arbitrary `permissions` strings into raw
+`GrantedAuthority` objects with no `"ROLE_"`-prefix hygiene (`UserPrincipal.java:49-51`) — is unchanged. The
+comment block directly above this fix (`AdminController.java:50-51`) already flags that "Phase 121 (ISOL-03)
+irá depois fechar o endpoint PUT /rbac... a papéis de plataforma," i.e. more platform-scoped gating is coming;
+each new `hasRole('<X>')` a future phase adds will need this exact denylist manually extended, or it silently
+reopens the same class of bypass for the new role.
 
+**Fix:** Not required to ship Phase 119 (verified functionally complete today), but before Phase 121 adds
+another `hasRole(...)`-gated surface, prefer one of the two originally-recommended, self-maintaining
+approaches instead of (or in addition to) the denylist:
 ```java
-// UserPrincipal.java:30-51
-Set<SimpleGrantedAuthority> authorities = roles.stream()
-        .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-        .collect(Collectors.toSet());
-...
-permissions.stream()
-        .map(SimpleGrantedAuthority::new)   // <-- raw string, no "ROLE_" prefixing, no catalog check
-        .forEach(authorities::add);
-```
-
-`permissions` here is `user.getPermissions()` (`JwtAuthenticationFilter.java:48-53`), a completely free-form `Set<String>` (`User.java:63-67`, `@ElementCollection`) that `AdminController.createUser`/`updateUser` accept **verbatim from the request body**, with zero validation against `PermissionRepository` — unlike `roles`, which are resolved via `roleRepository.findByNome(...)` and silently dropped if unknown:
-
-```java
-// AdminController.java:168-172 (createUser) — identical shape at 275-282 for updateUser
-List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
-Set<String> permissions = new HashSet<>();
-for (Object pObj : permsList) {
-    permissions.add((String) pObj);   // any string accepted, including "ROLE_PLATAFORMA_ADMIN"
-}
-```
-
-Because Spring Security's `hasRole('PLATAFORMA_ADMIN')` SpEL check is a pure string match against `getAuthorities()` for `"ROLE_PLATAFORMA_ADMIN"` — it does not care whether that `GrantedAuthority` came from a seeded `Role` or a raw permission string — this is a complete, mechanical bypass of all four guards.
-
-**Reproduction (no timing/race required, 100% reliable):**
-1. Authenticate as any tenant's existing `ADMIN` (any real customer's office admin, or the seeded `admin@lexcv.cv`).
-2. `PUT /api/v1/admin/users/{ownUserId}` with body `{"permissions": ["ROLE_PLATAFORMA_ADMIN"]}` (own id obtainable from `GET /api/v1/auth/me`). This is accepted with `200 OK` — `updateUser`'s roles-guard (`AdminController.java:255-263`) never runs because the request has no `"roles"` key.
-3. No re-login needed: `JwtAuthenticationFilter` re-reads `User` from the DB on every request (`JwtAuthenticationFilter.java:42-62`), so the very next request already carries the new authority.
-4. `POST /api/v1/platform/tenants` with a valid `SetupInitializeRequest` body now passes `PlatformAdminController`'s class-level `@PreAuthorize("hasRole('PLATAFORMA_ADMIN')")` and creates an arbitrary new tenant + its own `ADMIN` user, `201 Created`.
-
-A stealthier variant works via `createUser` instead of self-escalation: create a brand-new user with an innocuous `"roles": ["ADVOGADO"]` (satisfies the non-empty-roles check and the reserved-word guard) plus `"permissions": ["ROLE_PLATAFORMA_ADMIN"]` — a throwaway account with full platform privilege that looks like an ordinary lawyer account in the roles column of `GET /api/v1/admin/users` (the raw string is visible in that endpoint's `permissions` array if anyone audits it, but nothing flags or blocks it).
-
-The extensive new test suite (`AdminControllerPlataformaAdminContencaoTest`) only ever sends `"roles"` payloads — none of its 8 cases exercise a `"permissions"` array, so this gap has no regression coverage either.
-
-**Fix:** Validate `permissions` against the known catalog exactly the way `roles` are already validated, instead of trusting client-supplied strings:
-
-```java
-// AdminController.java:168-172 (createUser) and :275-282 (updateUser) — apply to both
+// Option A: validate against the real catalog, exactly like roles already are.
 List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
 Set<String> permissions = new HashSet<>();
 for (Object pObj : permsList) {
@@ -130,95 +236,63 @@ for (Object pObj : permsList) {
     permissionRepository.findByNome(permName).ifPresent(p -> permissions.add(p.getNome()));
 }
 ```
-
-As defense-in-depth (in case another write path to `User.permissions` is added later), consider also hardening `UserPrincipal.create` to reject/strip any permission string matching `^ROLE_.*` before turning it into a `GrantedAuthority` — permissions should never be able to mint a synthetic role. Add a regression test mirroring the existing "Caso 1/2" tests in `AdminControllerPlataformaAdminContencaoTest` but asserting on a `"permissions": ["ROLE_PLATAFORMA_ADMIN"]` payload.
-
----
-
-#### CR-02: Unconditional reserved-tenant seeding permanently breaks the "oldest tenant" assumption behind the public branding endpoint, for every future install
-
-**File:** `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:389-392` (`seedTenantPlataforma`)
-**Related:** `backend/src/main/java/com/lexcv/repositories/TenantRepository.java:10-20` (`findFirstByOrderByCreatedAtAsc`, with its own pre-existing WR-01 warning), `backend/src/main/java/com/lexcv/controllers/PublicController.java:46-51`, `backend/src/main/java/com/lexcv/models/Tenant.java:47-53` (`createdAt` set by `@PrePersist`)
-
-**Issue:** `seedTenantPlataforma()` runs unconditionally, first, on **every** application boot (before the `seedEnabled` check, `DatabaseSeeder.java:53-57`) — in dev *and* in production. On any brand-new database, this inserts the "LexCV" tenant with `createdAt = <first-ever boot time>`, unconditionally, before a real customer ever exists. `TenantRepository.java` already carries a Phase-98 warning about exactly this class of risk:
-
-> "esta query assume um deployment single-tenant... Se uma futura feature de onboarding multi-tenant permitir uma 2ª Tenant, este call site tem de ser revisitado." (`TenantRepository.java:13-18`)
-
-Phase 119 is precisely that future feature, and the call site was never revisited. `PublicController.getBranding()` — the public, unauthenticated endpoint that serves the login screen's name/logo — calls `tenantRepository.findFirstByOrderByCreatedAtAsc()` (`PublicController.java:51`) and returns whatever tenant is oldest. From this phase onward, for **every new deployment**, that will always be the reserved "LexCV" tenant (`nome="LexCV"`, `logoDataUrl=null`), because it is now guaranteed to be created before any tenant a real customer creates via `/setup/initialize`. The customer's actual branding (their name + logo, configured through the setup wizard) will never be shown — the public login page will silently serve generic/blank "LexCV" branding forever.
-
-The endpoint's own pre-existing defensive log (`PublicController.java:46-49`, `if (tenantCount > 1) log.warn(...)`) *will* fire in this scenario, but it only writes a server-side log line — it does not change which tenant is served, and no operator is likely to be watching for it. Verified this is not a pre-existing/already-mitigated concern: it is absent from every Phase 119 planning document (`119-CONTEXT.md`, `119-01-PLAN.md`, `119-PATTERNS.md`) — the plans explicitly preserve the WR-01 Javadoc "intact" without anyone connecting it to the new unconditional seeding they were simultaneously introducing.
-
-This is also forward-looking: the project's own multi-tenancy proposal (`proposta_multitenancy_distribuicao_faturacao.md`) and Phase 120's "list all tenants" success criterion both point toward genuinely multi-tenant hosting (many customer tenants on one backend). `PublicController.getBranding()` has no per-request tenant resolution at all (no host/subdomain lookup) — Phase 119 is the first change that guarantees a 2nd tenant will always exist, turning a previously theoretical gap into a guaranteed-to-trigger one for every install from here on.
-
-**Verified NOT affected:** existing production deployments that already have a real tenant created before upgrading to this version (their real tenant's `createdAt` predates the newly-inserted "LexCV" row, so `findFirstByOrderByCreatedAtAsc()` still returns the real tenant, and the `tenantCount > 1` warning will correctly fire in their logs).
-
-**Fix:** Exclude the reserved tenant from this lookup rather than relying on "whichever tenant happens to be oldest." Minimal patch (name-based, zero migration):
-
 ```java
-// TenantRepository.java
-Optional<Tenant> findFirstByNomeNotOrderByCreatedAtAsc(String nomeReservado);
+// Option B: defense-in-depth at the authority-minting boundary itself — never let a free-form
+// permission string mint a synthetic role, regardless of which controller writes User.permissions.
+permissions.stream()
+        .filter(p -> !p.startsWith("ROLE_"))
+        .map(SimpleGrantedAuthority::new)
+        .forEach(authorities::add);
 ```
-```java
-// PublicController.java:51
-Optional<Tenant> tenant = tenantRepository.findFirstByNomeNotOrderByCreatedAtAsc("LexCV");
-```
-
-A more robust fix (recommended before Phase 120 broadens this surface) adds a dedicated boolean/flag column (e.g. `reservado_plataforma`) so the exclusion doesn't depend on a customer never naming their firm literally "LexCV". Either way, add a seeder-level regression test that runs `DatabaseSeeder.run()` and then asserts the branding lookup still resolves to the *real* tenant, not the reserved one — the current test suite never connects these two pieces of the phase.
-
-### Warnings
-
-#### WR-01: Concurrent-boot race in reserved-tenant/bootstrap-user seeding can duplicate the tenant or crash-loop the app on every subsequent start
-
-**File:** `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:389-392` (`seedTenantPlataforma`), `:403-423` (`seedUtilizadorPlataforma`)
-**Related:** `backend/src/main/java/com/lexcv/models/Tenant.java:20-21` (`nome` has no `unique = true`), `backend/src/main/java/com/lexcv/models/User.java:29-30` (`email` has `unique = true`)
-
-**Issue:** `seedTenantPlataforma()` is a classic check-then-act find-or-create (`findByNome("LexCV")` → `save(...)` if absent) with no DB-level unique constraint on `Tenant.nome` and no transactional/pessimistic lock around the pair. If two application instances start concurrently against the same empty database (a rolling deploy or any >1-replica startup is a realistic trigger for a "platform" service), both can read `Optional.empty()` before either commits, and both then insert a row named "LexCV" — nothing in the schema prevents it. Once two rows share that name, `TenantRepository.findByNome` (declared to return a single `Optional<Tenant>`) will throw `IncorrectResultSizeDataAccessException` the next time *any* instance boots, since `seedTenantPlataforma()` calls it unconditionally on every startup — i.e., a transient race at first-ever boot can turn into a **permanent startup failure** for the whole application until someone manually deletes the duplicate row.
-
-`seedUtilizadorPlataforma()` has a narrower version of the same race on `userRepository.findByEmail("plataforma@lexcv.cv")`, but there `User.email` *does* carry a real unique constraint, so the losing instance would instead fail its `CommandLineRunner.run()` with an uncaught `DataIntegrityViolationException` on that specific boot (also fatal to that instance's startup, though not a permanent crash-loop like the tenant case since a later, non-concurrent restart would find the winner's row and proceed normally).
-
-Note the pre-existing `upsertRolePermissions` (`DatabaseSeeder.java:373-381`) has the identical structural pattern for `Role`/`Permission`, so this is not a new anti-pattern in this codebase — but applying it to a tenant that's supposed to be a stable, singleton "reserved" identity raises the stakes of getting it wrong, and — unlike roles/permissions, which are pure reference data — a duplicated `Tenant` row can hard-fail every future boot via the `Optional`-returning derived query.
-
-**Fix:** Add a real DB-level unique constraint on `t_tenant.nome` (or, better, a dedicated flag column as suggested in CR-02) and make the seeding methods tolerant of losing the race instead of assuming they never will:
-
-```java
-private Tenant seedTenantPlataforma() {
-    try {
-        return tenantRepository.findByNome("LexCV")
-                .orElseGet(() -> tenantRepository.save(Tenant.builder().nome("LexCV").build()));
-    } catch (DataIntegrityViolationException raceLost) {
-        return tenantRepository.findByNome("LexCV").orElseThrow();
-    }
-}
-```
-
-#### WR-02: `provisionTenant` has a TOCTOU on admin-email uniqueness that surfaces as a raw 500 instead of a clean 400
-
-**File:** `backend/src/main/java/com/lexcv/services/SetupService.java:102-131`, `backend/src/main/java/com/lexcv/controllers/PlatformAdminController.java:41-55`
-
-**Issue:** `provisionTenant` checks `userRepository.findByEmail(...).isPresent()` and only *afterward* saves the `Tenant` and the `User` (lines 106-108 vs. 118/128). Unlike `initializeSystem`, which is naturally serialized by `systemSettingRepository.findByIdForUpdate(...)` (a pessimistic lock that means only one caller can ever get past the singleton gate at a time), `provisionTenant` has no such lock — and its whole design point (proven by `SetupServiceProvisionTenantTest`'s "Caso 6", which explicitly asserts repeated/back-to-back calls both succeed) is to be called repeatedly and without serialization. Two concurrent `POST /api/v1/platform/tenants` calls with the same `adminEmail` (a plausible double-submit from a slow admin console UI in Phase 120, or two operators racing to onboard the same client) can both pass the `isPresent()` check, and the loser's `userRepository.save(adminUser)` then throws `DataIntegrityViolationException` against the real unique constraint on `User.email`. Because `provisionTenant` is `@Transactional`, the loser's `Tenant` insert rolls back too (no orphaned data), but `PlatformAdminController.createTenant`'s catch blocks only handle `IllegalArgumentException`/`IllegalStateException` (`PlatformAdminController.java:50-54`) — the `DataIntegrityViolationException` falls through to `GlobalExceptionHandler`'s catch-all, returning `500` with the raw exception class name and message instead of the intended `400 "Já existe um utilizador com este email."`.
-
-**Fix:** Catch `DataIntegrityViolationException` around the `userRepository.save(...)` call in `provisionTenant` (or in `PlatformAdminController.createTenant`) and translate it to the same `IllegalArgumentException`/400 response used for the non-racy case, so the client-visible behavior doesn't depend on timing.
 
 ### Info
 
-#### IN-01: No duplicate-name protection when provisioning tenants
+#### IN-01: No duplicate-name protection when provisioning tenants (carried forward, unchanged)
 
-**File:** `backend/src/main/java/com/lexcv/services/SetupService.java:102-118`
+**File:** `backend/src/main/java/com/lexcv/services/SetupService.java:102-131`
 
-**Issue:** `provisionTenant` validates admin-email uniqueness but never checks `Tenant.nome` for collisions (and `Tenant.nome` has no DB unique constraint — `Tenant.java:20-21`). A `PLATAFORMA_ADMIN` can create any number of tenants with identical display names, which will be indistinguishable in any future tenant-listing UI (Phase 120) except by `id`. Likely acceptable for this phase's minimal scope (tenant listing/management is explicitly deferred to Phase 120 per `119-CONTEXT.md`), but worth tracking so Phase 120 addresses it rather than assuming names are unique.
+**Issue:** Unchanged since the original review; not part of this fix pass. `provisionTenant` validates
+`adminEmail` uniqueness (`:106-108`) but never checks `Tenant.nome` for collisions, and `Tenant.nome` still
+has no DB unique constraint (`Tenant.java:20-21`). A `PLATAFORMA_ADMIN` can create any number of tenants with
+identical display names, indistinguishable in a future tenant-listing UI except by `id`. Re-confirmed this
+round that tenant-listing/management is still explicitly deferred to Phase 120 per `119-CONTEXT.md`, so this
+remains acceptable for this phase's minimal scope.
 
-**Fix:** Either enforce a case-insensitive uniqueness check in `provisionTenant` (mirroring the email check) or explicitly document that tenant names are non-unique by design before Phase 120 builds a name-based lookup UI on top of it.
+**Fix:** Either enforce a case-insensitive uniqueness check in `provisionTenant` (mirroring the email check)
+or explicitly document that tenant names are non-unique by design before Phase 120 builds a name-based lookup
+UI on top of it.
 
-#### IN-02: Bootstrap platform-admin credential warning uses `System.out.println` instead of the logger
+#### IN-03: `AdminController`'s unvalidated `Map`-cast pattern (already tracked as `117-REVIEW.md` IN-05) remains reachable via `"password"` and via the two `permissions`-list casts CR-01's new guard now sits in front of
 
-**File:** `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java:419-421`
+**File:** `backend/src/main/java/com/lexcv/controllers/AdminController.java:137-138` (createUser password),
+`:271` (updateUser password), `:196-199`/`:316-319` (permissions list, pre-existing, unchanged by CR-01)
 
-**Issue:** The warning that a default-password, maximum-privilege account was just created (`"⚠️ Utilizador de administrador de plataforma criado..."`) is emitted via `System.out.println`, which won't carry a log level, timestamp, or be reliably picked up by log-level-based alerting/aggregation in ops the way an SLF4J `logger.warn(...)` call would. This matches this file's existing style for its other seed messages (lines 72, 304), so it isn't a new deviation introduced by this phase, but given this specific message is arguably the single most security-sensitive line this class ever prints, it's worth promoting to a real logger call as a low-effort improvement.
+**Issue:** Not a regression and not newly introduced by Phase 119 — filed here only because this round's
+line-by-line re-verification of CR-01 walked through this exact code and it's directly relevant to that
+fix's completeness. `117-REVIEW.md`'s **IN-05** already identified and explicitly, deliberately deferred
+("optional, low-priority... best done together with a broader input-validation pass") this general pattern —
+`Map<String, Object>` values cast straight to their expected type with no `instanceof` check — for
+`nome`/`email`/`telefone`/`roles`/`permissions`. Two things worth adding to that existing, accepted
+disposition rather than re-opening it as new: (1) `"password"` belongs on that list too — `createUser`
+(`:137-138`) calls `.matches(...)` directly on the cast value with no null guard, and `updateUser` (`:271`)
+calls `.trim()` the same way, so an explicit JSON `"password": null` NPEs (caught only by
+`GlobalExceptionHandler`'s catch-all, returning `500` with the JDK's "helpful NPE" message instead of a clean
+`400`) rather than just risking a `ClassCastException` like the other fields; (2) CR-01's new denylist checks
+(`PAPEL_PLATAFORMA.equals(pObj)`, `:189`/`:309`) are themselves safe against this — `String.equals(Object)`
+never throws regardless of `pObj`'s runtime type or nullness — but they run immediately before the
+pre-existing unsafe `permissions.add((String) pObj)` (`:198`/`:318`), so the pattern IN-05 already flagged is
+still there, unchanged, right next to the new fix.
 
-**Fix:** Add an SLF4J `Logger` to `DatabaseSeeder` (or reuse an existing one if this class already has access to one) and emit this specific message via `logger.warn(...)` instead of `System.out.println`.
+**Fix:** No action needed to ship Phase 119, consistent with IN-05's existing disposition. If/when that
+broader input-validation pass happens, extend it to `"password"` too:
+```java
+if (!(body.get("password") instanceof String password) || password.isBlank()) {
+    return ResponseEntity.badRequest().body(Map.of("message", "Nome, email, password e roles são obrigatórios."));
+}
+```
 
 ---
 
-_Reviewed: 2026-07-29T18:00:00Z_
+_Reviewed: 2026-07-29T19:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: deep_
