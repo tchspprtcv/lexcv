@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: planning
-last_updated: "2026-07-28T23:58:00.000Z"
-last_activity: 2026-07-28
+status: executing
+stopped_at: Criado ROADMAP.md da v2.16 (7 fases, 117–123) — PLAN backend/frontend (117-118), PROV backend/frontend (119-120), fecho de suposições de tenant única + bloqueio de RBAC (121), relatório de utilização (122), auditoria de isolamento dedicada (123). REQUIREMENTS.md traceability atualizado (15/15, 100% cobertura). STATE.md refrescado.
+last_updated: "2026-07-29T00:59:18.539Z"
+last_activity: 2026-07-29 -- Phase 117 planning complete
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -26,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 Phase: 117 of 123 (Backend — Limite de Utilizadores por Tenant)
 Plan: TBD — not yet planned
-Status: Roadmap ready, awaiting plan-phase
-Last activity: 2026-07-28 — Roadmap v2.16 criado (7 fases, 117–123, 15/15 requisitos mapeados, 100% cobertura)
+Status: Ready to execute
+Last activity: 2026-07-29 -- Phase 117 planning complete
 
 ## Performance Metrics
 

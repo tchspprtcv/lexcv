@@ -347,7 +347,9 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
   2. `AdminController.createUser` (`POST /api/v1/admin/users`) devolve `409` com uma mensagem clara quando o tenant já tem `limiteUtilizadores` utilizadores com `ativo=true` — e continua a criar normalmente abaixo do limite
   3. Desativar um utilizador (`PUT /api/v1/admin/users/{id}` com `ativo=false`) liberta imediatamente uma vaga — uma criação imediatamente a seguir já não é bloqueada pelo `409`
   4. A contagem de "utilizadores ativos" usada para o limite é uma única função/consulta reutilizável, não duplicada — as Phases 120 e 122 vão reutilizá-la para a consola de tenants e o relatório de utilização
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
+- [ ] 117-01-PLAN.md — Camada de dados: enum `TenantPlano`, campos `plano`/`limiteUtilizadores` em `Tenant`, contagem reutilizável `UserRepository.countByTenantIdAndAtivoTrue` (fonte única para as Phases 120/122) e migração manual `117-add-tenant-plano-limite-utilizadores.sql` com backfill `ENTERPRISE`/`NULL` do tenant existente
+- [ ] 117-02-PLAN.md — Enforcement em `AdminController.createUser`: `409 CONFLICT` no limite, `201` abaixo, `null` sem limite, vaga libertada de imediato ao desativar — provado por teste Mockito de 4 casos escrito primeiro, mais gate de regressão/SAST e verificação das mitigações STRIDE
 
 #### Phase 118: Frontend — Indicador de Utilizadores no Limite
 
