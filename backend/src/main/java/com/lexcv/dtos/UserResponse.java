@@ -23,4 +23,6 @@ public class UserResponse {
     private Boolean ativo;
     private String tenant_nome;
     private String tenant_logo_data_url;
+    private String tenant_plano;
+    private Integer tenant_limite_utilizadores;
 }

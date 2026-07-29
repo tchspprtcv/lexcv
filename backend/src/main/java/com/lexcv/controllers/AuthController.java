@@ -169,6 +169,8 @@ public class AuthController {
         tenantRepository.findById(principal.getTenantId()).ifPresent(t -> {
             response.setTenant_nome(t.getNome());
             response.setTenant_logo_data_url(t.getLogoDataUrl());
+            response.setTenant_plano(t.getPlano() != null ? t.getPlano().name() : null);
+            response.setTenant_limite_utilizadores(t.getLimiteUtilizadores());
         });
 
         return ResponseEntity.ok(response);
