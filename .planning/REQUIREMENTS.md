@@ -22,7 +22,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 - [ ] **PROV-02**: Administrador de plataforma cria um novo tenant + utilizador ADMIN inicial, num ecrã interno não público
 - [x] **PROV-03**: Administrador de plataforma lista todos os tenants e vê utilizadores ativos por tenant
 - [x] **PROV-04**: Administrador de plataforma ajusta `plano`/`limite_utilizadores` de qualquer tenant
-- [x] **PROV-05**: Administrador de plataforma suspende um tenant que não pague (bloqueia acesso)
+- [ ] **PROV-05**: Administrador de plataforma suspende um tenant que não pague (bloqueia acesso)
 - [x] **PROV-06**: Wizard `/setup` deixa de ser singleton — fica só para o arranque inicial; tenants seguintes usam o fluxo de administrador de plataforma
 
 ### ISOL — Fechar Suposições de Tenant Única
