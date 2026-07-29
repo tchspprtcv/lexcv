@@ -40,6 +40,7 @@ import {
   useUpdateTenant,
 } from "@/hooks/use-platform-admin";
 import { cn } from "@/lib/utils";
+import { tenantInitials } from "@/lib/tenant-initials";
 import type { TenantAdminSummary, TenantPlano, TenantUpdateRequest } from "@/types/platform-admin";
 import type { SetupInitializeRequest } from "@/types/setup";
 
@@ -195,13 +196,7 @@ function PlataformaPageContent() {
                     </div>
                   ) : (
                     tenantsFiltrados.map((tenant) => {
-                      const initials = tenant.nome
-                        .split(" ")
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((w) => w[0])
-                        .join("")
-                        .toUpperCase();
+                      const initials = tenantInitials(tenant.nome);
                       const suspenderDesativado = tenant.nome === TENANT_RESERVADO && tenant.ativo;
 
                       return (

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 import { cn } from "@/lib/utils";
+import { tenantInitials } from "@/lib/tenant-initials";
 import type { TenantAdminSummary, TenantPlano } from "@/types/platform-admin";
 
 /**
@@ -126,13 +127,7 @@ export function columns({
       header: ({ column }) => <DataTableColumnHeader column={column} title="Nome" />,
       cell: ({ row }) => {
         const tenant = row.original;
-        const initials = tenant.nome
-          .split(" ")
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((p) => p[0])
-          .join("")
-          .toUpperCase();
+        const initials = tenantInitials(tenant.nome);
 
         return (
           <div className="flex items-center gap-3">
