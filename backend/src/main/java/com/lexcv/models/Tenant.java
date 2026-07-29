@@ -38,8 +38,9 @@ public class Tenant {
 
     // Phase 117 (limite de utilizadores por tenant): null = sem limite (plano Enterprise
     // "por acordo"); um valor numérico é o limite exato de utilizadores ativos. Nunca usar
-    // sentinela mágico (-1/MAX_VALUE). Consumido por AdminController.createUser antes de
-    // persistir um novo utilizador.
+    // sentinela mágico (-1/MAX_VALUE). Consumido por AdminController.limiteUtilizadoresExcedido,
+    // chamado a partir de createUser (antes de persistir um novo utilizador) e de updateUser
+    // (reativação, false -> true) — ver CR-01 em 117-REVIEW.md.
     @Column(name = "limite_utilizadores")
     private Integer limiteUtilizadores;
 

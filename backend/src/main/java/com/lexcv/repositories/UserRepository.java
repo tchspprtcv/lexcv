@@ -30,9 +30,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByTenantIdAndRoleNameAndAtivoTrue(@Param("tenantId") UUID tenantId, @Param("roleName") String roleName);
 
     // Phase 117 (limite de utilizadores por tenant): UNICA fonte de verdade para "utilizadores
-    // ativos de um tenant" no codebase. Consumida por AdminController.createUser para aplicar
-    // Tenant.limiteUtilizadores; as Phases 120 (consola de tenants) e 122 (relatório de
-    // utilização) reutilizam este mesmo método (Success Criteria 4 da fase) — não duplicar
-    // esta contagem noutro sítio.
+    // ativos de um tenant" no codebase. Consumida por AdminController.limiteUtilizadoresExcedido
+    // (chamado a partir de createUser e de updateUser, na reativação false -> true — ver CR-01 em
+    // 117-REVIEW.md) para aplicar Tenant.limiteUtilizadores; as Phases 120 (consola de tenants) e
+    // 122 (relatório de utilização) reutilizam este mesmo método (Success Criteria 4 da fase) —
+    // não duplicar esta contagem noutro sítio.
     long countByTenantIdAndAtivoTrue(UUID tenantId);
 }
