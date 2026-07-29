@@ -67,12 +67,33 @@ const NAV: NavItem[] = [
   { href: "/pareceres", label: "Pareceres", icon: ScrollText, requiredPermission: "pareceres:view" },
 ];
 
+// Unico item de navegacao gated por PAPEL em vez de por permissao com scope: o
+// papel PLATAFORMA_ADMIN (Phase 119) nao tem nenhuma permissao com scope, pelo
+// que o filtro hasPermission/requiredPermission do SidebarNav nunca o poderia
+// gatilhar (um item sem requiredPermission passa sempre por esse filtro) — o
+// gate tem de acontecer aqui, na construcao do array, antes de chegar ao
+// SidebarNav.
+const platformNavItem: NavItem = { href: "/plataforma", label: "Plataforma", icon: Building2 };
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const me = useMe();
+
+  // Um PLATAFORMA_ADMIN tem `permissions` vazio (Phase 119), pelo que os 6
+  // itens de NAV com requiredPermission ja ficam ocultos automaticamente pelo
+  // filtro existente do SidebarNav, sem nenhum codigo novo — resta-lhe
+  // tipicamente Dashboard (sem requiredPermission) e este item Plataforma.
+  // Este gate e apenas espelho de UX: a fronteira real de autorizacao e o
+  // @PreAuthorize de classe do PlatformAdminController.
+  const isPlatformAdmin = me.data?.roles?.includes("PLATAFORMA_ADMIN") ?? false;
+  const navItems = React.useMemo(
+    () => (isPlatformAdmin ? [...NAV, platformNavItem] : NAV),
+    [isPlatformAdmin],
+  );
+
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
   const shortcutLabel = React.useSyncExternalStore(
@@ -118,7 +139,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <SidebarNav
-          nav={NAV}
+          nav={navItems}
           pathname={pathname}
           permissions={me.data?.permissions}
           onNavigate={() => setDrawerOpen(false)}
@@ -138,7 +159,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <SidebarNav
-            nav={NAV}
+            nav={navItems}
             pathname={pathname}
             permissions={me.data?.permissions}
             onNavigate={() => setDrawerOpen(false)}
