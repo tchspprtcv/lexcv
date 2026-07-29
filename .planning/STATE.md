@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: verifying
+status: completed
 stopped_at: Completed 119-04-PLAN.md
-last_updated: "2026-07-29T08:37:47.955Z"
-last_activity: 2026-07-29
+last_updated: "2026-07-29T10:09:32.585Z"
+last_activity: 2026-07-29 -- Phase 119 marked complete
 progress:
   total_phases: 7
   completed_phases: 3
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 119 (Backend — Papel de Administrador de Plataforma e Provisionamento) — EXECUTING
+Phase: 119 — COMPLETE
 Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-07-29
+Status: Phase 119 complete
+Last activity: 2026-07-29 -- Phase 119 marked complete
 
 ## Performance Metrics
 
