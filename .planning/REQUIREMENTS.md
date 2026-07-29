@@ -76,7 +76,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PROV-04 | Phase 120 | Pending |
 | PROV-05 | Phase 120 | Pending |
 | PROV-06 | Phase 119 | Complete |
-| ISOL-01 | Phase 121 | Pending |
+| ISOL-01 | Phase 121 | Pending (já implementado como efeito colateral do CR-02 da Phase 119 — `PublicController.getBranding` já devolve sempre marca genérica; Phase 121 só precisa confirmar/fechar, não reimplementar) |
 | ISOL-02 | Phase 121 | Pending |
 | ISOL-03 | Phase 121 | Pending |
 | ISOL-04 | Phase 123 | Pending |
