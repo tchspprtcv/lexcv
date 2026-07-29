@@ -292,7 +292,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     } catch (err: unknown) {
       const msg =
         err instanceof Error
-          ? err.message.replace("API 400: ", "")
+          ? err.message.replace(/^API \d{3}: /, "")
           : "Erro ao gravar dados.";
       setMessage({ text: msg || "Erro ao gravar dados.", type: "error" });
       toast.error(msg || "Erro ao gravar dados.");
