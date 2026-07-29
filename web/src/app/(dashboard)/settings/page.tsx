@@ -909,6 +909,15 @@ function RbacTab() {
           <ShieldAlert className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
           <div>
             <strong>Nota Importante:</strong> O perfil de administrador (<strong>ADMIN</strong>) possui acessos totais e incondicionais por padrão. As suas caixas de seleção estão marcadas e bloqueadas permanentemente para evitar o bloqueio acidental do painel de administração.
+            {!isPlatformAdmin && (
+              // IN-01 (121-REVIEW.md): a mesma mensagem do Tooltip do Badge "Gerido pela
+              // Plataforma" acima, mas sempre visível -- quem nunca passa o rato/foca o Badge
+              // também precisa de saber porque as alterações na matriz não persistem.
+              <>
+                {" "}As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
+                toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+              </>
+            )}
           </div>
         </div>
 
