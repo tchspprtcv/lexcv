@@ -413,7 +413,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 119-04-PLAN.md — `PlatformAdminController` (`POST /api/v1/platform/tenants`), mapeamento `AccessDeniedException` -> 403, e regressão do gate singleton de `/setup/initialize`
+- [x] 119-04-PLAN.md — `PlatformAdminController` (`POST /api/v1/platform/tenants`), mapeamento `AccessDeniedException` -> 403, e regressão do gate singleton de `/setup/initialize`
 
 #### Phase 120: Frontend — Consola de Administração de Tenants
 
@@ -555,7 +555,7 @@ Plans:
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
-| 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 3/4 | In Progress|  |
+| 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
