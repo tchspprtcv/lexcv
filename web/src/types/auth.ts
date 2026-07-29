@@ -1,4 +1,5 @@
-export type Role = "ADMIN" | "TECNICO" | "ADVOGADO" | "ASSISTENTE";
+// PLATAFORMA_ADMIN e o papel de plataforma introduzido na Phase 119, deliberadamente sem permissoes com scope.
+export type Role = "ADMIN" | "TECNICO" | "ADVOGADO" | "ASSISTENTE" | "PLATAFORMA_ADMIN";
 
 export interface LoginRequest {
   email: string;
