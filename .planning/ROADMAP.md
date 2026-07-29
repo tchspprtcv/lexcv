@@ -361,7 +361,7 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
   2. O botão "Novo Utilizador" fica desativado quando X=Y, com indicação visual do motivo (tooltip ou texto junto ao contador)
   3. O `409` devolvido pelo backend (Phase 117), caso ainda assim ocorra (ex.: duas abas abertas em simultâneo), é apresentado como toast claro, sem crash da UI — nunca confiar só na validação visual do lado do cliente
 **Plans**: 3 plans (3 waves)
-- [ ] 118-01-PLAN.md — Backend: expor `tenant_plano`/`tenant_limite_utilizadores` no `GET /auth/me` (2 campos no `UserResponse` + 2 setters dentro do `ifPresent` ja existente, zero queries novas), provado por 4 testes Mockito + gate de regressao/SAST/STRIDE
+- [x] 118-01-PLAN.md — Backend: expor `tenant_plano`/`tenant_limite_utilizadores` no `GET /auth/me` (2 campos no `UserResponse` + 2 setters dentro do `ifPresent` ja existente, zero queries novas), provado por 4 testes Mockito + gate de regressao/SAST/STRIDE
 - [ ] 118-02-PLAN.md — Frontend: `MeResponse` estendido, toast local sem prefixo `API NNN:` (409 limpo), e o indicador "X/Y utilizadores" com botao "Novo Utilizador" desativado no limite + tooltip que dispara via `<span tabIndex={0}>` — com gate executavel `pnpm verify:limite-utilizadores` (8 assercoes)
 - [ ] 118-03-PLAN.md — Verificacao humana ao vivo: contador nos 3 estados, tooltip por rato e por teclado sobre o botao desativado, e toast do 409 forcado; base de dados reposta no fim
 **UI hint**: yes
@@ -509,7 +509,7 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
-| 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 0/TBD | Not started | - |
+| 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 1/3 | In Progress|  |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 0/TBD | Not started | - |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
