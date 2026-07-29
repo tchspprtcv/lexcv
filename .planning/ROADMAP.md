@@ -427,7 +427,17 @@ Plans:
   3. Administrador de plataforma edita `plano`/`limiteUtilizadores` de qualquer tenant a partir desse ecrã
   4. Administrador de plataforma alterna o estado suspenso/ativo de um tenant a partir desse ecrã; um tenant suspenso deixa imediatamente de conseguir autenticar-se ou continuar a usar uma sessão já ativa
 
-**Plans**: TBD
+**Plans**: 6 plans (6 waves — sequência estritamente linear: backend antes de frontend, como nas Phases 111→112 e 86→89, mas dentro do mesmo número de fase por a capacidade de backend em falta ser pequena e indissociável da consola que a consome)
+
+Plans:
+
+- [ ] 120-01-PLAN.md — `Tenant.ativo` + migração manual `120-add-tenant-ativo.sql` + bloqueio de tenant suspenso nos **3** caminhos de acesso (`/auth/login` 403, `/auth/refresh` 401 — público em `SecurityConfig`, logo fora do filtro — e `JwtAuthenticationFilter` em todas as requisições, que é o que dá efeito imediato sobre sessões já ativas)
+- [ ] 120-02-PLAN.md — `PlatformAdminController`: `GET /platform/tenants` (com `countByTenantIdAndAtivoTrue` da Phase 117), `PUT /platform/tenants/{id}` (plano/limite) e `PATCH /platform/tenants/{id}/ativo` com guarda a impedir a suspensão da tenant reservada "LexCV"; DTOs próprios, handler global para corpo JSON inválido, e teste de gate por handler
+- [ ] 120-03-PLAN.md — Frontend camada de dados: `types/platform-admin.ts`, união `Role` alargada a `PLATAFORMA_ADMIN`, 4 hooks TanStack Query com `invalidateQueries`, e o item de navegação "Plataforma" gated por papel nos 2 call sites de `SidebarNav`
+- [ ] 120-04-PLAN.md — `plataforma/columns.tsx` (5 colunas, badge "Plataforma" na linha reservada, suspender desativado com a composição `<span tabIndex={0}>` da Phase 118) e `criar-tenant-panel.tsx` (painel inline reutilizando `setupSchema` verbatim)
+- [ ] 120-05-PLAN.md — Ecrã `/plataforma`: guard RBAC, lista com pesquisa, cards mobile, Dialog "Editar Tenant", AlertDialogs Suspender/Reativar, mais o gate executável `pnpm verify:consola-tenants` (10 asserções)
+- [ ] 120-06-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante, 2 janelas de browser): prova que suspender um tenant corta uma sessão **já aberta** no pedido seguinte, sem logout nem re-login; mais criação de um 2º tenant real pela consola e `403` confirmado para um ADMIN de escritório nos 3 endpoints
+
 **UI hint**: yes
 
 #### Phase 121: Fechar Suposições de Tenant Única + Bloqueio de RBAC
@@ -556,7 +566,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/6 | Planned | - |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
