@@ -26,6 +26,6 @@ export interface MeResponse {
   permissions: string[];
   tenant_nome?: string;
   tenant_logo_data_url?: string;
-  tenant_plano?: string;
+  tenant_plano?: string | null;
   tenant_limite_utilizadores?: number | null;
 }

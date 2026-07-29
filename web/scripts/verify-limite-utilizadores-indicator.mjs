@@ -80,8 +80,8 @@ async function main() {
     {
       id: "types-auth-tenant-plano",
       descricao:
-        "web/src/types/auth.ts contem 'tenant_plano?: string;' dentro de MeResponse",
-      predicate: () => authTypes.includes("tenant_plano?: string;"),
+        "web/src/types/auth.ts contem 'tenant_plano?: string | null;' dentro de MeResponse (com '| null' explicito)",
+      predicate: () => authTypes.includes("tenant_plano?: string | null;"),
     },
     {
       id: "types-auth-tenant-limite",
