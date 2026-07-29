@@ -1,0 +1,105 @@
+// Prova automatizada e executável (Node puro, sem dependências) das assercoes de
+// origem para o indicador "X/Y utilizadores" na aba "Gestão de Utilizadores"
+// (Phase 118, Plan 02).
+//
+// Le os ficheiros-alvo como texto puro (sem import de modulo, sem type-stripping),
+// normaliza removendo comentarios, e testa cada assercao com um predicado dedicado.
+// Imprime "PASS <id>" ou "FAIL <id> — <motivo>" por assercao; exit 0 se todas
+// passarem, exit 1 caso contrario. Segue o estilo de verify-juizo-origem-roundtrip.mjs
+// (o unico outro script de verificacao deste projeto) — Node puro, sem dependencias.
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const AUTH_TYPES_PATH = path.join(__dirname, "..", "src", "types", "auth.ts");
+const SETTINGS_PAGE_PATH = path.join(
+  __dirname,
+  "..",
+  "src",
+  "app",
+  "(dashboard)",
+  "settings",
+  "page.tsx"
+);
+
+/**
+ * Remove comentarios de um conteudo-fonte TypeScript/TSX antes de o usar em
+ * assercoes — sem isto, um comentario que mencione um dos tokens procurados
+ * tornaria o gate auto-invalidante (falso positivo).
+ */
+function stripComments(source) {
+  let out = source;
+  // Blocos de comentario JSX: {/* ... */} (remove incluindo as chavetas envolventes)
+  out = out.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, "");
+  // Blocos de comentario remanescentes: /* ... */
+  out = out.replace(/\/\*[\s\S]*?\*\//g, "");
+  // Linhas de comentario de linha (// ...) ou linhas de continuacao tipo JSDoc (* ...)
+  out = out
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      return !trimmed.startsWith("//") && !trimmed.startsWith("*");
+    })
+    .join("\n");
+  return out;
+}
+
+async function main() {
+  const [authTypesRaw, settingsPageRaw] = await Promise.all([
+    fs.readFile(AUTH_TYPES_PATH, "utf-8"),
+    fs.readFile(SETTINGS_PAGE_PATH, "utf-8"),
+  ]);
+
+  const authTypes = stripComments(authTypesRaw);
+  const settingsPage = stripComments(settingsPageRaw);
+
+  const assertions = [
+    {
+      id: "types-auth-tenant-plano",
+      descricao:
+        "web/src/types/auth.ts contem 'tenant_plano?: string;' dentro de MeResponse",
+      predicate: () => authTypes.includes("tenant_plano?: string;"),
+    },
+    {
+      id: "types-auth-tenant-limite",
+      descricao:
+        "web/src/types/auth.ts contem 'tenant_limite_utilizadores?: number | null;' (com '| null' explicito)",
+      predicate: () =>
+        authTypes.includes("tenant_limite_utilizadores?: number | null;"),
+    },
+    {
+      id: "toast-prefix-generico",
+      descricao:
+        'settings/page.tsx usa replace(/^API \\d{3}: /, "") e ja nao contem "API 400: " hardcoded',
+      predicate: () =>
+        settingsPage.includes('replace(/^API \\d{3}: /, "")') &&
+        !settingsPage.includes("API 400: "),
+    },
+  ];
+
+  let failures = 0;
+  for (const assertion of assertions) {
+    let pass = false;
+    let error = null;
+    try {
+      pass = assertion.predicate();
+    } catch (err) {
+      error = err;
+    }
+    if (pass) {
+      console.log(`PASS ${assertion.id}`);
+    } else {
+      failures += 1;
+      const motivo = error ? error.message : assertion.descricao;
+      console.log(`FAIL ${assertion.id} — ${motivo}`);
+    }
+  }
+
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+main();
