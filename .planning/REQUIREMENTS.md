@@ -22,7 +22,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 - [ ] **PROV-02**: Administrador de plataforma cria um novo tenant + utilizador ADMIN inicial, num ecrã interno não público
 - [ ] **PROV-03**: Administrador de plataforma lista todos os tenants e vê utilizadores ativos por tenant
 - [ ] **PROV-04**: Administrador de plataforma ajusta `plano`/`limite_utilizadores` de qualquer tenant
-- [ ] **PROV-05**: Administrador de plataforma suspende um tenant que não pague (bloqueia acesso)
+- [x] **PROV-05**: Administrador de plataforma suspende um tenant que não pague (bloqueia acesso)
 - [x] **PROV-06**: Wizard `/setup` deixa de ser singleton — fica só para o arranque inicial; tenants seguintes usam o fluxo de administrador de plataforma
 
 ### ISOL — Fechar Suposições de Tenant Única
@@ -74,7 +74,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PROV-02 | Phase 120 | Pending |
 | PROV-03 | Phase 120 | Pending |
 | PROV-04 | Phase 120 | Pending |
-| PROV-05 | Phase 120 | Pending |
+| PROV-05 | Phase 120 | Complete |
 | PROV-06 | Phase 119 | Complete |
 | ISOL-01 | Phase 121 | Pending (já implementado como efeito colateral do CR-02 da Phase 119 — `PublicController.getBranding` já devolve sempre marca genérica; Phase 121 só precisa confirmar/fechar, não reimplementar) |
 | ISOL-02 | Phase 121 | Pending |

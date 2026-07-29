@@ -433,7 +433,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 120-01-PLAN.md — `Tenant.ativo` + migração manual `120-add-tenant-ativo.sql` + bloqueio de tenant suspenso nos **3** caminhos de acesso (`/auth/login` 403, `/auth/refresh` 401 — público em `SecurityConfig`, logo fora do filtro — e `JwtAuthenticationFilter` em todas as requisições, que é o que dá efeito imediato sobre sessões já ativas)
+- [x] 120-01-PLAN.md — `Tenant.ativo` + migração manual `120-add-tenant-ativo.sql` + bloqueio de tenant suspenso nos **3** caminhos de acesso (`/auth/login` 403, `/auth/refresh` 401 — público em `SecurityConfig`, logo fora do filtro — e `JwtAuthenticationFilter` em todas as requisições, que é o que dá efeito imediato sobre sessões já ativas)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -583,7 +583,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/6 | Planned | - |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 1/6 | In Progress|  |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
