@@ -407,7 +407,7 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 Plans:
 **Wave 1**
 
-- [ ] 119-01-PLAN.md — Seed do papel `PLATAFORMA_ADMIN` (zero permissões), da tenant reservada "LexCV" e do utilizador bootstrap, incondicional e idempotente, mais `TenantRepository.findByNome`
+- [x] 119-01-PLAN.md — Seed do papel `PLATAFORMA_ADMIN` (zero permissões), da tenant reservada "LexCV" e do utilizador bootstrap, incondicional e idempotente, mais `TenantRepository.findByNome`
 - [ ] 119-02-PLAN.md — `SetupService.provisionTenant` (devolve a `Tenant` criada, sem dependência de `SystemSetting`) e o DTO `TenantProvisionResponse`
 - [ ] 119-03-PLAN.md — Contenção do papel de plataforma em `AdminController`: um ADMIN de escritório não pode atribuir, promover, ver nem alterar `PLATAFORMA_ADMIN`
 
@@ -555,7 +555,7 @@ Plans:
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
-| 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 0/4 | Planned | - |
+| 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 1/4 | In Progress|  |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |

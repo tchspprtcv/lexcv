@@ -18,7 +18,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 
 ### PROV — Provisionamento Multi-Tenant
 
-- [ ] **PROV-01**: Papel `PLATAFORMA_ADMIN`, distinto do `ADMIN` de cada escritório, associado a uma tenant reservada "LexCV"
+- [x] **PROV-01**: Papel `PLATAFORMA_ADMIN`, distinto do `ADMIN` de cada escritório, associado a uma tenant reservada "LexCV"
 - [ ] **PROV-02**: Administrador de plataforma cria um novo tenant + utilizador ADMIN inicial, num ecrã interno não público
 - [ ] **PROV-03**: Administrador de plataforma lista todos os tenants e vê utilizadores ativos por tenant
 - [ ] **PROV-04**: Administrador de plataforma ajusta `plano`/`limite_utilizadores` de qualquer tenant
@@ -70,7 +70,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PLAN-02 | Phase 117 | Complete |
 | PLAN-03 | Phase 118 | Complete |
 | PLAN-04 | Phase 117 | Complete |
-| PROV-01 | Phase 119 | Pending |
+| PROV-01 | Phase 119 | Complete |
 | PROV-02 | Phase 120 | Pending |
 | PROV-03 | Phase 120 | Pending |
 | PROV-04 | Phase 120 | Pending |

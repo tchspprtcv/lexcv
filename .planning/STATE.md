@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 118-02-PLAN.md
-last_updated: "2026-07-29T07:17:32.608Z"
-last_activity: 2026-07-29 -- Phase 119 planning complete
+stopped_at: Completed 119-01-PLAN.md
+last_updated: "2026-07-29T07:37:30.903Z"
+last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 29
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 118 — Frontend — Indicador de Utilizadores no Limite
+**Current focus:** Phase 119 — Backend — Papel de Administrador de Plataforma e Provisionamento
 
 ## Current Position
 
-Phase: 118 (Frontend — Indicador de Utilizadores no Limite) — EXECUTING
-Plan: 3 of 3
+Phase: 119 (Backend — Papel de Administrador de Plataforma e Provisionamento) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-29 -- Phase 119 planning complete
+Last activity: 2026-07-29
 
 ## Performance Metrics
 
@@ -102,6 +102,7 @@ Last activity: 2026-07-29 -- Phase 119 planning complete
 | Phase 117 P02 | 12min | 2 tasks | 2 files |
 | Phase 118 P01 | 9min | 2 tasks | 3 files |
 | Phase 118 P02 | 8min | 2 tasks | 4 files |
+| Phase 119 P01 | ~20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 118-02]: Reused useMe() inside UserManagementTab (TanStack Query dedupe on shared ["auth","me"] key) instead of prop-drilling from SettingsPage — Matches the sub-component's existing self-fetching convention (useAdminUsers/useAdminRbac); zero new network fetches
 - [Phase 118-02]: Active-user count (X) uses strict u.ativo === true, deliberately different from the table's own user.ativo !== false display convention — Mirrors the backend's countByTenantIdAndAtivoTrue exactly; the gate script's contagem-estrita assertion requires both forms to coexist by design
 - [Phase 118-02]: First working span-wrapper Tooltip+disabled-Button composition in this codebase, closing the Phase 102/v2.13 documented debt — buttonVariants bakes in disabled:pointer-events-none, so TooltipTrigger asChild directly on a disabled Button never fires; a span tabIndex={0} wrapper is the real trigger target, proven by a new structural gate assertion (span-wrapper-tooltip)
+- [Phase 119]: PLATAFORMA_ADMIN role + reserved Tenant 'LexCV' seeded unconditionally (every startup, no seedEnabled gate); bootstrap user plataforma@lexcv.cv gated by app.seed.enabled only — Pa$$w0rd is a publicly documented password (CLAUDE.md); admin@lexcv.cv never reaches a production startup because it sits behind three gates, but an unconditional platform-user seed would create a max-privilege account with a known password on every production install -- role/tenant are infrastructure Phase 120 needs regardless
+- [Phase 119]: Demo-block guard counts hoisted into bdVaziaAntesDoSeedPlataforma, read before seedTenantPlataforma() inserts any row — the reserved tenant is now unconditional, so reading the three counts after its insert would permanently poison the genuinely-empty-database gate and silently stop the demo block from ever seeding on a fresh SEED_ENABLED=true database
 
 ### Pending Todos
 
@@ -220,8 +223,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T04:23:28.851Z
-Stopped at: Completed 118-02-PLAN.md
+Last session: 2026-07-29T07:37:30.879Z
+Stopped at: Completed 119-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
