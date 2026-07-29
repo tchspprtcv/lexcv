@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 120-05-PLAN.md
-last_updated: "2026-07-29T14:12:25.800Z"
+stopped_at: Completed 120 (review + fix loop + verification)
+last_updated: "2026-07-29T15:45:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
-  completed_plans: 13
-  percent: 43
+  completed_plans: 15
+  percent: 57
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 120 — Frontend — Consola de Administração de Tenants
+**Current focus:** Phase 121 — Fechar Suposições de Tenant Única + Bloqueio de RBAC
 
 ## Current Position
 
-Phase: 120 (Frontend — Consola de Administração de Tenants) — EXECUTING
-Plan: 6 of 6
-Status: Ready to execute
+Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — NOT STARTED
+Plan: -
+Status: Phase 120 complete (6/6 plans + deep code review + fix loop + round-2 verification + goal-backward VERIFICATION.md); ready to plan Phase 121
 Last activity: 2026-07-29
 
 ## Performance Metrics
@@ -153,6 +153,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: Plan 04 did not run requirements mark-complete for PROV-02 despite it being listed in its own frontmatter requirements field — PROV-02 requires a working, reachable internal screen (num ecra interno); Plan 04 only built 2 isolated, unmounted components (columns.tsx, criar-tenant-panel.tsx) - the actual /plataforma screen doesn't exist until Plan 05 composes them, matching the same premature-completion pitfall Plan 03 already flagged for PROV-05
 - [Phase 120]: Editar Tenant Dialog's local form state (plano/limite) resets on every open via the existing null-to-tenant conditional render, not via useEffect or a manual key/epoch counter — tenantEmEdicao always cycles through null between any two opens (the dialog must close before a different row's Editar can be clicked), so `{tenant ? <EditarTenantForm tenant={tenant} /> : null}` already fully unmounts and remounts EditarTenantForm on every single open -- including reopening the same tenant after Cancel -- giving fresh useState initial values from the just-selected tenant with zero risk of the react-hooks/set-state-in-effect antipattern this codebase has repeatedly flagged and fixed elsewhere.
 - [Phase 120]: Plan 05 is the plan that runs requirements mark-complete for PROV-02 and PROV-05, closing them for the first time in this milestone — Plans 02/03/04 each deliberately skipped requirements mark-complete for PROV-02/PROV-05 despite listing them in their own frontmatter, documenting that REQUIREMENTS.md's traceability table explicitly requires a working, reachable internal screen (PROV-02) and an actual suspend UI (PROV-05) before either can close -- exactly what this plan (120-05) delivers by composing /plataforma into a real, navigable route with a working Suspender/Reativar AlertDialog. Re-running mark-complete now is the correct completion, not a repeat of the earlier premature-completion regression (commit cd45fcf9) those plans were careful to avoid.
+- [Phase 120]: Deep code review (120-REVIEW.md) found 1 Critical (Tenant.plano had no @Builder.Default, every tenant created with plano=NULL) + 3 Warnings + 3 Info; a 6-commit fix pass resolved CR-01/WR-02/WR-03/IN-01/IN-02, IN-03 deliberately left as a documented non-fix (would require a design decision, not a mechanical change) — same disposition class as Phase 117's own deferred low-impact Info items.
+- [Phase 120]: WR-01 (login lockout keyed on a servlet session id that changed every request, so it never fired) was fixed to key on request.getRemoteAddr() instead — a genuine, tested security improvement, proven by AuthControllerLoginLockoutTest. Round-2 independent review then found the fix's own comment wrongly claimed no reverse proxy fronts this backend: this repo's own Caddyfile puts Caddy in front of /api/*, and docker-compose.yml also separately publishes the backend's own port directly to the host (8089:8080) — so in the Caddy-fronted path, getRemoteAddr() likely resolves to Caddy's constant address, collapsing the lockout key to effectively per-email rather than per-attacker. Still strictly better than the pre-fix bug (no throttle at all), not a regression. The comment was corrected to describe this accurately (commit 64ad226) rather than left overclaiming; properly trusting X-Forwarded-For requires first confirming production network topology actually blocks direct backend access (can't be verified from source alone, and guessing wrong would let an attacker with direct access forge the lockout key) — tracked as session follow-up task_0ccb6ccf, deliberately not attempted inline.
+- [Phase 120]: WR-03's fix (`/plataforma`'s RBAC guard failing open during the initial useMe() load, now `if (!me.isFetched) return null;` before the role check) was deliberately scoped to `/plataforma` only. The same `isFetched && !canX` pattern was confirmed present in 25 other dashboard pages (clientes, processos, financeiro, agenda, documentos, dashboard, etc.) — a pre-existing, app-wide pattern, not introduced by this phase and not fixed here; flagged as session follow-up task_a78e2d45 rather than expanding this phase's scope.
 
 ### Pending Todos
 
@@ -248,11 +251,12 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T14:12:25.772Z
-Stopped at: Completed 120-05-PLAN.md
+Last session: 2026-07-29T15:45:00.000Z
+Stopped at: Phase 120 complete (6 plans + review/fix loop + verification)
 Resume file: None
 
 ## Operator Next Steps
 
-- Rever e aprovar o roadmap da v2.16 (`.planning/ROADMAP.md`)
-- Depois de aprovado: `/gsd:plan-phase 117` para começar o planeamento da primeira fase (Backend — Limite de Utilizadores por Tenant)
+- Phase 120 (Consola de Administração de Tenants) is complete — see `120-VERIFICATION.md` for the goal-backward verdict.
+- Continuing autonomous execution to Phase 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) per the standing `/gsd:autonomous` authorization.
+- Two follow-ups were flagged as separate background tasks rather than folded into this milestone's phases (session task_a78e2d45: sweep the app-wide isFetched-fail-open RBAC guard pattern; session task_0ccb6ccf: confirm production network topology before tightening the login-lockout IP key) — pick these up whenever convenient, they don't block v2.16.
