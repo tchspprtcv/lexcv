@@ -4,21 +4,49 @@ import * as React from "react";
 import { Lock, Pencil, Plus, Unlock } from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { toast } from "@/hooks/use-toast";
 import { useMe } from "@/hooks/use-me";
-import { useCreateTenant, useTenantsAdmin } from "@/hooks/use-platform-admin";
+import {
+  useCreateTenant,
+  useSetTenantAtivo,
+  useTenantsAdmin,
+  useUpdateTenant,
+} from "@/hooks/use-platform-admin";
 import { cn } from "@/lib/utils";
-import type { TenantAdminSummary } from "@/types/platform-admin";
+import type { TenantAdminSummary, TenantPlano, TenantUpdateRequest } from "@/types/platform-admin";
 import type { SetupInitializeRequest } from "@/types/setup";
 
 import { columns, TENANT_RESERVADO } from "./columns";
 import { CriarTenantPanel } from "./criar-tenant-panel";
+
+const PLANO_OPTIONS: TenantPlano[] = ["STARTER", "STANDARD", "ENTERPRISE"];
 
 /**
  * Ecra `/plataforma` — consola de administracao de tenants, acessivel apenas
@@ -49,9 +77,14 @@ export default function PlataformaPage() {
 function PlataformaPageContent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [tenantEmEdicao, setTenantEmEdicao] = React.useState<TenantAdminSummary | null>(null);
+  const [tenantEmAlteracaoDeEstado, setTenantEmAlteracaoDeEstado] =
+    React.useState<TenantAdminSummary | null>(null);
 
   const tenants = useTenantsAdmin();
   const criarTenant = useCreateTenant();
+  const atualizarTenant = useUpdateTenant();
+  const alterarEstado = useSetTenantAtivo();
 
   const tenantsFiltrados = React.useMemo(() => {
     const termo = searchTerm.trim().toLowerCase();
@@ -60,15 +93,15 @@ function PlataformaPageContent() {
     return lista.filter((t) => t.nome.toLowerCase().includes(termo));
   }, [tenants.data, searchTerm]);
 
-  // Task 2 liga estes dois handlers aos estados dos dialogos de edicao e de
-  // alteracao de estado — aqui ficam vazios apenas para as colunas ja poderem
-  // ser instanciadas.
-  const onEdit = React.useCallback((_tenant: TenantAdminSummary) => {
-    // Task 2: abre o Dialog "Editar Tenant"
+  // Ambos os dialogos sao controlados a partir da pagina (nao das linhas da
+  // tabela) — o estado de "que tenant esta a ser editado/alterado" vive aqui,
+  // as colunas e os cards mobile apenas notificam por callback.
+  const onEdit = React.useCallback((tenant: TenantAdminSummary) => {
+    setTenantEmEdicao(tenant);
   }, []);
 
-  const onToggleAtivo = React.useCallback((_tenant: TenantAdminSummary) => {
-    // Task 2: abre o AlertDialog de suspensao/reativacao
+  const onToggleAtivo = React.useCallback((tenant: TenantAdminSummary) => {
+    setTenantEmAlteracaoDeEstado(tenant);
   }, []);
 
   const tenantColumns = React.useMemo(
@@ -273,6 +306,231 @@ function PlataformaPageContent() {
           </CardContent>
         </Card>
       )}
+
+      <EditarTenantDialog
+        tenant={tenantEmEdicao}
+        isSubmitting={atualizarTenant.isPending}
+        onOpenChange={(open) => {
+          if (!open) setTenantEmEdicao(null);
+        }}
+        onSubmit={async (payload) => {
+          if (!tenantEmEdicao) return;
+          try {
+            await atualizarTenant.mutateAsync({ id: tenantEmEdicao.id, payload });
+            toast.success("Tenant atualizado com sucesso.");
+            setTenantEmEdicao(null);
+          } catch {
+            // O wrapper de fetch partilhado ja mostrou o toast do backend;
+            // mantemos o Dialog aberto para o operador poder corrigir.
+          }
+        }}
+      />
+
+      {/* AlertDialog de suspensao/reativacao — nunca fundido no Dialog de
+          edicao acima: sao dois componentes distintos, com dois gatilhos
+          distintos (edicao e um rascunho adiado ate "Guardar"; alterar o
+          estado e uma accao direta e imediata). */}
+      <AlertDialog
+        open={tenantEmAlteracaoDeEstado !== null}
+        onOpenChange={(open) => {
+          if (!open) setTenantEmAlteracaoDeEstado(null);
+        }}
+      >
+        <AlertDialogContent>
+          {tenantEmAlteracaoDeEstado ? (
+            <AlteracaoEstadoConteudo
+              tenant={tenantEmAlteracaoDeEstado}
+              isPending={alterarEstado.isPending}
+              onConfirm={async () => {
+                try {
+                  await alterarEstado.mutateAsync({
+                    id: tenantEmAlteracaoDeEstado.id,
+                    ativo: !tenantEmAlteracaoDeEstado.ativo,
+                  });
+                  toast.success(
+                    tenantEmAlteracaoDeEstado.ativo
+                      ? "Tenant suspenso com sucesso."
+                      : "Tenant reativado com sucesso.",
+                  );
+                  setTenantEmAlteracaoDeEstado(null);
+                } catch {
+                  // O wrapper de fetch partilhado ja mostrou o toast do
+                  // backend (ex.: tentativa de suspender a tenant reservada);
+                  // mantemos o AlertDialog aberto.
+                }
+              }}
+            />
+          ) : null}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  );
+}
+
+/**
+ * Dialog "Editar Tenant" — formulario reversivel (Dialog, nao AlertDialog)
+ * para ajustar plano/limite de utilizadores em conjunto. Controlado a partir
+ * da pagina: `tenant` nulo fecha o dialogo.
+ */
+function EditarTenantDialog({
+  tenant,
+  onOpenChange,
+  onSubmit,
+  isSubmitting,
+}: {
+  tenant: TenantAdminSummary | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: TenantUpdateRequest) => Promise<void>;
+  isSubmitting: boolean;
+}) {
+  return (
+    <Dialog open={tenant !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-xl max-sm:rounded-b-none max-sm:w-full max-sm:max-w-none">
+        {/* O tenant so e nulo enquanto o dialogo esta fechado — quando null,
+            o Dialog acima ja recebeu open=false, pelo que renderizar nada e
+            seguro. Cada abertura re-monta este formulario (a transicao passa
+            sempre por um fecho antes de reabrir), pelo que o estado local
+            comeca sempre sincronizado com o tenant selecionado. */}
+        {tenant ? (
+          <EditarTenantForm tenant={tenant} onSubmit={onSubmit} isSubmitting={isSubmitting} />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarTenantForm({
+  tenant,
+  onSubmit,
+  isSubmitting,
+}: {
+  tenant: TenantAdminSummary;
+  onSubmit: (payload: TenantUpdateRequest) => Promise<void>;
+  isSubmitting: boolean;
+}) {
+  const [plano, setPlano] = React.useState<TenantPlano>(tenant.plano);
+  const [limiteInput, setLimiteInput] = React.useState(
+    tenant.limiteUtilizadores !== null ? String(tenant.limiteUtilizadores) : "",
+  );
+  const [limiteErro, setLimiteErro] = React.useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const valor = limiteInput.trim();
+
+    if (valor === "") {
+      setLimiteErro(null);
+      await onSubmit({ plano, limiteUtilizadores: null });
+      return;
+    }
+
+    const numero = Number(valor);
+    if (!Number.isInteger(numero) || numero < 1) {
+      setLimiteErro("O limite deve ser um número inteiro igual ou superior a 1.");
+      return;
+    }
+
+    setLimiteErro(null);
+    await onSubmit({ plano, limiteUtilizadores: numero });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle>Editar Tenant</DialogTitle>
+        <DialogDescription>Ajuste o plano e o limite de utilizadores de {tenant.nome}.</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="tenant-edit-plano">Plano</Label>
+          <NativeSelect
+            id="tenant-edit-plano"
+            value={plano}
+            onChange={(event) => setPlano(event.target.value as TenantPlano)}
+            className="w-full"
+          >
+            {PLANO_OPTIONS.map((opcao) => (
+              <option key={opcao} value={opcao}>
+                {opcao}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tenant-edit-limite">Limite de Utilizadores</Label>
+          <Input
+            id="tenant-edit-limite"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            placeholder="Sem limite"
+            value={limiteInput}
+            onChange={(event) => setLimiteInput(event.target.value)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Deixe em branco para não aplicar limite de utilizadores.
+          </p>
+          {limiteErro ? <p className="text-sm text-red-600">{limiteErro}</p> : null}
+        </div>
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="outline">
+            Cancelar
+          </Button>
+        </DialogClose>
+        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+          {isSubmitting ? "A guardar..." : "Guardar"}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+/**
+ * Conteudo do AlertDialog de alteracao de estado — o titulo, a descricao e a
+ * cor/rotulo do botao de confirmacao dependem da direcao (suspender vs.
+ * reativar), derivados de `tenant.ativo`.
+ */
+function AlteracaoEstadoConteudo({
+  tenant,
+  isPending,
+  onConfirm,
+}: {
+  tenant: TenantAdminSummary;
+  isPending: boolean;
+  onConfirm: () => Promise<void>;
+}) {
+  const vaiSuspender = tenant.ativo;
+
+  return (
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{vaiSuspender ? "Suspender Tenant" : "Reativar Tenant"}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {vaiSuspender
+            ? `Esta ação bloqueia de imediato o acesso de todos os utilizadores de ${tenant.nome}, incluindo sessões já iniciadas. Pode reativar o tenant a qualquer momento.`
+            : `Os utilizadores de ${tenant.nome} recuperam o acesso de imediato.`}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+        <AlertDialogAction
+          disabled={isPending}
+          onClick={(e) => {
+            e.preventDefault();
+            void onConfirm();
+          }}
+          className={
+            vaiSuspender
+              ? "bg-red-600 hover:bg-red-700 text-white"
+              : "bg-emerald-600 hover:bg-emerald-700 text-white"
+          }
+        >
+          {isPending ? "A processar..." : vaiSuspender ? "Suspender" : "Reativar"}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
   );
 }
