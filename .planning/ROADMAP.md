@@ -437,7 +437,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 120-02-PLAN.md — `PlatformAdminController`: `GET /platform/tenants` (com `countByTenantIdAndAtivoTrue` da Phase 117), `PUT /platform/tenants/{id}` (plano/limite) e `PATCH /platform/tenants/{id}/ativo` com guarda a impedir a suspensão da tenant reservada "LexCV"; DTOs próprios, handler global para corpo JSON inválido, e teste de gate por handler
+- [x] 120-02-PLAN.md — `PlatformAdminController`: `GET /platform/tenants` (com `countByTenantIdAndAtivoTrue` da Phase 117), `PUT /platform/tenants/{id}` (plano/limite) e `PATCH /platform/tenants/{id}/ativo` com guarda a impedir a suspensão da tenant reservada "LexCV"; DTOs próprios, handler global para corpo JSON inválido, e teste de gate por handler
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -583,7 +583,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 1/6 | In Progress|  |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 2/6 | In Progress|  |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |

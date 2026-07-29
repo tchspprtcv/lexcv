@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 120-01-PLAN.md
-last_updated: "2026-07-29T12:14:36.867Z"
+stopped_at: Completed 120-02-PLAN.md
+last_updated: "2026-07-29T12:42:19.315Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 15
-  completed_plans: 10
+  completed_plans: 11
   percent: 43
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 120 (Frontend — Consola de Administração de Tenants) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -107,6 +107,7 @@ Last activity: 2026-07-29
 | Phase 119 P03 | 15min | 2 tasks | 2 files |
 | Phase 119 P04 | ~17min | 3 tasks | 4 files |
 | Phase 120 P01 | 22min | 3 tasks | 6 files |
+| Phase 120 P02 | 22min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 119]: PlatformAdminController's @PreAuthorize gate proved with a real AuthorizationManagerBeforeMethodInterceptor + ProxyFactory proxy (not reflection-only) -- first use of this pattern in the codebase, reusable precedent for any future role-gated controller test
 - [Phase 120]: Tenant.ativo mirrors User.ativo's exact naming/polarity (never suspenso), NOT NULL DEFAULT TRUE with a columnDefinition so dev/CI ddl-auto=update succeeds against an already-populated t_tenant — Locked by 120-CONTEXT.md; JwtAuthenticationFilter re-validates it on every request (not cached) so suspension takes immediate effect on already-active sessions, matching ROADMAP Success Criterion 4
 - [Phase 120]: AuthController.refresh got its own independent Tenant.ativo gate (401), not just a filter fix — /api/v1/auth/refresh is permitAll() in SecurityConfig and never passes through JwtAuthenticationFilter, so without this a suspended tenant's user could keep minting fresh access tokens indefinitely via this public route
+- [Phase 120]: PlatformAdminController toSummary(Tenant) extracted as a shared private helper reused by listTenants/updateTenant/setTenantAtivo, so utilizadoresAtivos is always sourced from UserRepository.countByTenantIdAndAtivoTrue with no second implementation
+- [Phase 120]: Reserved-tenant suspend guard in setTenantAtivo blocks ativo=false only -- reactivating the reserved LexCV tenant is always allowed — Suspending it is the only unsafe direction -- it would lock out the sole PLATAFORMA_ADMIN with no application-level recovery path
+- [Phase 120]: Reworded 2 pre-existing Javadoc passages (PlatformAdminController class doc, PlatformAdminControllerTest class doc) that collided with this plan's own literal-text verify gates, without changing their documented meaning — Same precedent as 119-04-SUMMARY.md and 120-01-SUMMARY.md for self-referential comment text tripping grep-based acceptance gates
 
 ### Pending Todos
 
@@ -234,8 +238,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T12:14:36.837Z
-Stopped at: Completed 120-01-PLAN.md
+Last session: 2026-07-29T12:42:19.272Z
+Stopped at: Completed 120-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
