@@ -1,10 +1,11 @@
 ---
 phase: 120
 slug: frontend-consola-de-administra-o-de-tenants
-status: draft
+status: approved
 shadcn_initialized: true
 preset: radix-vega / baseColor=neutral / cssVariables=true / prefix=none / iconLibrary=lucide
 created: 2026-07-29
+reviewed_at: 2026-07-29
 ---
 
 # Phase 120 — UI Design Contract
@@ -63,7 +64,9 @@ Exceptions: none new. This phase reuses the intermediate 4px-increment values al
 | Heading | 20px | 600 | 1.2 |
 | Display | 30px | 700 | 1.2 |
 
-Two weights are new decisions for this phase's own compositions: **400** (regular — table cell text, Dialog body/description text, Input values, tooltip content) and **600** (semibold — page `<h1>`, Card/Dialog titles, `DataTableColumnHeader` labels, the "limite atingido" caption and any at-limit state text). Display (30px/700, the page `<h1 className="text-3xl font-bold tracking-tight">`) is not a new typographic decision — it is the same already-locked, app-wide Display convention every other page uses verbatim (Clientes, Settings, etc.), reused here rather than re-decided. Badge internals (12px, `font-medium`/500, baked into `components/ui/badge.tsx`) are an inherited shadcn-primitive weight this phase does not touch or override.
+**New weights decided by this phase: 2 total — 400** (regular — table cell text, Dialog body/description text, Input values, tooltip content) **and 600** (semibold — page `<h1>`, Card/Dialog titles, `DataTableColumnHeader` labels, the "limite atingido" caption and any at-limit state text). This is within the 2-weight budget.
+
+**Exception (pre-existing, locked, not a new decision — same mechanism as the Spacing section's own "Exceptions" line above):** Display (30px/**700**) appears on this screen only because the page `<h1 className="text-3xl font-bold tracking-tight">` reuses the exact already-locked, app-wide Display convention verbatim from every other page (Clientes, Settings, Dashboard, Agenda, Processos, Pareceres — 8 confirmed sites). It is inherited unchanged, not re-decided here, and is excluded from this phase's own 2-weight budget the same way the Spacing section excludes pre-existing 12px/36px/48px values from its own 7-checkpoint scale. Badge internals (12px, `font-medium`/500, baked into `components/ui/badge.tsx`) are likewise an inherited shadcn-primitive weight this phase does not touch, override, or count against its budget.
 
 ---
 
@@ -73,7 +76,7 @@ Two weights are new decisions for this phase's own compositions: **400** (regula
 |------|-------|-------|
 | Dominant (60%) | `--background` `#f8fafc` (light) / `#020617` (dark) | Page background — pre-existing, untouched |
 | Secondary (30%) | `--card` + `--border` (slate-200/slate-800) | The Card(s) housing the tenant list, the create panel, and Dialog/AlertDialog surfaces |
-| Accent (10%) | `--primary` `#2563eb` light / `#3b82f6` dark (Tailwind blue-600/500) | Reserved for, and ONLY for: the "Criar Tenant" CTA button, the "Guardar" submit button inside both the create panel and the Editar Dialog, the active state of the new "Plataforma" sidebar nav item (inherited automatically from `SidebarNav`'s existing active-link styling — no new code) |
+| Accent (10%) | `--primary` `#2563eb` light / `#3b82f6` dark (Tailwind blue-600/500) | Reserved for, and ONLY for: the "Criar Tenant" CTA button and its create-panel submit button (same label), the "Guardar" submit button inside the Editar Dialog, the active state of the new "Plataforma" sidebar nav item (inherited automatically from `SidebarNav`'s existing active-link styling — no new code) |
 | Destructive | `--destructive` `oklch(0.577 0.245 27.325)` light / `oklch(0.704 0.191 22.216)` dark (~Tailwind red-600/500) | Suspend action: row icon hover color, the "Suspenso" status Badge, and the new Suspender `AlertDialogAction` confirm button (`bg-red-600 hover:bg-red-700 text-white` — the first solid-destructive button in this codebase; same literal-Tailwind-class convention already used for the solid primary button, red swapped for blue) |
 
 Accent reserved for: "Criar Tenant" CTA, both Dialog "Guardar" buttons, the active nav-item state. Never applied to Plano badges (STARTER/STANDARD/ENTERPRISE — gray/purple/amber, informational tier labels, not actions) or to the Estado badge (green/red, a status signal, not an action).
@@ -122,6 +125,8 @@ No third-party registries are declared (`web/components.json` → `"registries":
 - Type-plumbing flag (not a visual decision, but load-bearing): `Role` in `web/src/types/auth.ts` is currently `"ADMIN" | "TECNICO" | "ADVOGADO" | "ASSISTENTE"` and does not include `"PLATAFORMA_ADMIN"` — extend the union for the role check above to type-check.
 
 ### Default view — Tenants list
+**Primary visual anchor:** the "Criar Tenant" button (sole accent-colored element in the header row) is the deliberate focal point of the default screen — everything else (table rows, badges) uses neutral/status color only.
+
 Single `Card` (`rounded-xl`, matching every other list Card in this app), containing:
 - `CardHeader` (`flex flex-row items-center justify-between`): left = CardTitle + CardDescription (see Copywriting); right = "Criar Tenant" button.
 - `CardContent`: search `Input` (see Copywriting) directly above the table, then the shared `DataTable`.
@@ -130,7 +135,7 @@ Single `Card` (`rounded-xl`, matching every other list Card in this app), contai
 **DataTable columns** (`ColumnDef<TenantAdminSummary>[]`, mirrors `clientes/columns.tsx` structurally):
 1. `nome` — `enableHiding: false`. Cell: rounded-md initials avatar (first 2 letters, uppercase — exact classes from `clientes/columns.tsx`'s nome cell: `h-10 w-10 rounded-md bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20`) + bold tenant name, **plain text, not a link** (deliberate deviation from Clientes: every action here happens via in-row Dialogs, there is no tenant detail page this phase). The row where `nome === "LexCV"` additionally renders a small `Badge variant="outline"` reading "Plataforma" immediately under the name, so the disabled suspend action is self-explanatory before the platform admin even hovers the tooltip.
 2. `plano` — Badge, raw enum casing (matches the established convention: Clientes' `tipo` column renders raw `"PARTICULAR"`/`"EMPRESA"`, not a humanized label). `STARTER` → `variant="gray"`, `STANDARD` → `variant="purple"`, `ENTERPRISE` → `variant="amber"`, class `font-bold tracking-wide` (identical to the `tipo` column's badge class).
-3. `utilizadores` — two-line stacked cell (`flex flex-col`, mirrors the `nif` column's stacked-caption treatment): line 1 = `"{X}/{Y}"` (or `"{X} · sem limite"` when `limiteUtilizadores` is null); when `X >= Y` (limit reached), line 1 switches to weight 600 + destructive color and a line 2 caption `"limite atingido"` appears (11px, uppercase, destructive) — reusing Phase 118's exact at-limit visual language for cross-phase consistency. Sortable on the numeric active-user count.
+3. `utilizadores` — two-line stacked cell (`flex flex-col`, mirrors the `nif` column's stacked-caption treatment): line 1 = `"{X}/{Y}"` (or `"{X} · sem limite"` when `limiteUtilizadores` is null); when `X >= Y` (limit reached), line 1 switches to weight 600 + destructive color and a line 2 caption `"limite atingido"` appears using the already-declared 12px Label size (uppercase, destructive) — reusing Phase 118's exact at-limit visual language for cross-phase consistency, sized from this phase's own declared scale rather than introducing a 5th size value. Sortable on the numeric active-user count.
 4. `estado` — Badge, humanized Title Case (matches the `ativo`/`Ativo`/`Inativo` boolean-status convention, distinct from the raw-enum `plano` column): `Ativo` → `variant="green"`, `Suspenso` → `variant="red"`.
 5. `acoes` — `enableSorting: false`, `enableHiding: false`, right-aligned (matches Clientes exactly). Two icon buttons, `inline-flex items-center gap-1`, `h-9 w-9 p-0` desktop / `h-12 w-12 p-0` mobile, each Tooltip-wrapped:
    - **Editar** (`Pencil`, hover `text-emerald-600`) — always enabled, including for "LexCV". Opens the Editar Dialog.
@@ -161,11 +166,11 @@ See column 5 above for the icon/tooltip/color contract. Confirmation copy and bu
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS (non-blocking note: "Guardar" is disambiguated by adjacent DialogTitle/description, consistent with existing convention)
+- [x] Dimension 2 Visuals: PASS (explicit focal-point line added per checker recommendation)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG, non-blocking (round 3 — 5th-size 11px caption issue resolved by reusing the declared 12px size; residual note: Display/700 is a well-evidenced pre-existing/locked exception, but Dimension 4 has no formal exceptions mechanism the way Dimension 5 does — a rubric question, not a spec defect; explicitly not blocking)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (round 3, post-revision)
