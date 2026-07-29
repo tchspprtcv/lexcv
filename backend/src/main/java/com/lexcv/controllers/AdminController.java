@@ -198,7 +198,12 @@ public class AdminController {
         if (body.containsKey("telefone")) user.setTelefone((String) body.get("telefone"));
         if (body.containsKey("avatar_url")) user.setAvatarUrl((String) body.get("avatar_url"));
         if (body.containsKey("ativo")) {
-            boolean novoAtivo = (Boolean) body.get("ativo");
+            // IN-04 (117-REVIEW.md): validar que "ativo" é mesmo um Boolean antes de desembrulhar
+            // para primitivo -- um "ativo": null explícito (JSON válido; a chave fica presente no
+            // Map com valor null) não pode rebentar com NullPointerException.
+            if (!(body.get("ativo") instanceof Boolean novoAtivo)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "O campo ativo deve ser um valor booleano."));
+            }
             // CR-01 (117-REVIEW.md): reativar um utilizador (false -> true) é o segundo caminho capaz
             // de tornar um utilizador ativo, além de createUser — sem esta verificação o limite era
             // totalmente contornável (criar com ativo=false, que nunca sobe a contagem, e reativar

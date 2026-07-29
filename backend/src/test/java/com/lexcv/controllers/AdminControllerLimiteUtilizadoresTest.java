@@ -244,4 +244,24 @@ class AdminControllerLimiteUtilizadoresTest {
         verify(tenantRepository, never()).findById(any());
         verify(userRepository, never()).countByTenantIdAndAtivoTrue(any());
     }
+
+    // IN-04 (117-REVIEW.md): "ativo": null é JSON válido -- Jackson desserializa-o num Map com a
+    // chave presente e valor null. Antes desta validação, o unboxing direto para boolean
+    // primitivo rebentava com NullPointerException em vez de devolver um erro tratado. Este
+    // teste prova que agora devolve 400 de forma limpa, sem gravar nada nem tocar no limite.
+    @Test
+    void updateUser_comAtivoNullDevolve400ENaoGravaNada() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente(true)));
+
+        Map<String, Object> corpo = new HashMap<>();
+        corpo.put("ativo", null);
+
+        ResponseEntity<?> response = novoController().updateUser(USER_ID, corpo);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+        verify(tenantRepository, never()).findById(any());
+        verify(userRepository, never()).countByTenantIdAndAtivoTrue(any());
+    }
 }
