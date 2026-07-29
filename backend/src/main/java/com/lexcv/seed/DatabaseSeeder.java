@@ -40,9 +40,23 @@ public class DatabaseSeeder implements CommandLineRunner {
         public void run(String... args) throws Exception {
                 seedRbac();
 
+                // Phase 119 (PROV-01): as tres contagens que protegem o bloco de dados demo tem
+                // de ser lidas AQUI, antes de seedTenantPlataforma() inserir qualquer linha -- a
+                // tenant reservada e incondicional, logo se fossem lidas depois dela ficariam
+                // permanentemente >= 1 e o bloco de dados demo deixaria silenciosamente de correr
+                // em qualquer base de dados nova com SEED_ENABLED=true (regressao de ambiente de
+                // desenvolvimento, nao um risco de seguranca classico).
+                boolean bdVaziaAntesDoSeedPlataforma = tenantRepository.count() == 0
+                                && userRepository.count() == 0
+                                && clienteRepository.count() == 0;
+
+                Tenant tenantPlataforma = seedTenantPlataforma();
+
                 if (!seedEnabled) {
                         return;
                 }
+
+                seedUtilizadorPlataforma(tenantPlataforma);
 
                 boolean initialized = systemSettingRepository.findById(SystemSetting.SINGLETON_ID)
                                 .map(SystemSetting::getInitialized)
@@ -51,7 +65,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                         return;
                 }
 
-                if (tenantRepository.count() > 0 || userRepository.count() > 0 || clienteRepository.count() > 0) {
+                if (!bdVaziaAntesDoSeedPlataforma) {
                         return;
                 }
 
@@ -363,6 +377,48 @@ public class DatabaseSeeder implements CommandLineRunner {
                 boolean changed = role.getPermissions().addAll(permissions);
                 if (changed) {
                         roleRepository.save(role);
+                }
+        }
+
+        /**
+         * Tenant reservada de plataforma (Phase 119, PROV-01), seedada INCONDICIONALMENTE em
+         * todos os arranques -- e infraestrutura, nao dados demo. A Phase 120 (provisionamento
+         * multi-tenant) precisa que esta tenant exista quer haja ou nao seed de demo. Find-or-create
+         * idempotente por nome literal; nao cria nenhuma credencial associada.
+         */
+        private Tenant seedTenantPlataforma() {
+                return tenantRepository.findByNome("LexCV")
+                                .orElseGet(() -> tenantRepository.save(Tenant.builder().nome("LexCV").build()));
+        }
+
+        /**
+         * Utilizador bootstrap de administrador de plataforma, deliberadamente atras do gate
+         * {@code seedEnabled} -- o mesmo motivo que ja protege o utilizador demo
+         * {@code admin@lexcv.cv}: "Pa$$w0rd" e uma password publicamente documentada (CLAUDE.md)
+         * e nao pode existir por omissao numa instalacao de producao (mitigacao T-119-06).
+         * Find-or-create idempotente por email; o papel PLATAFORMA_ADMIN e propriedade de
+         * seedRbac() (Task 1) -- se nao existir, e uma falha de ordem de arranque, nao algo a
+         * reparar aqui.
+         */
+        private void seedUtilizadorPlataforma(Tenant tenantPlataforma) {
+                Role plataformaAdminRole = roleRepository.findByNome("PLATAFORMA_ADMIN")
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "O papel PLATAFORMA_ADMIN nao esta configurado -- seedRbac() tem de correr antes de seedUtilizadorPlataforma()."));
+
+                if (userRepository.findByEmail("plataforma@lexcv.cv").isEmpty()) {
+                        User utilizadorPlataforma = User.builder()
+                                        .tenantId(tenantPlataforma.getId())
+                                        .nome("Administrador de Plataforma")
+                                        .email("plataforma@lexcv.cv")
+                                        .passwordHash(passwordEncoder.encode("Pa$$w0rd"))
+                                        .ativo(true)
+                                        .roles(Set.of(plataformaAdminRole))
+                                        .build();
+                        userRepository.save(utilizadorPlataforma);
+
+                        System.out.println("⚠️  Utilizador de administrador de plataforma criado (plataforma@lexcv.cv) "
+                                        + "com password por omissao -- isto so acontece porque app.seed.enabled=true. "
+                                        + "Mudar a password antes de qualquer utilizacao fora de desenvolvimento.");
                 }
         }
 }
