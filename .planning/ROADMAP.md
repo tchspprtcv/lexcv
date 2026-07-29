@@ -445,7 +445,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 120-04-PLAN.md — `plataforma/columns.tsx` (5 colunas, badge "Plataforma" na linha reservada, suspender desativado com a composição `<span tabIndex={0}>` da Phase 118) e `criar-tenant-panel.tsx` (painel inline reutilizando `setupSchema` verbatim)
+- [x] 120-04-PLAN.md — `plataforma/columns.tsx` (5 colunas, badge "Plataforma" na linha reservada, suspender desativado com a composição `<span tabIndex={0}>` da Phase 118) e `criar-tenant-panel.tsx` (painel inline reutilizando `setupSchema` verbatim)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -583,7 +583,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 3/6 | In Progress|  |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 4/6 | In Progress|  |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
