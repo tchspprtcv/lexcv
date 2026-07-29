@@ -470,7 +470,20 @@ Plans:
   4. A aba "Controlo de Acesso (RBAC)" das Definições (`settings/page.tsx`, `RbacTab`) deixa de expor a ação de gravar a um `ADMIN` de tenant na interface, evitando um `403` confuso na UI
 
 **Risco**: ISOL-03 (bloqueio do RBAC) é o item de maior risco identificado pela proposta (secção 7) — sem ele, dois tenants partilhados no mesmo deployment interferem-se um ao outro através de um ecrã de configurações aparentemente inofensivo. Esse risco só passa a existir a partir do momento em que a Phase 120 torna possível criar um 2º tenant real; por isso esta fase corre imediatamente a seguir, antes de UTIL (122) e da própria auditoria (123). Se a execução ou o deployment não seguirem esta ordem estrita — por exemplo, se a Phase 120 for posta em produção e usada para provisionar um 2º tenant real antes desta Phase 121 estar também em produção — essa janela de interferência fica genuinamente aberta. Não provisionar um 2º tenant pagante real através da consola da Phase 120 antes desta fase (121) estar concluída e implantada.
-**Plans**: TBD
+**Plans**: 4 plans (2 waves — backend e frontend correm em paralelo na Wave 1 por não terem dependência real entre si nem ficheiros em comum; auditoria e verificação ao vivo na Wave 2)
+
+Plans:
+
+**Wave 1**
+
+- [ ] 121-01-PLAN.md — Backend: `@PreAuthorize("hasRole('PLATAFORMA_ADMIN')")` no método `updateRbac` e só nele (`getRbac` e o gate de classe ficam intactos), provado RED→GREEN por 5 casos com proxy AOP real — estreia neste codebase da combinação anotação-de-classe + anotação-de-método
+- [ ] 121-02-PLAN.md — Frontend: "Guardar Regras" condicionado a `PLATAFORMA_ADMIN` em `RbacTab`, substituído por Badge `outline` "Gerido pela Plataforma" + Tooltip (rato e teclado), mais o gate executável `pnpm verify:bloqueio-rbac` (11 asserções, com guardas de não-regressão para `hasRbacManage`/`handleSave`/matriz)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 121-03-PLAN.md — ISOL-01 confirmado por execução (`PublicControllerTest` + 3 pesquisas independentes) e ISOL-02 fechado com `121-ISOL-AUDIT.md`: veredito por superfície no formato da AUD-01 (v2.11), comandos de reprodução para a Phase 123, e 2 itens explicitamente marcados como não-achados (padrão `findByXxxId`-sem-`tenantId` do `PITFALLS.md`, assimetria `GET`/`PUT` de `/admin/rbac`)
+- [ ] 121-04-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante): `403` real de um ADMIN de escritório no `PUT /admin/rbac` **e** `200` de um `PLATAFORMA_ADMIN` no mesmo endpoint (contra-teste que exclui um bloqueio universal acidental), com payload no-op e matriz comprovadamente sem deriva; mais 8 pontos de UI incluindo Tooltip por rato e por teclado com vereditos separados
+
 **UI hint**: yes
 
 #### Phase 122: Relatório de Utilização por Tenant
@@ -584,6 +597,6 @@ Plans:
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
-| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
+| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/4 | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
