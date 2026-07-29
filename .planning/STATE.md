@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 121-03-PLAN.md (ISOL-01/ISOL-02 audit artifact, 121-ISOL-AUDIT.md, no code changes)
-last_updated: "2026-07-29T21:52:27.449Z"
+stopped_at: Completed 121-04-PLAN.md (live UAT — 403/200 HTTP proof + RBAC tab checkpoint, all 8 points confirmed)
+last_updated: "2026-07-29T22:15:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 19
-  completed_plans: 18
-  percent: 57
+  completed_plans: 19
+  percent: 61
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — IN PROGRESS
-Plan: 4 of 4
-Status: Ready to execute
+Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — EXECUTED
+Plan: 4 of 4 (all complete)
+Status: All 4 plans complete (ISOL-01/02/03 all closed); goal-backward verification pending
 Last activity: 2026-07-29
 
 ## Performance Metrics
