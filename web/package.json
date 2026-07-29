@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "verify:juizo-origem": "node scripts/verify-juizo-origem-roundtrip.mjs",
-    "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs"
+    "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs",
+    "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
