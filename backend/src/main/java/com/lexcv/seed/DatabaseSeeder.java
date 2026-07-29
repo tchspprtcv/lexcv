@@ -3,6 +3,7 @@ package com.lexcv.seed;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +16,7 @@ import java.util.*;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
 
         private final TenantRepository tenantRepository;
@@ -439,7 +441,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                                         .build();
                         userRepository.save(utilizadorPlataforma);
 
-                        System.out.println("⚠️  Utilizador de administrador de plataforma criado (plataforma@lexcv.cv) "
+                        // IN-02 (119-REVIEW.md): esta e, com distancia, a linha mais sensivel a
+                        // seguranca que esta classe alguma vez imprime (cria uma credencial de
+                        // privilegio maximo com password por omissao) -- por isso, ao contrario
+                        // das outras mensagens de seed desta classe (que mantem o
+                        // System.out.println existente), esta usa o logger SLF4J real, para
+                        // carregar nivel/timestamp e ser apanhada por qualquer alerta baseado em
+                        // log level em produção.
+                        log.warn("Utilizador de administrador de plataforma criado (plataforma@lexcv.cv) "
                                         + "com password por omissao -- isto so acontece porque app.seed.enabled=true. "
                                         + "Mudar a password antes de qualquer utilizacao fora de desenvolvimento.");
                 }
