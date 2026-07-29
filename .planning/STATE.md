@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 120-04-PLAN.md
-last_updated: "2026-07-29T13:38:44.221Z"
+stopped_at: Completed 120-05-PLAN.md
+last_updated: "2026-07-29T14:12:25.800Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 120 (Frontend — Consola de Administração de Tenants) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -110,6 +110,7 @@ Last activity: 2026-07-29
 | Phase 120 P02 | 22min | 3 tasks | 5 files |
 | Phase 120 P03 | 22min | 3 tasks | 4 files |
 | Phase 120 P04 | 20min | 2 tasks | 2 files |
+| Phase 120 P05 | 30min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: Plan 03 did not run requirements mark-complete for PROV-02/PROV-05 despite both listed in its own frontmatter requirements field — REQUIREMENTS.md traceability already documents both as needing the actual UI screens (Plans 04/05/06); commit cd45fcf9 had just corrected an identical premature auto-check of PROV-05 caused by Plan 02's own mechanical requirements-mark-complete step, so re-running it here would reintroduce that regression
 - [Phase 120]: Logo file field in criar-tenant-panel.tsx uses a native <input type="file"> element, not the shadcn Input wrapper used for the other 4 fields — Matches the plan's own casing distinction (Input for text fields vs lowercase input type=file for the logo field) and makes the 5-input-control acceptance grep deterministic regardless of how a multi-line shadcn Input tag wraps its attributes
 - [Phase 120]: Plan 04 did not run requirements mark-complete for PROV-02 despite it being listed in its own frontmatter requirements field — PROV-02 requires a working, reachable internal screen (num ecra interno); Plan 04 only built 2 isolated, unmounted components (columns.tsx, criar-tenant-panel.tsx) - the actual /plataforma screen doesn't exist until Plan 05 composes them, matching the same premature-completion pitfall Plan 03 already flagged for PROV-05
+- [Phase 120]: Editar Tenant Dialog's local form state (plano/limite) resets on every open via the existing null-to-tenant conditional render, not via useEffect or a manual key/epoch counter — tenantEmEdicao always cycles through null between any two opens (the dialog must close before a different row's Editar can be clicked), so `{tenant ? <EditarTenantForm tenant={tenant} /> : null}` already fully unmounts and remounts EditarTenantForm on every single open -- including reopening the same tenant after Cancel -- giving fresh useState initial values from the just-selected tenant with zero risk of the react-hooks/set-state-in-effect antipattern this codebase has repeatedly flagged and fixed elsewhere.
+- [Phase 120]: Plan 05 is the plan that runs requirements mark-complete for PROV-02 and PROV-05, closing them for the first time in this milestone — Plans 02/03/04 each deliberately skipped requirements mark-complete for PROV-02/PROV-05 despite listing them in their own frontmatter, documenting that REQUIREMENTS.md's traceability table explicitly requires a working, reachable internal screen (PROV-02) and an actual suspend UI (PROV-05) before either can close -- exactly what this plan (120-05) delivers by composing /plataforma into a real, navigable route with a working Suspender/Reativar AlertDialog. Re-running mark-complete now is the correct completion, not a repeat of the earlier premature-completion regression (commit cd45fcf9) those plans were careful to avoid.
 
 ### Pending Todos
 
@@ -245,8 +248,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T13:38:44.185Z
-Stopped at: Completed 120-04-PLAN.md
+Last session: 2026-07-29T14:12:25.772Z
+Stopped at: Completed 120-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
