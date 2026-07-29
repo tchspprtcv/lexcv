@@ -8,6 +8,7 @@ import com.lexcv.dtos.LoginResponse;
 import com.lexcv.dtos.UserResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
+import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
@@ -80,6 +81,20 @@ public class AuthController {
             ));
         }
 
+        // Phase 120 (PROV-05): gate de tenant, DEPOIS do gate de conta -- uma conta
+        // desativada continua a receber a sua propria mensagem, sem revelar o estado da
+        // organizacao a quem ainda nao provou pertencer a ela. Este e 1 dos 3 pontos de
+        // acesso que tem de recusar um tenant suspenso (ver JwtAuthenticationFilter para a
+        // re-validacao por pedido de sessoes ja ativas, e o gate equivalente em refresh()
+        // abaixo). A condicao abaixo trata tenant nulo/ausente da mesma forma que um
+        // tenant explicitamente suspenso -- fail-closed, mesma regra do filtro.
+        Tenant tenant = tenantRepository.findById(user.getTenantId()).orElse(null);
+        if (tenant == null || !Boolean.TRUE.equals(tenant.getAtivo())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "message", "O acesso da sua organização está suspenso. Contacte o suporte LexCV."
+            ));
+        }
+
         List<String> roles = user.getRoles().stream().map(Role::getNome).collect(Collectors.toList());
         String accessToken = tokenProvider.generateAccessToken(user.getId(), user.getTenantId(), roles);
         String refreshToken = tokenProvider.generateRefreshToken(user.getId(), user.getTenantId(), roles);
@@ -128,6 +143,19 @@ public class AuthController {
             User user = userRepository.findById(userId).orElse(null);
             if (user == null || !user.getAtivo()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Utilizador inválido"));
+            }
+
+            // Phase 120 (PROV-05): /auth/refresh esta em permitAll() no SecurityConfig --
+            // nunca passa pelo caminho autenticado do JwtAuthenticationFilter, por isso
+            // precisa do seu proprio gate de tenant. Sem ele, um utilizador de um tenant
+            // suspenso poderia continuar a cunhar tokens de acesso novos indefinidamente
+            // atraves desta via publica. Mantém 401 (nao 403) porque e o codigo que o resto
+            // deste fluxo ja usa e que o frontend interpreta como "voltar ao login".
+            Tenant tenant = tenantRepository.findById(user.getTenantId()).orElse(null);
+            if (tenant == null || !Boolean.TRUE.equals(tenant.getAtivo())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                        "message", "Sessão inválida. O acesso da sua organização está suspenso."
+                ));
             }
 
             List<String> roles = user.getRoles().stream().map(Role::getNome).collect(Collectors.toList());
