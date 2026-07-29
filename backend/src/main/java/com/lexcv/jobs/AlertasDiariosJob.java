@@ -88,6 +88,19 @@ public class AlertasDiariosJob {
     void executar(LocalDate hoje) {
         try {
             for (Tenant tenant : tenantRepository.findAll()) {
+                // WR-02 (Phase 120 code review): tenant suspenso (Tenant.ativo=false, Phase 120)
+                // deixa de acumular trabalho de fundo -- os seus utilizadores nao conseguem sequer
+                // autenticar-se para ver as notificacoes que este job geraria (login/refresh/
+                // filtro por pedido recusam-nos todos, ver JwtAuthenticationFilter), por isso
+                // recomputar risco de prazo/evento/honorario e escrever novas Notificacao para
+                // eles seria esforco desperdicado. Boolean.TRUE.equals(...) -- nao
+                // !tenant.getAtivo() cru -- e o mesmo padrao null-safe ja usado em todo o resto do
+                // backend para este campo (AuthController, JwtAuthenticationFilter): um tenant com
+                // ativo null (nao deveria acontecer, ver @Builder.Default em Tenant.java) e tratado
+                // como suspenso, nunca como ativo por omissao.
+                if (!Boolean.TRUE.equals(tenant.getAtivo())) {
+                    continue;
+                }
                 try {
                     processarTenant(tenant.getId(), hoje);
                 } catch (Throwable e) {

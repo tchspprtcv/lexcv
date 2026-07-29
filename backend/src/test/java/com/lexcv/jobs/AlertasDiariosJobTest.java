@@ -414,4 +414,61 @@ class AlertasDiariosJobTest {
         verify(notificacaoService, times(1)).criar(eq(TENANT_ID), eq(adminOkId), eq("PRAZO_PROXIMO"),
                 anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
     }
+
+    @Test
+    void executar_tenantSuspenso_eIgnoradoSemChamarProcessoRepositoryNemGerarNotificacao() {
+        // WR-02 (Phase 120 code review): tenant suspenso (ativo=false) tem de ser saltado por
+        // completo -- os seus utilizadores nao conseguem sequer autenticar-se para ver as
+        // notificacoes que este job geraria (ver JwtAuthenticationFilter/AuthController), por
+        // isso recomputar risco de prazo/evento/honorario para eles seria esforco desperdicado.
+        // Prova nao so que nenhuma notificacao e criada, mas que o proprio repositorio de
+        // processos nunca chega a ser consultado para este tenant -- ou seja, que o `continue`
+        // acontece ANTES de processarTenant, nao so que o resultado final calha ser vazio.
+        Tenant tenantSuspenso = Tenant.builder().id(TENANT_ID).nome("Tenant Suspenso").ativo(false).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantSuspenso));
+
+        buildJob().executar(HOJE);
+
+        verify(processoRepository, never()).findByTenantId(any());
+        verify(userRepository, never()).findByTenantIdAndRoleName(any(), any());
+        verify(notificacaoService, never()).criar(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void executar_tenantSuspensoETenantAtivoNaMesmaExecucao_apenasOTenantAtivoEhProcessado() {
+        // WR-02 (Phase 120 code review): prova a nao-regressao complementar ao teste acima --
+        // saltar um tenant suspenso nao pode impedir que os restantes tenants (ativos) da mesma
+        // execucao continuem a ser processados normalmente, mesmo tendo aparecido antes dele em
+        // tenantRepository.findAll().
+        UUID tenantAtivoId = UUID.randomUUID();
+        Tenant tenantSuspenso = Tenant.builder().id(TENANT_ID).nome("Tenant Suspenso").ativo(false).build();
+        Tenant tenantAtivo = Tenant.builder().id(tenantAtivoId).nome("Tenant Ativo").ativo(true).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantSuspenso, tenantAtivo));
+
+        UUID processoId = UUID.randomUUID();
+        UUID responsavelId = UUID.randomUUID();
+        Processo processo = Processo.builder().id(processoId).tenantId(tenantAtivoId)
+                .responsavelId(responsavelId).numeroProcesso("PROC-ATIVO").build();
+        when(processoRepository.findByTenantId(tenantAtivoId)).thenReturn(List.of(processo));
+
+        UUID prazoId = UUID.randomUUID();
+        // Mesmos valores de executar_prazoProximoComResponsavelDefinido_notificaResponsavelEAdmin
+        // (2 dias restantes, prioridade MEDIA, limiar não-ALTA=3) => "proximo".
+        Prazo prazo = Prazo.builder().id(prazoId).tenantId(tenantAtivoId).processoId(processoId)
+                .descricao("Contestação").dataLimite(HOJE.plusDays(2)).prioridade("MEDIA")
+                .concluido(false).build();
+        when(prazoRepository.findByTenantId(tenantAtivoId)).thenReturn(List.of(prazo));
+
+        semEventos(tenantAtivoId);
+        semHonorarios();
+        nuncaAntesNotificado();
+        when(userRepository.findByTenantIdAndRoleName(tenantAtivoId, "ADMIN")).thenReturn(List.of());
+
+        buildJob().executar(HOJE);
+
+        verify(processoRepository, never()).findByTenantId(TENANT_ID);
+        verify(processoRepository, times(1)).findByTenantId(tenantAtivoId);
+        verify(notificacaoService, times(1)).criar(eq(tenantAtivoId), eq(responsavelId), eq("PRAZO_PROXIMO"),
+                anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
+    }
 }
