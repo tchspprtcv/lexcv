@@ -77,6 +77,15 @@ public class AdminController {
     // como por updateUser (apenas quando `ativo` transita de false para true — ver updateUser). Antes
     // desta extração, o limite só era verificado em createUser, o que tornava a regra totalmente
     // contornável via reativação por PUT /api/v1/admin/users/{id}. Não duplicar esta comparação inline.
+    //
+    // WR-01 (117-REVIEW.md): a contagem-depois-comparação abaixo não é atómica (sem lock, sem
+    // @Version, sem constraint de BD) — risco conscientemente aceite em 117-02-PLAN.md (T-117-07).
+    // A framing original ali só descreve 2 pedidos concorrentes ("pior caso é 1 utilizador acima do
+    // limite"); na prática, N pedidos concorrentes que observem o mesmo count == limite-1 podem todos
+    // passar a verificação, produzindo até limite-1+N utilizadores ativos, não apenas limite+1. Aceite
+    // tal e qual por ser um endpoint só-ADMIN, de baixo volume e faturação manual, sem alterar a decisão
+    // do plano de não acrescentar @Transactional/locks/constraints — reconfirmar quando a Phase 119/120
+    // tornarem o aprovisionamento/limites self-service.
     private Optional<ResponseEntity<?>> limiteUtilizadoresExcedido(UUID tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
         if (tenant != null && tenant.getLimiteUtilizadores() != null) {
