@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 120-02-PLAN.md
-last_updated: "2026-07-29T12:42:19.315Z"
+stopped_at: Completed 120-03-PLAN.md
+last_updated: "2026-07-29T13:14:26.664Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 43
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 120 (Frontend — Consola de Administração de Tenants) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -108,6 +108,7 @@ Last activity: 2026-07-29
 | Phase 119 P04 | ~17min | 3 tasks | 4 files |
 | Phase 120 P01 | 22min | 3 tasks | 6 files |
 | Phase 120 P02 | 22min | 3 tasks | 5 files |
+| Phase 120 P03 | 22min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: PlatformAdminController toSummary(Tenant) extracted as a shared private helper reused by listTenants/updateTenant/setTenantAtivo, so utilizadoresAtivos is always sourced from UserRepository.countByTenantIdAndAtivoTrue with no second implementation
 - [Phase 120]: Reserved-tenant suspend guard in setTenantAtivo blocks ativo=false only -- reactivating the reserved LexCV tenant is always allowed — Suspending it is the only unsafe direction -- it would lock out the sole PLATAFORMA_ADMIN with no application-level recovery path
 - [Phase 120]: Reworded 2 pre-existing Javadoc passages (PlatformAdminController class doc, PlatformAdminControllerTest class doc) that collided with this plan's own literal-text verify gates, without changing their documented meaning — Same precedent as 119-04-SUMMARY.md and 120-01-SUMMARY.md for self-referential comment text tripping grep-based acceptance gates
+- [Phase 120]: useCreateTenant's mutation response typed as { id: string; nome: string } only, not a union with SetupInitializeResponse — Matches Plan 03's own literal HTTP contract for POST /platform/tenants (201, {id, nome}) and its own clarifying sentence; SetupInitializeResponse ({initialized, message}) is an unrelated shape used only by /setup's status flow
+- [Phase 120]: Reworded use-platform-admin.ts's top comment to avoid literally spelling out the disallowed full-page-reload call, which collided with Plan 03's own grep-based verify gate — Same precedent as 119-04/120-01/120-02 for self-referential comment text tripping grep-based acceptance gates
+- [Phase 120]: Plan 03 did not run requirements mark-complete for PROV-02/PROV-05 despite both listed in its own frontmatter requirements field — REQUIREMENTS.md traceability already documents both as needing the actual UI screens (Plans 04/05/06); commit cd45fcf9 had just corrected an identical premature auto-check of PROV-05 caused by Plan 02's own mechanical requirements-mark-complete step, so re-running it here would reintroduce that regression
 
 ### Pending Todos
 
@@ -238,8 +242,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T12:42:19.272Z
-Stopped at: Completed 120-02-PLAN.md
+Last session: 2026-07-29T13:14:26.622Z
+Stopped at: Completed 120-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

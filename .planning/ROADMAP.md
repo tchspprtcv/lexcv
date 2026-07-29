@@ -441,7 +441,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 120-03-PLAN.md — Frontend camada de dados: `types/platform-admin.ts`, união `Role` alargada a `PLATAFORMA_ADMIN`, 4 hooks TanStack Query com `invalidateQueries`, e o item de navegação "Plataforma" gated por papel nos 2 call sites de `SidebarNav`
+- [x] 120-03-PLAN.md — Frontend camada de dados: `types/platform-admin.ts`, união `Role` alargada a `PLATAFORMA_ADMIN`, 4 hooks TanStack Query com `invalidateQueries`, e o item de navegação "Plataforma" gated por papel nos 2 call sites de `SidebarNav`
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -583,7 +583,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 2/6 | In Progress|  |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 3/6 | In Progress|  |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
