@@ -12,6 +12,7 @@ import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,14 +51,30 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email e password são obrigatórios"));
         }
 
-        String ip = org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes().getSessionId(); // Ideally real IP
+        // WR-01 (Phase 120 code review): a chave do limitador de tentativas falhadas tem de
+        // assentar no IP real do chamador, nunca num id de sessao servlet. Esta app corre com
+        // SessionCreationPolicy.STATELESS e sem cookie JSESSIONID persistido por um cliente JWT
+        // normal, por isso RequestContextHolder...getSessionId() (usado antes) criava/devolvia
+        // uma sessao nova e aleatoria a cada pedido para qualquer chamador que nao reenviasse
+        // cookies -- o comportamento por omissao de qualquer cliente HTTP scriptado (ex.:
+        // curl/requests sem cookie jar explicito). Isso tornava attemptKey diferente em cada
+        // tentativa, pelo que loginAttempts/lockoutTimers nunca acumulavam e o lockout nunca
+        // disparava. request.getRemoteAddr() e o endereco de origem real ao nivel do socket, tal
+        // como visto pelo servlet container -- ao contrario de um cabecalho X-Forwarded-For/
+        // X-Real-IP, nao pode ser forjado pelo cliente. Este backend nao tem (ainda) nenhuma
+        // configuracao de proxy confiavel (sem forward-headers-strategy, sem filtro de proxy
+        // dedicado), por isso honrar esses cabecalhos aqui seria trivialmente falsificavel pelo
+        // mesmo atacante que este limitador existe para conter; se/quando este backend passar a
+        // correr atras de um reverse proxy confiavel, tratar esse cabecalho exigira primeiro
+        // validar a origem do proxy.
+        String ip = request.getRemoteAddr();
         String attemptKey = loginRequest.getEmail() + "-" + ip;
-        
+
         if (lockoutTimers.containsKey(attemptKey) && System.currentTimeMillis() < lockoutTimers.get(attemptKey)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", "Muitas tentativas falhadas. Tente novamente mais tarde."));
         }

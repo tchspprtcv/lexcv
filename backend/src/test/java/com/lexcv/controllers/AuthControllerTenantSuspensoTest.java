@@ -7,7 +7,7 @@ import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
 import io.jsonwebtoken.Claims;
-import org.junit.jupiter.api.AfterEach;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -16,8 +16,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 
 import java.util.Map;
 import java.util.Optional;
@@ -38,9 +36,12 @@ import static org.mockito.Mockito.when;
  * {@code AuthControllerGetMeTenantPlanoTest}): sem MockMvc/{@code @SpringBootTest} --
  * instanciacao direta do controller com colaboradores mockados via Mockito.
  *
- * <p>{@code AuthController.login} chama {@code RequestContextHolder.currentRequestAttributes()}
- * logo no inicio (rate limiter) -- por isso os testes de login montam manualmente um
- * {@link RequestAttributes} mockado antes de invocar o metodo, e o {@code @AfterEach} limpa-o.
+ * <p>WR-01 (Phase 120 code review): {@code AuthController.login} passou a exigir um
+ * {@code HttpServletRequest} (chave do limitador de tentativas falhadas, agora
+ * {@code getRemoteAddr()} em vez de um id de sessao servlet -- ver
+ * {@code AuthControllerLoginLockoutTest} para a prova comportamental desse limitador). Os testes
+ * aqui passam um mock Mockito simples: o valor do IP e irrelevante para as assercoes de
+ * suspensao de tenant deste ficheiro.
  */
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTenantSuspensoTest {
@@ -60,19 +61,8 @@ class AuthControllerTenantSuspensoTest {
     private static final String SENHA_EM_TEXTO_PLANO = "Pa$$w0rd1";
     private static final String HASH_PASSWORD = "hash-de-teste";
 
-    @AfterEach
-    void limparRequestContext() {
-        RequestContextHolder.resetRequestAttributes();
-    }
-
     private AuthController novoController() {
         return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder);
-    }
-
-    private void configurarRequestContextParaLogin() {
-        RequestAttributes requestAttributes = mock(RequestAttributes.class);
-        when(requestAttributes.getSessionId()).thenReturn("sessao-de-teste");
-        RequestContextHolder.setRequestAttributes(requestAttributes);
     }
 
     private LoginRequest pedidoLoginValido(String email) {
@@ -104,12 +94,12 @@ class AuthControllerTenantSuspensoTest {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         String email = "utilizador@lexcv.cv";
-        configurarRequestContextParaLogin();
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(utilizador(userId, tenantId, true, email)));
         when(passwordEncoder.matches(SENHA_EM_TEXTO_PLANO, HASH_PASSWORD)).thenReturn(true);
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantComAtivo(tenantId, false)));
 
-        ResponseEntity<?> response = novoController().login(pedidoLoginValido(email));
+        ResponseEntity<?> response =
+                novoController().login(pedidoLoginValido(email), mock(HttpServletRequest.class));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(
@@ -124,14 +114,14 @@ class AuthControllerTenantSuspensoTest {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         String email = "utilizador@lexcv.cv";
-        configurarRequestContextParaLogin();
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(utilizador(userId, tenantId, true, email)));
         when(passwordEncoder.matches(SENHA_EM_TEXTO_PLANO, HASH_PASSWORD)).thenReturn(true);
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantComAtivo(tenantId, true)));
         when(tokenProvider.generateAccessToken(any(), any(), any())).thenReturn("access-token-novo");
         when(tokenProvider.generateRefreshToken(any(), any(), any())).thenReturn("refresh-token-novo");
 
-        ResponseEntity<?> response = novoController().login(pedidoLoginValido(email));
+        ResponseEntity<?> response =
+                novoController().login(pedidoLoginValido(email), mock(HttpServletRequest.class));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(tokenProvider).generateAccessToken(any(), any(), any());
@@ -142,12 +132,12 @@ class AuthControllerTenantSuspensoTest {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         String email = "utilizador@lexcv.cv";
-        configurarRequestContextParaLogin();
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(utilizador(userId, tenantId, true, email)));
         when(passwordEncoder.matches(SENHA_EM_TEXTO_PLANO, HASH_PASSWORD)).thenReturn(true);
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
 
-        ResponseEntity<?> response = novoController().login(pedidoLoginValido(email));
+        ResponseEntity<?> response =
+                novoController().login(pedidoLoginValido(email), mock(HttpServletRequest.class));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(
@@ -161,11 +151,11 @@ class AuthControllerTenantSuspensoTest {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         String email = "utilizador@lexcv.cv";
-        configurarRequestContextParaLogin();
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(utilizador(userId, tenantId, false, email)));
         when(passwordEncoder.matches(SENHA_EM_TEXTO_PLANO, HASH_PASSWORD)).thenReturn(true);
 
-        ResponseEntity<?> response = novoController().login(pedidoLoginValido(email));
+        ResponseEntity<?> response =
+                novoController().login(pedidoLoginValido(email), mock(HttpServletRequest.class));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(
