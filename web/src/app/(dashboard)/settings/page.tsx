@@ -178,7 +178,7 @@ export default function SettingsPage() {
 // USER MANAGEMENT TAB SUB-COMPONENT
 // ==========================================
 function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
-  const { data: users, isLoading } = useAdminUsers();
+  const { data: users, isLoading, isError, refetch } = useAdminUsers();
 
   const [editingUser, setEditingUser] = React.useState<Partial<MockUser> | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -339,6 +339,21 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     return (
       <div className="flex justify-center items-center h-48">
         <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-48 text-center px-4">
+        <AlertCircle className="h-6 w-6 text-red-500" />
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Não foi possível carregar a lista de utilizadores.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RotateCcw className="h-4 w-4" />
+          Tentar novamente
+        </Button>
       </div>
     );
   }
