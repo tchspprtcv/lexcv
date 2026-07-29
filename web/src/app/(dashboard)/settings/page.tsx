@@ -198,9 +198,9 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   // estrita (=== true) para espelhar countByTenantIdAndAtivoTrue do backend;
   // deliberadamente diferente da convencao de exibicao do badge "Ativo" da
   // tabela mais abaixo, que trata utilizadores sem o campo definido como ativos.
-  const { data: me } = useMe();
+  const { data: meData } = useMe();
   const activeUserCount = users?.filter((u) => u.ativo === true).length ?? 0;
-  const tenantUserLimit = me?.tenant_limite_utilizadores ?? null;
+  const tenantUserLimit = meData?.tenant_limite_utilizadores ?? null;
   const atUserLimit =
     tenantUserLimit !== null && activeUserCount >= tenantUserLimit;
   const userCountLabel =
