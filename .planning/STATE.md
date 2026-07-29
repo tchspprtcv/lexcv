@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: planning
-last_updated: "2026-07-28T23:46:36.018Z"
+last_updated: "2026-07-28T23:58:00.000Z"
 last_activity: 2026-07-28
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-27)
+See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone complete
+**Current focus:** Milestone v2.16 — Phase 117 (Backend — Limite de Utilizadores por Tenant)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-28 — Milestone v2.16 started
+Phase: 117 of 123 (Backend — Limite de Utilizadores por Tenant)
+Plan: TBD — not yet planned
+Status: Roadmap ready, awaiting plan-phase
+Last activity: 2026-07-28 — Roadmap v2.16 criado (7 fases, 117–123, 15/15 requisitos mapeados, 100% cobertura)
 
 ## Performance Metrics
 
@@ -108,6 +108,7 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 
 - Phase 115.1 inserted after Phase 115: Permitir criar Processo/Parecer a partir da ficha de cliente; corrigir redirect de Entrar no webpage para o login da app; alinhar visual dos filtros de Pareceres com Processos/Clientes (URGENT)
 - v2.15 roadmap created (2026-07-27): 1 phase (116), 4/4 requirements mapped, 100% coverage — deliberately single-phase: the 4 requirements are independent, no-dependency text/data corrections across unrelated files (`PROJECT.md`, `webpage/trust-section.tsx`, `SPEC.md`, `DatabaseSeeder.java`) serving one shared goal (stop describing LexCV via NOSi, correctly frame it around the SIJ ecosystem instead) — config.json's "standard" granularity guidance deliberately not applied literally, per the standing rule against padding a small milestone with artificial phase splits
+- v2.16 roadmap created (2026-07-28): 7 phases (117–123), 15/15 requirements mapped, 100% coverage, continuing numbering from v2.15's Phase 116 (no `--reset-phase-numbers`). PLAN (117 backend → 118 frontend) and PROV (119 backend → 120 frontend) each split backend-before-frontend, matching the project's established sequencing (Pesquisa Global 111→112, Notificações 86→89) — PROV-02/03/04/05 (all explicitly UI-facing, "num ecrã interno") credited to the frontend phase (120), while PROV-01/06 (role + reserved tenant + setup-singleton preservation, no UI implied) stay backend-only (119), mirroring the precedent where NOTF-14 (a systemic rule) stayed on the backend phase (86) while NOTF-08–13 (user-facing bell/page actions) moved to the frontend phase (89) despite Phase 86 building the bulk of the underlying API. ISOL was deliberately split into two non-adjacent-numbered phases rather than kept as one block per the source proposal's own "Fase C": Phase 121 (ISOL-01/02/03, closing the tenant-singleton assumptions + locking `PUT /api/v1/admin/rbac`) runs immediately after PROV (120) — not after UTIL — because ISOL-03 is the single highest-risk item flagged by the proposal (section 7): the window where a 2nd real tenant could exist with still-per-tenant-editable RBAC only opens once Phase 120 ships, so the lock-down phase cannot be deferred past it (explicit Risk note written into Phase 121 itself). Phase 123 (ISOL-04, the dedicated isolation audit) is the milestone's last phase, not part of 121, because ISOL-04's own text requires auditing "the tenant screen, the usage report, and the RBAC lock" — i.e. it has a hard dependency on Phase 120 AND Phase 122 (UTIL) both existing first, which the source proposal's flat A→B→C→D ordering doesn't surface. `StorageService` and `AlertasDiariosJob` confirmed by the proposal as needing no code changes this milestone (already tenant-partitioned / already the correct cross-tenant-iteration pattern to reuse).
 
 ### Decisions
 
@@ -143,6 +144,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
 - ~~(v2.12, flagged by research, unverified) Server-side "hairpin" fetch risk: a relative-URL `fetch()` inside the `webpage` container calling `/api/v1/setup/status` may resolve against the public domain (routing back out through Caddy) instead of the internal Docker network~~ — **RESOLVED (2026-07-15, Phase 100-04):** live `docker compose up` test proved `BACKEND_API_ORIGIN=http://backend:8080` resolves correctly against the internal Docker network with zero hairpin. Separately, code review (99-REVIEW.md CR-01) found `webpage/src/lib/setup.ts` itself used a *relative* URL (not the internal-origin absolute URL the research anticipated) — a distinct, more severe bug (relative URLs throw in Node/Edge `fetch`, silently disabling the `/setup` redirect gate entirely) — fixed by switching to the same `BACKEND_API_ORIGIN`-based absolute-URL pattern `branding.ts` already used.
 - ~~(v2.14, Phase 115 code review, 2026-07-22) 3 pre-existing issues found in passing and spawned as independent background-task worktrees (`task_48c8e2d9`, `task_482b4a64`, `task_d6ca37c9`, tracked in `.planning/milestones/v2.14-MILESTONE-AUDIT.md` tech debt)~~ — **RESOLVED (2026-07-22):** all 3 investigated, verified (lint+build clean), and merged to `master` at the user's request: Clientes mobile list "Editar" quick-action now actually opens edit mode (`?edit=1` deep link, was opening the same read-only view as "Ver detalhes"), Settings user-search clear button now has `aria-label`+explicit `type="button"` (was icon-only with no accessible name and an implicit submit type), and the 6 pre-existing `react-hooks/set-state-in-effect`/`refs` ESLint errors across `clientes/[id]/page.tsx`/`documentos/novo/page.tsx`/`processos/[id]/page.tsx`/`dashboard-shell.tsx` are fixed (React's render-time state-adjustment pattern, already established elsewhere in this codebase). `web/pnpm lint` and `pnpm build` both clean after all 3 merges. Worktrees and branches removed.
+- **(v2.16, roadmap creation, 2026-07-28) ISOL-03 sequencing risk, carried into the roadmap itself:** `PUT /api/v1/admin/rbac` (currently gated `hasRole('ADMIN')` at the `AdminController` class level, tenant-editable today) must be locked to `PLATAFORMA_ADMIN` before any real 2nd paying tenant is provisioned through the Phase 120 console — see the explicit Risk note on ROADMAP.md Phase 121. Not a code defect yet (only one tenant exists today), but a deployment-sequencing constraint the user must respect: do not use the Phase 120 tenant-creation screen against production for a real 2nd tenant until Phase 121 has also shipped to production.
 
 ## Deferred Items
 
@@ -205,10 +207,11 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-27T21:08:31.267Z
-Stopped at: Completed 116-01-PLAN.md
+Last session: 2026-07-28T23:58:00.000Z
+Stopped at: Criado ROADMAP.md da v2.16 (7 fases, 117–123) — PLAN backend/frontend (117-118), PROV backend/frontend (119-120), fecho de suposições de tenant única + bloqueio de RBAC (121), relatório de utilização (122), auditoria de isolamento dedicada (123). REQUIREMENTS.md traceability atualizado (15/15, 100% cobertura). STATE.md refrescado.
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Rever e aprovar o roadmap da v2.16 (`.planning/ROADMAP.md`)
+- Depois de aprovado: `/gsd:plan-phase 117` para começar o planeamento da primeira fase (Backend — Limite de Utilizadores por Tenant)

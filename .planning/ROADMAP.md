@@ -18,6 +18,7 @@
 - ✅ **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (complete 2026-07-18)
 - ✅ **v2.14 UI/UX Melhorias** — Phases 111–115.1 (complete 2026-07-22)
 - ✅ **v2.15 Reposicionamento SIJ** — Phase 116 (complete 2026-07-27)
+- 🚧 **v2.16 Distribuição Multi-Tenant e Faturação por Utilizadores** — Phases 117–123 (in progress)
 
 ## Phases
 
@@ -330,6 +331,98 @@ See archive: [milestones/v2.15-ROADMAP.md](milestones/v2.15-ROADMAP.md) · [mile
 
 </details>
 
+### 🚧 v2.16 Distribuição Multi-Tenant e Faturação por Utilizadores (Phases 117–123) — Em Curso
+
+**Milestone Goal:** Evoluir de "1 deployment por escritório" para uma instância partilhada multi-tenant, com limite de utilizadores por tenant e suporte a faturação manual por utilização — reabrindo deliberadamente a decisão da v2.12 de não ter provisionamento multi-tenant. Base: `proposta_multitenancy_distribuicao_faturacao.md` (28 jul 2026).
+
+As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) com uma ordem de dependência real, não arbitrária — a mesma ordem sugerida pela proposta, mas com o bloco ISOL desdobrado em duas fases por causa de uma dependência que a própria proposta cria: ISOL-04 (a auditoria) só pode auditar superfícies que ainda não existem no início da milestone. PLAN (117-118) entrega valor imediato com risco zero de isolamento entre tenants — só existe um tenant até esta fase terminar, por isso divide-se em backend (limite aplicado em `AdminController.createUser`) e frontend (indicador "X/Y"), seguindo o mesmo padrão backend-antes-de-frontend já usado no projeto. PROV (119-120) introduz o papel `PLATAFORMA_ADMIN` e a capacidade de provisionar tenants adicionais, também dividida em backend (papel, tenant reservada "LexCV", serviço de provisionamento que contorna o gate singleton do `SetupService` só neste novo caminho — PROV-01/PROV-06) e frontend (a consola onde essa capacidade é de facto usada para criar/listar/ajustar/suspender tenants — PROV-02 a PROV-05), o mesmo padrão já usado em Pesquisa Global (Phases 111→112) e Notificações (Phases 86→89). A Phase 121 (fechar as suposições de tenant única + bloquear `PUT /api/v1/admin/rbac`) corre imediatamente a seguir à Phase 120, nunca depois de UTIL ou da auditoria — é a correção mais importante identificada pela proposta (secção 7): sem ela, dois tenants partilhados interferem-se um ao outro através de um ecrã de configurações aparentemente inofensivo, e esse risco só passa a existir a partir do momento em que a Phase 120 torna possível criar um 2º tenant real (ver nota de Risco na própria Phase 121). UTIL (122) e a auditoria de isolamento dedicada (123, ISOL-04) fecham a milestone por último, nesta ordem e não antes, porque a Phase 123 tem de auditar precisamente as duas superfícies mais recentes — a consola de tenants (120) e o relatório de utilização (122) — no espírito da AUD-01 da v2.11 (veredito explícito por superfície, não apenas uma checklist). `StorageService` (particionamento por `tenantId` já existente) e o padrão de iteração cross-tenant do `AlertasDiariosJob` (reaproveitado conceptualmente pelo relatório da Phase 122) foram confirmados pela proposta como já corretos — nenhuma fase desta milestone precisa de os alterar.
+
+#### Phase 117: Backend — Limite de Utilizadores por Tenant
+
+**Goal**: O backend aplica um limite de utilizadores ativos por tenant — `POST /api/v1/admin/users` recusa criar mais um utilizador quando o tenant já está no limite do seu plano, e desativar alguém liberta a vaga de imediato.
+**Depends on**: Nothing (primeira fase da milestone)
+**Requirements**: PLAN-01, PLAN-02, PLAN-04
+**Success Criteria** (what must be TRUE):
+  1. `Tenant` tem os novos campos `plano` e `limiteUtilizadores` persistidos (migração aplicada; tenants existentes recebem um valor por omissão sensato, sem quebrar o arranque da aplicação)
+  2. `AdminController.createUser` (`POST /api/v1/admin/users`) devolve `409` com uma mensagem clara quando o tenant já tem `limiteUtilizadores` utilizadores com `ativo=true` — e continua a criar normalmente abaixo do limite
+  3. Desativar um utilizador (`PUT /api/v1/admin/users/{id}` com `ativo=false`) liberta imediatamente uma vaga — uma criação imediatamente a seguir já não é bloqueada pelo `409`
+  4. A contagem de "utilizadores ativos" usada para o limite é uma única função/consulta reutilizável, não duplicada — as Phases 120 e 122 vão reutilizá-la para a consola de tenants e o relatório de utilização
+**Plans**: TBD
+
+#### Phase 118: Frontend — Indicador de Utilizadores no Limite
+
+**Goal**: A aba "Gestão de Utilizadores" das Definições mostra a ocupação do plano do tenant e impede visualmente ultrapassar o limite antes mesmo de chamar a API.
+**Depends on**: Phase 117
+**Requirements**: PLAN-03
+**Success Criteria** (what must be TRUE):
+  1. A aba "Gestão de Utilizadores" (`settings/page.tsx`, `UserManagementTab`) mostra "X/Y utilizadores" com base nos utilizadores ativos e no `limiteUtilizadores` do tenant
+  2. O botão "Novo Utilizador" fica desativado quando X=Y, com indicação visual do motivo (tooltip ou texto junto ao contador)
+  3. O `409` devolvido pelo backend (Phase 117), caso ainda assim ocorra (ex.: duas abas abertas em simultâneo), é apresentado como toast claro, sem crash da UI — nunca confiar só na validação visual do lado do cliente
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 119: Backend — Papel de Administrador de Plataforma e Provisionamento
+
+**Goal**: Existe um papel `PLATAFORMA_ADMIN`, distinto do `ADMIN` de cada escritório, associado a uma tenant reservada "LexCV", com uma capacidade de backend para criar tenants adicionais sem depender do wizard `/setup` — que se mantém singleton, reservado só ao arranque inicial da própria plataforma.
+**Depends on**: Phase 118
+**Requirements**: PROV-01, PROV-06
+**Success Criteria** (what must be TRUE):
+  1. Existe um papel `PLATAFORMA_ADMIN` seedado (`DatabaseSeeder`), distinto de `ADMIN`, e uma tenant reservada "LexCV" à qual os utilizadores desse papel pertencem
+  2. Um novo método de serviço de backend cria um `Tenant` + o respetivo utilizador `ADMIN` inicial, reutilizando a validação já existente em `SetupService.initializeSystem`, sem depender de `SystemSetting.initialized`
+  3. `POST /api/v1/setup/initialize` continua a devolver erro se chamado uma segunda vez — a nova capacidade de criar tenants é um caminho de código distinto, gated a `PLATAFORMA_ADMIN`, nunca reaproveita o endpoint público de `/setup`
+  4. Um utilizador com o papel `ADMIN` de um tenant normal não tem `hasRole('PLATAFORMA_ADMIN')` e recebe `403` ao tentar invocar a nova capacidade de criação de tenants
+**Plans**: TBD
+
+#### Phase 120: Frontend — Consola de Administração de Tenants
+
+**Goal**: O administrador de plataforma tem um ecrã interno, não público, onde cria novos tenants (com o respetivo ADMIN inicial), lista todos os tenants existentes e a sua utilização, ajusta plano/limite de qualquer um, e suspende quem não pague — bloqueando-lhe o acesso de imediato.
+**Depends on**: Phase 119
+**Requirements**: PROV-02, PROV-03, PROV-04, PROV-05
+**Success Criteria** (what must be TRUE):
+  1. Ecrã interno, acessível só a `PLATAFORMA_ADMIN` (nunca ao `ADMIN` de um tenant normal), cria um novo tenant preenchendo nome + dados do utilizador ADMIN inicial, reutilizando o serviço de backend da Phase 119
+  2. O mesmo ecrã lista todos os tenants existentes, mostrando o número de utilizadores ativos de cada um
+  3. Administrador de plataforma edita `plano`/`limiteUtilizadores` de qualquer tenant a partir desse ecrã
+  4. Administrador de plataforma alterna o estado suspenso/ativo de um tenant a partir desse ecrã; um tenant suspenso deixa imediatamente de conseguir autenticar-se ou continuar a usar uma sessão já ativa
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 121: Fechar Suposições de Tenant Única + Bloqueio de RBAC
+
+**Goal**: Nenhuma superfície pública ou administrativa do produto continua a assumir que existe apenas um tenant — a landing pública mostra sempre a marca genérica LexCV, e a gestão de permissões por papel deixa de ser editável por cada escritório na interface, passando a ser uma operação fixa de plataforma. Esta fase corre imediatamente a seguir à Phase 120, nunca depois da Phase 122/123 — ver Risco abaixo.
+**Depends on**: Phase 120
+**Requirements**: ISOL-01, ISOL-02, ISOL-03
+**Success Criteria** (what must be TRUE):
+  1. `GET /api/v1/public/branding` deixa de depender de `TenantRepository.findFirstByOrderByCreatedAtAsc()` para decidir que marca mostrar — devolve sempre a marca genérica LexCV, independentemente de quantos tenants reais existirem
+  2. Uma pesquisa dedicada ao código de produção (não só o call site já sinalizado em `PublicController.getBranding`) confirma que nenhum outro caminho resolve "a" tenant por heurística de "mais antiga" quando existir mais de um tenant real
+  3. `PUT /api/v1/admin/rbac` deixa de aceitar chamadas de um `ADMIN` de tenant (`403`) — só `PLATAFORMA_ADMIN` pode alterar o mapeamento de permissões por papel
+  4. A aba "Controlo de Acesso (RBAC)" das Definições (`settings/page.tsx`, `RbacTab`) deixa de expor a ação de gravar a um `ADMIN` de tenant na interface, evitando um `403` confuso na UI
+**Risco**: ISOL-03 (bloqueio do RBAC) é o item de maior risco identificado pela proposta (secção 7) — sem ele, dois tenants partilhados no mesmo deployment interferem-se um ao outro através de um ecrã de configurações aparentemente inofensivo. Esse risco só passa a existir a partir do momento em que a Phase 120 torna possível criar um 2º tenant real; por isso esta fase corre imediatamente a seguir, antes de UTIL (122) e da própria auditoria (123). Se a execução ou o deployment não seguirem esta ordem estrita — por exemplo, se a Phase 120 for posta em produção e usada para provisionar um 2º tenant real antes desta Phase 121 estar também em produção — essa janela de interferência fica genuinamente aberta. Não provisionar um 2º tenant pagante real através da consola da Phase 120 antes desta fase (121) estar concluída e implantada.
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 122: Relatório de Utilização por Tenant
+
+**Goal**: O administrador de plataforma consulta um relatório interno, por tenant, com nome/plano/limite contratado/utilizadores ativos agora — a base factual para emitir a fatura manual de cada escritório.
+**Depends on**: Phase 121
+**Requirements**: UTIL-01
+**Success Criteria** (what must be TRUE):
+  1. Um ecrã de relatório, acessível só a `PLATAFORMA_ADMIN`, mostra na interface, para cada tenant: nome, plano, limite de utilizadores contratado, e utilizadores ativos neste momento
+  2. Os números apresentados usam a mesma contagem de "utilizador ativo" da Phase 117 (`ativo=true`) — uma única fonte de verdade, nunca um cálculo paralelo
+  3. Tenants suspensos (Phase 120) continuam visíveis no relatório com o seu estado identificado, em vez de desaparecerem da lista
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 123: Auditoria de Isolamento Dedicada
+
+**Goal**: Uma auditoria de isolamento dedicada — no espírito da AUD-01 da v2.11 — confirma que as novas superfícies multi-tenant (consola de administração de tenants, relatório de utilização, bloqueio de RBAC) não deixam nenhum tenant ver ou influenciar dados de outro, antes de o utilizador provisionar um 2º tenant pagante real através da consola da Phase 120. `StorageService` (particionamento por `tenantId` já existente) confirmado fora de âmbito — sem alterações necessárias.
+**Depends on**: Phase 122
+**Requirements**: ISOL-04
+**Success Criteria** (what must be TRUE):
+  1. A consola de administração de tenants (Phase 120) e o relatório de utilização (Phase 122) são auditados e confirmados a expor dados exclusivamente através de endpoints gated a `PLATAFORMA_ADMIN`, nunca através de um endpoint tenant-scoped comum
+  2. O bloqueio de `PUT /api/v1/admin/rbac` (Phase 121) é confirmado sem via de contorno — nenhum outro endpoint tenant-facing continua a permitir escrever `Role`/`Permission`
+  3. A auditoria produz um veredito explícito por superfície (COVERED, ou lista de fixes aplicados), documentado antes de se considerar segura a criação de um 2º tenant pagante real fora de teste
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -410,5 +503,10 @@ See archive: [milestones/v2.15-ROADMAP.md](milestones/v2.15-ROADMAP.md) · [mile
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 11/11 | Complete    | 2026-07-22 |
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
-
-**Next:** v2.15 concluída (Phase 116, 1/1 fase, 4/4 requisitos). Run `/gsd:new-milestone` to start the next milestone.
+| 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 0/TBD | Not started | - |
+| 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 0/TBD | Not started | - |
+| 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 0/TBD | Not started | - |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |
+| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
+| 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
+| 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |

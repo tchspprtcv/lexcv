@@ -66,27 +66,27 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAN-01 | TBD | Pending |
-| PLAN-02 | TBD | Pending |
-| PLAN-03 | TBD | Pending |
-| PLAN-04 | TBD | Pending |
-| PROV-01 | TBD | Pending |
-| PROV-02 | TBD | Pending |
-| PROV-03 | TBD | Pending |
-| PROV-04 | TBD | Pending |
-| PROV-05 | TBD | Pending |
-| PROV-06 | TBD | Pending |
-| ISOL-01 | TBD | Pending |
-| ISOL-02 | TBD | Pending |
-| ISOL-03 | TBD | Pending |
-| ISOL-04 | TBD | Pending |
-| UTIL-01 | TBD | Pending |
+| PLAN-01 | Phase 117 | Pending |
+| PLAN-02 | Phase 117 | Pending |
+| PLAN-03 | Phase 118 | Pending |
+| PLAN-04 | Phase 117 | Pending |
+| PROV-01 | Phase 119 | Pending |
+| PROV-02 | Phase 120 | Pending |
+| PROV-03 | Phase 120 | Pending |
+| PROV-04 | Phase 120 | Pending |
+| PROV-05 | Phase 120 | Pending |
+| PROV-06 | Phase 119 | Pending |
+| ISOL-01 | Phase 121 | Pending |
+| ISOL-02 | Phase 121 | Pending |
+| ISOL-03 | Phase 121 | Pending |
+| ISOL-04 | Phase 123 | Pending |
+| UTIL-01 | Phase 122 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️ (preenchido pelo roadmapper)
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-28*
-*Last updated: 2026-07-28 after initial definition*
+*Last updated: 2026-07-28 after roadmap creation — 7 phases (117–123), 15/15 requirements mapped, 100% coverage*
