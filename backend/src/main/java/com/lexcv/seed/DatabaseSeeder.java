@@ -385,9 +385,23 @@ public class DatabaseSeeder implements CommandLineRunner {
          * todos os arranques -- e infraestrutura, nao dados demo. A Phase 120 (provisionamento
          * multi-tenant) precisa que esta tenant exista quer haja ou nao seed de demo. Find-or-create
          * idempotente por nome literal; nao cria nenhuma credencial associada.
+         *
+         * <p>WR-01 (119-REVIEW.md): esta e uma check-then-act classica sem lock nem constraint
+         * unique em {@code t_tenant.nome} -- um arranque concorrente de >1 instancia contra a
+         * mesma base de dados vazia pode inserir duas linhas "LexCV". Aceite tal e qual,
+         * consistente com o padrao ja existente em {@code upsertRolePermissions} para
+         * Role/Permission: e um risco de arranque num contexto de deployment tipicamente
+         * single-instance, nao uma superficie exposta a utilizadores, e nao vale a pena
+         * introduzir locking pesado nem uma migracao de schema manual (este projeto nao tem
+         * Flyway/Liquibase) so para este boot-time race. Em vez disso,
+         * {@code tenantRepository.findFirstByNome(...)} (em vez de {@code findByNome}, que
+         * lancaria {@code IncorrectResultSizeDataAccessException} perante mais de uma linha)
+         * garante que uma eventual duplicata nunca transforma esta corrida transitoria num
+         * crash-loop permanente em todos os arranques seguintes -- apenas ignora a linha extra e
+         * segue em frente.
          */
         private Tenant seedTenantPlataforma() {
-                return tenantRepository.findByNome("LexCV")
+                return tenantRepository.findFirstByNome("LexCV")
                                 .orElseGet(() -> tenantRepository.save(Tenant.builder().nome("LexCV").build()));
         }
 
@@ -399,6 +413,15 @@ public class DatabaseSeeder implements CommandLineRunner {
          * Find-or-create idempotente por email; o papel PLATAFORMA_ADMIN e propriedade de
          * seedRbac() (Task 1) -- se nao existir, e uma falha de ordem de arranque, nao algo a
          * reparar aqui.
+         *
+         * <p>WR-01 (119-REVIEW.md): mesma classe de corrida de {@code seedTenantPlataforma()},
+         * mas {@code User.email} ja tem uma constraint {@code unique = true} real -- por isso a
+         * instancia perdedora de um arranque concorrente falha o seu proprio
+         * {@code CommandLineRunner.run()} com {@code DataIntegrityViolationException} nesse
+         * arranque especifico, sem nunca chegar a duplicar a linha. Nao e um crash-loop
+         * permanente como o caso da tenant: um restart subsequente e nao-concorrente encontra a
+         * linha do vencedor e prossegue normalmente. Aceite tal e qual, sem try/catch adicional,
+         * pela mesma razao de {@code seedTenantPlataforma()}.
          */
         private void seedUtilizadorPlataforma(Tenant tenantPlataforma) {
                 Role plataformaAdminRole = roleRepository.findByNome("PLATAFORMA_ADMIN")

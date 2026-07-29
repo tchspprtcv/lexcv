@@ -160,7 +160,7 @@ class DatabaseSeederPlataformaAdminTest {
         when(systemSettingRepository.findById(SystemSetting.SINGLETON_ID)).thenReturn(Optional.empty());
 
         Tenant tenantExistente = Tenant.builder().id(UUID.randomUUID()).nome(NOME_TENANT_PLATAFORMA).build();
-        when(tenantRepository.findByNome(NOME_TENANT_PLATAFORMA)).thenReturn(Optional.of(tenantExistente));
+        when(tenantRepository.findFirstByNome(NOME_TENANT_PLATAFORMA)).thenReturn(Optional.of(tenantExistente));
 
         User utilizadorExistente = User.builder()
                 .id(UUID.randomUUID())
