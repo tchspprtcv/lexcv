@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: executing
-stopped_at: Completed 117-01-PLAN.md
-last_updated: "2026-07-29T01:14:23.587Z"
+status: verifying
+stopped_at: Completed 117-02-PLAN.md
+last_updated: "2026-07-29T01:28:49.365Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 14
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 Phase: 117 (Backend — Limite de Utilizadores por Tenant) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-29
 
 ## Performance Metrics
@@ -99,6 +99,7 @@ Last activity: 2026-07-29
 | Phase 114 P01 | 18min | 3 tasks | 32 files |
 | Phase 116 P01 | 7min | 3 tasks | 3 files |
 | Phase 117 P01 | 9min | 2 tasks | 5 files |
+| Phase 117 P02 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,7 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full per-phase decision log has been cleared here at the v2.15 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.14-ROADMAP.md`, `.planning/milestones/v2.15-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
 
 - [Phase 117]: Tenant.limiteUtilizadores is a nullable Integer (never int, no -1/MAX_VALUE sentinel) — null is the sole 'sem limite' contract; UserRepository.countByTenantIdAndAtivoTrue is a pure derived query (no @Query), the single reusable active-user count for Plan 02 and later Phases 120/122 — 117-01 data-layer plan (TenantPlano enum, Tenant fields, migration) executed exactly as specified, no deviations
+- [Phase 117]: RED/GREEN committed as two separate atomic commits (test then feat) for the tdd=true task in 117-02, so git history shows the test genuinely failing to compile before the fix lands — Plan type is execute (not tdd), but preserving an accurate gate sequence matches the workflow's own TDD gate-compliance checks and costs nothing extra
 
 ### Pending Todos
 
@@ -212,8 +214,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T01:14:23.570Z
-Stopped at: Completed 117-01-PLAN.md
+Last session: 2026-07-29T01:28:49.348Z
+Stopped at: Completed 117-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

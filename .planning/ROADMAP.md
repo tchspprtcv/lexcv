@@ -349,7 +349,7 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
   4. A contagem de "utilizadores ativos" usada para o limite é uma única função/consulta reutilizável, não duplicada — as Phases 120 e 122 vão reutilizá-la para a consola de tenants e o relatório de utilização
 **Plans**: 2 plans (2 waves)
 - [x] 117-01-PLAN.md — Camada de dados: enum `TenantPlano`, campos `plano`/`limiteUtilizadores` em `Tenant`, contagem reutilizável `UserRepository.countByTenantIdAndAtivoTrue` (fonte única para as Phases 120/122) e migração manual `117-add-tenant-plano-limite-utilizadores.sql` com backfill `ENTERPRISE`/`NULL` do tenant existente
-- [ ] 117-02-PLAN.md — Enforcement em `AdminController.createUser`: `409 CONFLICT` no limite, `201` abaixo, `null` sem limite, vaga libertada de imediato ao desativar — provado por teste Mockito de 4 casos escrito primeiro, mais gate de regressão/SAST e verificação das mitigações STRIDE
+- [x] 117-02-PLAN.md — Enforcement em `AdminController.createUser`: `409 CONFLICT` no limite, `201` abaixo, `null` sem limite, vaga libertada de imediato ao desativar — provado por teste Mockito de 4 casos escrito primeiro, mais gate de regressão/SAST e verificação das mitigações STRIDE
 
 #### Phase 118: Frontend — Indicador de Utilizadores no Limite
 
@@ -505,7 +505,7 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 | 115. Linguagem Visual — Ícones + Filtros Ícone-Only | v2.14 | 11/11 | Complete    | 2026-07-22 |
 | 115.1. Melhorias Técnicas (INSERTED) | v2.14 | 3/3 | Complete    | 2026-07-22 |
 | 116. Reposicionamento Institucional — Fim das Referências a NOSi | v2.15 | 1/1 | Complete    | 2026-07-27 |
-| 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 1/2 | In Progress|  |
+| 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 0/TBD | Not started | - |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 0/TBD | Not started | - |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 0/TBD | Not started | - |

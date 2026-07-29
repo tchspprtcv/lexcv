@@ -12,9 +12,9 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 ### PLAN — Limite de Utilizadores
 
 - [x] **PLAN-01**: Tenant tem campos `plano` e `limite_utilizadores`
-- [ ] **PLAN-02**: Criar utilizador é bloqueado (409) quando o tenant atinge `limite_utilizadores` (conta só `ativo=true`)
+- [x] **PLAN-02**: Criar utilizador é bloqueado (409) quando o tenant atinge `limite_utilizadores` (conta só `ativo=true`)
 - [ ] **PLAN-03**: Frontend mostra "X/Y utilizadores" e desativa "novo utilizador" no limite
-- [ ] **PLAN-04**: Desativar utilizador liberta vaga imediatamente no limite
+- [x] **PLAN-04**: Desativar utilizador liberta vaga imediatamente no limite
 
 ### PROV — Provisionamento Multi-Tenant
 
@@ -67,9 +67,9 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PLAN-01 | Phase 117 | Complete |
-| PLAN-02 | Phase 117 | Pending |
+| PLAN-02 | Phase 117 | Complete |
 | PLAN-03 | Phase 118 | Pending |
-| PLAN-04 | Phase 117 | Pending |
+| PLAN-04 | Phase 117 | Complete |
 | PROV-01 | Phase 119 | Pending |
 | PROV-02 | Phase 120 | Pending |
 | PROV-03 | Phase 120 | Pending |
