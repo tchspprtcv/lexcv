@@ -453,7 +453,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 120-06-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante, 2 janelas de browser): prova que suspender um tenant corta uma sessão **já aberta** no pedido seguinte, sem logout nem re-login; mais criação de um 2º tenant real pela consola e `403` confirmado para um ADMIN de escritório nos 3 endpoints
+- [x] 120-06-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante, 2 janelas de browser): prova que suspender um tenant corta uma sessão **já aberta** no pedido seguinte, sem logout nem re-login; mais criação de um 2º tenant real pela consola e `403` confirmado para um ADMIN de escritório nos 3 endpoints
 
 **UI hint**: yes
 
@@ -583,7 +583,7 @@ Plans:
 | 117. Backend — Limite de Utilizadores por Tenant | v2.16 | 2/2 | Complete   | 2026-07-29 |
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 120. Frontend — Consola de Administração de Tenants | v2.16 | 5/6 | In Progress|  |
+| 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 0/TBD | Not started | - |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
