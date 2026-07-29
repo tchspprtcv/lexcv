@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 119-02-PLAN.md
-last_updated: "2026-07-29T07:52:54.224Z"
+stopped_at: Completed 119-03-PLAN.md
+last_updated: "2026-07-29T08:14:02.083Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 29
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 119 (Backend — Papel de Administrador de Plataforma e Provisionamento) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -104,6 +104,7 @@ Last activity: 2026-07-29
 | Phase 118 P02 | 8min | 2 tasks | 4 files |
 | Phase 119 P01 | ~20min | 2 tasks | 3 files |
 | Phase 119 P02 | 11min | 2 tasks | 3 files |
+| Phase 119 P03 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 119]: Demo-block guard counts hoisted into bdVaziaAntesDoSeedPlataforma, read before seedTenantPlataforma() inserts any row — the reserved tenant is now unconditional, so reading the three counts after its insert would permanently poison the genuinely-empty-database gate and silently stop the demo block from ever seeding on a fresh SEED_ENABLED=true database
 - [Phase 119]: provisionTenant placed immediately after initializeSystem and before validateRequest in SetupService.java, reusing validateRequest/normalizeLogo as-is (no duplication) -- zero SystemSettingRepository interaction, repeatable, returns saved Tenant instead of void since Plan 04 needs id/nome for its 201 body
 - [Phase 119]: TenantProvisionResponse Javadoc deliberately avoids spelling out excluded field names as literal words -- the plan's informal acceptance-criteria grep pattern (no 'private .*;' wrapper) would false-positive on a comment listing those words, even though the stricter automated verify gate would not
+- [Phase 119]: PLATAFORMA_ADMIN containment guards in AdminController scan the entire submitted roles list (not just the first element) with exact String equality, before any role-lookup or persistence, across createUser/updateUser/getRbac/updateRbac — Closes the self-escalation vector Plan 04's hasRole('PLATAFORMA_ADMIN') gate structurally depends on (T-119-01) -- a tenant ADMIN could otherwise self-promote via createUser/updateUser once the role exists, satisfy the gate, and reach POST /api/v1/platform/tenants
 
 ### Pending Todos
 
@@ -226,8 +228,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T07:52:54.202Z
-Stopped at: Completed 119-02-PLAN.md
+Last session: 2026-07-29T08:14:02.057Z
+Stopped at: Completed 119-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
