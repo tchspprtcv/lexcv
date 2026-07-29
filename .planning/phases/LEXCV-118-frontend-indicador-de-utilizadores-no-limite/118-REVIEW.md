@@ -1,6 +1,6 @@
 ---
 phase: LEXCV-118-frontend-indicador-de-utilizadores-no-limite
-reviewed: 2026-07-29T05:17:41Z
+reviewed: 2026-07-29T05:55:53Z
 depth: standard
 files_reviewed: 4
 files_reviewed_list:
@@ -10,86 +10,79 @@ files_reviewed_list:
   - web/scripts/verify-limite-utilizadores-indicator.mjs
 findings:
   critical: 0
-  warning: 4
+  warning: 3
   info: 3
-  total: 7
+  total: 6
 status: issues_found
 ---
 
 # Phase LEXCV-118-frontend-indicador-de-utilizadores-no-limite: Code Review Report
 
-**Reviewed:** 2026-07-29T05:17:41Z
+**Reviewed:** 2026-07-29T05:55:53Z
 **Depth:** standard
 **Files Reviewed:** 4
-**Status:** issues_found (0 blocking)
+**Status:** issues_found (0 blocking) — FINAL RE-REVIEW after fix pass
 
 ## Summary
 
-Phase 118 extends `GET /api/v1/auth/me` with `tenant_plano`/`tenant_limite_utilizadores` and adds an "X/Y utilizadores" indicator plus a disabled-button-with-firing-tooltip to `UserManagementTab`. I read all four files in full, cross-referenced them against `AdminController.limiteUtilizadoresExcedido` (the backend's authoritative 409 enforcement, Phase 117), the dedicated `AuthControllerGetMeTenantPlanoTest`, and the phase's own planning artifacts (`118-CONTEXT.md`, `118-UI-SPEC.md`, `118-02-PLAN.md`, `118-02-SUMMARY.md`), then independently re-ran `pnpm verify:limite-utilizadores` (8/8 PASS) and `pnpm lint` (0 errors, the same 18 pre-existing warnings, none in the touched files) rather than trusting the SUMMARY's claims.
+This is the final re-review of Phase 118, run after a targeted fix pass addressing two Warnings from the prior review (`118-REVIEW.md`, reviewed 2026-07-29T05:17:41Z): **WR-01** (`tenant_plano`'s frontend type omitted `| null`) and **WR-02** (`UserManagementTab` never surfaced `useAdminUsers`'s `isError` state). Per the requesting instructions, WR-03/WR-04 were left as-is (accepted trade-offs, not re-litigated unless materially changed — confirmed they weren't) and IN-01/IN-02/IN-03 were left untouched in substance (out of scope), carried forward here with line-number citations refreshed only where WR-02's fix physically shifted later code in `settings/page.tsx` down by 15 lines.
 
-Verdicts on the four areas flagged for particular attention:
+**Methodology:** re-read all four files in full at current HEAD; located and independently diffed the two fix commits (`6ff042b` — WR-01, `a18217c` — WR-02); re-ran `node scripts/verify-limite-utilizadores-indicator.mjs` (8/8 PASS, including both assertions that changed); ran `npx eslint` against both touched files (0 errors — the sole warning, `@next/next/no-img-element` on the pre-existing avatar `<img>` in `settings/page.tsx`, predates both fixes and sits outside both diffs); ran `npx tsc --noEmit` (0 errors touching either reviewed file — 3 pre-existing `vitest`-module-resolution errors in unrelated `*.test.ts` files, outside review scope and outside both diffs); re-grepped `tenant_plano` / `tenant_limite_utilizadores` across `web/src` to confirm consumer counts are unchanged; and confirmed via `git log` that `AuthController.java` and `UserResponse.java` are untouched since before the original review (last touched `fa5cf83`, 2026-07-29 02:52 local — over two hours before the fix commits), so WR-04's backend analysis required no re-verification.
 
-1. **Exposing `tenant_plano`/`tenant_limite_utilizadores` to every authenticated role via `/auth/me`** — appropriate and consistent with the existing `tenant_nome`/`tenant_logo_data_url` precedent; `/auth/me` itself is correctly gated behind authentication only (not `permitAll`, confirmed in `SecurityConfig`), and this was a deliberate, threat-modeled decision (`118-02-PLAN.md` `T-118-07`, disposition "accept"). See WR-04 for the residual least-privilege trade-off worth recording, and IN-01 for a related dead-code observation specific to `tenant_plano`.
-2. **Disabled-Button + Tooltip composition** — correct. `TooltipProvider` is mounted once at the app root (`providers.tsx:30`), the `<span tabIndex={0}>` wraps the natively-`disabled` `<Button>` as the real `TooltipTrigger asChild` target (required because `buttonVariants` bakes in `disabled:pointer-events-none`), and the ordering/adjacency is independently verified by the executable `span-wrapper-tooltip` gate, which I re-ran and confirmed passing. See IN-02 for a minor, hedged accessible-naming nuance and IN-03 for a gap in the gate script's own rigor.
-3. **Generalized `API NNN: ` prefix-stripping regex** — the regex itself (`/^API \d{3}: /`) is correct: anchored, matches the exact `API ${status}: ` prefix `apiFetch` always throws, and status codes are always 3 digits. See WR-03 for a real (but pre-existing and explicitly out-of-scope-by-plan) duplicate-toast side effect that this exact code path inherits.
-4. **`null`-means-unlimited semantics** — preserved correctly at every hop for `tenant_limite_utilizadores` specifically (`Tenant.limiteUtilizadores` → `UserResponse.tenant_limite_utilizadores` → `MeResponse.tenant_limite_utilizadores?: number | null` → `?? null` → `!== null` comparison, never a truthy/falsy shortcut, `0` handled correctly). However, the sibling field `tenant_plano` does **not** get the same `| null` treatment in its TypeScript type despite the backend provably sending `null` for it — see WR-01, the most concrete finding in this review.
+**WR-01 — VERIFIED FIXED, correct and complete, no regressions.**
+**WR-02 — VERIFIED FIXED, correct and complete, no regressions.**
+See "Resolved Since Previous Review" below for the evidence trail per finding.
 
-No Critical findings. The four Warnings below split into two genuinely new, actionable observations (WR-01, WR-02) and two real-but-consciously-accepted trade-offs that this repo's review convention (see `117-REVIEW.md` WR-01/WR-02) records rather than omits (WR-03, WR-04).
+**WR-03 and WR-04 — unchanged**, carried forward verbatim as accepted, documented trade-offs; their cited source lines are confirmed byte-identical to the prior review (neither `handleFormSubmit`'s catch block nor `AuthController.getMe()`'s tenant block were touched by this fix pass, and `web/src/lib/api.ts` — WR-03's other reference — hasn't changed since June).
+
+**IN-01, IN-02, IN-03 — unchanged in substance**; IN-02 and IN-03's line citations are refreshed to match the current file state.
+
+One new, narrowly-scoped observation surfaced during this pass's full re-read of `settings/page.tsx` and is recorded as **WR-05**: `RbacTab` — a different tab in the same file, untouched by either fix and outside Phase 118's "X/Y utilizadores" feature scope — has no `isError` branch at all. Unlike the pre-fix `UserManagementTab`, its failure mode isn't a misleading count; it's a permanent, un-escapable loading spinner. This is pre-existing, was not introduced by this fix pass, and does not block Phase 118 — recorded here for a fast-follow rather than left undiscovered.
+
+## Final Verdict — Phase 118: APPROVED TO SHIP
+
+No Critical findings, now or previously. Both WR-01 and WR-02 are verified correct, complete, and regression-free through independent re-execution of the project's own verification script, linter, and type checker, plus direct source inspection, a fresh consumer-count grep, and a git-history check confirming the backend was never in the blast radius of this fix pass. Nothing else in the four reviewed files regressed. The phase is safe to close: the two carried-forward Warnings (WR-03, WR-04) remain intentional, already-adjudicated trade-offs from the original review, and the newly-surfaced WR-05 belongs to a different tab/feature than Phase 118 delivered and does not block it.
+
+## Resolved Since Previous Review
+
+### WR-01 (RESOLVED): `tenant_plano`'s frontend type omitted `| null`
+
+**File:** `web/src/types/auth.ts:29`
+**Fix commit:** `6ff042b` — "fix(118): WR-01 add missing null to tenant_plano type"
+
+**Verification performed:**
+- Current line 29 reads `tenant_plano?: string | null;`, now matching sibling field `tenant_limite_utilizadores?: number | null;` (line 30) — the asymmetry the original finding was built on is gone.
+- Re-confirmed the full backend chain that motivated the finding is unchanged and still consistent with the new type: `UserResponse.tenant_plano` is `private String tenant_plano;` (nullable reference type, `backend/src/main/java/com/lexcv/dtos/UserResponse.java:26`); `AuthController.getMe()` still assigns `t.getPlano() != null ? t.getPlano().name() : null` (`AuthController.java:172`, byte-identical to the prior review); `AuthControllerGetMeTenantPlanoTest.java` still exists at `backend/src/test/java/com/lexcv/controllers/` and is untouched.
+- `grep -rn "tenant_plano" web/src` still returns only the type declaration itself — no consumers exist, so widening the type to include `null` has zero ripple effect on any call site (nothing to break).
+- The verify script's own `types-auth-tenant-plano` assertion was updated in the same commit (it previously asserted the pre-fix `tenant_plano?: string;` substring, which would otherwise now fail against the corrected type) — re-ran the script and confirmed `PASS types-auth-tenant-plano`.
+- `npx tsc --noEmit`: no errors touching `auth.ts` or any of its consumers.
+
+**Verdict:** Correct and complete. No regressions.
+
+### WR-02 (RESOLVED): `UserManagementTab` didn't surface `useAdminUsers`'s error state
+
+**File:** `web/src/app/(dashboard)/settings/page.tsx:181, 346-359`
+**Fix commit:** `a18217c` — "fix(118): WR-02 surface error state when user list fails to load"
+
+**Verification performed:**
+- Line 181 now destructures `isError` and `refetch`: `const { data: users, isLoading, isError, refetch } = useAdminUsers();`.
+- A new guard at lines 346-359 returns early on `isError`, before `filteredUsers` is computed (line 361) and before the indicator/button/table JSX (line 367 onward) can render — so the entire "X/Y utilizadores" card, including the create-button gate, is now correctly unreachable while the fetch is in a failed state. This closes the exact defect WR-02 described: a failed `GET /admin/users` can no longer render a false "0 utilizadores" with "Novo Utilizador" left enabled.
+- Directly compared the new block against the pre-existing `NotificationPreferencesTab` error state in the same file (lines 957-970) rather than trusting the commit message's claim of a match — they are structurally identical (`AlertCircle` icon + message paragraph + `Button variant="outline" size="sm" onClick={() => refetch()}` with `RotateCcw` + "Tentar novamente"), differing only in the message copy ("lista de utilizadores" vs. "preferências de notificação").
+- `useAdminUsers()` (`web/src/hooks/use-admin.ts:7-16`) is a bare `useQuery(...)` passthrough with no custom return-shape narrowing, so `isError`/`refetch` are genuine, correctly-typed members of its return value — confirmed by reading the hook, not assumed.
+- `AlertCircle`, `RotateCcw`, and `Button` were already imported in this file before the fix; no new imports needed, none missing.
+- Checked adjacent logic for regressions: `activeUserCount`/`tenantUserLimit`/`atUserLimit`/`userCountLabel` (lines 202-211) are computed *before* the new guard, using `users?.filter(...) ?? 0`, so they remain crash-safe regardless of `isError`; they are simply never rendered when `isError` short-circuits the return, since they live below the new guard in the JSX. `RbacTab`'s own `refetch` (from a separate `useAdminRbac()` call, separate component scope) does not collide with this one. On TanStack Query v5 (confirmed via `web/package.json`), a failed *background* refetch after a prior successful load does not flip `isError` back to `true` while cached data still exists, so this new guard cannot unexpectedly interrupt an in-progress edit/create form session.
+- Re-ran `node scripts/verify-limite-utilizadores-indicator.mjs`: 8/8 PASS — none of the 8 assertions target this exact branch, but none regressed either.
+- `npx eslint` / `npx tsc --noEmit`: no new errors attributable to this change.
+
+**Verdict:** Correct and complete. No regressions.
 
 ## Warnings
 
-### WR-01: `tenant_plano`'s frontend type omits `| null`, contradicting the backend's own tested contract
-
-**File:** `web/src/types/auth.ts:29`
-
-**Issue:** `tenant_plano?: string;` claims the field is `string | undefined` — never `null`. But `AuthController.getMe()` explicitly sends `null` when the tenant has no plan:
-
-```java
-// backend/src/main/java/com/lexcv/controllers/AuthController.java:172-173
-response.setTenant_plano(t.getPlano() != null ? t.getPlano().name() : null);
-response.setTenant_limite_utilizadores(t.getLimiteUtilizadores());
-```
-
-and this exact case is dedicated-tested: `AuthControllerGetMeTenantPlanoTest.getMe_comPlanoNull_naoLancaNullPointerException` asserts `assertNull(body.getTenant_plano())`. Because `apiFetch` does an unchecked `(await res.json()) as TResponse` with no runtime schema validation, `me.tenant_plano` really can be `null` at runtime while its static type says it can't be. The very next line in the same interface, `tenant_limite_utilizadores?: number | null;`, correctly carries `| null` for the identical nullable-tenant-column pattern — the asymmetry confirms this is an omission, not an intentional choice. Currently latent (no code in `web/src` reads `tenant_plano` — see IN-01), so nothing crashes today, but the first future consumer that does `me.tenant_plano.toLowerCase()` or similar without a null guard (Phase 120, per `118-02-SUMMARY.md`, is expected to touch this exact area next) will get an unguarded runtime `TypeError` that TypeScript should have caught.
-
-**Fix:**
-```typescript
-export interface MeResponse {
-  // ...
-  tenant_plano?: string | null;
-  tenant_limite_utilizadores?: number | null;
-}
-```
-
-### WR-02: New "X/Y utilizadores" indicator silently reports "0 utilizadores" (and leaves "Novo Utilizador" enabled) when the user list fails to load
-
-**File:** `web/src/app/(dashboard)/settings/page.tsx:181, 202-211, 338-344`
-
-**Issue:** `const { data: users, isLoading } = useAdminUsers();` never destructures `isError`. When `GET /admin/users` fails — network error, backend 5xx, or a permission mismatch (a user granted only the `users:manage` custom permission override, via the RBAC tab's own "Permissões Customizadas" feature, satisfies the frontend's `hasUsersManage = can.manage("users") || isAdmin` gate but not `AdminController`'s class-level `@PreAuthorize("hasRole('ADMIN')")`, so the request would 403) — TanStack Query settles with `isLoading: false`, `data: undefined`, `isError: true`. Nothing in `UserManagementTab` branches on that: execution falls through the `if (isLoading) return <Loader2 .../>` guard and renders the full card. `activeUserCount = users?.filter((u) => u.ativo === true).length ?? 0` silently becomes `0`, so the new counter confidently reads "0 utilizadores" (or "0/Y utilizadores"), and because `0 >= Y` is false for any real limit, "Novo Utilizador" stays fully enabled. This inverts the fail-safe posture the rest of the feature is careful about (an unknown/absent limit is deliberately never treated as "0 seats," per `118-CONTEXT.md`) — here an unknown/failed *count* is presented as "definitely zero, plenty of headroom" instead of "unknown." The backend 409 remains the authoritative gate (no over-limit user can actually be persisted), so this is a display/UX correctness bug, not a data-integrity one — but it is misleading exactly when an admin needs the number to be trustworthy.
-
-**Fix:**
-```tsx
-const { data: users, isLoading, isError } = useAdminUsers();
-// ...
-if (isLoading) {
-  return ( /* existing Loader2 */ );
-}
-if (isError) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 h-48 text-center px-4">
-      <AlertCircle className="h-6 w-6 text-red-500" />
-      <p className="text-sm text-slate-600 dark:text-slate-400">
-        Não foi possível carregar a lista de utilizadores.
-      </p>
-    </div>
-  );
-}
-```
-(`AlertCircle` is already imported in this file for the Notifications tab's equivalent error state, so this mirrors an existing pattern rather than introducing a new one.)
-
-### WR-03: `handleFormSubmit`'s local error toast duplicates the automatic toast `apiFetch` already shows — including for the new 409 "limite atingido" path
+### WR-03: `handleFormSubmit`'s local error toast duplicates the automatic toast `apiFetch` already shows — including for the 409 "limite atingido" path
 
 **File:** `web/src/app/(dashboard)/settings/page.tsx:310-317`
+
+**Status:** Unchanged since the prior review. Confirmed byte-identical (not touched by either fix commit); `web/src/lib/api.ts` (the other file this finding depends on) hasn't changed since 2026-06-17. Carried forward per instruction — not re-flagged as new, not re-analyzed.
 
 **Issue:** `apiFetch` (`web/src/lib/api.ts:43-44`) already calls `toast.error(...)` for every failed request except 401/403. `handleFormSubmit`'s `catch` block unconditionally calls `toast.error(msg)` again after stripping the prefix:
 ```tsx
@@ -102,17 +95,81 @@ if (isError) {
   toast.error(msg || "Erro ao gravar dados.");
 }
 ```
-Any create/update-user failure — including the 409 this exact phase adds UI for — stacks two Sonner toasts: "Erro 409: Limite de utilizadores atingido para o vosso plano." (from `apiFetch`) and "Limite de utilizadores atingido para o vosso plano." (from this block). This is pre-existing, file-wide behavior, not introduced by this phase, and it is explicitly, knowingly out of scope: `118-02-PLAN.md`'s Task 1 forbids touching `api.ts` and states verbatim "o duplo-toast (automático + local) é comportamento pré-existente para todos os erros e não é alterado por esta fase." Recorded here (per this repo's own review convention — see `117-REVIEW.md` WR-01/WR-02 for the same "accepted, documented trade-off" treatment) because the regex change under review in this pass sits directly inside the block that produces it, and the 409 flow this phase surfaces is the most likely real-world trigger.
+Any create/update-user failure — including the 409 this phase adds UI for — stacks two Sonner toasts. This is pre-existing, file-wide behavior, not introduced by this phase, and is explicitly, knowingly out of scope per `118-02-PLAN.md` Task 1 ("o duplo-toast (automático + local) é comportamento pré-existente para todos os erros e não é alterado por esta fase").
 
-**Fix:** No action required this phase — matches the explicit, documented scope decision above. If ever addressed, drop the second `toast.error(msg)` call here (keep only `setMessage(...)` for the inline banner) rather than duplicating `apiFetch`'s own toast, or centralize prefix-stripping inside `apiFetch` itself so every call site in the app gets a single clean toast for free.
+**Fix:** No action required this phase — matches the explicit, documented scope decision. If ever addressed: drop the second `toast.error(msg)` call here (keep only `setMessage(...)` for the inline banner), or centralize prefix-stripping inside `apiFetch` itself.
 
 ### WR-04: `tenant_plano`/`tenant_limite_utilizadores` reach every authenticated role via `/auth/me`, not just ADMIN/`users:manage`
 
 **File:** `backend/src/main/java/com/lexcv/controllers/AuthController.java:169-174`
 
-**Issue:** `getMe()` has no `@PreAuthorize`/role check by design (it's the self-info endpoint), so any authenticated user — including an ASSISTENTE with no administrative permissions — can read the tenant's subscription plan and contracted user-seat limit simply by calling `GET /api/v1/auth/me`. Unlike `tenant_nome`/`tenant_logo_data_url` (consumed broadly for branding across the authenticated app, so universal exposure has a genuine cross-role use case — confirmed via `dashboard-shell.tsx` and other consumers), `tenant_plano`/`tenant_limite_utilizadores` currently have exactly one consumer in the entire frontend (`UserManagementTab`, gated behind `hasUsersManage`); every other role receives billing-tier/seat-capacity data with no legitimate use for it. This is a deliberate, threat-modeled decision (`118-CONTEXT.md` "Backend gap" section; `118-02-PLAN.md` `T-118-07`, disposition "accept" — reasoning: mirrors the `tenant_nome` precedent, low sensitivity, render surface stays client-side-gated), and `/auth/me` itself is correctly behind authentication (confirmed in `SecurityConfig`, not in the `permitAll()` list). Recording as a Warning per this codebase's own convention for consciously-accepted trade-offs: CLAUDE.md states the `scope:action` RBAC pattern requires "both layers must agree," and this is a case where only the frontend layer gates the *display* of tenant-capacity data while the backend gates none of its *exposure* — a nominal (if low-impact) exception to that stated rule.
+**Status:** Unchanged since the prior review. `AuthController.java` has had no commits since `fa5cf83` (2026-07-29 02:52 local), which predates both fix commits and the original review itself. Carried forward per instruction — not re-flagged as new, not re-analyzed.
+
+**Issue:** `getMe()` has no `@PreAuthorize`/role check by design (self-info endpoint), so any authenticated user — including an ASSISTENTE with no administrative permissions — can read the tenant's subscription plan and contracted user-seat limit via `GET /api/v1/auth/me`. Unlike `tenant_nome`/`tenant_logo_data_url` (consumed broadly for branding, genuine cross-role use case), `tenant_plano`/`tenant_limite_utilizadores` currently have exactly one consumer in the entire frontend (`UserManagementTab`, gated behind `hasUsersManage`). This is a deliberate, threat-modeled decision (`118-CONTEXT.md` "Backend gap" section; `118-02-PLAN.md` `T-118-07`, disposition "accept"), and `/auth/me` itself is correctly behind authentication (not in `SecurityConfig`'s `permitAll()` list).
 
 **Fix:** No action required this phase — accept as documented, low-sensitivity, precedent-consistent. If tightened later, either scope these two fields to principals satisfying `hasRole('ADMIN')`/`users:manage` before populating them in `getMe()`, or formally document `/auth/me` as an intentional exception to CLAUDE.md's "both layers must agree" rule for non-PII, plan-capacity-only fields.
+
+### WR-05 (NEW — outside Phase 118's feature scope, non-blocking): `RbacTab` has no error state at all; a failed `GET /admin/rbac` produces a permanent, un-escapable loading spinner
+
+**File:** `web/src/app/(dashboard)/settings/page.tsx:761, 769-778`
+
+**Issue:** `RbacTab` (the "Controlo de Acesso (RBAC)" tab, adjacent to but distinct from `UserManagementTab`) destructures `useAdminRbac()` without `isError`:
+```tsx
+const { data: rbac, isLoading, refetch } = useAdminRbac();
+...
+const effectiveRolePermissions =
+  localRolePermissions ?? (rbac?.rolePermissions as RolePermissionsMap | undefined);
+
+if (isLoading || !effectiveRolePermissions) {
+  return (
+    <div className="flex justify-center items-center h-48">
+      <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+    </div>
+  );
+}
+```
+When `GET /admin/rbac` fails (network error, 5xx, or a permission mismatch), TanStack Query settles with `isLoading: false`, `data: undefined`, `isError: true`. Because `rbac` is `undefined` and `localRolePermissions` is still `null` (the user never got a chance to interact), `effectiveRolePermissions` evaluates to `undefined`, so `!effectiveRolePermissions` stays `true` forever — the component is permanently stuck in the *same* branch as the loading state, rendering an infinite spinner with no error message and no retry button. This is a strictly worse failure mode than the pre-fix `UserManagementTab` bug (WR-02): there, the UI at least rendered something interactive (if misleading); here, the tab becomes permanently unusable until a full page reload. `refetch` is captured but only ever invoked later, from `handleSave`'s success path (line 813) — there is no user-facing way to trigger it from the stuck loading state.
+
+This is pre-existing (not introduced by the WR-01/WR-02 fix commits — neither touches `RbacTab`) and sits outside Phase 118's delivered feature ("X/Y utilizadores" indicator in `UserManagementTab`), so it does not block this phase. Recorded here because it was directly observed during this pass's mandated full re-read of `settings/page.tsx`, and per this review's own adversarial mandate it should be surfaced rather than left for someone to rediscover.
+
+**Fix:**
+```tsx
+function RbacTab() {
+  const { data: rbac, isLoading, isError, refetch } = useAdminRbac();
+  ...
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-48 text-center px-4">
+        <AlertCircle className="h-6 w-6 text-red-500" />
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Não foi possível carregar a matriz de permissões (RBAC).
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RotateCcw className="h-4 w-4" />
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  }
+
+  if (!effectiveRolePermissions) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+  ...
+```
+(Mirrors the exact pattern now used by both `NotificationPreferencesTab` and, post-WR-02-fix, `UserManagementTab` — three near-identical hand-written copies of this block now exist in the same file; a shared `<QueryErrorState onRetry={refetch} message={...} />` component would be a reasonable follow-up to avoid a fourth divergence, but that is a suggestion, not a requirement of this fix.)
 
 ## Info
 
@@ -120,15 +177,19 @@ Any create/update-user failure — including the 409 this exact phase adds UI fo
 
 **File:** `web/src/types/auth.ts:29`; `backend/src/main/java/com/lexcv/controllers/AuthController.java:172`
 
-**Issue:** A repo-wide search (`grep -rn "tenant_plano" web/src`) finds only the type declaration itself — no component reads `me.tenant_plano` anywhere. This is intentional forward-scaffolding (the two fields were added together per the JSON contract Plan 01 delivered, likely anticipating Phase 120's plan/limit-editing UI), but as shipped it is exposed, backend-tested, typed dead data with no current reader.
+**Status:** Unchanged in substance; left untouched per instruction. Re-confirmed via a fresh grep that the consumer count is still zero even after WR-01 widened the type to `string | null` (a type change alone cannot add a consumer).
 
-**Fix:** No action required if a near-term consumer is confirmed (e.g. Phase 120 PROV-04). Otherwise, consider deferring `tenant_plano`'s addition to `/auth/me` until it has one, to minimize speculative surface (see also WR-04).
+**Issue:** A repo-wide search (`grep -rn "tenant_plano" web/src`) finds only the type declaration itself — no component reads `me.tenant_plano` anywhere. This is intentional forward-scaffolding (likely anticipating a future plan/limit-editing UI), but as shipped it is exposed, backend-tested, typed dead data with no current reader.
+
+**Fix:** No action required if a near-term consumer is confirmed. Otherwise, consider deferring `tenant_plano`'s addition to `/auth/me` until it has one (see also WR-04).
 
 ### IN-02: The focusable tooltip-trigger `<span>` around the disabled "Novo Utilizador" button carries no accessible name of its own
 
-**File:** `web/src/app/(dashboard)/settings/page.tsx:386-402`
+**File:** `web/src/app/(dashboard)/settings/page.tsx:402-418` (previously cited as `386-402`; shifted by WR-02's 16-line insertion earlier in the file — same code, refreshed citation only)
 
-**Issue:** `<span tabIndex={0}>` is the real `TooltipTrigger asChild` target (necessarily so — `disabled:pointer-events-none` on `Button` would otherwise kill hover/focus, and the executable gate correctly enforces this wrapper exists). `118-02-PLAN.md`'s Task 2 explicitly decided against adding any manual ARIA attribute to the span, reasoning that Radix already wires `aria-describedby` from the trigger to the tooltip content. `aria-describedby` supplies a *description*, not an accessible *name*, though — worth validating with an actual screen reader (NVDA/VoiceOver) that focusing the span announces something meaningful (e.g. via name-from-content of the nested disabled `<button>`'s visible text) rather than nothing, since cross-engine behavior for a bare, unnamed, tabbable `<span>` wrapping a `disabled` button is not fully consistent. Flagged as a hedged, low-confidence observation, not an asserted defect — the plan's reasoning may well be correct in practice.
+**Status:** Unchanged in substance; left untouched per instruction.
+
+**Issue:** `<span tabIndex={0}>` (line 404) is the real `TooltipTrigger asChild` target (necessarily so — `disabled:pointer-events-none` on `Button` would otherwise kill hover/focus). `118-02-PLAN.md`'s Task 2 explicitly decided against adding a manual ARIA attribute to the span, reasoning that Radix already wires `aria-describedby` from the trigger to the tooltip content. `aria-describedby` supplies a *description*, not an accessible *name*, though — worth validating with an actual screen reader (NVDA/VoiceOver) that focusing the span announces something meaningful rather than nothing. Flagged as a hedged, low-confidence observation, not an asserted defect.
 
 **Fix (optional, only if manual verification shows a gap):**
 ```tsx
@@ -137,13 +198,15 @@ Any create/update-user failure — including the 409 this exact phase adds UI fo
 
 ### IN-03: `span-wrapper-tooltip` gate's `hasDisabled` check doesn't confirm `disabled` is actually on the wrapped `<Button>`
 
-**File:** `web/scripts/verify-limite-utilizadores-indicator.mjs:144, 149`
+**File:** `web/scripts/verify-limite-utilizadores-indicator.mjs:145` (previously cited as `144`; the WR-01 commit edited an unrelated, earlier assertion block in the same file — same code, refreshed citation only)
+
+**Status:** Unchanged in substance; left untouched per instruction. Confirmed the WR-01 fix commit did not touch the `span-wrapper-tooltip` assertion (lines 133-151) — only the earlier, unrelated `types-auth-tenant-plano` assertion.
 
 **Issue:**
 ```js
 const hasDisabled = /\bdisabled\b/.test(block);
 ```
-This tests for the word "disabled" anywhere in the whole delimited `<Tooltip>...</Tooltip>` block, not specifically as a JSX attribute on the `<Button>` element. It passes correctly today because the only occurrence happens to be `<Button disabled ...>`, but it would equally pass if `disabled` appeared in an unrelated class name or string elsewhere in the same block, which would silently weaken this gate's one job: catching a future regression where the `disabled` attribute is accidentally dropped from `Button` while some other "disabled"-containing token remains nearby in the same Tooltip.
+This tests for the word "disabled" anywhere in the whole delimited `<Tooltip>...</Tooltip>` block, not specifically as a JSX attribute on the `<Button>` element. It passes correctly today because the only occurrence happens to be `<Button disabled ...>`, but it would equally pass if "disabled" appeared in an unrelated class name or string elsewhere in the same block, weakening this gate's ability to catch a future regression where the `disabled` attribute is accidentally dropped from `Button`.
 
 **Fix:**
 ```js
@@ -152,6 +215,7 @@ const hasDisabled = /<Button\b[^>]*\bdisabled\b/.test(block);
 
 ---
 
-_Reviewed: 2026-07-29T05:17:41Z_
+_Reviewed: 2026-07-29T05:55:53Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_This is a final re-review after a fix pass; see "Resolved Since Previous Review" for WR-01/WR-02 verification evidence._
