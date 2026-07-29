@@ -9,7 +9,8 @@
     "lint": "eslint",
     "verify:juizo-origem": "node scripts/verify-juizo-origem-roundtrip.mjs",
     "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs",
-    "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs"
+    "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs",
+    "verify:bloqueio-rbac": "node scripts/verify-bloqueio-rbac.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
