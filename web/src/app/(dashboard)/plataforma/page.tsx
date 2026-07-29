@@ -58,11 +58,27 @@ const PLANO_OPTIONS: TenantPlano[] = ["STARTER", "STANDARD", "ENTERPRISE"];
 export default function PlataformaPage() {
   // Guarda de pagina (defesa em profundidade). A camada autoritativa de
   // autorizacao e o gate de papel de classe do controlador de administracao
-  // de plataforma (backend, Phase 119) — este guard e apenas espelho de UX,
-  // a mesma disciplina de duas camadas que `clientes/page.tsx` ja pratica.
+  // de plataforma (backend, Phase 119) — este guard e apenas espelho de UX.
+  //
+  // WR-03 (Phase 120 code review): ao contrario do padrao de condicao unica
+  // `isFetched && !canX` usado no resto do codebase (ver `clientes/page.tsx`),
+  // este ecra precisa de um branch extra para `!me.isFetched` que ainda nao
+  // renderize nada. Sem ele, ANTES do primeiro resolve de useMe() (o estado
+  // normal na primeira navegacao direta para /plataforma), a condicao unica
+  // avaliava sempre a falso independentemente do papel real do chamador, e
+  // PlataformaPageContent renderizava incondicionalmente para QUALQUER
+  // utilizador autenticado -- disparando de imediato o GET /platform/tenants
+  // de useTenantsAdmin() antes sequer de se saber se o chamador e mesmo
+  // PLATAFORMA_ADMIN. O backend continua a recusar com 403 (defesa em
+  // profundidade real, sem fuga de dados), mas o proprio guard de pagina
+  // falhava aberto, nao fechado, durante essa janela.
   const me = useMe();
 
-  if (me.isFetched && !me.data?.roles?.includes("PLATAFORMA_ADMIN")) {
+  if (!me.isFetched) {
+    return null;
+  }
+
+  if (!me.data?.roles?.includes("PLATAFORMA_ADMIN")) {
     return (
       <AccessDeniedState
         description="Não tem permissão para aceder à consola de administração de tenants."

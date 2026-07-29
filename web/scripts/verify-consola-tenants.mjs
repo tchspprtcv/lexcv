@@ -1,4 +1,4 @@
-// Prova automatizada e executavel (Node puro, sem dependencias) das 11
+// Prova automatizada e executavel (Node puro, sem dependencias) das 12
 // assercoes de origem para a consola de administracao de tenants
 // (Phase 120, Plan 05) — /plataforma, columns.tsx, criar-tenant-panel.tsx,
 // dashboard-shell.tsx, sidebar-nav.tsx e types/auth.ts.
@@ -237,6 +237,22 @@ async function main() {
         );
         if (!blocoForm) return false;
         return /useState<TenantPlano>\(\s*tenant\.plano\s*\?\?\s*PLANO_OPTIONS\[0\]\s*\)/.test(blocoForm);
+      },
+    },
+    {
+      id: "guard-de-pagina-falha-fechado-durante-loading",
+      descricao:
+        "PlataformaPage tem um early-return para !me.isFetched ANTES do early-return de AccessDeniedState, para nao renderizar PlataformaPageContent (e disparar GET /platform/tenants) durante a janela de carregamento de useMe() (WR-03)",
+      predicate: () => {
+        const blocoPagina = sliceBetweenMarkers(
+          plataformaPage,
+          "export default function PlataformaPage",
+          "function PlataformaPageContent",
+        );
+        if (!blocoPagina) return false;
+        const idxIsFetchedGuard = blocoPagina.search(/if\s*\(\s*!me\.isFetched\s*\)/);
+        const idxAccessDenied = blocoPagina.indexOf("AccessDeniedState");
+        return idxIsFetchedGuard !== -1 && idxAccessDenied !== -1 && idxIsFetchedGuard < idxAccessDenied;
       },
     },
   ];
