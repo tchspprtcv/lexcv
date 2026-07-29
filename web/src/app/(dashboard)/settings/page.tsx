@@ -812,6 +812,7 @@ function RbacTab() {
 
   const handleCheckboxChange = (role: MockRole, permKey: MockPermission) => {
     if (role === "ADMIN") return; // Admin permissions are immutable (always enabled)
+    if (!isPlatformAdmin) return; // WR-01 (121-REVIEW.md): matriz é só-leitura para quem não pode gravar
 
     const base = effectiveRolePermissions;
     const currentPerms = base[role] || [];
@@ -948,19 +949,27 @@ function RbacTab() {
                         </td>
                         {roles.map((role) => {
                           const isAssigned = (effectiveRolePermissions[role] || []).includes(perm.key);
-                          const isDisabled = role === "ADMIN";
+                          const isAdminRow = role === "ADMIN";
+                          // WR-01 (121-REVIEW.md): alarga o estado desabilitado/esbatido a toda a
+                          // matriz quando quem a vê não a pode gravar — sem isto, um ADMIN de tenant
+                          // via a matriz como interativa (clicava e alternava localmente) mesmo sem
+                          // o botão Guardar alguma vez renderizar para si. "checked" fica ligado só a
+                          // isAdminRow (não a isDisabled): a coluna ADMIN mostra-se sempre marcada por
+                          // ter acessos totais implícitos, mas as restantes colunas não podem passar a
+                          // "sempre marcadas" só por estarem desabilitadas para leitura.
+                          const isDisabled = isAdminRow || !isPlatformAdmin;
 
                           return (
                             <td key={role} className="p-3 text-center">
                               <label className="inline-flex items-center justify-center cursor-pointer p-2">
                                 <input
                                   type="checkbox"
-                                  checked={isAssigned || isDisabled}
+                                  checked={isAssigned || isAdminRow}
                                   disabled={isDisabled}
                                   onChange={() => handleCheckboxChange(role, perm.key)}
                                   className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-800 rounded transition-all ${
-                                    isDisabled 
-                                      ? "cursor-not-allowed text-blue-500/55 opacity-60" 
+                                    isDisabled
+                                      ? "cursor-not-allowed text-blue-500/55 opacity-60"
                                       : "cursor-pointer"
                                   }`}
                                 />
