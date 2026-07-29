@@ -85,6 +85,51 @@ public class SetupService {
         systemSettingRepository.save(settings);
     }
 
+    /**
+     * Caminho de provisionamento gated a {@code PLATAFORMA_ADMIN} (invocado pelo
+     * {@code PlatformAdminController} do Plan 04) -- distinto do wizard público
+     * {@code /setup/initialize}. Nunca lê nem escreve {@link SystemSettingRepository}: não há
+     * gate singleton por desenho, pelo que este método é repetível (pode ser chamado N vezes,
+     * criando N tenants), ao contrário de {@link #initializeSystem}. Reutiliza
+     * {@link #validateRequest} deliberadamente, para as regras de email/password nunca
+     * divergirem entre o wizard público e o caminho de plataforma. O primeiro utilizador do
+     * tenant provisionado recebe sempre o papel {@code ADMIN} do próprio tenant -- nunca
+     * {@code PLATAFORMA_ADMIN} -- porque é o administrador do escritório, não um operador de
+     * plataforma. Devolve a {@link Tenant} guardada (com {@code id} preenchido), ao contrário de
+     * {@link #initializeSystem} (que devolve {@code void}), porque o controlador precisa do
+     * {@code id}/{@code nome} para construir a resposta 201.
+     */
+    @Transactional
+    public Tenant provisionTenant(SetupInitializeRequest request) {
+        validateRequest(request);
+
+        if (userRepository.findByEmail(request.getAdminEmail().trim().toLowerCase()).isPresent()) {
+            throw new IllegalArgumentException("Já existe um utilizador com este email.");
+        }
+
+        Role adminRole = roleRepository.findByNome("ADMIN")
+                .orElseThrow(() -> new IllegalStateException("O papel ADMIN não está configurado."));
+
+        Tenant tenant = Tenant.builder()
+                .nome(request.getClientName().trim())
+                .email(request.getAdminEmail().trim().toLowerCase())
+                .logoDataUrl(normalizeLogo(request.getLogo()))
+                .build();
+        tenant = tenantRepository.save(tenant);
+
+        User adminUser = User.builder()
+                .tenantId(tenant.getId())
+                .nome("Administrador")
+                .email(request.getAdminEmail().trim().toLowerCase())
+                .passwordHash(passwordEncoder.encode(request.getAdminPassword()))
+                .ativo(true)
+                .roles(Set.of(adminRole))
+                .build();
+        userRepository.save(adminUser);
+
+        return tenant;
+    }
+
     private void validateRequest(SetupInitializeRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Payload de inicialização em falta.");
