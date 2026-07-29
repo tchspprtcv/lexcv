@@ -64,14 +64,20 @@ public class AuthController {
         // cookies -- o comportamento por omissao de qualquer cliente HTTP scriptado (ex.:
         // curl/requests sem cookie jar explicito). Isso tornava attemptKey diferente em cada
         // tentativa, pelo que loginAttempts/lockoutTimers nunca acumulavam e o lockout nunca
-        // disparava. request.getRemoteAddr() e o endereco de origem real ao nivel do socket, tal
-        // como visto pelo servlet container -- ao contrario de um cabecalho X-Forwarded-For/
-        // X-Real-IP, nao pode ser forjado pelo cliente. Este backend nao tem (ainda) nenhuma
-        // configuracao de proxy confiavel (sem forward-headers-strategy, sem filtro de proxy
-        // dedicado), por isso honrar esses cabecalhos aqui seria trivialmente falsificavel pelo
-        // mesmo atacante que este limitador existe para conter; se/quando este backend passar a
-        // correr atras de um reverse proxy confiavel, tratar esse cabecalho exigira primeiro
-        // validar a origem do proxy.
+        // disparava. request.getRemoteAddr() nao pode ser forjado pelo cliente, ao contrario de
+        // X-Forwarded-For/X-Real-IP -- mas NAO honrar esses cabecalhos tem um custo conhecido
+        // neste repositorio especifico: o Caddyfile deste projeto poe o Caddy como unico ingress
+        // publico para /api/*, e o docker-compose.yml de dev tambem publica a porta do proprio
+        // backend diretamente no host (8089:8080) a par disso -- por isso, em producao,
+        // getRemoteAddr() podera devolver sempre o endereco interno do container Caddy (nao o IP
+        // real do cliente), o que colapsa attemptKey num bloqueio efetivamente por-email (ainda
+        // uma melhoria estrita face ao bug original: nunca bloqueava ninguem), nao por-atacante.
+        // Corrigir isso corretamente exige confirmar primeiro, ao nivel de infraestrutura, que o
+        // acesso direto ao backend (bypass do Caddy) esta mesmo bloqueado externamente antes de
+        // configurar forward-headers-strategy=framework para confiar em X-Forwarded-For -- ver
+        // task de seguimento. Confiar nesse cabecalho sem essa garantia seria pior do que o estado
+        // atual: um atacante com acesso direto ao backend poderia forjar X-Forwarded-For para
+        // nunca acionar o lockout.
         String ip = request.getRemoteAddr();
         String attemptKey = loginRequest.getEmail() + "-" + ip;
 
