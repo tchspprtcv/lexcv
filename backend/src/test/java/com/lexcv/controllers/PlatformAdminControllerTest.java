@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -154,6 +155,23 @@ class PlatformAdminControllerTest {
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(Map.of("message", "O papel ADMIN não está configurado."), response.getBody());
+    }
+
+    // WR-02 (119-REVIEW.md): TOCTOU no pre-check de email de provisionTenant -- o pedido
+    // perdedor de uma corrida concorrente com o mesmo adminEmail so falha no commit/flush da
+    // transacao (User.id usa GenerationType.UUID, sem round-trip a BD antes disso), pelo que a
+    // DataIntegrityViolationException so pode ser apanhada aqui, a volta desta chamada, nunca
+    // dentro do proprio metodo do servico. Sem este catch, cairia no handler global 500.
+    @Test
+    void createTenant_comDataIntegrityViolationExceptionDevolve400ComMensagemDeEmailDuplicado() {
+        SetupInitializeRequest request = pedidoValido();
+        when(setupService.provisionTenant(request))
+                .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+
+        ResponseEntity<?> response = novoController().createTenant(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(Map.of("message", "Já existe um utilizador com este email."), response.getBody());
     }
 
     @Test
