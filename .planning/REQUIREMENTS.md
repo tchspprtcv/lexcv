@@ -27,8 +27,8 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 
 ### ISOL — Fechar Suposições de Tenant Única
 
-- [ ] **ISOL-01**: Landing pública mostra sempre marca genérica LexCV (deixa de tentar mostrar branding "da" tenant)
-- [ ] **ISOL-02**: Nenhum caminho de código assume "a" tenant (`findFirstByOrderByCreatedAtAsc` ou equivalente) quando existir mais de uma tenant real
+- [x] **ISOL-01**: Landing pública mostra sempre marca genérica LexCV (deixa de tentar mostrar branding "da" tenant)
+- [x] **ISOL-02**: Nenhum caminho de código assume "a" tenant (`findFirstByOrderByCreatedAtAsc` ou equivalente) quando existir mais de uma tenant real
 - [x] **ISOL-03**: `PUT /api/v1/admin/rbac` deixa de ser editável por tenant — gestão de permissões por papel passa a ser fixa para toda a plataforma
 - [ ] **ISOL-04**: Auditoria de isolamento dedicada cobre as novas superfícies (ecrã de tenants, relatório de utilização, bloqueio RBAC) antes de existir um 2º tenant pagante real
 
@@ -76,8 +76,8 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PROV-04 | Phase 120 | Complete |
 | PROV-05 | Phase 120 | Complete |
 | PROV-06 | Phase 119 | Complete |
-| ISOL-01 | Phase 121 | Pending (já implementado como efeito colateral do CR-02 da Phase 119 — `PublicController.getBranding` já devolve sempre marca genérica; Phase 121 só precisa confirmar/fechar, não reimplementar) |
-| ISOL-02 | Phase 121 | Pending |
+| ISOL-01 | Phase 121 | Complete (já implementado como efeito colateral do CR-02 da Phase 119 — `PublicController.getBranding` já devolvia sempre marca genérica; Phase 121 Plan 03 confirmou por execução de teste + 4 pesquisas independentes, `121-ISOL-AUDIT.md`) |
+| ISOL-02 | Phase 121 | Complete |
 | ISOL-03 | Phase 121 | Complete |
 | ISOL-04 | Phase 123 | Pending |
 | UTIL-01 | Phase 122 | Pending |

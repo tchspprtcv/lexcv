@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: "Completed 121-02-PLAN.md (RbacTab Badge+Tooltip swap + verify:bloqueio-rbac gate, negative-proof recorded)"
-last_updated: "2026-07-29T21:19:26.569Z"
+stopped_at: Completed 121-03-PLAN.md (ISOL-01/ISOL-02 audit artifact, 121-ISOL-AUDIT.md, no code changes)
+last_updated: "2026-07-29T21:52:27.449Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 57
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — IN PROGRESS
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -113,6 +113,7 @@ Last activity: 2026-07-29
 | Phase 120 P05 | 30min | 3 tasks | 3 files |
 | Phase 121 P01 | 25min | 2 tasks | 2 files |
 | Phase 121 P02 | 35min | 2 tasks | 3 files |
+| Phase 121 P03 | 20min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: WR-03's fix (`/plataforma`'s RBAC guard failing open during the initial useMe() load, now `if (!me.isFetched) return null;` before the role check) was deliberately scoped to `/plataforma` only. The same `isFetched && !canX` pattern was confirmed present in 25 other dashboard pages (clientes, processos, financeiro, agenda, documentos, dashboard, etc.) — a pre-existing, app-wide pattern, not introduced by this phase and not fixed here; flagged as session follow-up task_a78e2d45 rather than expanding this phase's scope.
 - [Phase 121]: Worded the new updateRbac authorization comment and the rewritten PAPEL_PLATAFORMA docblock forward-reference entirely in prose, never reproducing the literal hasRole('PLATAFORMA_ADMIN') annotation text — Same precedent as Phases 119-04/120-01/120-02 for self-referential comments tripping grep-based verify gates; keeps the plan's own literal-count assertions (exactly 2 @PreAuthorize lines, 0 adjacent to getRbac) unambiguous
 - [Phase 121]: Negative-proof technique for verify:bloqueio-rbac: hardcoded the ternary condition (isPlatformAdmin) to true instead of deleting the whole alternate Badge/Tooltip branch — Isolates exactly the 2 assertions tied to conditional gating (A05, A06) while the other 9 structure, copy and non-regression assertions stay green, giving stronger evidence the gate fails precisely rather than as a blunt all-or-nothing signal
+- [Phase 121]: 121-03's Task 1 hit 2 literal grep-count acceptance checks that returned non-zero where the plan expected 0 (grep -c 'Repository' on PublicController.java = 1; grep -cE 'findFirstBy|findTopBy' on TenantRepository.java = 2) — both confirmed by direct code reading to be false positives (a docblock historical-reference comment, and a distinct legitimate findFirstByNome exact-name lookup from Phase 119) rather than an ISOL-01 regression; documented transparently in 121-ISOL-AUDIT.md instead of escalated to the orchestrator
+- [Phase 121]: 121-03's ISOL-02 sweep classified 6 hits (4 frontend "LexCV" UI-fallback defaults, 1 ResourceController .findFirst() on a state-transition map, 1 ResourceController movs.get(0) on an already-tenant-scoped Processo's Movimentacao list) as a 4th, explicit "unrelated to tenant resolution" outcome rather than forcing them into the plan's 3 prescribed categories — none of them determine which tenant's data is served
 
 ### Pending Todos
 
@@ -257,8 +260,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T21:19:26.425Z
-Stopped at: Completed 121-02-PLAN.md (RbacTab Badge+Tooltip swap + verify:bloqueio-rbac gate, negative-proof recorded)
+Last session: 2026-07-29T21:52:27.234Z
+Stopped at: Completed 121-03-PLAN.md (ISOL-01/ISOL-02 audit artifact, 121-ISOL-AUDIT.md, no code changes)
 Resume file: None
 
 ## Operator Next Steps

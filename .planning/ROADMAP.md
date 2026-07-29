@@ -481,7 +481,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 121-03-PLAN.md — ISOL-01 confirmado por execução (`PublicControllerTest` + 3 pesquisas independentes) e ISOL-02 fechado com `121-ISOL-AUDIT.md`: veredito por superfície no formato da AUD-01 (v2.11), comandos de reprodução para a Phase 123, e 2 itens explicitamente marcados como não-achados (padrão `findByXxxId`-sem-`tenantId` do `PITFALLS.md`, assimetria `GET`/`PUT` de `/admin/rbac`)
+- [x] 121-03-PLAN.md — ISOL-01 confirmado por execução (`PublicControllerTest` + 3 pesquisas independentes) e ISOL-02 fechado com `121-ISOL-AUDIT.md`: veredito por superfície no formato da AUD-01 (v2.11), comandos de reprodução para a Phase 123, e 2 itens explicitamente marcados como não-achados (padrão `findByXxxId`-sem-`tenantId` do `PITFALLS.md`, assimetria `GET`/`PUT` de `/admin/rbac`)
 - [ ] 121-04-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante): `403` real de um ADMIN de escritório no `PUT /admin/rbac` **e** `200` de um `PLATAFORMA_ADMIN` no mesmo endpoint (contra-teste que exclui um bloqueio universal acidental), com payload no-op e matriz comprovadamente sem deriva; mais 8 pontos de UI incluindo Tooltip por rato e por teclado com vereditos separados
 
 **UI hint**: yes
@@ -597,6 +597,6 @@ Plans:
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
-| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 2/4 | In Progress|  |
+| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 3/4 | In Progress|  |
 | 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
