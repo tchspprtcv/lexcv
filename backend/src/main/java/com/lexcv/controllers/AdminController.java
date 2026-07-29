@@ -5,9 +5,11 @@ import com.lexcv.dtos.RbacResponse;
 import com.lexcv.dtos.UserResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
+import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
+import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ public class AdminController {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TenantRepository tenantRepository;
 
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
@@ -91,6 +94,21 @@ public class AdminController {
 
         if (roles.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Pelo menos uma role válida é obrigatória."));
+        }
+
+        // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant. Tenant.limiteUtilizadores
+        // == null significa sem limite (plano Enterprise "por acordo"); um valor numérico bloqueia a
+        // criação quando os utilizadores já ativos do tenant do chamador (nunca do corpo do pedido, para
+        // não permitir forjar outro tenant) já o igualam. O novo utilizador ainda não conta para si
+        // próprio, por isso a comparação é >=. A contagem é sempre lida ao vivo nesta query — nunca em
+        // cache — pelo que desativar um utilizador liberta a vaga de imediato no pedido seguinte.
+        Tenant tenant = tenantRepository.findById(principal.getTenantId()).orElse(null);
+        if (tenant != null && tenant.getLimiteUtilizadores() != null) {
+            long utilizadoresAtivos = userRepository.countByTenantIdAndAtivoTrue(principal.getTenantId());
+            if (utilizadoresAtivos >= tenant.getLimiteUtilizadores()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Limite de utilizadores atingido para o vosso plano."));
+            }
         }
 
         List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
