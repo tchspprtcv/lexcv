@@ -23,7 +23,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 - [ ] **PROV-03**: Administrador de plataforma lista todos os tenants e vê utilizadores ativos por tenant
 - [ ] **PROV-04**: Administrador de plataforma ajusta `plano`/`limite_utilizadores` de qualquer tenant
 - [ ] **PROV-05**: Administrador de plataforma suspende um tenant que não pague (bloqueia acesso)
-- [ ] **PROV-06**: Wizard `/setup` deixa de ser singleton — fica só para o arranque inicial; tenants seguintes usam o fluxo de administrador de plataforma
+- [x] **PROV-06**: Wizard `/setup` deixa de ser singleton — fica só para o arranque inicial; tenants seguintes usam o fluxo de administrador de plataforma
 
 ### ISOL — Fechar Suposições de Tenant Única
 
@@ -75,7 +75,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PROV-03 | Phase 120 | Pending |
 | PROV-04 | Phase 120 | Pending |
 | PROV-05 | Phase 120 | Pending |
-| PROV-06 | Phase 119 | Pending |
+| PROV-06 | Phase 119 | Complete |
 | ISOL-01 | Phase 121 | Pending |
 | ISOL-02 | Phase 121 | Pending |
 | ISOL-03 | Phase 121 | Pending |
