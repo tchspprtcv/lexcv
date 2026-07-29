@@ -32,6 +32,17 @@ public class Tenant {
     @Column(name = "logo_data_url")
     private String logoDataUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plano")
+    private TenantPlano plano;
+
+    // Phase 117 (limite de utilizadores por tenant): null = sem limite (plano Enterprise
+    // "por acordo"); um valor numérico é o limite exato de utilizadores ativos. Nunca usar
+    // sentinela mágico (-1/MAX_VALUE). Consumido por AdminController.createUser antes de
+    // persistir um novo utilizador.
+    @Column(name = "limite_utilizadores")
+    private Integer limiteUtilizadores;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
