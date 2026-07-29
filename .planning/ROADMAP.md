@@ -360,7 +360,10 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
   1. A aba "Gestão de Utilizadores" (`settings/page.tsx`, `UserManagementTab`) mostra "X/Y utilizadores" com base nos utilizadores ativos e no `limiteUtilizadores` do tenant
   2. O botão "Novo Utilizador" fica desativado quando X=Y, com indicação visual do motivo (tooltip ou texto junto ao contador)
   3. O `409` devolvido pelo backend (Phase 117), caso ainda assim ocorra (ex.: duas abas abertas em simultâneo), é apresentado como toast claro, sem crash da UI — nunca confiar só na validação visual do lado do cliente
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+- [ ] 118-01-PLAN.md — Backend: expor `tenant_plano`/`tenant_limite_utilizadores` no `GET /auth/me` (2 campos no `UserResponse` + 2 setters dentro do `ifPresent` ja existente, zero queries novas), provado por 4 testes Mockito + gate de regressao/SAST/STRIDE
+- [ ] 118-02-PLAN.md — Frontend: `MeResponse` estendido, toast local sem prefixo `API NNN:` (409 limpo), e o indicador "X/Y utilizadores" com botao "Novo Utilizador" desativado no limite + tooltip que dispara via `<span tabIndex={0}>` — com gate executavel `pnpm verify:limite-utilizadores` (8 assercoes)
+- [ ] 118-03-PLAN.md — Verificacao humana ao vivo: contador nos 3 estados, tooltip por rato e por teclado sobre o botao desativado, e toast do 409 forcado; base de dados reposta no fim
 **UI hint**: yes
 
 #### Phase 119: Backend — Papel de Administrador de Plataforma e Provisionamento
