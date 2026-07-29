@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 118-01-PLAN.md
-last_updated: "2026-07-29T04:03:14.342Z"
+stopped_at: Completed 118-02-PLAN.md
+last_updated: "2026-07-29T04:23:28.874Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 14
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 118 (Frontend — Indicador de Utilizadores no Limite) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-29
 
@@ -101,6 +101,7 @@ Last activity: 2026-07-29
 | Phase 117 P01 | 9min | 2 tasks | 5 files |
 | Phase 117 P02 | 12min | 2 tasks | 2 files |
 | Phase 118 P01 | 9min | 2 tasks | 3 files |
+| Phase 118 P02 | 8min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 117]: Tenant.limiteUtilizadores is a nullable Integer (never int, no -1/MAX_VALUE sentinel) — null is the sole 'sem limite' contract; UserRepository.countByTenantIdAndAtivoTrue is a pure derived query (no @Query), the single reusable active-user count for Plan 02 and later Phases 120/122 — 117-01 data-layer plan (TenantPlano enum, Tenant fields, migration) executed exactly as specified, no deviations
 - [Phase 117]: RED/GREEN committed as two separate atomic commits (test then feat) for the tdd=true task in 117-02, so git history shows the test genuinely failing to compile before the fix lands — Plan type is execute (not tdd), but preserving an accurate gate sequence matches the workflow's own TDD gate-compliance checks and costs nothing extra
 - [Phase 118]: Extended GET /auth/me instead of creating a new endpoint for tenant_plano/tenant_limite_utilizadores — Reuses the Tenant row already fetched by the pre-existing tenantRepository.findById(...).ifPresent(...) block -- zero new queries, zero new authorization surface; matches the tenant_nome/tenant_logo_data_url precedent already served to every role
+- [Phase 118-02]: Reused useMe() inside UserManagementTab (TanStack Query dedupe on shared ["auth","me"] key) instead of prop-drilling from SettingsPage — Matches the sub-component's existing self-fetching convention (useAdminUsers/useAdminRbac); zero new network fetches
+- [Phase 118-02]: Active-user count (X) uses strict u.ativo === true, deliberately different from the table's own user.ativo !== false display convention — Mirrors the backend's countByTenantIdAndAtivoTrue exactly; the gate script's contagem-estrita assertion requires both forms to coexist by design
+- [Phase 118-02]: First working span-wrapper Tooltip+disabled-Button composition in this codebase, closing the Phase 102/v2.13 documented debt — buttonVariants bakes in disabled:pointer-events-none, so TooltipTrigger asChild directly on a disabled Button never fires; a span tabIndex={0} wrapper is the real trigger target, proven by a new structural gate assertion (span-wrapper-tooltip)
 
 ### Pending Todos
 
@@ -216,8 +220,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T04:03:14.316Z
-Stopped at: Completed 118-01-PLAN.md
+Last session: 2026-07-29T04:23:28.851Z
+Stopped at: Completed 118-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
