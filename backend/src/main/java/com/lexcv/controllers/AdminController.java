@@ -47,8 +47,8 @@ public class AdminController {
     // originais (que so olhavam para "roles"). As guardas de "permissions" abaixo, que usam
     // PAPEL_PLATAFORMA_AUTORIDADE, fecham esse caminho.
     //
-    // A Phase 121 (ISOL-03) ira depois fechar o endpoint PUT /rbac por inteiro a papeis de
-    // plataforma -- esta fase apenas protege o papel novo, sem antecipar esse bloqueio.
+    // A Phase 121 (ISOL-03) fechou o endpoint PUT /rbac por inteiro a papeis de plataforma --
+    // ver o comentario acima do handler updateRbac para o mecanismo exato.
     private static final String PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
 
     // CR-01 (119-REVIEW.md): forma que a mesma reserva assume quando chega via "permissions" em
@@ -388,6 +388,14 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
+    // ISOL-03 (Phase 121): so este handler ganha um gate de metodo mais especifico -- Role e
+    // Permission sao tabelas globais de plataforma, sem coluna tenant_id (ver PAPEL_PLATAFORMA
+    // acima), pelo que um ADMIN de um escritorio a gravar esta matriz reescreveria exatamente as
+    // mesmas linhas de que dependem os utilizadores TECNICO/ADVOGADO/ASSISTENTE de todos os
+    // outros escritorios. A anotacao de metodo abaixo substitui -- nunca soma a -- o gate de
+    // classe desta controller (a mais especifica ganha, nunca sao combinadas com E logico); todos
+    // os restantes handlers continuam governados apenas pelo gate de classe.
+    @PreAuthorize("hasRole('PLATAFORMA_ADMIN')")
     @PutMapping("/rbac")
     public ResponseEntity<?> updateRbac(@RequestBody Map<String, Object> body) {
         if (!body.containsKey("rolePermissions")) {
