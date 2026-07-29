@@ -29,6 +29,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminController {
 
+    // Phase 119 (Plan 03): "PLATAFORMA_ADMIN" e um papel reservado, seedado incondicionalmente a
+    // partir desta fase (DatabaseSeeder.seedRbac(), Plan 01) para servir exclusivamente o novo
+    // PlatformAdminController (Plan 04), gated por @PreAuthorize("hasRole('PLATAFORMA_ADMIN')").
+    // UserPrincipal deriva autoridades ROLE_* genericamente a partir de qualquer papel guardado na
+    // base de dados (ver UserPrincipal.create), sem allowlist -- por isso, sem as quatro guardas
+    // abaixo, um ADMIN de um escritorio normal poderia atribuir-se (ou a outro utilizador) este
+    // papel via createUser/updateUser, satisfazer o hasRole('PLATAFORMA_ADMIN') do Plan 04, e
+    // alcancar POST /api/v1/platform/tenants -- criacao arbitraria de tenants por um cliente
+    // qualquer. As guardas de getRbac/updateRbac fecham, respetivamente, a visibilidade e a
+    // alterabilidade das permissoes deste papel a partir do ecra de Definicoes (RBAC) de qualquer
+    // escritorio. A Phase 121 (ISOL-03) ira depois fechar o endpoint PUT /rbac por inteiro a
+    // papeis de plataforma -- esta fase apenas protege o papel novo, sem antecipar esse bloqueio.
+    private static final String PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -118,6 +132,15 @@ public class AdminController {
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
         List<?> rolesList = (List<?>) body.get("roles");
+
+        // Phase 119 (Plan 03): recusar antes do lookup -- ver o comentario de PAPEL_PLATAFORMA.
+        for (Object rObj : rolesList) {
+            if (PAPEL_PLATAFORMA.equals(rObj)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+            }
+        }
+
         Set<Role> roles = new HashSet<>();
         for (Object rObj : rolesList) {
             String roleName = (String) rObj;
@@ -228,6 +251,17 @@ public class AdminController {
 
         if (body.containsKey("roles")) {
             List<?> rolesList = (List<?>) body.get("roles");
+
+            // Phase 119 (Plan 03): mesma recusa de createUser -- ver o comentario de
+            // PAPEL_PLATAFORMA. O return acontece antes de qualquer userRepository.save(user), por
+            // isso nenhuma mutacao ja aplicada em memoria (nome/email/telefone/etc.) e persistida.
+            for (Object rObj : rolesList) {
+                if (PAPEL_PLATAFORMA.equals(rObj)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                            "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+                }
+            }
+
             Set<Role> roles = new HashSet<>();
             for (Object rObj : rolesList) {
                 String roleName = (String) rObj;
@@ -276,6 +310,11 @@ public class AdminController {
         Map<String, List<String>> rolePermissions = new HashMap<>();
 
         for (Role role : roles) {
+            // Phase 119 (Plan 03): o ecra de Definicoes (RBAC) de um escritorio nao deve sequer
+            // saber que o papel de plataforma existe -- ver o comentario de PAPEL_PLATAFORMA.
+            if (PAPEL_PLATAFORMA.equals(role.getNome())) {
+                continue;
+            }
             List<String> perms = role.getPermissions().stream()
                     .map(Permission::getNome)
                     .collect(Collectors.toList());
@@ -320,8 +359,13 @@ public class AdminController {
 
         for (Map.Entry<?, ?> entry : newRolePermissions.entrySet()) {
             String roleName = (String) entry.getKey();
-            if ("ADMIN".equals(roleName)) {
-                continue; // Protection: Admin is immutable
+            // Protection: Admin is immutable.
+            // Phase 119 (Plan 03): PLATAFORMA_ADMIN e igualmente imutavel por este caminho --
+            // DatabaseSeeder.upsertRolePermissions so faz addAll e nunca remove, pelo que uma
+            // injecao de permissoes aqui persistiria para sempre, sem reparacao no arranque
+            // seguinte. Ver o comentario de PAPEL_PLATAFORMA.
+            if ("ADMIN".equals(roleName) || PAPEL_PLATAFORMA.equals(roleName)) {
+                continue;
             }
 
             Role role = roleRepository.findByNome(roleName).orElse(null);
