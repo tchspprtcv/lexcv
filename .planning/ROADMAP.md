@@ -180,10 +180,13 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Depends on**: Nothing (primeira fase da milestone; paralelizável com Phase 86)
 **Requirements**: NOTF-22
 **Success Criteria** (what must be TRUE):
+
   1. Um novo serviço injetável `RiscoPrazoService` calcula o risco (ok/próximo/vencido) para `Prazo` e, com um método análogo, para `Evento` — substituindo por completo o método privado `computeRisco()` e as 3 implementações ad-hoc distintas hoje baseadas em `Evento` (dashboard, `/processos/dashboard`, `/eventos/upcoming`)
   2. Todos os pontos de consumo já existentes (dashboard KPI, listagem/criação/conclusão de prazos, listagem de processos enriquecida) continuam a devolver exatamente os mesmos resultados de antes da refatoração, para os mesmos dados — zero regressão observável
   3. `Evento` passa a ser avaliado pela mesma tabela de limiares (7 dias se prioridade ALTA, 3 dias caso contrário) já usada por `Prazo`, em vez das 3 janelas fixas e inconsistentes usadas hoje
+
 **Plans**: 1 plan
+
 - [x] 85-01-PLAN.md — Extrair RiscoPrazoService (@Service injetável) + repontar os 8 call sites de Prazo e os 3 blocos de Evento em ResourceController, apagando o método privado computeRisco
 
 #### Phase 86: Infraestrutura de Notificações — Entidade, API e Targeting
@@ -192,11 +195,14 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Depends on**: Nothing (primeira fase da milestone; paralelizável com Phase 85)
 **Requirements**: NOTF-14
 **Success Criteria** (what must be TRUE):
+
   1. Existe uma tabela `t_notificacao` persistida (com migração manual documentada em `backend/migrations/`) e os endpoints `GET /notificacoes` (com filtros por categoria/estado lida e paginação), `GET /notificacoes/unread-count`, `PATCH /notificacoes/{id}/lida` e `POST /notificacoes/ler-todas` funcionam, todos scoped por tenant E por destinatário
   2. Dois utilizadores de teste no mesmo tenant recebem listas de notificações independentes entre si; marcar uma notificação como lida por um utilizador nunca afeta o estado da mesma notificação para outro destinatário
   3. Uma notificação dirigida a "ADMIN" gera uma linha própria por cada ADMIN atual do tenant no momento da criação (fan-out), cada uma com o seu próprio estado de leitura independente
   4. O novo scope `notificacoes:view` está seedado para todos os perfis (ADMIN/ADVOGADO/TECNICO/ASSISTENTE) tanto no backend (`DatabaseSeeder`) como no frontend (`KNOWN_SCOPES`)
+
 **Plans**: 3 plans (3 waves)
+
 - [x] 86-01-PLAN.md — Camada de dados: entidade `Notificacao` (uma linha por destinatário) + `NotificacaoRepository` dual-scoped (tenant + destinatário) + migração manual `t_notificacao` com índice composto
 - [x] 86-02-PLAN.md — `NotificacaoService` (choke point único `criar` + fan-out ADMIN) + teste Mockito a provar isolamento entre 2 destinatários e fan-out por ADMIN (Critérios de Sucesso 2 e 3)
 - [x] 86-03-PLAN.md — `NotificacaoController` (4 endpoints dual-scoped: listar com filtros/paginação, unread-count, marcar lida, ler-todas) + seed do scope `notificacoes:view` para os 4 perfis (backend + frontend `KNOWN_SCOPES`)
@@ -207,15 +213,19 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Depends on**: Phase 86
 **Requirements**: NOTF-15, NOTF-16, NOTF-17, NOTF-18, NOTF-19
 **Success Criteria** (what must be TRUE):
+
   1. Quando um processo entra numa nova fase, o responsável do processo (e ADMIN) recebe uma notificação com link direto para o processo
   2. Quando um novo documento é adicionado a um processo (ou a um cliente sem processo associado), o destinatário correto — responsável do processo, ou equipa de advogados/administrativos do cliente quando não há processo — recebe uma notificação (mais ADMIN)
   3. Utilizador com permissão adequada reatribui o responsável de um processo através de um novo formulário/interface dedicado na ficha do processo (o backend valida que o novo responsável pertence ao tenant, tal como já acontece na criação); o novo responsável (e ADMIN) recebe de imediato uma notificação de atribuição
   4. Advogado atribuído a um parecer — na criação ou numa reatribuição posterior — recebe uma notificação de atribuição (mais ADMIN)
+
 **Plans**: 4 plans (3 waves)
+
 - [x] 87-01-PLAN.md — NotificacaoService: 4 métodos notificar* + overload notificarAdmins com actor-exclusion (fundação; testes Mockito)
 - [x] 87-02-PLAN.md — ResourceController: gatilhos FASE_ENTRADA/DOCUMENTO_NOVO/PROCESSO_ATRIBUIDO + novo endpoint PUT /processos/{id}/atribuir (manage-gated)
 - [x] 87-03-PLAN.md — ParecerController: gatilhos PARECER_ATRIBUIDO na criação e na reatribuição
 - [x] 87-04-PLAN.md — Frontend: hook useReatribuirResponsavel + controlo Reatribuir (Dialog→AlertDialog) na ficha do processo
+
 **UI hint**: yes
 
 #### Phase 88: Verificação Diária de Prazos e Honorários
@@ -224,11 +234,14 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Depends on**: Phase 85, Phase 86
 **Requirements**: NOTF-20, NOTF-21, NOTF-23
 **Success Criteria** (what must be TRUE):
+
   1. Um job `@Scheduled` (cron diário, fuso `Atlantic/Cape_Verde`) corre uma vez por dia, itera todos os tenants de forma explícita (sem depender de sessão/JWT), e uma exceção não tratada num tenant ou entidade não impede a execução dos restantes tenants nem das execuções futuras do job
   2. Quando um prazo de processo ou um evento de calendário crítico muda de estado de risco (ok→próximo ou próximo→vencido) desde a última verificação, o responsável do processo (e ADMIN) recebe exatamente uma notificação nova; correr o job duas vezes seguidas sobre os mesmos dados não gera notificações duplicadas
   3. Quando o honorário de um processo atinge N dias sem pagamento total desde `dataAcordo` (e apenas quando `valorTotal` já foi preenchido), o responsável do processo (e ADMIN) recebe uma notificação; honorários com `valorTotal` ainda `null` são ignorados sem gerar erro
   4. A verificação usa exclusivamente o `RiscoPrazoService` da Phase 85 para prazos e eventos — nenhuma cópia adicional da lógica de limiares é introduzida no job
+
 **Plans**: 2 plans (2 waves)
+
 - [x] 88-01-PLAN.md — Contratos: método existence-check em NotificacaoRepository (backbone da idempotência) + findByProcessoIdIn em HonorarioRepository (batch, anti-N+1) + SchedulingConfig (@EnableScheduling isolado)
 - [x] 88-02-PLAN.md — AlertasDiariosJob (@Scheduled cron diário, fuso Atlantic/Cape_Verde): varre todos os tenants sem SecurityContext, alerta prazos/eventos via RiscoPrazoService e honorários >=30 dias, idempotente por nível (edge-triggered) com isolamento de falhas por tenant/entidade — TDD (teste Mockito primeiro)
 
@@ -238,15 +251,19 @@ A pesquisa de arquitetura desta milestone identificou duas fundações obrigató
 **Depends on**: Phase 86 (beneficia de Phase 87/88 existirem para uma demonstração end-to-end realista, mas os endpoints de listagem/marcar-lida já são testáveis contra dados semeados manualmente assim que a Phase 86 estiver pronta)
 **Requirements**: NOTF-08, NOTF-09, NOTF-10, NOTF-11, NOTF-12, NOTF-13
 **Success Criteria** (what must be TRUE):
+
   1. O sino no topo da aplicação mostra um contador de notificações não lidas, atualizado automaticamente por polling (30-60s), incluindo uma atualização imediata ao voltar a focar a aba do browser
   2. Ao abrir o sino, o utilizador vê uma lista das notificações recentes, cada uma com link direto para a entidade relacionada (processo, documento, parecer ou honorário, conforme a categoria)
   3. O utilizador marca uma notificação individual como lida, ou todas de uma vez, e o contador do sino atualiza-se de imediato, sem esperar pelo próximo ciclo de polling
   4. O utilizador acede a `/notificacoes` e consulta o histórico completo, filtrável por categoria e por estado lida/não-lida
+
 **Plans**: 4 plans (3 waves)
+
 - [x] 89-01-PLAN.md — Camada de dados: tipos Notificacao + mapa categoria->label/variant + 4 hooks (polling opt-in, invalidação de prefixo ["notificacoes"])
 - [x] 89-02-PLAN.md — Sino reescrito: badge com polling 30s+refocus, dropdown de 10, clique=marcar-lida+navegar, marcar-todas, footer "Ver todas as notificações"
 - [x] 89-03-PLAN.md — Página /notificacoes: filtros (categoria + chips 3-vias lida/não-lida), linhas com marcar-uma/marcar-todas, paginação funcional, RBAC gate
 - [x] 89-04-PLAN.md — Checkpoint humano end-to-end (contador+polling+refocus, clique fundido, filtros, paginação, invalidação cross-surface)
+
 **UI hint**: yes
 
 See archive: [milestones/v2.10-ROADMAP.md](milestones/v2.10-ROADMAP.md) · [milestones/v2.10-MILESTONE-AUDIT.md](milestones/v2.10-MILESTONE-AUDIT.md)
@@ -343,11 +360,14 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 **Depends on**: Nothing (primeira fase da milestone)
 **Requirements**: PLAN-01, PLAN-02, PLAN-04
 **Success Criteria** (what must be TRUE):
+
   1. `Tenant` tem os novos campos `plano` e `limiteUtilizadores` persistidos (migração aplicada; tenants existentes recebem um valor por omissão sensato, sem quebrar o arranque da aplicação)
   2. `AdminController.createUser` (`POST /api/v1/admin/users`) devolve `409` com uma mensagem clara quando o tenant já tem `limiteUtilizadores` utilizadores com `ativo=true` — e continua a criar normalmente abaixo do limite
   3. Desativar um utilizador (`PUT /api/v1/admin/users/{id}` com `ativo=false`) liberta imediatamente uma vaga — uma criação imediatamente a seguir já não é bloqueada pelo `409`
   4. A contagem de "utilizadores ativos" usada para o limite é uma única função/consulta reutilizável, não duplicada — as Phases 120 e 122 vão reutilizá-la para a consola de tenants e o relatório de utilização
+
 **Plans**: 2 plans (2 waves)
+
 - [x] 117-01-PLAN.md — Camada de dados: enum `TenantPlano`, campos `plano`/`limiteUtilizadores` em `Tenant`, contagem reutilizável `UserRepository.countByTenantIdAndAtivoTrue` (fonte única para as Phases 120/122) e migração manual `117-add-tenant-plano-limite-utilizadores.sql` com backfill `ENTERPRISE`/`NULL` do tenant existente
 - [x] 117-02-PLAN.md — Enforcement em `AdminController.createUser`: `409 CONFLICT` no limite, `201` abaixo, `null` sem limite, vaga libertada de imediato ao desativar — provado por teste Mockito de 4 casos escrito primeiro, mais gate de regressão/SAST e verificação das mitigações STRIDE
 
@@ -357,13 +377,17 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 **Depends on**: Phase 117
 **Requirements**: PLAN-03
 **Success Criteria** (what must be TRUE):
+
   1. A aba "Gestão de Utilizadores" (`settings/page.tsx`, `UserManagementTab`) mostra "X/Y utilizadores" com base nos utilizadores ativos e no `limiteUtilizadores` do tenant
   2. O botão "Novo Utilizador" fica desativado quando X=Y, com indicação visual do motivo (tooltip ou texto junto ao contador)
   3. O `409` devolvido pelo backend (Phase 117), caso ainda assim ocorra (ex.: duas abas abertas em simultâneo), é apresentado como toast claro, sem crash da UI — nunca confiar só na validação visual do lado do cliente
+
 **Plans**: 3 plans (3 waves)
+
 - [x] 118-01-PLAN.md — Backend: expor `tenant_plano`/`tenant_limite_utilizadores` no `GET /auth/me` (2 campos no `UserResponse` + 2 setters dentro do `ifPresent` ja existente, zero queries novas), provado por 4 testes Mockito + gate de regressao/SAST/STRIDE
 - [x] 118-02-PLAN.md — Frontend: `MeResponse` estendido, toast local sem prefixo `API NNN:` (409 limpo), e o indicador "X/Y utilizadores" com botao "Novo Utilizador" desativado no limite + tooltip que dispara via `<span tabIndex={0}>` — com gate executavel `pnpm verify:limite-utilizadores` (8 assercoes)
 - [x] 118-03-PLAN.md — Verificacao humana ao vivo: contador nos 3 estados, tooltip por rato e por teclado sobre o botao desativado, e toast do 409 forcado; base de dados reposta no fim
+
 **UI hint**: yes
 
 #### Phase 119: Backend — Papel de Administrador de Plataforma e Provisionamento
@@ -372,16 +396,23 @@ As 15 requisitos desta milestone dividem-se em 4 blocos (PLAN/PROV/ISOL/UTIL) co
 **Depends on**: Phase 118
 **Requirements**: PROV-01, PROV-06
 **Success Criteria** (what must be TRUE):
+
   1. Existe um papel `PLATAFORMA_ADMIN` seedado (`DatabaseSeeder`), distinto de `ADMIN`, e uma tenant reservada "LexCV" à qual os utilizadores desse papel pertencem
   2. Um novo método de serviço de backend cria um `Tenant` + o respetivo utilizador `ADMIN` inicial, reutilizando a validação já existente em `SetupService.initializeSystem`, sem depender de `SystemSetting.initialized`
   3. `POST /api/v1/setup/initialize` continua a devolver erro se chamado uma segunda vez — a nova capacidade de criar tenants é um caminho de código distinto, gated a `PLATAFORMA_ADMIN`, nunca reaproveita o endpoint público de `/setup`
   4. Um utilizador com o papel `ADMIN` de um tenant normal não tem `hasRole('PLATAFORMA_ADMIN')` e recebe `403` ao tentar invocar a nova capacidade de criação de tenants
+
 **Plans**: 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 119-01-PLAN.md — Seed do papel `PLATAFORMA_ADMIN` (zero permissões), da tenant reservada "LexCV" e do utilizador bootstrap, incondicional e idempotente, mais `TenantRepository.findByNome`
 - [ ] 119-02-PLAN.md — `SetupService.provisionTenant` (devolve a `Tenant` criada, sem dependência de `SystemSetting`) e o DTO `TenantProvisionResponse`
 - [ ] 119-03-PLAN.md — Contenção do papel de plataforma em `AdminController`: um ADMIN de escritório não pode atribuir, promover, ver nem alterar `PLATAFORMA_ADMIN`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 119-04-PLAN.md — `PlatformAdminController` (`POST /api/v1/platform/tenants`), mapeamento `AccessDeniedException` -> 403, e regressão do gate singleton de `/setup/initialize`
 
 #### Phase 120: Frontend — Consola de Administração de Tenants
@@ -390,10 +421,12 @@ Plans:
 **Depends on**: Phase 119
 **Requirements**: PROV-02, PROV-03, PROV-04, PROV-05
 **Success Criteria** (what must be TRUE):
+
   1. Ecrã interno, acessível só a `PLATAFORMA_ADMIN` (nunca ao `ADMIN` de um tenant normal), cria um novo tenant preenchendo nome + dados do utilizador ADMIN inicial, reutilizando o serviço de backend da Phase 119
   2. O mesmo ecrã lista todos os tenants existentes, mostrando o número de utilizadores ativos de cada um
   3. Administrador de plataforma edita `plano`/`limiteUtilizadores` de qualquer tenant a partir desse ecrã
   4. Administrador de plataforma alterna o estado suspenso/ativo de um tenant a partir desse ecrã; um tenant suspenso deixa imediatamente de conseguir autenticar-se ou continuar a usar uma sessão já ativa
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -403,10 +436,12 @@ Plans:
 **Depends on**: Phase 120
 **Requirements**: ISOL-01, ISOL-02, ISOL-03
 **Success Criteria** (what must be TRUE):
+
   1. `GET /api/v1/public/branding` deixa de depender de `TenantRepository.findFirstByOrderByCreatedAtAsc()` para decidir que marca mostrar — devolve sempre a marca genérica LexCV, independentemente de quantos tenants reais existirem
   2. Uma pesquisa dedicada ao código de produção (não só o call site já sinalizado em `PublicController.getBranding`) confirma que nenhum outro caminho resolve "a" tenant por heurística de "mais antiga" quando existir mais de um tenant real
   3. `PUT /api/v1/admin/rbac` deixa de aceitar chamadas de um `ADMIN` de tenant (`403`) — só `PLATAFORMA_ADMIN` pode alterar o mapeamento de permissões por papel
   4. A aba "Controlo de Acesso (RBAC)" das Definições (`settings/page.tsx`, `RbacTab`) deixa de expor a ação de gravar a um `ADMIN` de tenant na interface, evitando um `403` confuso na UI
+
 **Risco**: ISOL-03 (bloqueio do RBAC) é o item de maior risco identificado pela proposta (secção 7) — sem ele, dois tenants partilhados no mesmo deployment interferem-se um ao outro através de um ecrã de configurações aparentemente inofensivo. Esse risco só passa a existir a partir do momento em que a Phase 120 torna possível criar um 2º tenant real; por isso esta fase corre imediatamente a seguir, antes de UTIL (122) e da própria auditoria (123). Se a execução ou o deployment não seguirem esta ordem estrita — por exemplo, se a Phase 120 for posta em produção e usada para provisionar um 2º tenant real antes desta Phase 121 estar também em produção — essa janela de interferência fica genuinamente aberta. Não provisionar um 2º tenant pagante real através da consola da Phase 120 antes desta fase (121) estar concluída e implantada.
 **Plans**: TBD
 **UI hint**: yes
@@ -417,9 +452,11 @@ Plans:
 **Depends on**: Phase 121
 **Requirements**: UTIL-01
 **Success Criteria** (what must be TRUE):
+
   1. Um ecrã de relatório, acessível só a `PLATAFORMA_ADMIN`, mostra na interface, para cada tenant: nome, plano, limite de utilizadores contratado, e utilizadores ativos neste momento
   2. Os números apresentados usam a mesma contagem de "utilizador ativo" da Phase 117 (`ativo=true`) — uma única fonte de verdade, nunca um cálculo paralelo
   3. Tenants suspensos (Phase 120) continuam visíveis no relatório com o seu estado identificado, em vez de desaparecerem da lista
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -429,9 +466,11 @@ Plans:
 **Depends on**: Phase 122
 **Requirements**: ISOL-04
 **Success Criteria** (what must be TRUE):
+
   1. A consola de administração de tenants (Phase 120) e o relatório de utilização (Phase 122) são auditados e confirmados a expor dados exclusivamente através de endpoints gated a `PLATAFORMA_ADMIN`, nunca através de um endpoint tenant-scoped comum
   2. O bloqueio de `PUT /api/v1/admin/rbac` (Phase 121) é confirmado sem via de contorno — nenhum outro endpoint tenant-facing continua a permitir escrever `Role`/`Permission`
   3. A auditoria produz um veredito explícito por superfície (COVERED, ou lista de fixes aplicados), documentado antes de se considerar segura a criação de um 2º tenant pagante real fora de teste
+
 **Plans**: TBD
 
 ## Progress
