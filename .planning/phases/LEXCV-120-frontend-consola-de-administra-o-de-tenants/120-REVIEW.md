@@ -29,10 +29,10 @@ status: issues_found
 
 # Phase LEXCV-120: Code Review Report
 
-**Reviewed:** 2026-07-29T16:00:00Z
+**Reviewed:** 2026-07-29T16:00:00Z (round 1) / round-2 verification 2026-07-29
 **Depth:** deep
 **Files Reviewed:** 14
-**Status:** issues_found
+**Status:** issues_found (0 blocking — see Final Verdict)
 
 ## Summary
 
@@ -69,9 +69,82 @@ admin console's types/UI never account for that — this is not a hypothetical e
 independently confirmed against the real dev database by this phase's own `120-HUMAN-UAT.md`
 (point 10: both existing tenants have `plano=NULL`). See CR-01.
 
+## Round 2 — Fix Verification
+
+A fix pass produced 7 commits addressing all 7 findings below (6 direct fixes + 1 follow-up
+comment correction discovered during this same round-2 pass):
+`2c55eac1` (CR-01), `f116b024` (WR-01), `8e544551` (WR-02), `57900ff1` (WR-03), `09c79146`
+(IN-01), `6af129e2` (IN-02), `64ad226` (WR-01 comment-accuracy follow-up). IN-03 was deliberately
+left unchanged (see its entry below).
+
+This round independently re-read every diff (not just the fix commits' own messages), re-ran
+`mvn test` (172/172, exit 0), `mvn spotbugs:check` (0 findings), `pnpm lint` (0 errors, 18
+pre-existing warnings, none in touched files) and `pnpm build` (succeeds, `/plataforma` present in
+the route list) directly from the real project checkout — not the fixer's isolated worktree, whose
+own `pnpm build` run hit an unrelated sandbox path-resolution failure that does not reproduce here.
+A second, independent adversarial review (fresh agent, no access to the fixer's own reasoning) then
+verified each of the 6 direct fixes against the original finding. Verdicts below; full per-finding
+detail follows in place in each section.
+
+- **CR-01 — CONFIRMED-RESOLVED.** `Tenant.plano` now defaults to `STARTER` via `@Builder.Default`,
+  mirroring `ativo` exactly. All three tenant-creation paths (`provisionTenant`,
+  `initializeSystem`, `seedTenantPlataforma`) proven by new tests to persist `STARTER`, never
+  `null`. Migration `120b-backfill-tenant-plano.sql` backfills existing rows and tightens the
+  column to `NOT NULL`. Frontend `EditarTenantForm` seeds state with `tenant.plano ??
+  PLANO_OPTIONS[0]` as defense in depth. Residual (non-blocking): the two pre-existing dev-DB rows
+  stay `NULL` until an operator actually runs the migration script (this repo's standing manual-SQL
+  convention, same as every other migration here); `columns.tsx`/`platform-admin.ts` were not
+  additionally typed `| null`, but the `page.tsx` fallback means the previously-reported
+  confusing-400 failure mode cannot recur regardless.
+- **WR-01 — PARTIALLY RESOLVED.** The reported mechanical bug (session-id key changes every
+  request → lockout never fires) is genuinely fixed and proven: `AuthControllerLoginLockoutTest`
+  drives the real `login()` method 6 times through a stable mocked IP and shows the 6th attempt
+  correctly gets `429`, plus a second test shows two different IPs don't share a lockout. This is a
+  strict improvement over the pre-fix state (no throttle at all) and does not reintroduce the
+  original vulnerability. However, this round's independent re-review found the fix's own comment
+  claimed this backend has no reverse proxy in front of it — false for this repo's own shipped
+  topology: `Caddyfile` fronts `/api/*` via `reverse_proxy backend:8080`, and `docker-compose.yml`
+  additionally publishes the backend's own port directly to the host (`8089:8080`). In the
+  Caddy-fronted path, `request.getRemoteAddr()` likely resolves to Caddy's constant container
+  address rather than the real client IP, which collapses the lockout key to effectively
+  per-email rather than per-attacker. Fixing this correctly requires first confirming, at the
+  infrastructure level, that direct backend access is actually blocked externally in production —
+  a fact not verifiable from source alone, and not safe to guess (trusting `X-Forwarded-For`
+  without that guarantee would let an attacker with direct backend access forge the header and
+  dodge the lockout entirely, worse than today). The comment was corrected to accurately describe
+  this limitation (`64ad226`) rather than leave a misleading claim in place, and the deeper
+  infrastructure verification + correct trusted-proxy configuration is tracked as a follow-up
+  (session task `task_0ccb6ccf`) rather than guessed at here. Not a blocker: no regression, no new
+  vulnerability, strictly better than the pre-existing state this finding described.
+- **WR-02 — CONFIRMED-RESOLVED.** `AlertasDiariosJob` now skips any tenant where
+  `!Boolean.TRUE.equals(tenant.getAtivo())` as the very first statement in its per-tenant loop, so
+  100% of per-tenant side effects are skipped, not a subset. New tests prove a suspended tenant has
+  zero interaction with any downstream repository/service, and that an active tenant elsewhere in
+  the same run is unaffected.
+- **WR-03 — CONFIRMED-RESOLVED.** `if (!me.isFetched) return null;` now precedes the role check,
+  closing the fail-open window rather than narrowing it — confirmed against `useMe()`'s actual
+  `isFetched` semantics (false until the query settles, true on both success and error), with no
+  rules-of-hooks violation from the added early return. Non-blocking note: `clientes/page.tsx` and
+  25 other dashboard pages still share the exact pre-existing `isFetched && !canX` pattern this
+  finding called systemic; this fix was correctly scoped to `/plataforma` only, and the wider sweep
+  is tracked separately (session task `task_a78e2d45`), not silently dropped.
+- **IN-01 — CONFIRMED-RESOLVED.** Shared `tenantInitials()` helper extracted, verified
+  byte-for-byte equivalent to both prior inline implementations.
+- **IN-02 — CONFIRMED-RESOLVED.** Editar Tenant dialog's Cancel button now disables on the same
+  `isSubmitting` flag already gating its Guardar button, matching the sibling AlertDialog.
+- **IN-03 — deliberately unchanged.** Still maps `IllegalStateException` to `403` in
+  `createTenant`; fixing it means either changing that mapping (which would break the existing
+  `createTenant_comIllegalStateExceptionDevolve403` test) or introducing a dedicated exception
+  type — a real design decision, not a mechanical fix, consistent with the original finding's own
+  "low real impact" framing. No action taken this round.
+
+Cross-cutting: none of the 6 fix commits touch `tenant_id` derivation or repository scoping, and
+none trust client-supplied role/permission data — the Phase 119 escalation-bug class is not
+reintroduced anywhere in this diff set.
+
 ## Critical Issues
 
-### CR-01: Newly-provisioned tenants (including the reserved "LexCV" tenant) get `plano = NULL`, which the new console's types/UI assume can never happen
+### CR-01: Newly-provisioned tenants (including the reserved "LexCV" tenant) get `plano = NULL`, which the new console's types/UI assume can never happen (RESOLVED — see Round 2)
 
 **Files:**
 - `backend/src/main/java/com/lexcv/models/Tenant.java:35-37` (vs. `:59-61`)
@@ -189,7 +262,7 @@ submitted value can never disagree.
 
 ## Warnings
 
-### WR-01: Login brute-force lockout key is trivially bypassable (pre-existing, but sits in one of the 3 access paths this phase depends on)
+### WR-01: Login brute-force lockout key is trivially bypassable (pre-existing, but sits in one of the 3 access paths this phase depends on) (PARTIALLY RESOLVED — see Round 2)
 
 **File:** `backend/src/main/java/com/lexcv/controllers/AuthController.java:58-59`
 
@@ -217,7 +290,7 @@ this phase's suspension model depends on, so it was in scope for this pass.
 `X-Forwarded-For`/`X-Real-IP` if the app sits behind a reverse proxy), e.g.
 `request.getRemoteAddr()` via an injected `HttpServletRequest`, not a servlet session id.
 
-### WR-02: `AlertasDiariosJob` (existing scheduled job) does not honor the new `Tenant.ativo` suspension semantics
+### WR-02: `AlertasDiariosJob` (existing scheduled job) does not honor the new `Tenant.ativo` suspension semantics (RESOLVED — see Round 2)
 
 **File:** `backend/src/main/java/com/lexcv/jobs/AlertasDiariosJob.java:90` (not in this phase's
 file list, but a direct downstream consumer of `Tenant`, the entity this phase modifies)
@@ -242,7 +315,7 @@ continues during a suspension) rather than a silent gap.
 or an equivalent repository-level filter, if the product decision is that suspended tenants should
 stop accruing background work too.
 
-### WR-03: `/plataforma`'s authorization gate fails open during the initial `useMe()` load
+### WR-03: `/plataforma`'s authorization gate fails open during the initial `useMe()` load (RESOLVED — see Round 2)
 
 **File:** `web/src/app/(dashboard)/plataforma/page.tsx:63-75`
 
@@ -282,7 +355,7 @@ return <PlataformaPageContent />;
 
 ## Info
 
-### IN-01: Duplicated "initials" computation between desktop and mobile
+### IN-01: Duplicated "initials" computation between desktop and mobile (RESOLVED — see Round 2)
 
 **Files:** `web/src/app/(dashboard)/plataforma/columns.tsx:129-135`,
 `web/src/app/(dashboard)/plataforma/page.tsx:182-188`
@@ -294,7 +367,7 @@ block in `page.tsx`.
 **Fix:** Extract a small shared `tenantInitials(nome: string): string` helper (e.g. in
 `web/src/types/platform-admin.ts` or a small `lib` util) and import it in both places.
 
-### IN-02: "Editar Tenant" dialog's Cancel button isn't disabled while a save is in flight
+### IN-02: "Editar Tenant" dialog's Cancel button isn't disabled while a save is in flight (RESOLVED — see Round 2)
 
 **File:** `web/src/app/(dashboard)/plataforma/page.tsx:477-482`
 
@@ -312,7 +385,7 @@ same file.
 
 **Fix:** `<Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>`.
 
-### IN-03: `createTenant` maps a server-misconfiguration to `403 Forbidden`
+### IN-03: `createTenant` maps a server-misconfiguration to `403 Forbidden` (deliberately unchanged — see Round 2)
 
 **File:** `backend/src/main/java/com/lexcv/controllers/PlatformAdminController.java:76-79`
 
@@ -333,8 +406,36 @@ in practice (`DatabaseSeeder.seedRbac()` creates the ADMIN role on every boot), 
 exception type than the borrowed `IllegalStateException` so the two call sites don't share a
 status-code mapping that only fits one of them.
 
+## Final Verdict
+
+**Phase 120 (frontend consola de administração de tenants) is APPROVED — no blockers.**
+
+- 0 open Critical findings: CR-01 is resolved and proven by new tests exercising all three
+  tenant-creation paths.
+- 0 open blocking Warnings: WR-02 and WR-03 are fully resolved. WR-01 is substantially improved —
+  the reported bug (lockout never fires) is genuinely fixed and is a strict security improvement
+  over the pre-existing state — with one residual precision gap (real attacker-IP vs. per-email
+  granularity behind this repo's own Caddy deployment) that neither regresses nor introduces a new
+  vulnerability, tracked as a follow-up rather than guessed at inside this phase.
+- 0 open blocking Info items: IN-01 and IN-02 are resolved; IN-03 is a deliberate, documented
+  non-fix consistent with its own original "low real impact" framing, same disposition class as
+  Phase 117's own deferred Info items.
+- Regression gates independently re-run and green: backend unit suite (172/172), SpotBugs/
+  FindSecBugs (0 findings), frontend lint (0 errors), frontend production build (succeeds,
+  `/plataforma` present in the route list) — all run directly against the real project checkout,
+  not just taken from the fix pass's own report.
+- Two genuinely out-of-scope-but-real issues surfaced incidentally during this round were
+  deliberately NOT fixed inline (would have expanded this phase's scope beyond its own findings):
+  the `isFetched && !canX` fail-open pattern exists identically in 25 other dashboard pages besides
+  `/plataforma` (session task `task_a78e2d45`), and confirming this backend's production network
+  topology actually blocks direct-to-backend access is needed before WR-01's lockout key can be
+  tightened further (session task `task_0ccb6ccf`).
+
+No further fix iteration is warranted for this phase.
+
 ---
 
-_Reviewed: 2026-07-29T16:00:00Z_
+_Reviewed: 2026-07-29T16:00:00Z (round 1)_
+_Round-2 verification: 2026-07-29_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: deep_
