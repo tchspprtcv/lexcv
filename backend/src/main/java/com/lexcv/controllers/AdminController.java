@@ -343,6 +343,17 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Utilizador removido com sucesso!"));
     }
 
+    // CR-01 (121-REVIEW.md): getRbac ganha aqui uma segunda autoridade aceite -- alargamento so de
+    // LEITURA sobre um catalogo estrutural de plataforma (papeis/permissoes), nunca sobre dados de
+    // tenant. Sem isto, o unico chamador que passou a poder escrever esta matriz apos a guarda de
+    // updateRbac acima (PLATAFORMA_ADMIN) era simultaneamente o unico que nao a podia ler primeiro
+    // -- DatabaseSeeder.seedUtilizadorPlataforma atribui-lhe so PLATAFORMA_ADMIN, nunca ADMIN, e
+    // updateRbac substitui (nunca funde) as permissoes de cada papel submetido, pelo que o primeiro
+    // uso real deste endpoint pelo seu unico chamador legitimo estava a uma submissao incompleta de
+    // apagar permissoes de plataforma inteira. O corpo do metodo (incluindo a exclusao deliberada
+    // de PAPEL_PLATAFORMA da resposta, abaixo) fica inalterado -- so quem pode chamar muda, nunca o
+    // que e devolvido.
+    @PreAuthorize("hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')")
     @GetMapping("/rbac")
     public ResponseEntity<?> getRbac() {
         List<Role> roles = roleRepository.findAll();

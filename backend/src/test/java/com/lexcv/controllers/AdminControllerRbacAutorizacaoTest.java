@@ -31,7 +31,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -156,13 +155,50 @@ class AdminControllerRbacAutorizacaoTest {
         assertEquals("hasRole('PLATAFORMA_ADMIN')", anotacao.value());
     }
 
-    // Guarda de regressao para a decisao explicita de 121-CONTEXT.md de nao tocar em getRbac: um
-    // ADMIN de tenant mantem a leitura da matriz, governada so pelo gate de classe.
+    // CR-01 (121-REVIEW.md): a decisao original de 121-CONTEXT.md era deixar getRbac sem anotacao
+    // de metodo -- mas isso deixava o unico chamador capaz de escrever a matriz (PLATAFORMA_ADMIN)
+    // sem nenhuma forma de a ler primeiro (ver o comentario do handler). Este teste substitui
+    // getRbac_continuaSemAnotacaoDeMetodo, cuja premissa (nenhuma anotacao de metodo) deixou de
+    // ser verdadeira com este fix: prova, por reflexao, que getRbac passa a ter a sua propria
+    // anotacao de metodo, alargada para aceitar tambem PLATAFORMA_ADMIN sem deixar de aceitar
+    // ADMIN.
     @Test
-    void getRbac_continuaSemAnotacaoDeMetodo() throws NoSuchMethodException {
+    void getRbac_temAnotacaoDeMetodoComValorExatoHasRoleAdminOuPlataformaAdmin() throws NoSuchMethodException {
         Method metodo = AdminController.class.getMethod("getRbac");
+        PreAuthorize anotacao = metodo.getAnnotation(PreAuthorize.class);
 
-        assertNull(metodo.getAnnotation(PreAuthorize.class));
+        assertNotNull(anotacao);
+        assertEquals("hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')", anotacao.value());
+    }
+
+    // CR-01 (121-REVIEW.md): prova comportamental, pelo proxy real de method security, de que um
+    // chamador com apenas ROLE_PLATAFORMA_ADMIN (o unico papel que o utilizador seedado em
+    // DatabaseSeeder.seedUtilizadorPlataforma alguma vez detem) agora consegue ler a matriz -- o
+    // gap real que motivou este fix: antes, este chamador passava em updateRbac mas era sempre
+    // recusado em getRbac, sem nenhuma forma de validar o estado atual antes de o substituir.
+    @Test
+    void getRbac_comRolePlataformaAdminObtemSucesso() {
+        autenticarComoAuthorities("ROLE_PLATAFORMA_ADMIN");
+        when(roleRepository.findAll()).thenReturn(List.of());
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    // CR-01 (121-REVIEW.md): nao-regressao -- um ADMIN de tenant continua a conseguir ler a matriz
+    // tal como antes deste fix; o alargamento e estritamente aditivo (uma segunda autoridade
+    // aceite), nunca retira o acesso que ja existia.
+    @Test
+    void getRbac_comRoleAdminContinuaAObterSucesso() {
+        autenticarComoAuthorities("ROLE_ADMIN");
+        when(roleRepository.findAll()).thenReturn(List.of());
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     // Guarda de regressao para os restantes handlers de AdminController (utilizadores, etc.), que
