@@ -4,8 +4,8 @@ milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
 stopped_at: Criado ROADMAP.md da v2.16 (7 fases, 117–123) — PLAN backend/frontend (117-118), PROV backend/frontend (119-120), fecho de suposições de tenant única + bloqueio de RBAC (121), relatório de utilização (122), auditoria de isolamento dedicada (123). REQUIREMENTS.md traceability atualizado (15/15, 100% cobertura). STATE.md refrescado.
-last_updated: "2026-07-29T00:59:18.539Z"
-last_activity: 2026-07-29 -- Phase 117 planning complete
+last_updated: "2026-07-29T01:00:25.185Z"
+last_activity: 2026-07-29 -- Phase 117 execution started
 progress:
   total_phases: 7
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Milestone v2.16 — Phase 117 (Backend — Limite de Utilizadores por Tenant)
+**Current focus:** Phase 117 — Backend — Limite de Utilizadores por Tenant
 
 ## Current Position
 
-Phase: 117 of 123 (Backend — Limite de Utilizadores por Tenant)
-Plan: TBD — not yet planned
-Status: Ready to execute
-Last activity: 2026-07-29 -- Phase 117 planning complete
+Phase: 117 (Backend — Limite de Utilizadores por Tenant) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 117
+Last activity: 2026-07-29 -- Phase 117 execution started
 
 ## Performance Metrics
 
@@ -122,6 +122,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - Phase 85 open product decision (`97-UAT.md`, carried forward unanswered): should an ALTA-priority `Evento` with null `dataInicio` count as urgent in `agendaUrgentesCount`/`prazosCriticosCount`? Current behavior excludes it by design (see `isEventoCritico()` docblock in `ResourceController.java`, grep to relocate). Not resolved by v2.11 — awaiting a user product decision. (Field renamed from `dataFim` to `dataInicio` on 2026-07-14 — see the next bullet; the corner case itself, and the still-open product question, are unchanged.)
 - ~~`isEventoCritico()` (dashboard KPIs: `prazos_vencer`/`prazos_criticos_count`) computed Evento risk from `dataFim`, while `listEventos` (GET /eventos, Agenda, AGD-34/35) and `AlertasDiariosJob` both use `dataInicio` — a genuine 5th divergent "prazo crítico" implementation that AGD-34/35's own consolidation goal was meant to eliminate~~ — CLOSED 2026-07-14, found by the v2.11 milestone audit's integration-checker (flagged by `92-REVIEW.md` CR-01/`92-CONTEXT.md` as deferred to Phase 97, but missed by Phase 97's own bounded AUD-05 scope until the milestone-audit step caught it). Fixed by standardizing `isEventoCritico()` on `dataInicio`; full backend suite re-confirmed green (69/69) after the change. Commit `f0c62ff`.
 - `backend/migrations/74-cleanup-nif-documento-tipo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
+- `backend/migrations/117-add-tenant-plano-limite-utilizadores.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - ~~REG_COMERCIAL and other `DocumentoTipo` values still render as raw enum strings instead of translated Portuguese labels~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `getDocumentoTipoLabel` helper added, applied at both cliente render sites (detail page + printable ficha).
 - ~~No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `ClienteNifValidationTest` added (standalone `jakarta.validation.Validator`, 4 scenarios: valid/blank/wrong-length/non-numeric).
 - ~~No H2/Testcontainers integration-test infrastructure exists anywhere in this backend~~ — CLOSED by v2.11 Phase 91 (TEST-01/02/03): Testcontainers PostgreSQL integration-test infra + CI gate now exist; `buscarPorFiltros` (native query) and the `numeroVersao` concurrency lock are proven against real Postgres in `NotificacaoRepositoryIT`/`ParecerVersaoConcorrenciaIT`.
