@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 120 (review + fix loop + verification)
-last_updated: "2026-07-29T15:45:00.000Z"
+stopped_at: Completed 121-01-PLAN.md (PUT /api/v1/admin/rbac locked to PLATAFORMA_ADMIN)
+last_updated: "2026-07-29T19:35:13.987Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 19
+  completed_plans: 16
   percent: 57
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — NOT STARTED
-Plan: -
-Status: Phase 120 complete (6/6 plans + deep code review + fix loop + round-2 verification + goal-backward VERIFICATION.md); ready to plan Phase 121
+Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — IN PROGRESS
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-07-29
 
 ## Performance Metrics
@@ -111,6 +111,7 @@ Last activity: 2026-07-29
 | Phase 120 P03 | 22min | 3 tasks | 4 files |
 | Phase 120 P04 | 20min | 2 tasks | 2 files |
 | Phase 120 P05 | 30min | 3 tasks | 3 files |
+| Phase 121 P01 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -156,6 +157,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: Deep code review (120-REVIEW.md) found 1 Critical (Tenant.plano had no @Builder.Default, every tenant created with plano=NULL) + 3 Warnings + 3 Info; a 6-commit fix pass resolved CR-01/WR-02/WR-03/IN-01/IN-02, IN-03 deliberately left as a documented non-fix (would require a design decision, not a mechanical change) — same disposition class as Phase 117's own deferred low-impact Info items.
 - [Phase 120]: WR-01 (login lockout keyed on a servlet session id that changed every request, so it never fired) was fixed to key on request.getRemoteAddr() instead — a genuine, tested security improvement, proven by AuthControllerLoginLockoutTest. Round-2 independent review then found the fix's own comment wrongly claimed no reverse proxy fronts this backend: this repo's own Caddyfile puts Caddy in front of /api/*, and docker-compose.yml also separately publishes the backend's own port directly to the host (8089:8080) — so in the Caddy-fronted path, getRemoteAddr() likely resolves to Caddy's constant address, collapsing the lockout key to effectively per-email rather than per-attacker. Still strictly better than the pre-fix bug (no throttle at all), not a regression. The comment was corrected to describe this accurately (commit 64ad226) rather than left overclaiming; properly trusting X-Forwarded-For requires first confirming production network topology actually blocks direct backend access (can't be verified from source alone, and guessing wrong would let an attacker with direct access forge the lockout key) — tracked as session follow-up task_0ccb6ccf, deliberately not attempted inline.
 - [Phase 120]: WR-03's fix (`/plataforma`'s RBAC guard failing open during the initial useMe() load, now `if (!me.isFetched) return null;` before the role check) was deliberately scoped to `/plataforma` only. The same `isFetched && !canX` pattern was confirmed present in 25 other dashboard pages (clientes, processos, financeiro, agenda, documentos, dashboard, etc.) — a pre-existing, app-wide pattern, not introduced by this phase and not fixed here; flagged as session follow-up task_a78e2d45 rather than expanding this phase's scope.
+- [Phase 121]: Worded the new updateRbac authorization comment and the rewritten PAPEL_PLATAFORMA docblock forward-reference entirely in prose, never reproducing the literal hasRole('PLATAFORMA_ADMIN') annotation text — Same precedent as Phases 119-04/120-01/120-02 for self-referential comments tripping grep-based verify gates; keeps the plan's own literal-count assertions (exactly 2 @PreAuthorize lines, 0 adjacent to getRbac) unambiguous
 
 ### Pending Todos
 
@@ -253,8 +255,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T15:45:00.000Z
-Stopped at: Phase 120 complete (6 plans + review/fix loop + verification)
+Last session: 2026-07-29T19:35:13.660Z
+Stopped at: Completed 121-01-PLAN.md (PUT /api/v1/admin/rbac locked to PLATAFORMA_ADMIN)
 Resume file: None
 
 ## Operator Next Steps

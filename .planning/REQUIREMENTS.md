@@ -29,7 +29,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 
 - [ ] **ISOL-01**: Landing pública mostra sempre marca genérica LexCV (deixa de tentar mostrar branding "da" tenant)
 - [ ] **ISOL-02**: Nenhum caminho de código assume "a" tenant (`findFirstByOrderByCreatedAtAsc` ou equivalente) quando existir mais de uma tenant real
-- [ ] **ISOL-03**: `PUT /api/v1/admin/rbac` deixa de ser editável por tenant — gestão de permissões por papel passa a ser fixa para toda a plataforma
+- [x] **ISOL-03**: `PUT /api/v1/admin/rbac` deixa de ser editável por tenant — gestão de permissões por papel passa a ser fixa para toda a plataforma
 - [ ] **ISOL-04**: Auditoria de isolamento dedicada cobre as novas superfícies (ecrã de tenants, relatório de utilização, bloqueio RBAC) antes de existir um 2º tenant pagante real
 
 ### UTIL — Relatório de Utilização/Faturação
@@ -78,7 +78,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | PROV-06 | Phase 119 | Complete |
 | ISOL-01 | Phase 121 | Pending (já implementado como efeito colateral do CR-02 da Phase 119 — `PublicController.getBranding` já devolve sempre marca genérica; Phase 121 só precisa confirmar/fechar, não reimplementar) |
 | ISOL-02 | Phase 121 | Pending |
-| ISOL-03 | Phase 121 | Pending |
+| ISOL-03 | Phase 121 | Complete |
 | ISOL-04 | Phase 123 | Pending |
 | UTIL-01 | Phase 122 | Pending |
 
