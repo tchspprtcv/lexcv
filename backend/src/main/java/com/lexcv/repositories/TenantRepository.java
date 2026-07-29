@@ -18,4 +18,11 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
      * onboarding multi-tenant permitir uma 2ª {@code Tenant}, este call site tem de ser revisitado.
      */
     Optional<Tenant> findFirstByOrderByCreatedAtAsc();
+
+    /**
+     * Lookup idempotente da tenant reservada de plataforma (nome literal {@code "LexCV"}),
+     * usado por {@code DatabaseSeeder} para garantir find-or-create sem duplicar a tenant
+     * em arranques sucessivos da aplicação (Phase 119, PROV-01).
+     */
+    Optional<Tenant> findByNome(String nome);
 }

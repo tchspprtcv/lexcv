@@ -347,6 +347,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 permissionMap.get("pareceres:create"),
                                 permissionMap.get("pareceres:edit"),
                                 permissionMap.get("notificacoes:view")));
+
+                // Phase 119 (PROV-01): papel de plataforma com coleccao de permissoes
+                // deliberadamente VAZIA. Opera exclusivamente atraves do seu proprio endpoint
+                // gated por @PreAuthorize("hasRole('PLATAFORMA_ADMIN')") (Plan 04), nunca atraves
+                // do sistema RBAC scoped por tenant -- atribuir-lhe qualquer clientes:*/processos:*/
+                // rbac:manage/users:manage contradiria a decisao bloqueada em CONTEXT.md.
+                upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList());
         }
 
         private void upsertRolePermissions(String roleName, Collection<Permission> permissions) {
