@@ -4,6 +4,7 @@ import com.lexcv.dtos.SetupInitializeRequest;
 import com.lexcv.models.Role;
 import com.lexcv.models.SystemSetting;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantPlano;
 import com.lexcv.models.User;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.SystemSettingRepository;
@@ -234,5 +235,50 @@ class SetupServiceProvisionTenantTest {
                 () -> setupService.initializeSystem(request));
 
         assertEquals("O sistema já foi inicializado.", ex.getMessage());
+    }
+
+    // Caso 8 (CR-01, 120-REVIEW.md) -- provisionTenant nunca chama .plano(...) explicitamente;
+    // prova que o @Builder.Default de Tenant.plano garante STARTER, nunca null, sem depender de
+    // nenhuma logica extra dentro do proprio SetupService.
+    @Test
+    void provisionTenant_naoDefinePlanoExplicitamente_tenantPersistidaTemPlanoStarterNuncaNull() {
+        SetupInitializeRequest request =
+                requestValido("Escritorio Sem Plano Explicito", "semplano@escritorio.cv", "Pa$$w0rd");
+        Role adminRole = Role.builder().id(1).nome("ADMIN").permissions(new HashSet<>()).build();
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(userRepository.findByEmail("semplano@escritorio.cv")).thenReturn(Optional.empty());
+        stubTenantSaveComIdGerado();
+
+        Tenant resultado = setupService.provisionTenant(request);
+
+        assertEquals(TenantPlano.STARTER, resultado.getPlano());
+        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals(TenantPlano.STARTER, tenantCaptor.getValue().getPlano());
+    }
+
+    // Caso 9 (CR-01, 120-REVIEW.md) -- initializeSystem (o wizard publico de setup, distinto de
+    // provisionTenant) tambem nunca chama .plano(...) explicitamente; mesma prova que o Caso 8,
+    // desta vez para o outro dos dois caminhos de criacao de tenant apontados pelo finding.
+    @Test
+    void initializeSystem_naoDefinePlanoExplicitamente_tenantPersistidaTemPlanoStarterNuncaNull() {
+        SystemSetting settings = SystemSetting.builder()
+                .id(SystemSetting.SINGLETON_ID)
+                .initialized(false)
+                .build();
+        when(systemSettingRepository.findByIdForUpdate(SystemSetting.SINGLETON_ID))
+                .thenReturn(Optional.of(settings));
+        SetupInitializeRequest request =
+                requestValido("Escritorio Setup Inicial", "setupinicial@escritorio.cv", "Pa$$w0rd");
+        Role adminRole = Role.builder().id(1).nome("ADMIN").permissions(new HashSet<>()).build();
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(userRepository.findByEmail("setupinicial@escritorio.cv")).thenReturn(Optional.empty());
+        stubTenantSaveComIdGerado();
+
+        setupService.initializeSystem(request);
+
+        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals(TenantPlano.STARTER, tenantCaptor.getValue().getPlano());
     }
 }

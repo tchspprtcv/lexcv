@@ -1,4 +1,4 @@
-// Prova automatizada e executavel (Node puro, sem dependencias) das 10
+// Prova automatizada e executavel (Node puro, sem dependencias) das 11
 // assercoes de origem para a consola de administracao de tenants
 // (Phase 120, Plan 05) — /plataforma, columns.tsx, criar-tenant-panel.tsx,
 // dashboard-shell.tsx, sidebar-nav.tsx e types/auth.ts.
@@ -224,6 +224,20 @@ async function main() {
       descricao:
         "page.tsx contem tabIndex={0} (a guarda do tenant reservado tambem existe no bloco de cards mobile, nao so nas colunas de desktop)",
       predicate: () => plataformaPage.includes("tabIndex={0}"),
+    },
+    {
+      id: "editar-tenant-plano-com-fallback-nao-nulo",
+      descricao:
+        "EditarTenantForm em page.tsx seed-a o estado plano via 'tenant.plano ?? PLANO_OPTIONS[0]', para o NativeSelect nunca ficar nao-controlado a partir de um valor null (CR-01)",
+      predicate: () => {
+        const blocoForm = sliceBetweenMarkers(
+          plataformaPage,
+          "function EditarTenantForm",
+          "function AlteracaoEstadoConteudo",
+        );
+        if (!blocoForm) return false;
+        return /useState<TenantPlano>\(\s*tenant\.plano\s*\?\?\s*PLANO_OPTIONS\[0\]\s*\)/.test(blocoForm);
+      },
     },
   ];
 

@@ -4,6 +4,7 @@ import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.SystemSetting;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantPlano;
 import com.lexcv.models.User;
 import com.lexcv.repositories.ClienteRepository;
 import com.lexcv.repositories.ContaCorrenteRepository;
@@ -196,5 +197,22 @@ class DatabaseSeederPlataformaAdminTest {
         seeder.run();
 
         verify(roleRepository).findByNome("PLATAFORMA_ADMIN");
+    }
+
+    // CR-01 (120-REVIEW.md): seedTenantPlataforma() constroi a tenant reservada "LexCV" com
+    // Tenant.builder().nome("LexCV").build() -- sem nunca chamar .plano(...) -- por isso esta
+    // tenant so nasce com plano != null porque depende do mesmo @Builder.Default que ja garante
+    // ativo=true. Prova direta do 3º dos 3 pontos de criacao de tenant apontados pelo finding
+    // (os outros 2, provisionTenant/initializeSystem, sao provados em
+    // SetupServiceProvisionTenantTest).
+    @Test
+    void run_tenantReservadaLexCV_temPlanoStarterNuncaNull() throws Exception {
+        ReflectionTestUtils.setField(seeder, "seedEnabled", false);
+
+        seeder.run();
+
+        ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals(TenantPlano.STARTER, tenantCaptor.getValue().getPlano());
     }
 }

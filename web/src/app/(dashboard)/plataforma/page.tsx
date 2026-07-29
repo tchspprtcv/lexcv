@@ -408,7 +408,17 @@ function EditarTenantForm({
   onSubmit: (payload: TenantUpdateRequest) => Promise<void>;
   isSubmitting: boolean;
 }) {
-  const [plano, setPlano] = React.useState<TenantPlano>(tenant.plano);
+  // CR-01 (Phase 120 code review): fallback de defesa em profundidade -- o backend agora
+  // garante que `plano` nunca fica null (Tenant.java tem @Builder.Default = STARTER, e a
+  // migracao 120b-backfill-tenant-plano.sql corrige linhas antigas), mas seed-ar o estado
+  // diretamente com `tenant.plano` sem esta rede de seguranca deixava o <NativeSelect> abaixo
+  // funcionalmente nao controlado sempre que `plano` fosse null (o browser mostra visualmente a
+  // 1ª opcao, "STARTER", sem o estado React alguma vez sincronizar com esse valor) -- o operador
+  // podia gravar sem tocar no dropdown e submeter `{ plano: null, ... }`, que o backend recusa
+  // com 400 "O plano e obrigatorio.". `?? PLANO_OPTIONS[0]` garante que o valor inicial e sempre
+  // uma das opcoes reais do <select>, para a selecao visivel e o valor submetido nunca poderem
+  // divergir, mesmo perante dados antigos/pre-migracao.
+  const [plano, setPlano] = React.useState<TenantPlano>(tenant.plano ?? PLANO_OPTIONS[0]);
   const [limiteInput, setLimiteInput] = React.useState(
     tenant.limiteUtilizadores !== null ? String(tenant.limiteUtilizadores) : "",
   );

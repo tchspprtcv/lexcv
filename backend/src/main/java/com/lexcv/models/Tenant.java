@@ -32,9 +32,20 @@ public class Tenant {
     @Column(name = "logo_data_url")
     private String logoDataUrl;
 
+    // Phase 120 code review (CR-01): sem @Builder.Default, as 3 vias que constroem um Tenant sem
+    // chamar .plano(...) explicitamente (SetupService.initializeSystem, SetupService.
+    // provisionTenant, DatabaseSeeder.seedTenantPlataforma() -- a tenant reservada "LexCV")
+    // deixavam plano = NULL em producao, confirmado no 120-HUMAN-UAT.md (ponto 10) contra a base
+    // de dados real de desenvolvimento (os 2 tenants existentes tinham plano=NULL). Mesmo padrao
+    // exato de `ativo` (imediatamente abaixo): o columnDefinition garante que um ambiente novo
+    // (ddl-auto=update contra uma tabela ainda sem esta coluna) a cria ja com o default certo; uma
+    // tabela ja existente com esta coluna nullable (ex.: producao, onde a migracao 117 ja a criou)
+    // precisa do backfill em backend/migrations/120b-backfill-tenant-plano.sql, que tambem aperta a
+    // constraint para NOT NULL.
     @Enumerated(EnumType.STRING)
-    @Column(name = "plano")
-    private TenantPlano plano;
+    @Column(name = "plano", nullable = false, columnDefinition = "varchar(255) not null default 'STARTER'")
+    @Builder.Default
+    private TenantPlano plano = TenantPlano.STARTER;
 
     // Phase 117 (limite de utilizadores por tenant): null = sem limite (plano Enterprise
     // "por acordo"); um valor numérico é o limite exato de utilizadores ativos. Nunca usar
