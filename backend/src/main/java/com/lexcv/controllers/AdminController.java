@@ -33,15 +33,31 @@ public class AdminController {
     // partir desta fase (DatabaseSeeder.seedRbac(), Plan 01) para servir exclusivamente o novo
     // PlatformAdminController (Plan 04), gated por @PreAuthorize("hasRole('PLATAFORMA_ADMIN')").
     // UserPrincipal deriva autoridades ROLE_* genericamente a partir de qualquer papel guardado na
-    // base de dados (ver UserPrincipal.create), sem allowlist -- por isso, sem as quatro guardas
-    // abaixo, um ADMIN de um escritorio normal poderia atribuir-se (ou a outro utilizador) este
-    // papel via createUser/updateUser, satisfazer o hasRole('PLATAFORMA_ADMIN') do Plan 04, e
-    // alcancar POST /api/v1/platform/tenants -- criacao arbitraria de tenants por um cliente
-    // qualquer. As guardas de getRbac/updateRbac fecham, respetivamente, a visibilidade e a
-    // alterabilidade das permissoes deste papel a partir do ecra de Definicoes (RBAC) de qualquer
-    // escritorio. A Phase 121 (ISOL-03) ira depois fechar o endpoint PUT /rbac por inteiro a
-    // papeis de plataforma -- esta fase apenas protege o papel novo, sem antecipar esse bloqueio.
+    // base de dados (ver UserPrincipal.create), sem allowlist -- por isso, sem as guardas abaixo,
+    // um ADMIN de um escritorio normal poderia atribuir-se (ou a outro utilizador) este papel via
+    // createUser/updateUser, satisfazer o hasRole('PLATAFORMA_ADMIN') do Plan 04, e alcancar
+    // POST /api/v1/platform/tenants -- criacao arbitraria de tenants por um cliente qualquer. As
+    // guardas de getRbac/updateRbac fecham, respetivamente, a visibilidade e a alterabilidade das
+    // permissoes deste papel a partir do ecra de Definicoes (RBAC) de qualquer escritorio.
+    //
+    // CR-01 (119-REVIEW.md): createUser/updateUser originalmente so guardavam o campo "roles" --
+    // o campo irmao "permissions" (free-form, sem catalogo) e virado diretamente em
+    // GrantedAuthority por UserPrincipal.create, sem qualquer prefixagem "ROLE_" propria da app,
+    // pelo que um "ROLE_PLATAFORMA_ADMIN" colocado ali bypassava por completo as guardas
+    // originais (que so olhavam para "roles"). As guardas de "permissions" abaixo, que usam
+    // PAPEL_PLATAFORMA_AUTORIDADE, fecham esse caminho.
+    //
+    // A Phase 121 (ISOL-03) ira depois fechar o endpoint PUT /rbac por inteiro a papeis de
+    // plataforma -- esta fase apenas protege o papel novo, sem antecipar esse bloqueio.
     private static final String PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
+
+    // CR-01 (119-REVIEW.md): forma que a mesma reserva assume quando chega via "permissions" em
+    // vez de "roles". UserPrincipal.create NAO acrescenta o prefixo "ROLE_" a permissions (ao
+    // contrario do que faz para roles, ver o metodo), por isso e esta string ja-prefixada --
+    // nao PAPEL_PLATAFORMA sozinho -- que realmente satisfaz hasRole('PLATAFORMA_ADMIN') quando
+    // colocada em User.permissions. Bloqueamos as duas formas (crua e prefixada) por defesa em
+    // profundidade, mesmo a crua nao bastando por si so para o bypass.
+    private static final String PAPEL_PLATAFORMA_AUTORIDADE = "ROLE_" + PAPEL_PLATAFORMA;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -166,6 +182,17 @@ public class AdminController {
         }
 
         List<?> permsList = body.containsKey("permissions") ? (List<?>) body.get("permissions") : Collections.emptyList();
+
+        // CR-01 (119-REVIEW.md): mesma recusa aplicada acima a "roles" -- ver o comentario de
+        // PAPEL_PLATAFORMA_AUTORIDADE. Bloqueia tanto a forma crua do papel como a forma
+        // ja-prefixada que realmente satisfaz hasRole('PLATAFORMA_ADMIN') quando vinda deste campo.
+        for (Object pObj : permsList) {
+            if (PAPEL_PLATAFORMA.equals(pObj) || PAPEL_PLATAFORMA_AUTORIDADE.equals(pObj)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+            }
+        }
+
         Set<String> permissions = new HashSet<>();
         for (Object pObj : permsList) {
             permissions.add((String) pObj);
@@ -274,6 +301,18 @@ public class AdminController {
 
         if (body.containsKey("permissions")) {
             List<?> permsList = (List<?>) body.get("permissions");
+
+            // CR-01 (119-REVIEW.md): mesma recusa de createUser -- ver o comentario de
+            // PAPEL_PLATAFORMA_AUTORIDADE. O return acontece antes de qualquer
+            // userRepository.save(user), por isso nenhuma mutacao ja aplicada em memoria
+            // (nome/email/telefone/roles/etc.) e persistida.
+            for (Object pObj : permsList) {
+                if (PAPEL_PLATAFORMA.equals(pObj) || PAPEL_PLATAFORMA_AUTORIDADE.equals(pObj)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                            "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+                }
+            }
+
             Set<String> permissions = new HashSet<>();
             for (Object pObj : permsList) {
                 permissions.add((String) pObj);

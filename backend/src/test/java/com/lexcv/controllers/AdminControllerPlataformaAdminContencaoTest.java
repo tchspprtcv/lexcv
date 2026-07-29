@@ -55,6 +55,15 @@ import static org.mockito.Mockito.when;
  * TECNICO, ASSISTENTE) continuam geriveis exatamente como antes -- estas guardas sao recusas de um
  * unico nome de papel, nunca allowlists positivas que pudessem estreitar os caminhos legitimos.
  *
+ * <p>CR-01 (119-REVIEW.md): os Casos 9-14 provam a correcao do bypass encontrado na revisao de
+ * codigo desta fase -- as guardas originais (Casos 1/2/4 acima) so inspecionavam "roles", nunca o
+ * campo irmao "permissions", que {@link UserPrincipal#create} tambem vira em GrantedAuthority mas
+ * sem qualquer prefixagem "ROLE_" propria da app. Isso permitia a um ADMIN de escritorio colocar
+ * literalmente {@code "ROLE_PLATAFORMA_ADMIN"} em {@code permissions} (proprio ou de outro
+ * utilizador) e satisfazer o {@code hasRole('PLATAFORMA_ADMIN')} do {@code PlatformAdminController}
+ * na proxima requisicao, sem nunca tocar em "roles". Os Casos 9-14 mirror exatamente os Casos
+ * 1/2/4/5 mas para "permissions".
+ *
  * <p>Segue a mesma convencao de todos os testes de controller deste codebase (ver
  * {@link AdminControllerLimiteUtilizadoresTest}): nao existe harness MockMvc/{@code @SpringBootTest}
  * neste projeto -- o controller e instanciado diretamente com colaboradores mockados via Mockito,
@@ -96,6 +105,19 @@ class AdminControllerPlataformaAdminContencaoTest {
                 "email", EMAIL,
                 "password", PASSWORD,
                 "roles", roles
+        );
+    }
+
+    // CR-01 (119-REVIEW.md): "roles" continua obrigatorio (ver a validacao de entrada de
+    // createUser) mesmo nos casos que testam exclusivamente "permissions" -- usa-se sempre um
+    // papel de tenant legitimo aqui para que a guarda de "roles" nunca seja o motivo do 403.
+    private Map<String, Object> corpoCriacaoComPermissions(List<String> permissions) {
+        return Map.of(
+                "nome", "Novo Utilizador",
+                "email", EMAIL,
+                "password", PASSWORD,
+                "roles", List.of("ADVOGADO"),
+                "permissions", permissions
         );
     }
 
@@ -231,5 +253,104 @@ class AdminControllerPlataformaAdminContencaoTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(roleRepository, times(1)).save(any());
+    }
+
+    // Caso 9 — createUser recusa "permissions": ["ROLE_PLATAFORMA_ADMIN"] com 403 -- reproducao
+    // exata do bypass do CR-01 (119-REVIEW.md): esta e a forma ja-prefixada que
+    // UserPrincipal.create vira diretamente em GrantedAuthority "ROLE_PLATAFORMA_ADMIN",
+    // satisfazendo hasRole('PLATAFORMA_ADMIN') sem nunca tocar em "roles".
+    @Test
+    void createUser_recusaPermissionRolePlataformaAdminCom403() {
+        autenticarComoPrincipalDoTenant();
+        // "roles": ["ADVOGADO"] tem de resolver para uma Role real -- senao createUser devolveria
+        // 400 ("Pelo menos uma role válida é obrigatória") antes de sequer chegar a guarda de
+        // "permissions" sob teste aqui. Ver corpoCriacaoComPermissions.
+        when(roleRepository.findByNome("ADVOGADO"))
+                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+
+        ResponseEntity<?> response = novoController()
+                .createUser(corpoCriacaoComPermissions(List.of("ROLE_PLATAFORMA_ADMIN")));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
+        assertTrue(mensagem.toLowerCase().contains("plataforma"));
+        assertTrue(mensagem.toLowerCase().contains("reservado"));
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 10 — createUser recusa tambem a forma crua "PLATAFORMA_ADMIN" em "permissions", por
+    // defesa em profundidade (mesmo nao bastando por si so para satisfazer hasRole(...) hoje).
+    @Test
+    void createUser_recusaPermissionPlataformaAdminCruaCom403() {
+        autenticarComoPrincipalDoTenant();
+        when(roleRepository.findByNome("ADVOGADO"))
+                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+
+        ResponseEntity<?> response = novoController()
+                .createUser(corpoCriacaoComPermissions(List.of("PLATAFORMA_ADMIN")));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 11 — createUser recusa "ROLE_PLATAFORMA_ADMIN" em "permissions" mesmo misturado com
+    // uma permission legitima (nao basta inspecionar so o primeiro elemento da lista).
+    @Test
+    void createUser_recusaPermissionPlataformaAdminMesmoMisturadaComPermissionLegitima() {
+        autenticarComoPrincipalDoTenant();
+        when(roleRepository.findByNome("ADVOGADO"))
+                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+
+        ResponseEntity<?> response = novoController().createUser(
+                corpoCriacaoComPermissions(List.of("clientes:view", "ROLE_PLATAFORMA_ADMIN")));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 12 — nao-regressao: createUser continua a aceitar permissions livres legitimas.
+    @Test
+    void createUser_continuaAAceitarPermissionsLegitimas() {
+        autenticarComoPrincipalDoTenant();
+        when(roleRepository.findByNome("ADVOGADO"))
+                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).build()));
+        when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController()
+                .createUser(corpoCriacaoComPermissions(List.of("clientes:view")));
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        verify(userRepository, times(1)).save(any());
+    }
+
+    // Caso 13 — updateUser recusa "permissions": ["ROLE_PLATAFORMA_ADMIN"] com 403 e nao altera o
+    // utilizador -- reproducao exata do caminho de auto-escalada do CR-01 (PUT
+    // /api/v1/admin/users/{ownUserId} com este corpo).
+    @Test
+    void updateUser_recusaPermissionRolePlataformaAdminCom403ENaoAlteraUtilizador() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente()));
+
+        ResponseEntity<?> response = novoController()
+                .updateUser(USER_ID, Map.of("permissions", List.of("ROLE_PLATAFORMA_ADMIN")));
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 14 — nao-regressao: updateUser continua a permitir alterar permissions legitimas.
+    @Test
+    void updateUser_continuaAPermitirAlterarPermissionsLegitimas() {
+        autenticarComoPrincipalDoTenant();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente()));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController()
+                .updateUser(USER_ID, Map.of("permissions", List.of("clientes:view")));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(userRepository, times(1)).save(any());
     }
 }
