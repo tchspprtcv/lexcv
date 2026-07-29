@@ -2,12 +2,20 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.SetupInitializeRequest;
+import com.lexcv.dtos.TenantAdminSummaryResponse;
 import com.lexcv.dtos.TenantProvisionResponse;
+import com.lexcv.dtos.TenantUpdateRequest;
+import com.lexcv.models.Permission;
+import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantPlano;
+import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.aop.framework.ProxyFactory;
@@ -21,9 +29,12 @@ import org.springframework.security.authorization.method.AuthorizationManagerBef
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -40,33 +51,41 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Prova o comportamento de {@link PlatformAdminController} em dois grupos.
+ * Prova o comportamento de {@link PlatformAdminController} em dois grupos, agora cobrindo os 4
+ * handlers do controller (o {@code createTenant} original da Phase 119 mais os 3 acrescentados
+ * pela Phase 120 Plan 02: {@code listTenants}, {@code updateTenant}, {@code setTenantAtivo}).
  *
- * <p>Grupo A (Casos 1-4, instanciação direta, sem proxy) segue a mesma convenção de todos os
- * testes de controller deste codebase (ver {@code AdminControllerLimiteUtilizadoresTest}): não
- * existe harness MockMvc/{@code @SpringBootTest} neste projeto -- o controller é instanciado
- * diretamente com {@link SetupService} mockado via Mockito, e o método sob teste é invocado como
- * uma chamada Java simples.
+ * <p>Grupo A (instanciação direta, sem proxy) segue a mesma convenção de todos os testes de
+ * controller deste codebase (ver {@code AdminControllerLimiteUtilizadoresTest}): não existe
+ * nenhum harness de contexto Spring nem de simulação de pedidos HTTP neste projeto -- o
+ * controller é instanciado diretamente com {@link SetupService}, {@link TenantRepository} e
+ * {@link UserRepository} mockados via Mockito, e o método sob teste é invocado como uma chamada
+ * Java simples.
  *
- * <p>Grupo B (Casos 5, 6 e 8) precisa de algo mais: uma chamada Java direta ao controller NUNCA
- * avalia {@code @PreAuthorize} -- essa anotação só é interpretada por um proxy AOP de method
- * security. Sem esse proxy, o Success Criterion 4 da Phase 119 ("uma recusa de autorização
- * chega ao cliente como 403") não teria nenhuma prova comportamental, apenas uma leitura por
- * reflexão da string da anotação (o que o Caso 7 já cobre à parte, sem envolver o proxy). Por
- * isso estes três casos envolvem o controller num {@link ProxyFactory} CGLIB
- * ({@code setProxyTargetClass(true)}, obrigatório porque {@code PlatformAdminController} não
- * implementa nenhuma interface) montado com o mesmo
+ * <p>Grupo B precisa de algo mais: uma chamada Java direta ao controller NUNCA avalia
+ * {@code @PreAuthorize} -- essa anotação só é interpretada por um proxy AOP de method security.
+ * Sem esse proxy, os Success Criteria desta fase que exigem que um ADMIN de tenant normal nunca
+ * alcance nenhum dos 4 handlers não teriam nenhuma prova comportamental, apenas uma leitura por
+ * reflexão da string da anotação. Por isso estes casos envolvem o controller num
+ * {@link ProxyFactory} CGLIB ({@code setProxyTargetClass(true)}, obrigatório porque
+ * {@code PlatformAdminController} não implementa nenhuma interface) montado com o mesmo
  * {@link AuthorizationManagerBeforeMethodInterceptor#preAuthorize()} que o Spring Security usa
  * em produção via {@code @EnableMethodSecurity}, e povoam o {@link SecurityContextHolder}
  * manualmente antes de cada chamada, limpando-o em {@code @AfterEach} (como em
  * {@code AdminControllerLimiteUtilizadoresTest}). Isto continua a não introduzir nenhum harness
- * MockMvc/{@code @SpringBootTest} neste projeto.
+ * de contexto Spring nem de simulação de pedidos HTTP neste projeto.
  */
 @ExtendWith(MockitoExtension.class)
 class PlatformAdminControllerTest {
 
     @Mock
     private SetupService setupService;
+
+    @Mock
+    private TenantRepository tenantRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @AfterEach
     void limparSecurityContext() {
@@ -82,7 +101,7 @@ class PlatformAdminControllerTest {
     }
 
     private PlatformAdminController novoController() {
-        return new PlatformAdminController(setupService);
+        return new PlatformAdminController(setupService, tenantRepository, userRepository);
     }
 
     /**
@@ -233,5 +252,279 @@ class PlatformAdminControllerTest {
         proxy.createTenant(request);
 
         verify(setupService).provisionTenant(same(request));
+    }
+
+    // ---- Grupo A: comportamento de listTenants/updateTenant/setTenantAtivo (Phase 120 Plan 02) ----
+
+    @Test
+    void listTenants_devolve200ComUmResumoPorTenantComAContagemDoSeuProprioId() {
+        UUID tenantAId = UUID.randomUUID();
+        UUID tenantBId = UUID.randomUUID();
+        Tenant tenantA = Tenant.builder().id(tenantAId).nome("Escritorio A").plano(TenantPlano.STARTER)
+                .limiteUtilizadores(5).ativo(true).build();
+        Tenant tenantB = Tenant.builder().id(tenantBId).nome("Escritorio B").plano(TenantPlano.STANDARD)
+                .limiteUtilizadores(null).ativo(true).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantA, tenantB));
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantAId)).thenReturn(3L);
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantBId)).thenReturn(7L);
+
+        ResponseEntity<?> response = novoController().listTenants();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<TenantAdminSummaryResponse> corpo = (List<TenantAdminSummaryResponse>) response.getBody();
+        assertNotNull(corpo);
+        assertEquals(2, corpo.size());
+        TenantAdminSummaryResponse resumoA = corpo.stream().filter(r -> r.getId().equals(tenantAId)).findFirst().orElseThrow();
+        TenantAdminSummaryResponse resumoB = corpo.stream().filter(r -> r.getId().equals(tenantBId)).findFirst().orElseThrow();
+        assertEquals(3L, resumoA.getUtilizadoresAtivos());
+        assertEquals(7L, resumoB.getUtilizadoresAtivos());
+    }
+
+    @Test
+    void listTenants_nuncaDevolveEntidadesCruas() {
+        Tenant tenant = Tenant.builder().id(UUID.randomUUID()).nome("Escritorio C").plano(TenantPlano.ENTERPRISE)
+                .ativo(true).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenant));
+        when(userRepository.countByTenantIdAndAtivoTrue(any())).thenReturn(0L);
+
+        ResponseEntity<?> response = novoController().listTenants();
+
+        List<?> corpo = (List<?>) response.getBody();
+        assertNotNull(corpo);
+        corpo.forEach(item -> assertFalse(item instanceof Tenant));
+    }
+
+    @Test
+    void listTenants_devolveOrdenadoPorNomeCaseInsensitiveMesmoQuandoFindAllDevolveForaDeOrdem() {
+        // "bravo" (minusculo) vs "Alfa"/"Charlie" (maiusculo): a ordenacao natural de String
+        // (case-sensitive) poria "bravo" DEPOIS de "Charlie" (letras minusculas > maiusculas em
+        // ASCII) -- so uma comparacao case-insensitive real produz Alfa, bravo, Charlie.
+        Tenant tenantCharlie = Tenant.builder().id(UUID.randomUUID()).nome("Charlie Advogados")
+                .plano(TenantPlano.STARTER).ativo(true).build();
+        Tenant tenantAlfa = Tenant.builder().id(UUID.randomUUID()).nome("Alfa Advogados")
+                .plano(TenantPlano.STARTER).ativo(true).build();
+        Tenant tenantBravo = Tenant.builder().id(UUID.randomUUID()).nome("bravo Advogados")
+                .plano(TenantPlano.STARTER).ativo(true).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantCharlie, tenantAlfa, tenantBravo));
+        when(userRepository.countByTenantIdAndAtivoTrue(any())).thenReturn(0L);
+
+        ResponseEntity<?> response = novoController().listTenants();
+
+        @SuppressWarnings("unchecked")
+        List<TenantAdminSummaryResponse> corpo = (List<TenantAdminSummaryResponse>) response.getBody();
+        assertNotNull(corpo);
+        assertEquals(List.of("Alfa Advogados", "bravo Advogados", "Charlie Advogados"),
+                corpo.stream().map(TenantAdminSummaryResponse::getNome).toList());
+    }
+
+    @Test
+    void updateTenant_comPlanoELimiteValidosDevolve200EGravaComAtivoInalterado() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantExistente = Tenant.builder().id(tenantId).nome("Escritorio D").plano(TenantPlano.STARTER)
+                .limiteUtilizadores(3).ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantExistente));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantId)).thenReturn(2L);
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(TenantPlano.STANDARD);
+        request.setLimiteUtilizadores(10);
+
+        ResponseEntity<?> response = novoController().updateTenant(tenantId, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ArgumentCaptor<Tenant> captor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository, times(1)).save(captor.capture());
+        Tenant gravado = captor.getValue();
+        assertEquals(TenantPlano.STANDARD, gravado.getPlano());
+        assertEquals(10, gravado.getLimiteUtilizadores());
+        assertEquals(true, gravado.getAtivo());
+    }
+
+    @Test
+    void updateTenant_comLimiteUtilizadoresNuloDevolve200EGravaNulo() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantExistente = Tenant.builder().id(tenantId).nome("Escritorio E").plano(TenantPlano.STARTER)
+                .limiteUtilizadores(5).ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantExistente));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantId)).thenReturn(0L);
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(TenantPlano.ENTERPRISE);
+        request.setLimiteUtilizadores(null);
+
+        ResponseEntity<?> response = novoController().updateTenant(tenantId, request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ArgumentCaptor<Tenant> captor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(captor.capture());
+        assertEquals(null, captor.getValue().getLimiteUtilizadores());
+    }
+
+    @Test
+    void updateTenant_comLimiteUtilizadoresZeroDevolve400ENuncaChamaSave() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantExistente = Tenant.builder().id(tenantId).nome("Escritorio F").plano(TenantPlano.STARTER)
+                .ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantExistente));
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(TenantPlano.STARTER);
+        request.setLimiteUtilizadores(0);
+
+        ResponseEntity<?> response = novoController().updateTenant(tenantId, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTenant_comPlanoNuloDevolve400ENuncaChamaSave() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantExistente = Tenant.builder().id(tenantId).nome("Escritorio G").plano(TenantPlano.STARTER)
+                .ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantExistente));
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(null);
+        request.setLimiteUtilizadores(5);
+
+        ResponseEntity<?> response = novoController().updateTenant(tenantId, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTenant_comIdInexistenteDevolve404() {
+        UUID tenantId = UUID.randomUUID();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(TenantPlano.STARTER);
+        request.setLimiteUtilizadores(5);
+
+        ResponseEntity<?> response = novoController().updateTenant(tenantId, request);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void setTenantAtivo_comFalseSobreTenantNormalDevolve200EGravaAtivoFalse() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantExistente = Tenant.builder().id(tenantId).nome("Escritorio H").plano(TenantPlano.STARTER)
+                .ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantExistente));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantId)).thenReturn(0L);
+
+        ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", false));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ArgumentCaptor<Tenant> captor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(captor.capture());
+        assertEquals(false, captor.getValue().getAtivo());
+    }
+
+    @Test
+    void setTenantAtivo_comFalseSobreLexCVDevolve400ComMensagemExataENuncaChamaSave() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("LexCV").plano(TenantPlano.ENTERPRISE)
+                .ativo(true).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantLexCV));
+
+        ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", false));
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(Map.of("message", "Não é possível suspender o tenant da plataforma (LexCV)."), response.getBody());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void setTenantAtivo_comTrueSobreLexCVDevolve200EGrava() {
+        UUID tenantId = UUID.randomUUID();
+        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("LexCV").plano(TenantPlano.ENTERPRISE)
+                .ativo(false).build();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantLexCV));
+        when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.countByTenantIdAndAtivoTrue(tenantId)).thenReturn(1L);
+
+        ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", true));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(tenantRepository, times(1)).save(any(Tenant.class));
+    }
+
+    @Test
+    void setTenantAtivo_comStringEmVezDeBooleanDevolve400ENuncaChamaSave() {
+        UUID tenantId = UUID.randomUUID();
+
+        ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", "sim"));
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(Map.of("message", "O campo ativo deve ser um valor booleano."), response.getBody());
+        verify(tenantRepository, never()).findById(any());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void setTenantAtivo_comIdInexistenteDevolve404() {
+        UUID tenantId = UUID.randomUUID();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", true));
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    // ---- Grupo B: gate de autorização real dos 3 handlers novos (Phase 120 Plan 02) ----
+
+    @Test
+    void listTenants_comRoleAdminDeTenantNormalERecusadoAntesDeAlcancarOsRepositorios() {
+        autenticarComoRoles("ADMIN");
+        PlatformAdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, proxy::listTenants);
+        verify(tenantRepository, never()).findAll();
+        verify(userRepository, never()).countByTenantIdAndAtivoTrue(any());
+    }
+
+    @Test
+    void updateTenant_comRoleAdminDeTenantNormalERecusadoAntesDeAlcancarOsRepositorios() {
+        autenticarComoRoles("ADMIN");
+        UUID tenantId = UUID.randomUUID();
+        TenantUpdateRequest request = new TenantUpdateRequest();
+        request.setPlano(TenantPlano.STARTER);
+        request.setLimiteUtilizadores(5);
+        PlatformAdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.updateTenant(tenantId, request));
+        verify(tenantRepository, never()).findById(any());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void setTenantAtivo_comRoleAdminDeTenantNormalERecusadoAntesDeAlcancarOsRepositorios() {
+        autenticarComoRoles("ADMIN");
+        UUID tenantId = UUID.randomUUID();
+        PlatformAdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.setTenantAtivo(tenantId, Map.of("ativo", false)));
+        verify(tenantRepository, never()).findById(any());
+        verify(tenantRepository, never()).save(any());
+    }
+
+    // ---- Contenção estrutural: nenhum handler alcança Role/Permission (Phase 120 Plan 02) ----
+
+    @Test
+    void nenhumMetodoPublicoDeclaraParametroDoTipoRoleOuPermission() {
+        for (Method metodo : PlatformAdminController.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(metodo.getModifiers())) {
+                continue;
+            }
+            for (Class<?> tipoParametro : metodo.getParameterTypes()) {
+                assertFalse(tipoParametro.equals(Role.class) || tipoParametro.equals(Permission.class),
+                        "Metodo " + metodo.getName() + " nao deve declarar parametro do tipo Role/Permission");
+            }
+        }
     }
 }
