@@ -23,6 +23,7 @@ import {
 
 import { apiFetch } from "@/lib/api";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useMe } from "@/hooks/use-me";
 import {
   useAdminUsers,
   useAdminRbac
@@ -192,6 +193,23 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   const { data: rbacData } = useAdminRbac();
   const systemPermissions = rbacData?.systemPermissions || [];
 
+  // Indicador "X/Y utilizadores" (Phase 118 PLAN-03) — useMe() dedupe pela cache
+  // partilhada ["auth","me"], nao e um segundo pedido de rede. X usa igualdade
+  // estrita (=== true) para espelhar countByTenantIdAndAtivoTrue do backend;
+  // deliberadamente diferente da convencao de exibicao do badge "Ativo" da
+  // tabela mais abaixo, que trata utilizadores sem o campo definido como ativos.
+  const { data: me } = useMe();
+  const activeUserCount = users?.filter((u) => u.ativo === true).length ?? 0;
+  const tenantUserLimit = me?.tenant_limite_utilizadores ?? null;
+  const atUserLimit =
+    tenantUserLimit !== null && activeUserCount >= tenantUserLimit;
+  const userCountLabel =
+    tenantUserLimit === null
+      ? `${activeUserCount} utilizadores`
+      : atUserLimit
+        ? `${activeUserCount}/${tenantUserLimit} utilizadores · limite atingido`
+        : `${activeUserCount}/${tenantUserLimit} utilizadores`;
+
   const handleEditClick = (user: MockUser) => {
     setEditingUser(user);
     setSelectedRoles(user.roles);
@@ -355,13 +373,43 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 Lista de profissionais com credenciais de acesso ao sistema LexCV.
               </CardDescription>
             </div>
-            <Button
-              onClick={handleCreateClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
-            >
-              <Plus className="h-4 w-4" />
-              Novo Utilizador
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <span
+                className={
+                  atUserLimit
+                    ? "text-xs font-semibold text-red-600 dark:text-red-400"
+                    : "text-xs text-slate-500 dark:text-slate-400"
+                }
+              >
+                {userCountLabel}
+              </span>
+              {atUserLimit ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0}>
+                      <Button
+                        disabled
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Novo Utilizador
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Limite de utilizadores atingido. Desative um utilizador para libertar uma vaga.
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Button
+                  onClick={handleCreateClick}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Novo Utilizador
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
