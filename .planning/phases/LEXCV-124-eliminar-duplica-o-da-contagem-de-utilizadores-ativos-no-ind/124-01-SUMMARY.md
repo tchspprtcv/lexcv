@@ -178,6 +178,14 @@ None - no external service configuration required.
 - `web/scripts/verify-limite-utilizadores-indicator.mjs`'s `contagem-estrita` assertion will need updating (not bypassing) once Plan 02 changes the client-side derivation — flagged in `124-PATTERNS.md` section 8, out of this plan's scope.
 - No blockers identified for Plan 02.
 
+## Self-Check: PASSED
+
+- FOUND: `backend/src/test/java/com/lexcv/controllers/AuthControllerGetMeUtilizadoresAtivosTest.java`
+- FOUND: `.planning/phases/LEXCV-124-eliminar-duplica-o-da-contagem-de-utilizadores-ativos-no-ind/124-01-SUMMARY.md`
+- FOUND: commit `fc2898a3` (RED — test)
+- FOUND: commit `537aea42` (GREEN — feat)
+- FOUND: commit `0f74ecdf` (docs — this SUMMARY)
+
 ---
 *Phase: 124-eliminar-duplica-o-da-contagem-de-utilizadores-ativos-no-ind*
 *Completed: 2026-07-30*
