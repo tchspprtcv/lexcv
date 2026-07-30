@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "verify:juizo-origem": "node scripts/verify-juizo-origem-roundtrip.mjs",
     "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs",
     "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs",
@@ -42,6 +43,7 @@
     "eslint-config-next": "16.2.6",
     "shadcn": "^4.13.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
