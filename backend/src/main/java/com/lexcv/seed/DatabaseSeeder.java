@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,6 +40,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         private boolean seedEnabled;
 
         @Override
+        @Transactional
         public void run(String... args) throws Exception {
                 seedRbac();
 
