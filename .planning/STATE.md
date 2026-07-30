@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: executing
-stopped_at: Completed 123-02-PLAN.md
-last_updated: "2026-07-30T14:04:04.645Z"
-last_activity: 2026-07-30 -- Phase 124 execution started
+status: "Fase 124 COMPLETA (2/2 planos) — indicador X/Y utilizadores passa a consumir tenant_utilizadores_ativos de GET /auth/me em vez de recalcular no cliente; gate verify-limite-utilizadores-indicator.mjs reescrito com guarda negativa permanente contra o regresso do filtro. Achado #2 da auditoria do marco v2.16 fechado. Verificação: human_needed (só a confirmação visual ao vivo dos 3 estados, deferida para UAT de fim de fase — tudo o resto estruturalmente provado sem discrepâncias)."
+stopped_at: Completed 124-02-PLAN.md
+last_updated: "2026-07-30T15:25:00.000Z"
+last_activity: 2026-07-30 -- Phase 124 concluída (2/2 planos)
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 27
-  completed_plans: 25
-  percent: 88
+  completed_plans: 27
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 124 — Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite
+**Current focus:** Marco v2.16 completo (8/8 fases, incluindo a Fase 124 de fecho de dívida técnica) — pronto para `/gsd:complete-milestone` após a confirmação visual pendente
 
 ## Current Position
 
-Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 124
-Last activity: 2026-07-30 -- Phase 124 execution started
+Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — COMPLETE
+Plan: 2 of 2
+Status: Fase 124 completa. `124-VERIFICATION.md`: human_needed (só falta a confirmação visual ao vivo dos 3 estados do indicador, item de reforço não-bloqueante já classificado como tal pelo próprio plano).
+Last activity: 2026-07-30 -- Phase 124 concluída (2/2 planos)
 
 ## Performance Metrics
 
