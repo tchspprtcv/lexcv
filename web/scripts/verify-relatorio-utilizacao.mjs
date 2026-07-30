@@ -238,27 +238,54 @@ async function main() {
     {
       id: "entrada-ver-relatorio",
       descricao:
-        'plataforma/page.tsx contem href="/plataforma/relatorio", "Ver Relatório", variant="outline" e o CardHeader contem flex-wrap',
+        'plataforma/page.tsx contem href="/plataforma/relatorio", "Ver Relatório", e o <Button> que envolve esse link (nao qualquer outro elemento do ficheiro) tem variant="outline"; o CardHeader contem flex-wrap',
       predicate: () => {
         const temHref = plataformaPage.includes('href="/plataforma/relatorio"');
         const temCopy = plataformaPage.includes("Ver Relatório");
-        const temOutline = plataformaPage.includes('variant="outline"');
+        // WR-01 (122-REVIEW.md): variant="outline" tem de pertencer ao <Button> deste link
+        // especifico, nao a qualquer badge/botao noutro sitio do ficheiro (ex.: o Badge
+        // "Plataforma" tambem usa variant="outline"). Isola o bloco entre o <Button> mais
+        // proximo antes de "Ver Relatório" e o </Button> mais proximo a seguir -- usar
+        // </Button> como fim (nao o primeiro ">" solto) evita apanhar o "=>" de um onClick
+        // arrow function como falso fecho de tag.
+        const idxVerRelatorio = plataformaPage.indexOf("Ver Relatório");
+        const buttonStartIdx = plataformaPage.lastIndexOf("<Button", idxVerRelatorio);
+        const buttonEndIdx = plataformaPage.indexOf("</Button>", idxVerRelatorio);
+        const verRelatorioButtonBlock =
+          buttonStartIdx !== -1 && buttonEndIdx !== -1
+            ? plataformaPage.slice(buttonStartIdx, buttonEndIdx)
+            : "";
+        const temOutlineNoBotaoCerto = verRelatorioButtonBlock.includes('variant="outline"');
         const cardHeaderMatch = plataformaPage.match(/<CardHeader className="([^"]*)"/);
         const temFlexWrapNoCardHeader = !!cardHeaderMatch && cardHeaderMatch[1].includes("flex-wrap");
-        return temHref && temCopy && temOutline && temFlexWrapNoCardHeader;
+        return temHref && temCopy && temOutlineNoBotaoCerto && temFlexWrapNoCardHeader;
       },
     },
     {
       id: "entrada-ordem-e-criar-tenant-intocado",
       descricao:
-        '"Ver Relatório" precede "Criar Tenant"; setIsFormOpen(true) aparece exatamente 1 vez; bg-blue-600 hover:bg-blue-700 text-white preservado',
+        '"Ver Relatório" precede "Criar Tenant"; setIsFormOpen(true) aparece exatamente 1 vez; o <Button> de "Criar Tenant" especificamente (nao qualquer outro botao do ficheiro) preserva bg-blue-600 hover:bg-blue-700 text-white',
       predicate: () => {
         const idxVer = plataformaPage.indexOf("Ver Relatório");
         const idxCriar = plataformaPage.indexOf("Criar Tenant");
         const ordemOk = idxVer !== -1 && idxCriar !== -1 && idxVer < idxCriar;
         const countSetIsFormOpen = (plataformaPage.match(/setIsFormOpen\(true\)/g) ?? []).length;
-        const temClassesIntactas = plataformaPage.includes("bg-blue-600 hover:bg-blue-700 text-white");
-        return ordemOk && countSetIsFormOpen === 1 && temClassesIntactas;
+        // WR-02 (122-REVIEW.md): a classe bg-blue-600 hover:bg-blue-700 text-white tem de
+        // pertencer ao <Button> de "Criar Tenant" especificamente, nao a qualquer outro botao
+        // do ficheiro (ex.: o botao "Guardar" de EditarTenantForm usa a mesma classe). Isola o
+        // bloco entre o <Button> mais proximo antes de "Criar Tenant" e o </Button> mais
+        // proximo a seguir -- usar </Button> como fim (nao o primeiro ">" solto) evita apanhar
+        // o "=>" do onClick={() => setIsFormOpen(true)} como falso fecho de tag.
+        const buttonStartIdx = plataformaPage.lastIndexOf("<Button", idxCriar);
+        const buttonEndIdx = plataformaPage.indexOf("</Button>", idxCriar);
+        const criarTenantButtonBlock =
+          buttonStartIdx !== -1 && buttonEndIdx !== -1
+            ? plataformaPage.slice(buttonStartIdx, buttonEndIdx)
+            : "";
+        const temClassesIntactasNoBotaoCerto = criarTenantButtonBlock.includes(
+          "bg-blue-600 hover:bg-blue-700 text-white"
+        );
+        return ordemOk && countSetIsFormOpen === 1 && temClassesIntactasNoBotaoCerto;
       },
     },
     {
