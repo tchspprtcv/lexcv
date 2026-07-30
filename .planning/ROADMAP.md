@@ -527,7 +527,17 @@ Plans:
   2. O bloqueio de `PUT /api/v1/admin/rbac` (Phase 121) é confirmado sem via de contorno — nenhum outro endpoint tenant-facing continua a permitir escrever `Role`/`Permission`
   3. A auditoria produz um veredito explícito por superfície (COVERED, ou lista de fixes aplicados), documentado antes de se considerar segura a criação de um 2º tenant pagante real fora de teste
 
-**Plans**: TBD
+**Plans**: 2 plans (2 waves — fase de confirmação e documentação, sem alterações de código de produção esperadas, no espírito da AUD-01 da v2.11. Os 2 planos correm em série por ambos escreverem `123-ISOL-AUDIT.md`: o Plano 01 cria-o com o veredito do Critério 1, o Plano 02 anexa-lhe o Critério 2 e o veredito final. Deliberadamente sem plano de UAT ao vivo: as 3 superfícies já passaram por verificação HTTP real nas suas próprias fases (120-06, 121-04, 122-04) e os gates estão sob cobertura de regressão automatizada permanente — a auditoria cita essa evidência em vez de a repetir, o mesmo precedente da AUD-01, que saltou a sonda cross-tenant ao vivo sob a mesma cláusula de discrição.)
+
+Plans:
+
+**Wave 1**
+
+- [ ] 123-01-PLAN.md — Critério 1 re-derivado por execução independente (gate de classe de `PlatformAdminController` sem excepções de método, as 4 chamadas HTTP das 2 superfícies todas em `/platform/tenants*`, projeção de 6 campos sem campos sensíveis) e criação de `123-ISOL-AUDIT.md` no formato de veredito de `121-ISOL-AUDIT.md`/AUD-01 — incluindo os 2 caminhos que NÃO são gated por papel, nomeados em vez de omitidos: os campos `tenant_*` de `GET /auth/me` (own-tenant) e a escrita de `Tenant` do público `POST /setup/initialize` (gate singleton, PROV-06)
+
+**Wave 2** *(blocked on 123-01)*
+
+- [ ] 123-02-PLAN.md — Critério 2 por enumeração exaustiva (`AdminController.updateRbac` provado como único call site HTTP-alcançável que escreve as tabelas globais `Role`/`Permission`; o override per-user de `updateUser` dispositionado como own-tenant-only distinto da matriz), o handler morto `_api-backup/v1/admin/rbac/route.ts` registado como traçado-e-descartado com 3 provas independentes (0 rotas de API no manifesto de build, `apiFetch` só alcança o backend Spring, dependências `mockDb` sem ligação ao PostgreSQL), a decisão sobre o Pitfall 1 fechada como risco residual conhecido e aceite com as 4 razões, veredito final por superfície e declaração de pré-condição de go/no-go. **Este é o plano que fecha ISOL-04**
 
 ## Progress
 
