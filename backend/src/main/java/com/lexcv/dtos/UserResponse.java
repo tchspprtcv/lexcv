@@ -25,4 +25,5 @@ public class UserResponse {
     private String tenant_logo_data_url;
     private String tenant_plano;
     private Integer tenant_limite_utilizadores;
+    private Long tenant_utilizadores_ativos;
 }
