@@ -482,7 +482,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 121-03-PLAN.md — ISOL-01 confirmado por execução (`PublicControllerTest` + 3 pesquisas independentes) e ISOL-02 fechado com `121-ISOL-AUDIT.md`: veredito por superfície no formato da AUD-01 (v2.11), comandos de reprodução para a Phase 123, e 2 itens explicitamente marcados como não-achados (padrão `findByXxxId`-sem-`tenantId` do `PITFALLS.md`, assimetria `GET`/`PUT` de `/admin/rbac`)
-- [ ] 121-04-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante): `403` real de um ADMIN de escritório no `PUT /admin/rbac` **e** `200` de um `PLATAFORMA_ADMIN` no mesmo endpoint (contra-teste que exclui um bloqueio universal acidental), com payload no-op e matriz comprovadamente sem deriva; mais 8 pontos de UI incluindo Tooltip por rato e por teclado com vereditos separados
+- [x] 121-04-PLAN.md — Verificação humana ao vivo (checkpoint bloqueante): `403` real de um ADMIN de escritório no `PUT /admin/rbac` **e** `200` de um `PLATAFORMA_ADMIN` no mesmo endpoint (contra-teste que exclui um bloqueio universal acidental), com payload no-op e matriz comprovadamente sem deriva; mais 8 pontos de UI incluindo Tooltip por rato e por teclado com vereditos separados
 
 **UI hint**: yes
 
@@ -497,7 +497,23 @@ Plans:
   2. Os números apresentados usam a mesma contagem de "utilizador ativo" da Phase 117 (`ativo=true`) — uma única fonte de verdade, nunca um cálculo paralelo
   3. Tenants suspensos (Phase 120) continuam visíveis no relatório com o seu estado identificado, em vez de desaparecerem da lista
 
-**Plans**: TBD
+**Plans**: 4 plans (3 waves — o ecrã novo e a guarda de regressão do backend correm em paralelo na Wave 1 por não terem dependência nem ficheiros em comum; o ponto de entrada e o gate estrutural na Wave 2; a verificação ao vivo na Wave 3). Fase deliberadamente enxuta: **zero código de produção novo no backend** — `GET /api/v1/platform/tenants` (Phase 120) já devolve os 6 campos necessários, já inclui tenants suspensos, e `UserRepository.countByTenantIdAndAtivoTrue` (Phase 117) já é a única fonte de verdade da contagem de utilizadores ativos.
+
+Plans:
+
+**Wave 1**
+
+- [ ] 122-01-PLAN.md — Ecrã novo `/plataforma/relatorio` (só leitura): `relatorio/columns.tsx` com 4 column defs num array estático (primeiro `columns.tsx` sem factory neste codebase, por não haver callbacks de linha) e `relatorio/page.tsx` com guard `PLATAFORMA_ADMIN` a falhar fechado durante o loading de `useMe()` (WR-03), header satélite, pesquisa por nome, DataTable em desktop e cards mobile com a contagem de utilizadores incluída (divergência obrigatória: o card mobile de `/plataforma` nunca mostra essa contagem)
+- [ ] 122-02-PLAN.md — Guarda de regressão no backend: teste `listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta` em `PlatformAdminControllerTest`, o primeiro com fixture `.ativo(false)` (os 3 testes `listTenants_*` existentes usam todos estado ativo). Zero código de produção alterado — prova comportamento já correto que estava sem prova
+
+**Wave 2** *(blocked on 122-01)*
+
+- [ ] 122-03-PLAN.md — Ponto de entrada e gate estrutural: botão `outline` "Ver Relatório" no `CardHeader` de `/plataforma` (secundário antes do primário "Criar Tenant", inalterado), mais `pnpm verify:relatorio-utilizacao` com 15 asserções sobre os 4 ficheiros relevantes — incluindo a não-regressão explícita "zero itens de navegação lateral para o relatório" (precedente da Phase 89) — com prova negativa obrigatória em 3 famílias de asserção. **Este é o plano que fecha UTIL-01**
+
+**Wave 3** *(blocked on 122-03)*
+
+- [ ] 122-04-PLAN.md — Verificação ao vivo (checkpoint bloqueante), deliberadamente mais leve que as das Phases 120/121 por esta fase não acrescentar endpoint, fronteira de autorização nem mutação: 3 cenários automatizados por HTTP real (`200` para `PLATAFORMA_ADMIN`, `403` para ADMIN de escritório, tenant suspenso presente na resposta) e 6 cenários humanos (alcançabilidade num clique, coerência cruzada dos números em 3 pontos, tenant suspenso visível, viewport mobile, acesso negado sem flash de dados, ausência de item de navegação lateral)
+
 **UI hint**: yes
 
 #### Phase 123: Auditoria de Isolamento Dedicada
@@ -597,6 +613,6 @@ Plans:
 | 118. Frontend — Indicador de Utilizadores no Limite | v2.16 | 3/3 | Complete   | 2026-07-29 |
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
-| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 3/4 | In Progress|  |
-| 122. Relatório de Utilização por Tenant | v2.16 | 0/TBD | Not started | - |
+| 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
+| 122. Relatório de Utilização por Tenant | v2.16 | 0/4 | Not started | - |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
