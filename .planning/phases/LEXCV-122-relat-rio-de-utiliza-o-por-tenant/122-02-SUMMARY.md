@@ -99,3 +99,13 @@ None - no external service configuration required.
 ---
 *Phase: 122-relat-rio-de-utiliza-o-por-tenant*
 *Completed: 2026-07-30*
+
+## Self-Check: PASSED
+
+- FOUND: `backend/src/test/java/com/lexcv/controllers/PlatformAdminControllerTest.java` exists on disk
+- FOUND: `listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta` present in that file
+- FOUND: this SUMMARY file (`122-02-SUMMARY.md`) exists on disk
+- FOUND: commit `3144d6d` (task commit) in `git log --oneline --all`
+- FOUND: commit `301fe2d0` (metadata commit: SUMMARY.md + STATE.md + ROADMAP.md) in `git log --oneline --all`
+- Re-verified acceptance criteria: `mvn test -Dtest=PlatformAdminControllerTest` (27 tests, 0 failures/errors), full `mvn test` (183 tests, 0 failures/errors), `mvn spotbugs:check` (0 bugs, 0 errors) — all green as reported above
+- `git diff --name-only 3144d6d~1 3144d6d` lists exactly one file: `backend/src/test/java/com/lexcv/controllers/PlatformAdminControllerTest.java`
