@@ -503,8 +503,8 @@ Plans:
 
 **Wave 1**
 
-- [ ] 122-01-PLAN.md — Ecrã novo `/plataforma/relatorio` (só leitura): `relatorio/columns.tsx` com 4 column defs num array estático (primeiro `columns.tsx` sem factory neste codebase, por não haver callbacks de linha) e `relatorio/page.tsx` com guard `PLATAFORMA_ADMIN` a falhar fechado durante o loading de `useMe()` (WR-03), header satélite, pesquisa por nome, DataTable em desktop e cards mobile com a contagem de utilizadores incluída (divergência obrigatória: o card mobile de `/plataforma` nunca mostra essa contagem)
-- [ ] 122-02-PLAN.md — Guarda de regressão no backend: teste `listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta` em `PlatformAdminControllerTest`, o primeiro com fixture `.ativo(false)` (os 3 testes `listTenants_*` existentes usam todos estado ativo). Zero código de produção alterado — prova comportamento já correto que estava sem prova
+- [x] 122-01-PLAN.md — Ecrã novo `/plataforma/relatorio` (só leitura): `relatorio/columns.tsx` com 4 column defs num array estático (primeiro `columns.tsx` sem factory neste codebase, por não haver callbacks de linha) e `relatorio/page.tsx` com guard `PLATAFORMA_ADMIN` a falhar fechado durante o loading de `useMe()` (WR-03), header satélite, pesquisa por nome, DataTable em desktop e cards mobile com a contagem de utilizadores incluída (divergência obrigatória: o card mobile de `/plataforma` nunca mostra essa contagem)
+- [x] 122-02-PLAN.md — Guarda de regressão no backend: teste `listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta` em `PlatformAdminControllerTest`, o primeiro com fixture `.ativo(false)` (os 3 testes `listTenants_*` existentes usam todos estado ativo). Zero código de produção alterado — prova comportamento já correto que estava sem prova
 
 **Wave 2** *(blocked on 122-01)*
 
@@ -614,5 +614,5 @@ Plans:
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 122. Relatório de Utilização por Tenant | v2.16 | 0/4 | Not started | - |
+| 122. Relatório de Utilização por Tenant | v2.16 | 2/4 | In Progress|  |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |

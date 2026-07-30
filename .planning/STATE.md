@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: executing
-stopped_at: Completed 121 (review + fix loop + verification, all 3 ISOL requirements closed)
-last_updated: "2026-07-30T00:15:00.000Z"
-last_activity: 2026-07-29
+status: verifying
+stopped_at: Completed 122-01-PLAN.md (relatorio route + columns); Plan 02 (backend regression test) also complete same wave
+last_updated: "2026-07-30T03:22:42.197Z"
+last_activity: 2026-07-30
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 23
+  completed_plans: 21
   percent: 71
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 122 (Relatório de Utilização por Tenant) — NOT STARTED
-Plan: -
-Status: Phase 121 complete (4/4 plans + deep code review + fix loop + round-2 verification + goal-backward VERIFICATION.md, ISOL-01/02/03 all closed); ready to plan Phase 122
-Last activity: 2026-07-29
+Phase: 122 (Relatório de Utilização por Tenant) — IN PROGRESS
+Plan: 02 of 04 (Wave 1 done: 122-01 + 122-02; Wave 2 next: 122-03)
+Status: Wave 1 complete (122-01 frontend relatorio columns/route, 122-02 backend regression guard for suspended-tenant visibility, zero production changes). Ready to execute 122-03 (wires Ver Relatorio link into /plataforma CardHeader + verify script).
+Last activity: 2026-07-30
 
 ## Performance Metrics
 
@@ -114,6 +114,8 @@ Last activity: 2026-07-29
 | Phase 121 P01 | 25min | 2 tasks | 2 files |
 | Phase 121 P02 | 35min | 2 tasks | 3 files |
 | Phase 121 P03 | 20min | 2 tasks | 1 files |
+| Phase 122 P02 | ~10min | 1 tasks | 1 files |
+| Phase 122 P01 | ~20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -167,6 +169,10 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 121]: Negative-proof technique for verify:bloqueio-rbac: hardcoded the ternary condition (isPlatformAdmin) to true instead of deleting the whole alternate Badge/Tooltip branch — Isolates exactly the 2 assertions tied to conditional gating (A05, A06) while the other 9 structure, copy and non-regression assertions stay green, giving stronger evidence the gate fails precisely rather than as a blunt all-or-nothing signal
 - [Phase 121]: 121-03's Task 1 hit 2 literal grep-count acceptance checks that returned non-zero where the plan expected 0 (grep -c 'Repository' on PublicController.java = 1; grep -cE 'findFirstBy|findTopBy' on TenantRepository.java = 2) — both confirmed by direct code reading to be false positives (a docblock historical-reference comment, and a distinct legitimate findFirstByNome exact-name lookup from Phase 119) rather than an ISOL-01 regression; documented transparently in 121-ISOL-AUDIT.md instead of escalated to the orchestrator
 - [Phase 121]: 121-03's ISOL-02 sweep classified 6 hits (4 frontend "LexCV" UI-fallback defaults, 1 ResourceController .findFirst() on a state-transition map, 1 ResourceController movs.get(0) on an already-tenant-scoped Processo's Movimentacao list) as a 4th, explicit "unrelated to tenant resolution" outcome rather than forcing them into the plan's 3 prescribed categories — none of them determine which tenant's data is served
+- [Phase 122]: Plan 02 added listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta as a pure regression guard, zero production code changes — listTenants() already included suspended tenants by absence of any filter, but all 3 pre-existing listTenants_* tests used .ativo(true) fixtures only; the new test passed immediately on first run, proving Success Criterion 3 server-side without needing any fix
+- [Phase 122]: Plan 02 deliberately did not run requirements mark-complete for UTIL-01 despite it being listed in its own frontmatter — REQUIREMENTS.md requires an actually-reachable report screen before UTIL-01 can close; this plan only adds a backend test, mirroring the Phase 120 Plan 02/03/04 precedent for PROV-02/PROV-05
+- [Phase 122]: Plan 01 built /plataforma/relatorio's relatorioColumns as a plain static array instead of the factory-function shape all 6 other columns.tsx files use — the codebase's first columns file with zero row callbacks to thread through a factory, flagged (not silently claimed as exact precedent) in 122-PATTERNS.md's own "No Analog Found" section. Page guard order (!me.isFetched before the role check) was copied structurally from /plataforma to avoid reintroducing WR-03
+- [Phase 122]: Plan 01 deliberately did not run requirements mark-complete for UTIL-01 despite it being listed in its own frontmatter — the report route is fully built and build-verified but not yet reachable from any link (Plan 03's job); mirrors Plan 02's identical UTIL-01 rationale and the Phase 120 Plan 02/03/04 precedent for PROV-02/PROV-05
 
 ### Pending Todos
 
@@ -264,8 +270,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-29T21:52:27.234Z
-Stopped at: Completed 121-03-PLAN.md (ISOL-01/ISOL-02 audit artifact, 121-ISOL-AUDIT.md, no code changes)
+Last session: 2026-07-30T03:21:38.971Z
+Stopped at: Completed 122-01-PLAN.md (relatorio route + columns); Plan 02 (backend regression test) also complete same wave
 Resume file: None
 
 ## Operator Next Steps
