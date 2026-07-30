@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Completed 121-04-PLAN.md (live UAT — 403/200 HTTP proof + RBAC tab checkpoint, all 8 points confirmed)
-last_updated: "2026-07-29T22:15:00.000Z"
+stopped_at: Completed 121 (review + fix loop + verification, all 3 ISOL requirements closed)
+last_updated: "2026-07-30T00:15:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
   completed_plans: 19
-  percent: 61
+  percent: 71
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 121 — Fechar Suposições de Tenant Única + Bloqueio de RBAC
+**Current focus:** Phase 122 — Relatório de Utilização por Tenant
 
 ## Current Position
 
-Phase: 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) — EXECUTED
-Plan: 4 of 4 (all complete)
-Status: All 4 plans complete (ISOL-01/02/03 all closed); goal-backward verification pending
+Phase: 122 (Relatório de Utilização por Tenant) — NOT STARTED
+Plan: -
+Status: Phase 121 complete (4/4 plans + deep code review + fix loop + round-2 verification + goal-backward VERIFICATION.md, ISOL-01/02/03 all closed); ready to plan Phase 122
 Last activity: 2026-07-29
 
 ## Performance Metrics
@@ -159,6 +159,10 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 120]: Deep code review (120-REVIEW.md) found 1 Critical (Tenant.plano had no @Builder.Default, every tenant created with plano=NULL) + 3 Warnings + 3 Info; a 6-commit fix pass resolved CR-01/WR-02/WR-03/IN-01/IN-02, IN-03 deliberately left as a documented non-fix (would require a design decision, not a mechanical change) — same disposition class as Phase 117's own deferred low-impact Info items.
 - [Phase 120]: WR-01 (login lockout keyed on a servlet session id that changed every request, so it never fired) was fixed to key on request.getRemoteAddr() instead — a genuine, tested security improvement, proven by AuthControllerLoginLockoutTest. Round-2 independent review then found the fix's own comment wrongly claimed no reverse proxy fronts this backend: this repo's own Caddyfile puts Caddy in front of /api/*, and docker-compose.yml also separately publishes the backend's own port directly to the host (8089:8080) — so in the Caddy-fronted path, getRemoteAddr() likely resolves to Caddy's constant address, collapsing the lockout key to effectively per-email rather than per-attacker. Still strictly better than the pre-fix bug (no throttle at all), not a regression. The comment was corrected to describe this accurately (commit 64ad226) rather than left overclaiming; properly trusting X-Forwarded-For requires first confirming production network topology actually blocks direct backend access (can't be verified from source alone, and guessing wrong would let an attacker with direct access forge the lockout key) — tracked as session follow-up task_0ccb6ccf, deliberately not attempted inline.
 - [Phase 120]: WR-03's fix (`/plataforma`'s RBAC guard failing open during the initial useMe() load, now `if (!me.isFetched) return null;` before the role check) was deliberately scoped to `/plataforma` only. The same `isFetched && !canX` pattern was confirmed present in 25 other dashboard pages (clientes, processos, financeiro, agenda, documentos, dashboard, etc.) — a pre-existing, app-wide pattern, not introduced by this phase and not fixed here; flagged as session follow-up task_a78e2d45 rather than expanding this phase's scope.
+- [Phase 121]: ISOL-01 and ISOL-02 were found already-covered before any code was written — Phase 119's CR-02 already made PublicController.getBranding() tenant-independent, and a dedicated 5-pattern-family sweep across backend+web found zero genuine "resolve-the-tenant-by-heuristic" gaps (findFirstByNome is a legitimate reserved-tenant lookup, not the removed heuristic). Both closed via confirmation/audit-record only (121-ISOL-AUDIT.md), zero code changes. The pre-existing findByXxxId-without-tenantId pattern (PITFALLS.md Pitfall 1) was explicitly cited as background, out of this phase's scope, owned by Phase 123.
+- [Phase 121]: ISOL-03 (locking PUT /admin/rbac to PLATAFORMA_ADMIN via a method-level @PreAuthorize override — first-of-its-kind combined with the existing class-level gate in this codebase) was deliberately scoped to PUT only; GET and the Settings tab's own visibility (hasRbacManage) were left untouched per 121-CONTEXT.md's explicit non-goal of not building a new PLATAFORMA_ADMIN-facing RBAC screen. A subsequent deep code review (CR-01) found this created a real footgun: PLATAFORMA_ADMIN is the ONLY caller who can now write the matrix, but was ALSO the only caller who couldn't read it first (GET stayed ADMIN-only), and updateRbac does a full replace per role — one incomplete direct-API payload away from silently wiping a role's permissions platform-wide. Fixed by widening GET to `hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')` — a read-only widening over platform-structural (non-tenant) data, not a reopening of the "no new UI" decision, since PLATAFORMA_ADMIN's only path to either endpoint remains direct API calls.
+- [Phase 121]: Two code-review-suggested one-liners were deliberately NOT applied verbatim, both catching a worse bug than the one being fixed: (a) WR-01's suggested `isDisabled = role === "ADMIN" || !isPlatformAdmin` would have coupled to `checked={isAssigned || isDisabled}`, force-checking every non-ADMIN cell for any non-platform-admin viewer regardless of actual data — fixed instead via a separate `isAdminRow` decoupled from the read-only `isDisabled`; (b) WR-03's suggested rename target (RbacTab's `me`) would have broken verify-bloqueio-rbac.mjs's A03/A04 assertions, which match `me.isFetched` by exact substring — fixed by renaming the OTHER `me` binding (UserManagementTab's) instead, achieving the same disambiguation with zero risk to the working gate.
+- [Phase 121]: Because CR-01 changed a live HTTP contract (GET /admin/rbac for PLATAFORMA_ADMIN: 403→200) and WR-01 changed a live UI behavior (matrix checkboxes: interactive→disabled) after the live-UAT plan had already closed and recorded the pre-fix values, both `121-HUMAN-UAT.md` and `121-04-SUMMARY.md` were corrected in place with dated addenda (not silently rewritten) and the corrected behavior was re-verified live a second time against the actually-running app, not assumed from the fix commits alone — the independent goal-backward verification agent caught the WR-01-side staleness (point 5) that I'd missed when fixing the CR-01-side staleness (the HTTP table) in isolation.
 - [Phase 121]: Worded the new updateRbac authorization comment and the rewritten PAPEL_PLATAFORMA docblock forward-reference entirely in prose, never reproducing the literal hasRole('PLATAFORMA_ADMIN') annotation text — Same precedent as Phases 119-04/120-01/120-02 for self-referential comments tripping grep-based verify gates; keeps the plan's own literal-count assertions (exactly 2 @PreAuthorize lines, 0 adjacent to getRbac) unambiguous
 - [Phase 121]: Negative-proof technique for verify:bloqueio-rbac: hardcoded the ternary condition (isPlatformAdmin) to true instead of deleting the whole alternate Badge/Tooltip branch — Isolates exactly the 2 assertions tied to conditional gating (A05, A06) while the other 9 structure, copy and non-regression assertions stay green, giving stronger evidence the gate fails precisely rather than as a blunt all-or-nothing signal
 - [Phase 121]: 121-03's Task 1 hit 2 literal grep-count acceptance checks that returned non-zero where the plan expected 0 (grep -c 'Repository' on PublicController.java = 1; grep -cE 'findFirstBy|findTopBy' on TenantRepository.java = 2) — both confirmed by direct code reading to be false positives (a docblock historical-reference comment, and a distinct legitimate findFirstByNome exact-name lookup from Phase 119) rather than an ISOL-01 regression; documented transparently in 121-ISOL-AUDIT.md instead of escalated to the orchestrator
@@ -266,6 +270,6 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phase 120 (Consola de Administração de Tenants) is complete — see `120-VERIFICATION.md` for the goal-backward verdict.
-- Continuing autonomous execution to Phase 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) per the standing `/gsd:autonomous` authorization.
-- Two follow-ups were flagged as separate background tasks rather than folded into this milestone's phases (session task_a78e2d45: sweep the app-wide isFetched-fail-open RBAC guard pattern; session task_0ccb6ccf: confirm production network topology before tightening the login-lockout IP key) — pick these up whenever convenient, they don't block v2.16.
+- Phase 120 (Consola de Administração de Tenants) and Phase 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) are both complete — see `120-VERIFICATION.md` / `121-VERIFICATION.md` for the goal-backward verdicts. All 3 ISOL requirements (ISOL-01/02/03) closed.
+- Continuing autonomous execution to Phase 122 (Relatório de Utilização por Tenant) per the standing `/gsd:autonomous` authorization.
+- Three follow-ups were flagged as separate background tasks rather than folded into this milestone's phases (session task_a78e2d45: sweep the app-wide isFetched-fail-open RBAC guard pattern; session task_0ccb6ccf: confirm production network topology before tightening the login-lockout IP key; session task_3b2eae90: add a frontend CI job — no `pnpm lint/build`/`verify:*` script runs automatically today) — pick these up whenever convenient, they don't block v2.16.
