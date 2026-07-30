@@ -318,6 +318,43 @@ class PlatformAdminControllerTest {
                 corpo.stream().map(TenantAdminSummaryResponse::getNome).toList());
     }
 
+    /**
+     * Guarda o criterio de sucesso 3 da Phase 122: o relatorio de utilizacao por tenant depende
+     * de um escritorio suspenso continuar a aparecer na resposta deste endpoint, com o seu
+     * estado transportado ao cliente -- um escritorio suspenso continua a precisar de ser
+     * faturado ou reconciliado, nao pode simplesmente desaparecer da base factual.
+     *
+     * <p>A implementacao atual ja cumpre isto por ausencia de qualquer condicao no pipeline de
+     * {@code listTenants()} -- por isso este teste passa de imediato, sem nenhuma alteracao de
+     * producao. O seu valor esta em impedir que uma refatoracao futura introduza silenciosamente
+     * essa condicao: os 3 testes {@code listTenants_*} anteriores construiam todos os seus
+     * fixtures com o mesmo estado, deixando esta propriedade sem nenhuma prova ate agora.
+     */
+    @Test
+    void listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta() {
+        UUID tenantAtivoId = UUID.randomUUID();
+        UUID tenantSuspensoId = UUID.randomUUID();
+        Tenant tenantAtivo = Tenant.builder().id(tenantAtivoId).nome("Escritorio Ativo")
+                .plano(TenantPlano.STARTER).ativo(true).build();
+        Tenant tenantSuspenso = Tenant.builder().id(tenantSuspensoId).nome("Escritorio Suspenso")
+                .plano(TenantPlano.STANDARD).ativo(false).build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenantAtivo, tenantSuspenso));
+        when(userRepository.countByTenantIdAndAtivoTrue(any())).thenReturn(0L);
+
+        ResponseEntity<?> response = novoController().listTenants();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<TenantAdminSummaryResponse> corpo = (List<TenantAdminSummaryResponse>) response.getBody();
+        assertNotNull(corpo);
+        assertEquals(2, corpo.size());
+        TenantAdminSummaryResponse resumoSuspenso = corpo.stream()
+                .filter(r -> r.getId().equals(tenantSuspensoId))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(false, resumoSuspenso.getAtivo());
+    }
+
     @Test
     void updateTenant_comPlanoELimiteValidosDevolve200EGravaComAtivoInalterado() {
         UUID tenantId = UUID.randomUUID();
