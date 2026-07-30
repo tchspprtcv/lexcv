@@ -71,7 +71,11 @@ O que **não pôde** ser confirmado sem o browser: a navegação por clique real
 
 ## Resumo
 
-3 de 9 cenários (A1-A3) confirmados ao vivo com evidência HTTP real, incluindo a descoberta e correção de um bloqueador de ambiente genuíno (migração pendente causando `500` em qualquer escrita sobre um tenant pré-existente). 6 de 9 cenários (H1-H6) não puderam ser executados devido a um bloqueio da ferramenta de automação de browser desta sessão — não uma falha do produto. `UTIL-01` já foi fechado pelo Plan 03 com base em evidência de código + gate estrutural; esta sessão não reabre nem refecha esse requisito. Recomenda-se repetir os 6 cenários H1-H6 numa sessão em que o Browser MCP esteja a funcionar normalmente, antes de considerar este plano (122-04) totalmente encerrado.
+3 de 9 cenários (A1-A3) confirmados ao vivo com evidência HTTP real, incluindo a descoberta e correção de um bloqueador de ambiente genuíno (migração pendente causando `500` em qualquer escrita sobre um tenant pré-existente). 6 de 9 cenários (H1-H6) não puderam ser executados devido a um bloqueio da ferramenta de automação de browser desta sessão — não uma falha do produto. `UTIL-01` já foi fechado pelo Plan 03 com base em evidência de código + gate estrutural; esta sessão não reabre nem refecha esse requisito.
+
+## Decisão do utilizador (2026-07-30)
+
+O utilizador reviu este registo e instruiu explicitamente: **aceitar a evidência disponível e continuar**, sem repetir os cenários H1-H6 nesta sessão. Decisão registada aqui para o histórico, dado que os 6 cenários visuais permanecem tecnicamente "não verificados ao vivo" — a aceitação é uma decisão consciente do operador, com base em: todos os gates automatizados a verde, os 3 cenários que puderam correr (A1-A3) confirmados sem qualquer defeito, e zero indícios de regressão em qualquer evidência recolhida (código, testes, HTTP real). Não é uma reinterpretação silenciosa do critério — é uma aceitação explícita e datada do risco residual.
 
 ---
 *Phase: 122-relat-rio-de-utiliza-o-por-tenant*
