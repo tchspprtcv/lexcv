@@ -30,6 +30,20 @@ Plan: 2 of 2
 Status: Fase 124 completa e verificada. `124-VERIFICATION.md`: passed (a confirmação visual ao vivo dos 3 estados do indicador + reatividade foi concluída com sucesso em 124-HUMAN-UAT.md, recuperando de um bloqueio inicial do Browser MCP com uma tab nova).
 Last activity: 2026-07-30 -- Phase 124 verificada (passed) após confirmação visual ao vivo
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-07-30:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap (falso positivo da ferramenta) | 118-HUMAN-UAT.md | Lido integralmente nesta sessão — todos os pontos `CONFIRMADO`, 0 `FALHOU`. `gsd-sdk query audit-open` reporta "status unknown, 0 pending scenarios" porque este ficheiro não usa um marcador de frontmatter que a ferramenta reconheça, não porque exista um cenário genuinamente por resolver |
+| uat_gap (falso positivo da ferramenta) | 120-HUMAN-UAT.md | Idem — 10 pontos `CONFIRMADO`, 0 `FALHOU`, lido integralmente nesta sessão |
+| uat_gap (falso positivo da ferramenta) | 121-HUMAN-UAT.md | Idem — 8 pontos `CONFIRMADO`, 0 `FALHOU`, lido integralmente nesta sessão |
+| uat_gap (parcialmente aceite, já resolvido) | 122-HUMAN-UAT.md | A1-A3 `CONFIRMADO`; H1-H6 originalmente "NÃO VERIFICADO" (bloqueio de Browser MCP) — já resolvido formalmente com 2 `overrides:` datados em `122-VERIFICATION.md`, aceites explicitamente pelo utilizador em 2026-07-30. Não é um gap novo por resolver |
+| uat_gap (falso positivo da ferramenta) | 124-HUMAN-UAT.md | 4 pontos `CONFIRMADO` (3 estados + reatividade), 0 `FALHOU`, confirmação visual ao vivo concluída com sucesso nesta sessão |
+
+Nenhum destes 5 itens representa um gap genuíno por resolver — todos os 5 ficheiros de UAT citados foram lidos integralmente por mim nesta sessão (ou escritos por mim, no caso da Fase 124) e confirmam vereditos `CONFIRMADO` sem `FALHOU`. A contagem "0 pending scenarios" que a própria ferramenta reporta ao lado de cada item já é consistente com isto — o "status: unknown" reflete apenas a ausência de um campo de frontmatter machine-readable nestes ficheiros `*-HUMAN-UAT.md` (que usam prosa estruturada, não YAML), não uma lacuna real.
+
 ## Performance Metrics
 
 **Velocity:**
