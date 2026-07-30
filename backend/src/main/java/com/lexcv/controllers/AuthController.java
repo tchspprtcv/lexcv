@@ -227,6 +227,10 @@ public class AuthController {
             response.setTenant_logo_data_url(t.getLogoDataUrl());
             response.setTenant_plano(t.getPlano() != null ? t.getPlano().name() : null);
             response.setTenant_limite_utilizadores(t.getLimiteUtilizadores());
+            // Fase 124: terceiro e ultimo consumidor do metodo unico de contagem de
+            // utilizadores ativos do repositorio de utilizadores (Fase 117), fechando a
+            // duplicacao que o indicador do frontend fazia via filtro no cliente.
+            response.setTenant_utilizadores_ativos(userRepository.countByTenantIdAndAtivoTrue(t.getId()));
         });
 
         return ResponseEntity.ok(response);
