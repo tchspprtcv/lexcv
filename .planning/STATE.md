@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: executing
-stopped_at: Completed 123-01-PLAN.md (123-ISOL-AUDIT.md criado — Criterio de Sucesso 1, 14 linhas COVERED); ISOL-04 nao fechado, aguarda Plano 02
-last_updated: "2026-07-30T11:27:24.401Z"
+status: "Fase 123 COMPLETA (Plano 02 concluído) — 123-ISOL-AUDIT.md fechado com veredito nomeado para os 3 Critérios de Sucesso: Critério 1 (Plano 01, consola+relatório gated a PLATAFORMA_ADMIN) e Critério 2+3 (Plano 02, updateRbac único call site de escrita RBAC, handler morto _api-backup traçado-e-descartado, Pitfall 1 aceite como risco residual, veredito final por superfície). ISOL-04 fechado em REQUIREMENTS.md. Marco v2.16 completo: 15/15 requisitos, 7/7 fases, 25/25 planos."
+stopped_at: Completed 123-02-PLAN.md
+last_updated: "2026-07-30T11:56:44.519Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 25
-  completed_plans: 24
-  percent: 86
+  completed_plans: 25
+  percent: 100
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 123 — Auditoria de Isolamento Dedicada
+**Current focus:** Marco v2.16 completo — pronto para `/gsd:complete-milestone`
 
 ## Current Position
 
-Phase: 123 (Auditoria de Isolamento Dedicada) — IN PROGRESS
-Plan: 01 de 02
-Status: Plano 01 completo — 123-ISOL-AUDIT.md criado com o veredito do Critério de Sucesso 1 (14 linhas de tabela, todas COVERED): gate de classe único de PlatformAdminController, os 4 endpoints /platform/tenants*, TenantAdminSummaryResponse/TenantProvisionResponse, as 4 chamadas de use-platform-admin.ts, os 2 guards de página, e os 2 caminhos não-gated-por-papel (GET /auth/me own-tenant, POST /setup/initialize gate singleton) — todos re-derivados por execução de comando e leitura fresca do código, nunca por citação das Fases 120/121/122. ISOL-04 deliberadamente ainda não fechado. Pronto para executar o Plano 02 (Critério de Sucesso 2 — bloqueio de RBAC, decisão do Pitfall 1, veredito final da fase).
+Phase: 123 (Auditoria de Isolamento Dedicada) — COMPLETE
+Plan: 02 de 02
+Status: Plano 02 completo — 123-ISOL-AUDIT.md fechado com o veredito do Critério de Sucesso 2 (`AdminController.updateRbac` provado por enumeração exaustiva como único call site HTTP-alcançável que escreve `Role`/`Permission`; handler morto `_api-backup/v1/admin/rbac/route.ts` traçado e descartado com 3 provas independentes; override per-user de `updateUser` dispositionado como own-tenant-only), a decisão sobre o Pitfall 1 (risco residual conhecido e aceite, 4 razões), e o veredito final nomeado para as 3 superfícies (Phase 120/121/122) mais a pré-condição de go/no-go para um 2º tenant pagante real. ISOL-04 fechado em `REQUIREMENTS.md`. **Marco v2.16 concluído: 15/15 requisitos, 7/7 fases, 25/25 planos.**
 Last activity: 2026-07-30
 
 ## Performance Metrics
@@ -118,6 +118,7 @@ Last activity: 2026-07-30
 | Phase 122 P01 | ~20min | 2 tasks | 2 files |
 | Phase 122 P03 | ~23min | 2 tasks | 3 files |
 | Phase 123 P01 | ~25min | 2 tasks | 1 files |
+| Phase 123 P02 | 24min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 122]: Plan 03 (not 01 or 02) ran requirements mark-complete for UTIL-01 -- this is the first plan making the report genuinely reachable by a real click from /plataforma, matching the Phase 120 Plan 02/03/04 precedent of only closing a requirement once the actual user-facing path exists
 - [Phase 123]: Plano 01 da Fase 123 (ISOL-04) criou 123-ISOL-AUDIT.md com o veredito do Critério de Sucesso 1 (14 linhas de tabela, todas COVERED), mas deliberadamente não fechou o requisito no seu próprio frontmatter — 123-CONTEXT.md e o próprio plano são explícitos: ISOL-04 só fecha no Plano 02, depois do Critério 2 + a decisão do Pitfall 1 + o veredito final da fase — mesmo precedente das Phases 120 (PROV-02/PROV-05) e 122 (UTIL-01), que também adiaram requirements mark-complete até o plano que entrega a peça final
 - [Phase 123]: Descobertos e documentados 2 quirks de ambiente genuinamente novos neste Windows/Git Bash (GNU grep 3.0): um padrao de grep com barra inicial (ex. "/platform") e mangled pelo runtime MSYS2, devolvendo sempre 0 falsos; e '|' sem a flag -E e tratado como caracter literal, nao como alternancia — Ambos os comandos afetados estavam literalmente escritos na accao da Task 1 do plano; corrigidos com MSYS_NO_PATHCONV=1 e -E respetivamente, revalidados, e registados na seccao Divergencias de 123-ISOL-AUDIT.md para fases futuras nao repetirem o mesmo engano
+- [Phase 123]: Plano 02 fechou a Fase 123 (ISOL-04) e o marco v2.16 inteiro. Pitfall 1 (findByXxxId sem tenantId, ~11 metodos de repositorio) aceite como risco residual conhecido e aceite -- nao corrigido, nao ignorado -- com as 4 razoes trancadas em 123-CONTEXT.md reproduzidas fielmente, e recomendacao explicita de uma fase dedicada de refactor de repositorios numa milestone futura. 121-ISOL-AUDIT.md marcado como precedente desatualizado (nao corrigido retroativamente) no ponto especifico da assimetria GET/PUT de /admin/rbac, ja que o CR-01 de 121-REVIEW.md alargou getRbac a PLATAFORMA_ADMIN depois desse ficheiro ter sido escrito. StorageService confirmado fora de ambito por grep direto (tenantId no path do objeto MinIO), nao copiado por fe do ROADMAP. UAT ao vivo nao repetido -- evidencia HTTP real das Fases 120/121/122 citada, com justificacao explicita (cobertura de regressao automatizada permanente + precedente da AUD-01)
+- [Phase 123]: gsd-sdk v1.42.3 (`state.advance-plan`, `state.update-progress` sem flags, `state.record-metric` posicional) devolveu erros de parsing/argumentos contra este STATE.md -- `state.record-metric`/`state.record-session` funcionaram com sintaxe de flags (`--phase`/`--plan`/`--duration`/`--tasks`/`--files`, `--stopped-at`/`--resume-file`); `state.advance-plan`/`state.update-progress` continuaram a falhar mesmo assim ("Cannot parse Current Plan or Total Plans", "Progress field not found"), pelo que a secção "Current Position" e o campo `status` do frontmatter foram atualizados manualmente. O bloco `progress:` do frontmatter corrigiu-se sozinho para 100%/25/25/7/7 como efeito lateral de `state.record-metric`, provavelmente por recalculo a partir dos SUMMARY.md em disco (123-02-SUMMARY.md ja existia nesse momento) -- confirmado correto por contagem manual, nao revertido
 
 ### Pending Todos
 
@@ -281,13 +284,13 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-30T11:27:23.894Z
-Stopped at: Completed 123-01-PLAN.md (123-ISOL-AUDIT.md criado — Criterio de Sucesso 1, 14 linhas COVERED); ISOL-04 nao fechado, aguarda Plano 02
+Last session: 2026-07-30T11:56:44.307Z
+Stopped at: Completed 123-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
 
 - Phases 120, 121 e 122 estão completas — ver `120-VERIFICATION.md` / `121-VERIFICATION.md` / `122-VERIFICATION.md` para os veredictos. Todos os requisitos ISOL-01/02/03 e UTIL-01 fechados.
 - Fase 122 fechou com um override formal do utilizador para os 6 cenários visuais (H1-H6) que ficaram por confirmar ao vivo devido a um bloqueio de ferramenta (Browser MCP) — não uma falha do produto. Recomenda-se, quando conveniente, repetir esses 6 cenários numa sessão com o Browser MCP confirmado saudável (ver `122-HUMAN-UAT.md`), mas isto não bloqueia o marco.
-- Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) em curso: Plano 01 completo (`123-ISOL-AUDIT.md` criado, veredito do Critério de Sucesso 1 — 14 linhas COVERED). A prosseguir a execução autónoma para o Plano 02 (Critério de Sucesso 2, decisão do Pitfall 1, veredito final da fase) conforme a autorização `/gsd:autonomous` em vigor.
+- Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) **COMPLETA**: `123-ISOL-AUDIT.md` fechado (310 linhas) com veredito nomeado para os 3 Critérios de Sucesso, ISOL-04 fechado em `REQUIREMENTS.md`. **Marco v2.16 concluído: 15/15 requisitos, 7/7 fases, 25/25 planos.** Próximo passo sugerido: `/gsd:complete-milestone` (mais `/gsd:verify-work` se desejado antes de fechar).
 - Quatro follow-ups foram sinalizados como tarefas de fundo separadas em vez de incluídos nas fases deste marco (task_a78e2d45: varrer o padrão app-wide de guarda RBAC fail-open durante carregamento; task_0ccb6ccf: confirmar a topologia de rede de produção antes de reforçar a chave de IP do lockout de login; task_3b2eae90: adicionar um job de CI para frontend — nenhum script `pnpm lint/build`/`verify:*` corre automaticamente hoje; task_f7e73ed0: registar o peso 700 como exceção formal do design-system) — a retomar quando conveniente, não bloqueiam a v2.16.

@@ -537,7 +537,7 @@ Plans:
 
 **Wave 2** *(blocked on 123-01)*
 
-- [ ] 123-02-PLAN.md — Critério 2 por enumeração exaustiva (`AdminController.updateRbac` provado como único call site HTTP-alcançável que escreve as tabelas globais `Role`/`Permission`; o override per-user de `updateUser` dispositionado como own-tenant-only distinto da matriz), o handler morto `_api-backup/v1/admin/rbac/route.ts` registado como traçado-e-descartado com 3 provas independentes (0 rotas de API no manifesto de build, `apiFetch` só alcança o backend Spring, dependências `mockDb` sem ligação ao PostgreSQL), a decisão sobre o Pitfall 1 fechada como risco residual conhecido e aceite com as 4 razões, veredito final por superfície e declaração de pré-condição de go/no-go. **Este é o plano que fecha ISOL-04**
+- [x] 123-02-PLAN.md — Critério 2 por enumeração exaustiva (`AdminController.updateRbac` provado como único call site HTTP-alcançável que escreve as tabelas globais `Role`/`Permission`; o override per-user de `updateUser` dispositionado como own-tenant-only distinto da matriz), o handler morto `_api-backup/v1/admin/rbac/route.ts` registado como traçado-e-descartado com 3 provas independentes (0 rotas de API no manifesto de build, `apiFetch` só alcança o backend Spring, dependências `mockDb` sem ligação ao PostgreSQL), a decisão sobre o Pitfall 1 fechada como risco residual conhecido e aceite com as 4 razões, veredito final por superfície e declaração de pré-condição de go/no-go. **Este é o plano que fecha ISOL-04**
 
 ## Progress
 
@@ -625,4 +625,4 @@ Plans:
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 122. Relatório de Utilização por Tenant | v2.16 | 4/4 | Complete   | 2026-07-30 |
-| 123. Auditoria de Isolamento Dedicada | v2.16 | 1/2 | In Progress|  |
+| 123. Auditoria de Isolamento Dedicada | v2.16 | 2/2 | Complete   | 2026-07-30 |
