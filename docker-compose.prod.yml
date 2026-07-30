@@ -5,6 +5,16 @@ services:
   backend:
     image: ${REGISTRY:-ghcr.io/tchspprtcv/lexcv}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    # WR-01 follow-up (Phase 120 code review): docker-compose.yml's base "8089:8080" publish
+    # is a multi-value `ports` key, which Compose concatenates across -f layers rather than
+    # letting an override file that omits `ports:` clear it -- so without this, the backend
+    # stayed reachable directly on the VPS host port 8089 even in prod, bypassing Caddy
+    # entirely and undermining the assumption (see AuthController.login) that Caddy is the
+    # sole ingress for /api/*. `!reset` is the Compose Specification's explicit "clear the
+    # inherited value" merge tag; empirically verified with `docker compose config` that this
+    # removes the published port from the merged config while docker-compose.yml (used alone
+    # for local dev) is untouched and keeps host access to 8089 for local testing.
+    ports: !reset []
     deploy:
       resources:
         limits:

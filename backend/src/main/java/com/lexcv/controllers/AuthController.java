@@ -72,12 +72,17 @@ public class AuthController {
         // getRemoteAddr() podera devolver sempre o endereco interno do container Caddy (nao o IP
         // real do cliente), o que colapsa attemptKey num bloqueio efetivamente por-email (ainda
         // uma melhoria estrita face ao bug original: nunca bloqueava ninguem), nao por-atacante.
-        // Corrigir isso corretamente exige confirmar primeiro, ao nivel de infraestrutura, que o
-        // acesso direto ao backend (bypass do Caddy) esta mesmo bloqueado externamente antes de
-        // configurar forward-headers-strategy=framework para confiar em X-Forwarded-For -- ver
-        // task de seguimento. Confiar nesse cabecalho sem essa garantia seria pior do que o estado
-        // atual: um atacante com acesso direto ao backend poderia forjar X-Forwarded-For para
-        // nunca acionar o lockout.
+        // Seguimento: nao foi possivel confirmar o estado real da firewall/infra de producao
+        // (VPS com Docker publica portas via iptables de forma que tipicamente ignora regras do
+        // ufw), por isso optou-se por eliminar a via de bypass na origem em vez de confiar nela.
+        // docker-compose.prod.yml usa agora `ports: !reset []` no servico backend, anulando o
+        // "8089:8080" herdado de docker-compose.yml -- o Caddy passa a ser o unico caminho ate
+        // este endpoint em producao (rede Docker interna lexcv_net, nao publicada ao host). Com
+        // essa via fechada, application-prod.yml ativa server.forward-headers-strategy=framework
+        // (isolado ao perfil prod -- ver comentario la), pelo que o ip acima passa a refletir o
+        // X-Forwarded-For genuino que o Caddy define. Sem o fecho da porta, confiar nesse
+        // cabecalho seria pior do que o estado anterior: um atacante com acesso direto ao
+        // backend poderia forja-lo para nunca acionar o lockout.
         String ip = request.getRemoteAddr();
         String attemptKey = loginRequest.getEmail() + "-" + ip;
 
