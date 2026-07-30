@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: verifying
-stopped_at: Completed 122-01-PLAN.md (relatorio route + columns); Plan 02 (backend regression test) also complete same wave
-last_updated: "2026-07-30T03:22:42.197Z"
+status: executing
+stopped_at: Completed 122-03-PLAN.md (Ver Relatorio entry link + verify-relatorio-utilizacao gate, 15/15 PASS); UTIL-01 closed
+last_updated: "2026-07-30T03:49:42.899Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
   percent: 71
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 ## Current Position
 
 Phase: 122 (Relatório de Utilização por Tenant) — IN PROGRESS
-Plan: 02 of 04 (Wave 1 done: 122-01 + 122-02; Wave 2 next: 122-03)
-Status: Wave 1 complete (122-01 frontend relatorio columns/route, 122-02 backend regression guard for suspended-tenant visibility, zero production changes). Ready to execute 122-03 (wires Ver Relatorio link into /plataforma CardHeader + verify script).
+Plan: 3 of 04 complete (Wave 1: 122-01 + 122-02 done; Wave 2: 122-03 done — Ver Relatório entry link + verify-relatorio-utilizacao gate, UTIL-01 closed; Plan 04 remaining)
+Status: Ready to execute 122-04 (live UAT / human checkpoint)
 Last activity: 2026-07-30
 
 ## Performance Metrics
@@ -116,6 +116,7 @@ Last activity: 2026-07-30
 | Phase 121 P03 | 20min | 2 tasks | 1 files |
 | Phase 122 P02 | ~10min | 1 tasks | 1 files |
 | Phase 122 P01 | ~20min | 2 tasks | 2 files |
+| Phase 122 P03 | ~23min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 122]: Plan 02 deliberately did not run requirements mark-complete for UTIL-01 despite it being listed in its own frontmatter — REQUIREMENTS.md requires an actually-reachable report screen before UTIL-01 can close; this plan only adds a backend test, mirroring the Phase 120 Plan 02/03/04 precedent for PROV-02/PROV-05
 - [Phase 122]: Plan 01 built /plataforma/relatorio's relatorioColumns as a plain static array instead of the factory-function shape all 6 other columns.tsx files use — the codebase's first columns file with zero row callbacks to thread through a factory, flagged (not silently claimed as exact precedent) in 122-PATTERNS.md's own "No Analog Found" section. Page guard order (!me.isFetched before the role check) was copied structurally from /plataforma to avoid reintroducing WR-03
 - [Phase 122]: Plan 01 deliberately did not run requirements mark-complete for UTIL-01 despite it being listed in its own frontmatter — the report route is fully built and build-verified but not yet reachable from any link (Plan 03's job); mirrors Plan 02's identical UTIL-01 rationale and the Phase 120 Plan 02/03/04 precedent for PROV-02/PROV-05
+- [Phase 122]: Plan 03 added flex-wrap + gap-3 to /plataforma's CardHeader (not just a second button) because 3 elements (title block + 2 buttons) now need to wrap on narrow viewports -- Phase 120 never needed this with only one button in the header
+- [Phase 122]: Plan 03's verify-relatorio-utilizacao.mjs negative-proof used 3 minimal one-line regressions (add a .filter( call, swap font-semibold->font-bold, add a stray string literal) rather than deleting blocks -- each isolated exactly 1 of 15 assertions to FAIL, confirming gate precision
+- [Phase 122]: Plan 03 (not 01 or 02) ran requirements mark-complete for UTIL-01 -- this is the first plan making the report genuinely reachable by a real click from /plataforma, matching the Phase 120 Plan 02/03/04 precedent of only closing a requirement once the actual user-facing path exists
 
 ### Pending Todos
 
@@ -270,8 +274,8 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-30T03:21:38.971Z
-Stopped at: Completed 122-01-PLAN.md (relatorio route + columns); Plan 02 (backend regression test) also complete same wave
+Last session: 2026-07-30T03:49:42.704Z
+Stopped at: Completed 122-03-PLAN.md (Ver Relatorio entry link + verify-relatorio-utilizacao gate, 15/15 PASS); UTIL-01 closed
 Resume file: None
 
 ## Operator Next Steps

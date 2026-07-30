@@ -34,7 +34,7 @@ Requisitos para a milestone v2.16. Cada um mapeia para uma fase do roadmap.
 
 ### UTIL — Relatório de Utilização/Faturação
 
-- [ ] **UTIL-01**: Relatório interno (só administrador de plataforma) mostra, por tenant: nome, plano, limite contratado, utilizadores ativos agora
+- [x] **UTIL-01**: Relatório interno (só administrador de plataforma) mostra, por tenant: nome, plano, limite contratado, utilizadores ativos agora
 
 ## v2 Requirements
 
@@ -80,7 +80,7 @@ Que fases cobrem que requisitos. Preenchido durante a criação do roadmap.
 | ISOL-02 | Phase 121 | Complete |
 | ISOL-03 | Phase 121 | Complete |
 | ISOL-04 | Phase 123 | Pending |
-| UTIL-01 | Phase 122 | Pending |
+| UTIL-01 | Phase 122 | Complete |
 
 **Coverage:**
 - v1 requirements: 15 total

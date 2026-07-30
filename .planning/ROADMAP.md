@@ -508,7 +508,7 @@ Plans:
 
 **Wave 2** *(blocked on 122-01)*
 
-- [ ] 122-03-PLAN.md — Ponto de entrada e gate estrutural: botão `outline` "Ver Relatório" no `CardHeader` de `/plataforma` (secundário antes do primário "Criar Tenant", inalterado), mais `pnpm verify:relatorio-utilizacao` com 15 asserções sobre os 4 ficheiros relevantes — incluindo a não-regressão explícita "zero itens de navegação lateral para o relatório" (precedente da Phase 89) — com prova negativa obrigatória em 3 famílias de asserção. **Este é o plano que fecha UTIL-01**
+- [x] 122-03-PLAN.md — Ponto de entrada e gate estrutural: botão `outline` "Ver Relatório" no `CardHeader` de `/plataforma` (secundário antes do primário "Criar Tenant", inalterado), mais `pnpm verify:relatorio-utilizacao` com 15 asserções sobre os 4 ficheiros relevantes — incluindo a não-regressão explícita "zero itens de navegação lateral para o relatório" (precedente da Phase 89) — com prova negativa obrigatória em 3 famílias de asserção. **Este é o plano que fecha UTIL-01**
 
 **Wave 3** *(blocked on 122-03)*
 
@@ -614,5 +614,5 @@ Plans:
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 122. Relatório de Utilização por Tenant | v2.16 | 2/4 | In Progress|  |
+| 122. Relatório de Utilização por Tenant | v2.16 | 3/4 | In Progress|  |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
