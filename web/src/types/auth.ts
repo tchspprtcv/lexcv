@@ -29,4 +29,5 @@ export interface MeResponse {
   tenant_logo_data_url?: string;
   tenant_plano?: string | null;
   tenant_limite_utilizadores?: number | null;
+  tenant_utilizadores_ativos?: number | null;
 }

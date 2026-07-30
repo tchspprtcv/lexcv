@@ -193,13 +193,16 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   const { data: rbacData } = useAdminRbac();
   const systemPermissions = rbacData?.systemPermissions || [];
 
-  // Indicador "X/Y utilizadores" (Phase 118 PLAN-03) — useMe() dedupe pela cache
-  // partilhada ["auth","me"], nao e um segundo pedido de rede. X usa igualdade
-  // estrita (=== true) para espelhar countByTenantIdAndAtivoTrue do backend;
-  // deliberadamente diferente da convencao de exibicao do badge "Ativo" da
-  // tabela mais abaixo, que trata utilizadores sem o campo definido como ativos.
+  // Indicador "X/Y utilizadores" (Phase 118 PLAN-03, fonte trocada na Phase 124)
+  // — useMe() dedupe pela cache partilhada ["auth","me"], nao e um segundo
+  // pedido de rede. X vem diretamente de tenant_utilizadores_ativos, calculado
+  // no backend pela funcao unica de contagem da Phase 117, fechando a
+  // duplicacao encontrada pela auditoria do marco v2.16 (Phase 124). A lista
+  // de utilizadores carregada acima mantem-se apenas para alimentar a tabela
+  // de gestao abaixo. A convencao de exibicao do badge "Ativo" dessa tabela e
+  // separada e permanece inalterada.
   const { data: meData } = useMe();
-  const activeUserCount = users?.filter((u) => u.ativo === true).length ?? 0;
+  const activeUserCount = meData?.tenant_utilizadores_ativos ?? 0;
   const tenantUserLimit = meData?.tenant_limite_utilizadores ?? null;
   const atUserLimit =
     tenantUserLimit !== null && activeUserCount >= tenantUserLimit;

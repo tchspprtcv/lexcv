@@ -91,6 +91,13 @@ async function main() {
         authTypes.includes("tenant_limite_utilizadores?: number | null;"),
     },
     {
+      id: "types-auth-tenant-utilizadores-ativos",
+      descricao:
+        "web/src/types/auth.ts contem 'tenant_utilizadores_ativos?: number | null;' (com '| null' explicito)",
+      predicate: () =>
+        authTypes.includes("tenant_utilizadores_ativos?: number | null;"),
+    },
+    {
       id: "toast-prefix-generico",
       descricao:
         'settings/page.tsx usa replace(/^API \\d{3}: /, "") e ja nao contem "API 400: " hardcoded',
@@ -112,11 +119,12 @@ async function main() {
       },
     },
     {
-      id: "contagem-estrita",
+      id: "contagem-da-fonte-unica",
       descricao:
-        "settings/page.tsx contem '.ativo === true' (contagem estrita, espelha countByTenantIdAndAtivoTrue) E continua a conter 'user.ativo !== false' (convencao de exibicao do badge da tabela, inalterada)",
+        "settings/page.tsx contem 'meData?.tenant_utilizadores_ativos' (contagem lida da fonte unica do backend, Phase 124) E NAO contem '.ativo === true' (guarda negativa permanente contra o regresso do filtro client-side) E continua a conter 'user.ativo !== false' (convencao de exibicao do badge da tabela, inalterada)",
       predicate: () =>
-        settingsPage.includes(".ativo === true") &&
+        settingsPage.includes("meData?.tenant_utilizadores_ativos") &&
+        !settingsPage.includes(".ativo === true") &&
         settingsPage.includes("user.ativo !== false"),
     },
     {
