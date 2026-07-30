@@ -4,7 +4,7 @@ import { GlobalSearchDialog, SEARCH_OPEN_EVENT } from "@/components/shared/globa
 import { NotificationBell } from "@/components/shared/notification-bell";
 import { SidebarNav, type NavItem } from "@/components/shared/sidebar-nav";
 import { UserMenu } from "@/components/shared/user-menu";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import {
   Building2,
@@ -78,7 +78,6 @@ const platformNavItem: NavItem = { href: "/plataforma", label: "Plataforma", ico
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const me = useMe();
 
@@ -104,10 +103,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (me.isError) {
-      const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : "");
+      // Read directly rather than via useSearchParams() -- avoids forcing this whole
+      // subtree through Suspense/CSR-bailout on every cold navigation for an effect-only value.
+      const currentPath = pathname + window.location.search;
       router.replace(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
     }
-  }, [router, pathname, searchParams, me.isError]);
+  }, [router, pathname, me.isError]);
 
   // Close the mobile drawer on any navigation — not just the SidebarNav links that already call
   // setDrawerOpen(false) via onNavigate, but also UserMenu's Perfil/Configurações links rendered
@@ -236,7 +237,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-8 pb-24 md:pb-8">{children}</div>
+        <div className="flex-1 overflow-auto p-8 pb-24 md:pb-8">
+          <React.Suspense
+            fallback={
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-slate-900 dark:border-white"></div>
+              </div>
+            }
+          >
+            {children}
+          </React.Suspense>
+        </div>
         <BottomNav permissions={me.data?.permissions} />
       </main>
     </div>
