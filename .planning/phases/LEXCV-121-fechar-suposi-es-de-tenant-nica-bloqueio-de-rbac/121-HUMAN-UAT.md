@@ -4,7 +4,11 @@
 **Ambiente:** backend `mvn spring-boot:run` (porta 8080) + frontend `pnpm dev` (porta 3000), Postgres local via `psql` bundled em `C:\Program Files\PostgreSQL\18\bin\psql.exe`
 **Executor:** Claude (via `curl` para a bateria HTTP da Task 1 + Browser MCP para o checkpoint da Task 2)
 
-## Códigos HTTP confirmados (Task 1)
+## Adenda pós-revisão (CR-01, mesmo dia)
+
+A tabela abaixo foi originalmente registada com o ponto 5 (`GET /admin/rbac` para `plataforma@lexcv.cv`) como `403`, e assim se manteve verdadeiro até a revisão de código (`121-REVIEW.md`) encontrar CR-01: o único chamador que passou a poder escrever a matriz (`PLATAFORMA_ADMIN`) ficava sem nenhuma forma de a ler primeiro, o que tornava o primeiro uso real deste endpoint por esse chamador uma submissão às cegas. Corrigido em `31619be9` (`getRbac` passa a aceitar `hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')`). A tabela abaixo já reflete o comportamento final, pós-fix — **re-verificado ao vivo** contra o backend reiniciado com o código corrigido (não apenas assumido a partir do commit): login de ambas as identidades repetido, os 4 códigos re-confirmados, e o `GET` do `ADMIN` re-comparado byte a byte com a linha de base original — continua idêntico, zero deriva mesmo depois desta segunda bateria.
+
+## Códigos HTTP confirmados (Task 1, valores finais pós-CR-01)
 
 Bateria executada por esta ordem, com um único ficheiro de cookies por identidade (fora do repositório), e o mesmo objeto `rolePermissions` devolvido pelo `GET` usado verbatim como corpo do `PUT` em ambos os casos (payload no-op):
 
@@ -14,9 +18,9 @@ Bateria executada por esta ordem, com um único ficheiro de cookies por identida
 | 2 | `GET /admin/rbac` | `admin@lexcv.cv` | `200` (corpo guardado como linha de base) | `200` | CONFIRMADO |
 | 3 | `PUT /admin/rbac` | `admin@lexcv.cv` | **`403`** `{"message":"Acesso negado."}` | `403` (**PROVA CENTRAL**) | CONFIRMADO |
 | 4 | `POST /auth/login` | `plataforma@lexcv.cv` (PLATAFORMA_ADMIN) | `200` | `200` | CONFIRMADO |
-| 5 | `GET /admin/rbac` | `plataforma@lexcv.cv` | `403` `{"message":"Acesso negado."}` | `403` (assimetria intencional) | CONFIRMADO |
+| 5 | `GET /admin/rbac` | `plataforma@lexcv.cv` | **`200`** (corrigido por CR-01 — era `403` antes do fix; re-verificado ao vivo pós-fix) | `200` (pós-CR-01: acesso de leitura alargado, condição de escrita `updateRbac` inalterada) | CONFIRMADO |
 | 6 | `PUT /admin/rbac` | `plataforma@lexcv.cv` | **`200`** `{"message":"Permissões de perfis (RBAC) atualizadas com sucesso!"}` | `200` (**contra-teste**) | CONFIRMADO |
-| 7 | `GET /admin/rbac` | `admin@lexcv.cv` (repetição) | `200`, corpo **byte a byte idêntico** à linha de base do passo 2 (`diff` sem output) | idêntico | CONFIRMADO — zero deriva |
+| 7 | `GET /admin/rbac` | `admin@lexcv.cv` (repetição) | `200`, corpo **byte a byte idêntico** à linha de base do passo 2 (`diff` sem output, confirmado outra vez após a bateria de re-verificação do CR-01) | idêntico | CONFIRMADO — zero deriva |
 
 Confirmação secundária via `psql` (contagem de permissões por papel, pós-bateria): `ADMIN=19, ADVOGADO=17, ASSISTENTE=7, PLATAFORMA_ADMIN=0, TECNICO=8` — consistente com o desenho da Phase 119 (PLATAFORMA_ADMIN sempre zero permissões com scope).
 
