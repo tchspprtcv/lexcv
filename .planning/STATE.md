@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: blocked
-stopped_at: Plan 122-04 partial — A1-A3 (HTTP battery) confirmed, H1-H6 (browser-visual) blocked by Browser MCP tooling, needs retry
-last_updated: "2026-07-30T05:15:00.000Z"
+status: executing
+stopped_at: Fase 122 completa (revisão de código ronda 2 + verificação com override do utilizador para H1-H6); UTIL-01 fechado
+last_updated: "2026-07-30T06:30:00.000Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 23
-  completed_plans: 22
-  percent: 71
+  completed_plans: 23
+  percent: 86
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 122 — Relatório de Utilização por Tenant (blocked on live-UAT tooling, awaiting operator)
+**Current focus:** Phase 123 — Auditoria de Isolamento Dedicada
 
 ## Current Position
 
-Phase: 122 (Relatório de Utilização por Tenant) — BLOCKED (not failed — code/gates all green, live-UAT tooling issue)
-Plan: 3.5 of 4 (Waves 1-2 done: 122-01/02/03 complete, UTIL-01 closed; Plan 04 Task 1 (A1-A3 automated HTTP battery) complete and passed, including finding+fixing a real regression; Plan 04 Task 2 (H1-H6 browser-visual scenarios) NOT completed — Browser MCP pane tooling blocker, see 122-HUMAN-UAT.md and 122-04-SUMMARY.md for full detail)
-Status: Awaiting operator — retry H1-H6 once Browser MCP is confirmed working, or explicitly accept current evidence (all automated gates green, 3/9 live scenarios confirmed, zero known product defects) and proceed
+Phase: 123 (Auditoria de Isolamento Dedicada) — NOT STARTED
+Plan: -
+Status: Fase 122 completa (4/4 planos + revisão de código profunda + correção + verificação de objetivo). O utilizador reviu o bloqueio de ferramenta do UAT visual (H1-H6, Browser MCP) e instruiu explicitamente aceitar a evidência disponível — formalizado como override em 122-VERIFICATION.md, ligado aos critérios de sucesso 1 e 3. UTIL-01 fechado. Pronto para planear a Fase 123 (última fase do marco v2.16).
 Last activity: 2026-07-30
 
 ## Performance Metrics
@@ -170,6 +170,10 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 121]: Negative-proof technique for verify:bloqueio-rbac: hardcoded the ternary condition (isPlatformAdmin) to true instead of deleting the whole alternate Badge/Tooltip branch — Isolates exactly the 2 assertions tied to conditional gating (A05, A06) while the other 9 structure, copy and non-regression assertions stay green, giving stronger evidence the gate fails precisely rather than as a blunt all-or-nothing signal
 - [Phase 121]: 121-03's Task 1 hit 2 literal grep-count acceptance checks that returned non-zero where the plan expected 0 (grep -c 'Repository' on PublicController.java = 1; grep -cE 'findFirstBy|findTopBy' on TenantRepository.java = 2) — both confirmed by direct code reading to be false positives (a docblock historical-reference comment, and a distinct legitimate findFirstByNome exact-name lookup from Phase 119) rather than an ISOL-01 regression; documented transparently in 121-ISOL-AUDIT.md instead of escalated to the orchestrator
 - [Phase 121]: 121-03's ISOL-02 sweep classified 6 hits (4 frontend "LexCV" UI-fallback defaults, 1 ResourceController .findFirst() on a state-transition map, 1 ResourceController movs.get(0) on an already-tenant-scoped Processo's Movimentacao list) as a 4th, explicit "unrelated to tenant resolution" outcome rather than forcing them into the plan's 3 prescribed categories — none of them determine which tenant's data is served
+- [Phase 122]: Dedicated research confirmed zero new backend endpoint was needed — GET /api/v1/platform/tenants (Phase 120) already returned every field UTIL-01 needed, already included suspended tenants, and already sourced its active-user count from the sole implementation of countByTenantIdAndAtivoTrue. The only backend work was a regression test proving suspended tenants stay in the response. Screen placement: new route (/plataforma/relatorio), reached via an in-context link from /plataforma's CardHeader, not a second permanent sidebar nav item — mirroring the Notificações precedent (PROJECT.md v2.10) and 120-CONTEXT.md's own console-vs-report framing.
+- [Phase 122]: Live HTTP verification (Plan 04 Task 1) found and fixed a real regression: the pending 120b-backfill-tenant-plano.sql migration (Phase 120's CR-01) had never run in this dev database, causing a genuine 500 DataIntegrityViolationException on any tenant write — not the "cosmetic wrong badge" previously documented in STATE.md. @Builder.Default only supplies a default for entities built via the Lombok builder, not for entities Hibernate loads from an already-populated, still-nullable column. Fixed by running the already-written migration directly; STATE.md's own entry corrected to reflect the real (functional, not cosmetic) severity, since any production deploy skipping this migration would hit the same 500 on its first tenant-suspend attempt.
+- [Phase 122]: Plan 04 Task 2's 6 browser-visual scenarios (H1-H6) could not be completed after extensive troubleshooting of a persistent Browser MCP pane tooling failure ("pane hidden/not displayed" on interactive actions, while simple metadata calls kept working) — a tooling blocker, not a product defect, confirmed by repeatedly verifying backend/frontend health via direct curl during the same window. Documented honestly as NÃO VERIFICADO in 122-HUMAN-UAT.md rather than inferred from the strong indirect evidence (all gates green, A1-A3 all passing) that they would likely also pass. User explicitly reviewed and instructed accepting the available evidence and proceeding ("aceite as evidencias e continue") — formalized as 2 dated `overrides:` entries in 122-VERIFICATION.md tied to ROADMAP success criteria 1 and 3 specifically, rather than silently reinterpreting the verifier's own `human_needed` verdict.
+- [Phase 122]: Code review found 2 Warnings, both in the phase's own structural gate (verify-relatorio-utilizacao.mjs) rather than the product: 2 of 15 assertions tested a button's variant/class against the whole file instead of isolating the specific <Button> block, so they'd still pass even if that exact button lost the property being checked (a sibling Badge/button elsewhere in the same file shares the same string). Fixed by slicing to the `<Button>...</Button>` block bounded by the button's own closing tag — deliberately not bounded by the first "&gt;" alone, since that first attempt caught the "=&gt;" inside a sibling onClick arrow function as a false tag-close (found and fixed before commit via a deliberate negative-proof test). Mattered more than usual here since this gate is the substitute safety net while the visual UAT stays blocked.
 - [Phase 122]: Plan 02 added listTenants_incluiTenantSuspensoComEstadoAtivoFalseNaResposta as a pure regression guard, zero production code changes — listTenants() already included suspended tenants by absence of any filter, but all 3 pre-existing listTenants_* tests used .ativo(true) fixtures only; the new test passed immediately on first run, proving Success Criterion 3 server-side without needing any fix
 - [Phase 122]: Plan 02 deliberately did not run requirements mark-complete for UTIL-01 despite it being listed in its own frontmatter — REQUIREMENTS.md requires an actually-reachable report screen before UTIL-01 can close; this plan only adds a backend test, mirroring the Phase 120 Plan 02/03/04 precedent for PROV-02/PROV-05
 - [Phase 122]: Plan 01 built /plataforma/relatorio's relatorioColumns as a plain static array instead of the factory-function shape all 6 other columns.tsx files use — the codebase's first columns file with zero row callbacks to thread through a factory, flagged (not silently claimed as exact precedent) in 122-PATTERNS.md's own "No Analog Found" section. Page guard order (!me.isFetched before the role check) was copied structurally from /plataforma to avoid reintroducing WR-03
@@ -280,6 +284,7 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phase 120 (Consola de Administração de Tenants) and Phase 121 (Fechar Suposições de Tenant Única + Bloqueio de RBAC) are both complete — see `120-VERIFICATION.md` / `121-VERIFICATION.md` for the goal-backward verdicts. All 3 ISOL requirements (ISOL-01/02/03) closed.
-- Continuing autonomous execution to Phase 122 (Relatório de Utilização por Tenant) per the standing `/gsd:autonomous` authorization.
-- Three follow-ups were flagged as separate background tasks rather than folded into this milestone's phases (session task_a78e2d45: sweep the app-wide isFetched-fail-open RBAC guard pattern; session task_0ccb6ccf: confirm production network topology before tightening the login-lockout IP key; session task_3b2eae90: add a frontend CI job — no `pnpm lint/build`/`verify:*` script runs automatically today) — pick these up whenever convenient, they don't block v2.16.
+- Phases 120, 121 e 122 estão completas — ver `120-VERIFICATION.md` / `121-VERIFICATION.md` / `122-VERIFICATION.md` para os veredictos. Todos os requisitos ISOL-01/02/03 e UTIL-01 fechados.
+- Fase 122 fechou com um override formal do utilizador para os 6 cenários visuais (H1-H6) que ficaram por confirmar ao vivo devido a um bloqueio de ferramenta (Browser MCP) — não uma falha do produto. Recomenda-se, quando conveniente, repetir esses 6 cenários numa sessão com o Browser MCP confirmado saudável (ver `122-HUMAN-UAT.md`), mas isto não bloqueia o marco.
+- A prosseguir a execução autónoma para a Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) conforme a autorização `/gsd:autonomous` em vigor.
+- Quatro follow-ups foram sinalizados como tarefas de fundo separadas em vez de incluídos nas fases deste marco (task_a78e2d45: varrer o padrão app-wide de guarda RBAC fail-open durante carregamento; task_0ccb6ccf: confirmar a topologia de rede de produção antes de reforçar a chave de IP do lockout de login; task_3b2eae90: adicionar um job de CI para frontend — nenhum script `pnpm lint/build`/`verify:*` corre automaticamente hoje; task_f7e73ed0: registar o peso 700 como exceção formal do design-system) — a retomar quando conveniente, não bloqueiam a v2.16.
