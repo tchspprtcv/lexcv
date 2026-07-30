@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: "Fase 124 COMPLETA e VERIFICADA (passed) — indicador X/Y utilizadores passa a consumir tenant_utilizadores_ativos de GET /auth/me em vez de recalcular no cliente; gate verify-limite-utilizadores-indicator.mjs reescrito com guarda negativa permanente contra o regresso do filtro. Achado #2 da auditoria do marco v2.16 fechado. Confirmação visual ao vivo dos 3 estados + reatividade concluída com sucesso (124-HUMAN-UAT.md) — marco v2.16 genuinamente completo: 8/8 fases, 27/27 planos."
-stopped_at: Completed 124-02-PLAN.md
-last_updated: "2026-07-30T15:45:00.000Z"
-last_activity: 2026-07-30 -- Phase 124 verificada (passed) após confirmação visual ao vivo
+status: Awaiting next milestone
+stopped_at: Completed 123-02-PLAN.md
+last_updated: "2026-07-30T15:53:59.555Z"
+last_activity: 2026-07-30 — Milestone v2.16 completed and archived
 progress:
   total_phases: 8
   completed_phases: 8
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — COMPLETE, VERIFIED (passed)
-Plan: 2 of 2
-Status: Fase 124 completa e verificada. `124-VERIFICATION.md`: passed (a confirmação visual ao vivo dos 3 estados do indicador + reatividade foi concluída com sucesso em 124-HUMAN-UAT.md, recuperando de um bloqueio inicial do Browser MCP com uma tab nova).
-Last activity: 2026-07-30 -- Phase 124 verificada (passed) após confirmação visual ao vivo
+Phase: Milestone v2.16 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-30 — Milestone v2.16 completed and archived
 
 ## Deferred Items
 
@@ -305,7 +305,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Phases 120, 121 e 122 estão completas — ver `120-VERIFICATION.md` / `121-VERIFICATION.md` / `122-VERIFICATION.md` para os veredictos. Todos os requisitos ISOL-01/02/03 e UTIL-01 fechados.
-- Fase 122 fechou com um override formal do utilizador para os 6 cenários visuais (H1-H6) que ficaram por confirmar ao vivo devido a um bloqueio de ferramenta (Browser MCP) — não uma falha do produto. Recomenda-se, quando conveniente, repetir esses 6 cenários numa sessão com o Browser MCP confirmado saudável (ver `122-HUMAN-UAT.md`), mas isto não bloqueia o marco.
-- Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) **COMPLETA**: `123-ISOL-AUDIT.md` fechado (310 linhas) com veredito nomeado para os 3 Critérios de Sucesso, ISOL-04 fechado em `REQUIREMENTS.md`. **Marco v2.16 concluído: 15/15 requisitos, 7/7 fases, 25/25 planos.** Próximo passo sugerido: `/gsd:complete-milestone` (mais `/gsd:verify-work` se desejado antes de fechar).
-- Quatro follow-ups foram sinalizados como tarefas de fundo separadas em vez de incluídos nas fases deste marco (task_a78e2d45: varrer o padrão app-wide de guarda RBAC fail-open durante carregamento; task_0ccb6ccf: confirmar a topologia de rede de produção antes de reforçar a chave de IP do lockout de login; task_3b2eae90: adicionar um job de CI para frontend — nenhum script `pnpm lint/build`/`verify:*` corre automaticamente hoje; task_f7e73ed0: registar o peso 700 como exceção formal do design-system) — a retomar quando conveniente, não bloqueiam a v2.16.
+- Start the next milestone with /gsd-new-milestone
