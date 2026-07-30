@@ -1,4 +1,4 @@
-// Prova automatizada e executavel (Node puro, sem dependencias) das 11
+// Prova automatizada e executavel (Node puro, sem dependencias) das 12
 // assercoes de origem para o bloqueio do botao "Guardar Regras" na aba
 // "Controlo de Acesso (RBAC)" das Definicoes (Phase 121, ISOL-03, Plan 02) —
 // web/src/app/(dashboard)/settings/page.tsx, RbacTab.
@@ -210,6 +210,16 @@ async function main() {
       descricao:
         'o bloco contem \'if (role === "ADMIN") return;\' — guarda de nao-regressao para o non-goal de nao adicionar nenhum disabled novo a matriz',
       predicate: () => rbacBlock.includes('if (role === "ADMIN") return;'),
+    },
+    {
+      id: "A12-matriz-so-leitura-para-nao-plataforma",
+      descricao:
+        'o bloco contem \'if (!isPlatformAdmin) return;\' em handleCheckboxChange E \'const isDisabled = isAdminRow || !isPlatformAdmin;\' — WR-01 (121-REVIEW.md): a matriz deixa de aceitar cliques (mesmo so localmente) para quem nao pode gravar, sem forcar checked=true nas colunas nao-ADMIN',
+      predicate: () =>
+        rbacBlock.includes("if (!isPlatformAdmin) return;") &&
+        rbacBlock.includes(
+          "const isDisabled = isAdminRow || !isPlatformAdmin;"
+        ),
     },
   ];
 
