@@ -28,8 +28,13 @@ public class Tenant {
     private String email;
     private String telefone;
 
-    @Lob
-    @Column(name = "logo_data_url")
+    // Hotfix (post-v2.16): era @Lob, que o Hibernate mapeia em PostgreSQL para uma
+    // coluna de Large Object (oid) -- fragil a backup/restore/replicacao sem tratamento
+    // explicito de blobs, e a causa de um crash real em producao (ver
+    // backend/migrations/125-convert-tenant-logo-data-url-to-text.sql para o historico
+    // completo e o script de migracao obrigatorio). `text` no Postgres nao tem limite
+    // pratico de tamanho -- @Lob nunca foi necessario para este campo.
+    @Column(name = "logo_data_url", columnDefinition = "text")
     private String logoDataUrl;
 
     // Phase 120 code review (CR-01): sem @Builder.Default, as 3 vias que constroem um Tenant sem
