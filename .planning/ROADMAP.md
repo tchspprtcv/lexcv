@@ -512,7 +512,7 @@ Plans:
 
 **Wave 3** *(blocked on 122-03)*
 
-- [ ] 122-04-PLAN.md — Verificação ao vivo (checkpoint bloqueante), deliberadamente mais leve que as das Phases 120/121 por esta fase não acrescentar endpoint, fronteira de autorização nem mutação: 3 cenários automatizados por HTTP real (`200` para `PLATAFORMA_ADMIN`, `403` para ADMIN de escritório, tenant suspenso presente na resposta) e 6 cenários humanos (alcançabilidade num clique, coerência cruzada dos números em 3 pontos, tenant suspenso visível, viewport mobile, acesso negado sem flash de dados, ausência de item de navegação lateral)
+- [x] 122-04-PLAN.md — Verificação ao vivo (checkpoint bloqueante), deliberadamente mais leve que as das Phases 120/121 por esta fase não acrescentar endpoint, fronteira de autorização nem mutação: 3 cenários automatizados por HTTP real (`200` para `PLATAFORMA_ADMIN`, `403` para ADMIN de escritório, tenant suspenso presente na resposta) e 6 cenários humanos (alcançabilidade num clique, coerência cruzada dos números em 3 pontos, tenant suspenso visível, viewport mobile, acesso negado sem flash de dados, ausência de item de navegação lateral)
 
 **UI hint**: yes
 
@@ -614,5 +614,5 @@ Plans:
 | 119. Backend — Papel de Administrador de Plataforma e Provisionamento | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
-| 122. Relatório de Utilização por Tenant | v2.16 | 3/4 | In Progress|  |
+| 122. Relatório de Utilização por Tenant | v2.16 | 4/4 | Complete   | 2026-07-30 |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
