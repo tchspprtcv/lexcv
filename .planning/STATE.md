@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: "Fase 124 COMPLETA (2/2 planos) — indicador X/Y utilizadores passa a consumir tenant_utilizadores_ativos de GET /auth/me em vez de recalcular no cliente; gate verify-limite-utilizadores-indicator.mjs reescrito com guarda negativa permanente contra o regresso do filtro. Achado #2 da auditoria do marco v2.16 fechado. Verificação: human_needed (só a confirmação visual ao vivo dos 3 estados, deferida para UAT de fim de fase — tudo o resto estruturalmente provado sem discrepâncias)."
+status: "Fase 124 COMPLETA e VERIFICADA (passed) — indicador X/Y utilizadores passa a consumir tenant_utilizadores_ativos de GET /auth/me em vez de recalcular no cliente; gate verify-limite-utilizadores-indicator.mjs reescrito com guarda negativa permanente contra o regresso do filtro. Achado #2 da auditoria do marco v2.16 fechado. Confirmação visual ao vivo dos 3 estados + reatividade concluída com sucesso (124-HUMAN-UAT.md) — marco v2.16 genuinamente completo: 8/8 fases, 27/27 planos."
 stopped_at: Completed 124-02-PLAN.md
-last_updated: "2026-07-30T15:25:00.000Z"
-last_activity: 2026-07-30 -- Phase 124 concluída (2/2 planos)
+last_updated: "2026-07-30T15:45:00.000Z"
+last_activity: 2026-07-30 -- Phase 124 verificada (passed) após confirmação visual ao vivo
 progress:
   total_phases: 8
   completed_phases: 8
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.16 completo (8/8 fases, incluindo a Fase 124 de fecho de dívida técnica) — pronto para `/gsd:complete-milestone` após a confirmação visual pendente
+**Current focus:** Marco v2.16 completo e verificado (8/8 fases) — pronto para `/gsd:complete-milestone`
 
 ## Current Position
 
-Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — COMPLETE
+Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — COMPLETE, VERIFIED (passed)
 Plan: 2 of 2
-Status: Fase 124 completa. `124-VERIFICATION.md`: human_needed (só falta a confirmação visual ao vivo dos 3 estados do indicador, item de reforço não-bloqueante já classificado como tal pelo próprio plano).
-Last activity: 2026-07-30 -- Phase 124 concluída (2/2 planos)
+Status: Fase 124 completa e verificada. `124-VERIFICATION.md`: passed (a confirmação visual ao vivo dos 3 estados do indicador + reatividade foi concluída com sucesso em 124-HUMAN-UAT.md, recuperando de um bloqueio inicial do Browser MCP com uma tab nova).
+Last activity: 2026-07-30 -- Phase 124 verificada (passed) após confirmação visual ao vivo
 
 ## Performance Metrics
 
