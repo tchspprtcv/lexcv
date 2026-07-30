@@ -112,3 +112,5 @@ Phase 121 is fully verified and ready to close — all 3 ISOL requirements (ISOL
 - FOUND: `git status --porcelain -- backend web` empty at time of writing
 - Re-confirmed all 4 critical HTTP codes are recorded in `121-HUMAN-UAT.md`'s table: PUT ADMIN=403, PUT plataforma=200, GET ADMIN=200, GET plataforma=403
 - Re-confirmed points 3 and 4 have distinct, separately-worded verdicts (not merged into one "tooltip works" line)
+
+**Addendum (same day, post-close):** the code review (`121-REVIEW.md`) found and fixed CR-01 and WR-01 *after* this plan closed, and both changed values this Self-Check recorded as final: `GET /admin/rbac` for `plataforma@lexcv.cv` is now `200` (was `403`, see CR-01), and the RBAC matrix checkboxes are now genuinely `disabled` for a non-platform-admin viewer, not just Save-hidden (see WR-01). Both were re-verified live (not just assumed from the fix commits) and the corrected values now live in `121-HUMAN-UAT.md` itself (its HTTP table and point 5), which is the authoritative record going forward — this Self-Check's two bullets above are left as an accurate record of what was true when this plan closed, not silently edited.
