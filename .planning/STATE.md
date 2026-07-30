@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: "Fase 123 COMPLETA (Plano 02 concluído) — 123-ISOL-AUDIT.md fechado com veredito nomeado para os 3 Critérios de Sucesso: Critério 1 (Plano 01, consola+relatório gated a PLATAFORMA_ADMIN) e Critério 2+3 (Plano 02, updateRbac único call site de escrita RBAC, handler morto _api-backup traçado-e-descartado, Pitfall 1 aceite como risco residual, veredito final por superfície). ISOL-04 fechado em REQUIREMENTS.md. Marco v2.16 completo: 15/15 requisitos, 7/7 fases, 25/25 planos."
+status: executing
 stopped_at: Completed 123-02-PLAN.md
-last_updated: "2026-07-30T11:56:44.519Z"
-last_activity: 2026-07-30
+last_updated: "2026-07-30T14:04:04.645Z"
+last_activity: 2026-07-30 -- Phase 124 execution started
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 25
+  total_plans: 27
   completed_plans: 25
-  percent: 100
+  percent: 88
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.16 completo — pronto para `/gsd:complete-milestone`
+**Current focus:** Phase 124 — Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite
 
 ## Current Position
 
-Phase: 123 (Auditoria de Isolamento Dedicada) — COMPLETE
-Plan: 02 de 02
-Status: Plano 02 completo — 123-ISOL-AUDIT.md fechado com o veredito do Critério de Sucesso 2 (`AdminController.updateRbac` provado por enumeração exaustiva como único call site HTTP-alcançável que escreve `Role`/`Permission`; handler morto `_api-backup/v1/admin/rbac/route.ts` traçado e descartado com 3 provas independentes; override per-user de `updateUser` dispositionado como own-tenant-only), a decisão sobre o Pitfall 1 (risco residual conhecido e aceite, 4 razões), e o veredito final nomeado para as 3 superfícies (Phase 120/121/122) mais a pré-condição de go/no-go para um 2º tenant pagante real. ISOL-04 fechado em `REQUIREMENTS.md`. **Marco v2.16 concluído: 15/15 requisitos, 7/7 fases, 25/25 planos.**
-Last activity: 2026-07-30
+Phase: 124 (Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 124
+Last activity: 2026-07-30 -- Phase 124 execution started
 
 ## Performance Metrics
 
@@ -131,6 +131,7 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 - Phase 115.1 inserted after Phase 115: Permitir criar Processo/Parecer a partir da ficha de cliente; corrigir redirect de Entrar no webpage para o login da app; alinhar visual dos filtros de Pareceres com Processos/Clientes (URGENT)
 - v2.15 roadmap created (2026-07-27): 1 phase (116), 4/4 requirements mapped, 100% coverage — deliberately single-phase: the 4 requirements are independent, no-dependency text/data corrections across unrelated files (`PROJECT.md`, `webpage/trust-section.tsx`, `SPEC.md`, `DatabaseSeeder.java`) serving one shared goal (stop describing LexCV via NOSi, correctly frame it around the SIJ ecosystem instead) — config.json's "standard" granularity guidance deliberately not applied literally, per the standing rule against padding a small milestone with artificial phase splits
 - v2.16 roadmap created (2026-07-28): 7 phases (117–123), 15/15 requirements mapped, 100% coverage, continuing numbering from v2.15's Phase 116 (no `--reset-phase-numbers`). PLAN (117 backend → 118 frontend) and PROV (119 backend → 120 frontend) each split backend-before-frontend, matching the project's established sequencing (Pesquisa Global 111→112, Notificações 86→89) — PROV-02/03/04/05 (all explicitly UI-facing, "num ecrã interno") credited to the frontend phase (120), while PROV-01/06 (role + reserved tenant + setup-singleton preservation, no UI implied) stay backend-only (119), mirroring the precedent where NOTF-14 (a systemic rule) stayed on the backend phase (86) while NOTF-08–13 (user-facing bell/page actions) moved to the frontend phase (89) despite Phase 86 building the bulk of the underlying API. ISOL was deliberately split into two non-adjacent-numbered phases rather than kept as one block per the source proposal's own "Fase C": Phase 121 (ISOL-01/02/03, closing the tenant-singleton assumptions + locking `PUT /api/v1/admin/rbac`) runs immediately after PROV (120) — not after UTIL — because ISOL-03 is the single highest-risk item flagged by the proposal (section 7): the window where a 2nd real tenant could exist with still-per-tenant-editable RBAC only opens once Phase 120 ships, so the lock-down phase cannot be deferred past it (explicit Risk note written into Phase 121 itself). Phase 123 (ISOL-04, the dedicated isolation audit) is the milestone's last phase, not part of 121, because ISOL-04's own text requires auditing "the tenant screen, the usage report, and the RBAC lock" — i.e. it has a hard dependency on Phase 120 AND Phase 122 (UTIL) both existing first, which the source proposal's flat A→B→C→D ordering doesn't surface. `StorageService` and `AlertasDiariosJob` confirmed by the proposal as needing no code changes this milestone (already tenant-partitioned / already the correct cross-tenant-iteration pattern to reuse).
+- Phase 124 added (2026-07-30): the v2.16 milestone audit's integration checker found that Phase 118's "X/Y utilizadores" indicator recalculates the active-user count client-side instead of reusing `UserRepository.countByTenantIdAndAtivoTrue` (117) — the same source Phases 120/122 already reuse. Zero current behavioral impact (both computations agree today), but a genuine drift risk if either side's semantics change. User explicitly chose "plan a cleanup phase first" over "accept as tracked debt" when presented with the milestone audit's `tech_debt` verdict — this phase closes that gap before `/gsd:complete-milestone` runs. Full finding: `v2.16-MILESTONE-AUDIT.md`.
 
 ### Decisions
 
