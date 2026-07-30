@@ -3,12 +3,7 @@ import { describe, expect, it } from "vitest";
 import { normalizeProcesso, toProcessoApiPayload } from "./use-processos";
 import type { ProcessoCreateRequest, ProcessoUpdateRequest } from "@/types/processos";
 
-// Spec vitest durável do round-trip juizo/origem — não executável nesta repo hoje
-// (sem test runner instalado, precedente `web/src/lib/cliente-documento-tipo.test.ts`,
-// confirmado ainda válido em 82-VERIFICATION.md). Existe como contrato de
-// comportamento preciso para quando um runner for eventualmente adicionado.
-//
-// A prova executável real (Node puro, sem reimplementação) vive em
+// Existe também uma prova executável Node puro (sem reimplementação) em
 // `web/scripts/verify-juizo-origem-roundtrip.mjs`, que importa diretamente
 // `web/src/lib/processo-juizo-origem-mapping.ts` — o MESMO módulo que
 // `normalizeProcesso`/`toProcessoApiPayload` delegam a lógica de juizo/origem.
