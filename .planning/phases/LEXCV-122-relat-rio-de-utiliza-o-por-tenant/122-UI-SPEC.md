@@ -1,10 +1,11 @@
 ---
 phase: 122
 slug: relat-rio-de-utiliza-o-por-tenant
-status: draft
+status: approved
 shadcn_initialized: true
 preset: radix-vega / baseColor=neutral / cssVariables=true / prefix=none / iconLibrary=lucide
 created: 2026-07-30
+reviewed_at: 2026-07-30
 ---
 
 # Phase 122 — UI Design Contract
@@ -61,9 +62,11 @@ Exceptions: none new. This phase adds **zero new icon-only touch targets** — `
 | Body | 14px | 400 | 1.5 |
 | Label | 12px | 600 | 1.5 |
 | Heading | 20px | 600 | 1.2 |
-| Display | 30px | 700 | 1.2 |
+| Display | 30px | 600 | 1.2 |
 
-**Zero new sizes, zero new weights.** This phase stays entirely inside Phase 120's declared 2-weight budget (400 regular / 600 semibold). `/plataforma/relatorio`'s own `<h1>` reuses the exact same locked, app-wide Display exception (30px/700, `text-3xl font-bold tracking-tight`) verbatim from `/plataforma`, `/processos/dashboard`, Clientes, Settings, etc. — inherited unchanged, not re-decided here, exactly the same status Phase 120's own Typography section already gave this identical exception.
+**This phase's own new decisions use exactly 2 weights: 400** (regular — table cell text, search `Input` value, CardDescription/subtitle text) **and 600** (semibold — Label captions, column headers, CardTitle/Heading text, the "limite atingido" caption, the Heading role, and this screen's own new `<h1>` at `text-3xl font-semibold`, deliberately set to 600 rather than the app's usual 700 for this one new element).
+
+**Disclosed third weight — orchestrator-approved, not a new decision:** the `plano` column's Badge (Screen Layout below) is reused **verbatim** from `plataforma/columns.tsx:154-161`, including its `font-bold` (700) class — the exact same Badge, rendering the exact same tenant's exact same plano value, one click away on `/plataforma`. Overriding it to 600 on this screen only would make the identical badge render at two different weights depending on which screen the same data is viewed from — a real, visible inconsistency worse than the documentation concern it would resolve. This is a pre-existing, already-shipped, sitewide typographic reality (page `<h1>`s and this specific Badge both use 700 across `/plataforma`, `/processos/dashboard`, Clientes, Settings, and others), not a new decision this phase is making, and resolving it project-wide is outside any single phase's authority — it would need a formal, developer-approved design-system exception recorded once, not re-litigated per phase. The UI checker (`gsd-ui-checker`) correctly flagged this against Dimension 4's flat weight-count rule across 3 review rounds; force-approved by the orchestrator after the 2-iteration revision cap was reached, per `/gsd:ui-phase`'s own documented "max iterations reached" resolution path (Force approve / Edit manually / Abandon). Recorded here rather than argued away, so a future reader sees the actual disposition.
 
 ---
 
@@ -85,7 +88,7 @@ Accent reserved for: unchanged from Phase 120 (list above). **Zero new colors in
 | Element | Copy |
 |---------|------|
 | Primary CTA (this phase's only new actionable element) | **"Ver Relatório"** — new link/button added to `/plataforma`'s `CardHeader`, positioned to the left of the existing "Criar Tenant" button inside a shared `flex items-center gap-2` wrapper (mirrors `processos/page.tsx`'s exact "Dashboard" (outline) → "Novo Processo" (primary) two-button ordering: secondary before primary). `variant="outline"`, icon `FileChartColumn` (`h-4 w-4`), same `text-xs py-1.5 px-3 h-auto flex items-center gap-1.5` sizing as "Criar Tenant" so both buttons sit at equal height and icon-to-label gap. Navigates via `<Link href="/plataforma/relatorio">`. The report screen itself has **no CTA of its own** — it is 100% read-only, zero create/edit/delete actions. |
-| Report page heading | `<h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Relatório de Utilização</h1>`; subtitle directly below (`text-sm text-slate-500 dark:text-slate-400 mt-1`): "Utilizadores ativos, plano e limite contratado por tenant — base para faturação manual" (no trailing period — matches the noun-phrase-fragment rhythm of `processos/dashboard/page.tsx`'s own subtitle, "Acompanhamento operacional e indicadores executivos"). **No breadcrumb** — this page follows `/processos/dashboard`'s satellite-screen header shape (back-arrow + h1 + subtitle), not `/plataforma`'s own breadcrumb shape ("LexCV / Consola de Plataforma"), since `/plataforma/relatorio` is a secondary screen reached from `/plataforma` — structurally the same relationship as `/processos/dashboard` to `/processos`. |
+| Report page heading | `<h1 className="text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">Relatório de Utilização</h1>` (600, not the app's usual 700 — see Typography section above); subtitle directly below (`text-sm text-slate-500 dark:text-slate-400 mt-1`): "Utilizadores ativos, plano e limite contratado por tenant — base para faturação manual" (no trailing period — matches the noun-phrase-fragment rhythm of `processos/dashboard/page.tsx`'s own subtitle, "Acompanhamento operacional e indicadores executivos"). **No breadcrumb** — this page follows `/processos/dashboard`'s satellite-screen header shape (back-arrow + h1 + subtitle), not `/plataforma`'s own breadcrumb shape ("LexCV / Consola de Plataforma"), since `/plataforma/relatorio` is a secondary screen reached from `/plataforma` — structurally the same relationship as `/processos/dashboard` to `/processos`. |
 | Back navigation | Icon-only `Button asChild variant="ghost" className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 dark:hover:text-white"` wrapping `<Link href="/plataforma" aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Link>` — same visual composition as `processos/dashboard/page.tsx`'s own back button, plus an explicit `aria-label="Voltar"` (a small, deliberate improvement over that exact precedent, which has none — cheap to add, and this codebase has fixed identical icon-only-missing-accessible-name gaps before, e.g. Phase 115.1's user-search clear button). |
 | Card title / description | CardTitle "Utilização por Tenant"; CardDescription "Estado atual de todos os tenants registados na plataforma." (parallels `/plataforma`'s own CardTitle/CardDescription pair in tone and length; deliberately doesn't repeat "Relatório", already said once in the page `<h1>` above it). |
 | Search placeholder | "Pesquisar tenant por nome..." — reused **verbatim**, character-for-character, from `/plataforma`'s own search `Input` (same field, same data, same filter logic: `tenant.nome.toLowerCase().includes(termo)`). |
@@ -143,6 +146,8 @@ This link renders only when the list Card is showing (i.e., not while `isFormOpe
 
 ### `/plataforma/relatorio/page.tsx` (new file)
 
+**Primary visual anchor:** the report table is the sole focal point of this screen — zero accent-colored (`--primary` blue) elements exist anywhere on `/plataforma/relatorio` (no CTA, no "Criar"/"Guardar"-style submit button, no active nav highlight since this route carries no sidebar entry of its own), because the screen is 100% read-only (see Copywriting: "no CTA of its own"). The only non-neutral color present is semantic status — the `estado` Badge's green/red — not accent; this screen adds nothing to the Color section's reserved-for list above, and nothing competes with the table for visual weight.
+
 Guard: identical structure to `plataforma/page.tsx:76-92` — `useMe()`, `if (!me.isFetched) return null;`, then `if (!me.data?.roles?.includes("PLATAFORMA_ADMIN")) return <AccessDeniedState .../>;`, else render content. Same defense-in-depth rationale (backend `PlatformAdminController`'s class-level `@PreAuthorize` is authoritative; this is the UX mirror only).
 
 Page structure:
@@ -196,11 +201,11 @@ No 5th `acoes` column, no `TenantAcoesCell`. This is the one deliberate content 
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (force-approved — see Typography section's "Disclosed third weight" note; 3 revision rounds confirmed the same root cause, a pre-existing sitewide `font-bold`/700 convention this phase reuses verbatim rather than introduces, which Dimension 4's rubric has no mechanism to except the way Dimension 5 does for Spacing)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** Force-approved by orchestrator after 2 revision iterations (the workflow's own cap) — Dimension 4 remains a disclosed, non-blocking FLAG, all other dimensions PASS cleanly. Not a silent override: the finding, its root cause, and the reasoning for accepting it are recorded in the Typography section above.
