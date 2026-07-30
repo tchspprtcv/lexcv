@@ -626,3 +626,21 @@ Plans:
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 122. Relatório de Utilização por Tenant | v2.16 | 4/4 | Complete   | 2026-07-30 |
 | 123. Auditoria de Isolamento Dedicada | v2.16 | 2/2 | Complete   | 2026-07-30 |
+
+### Phase 124: Eliminar Duplicação da Contagem de Utilizadores Ativos no Indicador de Limite
+
+**Goal**: O indicador "X/Y utilizadores" das Definições (Fase 118) deixa de recalcular a contagem de utilizadores ativos no cliente — passa a consumir a mesma fonte única (`UserRepository.countByTenantIdAndAtivoTrue`, Fase 117) já reutilizada por `AdminController`/`PlatformAdminController` (Fases 117/120/122), eliminando a duplicação de lógica que a auditoria de integração do marco v2.16 encontrou (zero impacto atual, risco de deriva futura).
+**Depends on**: Phase 123
+**Requirements**: Nenhum requisito v1 novo — fecha um item de dívida técnica identificado em `v2.16-MILESTONE-AUDIT.md` (achado de integração cross-phase, não um requisito de produto em falta)
+**Success Criteria** (what must be TRUE):
+
+  1. `GET /api/v1/auth/me` passa a expor a contagem de utilizadores ativos do tenant do chamador, calculada através de `UserRepository.countByTenantIdAndAtivoTrue` — a mesma função já usada por `AdminController.limiteUtilizadoresExcedido` e `PlatformAdminController.toSummary` — nunca uma consulta/filtro paralelo
+  2. `settings/page.tsx` (`UserManagementTab`) consome esse campo para o indicador "X/Y utilizadores", em vez de filtrar localmente a lista completa de `GET /admin/users`
+  3. Os 3 estados visuais já confirmados ao vivo na Fase 118 (sem limite, dentro do limite, no limite — incluindo o tooltip sobre o botão desativado) continuam corretos após a mudança
+  4. Zero regressão nos gates já existentes da Fase 118 (`pnpm verify:limite-utilizadores`, testes Mockito de `AuthController`/`AdminController`)
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 124-01-PLAN.md — Backend: expor `tenant_utilizadores_ativos` em `GET /auth/me` a partir de `countByTenantIdAndAtivoTrue` (fonte única), com 4 testes Mockito e veredito do threat model
+- [ ] 124-02-PLAN.md — Frontend: indicador "X/Y utilizadores" passa a consumir esse campo, remove o `filter()` client-side e reescreve a asserção do gate da Fase 118 para proibir o regresso do filtro
