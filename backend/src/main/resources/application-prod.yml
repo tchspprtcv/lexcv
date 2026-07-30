@@ -1,6 +1,17 @@
 server:
   error:
     include-message: never
+  # WR-01 follow-up (Phase 120 code review): confiar em X-Forwarded-For/X-Forwarded-Proto para
+  # reconstruir os atributos do pedido -- incluindo HttpServletRequest.getRemoteAddr(), do qual
+  # depende o lockout de login em AuthController.login -- só é seguro porque, neste perfil
+  # "prod", o Caddy passou a ser garantidamente o único ingress para /api/*: docker-compose.prod.yml
+  # usa `ports: !reset []` no serviço backend para anular o "8089:8080" herdado de
+  # docker-compose.yml, fechando o acesso direto à porta do host que o comentário original em
+  # AuthController.login descrevia como não confirmado. Isolado ao perfil prod de propósito --
+  # em dev (application.yml, sem esta chave) normalmente não há proxy nenhum à frente do
+  # backend, pelo que confiar neste cabeçalho aí permitiria a qualquer cliente forjar
+  # X-Forwarded-For diretamente contra getRemoteAddr() sem verificação nenhuma.
+  forward-headers-strategy: framework
 
 spring:
   datasource:
