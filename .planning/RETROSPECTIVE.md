@@ -525,6 +525,48 @@ A pure positioning/copy correction, not new functionality: the product stopped d
 
 ---
 
+## Milestone: v2.16 — Distribuição Multi-Tenant e Faturação por Utilizadores
+
+**Shipped:** 2026-07-30
+**Phases:** 8 (incl. 1 inserted post-audit) | **Plans:** 27 | **Tasks:** 58
+
+### What Was Built
+
+Evolution from "1 deployment per office" to a shared multi-tenant instance, deliberately reopening a decision made in v2.12 not to build multi-tenant provisioning. Per-tenant active-user limits enforced backend-first with a single reusable count function (Phase 117), then mirrored in the UI with a tooltip-on-disabled-button pattern (Phase 118). A `PLATAFORMA_ADMIN` role with deliberately zero `scope:action` authorities, plus a reserved "LexCV" tenant and a `SetupService.provisionTenant` path that never touches the `/setup` singleton gate (Phase 119), followed by an internal `/plataforma` console to create/list/adjust/suspend tenants — with tenant suspension proven, via two genuinely isolated HTTP sessions and real timing, to cut an already-open session in ~1 second (Phase 120). The single highest-risk item the source proposal identified — a shared-RBAC-editable-per-tenant screen that would let two tenants interfere with each other — was locked down immediately after (Phase 121), followed by a usage report for manual billing (Phase 122) and a dedicated isolation audit confirming all three new surfaces don't leak between tenants (Phase 123). A late-inserted Phase 124, added after the milestone's own integration audit surfaced a non-blocking cross-phase logic duplication, closed that finding by making the frontend's user-count indicator consume the backend's single source of truth instead of recomputing it — the user's own explicit choice over accepting it as tracked debt.
+
+### What Worked
+
+- **The AUD-01 (v2.11) audit-report format — verdict table + reproduction commands + explicit non-findings — was reused verbatim across two more audits this milestone** (`121-ISOL-AUDIT.md`, `123-ISOL-AUDIT.md`), each explicitly citing its predecessor instead of re-deriving from scratch, and each still independently re-confirmed rather than trusted at goal-backward verification time. The format scales across milestones without drift.
+- **Negative-proof testing (deliberately breaking a gate to confirm it actually fails, then reverting) caught real false positives before they shipped** — a gate script asserting a `<Button>` block's content matched on `indexOf(">", ...)` instead of `indexOf("</Button>", ...)` and silently passed on the wrong substring (Phase 122); a rewritten gate assertion's precision was proven by two isolated one-line regressions, each expected to fail exactly one named assertion (Phase 124). Both would have shipped a gate that looked green but proved nothing, without the negative check.
+- **The milestone integration-checker found a real, previously-invisible cross-phase gap that no individual phase's own verification could have caught by construction**: Phase 118's UI indicator never actually called the "single source of truth" count function Phase 117 built and documented as such — each phase's own tests passed because each was scoped to itself, and only a check spanning both surfaces at once could see the duplication. Same class of finding as v2.15's undocumented second data-exposure flow — cross-phase auditing keeps finding real bugs that phase-scoped review structurally cannot.
+- **Recovered successfully from the exact Browser MCP "pane hidden" failure that fully blocked Phase 122's live UAT** — this time, opening a brand-new tab (rather than reusing an existing one) resolved it immediately, letting Phase 124's full 3-state-plus-reactivity human-check close as `passed` instead of needing another user-accepted override.
+- **The user's own choice to insert a cleanup phase rather than accept the audit's `tech_debt` verdict validated asking instead of assuming** — the standing autonomous authorization would have supported either choice, and the resulting Phase 124 closed the finding with full pipeline rigor (plan-check, TDD RED/GREEN, negative-proof gate rewrite, live UAT) rather than an ad-hoc patch.
+
+### What Was Inefficient
+
+- **A grep discrepancy was misdiagnosed twice before finding the real cause.** A planner and a plan-checker both hit `grep -vE '^[[:space:]]*(//|\*|/\*)'` returning 0 lines where 267+ were expected, and both initially attributed it to this project's known MSYS2/Git-Bash path-mangling quirk (previously documented only for patterns starting with `/`). That diagnosis was itself wrong — a second correction was needed after directly invoking `/usr/bin/grep` to bypass the shell, which revealed the actual cause: this user's global `rtk` hook silently rewrites plain `grep` invocations to a non-equivalent reimplementation that mishandles complex patterns. Two documentation corrections were needed in the same phase's plans before the root cause was accurately recorded.
+- **Browser MCP instability recurred for the second consecutive milestone-closing phase** (Phase 122 and, briefly, Phase 124) — the underlying tooling issue remains unresolved at the platform level; only the specific recovery technique (fresh tab vs. reusing an existing one) differed between the two occurrences, and it isn't yet clear which recovery will work on any given occurrence.
+- **`gsd-sdk query init.milestone-op`'s `completed_phases`/`all_phases_complete` fields remained wrong throughout** (reporting 0/false against an 8/8 reality that `roadmap.analyze` correctly showed in the same session) — confirmed as a pre-existing schema mismatch already present in the already-shipped v2.15, not something this milestone could or should have fixed inline, but it cost investigation time twice (once during Phase 123, once re-confirmed here).
+
+### Patterns Established
+
+- **Prefer the dedicated Grep tool, or `/usr/bin/grep` explicitly, over bare Bash `grep` for any correctness-critical check in this environment** — bare `grep` risks silent transformation by the user's global `rtk` hook for complex patterns (alternation, character classes, `-v`), confirmed this milestone to produce a wrong answer rather than an error.
+- **A milestone audit's `tech_debt` verdict is a genuine decision point for the user, not an autonomous default** — when structural evidence is strong but a live/interactive confirmation was skipped or a cross-phase gap is found post-hoc, ask whether to accept-and-track or insert a closure phase, rather than assuming either answer under a standing autonomy grant.
+
+### Key Lessons
+
+1. **Run the milestone-level integration check even when every phase already passed its own verification independently** — this milestone's only real code-level finding (the user-count duplication) was, by construction, invisible to any single phase's own goal-backward verification; it only exists as a *relationship* between two phases' choices.
+2. **When a tool produces an implausible result (a confident 0 where the file obviously contains matches), don't accept the first plausible-sounding root-cause theory** — re-derive independently (a different tool, a direct binary invocation) before writing a diagnosis into a committed planning document. The first theory here (MSYS2 path-mangling) was wrong despite fitting a known precedent.
+3. **Given working browser tooling, attempt genuine live verification for a deferred human-check rather than defaulting to the structural-evidence-acceptance fallback established by a recent precedent** — Phase 122's accepted override was itself the right call under a real, exhausted tooling blocker, but it is a fallback for when recovery genuinely fails, not a template to reach for by default on the next phase's own human-check item.
+
+### Cost Observations
+
+- Model mix: sonnet throughout — main-loop orchestration plus every subagent role this milestone's closing phases used (planner, plan-checker, pattern-mapper, executor ×2 worktrees, phase verifier, milestone integration-checker, milestone auditor).
+- Sessions: one continuous session covering the remainder of `/gsd:autonomous` for Phases 120–123, the milestone audit, a user-directed insertion and full pipeline execution of Phase 124, and the complete `/gsd:complete-milestone` lifecycle, spanning 2026-07-29 to 2026-07-30.
+- Notable: this is the second milestone in the project's history (after v2.7's Phase 73.1) to insert a closure phase mid-lifecycle for a specific found gap — but the first to do so *after* the milestone-level audit had already run and produced a `tech_debt` verdict, rather than during phase-level review. The standing autonomy grant covered proceeding either way; the user chose to close it inline.
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -541,5 +583,6 @@ A pure positioning/copy correction, not new functionality: the product stopped d
 | v2.13 Refactor UI/UX (shadcn/ui) | 10 | 42 | 3 | 97 | 33/33 (2 integration gaps found at audit — 1 fixed, 1 deferred as small tech debt) |
 | v2.14 UI/UX Melhorias | 6 (incl. 1 urgent decimal insertion) | 23 | 4 | 68 | 15/15 + 3 informal (0 integration gaps at re-audit; 1 phase human_needed on rendering-only criteria, substantively de-risked; 1 real bug found+fixed via live UAT) |
 | v2.15 Reposicionamento SIJ | 1 | 1 | 1 | 3 | 4/4 (0 audit gaps; 1 integration finding — undocumented 2nd data-exposure flow, fixed automatically by the same seed-data change) |
+| v2.16 Distribuição Multi-Tenant e Faturação | 8 (incl. 1 inserted post-audit) | 27 | 2 | 55 | 15/15 (audit found 2 tech-debt items — 1 closed inline by the inserted Phase 124, 1 a deployment pre-condition, not code debt) |
 
 *Table grows with each milestone*
