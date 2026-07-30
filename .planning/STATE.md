@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: executing
-stopped_at: Completed 122-03-PLAN.md (Ver Relatorio entry link + verify-relatorio-utilizacao gate, 15/15 PASS); UTIL-01 closed
-last_updated: "2026-07-30T03:49:42.899Z"
+status: blocked
+stopped_at: Plan 122-04 partial — A1-A3 (HTTP battery) confirmed, H1-H6 (browser-visual) blocked by Browser MCP tooling, needs retry
+last_updated: "2026-07-30T05:15:00.000Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 7
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 122 — Relatório de Utilização por Tenant
+**Current focus:** Phase 122 — Relatório de Utilização por Tenant (blocked on live-UAT tooling, awaiting operator)
 
 ## Current Position
 
-Phase: 122 (Relatório de Utilização por Tenant) — IN PROGRESS
-Plan: 3 of 04 complete (Wave 1: 122-01 + 122-02 done; Wave 2: 122-03 done — Ver Relatório entry link + verify-relatorio-utilizacao gate, UTIL-01 closed; Plan 04 remaining)
-Status: Ready to execute 122-04 (live UAT / human checkpoint)
+Phase: 122 (Relatório de Utilização por Tenant) — BLOCKED (not failed — code/gates all green, live-UAT tooling issue)
+Plan: 3.5 of 4 (Waves 1-2 done: 122-01/02/03 complete, UTIL-01 closed; Plan 04 Task 1 (A1-A3 automated HTTP battery) complete and passed, including finding+fixing a real regression; Plan 04 Task 2 (H1-H6 browser-visual scenarios) NOT completed — Browser MCP pane tooling blocker, see 122-HUMAN-UAT.md and 122-04-SUMMARY.md for full detail)
+Status: Awaiting operator — retry H1-H6 once Browser MCP is confirmed working, or explicitly accept current evidence (all automated gates green, 3/9 live scenarios confirmed, zero known product defects) and proceed
 Last activity: 2026-07-30
 
 ## Performance Metrics
