@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.16
 milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
 status: executing
-stopped_at: Fase 122 completa (revisão de código ronda 2 + verificação com override do utilizador para H1-H6); UTIL-01 fechado
-last_updated: "2026-07-30T06:30:00.000Z"
+stopped_at: Completed 123-01-PLAN.md (123-ISOL-AUDIT.md criado — Criterio de Sucesso 1, 14 linhas COVERED); ISOL-04 nao fechado, aguarda Plano 02
+last_updated: "2026-07-30T11:27:24.401Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 23
-  completed_plans: 23
+  total_plans: 25
+  completed_plans: 24
   percent: 86
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: 123 (Auditoria de Isolamento Dedicada) — NOT STARTED
-Plan: -
-Status: Fase 122 completa (4/4 planos + revisão de código profunda + correção + verificação de objetivo). O utilizador reviu o bloqueio de ferramenta do UAT visual (H1-H6, Browser MCP) e instruiu explicitamente aceitar a evidência disponível — formalizado como override em 122-VERIFICATION.md, ligado aos critérios de sucesso 1 e 3. UTIL-01 fechado. Pronto para planear a Fase 123 (última fase do marco v2.16).
+Phase: 123 (Auditoria de Isolamento Dedicada) — IN PROGRESS
+Plan: 01 de 02
+Status: Plano 01 completo — 123-ISOL-AUDIT.md criado com o veredito do Critério de Sucesso 1 (14 linhas de tabela, todas COVERED): gate de classe único de PlatformAdminController, os 4 endpoints /platform/tenants*, TenantAdminSummaryResponse/TenantProvisionResponse, as 4 chamadas de use-platform-admin.ts, os 2 guards de página, e os 2 caminhos não-gated-por-papel (GET /auth/me own-tenant, POST /setup/initialize gate singleton) — todos re-derivados por execução de comando e leitura fresca do código, nunca por citação das Fases 120/121/122. ISOL-04 deliberadamente ainda não fechado. Pronto para executar o Plano 02 (Critério de Sucesso 2 — bloqueio de RBAC, decisão do Pitfall 1, veredito final da fase).
 Last activity: 2026-07-30
 
 ## Performance Metrics
@@ -117,6 +117,7 @@ Last activity: 2026-07-30
 | Phase 122 P02 | ~10min | 1 tasks | 1 files |
 | Phase 122 P01 | ~20min | 2 tasks | 2 files |
 | Phase 122 P03 | ~23min | 2 tasks | 3 files |
+| Phase 123 P01 | ~25min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.10–v2.15's full pe
 - [Phase 122]: Plan 03 added flex-wrap + gap-3 to /plataforma's CardHeader (not just a second button) because 3 elements (title block + 2 buttons) now need to wrap on narrow viewports -- Phase 120 never needed this with only one button in the header
 - [Phase 122]: Plan 03's verify-relatorio-utilizacao.mjs negative-proof used 3 minimal one-line regressions (add a .filter( call, swap font-semibold->font-bold, add a stray string literal) rather than deleting blocks -- each isolated exactly 1 of 15 assertions to FAIL, confirming gate precision
 - [Phase 122]: Plan 03 (not 01 or 02) ran requirements mark-complete for UTIL-01 -- this is the first plan making the report genuinely reachable by a real click from /plataforma, matching the Phase 120 Plan 02/03/04 precedent of only closing a requirement once the actual user-facing path exists
+- [Phase 123]: Plano 01 da Fase 123 (ISOL-04) criou 123-ISOL-AUDIT.md com o veredito do Critério de Sucesso 1 (14 linhas de tabela, todas COVERED), mas deliberadamente não fechou o requisito no seu próprio frontmatter — 123-CONTEXT.md e o próprio plano são explícitos: ISOL-04 só fecha no Plano 02, depois do Critério 2 + a decisão do Pitfall 1 + o veredito final da fase — mesmo precedente das Phases 120 (PROV-02/PROV-05) e 122 (UTIL-01), que também adiaram requirements mark-complete até o plano que entrega a peça final
+- [Phase 123]: Descobertos e documentados 2 quirks de ambiente genuinamente novos neste Windows/Git Bash (GNU grep 3.0): um padrao de grep com barra inicial (ex. "/platform") e mangled pelo runtime MSYS2, devolvendo sempre 0 falsos; e '|' sem a flag -E e tratado como caracter literal, nao como alternancia — Ambos os comandos afetados estavam literalmente escritos na accao da Task 1 do plano; corrigidos com MSYS_NO_PATHCONV=1 e -E respetivamente, revalidados, e registados na seccao Divergencias de 123-ISOL-AUDIT.md para fases futuras nao repetirem o mesmo engano
 
 ### Pending Todos
 
@@ -278,13 +281,13 @@ Known deferred items count at v2.14 close: 2 (1 verification_gap + 1 uat_gap, th
 
 ## Session Continuity
 
-Last session: 2026-07-30T03:49:42.704Z
-Stopped at: Completed 122-03-PLAN.md (Ver Relatorio entry link + verify-relatorio-utilizacao gate, 15/15 PASS); UTIL-01 closed
+Last session: 2026-07-30T11:27:23.894Z
+Stopped at: Completed 123-01-PLAN.md (123-ISOL-AUDIT.md criado — Criterio de Sucesso 1, 14 linhas COVERED); ISOL-04 nao fechado, aguarda Plano 02
 Resume file: None
 
 ## Operator Next Steps
 
 - Phases 120, 121 e 122 estão completas — ver `120-VERIFICATION.md` / `121-VERIFICATION.md` / `122-VERIFICATION.md` para os veredictos. Todos os requisitos ISOL-01/02/03 e UTIL-01 fechados.
 - Fase 122 fechou com um override formal do utilizador para os 6 cenários visuais (H1-H6) que ficaram por confirmar ao vivo devido a um bloqueio de ferramenta (Browser MCP) — não uma falha do produto. Recomenda-se, quando conveniente, repetir esses 6 cenários numa sessão com o Browser MCP confirmado saudável (ver `122-HUMAN-UAT.md`), mas isto não bloqueia o marco.
-- A prosseguir a execução autónoma para a Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) conforme a autorização `/gsd:autonomous` em vigor.
+- Fase 123 (Auditoria de Isolamento Dedicada — última fase do marco v2.16) em curso: Plano 01 completo (`123-ISOL-AUDIT.md` criado, veredito do Critério de Sucesso 1 — 14 linhas COVERED). A prosseguir a execução autónoma para o Plano 02 (Critério de Sucesso 2, decisão do Pitfall 1, veredito final da fase) conforme a autorização `/gsd:autonomous` em vigor.
 - Quatro follow-ups foram sinalizados como tarefas de fundo separadas em vez de incluídos nas fases deste marco (task_a78e2d45: varrer o padrão app-wide de guarda RBAC fail-open durante carregamento; task_0ccb6ccf: confirmar a topologia de rede de produção antes de reforçar a chave de IP do lockout de login; task_3b2eae90: adicionar um job de CI para frontend — nenhum script `pnpm lint/build`/`verify:*` corre automaticamente hoje; task_f7e73ed0: registar o peso 700 como exceção formal do design-system) — a retomar quando conveniente, não bloqueiam a v2.16.

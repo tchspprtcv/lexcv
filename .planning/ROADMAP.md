@@ -533,7 +533,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 123-01-PLAN.md — Critério 1 re-derivado por execução independente (gate de classe de `PlatformAdminController` sem excepções de método, as 4 chamadas HTTP das 2 superfícies todas em `/platform/tenants*`, projeção de 6 campos sem campos sensíveis) e criação de `123-ISOL-AUDIT.md` no formato de veredito de `121-ISOL-AUDIT.md`/AUD-01 — incluindo os 2 caminhos que NÃO são gated por papel, nomeados em vez de omitidos: os campos `tenant_*` de `GET /auth/me` (own-tenant) e a escrita de `Tenant` do público `POST /setup/initialize` (gate singleton, PROV-06)
+- [x] 123-01-PLAN.md — Critério 1 re-derivado por execução independente (gate de classe de `PlatformAdminController` sem excepções de método, as 4 chamadas HTTP das 2 superfícies todas em `/platform/tenants*`, projeção de 6 campos sem campos sensíveis) e criação de `123-ISOL-AUDIT.md` no formato de veredito de `121-ISOL-AUDIT.md`/AUD-01 — incluindo os 2 caminhos que NÃO são gated por papel, nomeados em vez de omitidos: os campos `tenant_*` de `GET /auth/me` (own-tenant) e a escrita de `Tenant` do público `POST /setup/initialize` (gate singleton, PROV-06)
 
 **Wave 2** *(blocked on 123-01)*
 
@@ -625,4 +625,4 @@ Plans:
 | 120. Frontend — Consola de Administração de Tenants | v2.16 | 6/6 | Complete   | 2026-07-29 |
 | 121. Fechar Suposições de Tenant Única + Bloqueio de RBAC | v2.16 | 4/4 | Complete   | 2026-07-29 |
 | 122. Relatório de Utilização por Tenant | v2.16 | 4/4 | Complete   | 2026-07-30 |
-| 123. Auditoria de Isolamento Dedicada | v2.16 | 0/TBD | Not started | - |
+| 123. Auditoria de Isolamento Dedicada | v2.16 | 1/2 | In Progress|  |
