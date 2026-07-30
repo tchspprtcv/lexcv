@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Lock, Pencil, Plus, Unlock } from "lucide-react";
+import Link from "next/link";
+import { FileChartColumn, Lock, Pencil, Plus, Unlock } from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import {
@@ -159,18 +160,26 @@ function PlataformaPageContent() {
         />
       ) : (
         <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="text-xl font-semibold">Tenants Registados</CardTitle>
               <CardDescription>Lista de organizações com acesso à plataforma LexCV.</CardDescription>
             </div>
-            <Button
-              onClick={() => setIsFormOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
-            >
-              <Plus className="h-4 w-4" />
-              Criar Tenant
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="text-xs py-1.5 px-3 h-auto flex items-center gap-1.5">
+                <Link href="/plataforma/relatorio">
+                  <FileChartColumn className="h-4 w-4" />
+                  Ver Relatório
+                </Link>
+              </Button>
+              <Button
+                onClick={() => setIsFormOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Criar Tenant
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
