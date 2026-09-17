@@ -1,6 +1,6 @@
-# Manual do Utilizador — Plataforma Jurídica LexCV
+# Manual do Utilizador — Plataforma Jurídica ALCv
 > **Versão:** 1.0 (Edição Oficial)  
-> **Sistema:** LexCV — Legal Practice Management Platform (Cabo Verde)  
+> **Sistema:** ALCv — Legal Practice Management Platform (Cabo Verde)  
 > **Ambiente:** [https://www.alcv.tech](https://www.alcv.tech)  
 > **Data de Atualização:** Setembro de 2026  
 > **Público-alvo:** Administradores, Advogados, Técnicos Jurídicos e Assistentes Forenses  
@@ -45,7 +45,7 @@
 
 ## 1. Visão Geral e Enquadramento do Sistema
 
-O **LexCV** é uma plataforma integrada de gestão forense e prática jurídica desenvolvida especificamente para a realidade de **Cabo Verde**. A plataforma centraliza os fluxos de trabalho essenciais de advogados, sociedades de advogados e gabinetes jurídicos, contemplando a tramitação processual nos tribunais de comarca (Praia, Mindelo, Sal, Santa Catarina, etc.), tribunais de relação e Supremo Tribunal de Justiça.
+O **ALCv** é uma plataforma integrada de gestão forense e prática jurídica desenvolvida especificamente para a realidade de **Cabo Verde**. A plataforma centraliza os fluxos de trabalho essenciais de advogados, sociedades de advogados e gabinetes jurídicos, contemplando a tramitação processual nos tribunais de comarca (Praia, Mindelo, Sal, Santa Catarina, etc.), tribunais de relação e Supremo Tribunal de Justiça.
 
 ### Pilares Fundamentais do Sistema:
 - **Isolamento Multi-Tenant Estrito:** Cada sociedade ou escritório opera num ambiente com dados, clientes e documentos completamente isolados (partição lógica por `tenant_id`).
@@ -78,7 +78,7 @@ O **LexCV** é uma plataforma integrada de gestão forense e prática jurídica 
 
 ## 3. Perfis de Utilizador e Matriz de Permissões (RBAC)
 
-O LexCV baseia-se num modelo robusto de Controlo de Acesso Baseado em Papéis (**Role-Based Access Control - RBAC**), com granularidade por módulo e ação (`scope:action`):
+O ALCv baseia-se num modelo robusto de Controlo de Acesso Baseado em Papéis (**Role-Based Access Control - RBAC**), com granularidade por módulo e ação (`scope:action`):
 
 ![Matriz de Regras de Acesso (RBAC)](images/20c_rbac_permissoes.png)
 
@@ -151,7 +151,7 @@ Para registar um constituinte, clique no botão **+ Adicionar Novo Cliente** no 
 * **Ramo de Atividade & Detalhes Adicionais:** Informações contextuais para apoio ao atendimento.
 
 ### 5.3 Ficha do Cliente e Dossiê para Impressão
-Ao clicar no ícone de impressão ou aceder ao detalhe do cliente, o LexCV disponibiliza a **Ficha Oficial do Cliente**.
+Ao clicar no ícone de impressão ou aceder ao detalhe do cliente, o ALCv disponibiliza a **Ficha Oficial do Cliente**.
 
 ![Ficha Oficial do Cliente Formatada para Dossiê](images/05b_cliente_ficha.png)
 
@@ -178,7 +178,7 @@ Caso sejam inseridos registos duplicados do mesmo cliente (ex.: criados por assi
 
 ## 6. Módulo de Gestão de Processos Judiciais
 
-O módulo de processos constitui o coração operacional da plataforma LexCV, refletindo a praxe processual civil, penal e laboral de Cabo Verde.
+O módulo de processos constitui o coração operacional da plataforma ALCv, refletindo a praxe processual civil, penal e laboral de Cabo Verde.
 
 ### 6.1 Listagem de Processos
 Aceda ao menu **Processos** para visualizar a carteira forense do escritório.
@@ -191,7 +191,7 @@ Aceda ao menu **Processos** para visualizar a carteira forense do escritório.
 * **Estado:** Badges dinâmicos indicando `ATIVO`, `EM TRIAGEM`, `SUSPENSO` ou `ENCERRADO`.
 
 ### 6.2 Abertura de Processo com Wizard em 3 Etapas e Conflict Check
-O LexCV implementa um assistente de abertura de processos com verificação prévia obrigatória de conflito de interesses.
+O ALCv implementa um assistente de abertura de processos com verificação prévia obrigatória de conflito de interesses.
 
 ![Wizard de Novo Processo - Etapa 1: Intake](images/08_processos_novo.png)
 
@@ -295,7 +295,7 @@ Aceda a **Processos > Dashboard** para uma análise de produtividade e acompanha
 
 ## 7. Módulo de Agenda Forense e Gestão de Prazos
 
-A agenda do LexCV foi concebida para mitigar o principal risco de qualquer prática forense: a perda de prazos judiciais perentórios.
+A agenda do ALCv foi concebida para mitigar o principal risco de qualquer prática forense: a perda de prazos judiciais perentórios.
 
 ### 7.1 Visão Mensal e Código de Cores
 Aceda ao menu **Agenda**.
@@ -360,7 +360,7 @@ O módulo financeiro assegura a gestão de cobranças, acordos de honorários e 
 
 ## 10. Módulo de Pareceres Jurídicos e Consultoria
 
-Para os escritórios que prestam serviços de consultoria jurídica continuada, o LexCV disponibiliza um fluxo dedicado à emissão de pareceres jurídicos formais.
+Para os escritórios que prestam serviços de consultoria jurídica continuada, o ALCv disponibiliza um fluxo dedicado à emissão de pareceres jurídicos formais.
 
 ![Listagem e Gestão de Pareceres Jurídicos](images/17_pareceres.png)
 
@@ -376,7 +376,7 @@ Para os escritórios que prestam serviços de consultoria jurídica continuada, 
 
 ## 11. Central de Notificações e Alertas
 
-A central de notificações do LexCV assegura que nenhum membro do escritório perca eventos críticos ou alterações efetuadas nos processos.
+A central de notificações do ALCv assegura que nenhum membro do escritório perca eventos críticos ou alterações efetuadas nos processos.
 
 ![Central de Notificações e Alertas de Prazos](images/19_notificacoes.png)
 
@@ -426,4 +426,4 @@ Para efeitos de formação e demonstração prática, considere o seguinte caso 
 * **Próxima Audiência:** Audiência de Julgamento agendada com notificação de prazo fatal ativa na agenda forense.
 
 ---
-© 2026 LexCV. Todos os direitos reservados.
+© 2026 ALCv. Todos os direitos reservados.

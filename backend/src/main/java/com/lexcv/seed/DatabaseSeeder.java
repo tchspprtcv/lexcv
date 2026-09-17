@@ -315,7 +315,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 "processos:create", "processos:manage",
                                 "agenda:view", "agenda:edit",
                                 "documentos:view", "documentos:edit",
-                                "financeiro:view", "financeiro:edit",
+                                "financeiro:view", "financeiro:edit", "financeiro:manage",
                                 "rbac:manage", "users:manage",
                                 "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage",
                                 "notificacoes:view");
