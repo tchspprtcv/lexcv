@@ -1,3 +1,67 @@
+-- ############################################################################
+-- ##  STOP. EXISTING-DATABASE ONLY. NEVER RUN THIS ON A FRESH DATABASE.     ##
+-- ############################################################################
+--
+-- >> There is now a TECHNICAL GUARD at the bottom of this header (search for
+-- >> "GUARDA TECNICA"). It reads the real column type and aborts the whole
+-- >> script before touching anything if `logo_data_url` is not `oid`. Everything
+-- >> you read below is still true about what WOULD happen without it — the
+-- >> written warning is now reinforcement, no longer the only line of defence.
+--
+-- This script is valid ONLY against a database where t_tenant.logo_data_url is
+-- still a Postgres Large Object (`oid`) column. On a database created from the
+-- current entity mapping it is DESTRUCTIVE, and it does NOT fail — it silently
+-- deletes every logo already uploaded and exits successfully.
+--
+-- VERIFY FIRST. Run this and read the answer before going any further:
+--
+--   SELECT data_type FROM information_schema.columns
+--   WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
+--
+--     oid  -> this migration applies. Run it ONCE.
+--     text -> ALREADY MIGRATED, or a fresh database. DO NOT RUN THIS SCRIPT.
+--
+-- Why it destroys data on a fresh database:
+--   1. Tenant.java:37-38 maps the column as
+--      @Column(name = "logo_data_url", columnDefinition = "text") with NO @Lob,
+--      so on a fresh database the column is born as `text`, never as `oid`.
+--   2. Step 2 (line 115 below) calls lo_get() on that `text` value. There is no
+--      lo_get(text) overload and no implicit text -> oid cast, so the call fails
+--      with: function lo_get(text) does not exist.
+--   3. That error is SWALLOWED by the `EXCEPTION WHEN OTHERS` handler (line 118).
+--      logo_data_url_text stays NULL and the script continues, reporting success.
+--   4. Step 4 then runs DROP COLUMN logo_data_url (line 142), deleting the real
+--      logo data, and RENAME COLUMN logo_data_url_text (line 143) puts the
+--      all-NULL column in its place.
+--
+--   The only trace left behind is a RAISE NOTICE line. Nothing throws, nothing
+--   in the application reports an error, and the logos are gone.
+--
+-- NOT RE-RUNNABLE, for the same reason: after a successful run the column is
+-- already `text`, so a second execution would follow the exact destructive path
+-- above and wipe the logos this script just migrated. The guard turns that into
+-- a clean, loud failure: a second run now aborts with the same exception as any
+-- other already-`text` database, and destroys nothing.
+--
+-- EVIDENCE BASE for the four steps above: executed, not only reasoned about.
+-- Rehearsed on 2026-08-22 against a throwaway database whose logo_data_url was a
+-- populated `text` column (34,432-character data URL), running this file verbatim
+-- with -v ON_ERROR_STOP=1. Observed: two swallowed errors surfacing only as
+-- RAISE NOTICE (`function lo_get(text) does not exist`, then
+-- `function lo_unlink(text) does not exist`), both step-4 statements reporting
+-- ALTER TABLE, exit code 0, and logo_data_url left `text` and NULL — the 34,432
+-- characters gone. Caveats, neither of which softens the rule: the run was on
+-- PostgreSQL 18.4, while the deployment images are postgres:16-alpine; and the
+-- fixture reproduced the fresh-database column shape, not a full Hibernate-generated
+-- schema — the Tenant.java mapping claim in point 1 is established by reading the
+-- entity. The prohibition is the conservative side of the bet either way: this script
+-- is only ever NEEDED where the column is `oid`, so refusing to run it on a fresh
+-- database costs nothing. VERIFY THE COLUMN TYPE AND ACT ON THAT, not on reasoning.
+--
+-- Operational checklist for all migrations: backend/migrations/README.md
+--
+-- ############################################################################
+
 -- Hotfix (post-v2.16): convert t_tenant.logo_data_url from a Postgres Large Object
 -- (oid) column to a plain text column.
 --
@@ -44,6 +108,68 @@
 -- populated `oid` value (34,410-character base64 data URL) and against a deliberately
 -- invalid oid on 2026-07-30 — both paths confirmed to behave as described above.
 
+-- ############################################################################
+-- ##  GUARDA TECNICA — auto-executavel. NAO REMOVER.                        ##
+-- ############################################################################
+--
+-- Duas construcoes, e so estas duas, tornam a protecao auto-executavel:
+--
+--   1. `BEGIN` ... `COMMIT` (no fim do ficheiro) envolvem a migracao inteira
+--      numa unica transacao. Se a guarda disparar, TUDO o que vem a seguir
+--      aborta ou e revertido — inclusive quando o operador se esquece de
+--      `-v ON_ERROR_STOP=1`. Nao ha trabalho parcial nem estado intermedio.
+--   2. O bloco `DO $guarda$` a seguir le o tipo REAL da coluna em pg_catalog
+--      (a fonte autoritativa, nao a reformulacao do information_schema) e faz
+--      RAISE EXCEPTION se nao for `oid`.
+--
+-- PORQUE E QUE ISTO NAO E ENGOLIDO PELOS `EXCEPTION WHEN OTHERS`:
+--   Os dois handlers `WHEN OTHERS` deste ficheiro (passos 2 e 3) vivem DENTRO
+--   dos respetivos blocos `DO`, e um handler so alcanca o que acontece no seu
+--   proprio bloco. Esta guarda e uma instrucao de topo separada, IRMA e nao
+--   filha desses blocos, e corre ANTES de ambos — nenhum deles esta sequer a
+--   executar quando ela dispara. Foi exatamente o padrao `WHEN OTHERS` que
+--   engoliu o `function lo_get(text) does not exist` original; a guarda esta
+--   deliberadamente colocada fora do seu alcance lexico e temporal.
+--
+-- IDEMPOTENTE POR CONSTRUCAO: apos uma execucao com exito a coluna ja e `text`,
+-- por isso a segunda execucao cai no mesmo ramo e falha com a mesma mensagem.
+
+BEGIN;
+
+DO $guarda$
+DECLARE
+    tipo_atual text;
+BEGIN
+    SELECT format_type(a.atttypid, a.atttypmod)
+      INTO tipo_atual
+      FROM pg_attribute  a
+      JOIN pg_class      c ON c.oid = a.attrelid
+      JOIN pg_namespace  n ON n.oid = c.relnamespace
+     WHERE n.nspname = current_schema()
+       AND c.relname = 't_tenant'
+       AND a.attname = 'logo_data_url'
+       AND a.attnum  > 0
+       AND NOT a.attisdropped;
+
+    IF tipo_atual IS NULL THEN
+        RAISE EXCEPTION
+            'GUARDA 125: a coluna t_tenant.logo_data_url nao existe no schema "%". Esta migracao NAO se aplica a esta base de dados e foi ABORTADA sem tocar em nada.',
+            current_schema()
+            USING HINT = 'Confirme que esta ligado a base de dados e ao schema corretos antes de correr qualquer migracao.';
+    END IF;
+
+    IF tipo_atual <> 'oid' THEN
+        RAISE EXCEPTION
+            'GUARDA 125: t_tenant.logo_data_url ja e do tipo "%", nao "oid". Esta migracao NAO se aplica a esta base de dados e foi ABORTADA sem tocar em nada.',
+            tipo_atual
+            USING DETAIL = 'A base ja foi migrada, ou nasceu em text (instalacao nova). Prosseguir APAGARIA todos os logotipos: o lo_get() do passo 2 falharia em silencio (engolido por EXCEPTION WHEN OTHERS), o DROP COLUMN do passo 4 eliminaria os dados reais e o RENAME poria uma coluna toda NULL no lugar.',
+                  HINT   = 'Nao ha nada a fazer nesta base de dados. Registe 125 como concluida para ela e siga em frente.';
+    END IF;
+
+    RAISE NOTICE 'GUARDA 125: t_tenant.logo_data_url e "oid" — a migracao aplica-se; a prosseguir.';
+END
+$guarda$;
+
 -- Step 1: add the new plain-text column.
 ALTER TABLE t_tenant ADD COLUMN logo_data_url_text text;
 
@@ -85,3 +211,7 @@ END $$;
 -- column name the entity mapping expects (`@Column(name = "logo_data_url")`).
 ALTER TABLE t_tenant DROP COLUMN logo_data_url;
 ALTER TABLE t_tenant RENAME COLUMN logo_data_url_text TO logo_data_url;
+
+-- Fecha a transacao aberta pela GUARDA TECNICA. Se a guarda tiver disparado,
+-- este COMMIT e tratado como ROLLBACK e nada acima foi consumado.
+COMMIT;

@@ -1,16 +1,16 @@
-﻿# Manual do Utilizador — LexCV
+﻿# Manual do Utilizador — ALCv
 
-Bem-vindo ao **LexCV**, a plataforma moderna de gestão para escritórios de advogados e controlo de processos jurídicos. Este manual foi desenhado para ajudar utilizadores de todos os níveis de experiência a navegar e a tirar o máximo partido do sistema de forma rápida e autónoma.
+Bem-vindo ao **ALCv**, a plataforma moderna de gestão para escritórios de advogados e controlo de processos jurídicos. Este manual foi desenhado para ajudar utilizadores de todos os níveis de experiência a navegar e a tirar o máximo partido do sistema de forma rápida e autónoma.
 
 ---
 
 ## 1. Introdução
 
-O **LexCV** é uma aplicação web centralizada criada para modernizar e simplificar a gestão diária de escritórios jurídicos. Ela funciona como um assistente digital inteligente para advogados, assistentes e gestores de processos.
+O **ALCv** é uma aplicação web centralizada criada para modernizar e simplificar a gestão diária de escritórios jurídicos. Ela funciona como um assistente digital inteligente para advogados, assistentes e gestores de processos.
 
 ### Para que serve?
 
-Com o LexCV, pode:
+Com o ALCv, pode:
 
 * Criar e organizar a ficha de dados dos seus **Clientes**.
 * Acompanhar **Processos Judiciais** desde a fase inicial até à conclusão.
@@ -35,7 +35,7 @@ Com o LexCV, pode:
 3. No ecrã de início de sessão, insira o seu **E-mail** e a sua **Palavra-passe**.
 4. Clique no botão **Entrar**.
 
-![Ecrã de Login do LexCV](screenshots/login.png)
+![Ecrã de Login do ALCv](screenshots/login.png)
 
 ### O Painel Principal (Dashboard)
 
