@@ -7,7 +7,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LexCV — Plataforma de Gestão Jurídica",
+  title: "ALCv — Plataforma de Gestão Jurídica",
   description:
     "Gestão jurídica completa para a sua instituição — clientes, processos, prazos e documentos num único painel, com isolamento total por tenant.",
 };

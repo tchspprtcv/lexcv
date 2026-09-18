@@ -49,7 +49,7 @@ export function SiteFooter({ branding }: { branding: BrandingResponse }) {
         </div>
 
         <p className="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-          © {ano} LexCV. Todos os direitos reservados.
+          © {ano} ALCv. Todos os direitos reservados.
         </p>
       </div>
     </footer>
