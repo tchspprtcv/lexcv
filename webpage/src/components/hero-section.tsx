@@ -15,13 +15,11 @@ import { getDemoUrl } from "@/lib/contacto";
 export function HeroSection() {
   return (
     <section className="border-b border-slate-200 py-12 dark:border-slate-800 md:py-16">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] xl:gap-16">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-12 px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] xl:gap-16">
+        {/* Sem marca nem traço acima da etiqueta: o cabeçalho fixo já mostra a
+            marca, e as duas colunas alinham-se pelo topo, etiqueta com
+            etiqueta. Qualquer ornamento aqui desencontrava-as. */}
         <div>
-          {/* Sem marca aqui: o cabeçalho fixo mostra-a logo por cima e repeti-la
-              a poucos pixéis de distância só rouba espaço ao título. Fica o
-              traço, que dá um ponto de partida à coluna. */}
-          <div className="mb-6 h-px w-12 bg-blue-600 dark:bg-blue-400" />
-
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
             Gestão jurídica · Cabo Verde
           </span>
