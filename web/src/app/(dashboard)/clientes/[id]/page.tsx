@@ -1495,14 +1495,8 @@ function ClienteDocumentoEntregueRow({
   const del = useDeleteDocumento(documento.id);
   const download = useDownloadDocumento(documento.id);
 
-  // WR-01: the backend serializes the raw Documento entity with its Java field
-  // names (tamanho, createdAt), not the snake_case/renamed shape declared on the
-  // shared frontend `Documento` type (size, created_at). Read the actual wire
-  // fields here rather than widening the shared type (which is also consumed by
-  // the generic /documentos pages outside this phase's scope).
-  const wireDocumento = documento as unknown as { tamanho?: number; createdAt?: string };
-  const tamanho = wireDocumento.tamanho ?? 0;
-  const criadoEm = wireDocumento.createdAt;
+  const tamanho = documento.tamanho ?? 0;
+  const criadoEm = documento.createdAt;
 
   const onDelete = async () => {
     const ok = window.confirm("Apagar este documento?");

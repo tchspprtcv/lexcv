@@ -161,31 +161,31 @@ export function columns(
     {
       id: "processo",
       accessorFn: (d) => {
-        if (!d.processo_id) return "";
-        const processo = processoById.get(d.processo_id);
-        return processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processo_id;
+        if (!d.processoId) return "";
+        const processo = processoById.get(d.processoId);
+        return processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processoId;
       },
       meta: { label: "Processo" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Processo" />,
       cell: ({ row }) => {
-        if (!row.original.processo_id) return "—";
-        const processo = processoById.get(row.original.processo_id);
+        if (!row.original.processoId) return "—";
+        const processo = processoById.get(row.original.processoId);
         return processo ? (
           <Link href={`/processos/${encodeURIComponent(processo.id)}`} className="hover:underline">
             {processo.numero ?? processo.titulo ?? processo.id}
           </Link>
         ) : (
-          <>{row.original.processo_id}</>
+          <>{row.original.processoId}</>
         );
       },
     },
     {
       id: "cliente",
-      accessorFn: (d) => (d.cliente_id ? (clienteNomeById.get(d.cliente_id) ?? d.cliente_id) : ""),
+      accessorFn: (d) => (d.clienteId ? (clienteNomeById.get(d.clienteId) ?? d.clienteId) : ""),
       meta: { label: "Cliente" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Cliente" />,
       cell: ({ row }) => {
-        const clienteId = row.original.cliente_id;
+        const clienteId = row.original.clienteId;
         if (!clienteId) return "—";
         return (
           <Link href={`/clientes/${encodeURIComponent(clienteId)}`} className="hover:underline">
@@ -218,16 +218,16 @@ export function columns(
       cell: ({ row }) => `v${row.original.versao ?? 1}`,
     },
     {
-      accessorKey: "size",
+      accessorKey: "tamanho",
       meta: { label: "Tamanho" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tamanho" />,
-      cell: ({ row }) => `${row.original.size.toLocaleString("pt-CV")} bytes`,
+      cell: ({ row }) => `${(row.original.tamanho ?? 0).toLocaleString("pt-CV")} bytes`,
     },
     {
-      accessorKey: "created_at",
+      accessorKey: "createdAt",
       meta: { label: "Criado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criado" />,
-      cell: ({ row }) => new Date(row.original.created_at).toLocaleString("pt-CV"),
+      cell: ({ row }) => new Date(row.original.createdAt).toLocaleString("pt-CV"),
     },
     {
       id: "acoes",

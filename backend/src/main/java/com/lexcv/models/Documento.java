@@ -13,8 +13,14 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Documento {
+    // Identificador atribuido pela aplicacao, nao pela base de dados: a chave do
+    // objeto no storage e <tenantId>/<documentoId>/<ficheiro>, por isso o id tem
+    // de ser conhecido antes do upload -- e o upload acontece antes do save, para
+    // que uma falha no storage nao deixe uma linha a apontar para nada.
+    // Com @GeneratedValue, o Hibernate lia um id ja preenchido como entidade
+    // destacada e o save() fazia merge() em vez de persist(): UPDATE a uma linha
+    // inexistente, zero linhas afetadas, ObjectOptimisticLockingFailureException.
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "tenant_id", nullable = false)

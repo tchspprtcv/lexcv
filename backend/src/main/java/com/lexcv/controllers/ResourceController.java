@@ -2831,6 +2831,22 @@ public class ResourceController {
         return ResponseEntity.ok(documentoRepository.findByTenantIdAndClienteId(getTenantId(), id));
     }
 
+    /**
+     * Detalhe de um documento. A pagina /documentos/{id} do frontend ja consumia este
+     * endpoint, mas ele nunca existiu: so havia o download e o delete nesta rota, pelo
+     * que o pedido caia no handler errado e devolvia 500 ("Request method 'GET' is not
+     * supported"), deixando o ecra preso em "A carregar...".
+     */
+    @PreAuthorize("hasAuthority('documentos:view')")
+    @GetMapping("/documentos/{id}")
+    public ResponseEntity<?> getDocumento(@PathVariable UUID id) {
+        Documento doc = documentoRepository.findById(id).orElse(null);
+        if (doc == null || !doc.getTenantId().equals(getTenantId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Documento não encontrado"));
+        }
+        return ResponseEntity.ok(doc);
+    }
+
     @PreAuthorize("hasAuthority('documentos:view')")
     @GetMapping("/documentos/{id}/download")
     public ResponseEntity<?> downloadDocumento(@PathVariable UUID id) {

@@ -126,26 +126,26 @@ function DocumentoDetailContent({ id, canEditDocumentos }: { id: string; canEdit
               <dt className="text-neutral-500 dark:text-neutral-400">Nome</dt>
               <dd className="col-span-2 font-medium">{doc.data.nome}</dd>
 
-              <dt className="text-neutral-500 dark:text-neutral-400">Ficheiro</dt>
-              <dd className="col-span-2">{doc.data.filename}</dd>
+              <dt className="text-neutral-500 dark:text-neutral-400">Versão</dt>
+              <dd className="col-span-2">v{doc.data.versao ?? 1}</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Tipo</dt>
               <dd className="col-span-2">{doc.data.tipo ?? "—"}</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Content-Type</dt>
-              <dd className="col-span-2">{doc.data.content_type}</dd>
+              <dd className="col-span-2">{doc.data.mimeType ?? "—"}</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Tamanho</dt>
-              <dd className="col-span-2">{doc.data.size.toLocaleString("pt-CV")} bytes</dd>
+              <dd className="col-span-2">{(doc.data.tamanho ?? 0).toLocaleString("pt-CV")} bytes</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Processo</dt>
-              <dd className="col-span-2">{doc.data.processo_id ?? "—"}</dd>
+              <dd className="col-span-2">{doc.data.processoId ?? "—"}</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Cliente</dt>
-              <dd className="col-span-2">{doc.data.cliente_id ?? "—"}</dd>
+              <dd className="col-span-2">{doc.data.clienteId ?? "—"}</dd>
 
               <dt className="text-neutral-500 dark:text-neutral-400">Criado</dt>
-              <dd className="col-span-2">{new Date(doc.data.created_at).toLocaleString("pt-CV")}</dd>
+              <dd className="col-span-2">{new Date(doc.data.createdAt).toLocaleString("pt-CV")}</dd>
             </dl>
 
             {serverError ? <p className="text-sm text-red-600">{serverError}</p> : null}

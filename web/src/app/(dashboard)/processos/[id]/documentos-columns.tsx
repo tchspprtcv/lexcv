@@ -36,18 +36,6 @@ function confidencialidadeVariant(
 }
 
 /**
- * WR-01: the backend serializes the raw Documento entity with its Java
- * field names (tamanho, createdAt), not the shape declared on the shared
- * frontend `Documento` type (size, created_at) — same wire-shape
- * workaround the pre-migration ProcessoDocumentoRow applied, carried
- * verbatim into the Tamanho/Criado column accessors below.
- */
-function wireSizeAndDate(documento: Documento): { tamanho: number; criadoEm: string | undefined } {
-  const wireDocumento = documento as unknown as { tamanho?: number; createdAt?: string };
-  return { tamanho: wireDocumento.tamanho ?? 0, criadoEm: wireDocumento.createdAt };
-}
-
-/**
  * Ações cell as its own component (not an inline arrow) so the per-row
  * useDeleteDocumento/useDownloadDocumento mutations can be called safely —
  * TanStack column cell definitions are plain objects/functions and cannot
@@ -177,18 +165,18 @@ export function columns(canEditDocumentos: boolean): ColumnDef<Documento>[] {
     },
     {
       id: "tamanho",
-      accessorFn: (d) => wireSizeAndDate(d).tamanho,
+      accessorFn: (d) => d.tamanho ?? 0,
       meta: { label: "Tamanho" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Tamanho" />,
-      cell: ({ row }) => `${wireSizeAndDate(row.original).tamanho.toLocaleString("pt-CV")} bytes`,
+      cell: ({ row }) => `${(row.original.tamanho ?? 0).toLocaleString("pt-CV")} bytes`,
     },
     {
       id: "criado",
-      accessorFn: (d) => wireSizeAndDate(d).criadoEm ?? "",
+      accessorFn: (d) => d.createdAt ?? "",
       meta: { label: "Criado" },
       header: ({ column }) => <DataTableColumnHeader column={column} title="Criado" />,
       cell: ({ row }) => {
-        const criadoEm = wireSizeAndDate(row.original).criadoEm;
+        const criadoEm = row.original.createdAt;
         return criadoEm ? new Date(criadoEm).toLocaleString("pt-CV") : "—";
       },
     },

@@ -270,9 +270,9 @@ function DocumentosContent({
             </div>
             <div className="md:hidden divide-y divide-neutral-200 dark:divide-neutral-800">
               {documentosVisiveis.map((d) => {
-                const processo = d.processo_id ? processoById.get(d.processo_id) : undefined;
-                const processoLabel = d.processo_id
-                  ? (processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processo_id)
+                const processo = d.processoId ? processoById.get(d.processoId) : undefined;
+                const processoLabel = d.processoId
+                  ? (processo ? (processo.numero ?? processo.titulo ?? processo.id) : d.processoId)
                   : undefined;
                 return (
                   <DocumentoMobileCard
@@ -281,7 +281,7 @@ function DocumentosContent({
                     nome={d.nome}
                     tipo={d.tipo}
                     processoLabel={processoLabel}
-                    createdAt={d.created_at}
+                    createdAt={d.createdAt}
                     canEditDocumentos={canEditDocumentos}
                   />
                 );
