@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { AppPreview } from "@/components/app-preview";
 import { BrandMark } from "@/components/brand-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,26 @@ export function HeroSection({ branding }: { branding: BrandingResponse }) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* A demonstração fica fora do cartão e num contentor mais largo: é o
+          argumento principal da página e ganha em ter espaço próprio. */}
+      <div className="mx-auto mt-12 max-w-5xl px-6 md:mt-16">
+        <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              A plataforma em 40 segundos
+            </span>
+            <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+              Do primeiro contacto à sentença, sem sair do sistema
+            </h2>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 sm:max-w-xs sm:text-right">
+            O mesmo processo, visto de cinco ângulos.
+          </p>
+        </div>
+
+        <AppPreview />
       </div>
     </section>
   );
