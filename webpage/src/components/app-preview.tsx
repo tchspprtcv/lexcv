@@ -507,15 +507,24 @@ export function AppPreview({ className }: { className?: string }) {
             })}
           </nav>
 
-          {/* Conteúdo do passo. A chave força a nova cena a reanimar. */}
-          <div className="flex min-h-[260px] flex-1 flex-col overflow-hidden bg-slate-50/40 p-3 dark:bg-transparent md:h-[260px]">
+          {/* Conteúdo do passo. A chave força a nova cena a reanimar.
+              A altura é fixa para o quadro não saltar entre passos; 284px é a
+              cena mais alta medida em todas as larguras (a ficha do cliente
+              numa coluna estreita, onde os cartões da direita partem linhas).
+              Ao mexer nas cenas, confirmar que nenhuma passa disto — o que
+              exceder fica cortado pelo overflow-hidden, a começar no rodapé. */}
+          <div className="flex min-h-[260px] flex-1 flex-col overflow-hidden bg-slate-50/40 p-3 dark:bg-transparent md:h-[284px]">
             <div key={passo} className="flex-1">
               {atual.conteudo}
             </div>
             {/* Tudo o que acontece fica registado — o rodapé mostra-o em cada passo. */}
             <div className="mt-2 flex items-center gap-2 border-t border-slate-200 pt-2 dark:border-slate-800">
               <ShieldCheck className="h-3 w-3 shrink-0 text-slate-400" />
-              <Etiqueta>Trilha de auditoria</Etiqueta>
+              {/* Numa coluna estreita a etiqueta partia-se em duas linhas e
+                  desequilibrava o rodapé: prefere-se cortar o texto da ação. */}
+              <span className="shrink-0 whitespace-nowrap">
+                <Etiqueta>Trilha de auditoria</Etiqueta>
+              </span>
               <span
                 key={passo}
                 className="lex-fade truncate font-mono text-[10px] text-slate-500 dark:text-slate-400"
