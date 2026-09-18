@@ -489,8 +489,8 @@ divider(pres, "III", "Processos Judiciais",
       { f: "09_tab_testemunhas.png", cap: "Testemunhas — rol do processo.",
         t: "Rol de Testemunhas", d: "Testemunhas de cada lado, com contacto e resumo do depoimento." } ] },
     { titulo: "Documentos e Auditoria", notas: "Separadores documentos e auditoria.", itens: [
-      { f: "09_tab_documentos.png", cap: "Documentos — peças vinculadas ao processo.",
-        t: "Documentos do Processo", d: "Arquivo das peças vinculadas: procurações, certidões e comprovativos. A lista surge vazia enquanto nada tiver sido carregado." },
+      { f: "09_tab_documentos.png", cap: "Documentos — peças do processo, com versionamento (v1/v2).",
+        t: "Documentos do Processo", d: "Peças, procurações e comprovativos, com tipo, confidencialidade, versão e tamanho." },
       { f: "09_tab_auditoria.png", cap: "Auditoria — registo imutável de operações.",
         t: "Trilha de Auditoria", d: "Data, operação, entidade afetada e autor de cada alteração." } ] },
   ];
