@@ -88,7 +88,11 @@ class PesquisaRepositoryIT {
     }
 
     private Documento persistirDocumento(UUID tenantId, UUID clienteId, String nome, String tipo) {
+        // O id de Documento e atribuido pela aplicacao, nao gerado pela base de dados
+        // (ver DocumentoRepositoryIT): a chave do objeto no storage deriva dele, por isso
+        // tem de existir antes do persist. Este helper tem de fazer o mesmo que o upload.
         Documento documento = Documento.builder()
+                .id(UUID.randomUUID())
                 .tenantId(tenantId)
                 .clienteId(clienteId)
                 .nome(nome)
