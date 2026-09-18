@@ -13,27 +13,27 @@
 3. [Perfis de Utilizador e Matriz de Permissões (RBAC)](#3-perfis-de-utilizador-e-matriz-de-permissões-rbac)
 4. [Dashboard Institucional e Monitor Executivo](#4-dashboard-institucional-e-monitor-executivo)
 5. [Módulo de Gestão de Clientes](#5-módulo-de-gestão-de-clientes)
-   - 5.1 [Listagem e Filtros de Clientes](#51-listagem-e-filtros-de-clientes)
-   - 5.2 [Registo de Novo Cliente (Particular e Empresa)](#52-registo-de-novo-cliente-particular-e-empresa)
-   - 5.3 [Ficha Detalhada e Dossiê de Impressão](#53-ficha-detalhada-e-dossiê-de-impressão)
-   - 5.4 [Unificação de Registos Duplicados (Merge de Clientes)](#54-unificação-de-registos-duplicados-merge-de-clientes)
+    - 5.1 [Listagem e Filtros de Clientes](#51-listagem-e-filtros-de-clientes)
+    - 5.2 [Registo de Novo Cliente](#52-registo-de-novo-cliente)
+    - 5.3 [Ficha do Cliente e Dossiê para Impressão](#53-ficha-do-cliente-e-dossiê-para-impressão)
+    - 5.4 [Unificação de Registos Duplicados (Merge de Clientes)](#54-unificação-de-registos-duplicados-merge-de-clientes)
 6. [Módulo de Gestão de Processos Judiciais](#6-módulo-de-gestão-de-processos-judiciais)
-   - 6.1 [Listagem e Pesquisa Avançada de Processos](#61-listagem-e-pesquisa-avançada-de-processos)
-   - 6.2 [Abertura de Processo com Wizard em 3 Etapas e Conflict Check](#62-abertura-de-processo-com-wizard-em-3-etapas-e-conflict-check)
-   - 6.3 [Estrutura do Processo: Os 8 Separadores Operacionais](#63-estrutura-do-processo-os-8-separadores-operacionais)
-     - Timeline Unificada
-     - Gestão de Partes e Mandatários
-     - Tramitação e Fases Processuais
-     - Decisões Judiciais e Upload de Sentenças
-     - Factos Provados e Cronologia
-     - Rol de Testemunhas
-     - Peças e Documentos Vinculados
-     - Trilha de Auditoria (Audit Log)
-   - 6.4 [Geração e Requisitos do Termo de Honorários](#64-geração-e-requisitos-do-termo-de-honorários)
-   - 6.5 [Dashboard Operacional e Executivo de Processos](#65-dashboard-operacional-e-executivo-de-processos)
+    - 6.1 [Listagem de Processos](#61-listagem-de-processos)
+    - 6.2 [Abertura de Processo com Wizard em 3 Etapas e Conflict Check](#62-abertura-de-processo-com-wizard-em-3-etapas-e-conflict-check)
+    - 6.3 [Estrutura do Processo: Os 8 Separadores Operacionais](#63-estrutura-do-processo-os-8-separadores-operacionais)
+        - Timeline Unificada
+        - Gestão de Partes e Mandatários
+        - Tramitação e Fases Processuais
+        - Decisões Judiciais e Upload de Sentenças
+        - Factos Provados e Cronologia
+        - Rol de Testemunhas
+        - Peças e Documentos Vinculados
+        - Trilha de Auditoria (Audit Log)
+    - 6.4 [Geração e Requisitos do Termo de Honorários](#64-geração-e-requisitos-do-termo-de-honorários)
+    - 6.5 [Dashboard Operacional e Executivo de Processos](#65-dashboard-operacional-e-executivo-de-processos)
 7. [Módulo de Agenda Forense e Gestão de Prazos](#7-módulo-de-agenda-forense-e-gestão-de-prazos)
-   - 7.1 [Visão Mensal, Semanal e Código de Cores](#71-visão-mensal-semanal-e-código-de-cores)
-   - 7.2 [Marcação de Prazos Fatais, Audiências e Diligências](#72-marcação-de-prazos-fatais-audiências-e-diligências)
+    - 7.1 [Visão Mensal e Código de Cores](#71-visão-mensal-e-código-de-cores)
+    - 7.2 [Marcação de Novo Evento](#72-marcação-de-novo-evento)
 8. [Módulo de Gestão Documental (MinIO / S3)](#8-módulo-de-gestão-documental-minio--s3)
 9. [Módulo Financeiro, Honorários e Conta-Corrente](#9-módulo-financeiro-honorários-e-conta-corrente)
 10. [Módulo de Pareceres Jurídicos e Consultoria](#10-módulo-de-pareceres-jurídicos-e-consultoria)
