@@ -7,13 +7,15 @@ import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { getDemoUrl } from "@/lib/contacto";
 import { getLoginUrl } from "@/lib/get-login-url";
 import type { BrandingResponse } from "@/types/branding";
 
 const NAV_LINKS = [
-  { href: "#funcionalidades", label: "Funcionalidades" },
+  { href: "#demonstracao", label: "Demonstração" },
+  { href: "#funcionalidades", label: "Módulos" },
   { href: "#confianca", label: "Confiança" },
-  { href: "#contacto", label: "Contacto" },
+  { href: "#perguntas", label: "Perguntas" },
 ] as const;
 
 export function SiteHeader({ branding }: { branding: BrandingResponse }) {
@@ -46,8 +48,14 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button asChild variant="secondary" className="hidden md:inline-flex">
-              <a href={getLoginUrl()}>Entrar</a>
+            <a
+              href={getLoginUrl()}
+              className="hidden text-sm font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 md:inline-flex"
+            >
+              Entrar
+            </a>
+            <Button asChild className="hidden md:inline-flex">
+              <a href={getDemoUrl("cabecalho")}>Pedir demonstração</a>
             </Button>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
@@ -72,11 +80,18 @@ export function SiteHeader({ branding }: { branding: BrandingResponse }) {
                       {link.label}
                     </a>
                   ))}
-                  <Button asChild variant="secondary" className="mt-4">
-                    <a href={getLoginUrl()} onClick={() => setOpen(false)}>
-                      Entrar
+                  <Button asChild className="mt-4">
+                    <a href={getDemoUrl("menu")} onClick={() => setOpen(false)}>
+                      Pedir demonstração
                     </a>
                   </Button>
+                  <a
+                    href={getLoginUrl()}
+                    onClick={() => setOpen(false)}
+                    className="mt-2 rounded-md px-3 py-2 text-center text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Entrar
+                  </a>
                 </nav>
               </SheetContent>
             </Sheet>
