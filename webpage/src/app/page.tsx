@@ -17,7 +17,7 @@ export default async function Home() {
     <>
       <SiteHeader branding={branding} />
       <main>
-        <HeroSection branding={branding} />
+        <HeroSection />
         <ProblemSection />
         <FeaturesSection />
         <TrustSection />

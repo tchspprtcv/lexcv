@@ -1,9 +1,7 @@
-import { ArrowRight, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { AppPreview } from "@/components/app-preview";
-import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { getDemoUrl } from "@/lib/contacto";
-import type { BrandingResponse } from "@/types/branding";
 
 /**
  * Hero em duas colunas a partir de lg: a promessa à esquerda, a demonstração à
@@ -14,12 +12,14 @@ import type { BrandingResponse } from "@/types/branding";
  * para si — ao lado do h1 seriam dois títulos a disputar a mesma atenção. Fica
  * a etiqueta e uma linha de contexto; o resto conta-o a própria animação.
  */
-export function HeroSection({ branding }: { branding: BrandingResponse }) {
+export function HeroSection() {
   return (
     <section className="border-b border-slate-200 py-12 dark:border-slate-800 md:py-16">
       <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] xl:gap-16">
         <div>
-          <BrandMark branding={branding} className="mb-6" />
+          {/* Sem marca aqui: o cabeçalho fixo mostra-a logo por cima e repeti-la
+              a poucos pixéis de distância só rouba espaço ao título. Fica o
+              traço, que dá um ponto de partida à coluna. */}
           <div className="mb-6 h-px w-12 bg-blue-600 dark:bg-blue-400" />
 
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
@@ -37,17 +37,14 @@ export function HeroSection({ branding }: { branding: BrandingResponse }) {
             escritório isolado de todos os outros.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          {/* Um só apelo à ação: o "ver como funciona" existia para levar à
+              demonstração, que agora está ao lado e dispensa a viagem. O
+              cabeçalho e o rodapé mantêm a âncora, para quem quer voltar. */}
+          <div className="mt-8">
             <Button asChild size="lg">
               <a href={getDemoUrl("hero")}>
                 Pedir demonstração
                 <Mail className="h-4 w-4" />
-              </a>
-            </Button>
-            <Button asChild variant="ghost" size="lg">
-              <a href="#demonstracao">
-                Ver como funciona
-                <ArrowRight className="h-4 w-4" />
               </a>
             </Button>
           </div>
