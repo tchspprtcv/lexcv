@@ -11,6 +11,7 @@ public interface DocumentoRepository extends JpaRepository<Documento, UUID> {
     List<Documento> findByTenantId(UUID tenantId);
     List<Documento> findByTenantIdAndProcessoId(UUID tenantId, UUID processoId);
     List<Documento> findByTenantIdAndClienteId(UUID tenantId, UUID clienteId);
+    List<Documento> findByTenantIdAndProcessoIdAndClienteId(UUID tenantId, UUID processoId, UUID clienteId);
 
     // Phase 111 (SRCH-02/SRCH-07): tenant-first, accent-folded, ranked, LIMIT-capped
     // quick-search for GET /api/v1/pesquisa (PesquisaController, Plan 111-02).

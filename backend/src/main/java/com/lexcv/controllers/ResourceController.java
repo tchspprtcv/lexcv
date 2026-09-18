@@ -2805,10 +2805,55 @@ public class ResourceController {
         }
     }
 
+    /**
+     * Listagem de documentos do tenant, opcionalmente filtrada por processo e/ou cliente.
+     *
+     * <p>Os filtros sao novos: a pagina /documentos ja tinha os campos Processo e Cliente e
+     * enviava-os como parametros, mas o endpoint ignorava-os e devolvia sempre tudo, pelo que
+     * escolher um processo nao mudava nada no ecra.
+     *
+     * <p>Os parametros sao recebidos como texto e convertidos aqui: a conversao automatica para
+     * UUID lancaria MethodArgumentTypeMismatchException, que nao tem handler proprio e acabaria
+     * no catch-all como 500 -- um valor malformado e um erro do cliente, nao do servidor.
+     *
+     * <p>A ramificacao evita passar binds nulos ao SQL: com Postgres, um {@code :param IS NULL}
+     * sobre um uuid obriga a cast explicito para o motor inferir o tipo (ver NotificacaoRepositoryIT).
+     */
     @PreAuthorize("hasAuthority('documentos:view')")
     @GetMapping("/documentos")
-    public ResponseEntity<?> listDocumentos() {
-        return ResponseEntity.ok(documentoRepository.findByTenantId(getTenantId()));
+    public ResponseEntity<?> listDocumentos(
+            @RequestParam(value = "processoId", required = false) String processoIdRaw,
+            @RequestParam(value = "clienteId", required = false) String clienteIdRaw) {
+        UUID tenantId = getTenantId();
+
+        UUID processoId;
+        UUID clienteId;
+        try {
+            processoId = parseUuidOpcional(processoIdRaw);
+            clienteId = parseUuidOpcional(clienteIdRaw);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Identificador inválido: " + e.getMessage()));
+        }
+
+        if (processoId != null && clienteId != null) {
+            return ResponseEntity.ok(
+                    documentoRepository.findByTenantIdAndProcessoIdAndClienteId(tenantId, processoId, clienteId));
+        }
+        if (processoId != null) {
+            return ResponseEntity.ok(documentoRepository.findByTenantIdAndProcessoId(tenantId, processoId));
+        }
+        if (clienteId != null) {
+            return ResponseEntity.ok(documentoRepository.findByTenantIdAndClienteId(tenantId, clienteId));
+        }
+        return ResponseEntity.ok(documentoRepository.findByTenantId(tenantId));
+    }
+
+    /** Trata ausente e vazio da mesma forma: sem filtro. */
+    private static UUID parseUuidOpcional(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return UUID.fromString(valor.trim());
     }
 
     @PreAuthorize("hasAuthority('documentos:view')")

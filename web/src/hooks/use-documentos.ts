@@ -9,10 +9,15 @@ import type {
   DocumentosListFilters,
 } from "@/types/documentos";
 
+/**
+ * GET /documentos espera `processoId`/`clienteId`, como o upload — os nomes em
+ * snake_case que aqui estavam vinham da API mock e o backend ignorava-os, pelo
+ * que escolher um processo no formulário não alterava a lista.
+ */
 function buildDocumentosSearch(filters: DocumentosListFilters) {
   const sp = new URLSearchParams();
-  if (filters.processo_id?.trim()) sp.set("processo_id", filters.processo_id.trim());
-  if (filters.cliente_id?.trim()) sp.set("cliente_id", filters.cliente_id.trim());
+  if (filters.processo_id?.trim()) sp.set("processoId", filters.processo_id.trim());
+  if (filters.cliente_id?.trim()) sp.set("clienteId", filters.cliente_id.trim());
   const qs = sp.toString();
   return qs ? `?${qs}` : "";
 }
@@ -24,15 +29,15 @@ export function useDocumentos(filters: DocumentosListFilters) {
 
   return useQuery({
     queryKey: ["documentos", "list", processoId, clienteId],
-    queryFn: () => {
-      if (clienteId) {
-        return apiFetch<Documento[]>(`/clientes/${encodeURIComponent(clienteId)}/documentos`);
-      }
-      if (processoId) {
-        return apiFetch<Documento[]>(`/processos/${encodeURIComponent(processoId)}/documentos`);
-      }
-      return apiFetch<Documento[]>(`/documentos${buildDocumentosSearch({ processo_id: processoId, cliente_id: clienteId })}`);
-    },
+    // Um único endpoint para os quatro casos. Antes, cada filtro era encaminhado
+    // para a sua rota dedicada (/clientes/{id}/documentos, /processos/{id}/documentos),
+    // o que funcionava isoladamente mas ignorava o processo quando ambos estavam
+    // preenchidos: a primeira condição ganhava e devolvia os documentos do cliente
+    // inteiro, em vez da interseção.
+    queryFn: () =>
+      apiFetch<Documento[]>(
+        `/documentos${buildDocumentosSearch({ processo_id: processoId, cliente_id: clienteId })}`,
+      ),
     enabled,
     staleTime: 30_000,
   });
