@@ -227,7 +227,7 @@ The `<Button>` itself stays natively `disabled` (submission blocked at the DOM l
   <div>
     <CardTitle className="text-xl font-semibold">Utilizadores Registados</CardTitle>
     <CardDescription>
-      Lista de profissionais com credenciais de acesso ao sistema LexCV.
+      Lista de profissionais com credenciais de acesso ao sistema ALCv.
     </CardDescription>
   </div>
   <Button

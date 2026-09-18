@@ -437,4 +437,4 @@ Partial-analog files worth flagging to the planner (weak but real precedent, lis
 **Pattern extraction date:** 2026-07-15
 
 ---
-*Pattern map for: Phase 101 — Fundação — CLI Init e Design Tokens, LexCV v2.13 milestone*
+*Pattern map for: Phase 101 — Fundação — CLI Init e Design Tokens, ALCv v2.13 milestone*

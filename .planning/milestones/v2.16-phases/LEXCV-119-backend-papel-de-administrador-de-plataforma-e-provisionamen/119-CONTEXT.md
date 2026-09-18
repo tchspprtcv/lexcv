@@ -7,16 +7,16 @@
 <domain>
 ## Phase Boundary
 
-Backend-only. Introduces the `PLATAFORMA_ADMIN` role (distinct from each office's `ADMIN`), a reserved "LexCV" platform tenant that role's users belong to, and a new backend capability to provision additional tenants without touching the public `/setup` wizard or its singleton gate. No frontend/UI in this phase — that is Phase 120, which will build the actual console consuming the endpoint this phase creates.
+Backend-only. Introduces the `PLATAFORMA_ADMIN` role (distinct from each office's `ADMIN`), a reserved "ALCv" platform tenant that role's users belong to, and a new backend capability to provision additional tenants without touching the public `/setup` wizard or its singleton gate. No frontend/UI in this phase — that is Phase 120, which will build the actual console consuming the endpoint this phase creates.
 
 </domain>
 
 <decisions>
 ## Role and Reserved Tenant Seeding
 - `PLATAFORMA_ADMIN` is seeded via `DatabaseSeeder.seedRbac()` — the same unconditional (every-startup, no `seedEnabled` gate) method that already upserts `ADMIN`/`ASSISTENTE`/`TECNICO`/`ADVOGADO`. Call `upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList())` — this role gets **zero** scoped `clientes:view`-style permissions; it operates exclusively through its own dedicated, separately-`@PreAuthorize`-gated endpoint(s), never through the regular tenant RBAC system. Do not add it to `RbacResponse.systemPermissions` or any tenant-facing RBAC screen.
-- A reserved `Tenant` named literally `"LexCV"` plus one bootstrap `PLATAFORMA_ADMIN` user are also seeded unconditionally in `DatabaseSeeder` (NOT gated by `seedEnabled` — that flag controls optional demo data, e.g. `Cliente`/`Processo` fixtures; the reserved platform tenant is core infrastructure, needed for the capability to be usable at all, same category as the RBAC rows themselves).
+- A reserved `Tenant` named literally `"ALCv"` plus one bootstrap `PLATAFORMA_ADMIN` user are also seeded unconditionally in `DatabaseSeeder` (NOT gated by `seedEnabled` — that flag controls optional demo data, e.g. `Cliente`/`Processo` fixtures; the reserved platform tenant is core infrastructure, needed for the capability to be usable at all, same category as the RBAC rows themselves).
   - > **⚠ PARCIALMENTE SUPERSEDED (revisao de planeamento, 2026-07-29) — ver `119-01-PLAN.md`.**
-    > O **papel** `PLATAFORMA_ADMIN` e a **tenant reservada** `"LexCV"` continuam a ser seedados
+    > O **papel** `PLATAFORMA_ADMIN` e a **tenant reservada** `"ALCv"` continuam a ser seedados
     > incondicionalmente, exatamente como escrito acima. O **utilizador bootstrap**
     > `plataforma@lexcv.cv` passou a ser gated por `app.seed.enabled` — o mesmo flag que ja
     > protege o utilizador demo `admin@lexcv.cv`. Motivo: `Pa$w0rd` e uma password
@@ -25,8 +25,8 @@ Backend-only. Introduces the `PLATAFORMA_ADMIN` role (distinct from each office'
     > `plataforma@lexcv.cv` criaria uma conta de privilegio maximo com password conhecida em
     > TODAS as producoes. Com `SEED_ENABLED=false` nao existe credencial de plataforma por
     > omissao. Tudo o resto deste bloco (credenciais exatas quando o seed corre, idempotencia
-    > por `nome = "LexCV"`, `Collections.emptyList()` no papel) mantem-se vinculativo.
-- Idempotency: look up the reserved tenant by `nome = "LexCV"` before creating (mirrors the find-or-create idempotency already used by `upsertRolePermissions`) — repeated app restarts must never create duplicate reserved tenants.
+    > por `nome = "ALCv"`, `Collections.emptyList()` no papel) mantem-se vinculativo.
+- Idempotency: look up the reserved tenant by `nome = "ALCv"` before creating (mirrors the find-or-create idempotency already used by `upsertRolePermissions`) — repeated app restarts must never create duplicate reserved tenants.
 - Seeded bootstrap credentials follow the exact existing convention (`admin@lexcv.cv` / `Pa$$w0rd` documented in CLAUDE.md): use `plataforma@lexcv.cv` / `Pa$$w0rd` for the seeded `PLATAFORMA_ADMIN` user, same password (dev-only seed, already a public/known dev credential per CLAUDE.md — not a new secret).
 
 ## New Service Method — Reuse, Don't Duplicate

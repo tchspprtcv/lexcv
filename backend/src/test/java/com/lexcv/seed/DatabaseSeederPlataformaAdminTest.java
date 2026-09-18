@@ -49,7 +49,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Phase 119 (PROV-01): prova as duas politicas de gating distintas introduzidas por este plano
- * -- o papel {@code PLATAFORMA_ADMIN} e a tenant reservada {@code "LexCV"} sao seedados em TODOS
+ * -- o papel {@code PLATAFORMA_ADMIN} e a tenant reservada {@code "ALCv"} sao seedados em TODOS
  * os arranques (mesmo com {@code app.seed.enabled=false}), enquanto o utilizador bootstrap
  * {@code plataforma@lexcv.cv} so e criado quando {@code app.seed.enabled=true}.
  *
@@ -95,7 +95,7 @@ class DatabaseSeederPlataformaAdminTest {
     @InjectMocks
     private DatabaseSeeder seeder;
 
-    private static final String NOME_TENANT_PLATAFORMA = "LexCV";
+    private static final String NOME_TENANT_PLATAFORMA = "ALCv";
     private static final String EMAIL_PLATAFORMA = "plataforma@lexcv.cv";
 
     @BeforeEach
@@ -199,8 +199,8 @@ class DatabaseSeederPlataformaAdminTest {
         verify(roleRepository).findByNome("PLATAFORMA_ADMIN");
     }
 
-    // CR-01 (120-REVIEW.md): seedTenantPlataforma() constroi a tenant reservada "LexCV" com
-    // Tenant.builder().nome("LexCV").build() -- sem nunca chamar .plano(...) -- por isso esta
+    // CR-01 (120-REVIEW.md): seedTenantPlataforma() constroi a tenant reservada "ALCv" com
+    // Tenant.builder().nome("ALCv").build() -- sem nunca chamar .plano(...) -- por isso esta
     // tenant so nasce com plano != null porque depende do mesmo @Builder.Default que ja garante
     // ativo=true. Prova direta do 3º dos 3 pontos de criacao de tenant apontados pelo finding
     // (os outros 2, provisionTenant/initializeSystem, sao provados em

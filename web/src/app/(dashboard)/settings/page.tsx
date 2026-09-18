@@ -51,7 +51,7 @@ type TabId = "profile" | "security" | "users" | "rbac" | "notificacoes";
 export default function SettingsPage() {
   const { data: me, can } = usePermissions();
   const [activeTab, setActiveTab] = React.useState<TabId>("profile");
-  
+
   // Admin queries
   const isAdmin = me?.roles?.includes("ADMIN");
   const hasUsersManage = can.manage("users") || isAdmin;
@@ -64,7 +64,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Definições de Sistema</h1>
           <div className="mt-2 flex items-center text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
-            <span>LexCV</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Configurações Gerais e Segurança</span>
+            <span>ALCv</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Configurações Gerais e Segurança</span>
           </div>
         </div>
       </div>
@@ -73,11 +73,10 @@ export default function SettingsPage() {
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 pb-px overflow-x-auto">
         <button
           onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
-            activeTab === "profile"
+          className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "profile"
               ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
               : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          }`}
+            }`}
         >
           <User className="h-4 w-4" />
           O Meu Perfil
@@ -85,11 +84,10 @@ export default function SettingsPage() {
 
         <button
           onClick={() => setActiveTab("security")}
-          className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
-            activeTab === "security"
+          className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "security"
               ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
               : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          }`}
+            }`}
         >
           <Lock className="h-4 w-4" />
           Segurança
@@ -98,11 +96,10 @@ export default function SettingsPage() {
         {hasUsersManage && (
           <button
             onClick={() => setActiveTab("users")}
-            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
-              activeTab === "users"
+            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "users"
                 ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+              }`}
           >
             <Users className="h-4 w-4" />
             Gestão de Utilizadores
@@ -112,11 +109,10 @@ export default function SettingsPage() {
         {hasRbacManage && (
           <button
             onClick={() => setActiveTab("rbac")}
-            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
-              activeTab === "rbac"
+            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "rbac"
                 ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+              }`}
           >
             <Sliders className="h-4 w-4" />
             Controlo de Acesso (RBAC)
@@ -126,11 +122,10 @@ export default function SettingsPage() {
         {can.view("notificacoes") && (
           <button
             onClick={() => setActiveTab("notificacoes")}
-            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${
-              activeTab === "notificacoes"
+            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "notificacoes"
                 ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }`}
+              }`}
           >
             <Bell className="h-4 w-4" />
             Notificações
@@ -371,11 +366,10 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     <div className="space-y-6">
       {message && (
         <div
-          className={`p-3 text-sm border rounded-md ${
-            message.type === "success"
+          className={`p-3 text-sm border rounded-md ${message.type === "success"
               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
               : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
-          }`}
+            }`}
         >
           {message.text}
         </div>
@@ -388,7 +382,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
             <div>
               <CardTitle className="text-xl font-semibold">Utilizadores Registados</CardTitle>
               <CardDescription>
-                Lista de profissionais com credenciais de acesso ao sistema LexCV.
+                Lista de profissionais com credenciais de acesso ao sistema ALCv.
               </CardDescription>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -604,7 +598,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                     className="bg-slate-50 dark:bg-slate-950"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="userEmail">Email de Acesso</Label>
                   <Input
@@ -648,7 +642,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Status de Utilizador</h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Utilizadores desativados são imediatamente impedidos de fazer login no LexCV.
+                    Utilizadores desativados são imediatamente impedidos de fazer login no ALCv.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -675,11 +669,10 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                         type="button"
                         key={role}
                         onClick={() => toggleRole(role)}
-                        className={`flex items-center justify-between px-3 py-2 border rounded-md text-xs font-medium transition-all ${
-                          isChecked
+                        className={`flex items-center justify-between px-3 py-2 border rounded-md text-xs font-medium transition-all ${isChecked
                             ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-sm"
                             : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/30"
-                        }`}
+                          }`}
                       >
                         {role}
                         {isChecked && <Check className="h-3.5 w-3.5" />}
@@ -708,16 +701,15 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                       <div
                         key={perm.key}
                         onClick={() => togglePermission(perm.key)}
-                        className={`flex items-start gap-3 p-2 border rounded-md cursor-pointer transition-all ${
-                          isChecked
+                        className={`flex items-start gap-3 p-2 border rounded-md cursor-pointer transition-all ${isChecked
                             ? "border-amber-500/50 bg-amber-500/5 dark:bg-amber-500/10 text-slate-900 dark:text-slate-100"
                             : "border-transparent hover:bg-slate-100/50 dark:hover:bg-slate-900/30 text-slate-600 dark:text-slate-400"
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}} // handled by click div
+                          onChange={() => { }} // handled by click div
                           className="mt-0.5 text-amber-500 focus:ring-amber-500 rounded h-3.5 w-3.5 pointer-events-none"
                         />
                         <div className="space-y-0.5 text-left">
@@ -889,12 +881,12 @@ function RbacTab() {
             </TooltipTrigger>
             <TooltipContent>
               As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-              toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+              toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
             </TooltipContent>
           </Tooltip>
         )}
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {success && (
           <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm border border-emerald-500/20 rounded-md">
@@ -918,7 +910,7 @@ function RbacTab() {
               // também precisa de saber porque as alterações na matriz não persistem.
               <>
                 {" "}As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-                toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+                toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
               </>
             )}
           </div>
@@ -979,11 +971,10 @@ function RbacTab() {
                                   checked={isAssigned || isAdminRow}
                                   disabled={isDisabled}
                                   onChange={() => handleCheckboxChange(role, perm.key)}
-                                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-800 rounded transition-all ${
-                                    isDisabled
+                                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-800 rounded transition-all ${isDisabled
                                       ? "cursor-not-allowed text-blue-500/55 opacity-60"
                                       : "cursor-pointer"
-                                  }`}
+                                    }`}
                                 />
                               </label>
                             </td>
@@ -1088,9 +1079,8 @@ function NotificationPreferencesTab() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs font-semibold ${
-                      checked ? "text-emerald-500" : "text-slate-500"
-                    }`}
+                    className={`text-xs font-semibold ${checked ? "text-emerald-500" : "text-slate-500"
+                      }`}
                   >
                     {checked ? "A ENTREGAR" : "SILENCIADA"}
                   </span>

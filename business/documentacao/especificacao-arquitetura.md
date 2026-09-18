@@ -1,14 +1,14 @@
-# LexCV — Especificação de Arquitetura
+# ALCv — Especificação de Arquitetura
 
 - **Documento:** Especificação de Arquitetura (descrição técnica para o contratante)
-- **Produto:** LexCV — Plataforma Institucional de Gestão Jurídica
+- **Produto:** ALCv — Plataforma Institucional de Gestão Jurídica
 - **Destinatário:** Entidade contratante e respetivo responsável de sistemas
 - **Versão do produto descrita:** v2.16, encerrada a 30 de julho de 2026
 - **Data de emissão:** agosto de 2026
 
 > Este documento descreve a arquitetura em texto, sem diagramas. Destina-se a um
 > leitor técnico do lado do contratante — responsável de sistemas, auditor ou
-> consultor — e não à equipa de desenvolvimento. O LexCV é uma plataforma
+> consultor — e não à equipa de desenvolvimento. O ALCv é uma plataforma
 > institucional de gestão jurídica para Cabo Verde (clientes, processos, agenda
 > e prazos, documentos e honorários), que serve vários escritórios a partir da
 > mesma instalação.
@@ -17,7 +17,7 @@
 
 ## 1. Visão geral
 
-O LexCV é composto por **seis serviços** que correm em conjunto no mesmo
+O ALCv é composto por **seis serviços** que correm em conjunto no mesmo
 servidor, cada um em contentor próprio, ligados por uma rede privada interna.
 Apenas um deles está exposto à Internet.
 

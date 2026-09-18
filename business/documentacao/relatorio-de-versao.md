@@ -1,6 +1,6 @@
-# LexCV — Relatório de Versão
+# ALCv — Relatório de Versão
 
-**Produto:** LexCV — plataforma de gestão de escritórios e instituições jurídicas (Cabo Verde)
+**Produto:** ALCv — plataforma de gestão de escritórios e instituições jurídicas (Cabo Verde)
 **Documento:** Relatório de versão para o cliente contratante (*release notes*)
 **Data de emissão:** 21 de agosto de 2026
 **Última versão coberta:** v2.16 (30 de julho de 2026)
@@ -9,7 +9,7 @@
 
 ## Para que serve este documento
 
-O LexCV evoluiu ao longo de **25 versões entregues em 65 dias**, entre 26 de maio
+O ALCv evoluiu ao longo de **25 versões entregues em 65 dias**, entre 26 de maio
 e 30 de julho de 2026. Este relatório percorre essas versões, da mais recente para
 a mais antiga, e responde a uma pergunta de cada vez: **o que é que passou a ser
 possível fazer?**
@@ -62,7 +62,7 @@ O percurso versão a versão começa aqui.
 ---
 
 ## v2.16 — Distribuição Multi-Escritório e Faturação por Utilizadores
-**30 de julho de 2026** · *O LexCV passa a servir vários escritórios*
+**30 de julho de 2026** · *O ALCv passa a servir vários escritórios*
 
 **Em resumo:** até esta versão, cada escritório precisava da sua própria
 instalação da plataforma. A partir daqui, um escritório novo é criado a partir de
@@ -98,7 +98,7 @@ dado controlado — e faturável.
 ### Para o escritório
 
 - **A matriz de permissões deixou de poder ser alterada por engano.** Passa a ser
-  gerida centralmente pela LexCV, garantindo que a alteração feita por um
+  gerida centralmente pela ALCv, garantindo que a alteração feita por um
   escritório nunca afeta outro. Quem tenha o papel de administrador vê agora a
   indicação "Gerido pela Plataforma".
 - **Um administrador de escritório não consegue escalar os seus próprios
@@ -123,7 +123,7 @@ aqui, não por defeito do produto.
 ## v2.15 — Reposicionamento Institucional (SIJ)
 **27 de julho de 2026** · *Enquadramento institucional correto*
 
-**Em resumo:** a forma como o LexCV se apresenta publicamente passou a estar
+**Em resumo:** a forma como o ALCv se apresenta publicamente passou a estar
 correta e a deixar de expor a identidade de terceiros.
 
 - **A plataforma passou a apresentar-se como alinhada ao ecossistema do SIJ
@@ -232,7 +232,7 @@ Roteiro Tecnológico, item A.1.
 ---
 
 ## v2.12 — Sítio Institucional Público
-**15 de julho de 2026** · *O LexCV passa a ter presença pública*
+**15 de julho de 2026** · *O ALCv passa a ter presença pública*
 
 **Em resumo:** o produto ganhou uma cara para o exterior, sem abrir qualquer porta
 para os dados do escritório.
@@ -445,7 +445,7 @@ acessível através da aplicação.
 
 ### Para o advogado
 
-- **Passou a poder trabalhar pareceres sem sair do LexCV.** Existe agora uma lista
+- **Passou a poder trabalhar pareceres sem sair do ALCv.** Existe agora uma lista
   com filtros, uma página de detalhe com o histórico completo de versões, e um
   formulário de criação de solicitação.
 - **Passou a submeter versões sucessivas do parecer** — resumo mais o anexo
@@ -471,7 +471,7 @@ acessível através da aplicação.
 ## v2.5 — Módulo de Parecer Jurídico (Fundação)
 **30 de junho de 2026** · *O ciclo completo do parecer jurídico*
 
-**Em resumo:** o LexCV passou a suportar o ciclo completo do parecer, com
+**Em resumo:** o ALCv passou a suportar o ciclo completo do parecer, com
 rastreabilidade a sério — mas ainda sem interface (ver nota no fim).
 
 ### O que o ciclo garante
@@ -548,7 +548,7 @@ ficha em telemóvel.
 ---
 
 ## v2.3 — Utilização em Ecrã Móvel
-**21 de junho de 2026** · *O LexCV passa a funcionar no telemóvel*
+**21 de junho de 2026** · *O ALCv passa a funcionar no telemóvel*
 
 **Em resumo:** deixou de ser preciso estar ao computador para consultar o
 essencial.
@@ -641,7 +641,7 @@ fica operacional, para o perfil ADMIN, com a próxima atualização.
 ---
 
 ## v1.8 — Publicação em Servidor Próprio
-**16 de junho de 2026** · *O LexCV passa a estar em serviço permanente*
+**16 de junho de 2026** · *O ALCv passa a estar em serviço permanente*
 
 **Em resumo:** o produto deixou de correr apenas em máquinas de desenvolvimento.
 
@@ -765,7 +765,7 @@ vista de segurança.
 **Em resumo:** os dados passaram a ser reais.
 
 - **A plataforma passou a assentar num servidor e numa base de dados reais**, em
-  substituição da simulação usada até então. É esta a versão em que o LexCV deixou
+  substituição da simulação usada até então. É esta a versão em que o ALCv deixou
   de ser uma maqueta funcional.
 - **Cada utilizador passou a ter o seu painel de perfil**, com edição dos próprios
   dados.
@@ -814,7 +814,7 @@ própria aplicação. A passagem a servidor real ocorreu na v1.2.
 
 ---
 
-*Documento destinado a clientes contratantes do LexCV. O detalhe item a item por
+*Documento destinado a clientes contratantes do ALCv. O detalhe item a item por
 versão está no **Registo de Alterações**, que cobre exatamente as mesmas versões e
 usa as mesmas designações. Ambos os documentos derivam dos registos internos de
 planeamento e execução do projeto.*

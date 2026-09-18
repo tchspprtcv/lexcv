@@ -36,7 +36,7 @@ metrics:
 
 # Phase 40 Plan 01: Mapeamento e Alinhamento Casing (Agenda) Summary
 
-**One-liner:** Refatoração completa do data layer e das páginas do módulo de agenda do LexCV de snake_case para camelCase, com tratamento de fuso horário em campos de data, alinhando com a serialização padrão Jackson/Spring Boot do backend.
+**One-liner:** Refatoração completa do data layer e das páginas do módulo de agenda do ALCv de snake_case para camelCase, com tratamento de fuso horário em campos de data, alinhando com a serialização padrão Jackson/Spring Boot do backend.
 
 ## What Was Built
 

@@ -49,7 +49,7 @@ completed: 2026-07-29
 ## Accomplishments
 - Measured, not just observed: suspension → next-request-rejection in ~1.06 seconds, using the exact same session cookie throughout (no re-issuance)
 - Separately confirmed the two distinct enforcement mechanisms Plan 01 built (per-request filter re-validation vs. login-time gate) — a `FALHOU` on either would have meant a different, specific bug
-- Confirmed the reserved "LexCV" tenant's suspend guard fires correctly via both interaction modalities (mouse hover, keyboard focus) — second successful use of the Phase 118 composition
+- Confirmed the reserved "ALCv" tenant's suspend guard fires correctly via both interaction modalities (mouse hover, keyboard focus) — second successful use of the Phase 118 composition
 - Provisioned a real 2nd tenant through the actual UI (not SQL/curl), proving PROV-02 end-to-end
 - Found and worked around one environmental issue (transient backend connection refusal, frontend dev-server crash) without letting either interrupt the actual verification once recovered
 

@@ -125,7 +125,7 @@ _TDD tasks (2 and 3) each produced a genuine RED commit before the GREEN commit,
 **Task 3's own automated `<verify>` script has an internal contradiction that cannot be resolved by wording alone, without violating the plan's explicit literal-text requirements.**
 
 The action text mandates two exact message strings verbatim:
-- Login (403): `"O acesso da sua organização está suspenso. Contacte o suporte LexCV."`
+- Login (403): `"O acesso da sua organização está suspenso. Contacte o suporte ALCv."`
 - Refresh (401): `"Sessão inválida. O acesso da sua organização está suspenso."`
 
 The refresh message is (by design, for consistency of language) built by prefixing `"Sessão inválida. "` onto the *same* core clause used in the login message. This means the refresh message's line always contains the login message's shorter phrase as a literal substring. The task's automated verify script runs:

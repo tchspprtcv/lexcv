@@ -39,7 +39,7 @@ public class Tenant {
 
     // Phase 120 code review (CR-01): sem @Builder.Default, as 3 vias que constroem um Tenant sem
     // chamar .plano(...) explicitamente (SetupService.initializeSystem, SetupService.
-    // provisionTenant, DatabaseSeeder.seedTenantPlataforma() -- a tenant reservada "LexCV")
+    // provisionTenant, DatabaseSeeder.seedTenantPlataforma() -- a tenant reservada "ALCv")
     // deixavam plano = NULL em producao, confirmado no 120-HUMAN-UAT.md (ponto 10) contra a base
     // de dados real de desenvolvimento (os 2 tenants existentes tinham plano=NULL). Mesmo padrao
     // exato de `ativo` (imediatamente abaixo): o columnDefinition garante que um ambiente novo
@@ -69,8 +69,8 @@ public class Tenant {
     // Hibernate emitiria `alter table t_tenant add column ativo boolean not null` contra
     // uma tabela ja povoada, que o PostgreSQL rejeita (linhas existentes ficariam sem
     // valor) -- com o `default true` embutido no DDL, o ALTER passa e preenche as linhas
-    // existentes automaticamente. A tenant reservada "LexCV" (DatabaseSeeder.
-    // seedTenantPlataforma(), que constroi com Tenant.builder().nome("LexCV").build() sem
+    // existentes automaticamente. A tenant reservada "ALCv" (DatabaseSeeder.
+    // seedTenantPlataforma(), que constroi com Tenant.builder().nome("ALCv").build() sem
     // passar `ativo`) depende do @Builder.Default abaixo para nascer ativa.
     @Column(name = "ativo", nullable = false, columnDefinition = "boolean not null default true")
     @Builder.Default

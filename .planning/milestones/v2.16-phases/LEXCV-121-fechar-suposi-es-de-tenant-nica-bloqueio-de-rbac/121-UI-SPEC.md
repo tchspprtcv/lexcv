@@ -90,7 +90,7 @@ Accent reserved for: "Guardar Regras", "Novo Utilizador", "Guardar Utilizador" b
 |---------|------|
 | Primary CTA | "Guardar Regras" — pre-existing, unchanged. Now conditionally rendered only when `me?.roles?.includes("PLATAFORMA_ADMIN")` is true. Nobody can reach that branch today (`hasRbacManage` doesn't yet grant `PLATAFORMA_ADMIN` tab access — confirmed by 121-CONTEXT.md research), so in practice every current viewer sees the replacement state below. |
 | Replacement state — Badge label | **"Gerido pela Plataforma"** (`variant="outline"`, `Lock` icon `h-3 w-3`, `gap-1`). This is the always-visible "why there's no Save button" signal required by Success Criterion 4 — legible without hovering, unlike a tooltip-only explanation. |
-| Replacement state — Tooltip (on hover/focus) | "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual." Gives the fuller "why" for a curious tenant ADMIN without cluttering the header row. |
+| Replacement state — Tooltip (on hover/focus) | "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual." Gives the fuller "why" for a curious tenant ADMIN without cluttering the header row. |
 | Empty state | Not applicable — no new list/table is introduced. The permission matrix always has rows (4 roles × N system permissions); it can never render zero. |
 | Error state | Not applicable in practice. `handleSave`'s existing catch block (`setError(msg); toast.error(msg)`) is the only error path tied to this button, and its sole trigger (the Button) no longer renders for a tenant ADMIN — it becomes unreachable dead code for them, not a live error surface. No new error copy is introduced; do not rewrite `handleSave`. |
 | Destructive confirmation | Not applicable — this phase introduces no destructive action. |
@@ -143,7 +143,7 @@ Concrete implementation contract points — not covered by the tables above but 
        </TooltipTrigger>
        <TooltipContent>
          As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-         toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+         toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
        </TooltipContent>
      </Tooltip>
    )}

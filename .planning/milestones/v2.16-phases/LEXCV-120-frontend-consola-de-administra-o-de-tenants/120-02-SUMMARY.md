@@ -13,7 +13,7 @@ requires:
 provides:
   - "GET /api/v1/platform/tenants -- all tenants with nome/plano/limiteUtilizadores/ativo/utilizadoresAtivos, sorted by nome (case-insensitive)"
   - "PUT /api/v1/platform/tenants/{id} -- adjusts plano/limiteUtilizadores (null = sem limite), never touches ativo"
-  - "PATCH /api/v1/platform/tenants/{id}/ativo -- toggles suspended/active, rejects suspending the reserved LexCV tenant with 400"
+  - "PATCH /api/v1/platform/tenants/{id}/ativo -- toggles suspended/active, rejects suspending the reserved ALCv tenant with 400"
   - "TenantAdminSummaryResponse / TenantUpdateRequest DTOs, reusable as-is by Phase 122's usage report"
   - "GlobalExceptionHandler now maps HttpMessageNotReadableException -> 400 globally (backend-wide, not just this plan's endpoints)"
 affects: [120-03, 120-04, 120-05, 120-06, 122]
@@ -36,7 +36,7 @@ key-files:
 
 key-decisions:
   - "toSummary(Tenant) extracted as a shared private helper so listTenants/updateTenant/setTenantAtivo all build TenantAdminSummaryResponse the same way, with utilizadoresAtivos always sourced from UserRepository.countByTenantIdAndAtivoTrue"
-  - "Reserved-tenant guard blocks ativo=false only -- reactivating LexCV is always allowed, since suspending it is the only unsafe direction (would lock out the sole PLATAFORMA_ADMIN)"
+  - "Reserved-tenant guard blocks ativo=false only -- reactivating ALCv is always allowed, since suspending it is the only unsafe direction (would lock out the sole PLATAFORMA_ADMIN)"
   - "Reworded 2 pre-existing Javadoc passages (PlatformAdminController's class doc, PlatformAdminControllerTest's class doc) that collided with this same plan's own literal-text verify gates, without changing their documented meaning -- same precedent as 119-04/120-01"
 
 requirements-completed: [PROV-03, PROV-04, PROV-05]
@@ -62,7 +62,7 @@ completed: 2026-07-29
 
 - 3 new endpoints on `PlatformAdminController`: `GET /tenants` (list with active-user utilization), `PUT /tenants/{id}` (adjust `plano`/`limiteUtilizadores`), `PATCH /tenants/{id}/ativo` (suspend/reactivate) -- all covered by the pre-existing class-level `hasRole('PLATAFORMA_ADMIN')` gate, zero new per-method `@PreAuthorize`
 - New global `HttpMessageNotReadableException` -> `400` handler in `GlobalExceptionHandler`, fixing a pre-existing `500`-with-exception-class-name response for ANY malformed JSON body across the whole backend, not just this plan's new endpoints -- same `{"message": ...}` shape as every other error response
-- The reserved `LexCV` tenant cannot be suspended (`400` with the exact UI-SPEC message) but CAN always be reactivated -- both directions proven by dedicated tests
+- The reserved `ALCv` tenant cannot be suspended (`400` with the exact UI-SPEC message) but CAN always be reactivated -- both directions proven by dedicated tests
 - 17 new Mockito test cases (13 behavior + 3 real AOP-proxy authorization-gate cases + 1 structural reflection case) bring `PlatformAdminControllerTest` from 9 to 26 tests; full backend suite 165/165 green; `mvn spotbugs:check` clean
 
 ## Task Commits
@@ -86,7 +86,7 @@ Each task was committed atomically:
 ## Decisions Made
 
 - `toSummary(Tenant)` extracted as a single shared private helper so the 3 handlers never diverge on how `utilizadoresAtivos` is computed (always `userRepository.countByTenantIdAndAtivoTrue(tenant.getId())`, never a second implementation).
-- The reserved-tenant guard in `setTenantAtivo` only blocks the `ativo=false` transition; reactivating a reserved tenant is always allowed, matching the plan's explicit rationale (suspending `LexCV` would lock out the only `PLATAFORMA_ADMIN`, with no application-level recovery path).
+- The reserved-tenant guard in `setTenantAtivo` only blocks the `ativo=false` transition; reactivating a reserved tenant is always allowed, matching the plan's explicit rationale (suspending `ALCv` would lock out the only `PLATAFORMA_ADMIN`, with no application-level recovery path).
 - `plano` is required (not-null) in `TenantUpdateRequest`, and `limiteUtilizadores` accepts `null` as "sem limite" but rejects any non-null value `< 1` -- both validated explicitly in `updateTenant`, distinct from the Jackson-level enum rejection an invalid `plano` string already triggers.
 
 ## Deviations from Plan

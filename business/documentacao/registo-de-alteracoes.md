@@ -1,6 +1,6 @@
-# LexCV — Registo de Alterações
+# ALCv — Registo de Alterações
 
-**Produto:** LexCV — plataforma de gestão de escritórios e instituições jurídicas (Cabo Verde)
+**Produto:** ALCv — plataforma de gestão de escritórios e instituições jurídicas (Cabo Verde)
 **Documento:** Registo de alterações por versão (*changelog*)
 **Data de emissão:** 21 de agosto de 2026
 **Última versão coberta:** v2.16 (30 de julho de 2026)
@@ -10,7 +10,7 @@
 ## Como ler este documento
 
 Este registo lista, por ordem cronológica inversa (a versão mais recente primeiro),
-o que foi entregue em cada versão do LexCV. Cada versão está dividida em três
+o que foi entregue em cada versão do ALCv. Cada versão está dividida em três
 categorias:
 
 - **Novas funcionalidades** — capacidades que não existiam antes.
@@ -75,7 +75,7 @@ sua data provém apenas do registo interno de marcos.
 - Indicador "X/Y utilizadores" na gestão de utilizadores, com três estados de
   mensagem e explicação visível sobre o botão desativado quando o limite é
   atingido.
-- Novo papel **PLATAFORMA_ADMIN**, com um escritório reservado ("LexCV"),
+- Novo papel **PLATAFORMA_ADMIN**, com um escritório reservado ("ALCv"),
   distinto do papel ADMIN de cada escritório.
 - Provisionamento de um novo escritório com o respetivo ADMIN inicial, sem
   depender do assistente de primeira instalação.
@@ -95,7 +95,7 @@ sua data provém apenas do registo interno de marcos.
   indicação "Gerido pela Plataforma" em vez do botão de gravação.
 - Reforço das barreiras que impediam um ADMIN de escritório de escalar os seus
   próprios privilégios até ao novo papel de plataforma.
-- A página institucional pública passa a apresentar sempre a marca genérica LexCV,
+- A página institucional pública passa a apresentar sempre a marca genérica ALCv,
   deixando de assumir a existência de um único escritório.
 - Auditoria dedicada de isolamento de dados sobre as três novas superfícies
   introduzidas nesta versão, concluída antes da entrada de um segundo escritório
@@ -136,7 +136,7 @@ sua data provém apenas do registo interno de marcos.
 
 ### Melhorias
 
-- O enquadramento institucional do LexCV passou a descrever a plataforma como
+- O enquadramento institucional do ALCv passou a descrever a plataforma como
   alinhada ao ecossistema do **SIJ (Sistema Judicial de Cabo Verde)**, na página
   pública e na especificação do produto.
 - A identidade do escritório de demonstração pré-carregado foi generalizada
@@ -984,7 +984,7 @@ registo.
 ---
 
 *Documento gerado a partir dos registos internos de planeamento e execução do
-projeto LexCV. A designação técnica original de cada versão, indicada na terceira
+projeto ALCv. A designação técnica original de cada versão, indicada na terceira
 coluna da tabela-resumo, permite cruzar este documento com esses registos. O
 documento complementar, **Relatório de Versão**, cobre as mesmas versões pela
 ótica do benefício.*

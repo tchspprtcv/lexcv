@@ -8,7 +8,7 @@ tags: [rbac, multi-tenant, seed, spring-boot, mockito, tdd]
 requires: []
 provides:
   - PLATAFORMA_ADMIN role seeded unconditionally (every startup, no seedEnabled gate) with an empty permission collection
-  - Reserved Tenant "LexCV" seeded unconditionally, idempotent find-or-create by nome
+  - Reserved Tenant "ALCv" seeded unconditionally, idempotent find-or-create by nome
   - Bootstrap user plataforma@lexcv.cv seeded only when app.seed.enabled=true, single PLATAFORMA_ADMIN role
   - TenantRepository.findByNome(String) derived query
   - Demo-data gate rewritten so its three protective counts are read before the reserved-tenant insert (bdVaziaAntesDoSeedPlataforma)
@@ -30,7 +30,7 @@ key-files:
     - backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java
 
 key-decisions:
-  - "PLATAFORMA_ADMIN role + reserved Tenant 'LexCV' seeded unconditionally (every startup, no seedEnabled gate) -- infrastructure Phase 120 needs regardless of demo data"
+  - "PLATAFORMA_ADMIN role + reserved Tenant 'ALCv' seeded unconditionally (every startup, no seedEnabled gate) -- infrastructure Phase 120 needs regardless of demo data"
   - "Bootstrap user plataforma@lexcv.cv gated by app.seed.enabled only (not SystemSetting.initialized, not the demo-data counts) -- follows this plan's DECISAO REVISTA banner, which supersedes the original 119-CONTEXT.md/119-PATTERNS.md text (both said the user should also be unconditional) because Pa$$w0rd is a publicly documented password (CLAUDE.md)"
   - "Demo-block guard counts hoisted into bdVaziaAntesDoSeedPlataforma, read immediately after seedRbac() and before seedTenantPlataforma() inserts any row -- prevents the now-unconditional reserved-tenant insert from permanently poisoning the 'genuinely empty database' gate that protects the demo-data block"
 
@@ -46,7 +46,7 @@ completed: 2026-07-29
 
 # Phase 119 Plan 01: Papel de Plataforma e Seed de Infraestrutura Reservada Summary
 
-**PLATAFORMA_ADMIN role and reserved "LexCV" tenant now seed unconditionally on every backend startup, while the bootstrap plataforma@lexcv.cv credential seeds only when app.seed.enabled=true, proven by 5 new Mockito TDD cases plus a hoisted demo-data gate.**
+**PLATAFORMA_ADMIN role and reserved "ALCv" tenant now seed unconditionally on every backend startup, while the bootstrap plataforma@lexcv.cv credential seeds only when app.seed.enabled=true, proven by 5 new Mockito TDD cases plus a hoisted demo-data gate.**
 
 ## Performance
 
@@ -59,7 +59,7 @@ completed: 2026-07-29
 ## Accomplishments
 - `TenantRepository` gains `findByNome(String)`, the idempotent lookup the reserved tenant needs; the pre-existing WR-01 Javadoc warning on `findFirstByOrderByCreatedAtAsc` was left completely intact
 - `seedRbac()` now upserts `PLATAFORMA_ADMIN` with `Collections.emptyList()` permissions, unconditionally, alongside the four existing tenant-scoped roles
-- New `seedTenantPlataforma()`: unconditional find-or-create of `Tenant` "LexCV" by `nome`, called before any of the three `run()` gates -- infrastructure, not demo data
+- New `seedTenantPlataforma()`: unconditional find-or-create of `Tenant` "ALCv" by `nome`, called before any of the three `run()` gates -- infrastructure, not demo data
 - New `seedUtilizadorPlataforma()`: bootstrap user `plataforma@lexcv.cv` / `Pa$$w0rd`, called immediately after the `seedEnabled` gate only (never after `initialized` or the demo-data counts), find-or-create by email, exactly one `PLATAFORMA_ADMIN` role, startup warning printed only on the branch that actually creates the account (T-119-06 mitigation)
 - `run()`'s demo-data protection rewritten without changing its semantics: the three counts (`tenantRepository`/`userRepository`/`clienteRepository`) are now captured into `bdVaziaAntesDoSeedPlataforma` right after `seedRbac()`, before `seedTenantPlataforma()` can insert a row that would otherwise permanently poison the "genuinely empty database" check
 - New test class `DatabaseSeederPlataformaAdminTest` (5 cases, Mockito, no Spring context) proves: production posture creates zero platform credentials, dev posture creates a correctly-linked single-role bootstrap user, a second startup recreates nothing, the demo-gate counts are read in the correct order relative to the tenant insert (`InOrder`), and the role itself is seeded even in production posture
@@ -70,7 +70,7 @@ Each task was committed atomically:
 
 1. **Task 1: TenantRepository.findByNome + papel PLATAFORMA_ADMIN sem permissoes** - `681c53f` (feat)
 2. **Task 2 (TDD, RED): failing tests for platform tenant/user seeding** - `f4f7077` (test)
-3. **Task 2 (TDD, GREEN): seed reserved LexCV tenant unconditional + bootstrap user gated** - `22d07ed` (feat)
+3. **Task 2 (TDD, GREEN): seed reserved ALCv tenant unconditional + bootstrap user gated** - `22d07ed` (feat)
 
 _Note: Task 2 has two commits per this codebase's established TDD convention (RED then GREEN, e.g. Phases 117/118) -- Case 5 of the RED commit's test suite passed immediately because it proves Task 1's already-delivered contract (unconditional role seed), which the plan's own `<behavior>` text explicitly anticipates ("prova que o upsert do papel (Task 1) corre dentro de seedRbac()"). This was verified as intentional, not a test-authoring mistake, before proceeding to GREEN._
 
@@ -91,7 +91,7 @@ One minor pre-existing discrepancy noted (not a deviation caused by this executi
 
 ## Issues Encountered
 
-- A piped Bash `grep ... | grep -v ...` verification chain produced a false-negative count (0 instead of 1) for `tenantRepository.findByNome("LexCV")`, consistent with the environment note that the user's global `rtk` shell hook can intercept/summarize piped grep output. Re-verified immediately with the dedicated Grep tool, which correctly found the single occurrence. Switched all subsequent verification greps to the dedicated Grep tool rather than piped Bash commands, per the environment guidance.
+- A piped Bash `grep ... | grep -v ...` verification chain produced a false-negative count (0 instead of 1) for `tenantRepository.findByNome("ALCv")`, consistent with the environment note that the user's global `rtk` shell hook can intercept/summarize piped grep output. Re-verified immediately with the dedicated Grep tool, which correctly found the single occurrence. Switched all subsequent verification greps to the dedicated Grep tool rather than piped Bash commands, per the environment guidance.
 
 ## User Setup Required
 
@@ -99,7 +99,7 @@ None - no external service configuration required. `SEED_ENABLED` is an existing
 
 ## Next Phase Readiness
 
-- Phase 120 (frontend provisioning console) can now rely on: `PLATAFORMA_ADMIN` existing with zero permissions on every environment, and the reserved `Tenant` "LexCV" existing on every environment (resolvable via `TenantRepository.findByNome("LexCV")`) -- both independent of `app.seed.enabled`.
+- Phase 120 (frontend provisioning console) can now rely on: `PLATAFORMA_ADMIN` existing with zero permissions on every environment, and the reserved `Tenant` "ALCv" existing on every environment (resolvable via `TenantRepository.findByNome("ALCv")`) -- both independent of `app.seed.enabled`.
 - **Carried forward per this plan's `<output>` instructions (T-119-14):** a production installation with `SEED_ENABLED=false` has the role and reserved tenant but **zero** `PLATAFORMA_ADMIN` users -- the Phase 120 console is unreachable until a first platform account is provisioned. Documented bootstrap path until Phase 120 ships a first-class provisioning mechanism: one controlled restart with `SEED_ENABLED=true`, immediate password change on the created `plataforma@lexcv.cv` account, then set `SEED_ENABLED=false` again.
 - **Carried forward per this plan's `<output>` instructions (T-119-06):** recommend Phase 120 forces a password change on first login of the `PLATAFORMA_ADMIN` role, since the seeded password is the same publicly documented dev credential pattern as `admin@lexcv.cv`.
 - Plans 02/03/04 of Phase 119 (out of scope for this plan) still need to build: `SetupService.provisionTenant`, the new `PlatformAdminController` endpoint, and RBAC-screen containment of the new role (keeping it out of `RbacResponse.systemPermissions`).

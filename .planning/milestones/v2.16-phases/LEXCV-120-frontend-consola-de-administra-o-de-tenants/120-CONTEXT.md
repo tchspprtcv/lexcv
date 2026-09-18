@@ -17,7 +17,7 @@ This phase delivers the actual internal console a `PLATAFORMA_ADMIN` uses day-to
 ### Suspend mechanism
 - Add `Tenant.ativo` (`Boolean`, default `true`, matching `User.ativo`'s exact naming/semantics — not `suspenso`, to keep the "true = usable" polarity consistent with the rest of the codebase). Requires a manual SQL migration `backend/migrations/120-add-tenant-ativo.sql` (this project has no Flyway/Liquibase; `ddl-auto=update` in dev auto-adds the column but prod needs the manual script, same convention as every prior migration in `backend/migrations/`). Backfill existing tenants to `ativo=true`.
 - **Enforcement — immediate effect on already-active sessions, not just login-time.** `JwtAuthenticationFilter.doFilterInternal` (`backend/src/main/java/com/lexcv/config/JwtAuthenticationFilter.java:43`) already re-checks `user.getAtivo()` on **every single request** (not cached, not only at login) — this is the exact established mechanism that makes deactivating a `User` take immediate effect mid-session. Extend the SAME check to also verify the user's `Tenant.ativo` (inject `TenantRepository`, look up `user.getTenantId()`, require it to be active too — `user != null && user.getAtivo() && tenant present && tenant.getAtivo()`). This directly satisfies ROADMAP Success Criterion 4's explicit wording: a suspended tenant's users must stop being able to authenticate **or continue using an already-active session** — reusing the filter's per-request re-validation gives both for free, matching the exact pattern already proven for user-level deactivation.
-- Reserved "LexCV" platform tenant itself must never be suspendable through this UI (suspending it would lock out the only `PLATAFORMA_ADMIN` account) — the console should omit or disable the suspend action for the tenant named "LexCV" specifically (mirrors `AdminController.updateRbac`'s existing `"ADMIN".equals(roleName)` immutability-guard pattern, applied here to the reserved tenant instead of a role).
+- Reserved "ALCv" platform tenant itself must never be suspendable through this UI (suspending it would lock out the only `PLATAFORMA_ADMIN` account) — the console should omit or disable the suspend action for the tenant named "ALCv" specifically (mirrors `AdminController.updateRbac`'s existing `"ADMIN".equals(roleName)` immutability-guard pattern, applied here to the reserved tenant instead of a role).
 
 ### List tenants with utilization (PROV-03)
 - New endpoint `GET /api/v1/platform/tenants` on `PlatformAdminController` (already `@PreAuthorize("hasRole('PLATAFORMA_ADMIN')")` at class level from Phase 119 — reuse the same class, don't create a second controller). Returns, per tenant: id, nome, plano, limiteUtilizadores, ativo, and active-user count via the SAME reusable `UserRepository.countByTenantIdAndAtivoTrue` Phase 117 built specifically for this future reuse (see its own doc comment).
@@ -27,7 +27,7 @@ This phase delivers the actual internal console a `PLATAFORMA_ADMIN` uses day-to
 - New endpoint, e.g. `PATCH /api/v1/platform/tenants/{id}` (or `PUT`, Claude's discretion) accepting `plano`/`limiteUtilizadores`, on the same `PlatformAdminController`. Reuse `TenantPlano` enum validation (Jackson will already reject invalid enum values with a 400 by default — no need to hand-roll that check). `limiteUtilizadores` stays nullable (`null` = sem limite), exact same semantics as Phase 117.
 
 ### Suspend/reactivate (PROV-05)
-- New endpoint, e.g. `PATCH /api/v1/platform/tenants/{id}/ativo` or folded into the same adjust endpoint above (Claude's discretion on whether to combine into one PATCH accepting all three fields, or split) — toggles `Tenant.ativo`. Must reject (400 or 409) attempts to suspend the reserved "LexCV" tenant.
+- New endpoint, e.g. `PATCH /api/v1/platform/tenants/{id}/ativo` or folded into the same adjust endpoint above (Claude's discretion on whether to combine into one PATCH accepting all three fields, or split) — toggles `Tenant.ativo`. Must reject (400 or 409) attempts to suspend the reserved "ALCv" tenant.
 
 ## Frontend Console
 
@@ -40,7 +40,7 @@ This phase delivers the actual internal console a `PLATAFORMA_ADMIN` uses day-to
 - Table/list of all tenants: nome, plano, limiteUtilizadores (or "sem limite"), active-user count, ativo/suspenso status.
 - "Criar Tenant" action opens a form (nome/adminEmail/adminPassword/logo — same shape as the existing `/setup` wizard's fields, reuse copy/validation patterns from `SetupInitializeRequest`'s frontend equivalent if one already exists, otherwise build fresh following this file's own established form patterns from `UserManagementTab`'s "Novo Utilizador" dialog).
 - Per-tenant "Editar" action to adjust plano/limiteUtilizadores (reuse `NativeSelect`/`Input` patterns already established project-wide per PROJECT.md's v2.13 decisions).
-- Per-tenant suspend/reactivate toggle, disabled for the row where `nome === "LexCV"` (with a tooltip explaining why, matching the established disabled+Tooltip pattern Phase 118 just fixed).
+- Per-tenant suspend/reactivate toggle, disabled for the row where `nome === "ALCv"` (with a tooltip explaining why, matching the established disabled+Tooltip pattern Phase 118 just fixed).
 - Reuse the shared `DataTable` component (`web/src/components/shared/data-table/`) for the tenant list — established pattern for every list screen in this app (Clientes, Processos, Pareceres, Financeiro, Documentos per v2.13 Phase 104) — do not hand-roll a new table.
 
 ## Claude's Discretion
@@ -64,7 +64,7 @@ This phase delivers the actual internal console a `PLATAFORMA_ADMIN` uses day-to
 ### Established Patterns
 - Manual SQL migrations in `backend/migrations/NNN-description.sql`, no Flyway/Liquibase
 - Every controller response is a purpose-built DTO, never a raw entity
-- Two-layer enforcement (backend authoritative, frontend UX mirror) — the suspend-takes-immediate-effect backend mechanism is the security boundary; the frontend disabled-row-for-LexCV is UX only
+- Two-layer enforcement (backend authoritative, frontend UX mirror) — the suspend-takes-immediate-effect backend mechanism is the security boundary; the frontend disabled-row-for-ALCv is UX only
 - `Tooltip` + `<span tabIndex={0}>` wrapper for any disabled interactive element with an explanation (Phase 118 precedent, first fix of this composition)
 
 ### Integration Points

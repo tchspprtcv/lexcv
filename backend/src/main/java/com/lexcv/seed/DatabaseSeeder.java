@@ -73,7 +73,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                         return;
                 }
 
-                System.out.println("🌱 Seeding LexCV database...");
+                System.out.println("🌱 Seeding ALCv database...");
 
                 Role adminRole = roleRepository.findByNome("ADMIN").orElseThrow();
                 Role assistenteRole = roleRepository.findByNome("ASSISTENTE").orElseThrow();
@@ -305,7 +305,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 .build();
                 pagamentoRepository.save(pag2);
 
-                System.out.println("✅ LexCV database successfully seeded with default fixtures.");
+                System.out.println("✅ ALCv database successfully seeded with default fixtures.");
         }
 
         private void seedRbac() {
@@ -392,7 +392,7 @@ public class DatabaseSeeder implements CommandLineRunner {
          *
          * <p>WR-01 (119-REVIEW.md): esta e uma check-then-act classica sem lock nem constraint
          * unique em {@code t_tenant.nome} -- um arranque concorrente de >1 instancia contra a
-         * mesma base de dados vazia pode inserir duas linhas "LexCV". Aceite tal e qual,
+         * mesma base de dados vazia pode inserir duas linhas "ALCv". Aceite tal e qual,
          * consistente com o padrao ja existente em {@code upsertRolePermissions} para
          * Role/Permission: e um risco de arranque num contexto de deployment tipicamente
          * single-instance, nao uma superficie exposta a utilizadores, e nao vale a pena
@@ -405,8 +405,8 @@ public class DatabaseSeeder implements CommandLineRunner {
          * segue em frente.
          */
         private Tenant seedTenantPlataforma() {
-                return tenantRepository.findFirstByNome("LexCV")
-                                .orElseGet(() -> tenantRepository.save(Tenant.builder().nome("LexCV").build()));
+                return tenantRepository.findFirstByNome("ALCv")
+                                .orElseGet(() -> tenantRepository.save(Tenant.builder().nome("ALCv").build()));
         }
 
         /**

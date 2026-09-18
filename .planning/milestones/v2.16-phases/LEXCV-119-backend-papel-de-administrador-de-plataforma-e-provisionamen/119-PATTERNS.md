@@ -167,7 +167,7 @@ Add one line inside `seedRbac()`, after the existing four calls: `upsertRolePerm
 
 **Part B — reserved tenant + bootstrap user shape, analog the demo-data Tenant/User block** (lines 58-93 — note the surrounding gating at lines 39-56 is explicitly what must NOT be copied, see Shared Patterns below):
 ```java
-System.out.println("🌱 Seeding LexCV database...");
+System.out.println("🌱 Seeding ALCv database...");
 
 Role adminRole = roleRepository.findByNome("ADMIN").orElseThrow();
 Role assistenteRole = roleRepository.findByNome("ASSISTENTE").orElseThrow();
@@ -194,7 +194,7 @@ User adminUser = User.builder()
                 .build();
 userRepository.save(adminUser);
 ```
-For the new block: `Tenant.builder().nome("LexCV").build()` (no other fields required by CONTEXT.md), find-or-create by `nome` first via the new `TenantRepository.findByNome` (see below) before calling `.save(...)` — mirrors the `orElseGet(() -> repo.save(...))` idiom used by `upsertRolePermissions` above, not the unconditional `.save()` the demo block uses (the demo block never needs idempotency because it's already guarded by the `tenantRepository.count() > 0` early-return at line 54). Then `User.builder()...email("plataforma@lexcv.cv")...passwordHash(passwordEncoder.encode("Pa$$w0rd"))...roles(Set.of(plataformaAdminRole))...build()`, saved via `userRepository.save(...)`. Guard the user-creation the same find-or-create way (e.g. `userRepository.findByEmail(...)`, already used elsewhere in this codebase — see `SetupService` line 59) so a restart never tries to insert a duplicate email and hit the DB unique constraint.
+For the new block: `Tenant.builder().nome("ALCv").build()` (no other fields required by CONTEXT.md), find-or-create by `nome` first via the new `TenantRepository.findByNome` (see below) before calling `.save(...)` — mirrors the `orElseGet(() -> repo.save(...))` idiom used by `upsertRolePermissions` above, not the unconditional `.save()` the demo block uses (the demo block never needs idempotency because it's already guarded by the `tenantRepository.count() > 0` early-return at line 54). Then `User.builder()...email("plataforma@lexcv.cv")...passwordHash(passwordEncoder.encode("Pa$$w0rd"))...roles(Set.of(plataformaAdminRole))...build()`, saved via `userRepository.save(...)`. Guard the user-creation the same find-or-create way (e.g. `userRepository.findByEmail(...)`, already used elsewhere in this codebase — see `SetupService` line 59) so a restart never tries to insert a duplicate email and hit the DB unique constraint.
 
 **Placement pattern — where the new unconditional block goes** (lines 39-56, `run()` method):
 ```java
@@ -221,7 +221,7 @@ public void run(String... args) throws Exception {
 The new reserved-tenant/bootstrap-user block must sit **between** `seedRbac();` (line 41) and the `if (!seedEnabled)` gate (line 43) — i.e. it runs unconditionally on every startup, exactly like `seedRbac()` itself, and specifically **before** any of the three gates that protect the demo-data block. Do not place it inside or after those gates.
 
 > **⚠ PARCIALMENTE SUPERSEDED (revisao de planeamento, 2026-07-29) — ver `119-01-PLAN.md`.**
-> Este "Placement pattern" continua correto para a **tenant reservada** `"LexCV"`, que fica mesmo
+> Este "Placement pattern" continua correto para a **tenant reservada** `"ALCv"`, que fica mesmo
 > antes do gate `if (!seedEnabled)`. Deixou de valer para o **utilizador bootstrap**
 > `plataforma@lexcv.cv`, que passa a ser criado **logo a seguir** a esse gate (e antes do calculo de
 > `initialized`), ou seja gated por `app.seed.enabled` e so por ele. Estrutura alvo:
@@ -455,12 +455,12 @@ Every response-returning controller in this codebase copies entity fields into a
 
 ### Idempotent find-or-create seeding
 **Source:** `backend/src/main/java/com/lexcv/seed/DatabaseSeeder.java` lines 352-360 (`upsertRolePermissions`) and lines 306-311 (`permissionMap` loop) — both use the same `repository.findByX(...).orElseGet(() -> repository.save(...))` idiom.
-**Apply to:** the reserved `"LexCV"` tenant lookup/creation and the `PLATAFORMA_ADMIN` role.
+**Apply to:** the reserved `"ALCv"` tenant lookup/creation and the `PLATAFORMA_ADMIN` role.
 ```java
 Role role = roleRepository.findByNome(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder().nome(roleName).build()));
 ```
-Use the identical shape for the tenant: `Tenant tenant = tenantRepository.findByNome("LexCV").orElseGet(() -> tenantRepository.save(Tenant.builder().nome("LexCV").build()));`, and for the bootstrap user, guard with `userRepository.findByEmail("plataforma@lexcv.cv")` before saving.
+Use the identical shape for the tenant: `Tenant tenant = tenantRepository.findByNome("ALCv").orElseGet(() -> tenantRepository.save(Tenant.builder().nome("ALCv").build()));`, and for the bootstrap user, guard with `userRepository.findByEmail("plataforma@lexcv.cv")` before saving.
 
 ### Testing convention (bonus — no test file is required by CONTEXT.md's file list, but this codebase adds a test per phase touching `AdminController`-style role-gated logic)
 **Source:** `backend/src/test/java/com/lexcv/controllers/AdminControllerLimiteUtilizadoresTest.java` lines 35-90 (docstring + setup).

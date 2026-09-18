@@ -1,7 +1,7 @@
-# LexCV — Roadmap Tecnológico
+# ALCv — Roadmap Tecnológico
 
 - **Documento:** Roadmap Tecnológico
-- **Produto:** LexCV — Plataforma Institucional de Gestão Jurídica
+- **Produto:** ALCv — Plataforma Institucional de Gestão Jurídica
 - **Destinatário:** Entidade contratante (escritório de advogados ou instituição)
 - **Última versão entregue:** v2.16, a 30 de julho de 2026
 - **Data de referência:** agosto de 2026
@@ -27,7 +27,7 @@
 ## 1. Objetivo deste documento
 
 Este documento apresenta, de forma aberta, **o que está previsto acontecer a seguir
-no LexCV**: as correções planeadas, os trabalhos de fiabilidade e as evoluções de
+no ALCv**: as correções planeadas, os trabalhos de fiabilidade e as evoluções de
 produto em ponderação.
 
 Não é uma lista de promessas. É o registo honesto do que a equipa sabe hoje sobre o
@@ -156,7 +156,7 @@ visível todos os dias no painel.
 Reafirma-se, para evitar qualquer leitura incorreta:
 
 1. **À data de referência deste documento não existe um plano de desenvolvimento
-   futuro formalmente aprovado para o LexCV.** O ciclo anterior fechou a 30 de julho
+   futuro formalmente aprovado para o ALCv.** O ciclo anterior fechou a 30 de julho
    de 2026, integralmente concluído, com a entrega da versão v2.16.
 2. Todas as iniciativas listadas foram reunidas a partir de registos internos de
    pendências, de retrospetivas de ciclos anteriores e de uma proposta estratégica já

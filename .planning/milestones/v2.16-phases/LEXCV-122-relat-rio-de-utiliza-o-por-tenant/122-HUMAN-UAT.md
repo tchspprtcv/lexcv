@@ -18,7 +18,7 @@ Este ficheiro documenta com precisão o que foi e não foi confirmado, em vez de
 ```json
 [
   {"id":"31a1afee-1fda-4dcd-ac0b-d4ce8a6868b1","nome":"Escritorio A","plano":null,"limiteUtilizadores":null,"ativo":true,"utilizadoresAtivos":5},
-  {"id":"0a5f3d6b-a233-413f-9a96-a7ddd171ae2f","nome":"LexCV","plano":null,"limiteUtilizadores":null,"ativo":true,"utilizadoresAtivos":1}
+  {"id":"0a5f3d6b-a233-413f-9a96-a7ddd171ae2f","nome":"ALCv","plano":null,"limiteUtilizadores":null,"ativo":true,"utilizadoresAtivos":1}
 ]
 ```
 

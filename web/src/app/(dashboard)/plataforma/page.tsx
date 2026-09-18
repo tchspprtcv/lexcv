@@ -146,7 +146,7 @@ function PlataformaPageContent() {
           Administração de Tenants
         </h1>
         <div className="mt-2 flex items-center text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
-          <span>LexCV</span>
+          <span>ALCv</span>
           <span className="mx-2 text-slate-300 dark:text-slate-700">/</span>
           <span className="text-blue-600 dark:text-blue-400">Consola de Plataforma</span>
         </div>
@@ -163,7 +163,7 @@ function PlataformaPageContent() {
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="text-xl font-semibold">Tenants Registados</CardTitle>
-              <CardDescription>Lista de organizações com acesso à plataforma LexCV.</CardDescription>
+              <CardDescription>Lista de organizações com acesso à plataforma ALCv.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button asChild variant="outline" className="text-xs py-1.5 px-3 h-auto flex items-center gap-1.5">
@@ -281,7 +281,7 @@ function PlataformaPageContent() {
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  Não é possível suspender o tenant da plataforma (LexCV).
+                                  Não é possível suspender o tenant da plataforma (ALCv).
                                 </TooltipContent>
                               </Tooltip>
                             ) : (

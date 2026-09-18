@@ -51,7 +51,7 @@ private TenantPlano plano;
 @Column(name = "limite_utilizadores")
 private Integer limiteUtilizadores;
 ```
-— i.e. add `@Column(nullable = false)` + `@Builder.Default private Boolean ativo = true;` directly after these. Note `DatabaseSeeder.seedTenantPlataforma()` (`Tenant.builder().nome("LexCV").build()`) relies on `@Builder.Default` to get `ativo=true` for free on the reserved tenant — do not make callers set it explicitly.
+— i.e. add `@Column(nullable = false)` + `@Builder.Default private Boolean ativo = true;` directly after these. Note `DatabaseSeeder.seedTenantPlataforma()` (`Tenant.builder().nome("ALCv").build()`) relies on `@Builder.Default` to get `ativo=true` for free on the reserved tenant — do not make callers set it explicitly.
 
 ---
 
@@ -222,8 +222,8 @@ Tenant tenant = tenantRepository.findById(id).orElse(null);
 if (tenant == null) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Tenant não encontrado."));
 }
-if ("LexCV".equals(tenant.getNome())) {
-    return ResponseEntity.badRequest().body(Map.of("message", "Não é possível suspender o tenant da plataforma (LexCV)."));
+if ("ALCv".equals(tenant.getNome())) {
+    return ResponseEntity.badRequest().body(Map.of("message", "Não é possível suspender o tenant da plataforma (ALCv)."));
 }
 ```
 CONTEXT.md also cites `AdminController.updateRbac`'s `"ADMIN".equals(roleName)` line (lines 399-408) as the conceptual precedent for reserved-identity immutability — that one is a silent `continue` (skip), useful as the "reserved identifier gets special-cased by literal string comparison" idea, but `deleteUser`'s guard above is the better structural match since suspend must actively reject with an error response.
@@ -421,7 +421,7 @@ List-Card CTA + tooltip-when-disabled pattern (`UserManagementTab`, lines 381-42
     <CardHeader className="flex flex-row items-center justify-between space-y-0">
       <div>
         <CardTitle className="text-xl font-semibold">Utilizadores Registados</CardTitle>
-        <CardDescription>Lista de profissionais com credenciais de acesso ao sistema LexCV.</CardDescription>
+        <CardDescription>Lista de profissionais com credenciais de acesso ao sistema ALCv.</CardDescription>
       </div>
       <Button onClick={handleCreateClick} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto">
         <Plus className="h-4 w-4" />
@@ -565,7 +565,7 @@ Note: `plataforma/page.tsx` — per UI-SPEC — uses **plain text, not a `<Link>
   </AlertDialogContent>
 </AlertDialog>
 ```
-For Suspender, swap `className` to the UI-SPEC-mandated literal `bg-red-600 hover:bg-red-700 text-white` (first solid-destructive button in this codebase, per UI-SPEC Color section — a deliberate deviation from this analog's `bg-destructive` token class); for Reativar, `bg-emerald-600 hover:bg-emerald-700 text-white`. The Tooltip+disabled-`<span tabIndex={0}>` composition for the "LexCV" row's disabled Suspender icon is at `settings/page.tsx` lines 401-417 (already excerpted above) and `pareceres/[id]/page.tsx` (2nd known site, per grep) — same composition, wrap the disabled `Button` in `<span tabIndex={0}>` inside `<TooltipTrigger asChild>`.
+For Suspender, swap `className` to the UI-SPEC-mandated literal `bg-red-600 hover:bg-red-700 text-white` (first solid-destructive button in this codebase, per UI-SPEC Color section — a deliberate deviation from this analog's `bg-destructive` token class); for Reativar, `bg-emerald-600 hover:bg-emerald-700 text-white`. The Tooltip+disabled-`<span tabIndex={0}>` composition for the "ALCv" row's disabled Suspender icon is at `settings/page.tsx` lines 401-417 (already excerpted above) and `pareceres/[id]/page.tsx` (2nd known site, per grep) — same composition, wrap the disabled `Button` in `<span tabIndex={0}>` inside `<TooltipTrigger asChild>`.
 
 **Column defs / row-actions cell** — see `plataforma/columns.tsx` below (same file family, direct dependency of this page).
 
@@ -598,7 +598,7 @@ For Suspender, swap `className` to the UI-SPEC-mandated literal `bg-red-600 hove
   },
 },
 ```
-For `plataforma/columns.tsx`: same avatar block, but the name renders as plain bold text (`<span>`, not `<Link>`) plus a conditional `<Badge variant="outline">Plataforma</Badge>` under the name when `row.original.nome === "LexCV"`.
+For `plataforma/columns.tsx`: same avatar block, but the name renders as plain bold text (`<span>`, not `<Link>`) plus a conditional `<Badge variant="outline">Plataforma</Badge>` under the name when `row.original.nome === "ALCv"`.
 
 **Badge column, raw enum casing** (lines 169-183 — the `tipo` column is the exact precedent for `plano`):
 ```tsx
@@ -635,7 +635,7 @@ function ClienteAcoesCell({ cliente, canEditClientes }: { cliente: Cliente; canE
   );
 }
 ```
-For `TenantAcoesCell`: two icon buttons (Editar always enabled; Suspender/Reativar toggle disabled+tooltip-guarded for "LexCV"), same `h-9 w-9 p-0` sizing, same Tooltip-wrap-per-button shape. Editar opens the Dialog state lifted from the parent page (needs a callback prop, e.g. `onEdit: (tenant) => void`, since Dialog open-state for Editar most naturally lives in the page, not per-row — unlike the AlertDialog confirm, which CAN be self-contained per-row like `ClienteAcoesCell`'s own delete-confirm).
+For `TenantAcoesCell`: two icon buttons (Editar always enabled; Suspender/Reativar toggle disabled+tooltip-guarded for "ALCv"), same `h-9 w-9 p-0` sizing, same Tooltip-wrap-per-button shape. Editar opens the Dialog state lifted from the parent page (needs a callback prop, e.g. `onEdit: (tenant) => void`, since Dialog open-state for Editar most naturally lives in the page, not per-row — unlike the AlertDialog confirm, which CAN be self-contained per-row like `ClienteAcoesCell`'s own delete-confirm).
 
 **Badge column, humanized boolean status** — mirrors the `numero_cliente`/`avencado` badge cluster convention (lines 150-163) and the `ativo` mobile-card convention (`clientes/page.tsx` line 494: `<Badge variant={c.ativo ? "green" : "gray"}>{c.ativo ? "Ativo" : "Inativo"}</Badge>`) — for `estado`: `Ativo` → `variant="green"`, `Suspenso` → `variant="red"` (UI-SPEC's own spec, red not gray, since suspended is a stronger negative signal than merely inactive).
 
@@ -777,7 +777,7 @@ export type TenantUpdateRequest = {
   <TooltipContent>Limite de utilizadores atingido. ...</TooltipContent>
 </Tooltip>
 ```
-**Apply to:** the disabled Suspender icon on the "LexCV" row (both desktop `columns.tsx` cell and mobile card block in `plataforma/page.tsx`).
+**Apply to:** the disabled Suspender icon on the "ALCv" row (both desktop `columns.tsx` cell and mobile card block in `plataforma/page.tsx`).
 
 ### TanStack Query invalidate-on-mutate (not `window.location.reload()`)
 **Source:** `use-clientes.ts`'s `useCreateCliente`/`useUpdateCliente` (`queryClient.invalidateQueries({ queryKey: [...] })`).

@@ -240,7 +240,7 @@ class PlatformAdminControllerTest {
 
     @Test
     void createTenant_naoLeTenantIdDoSecurityContextEDelegaComOMesmoObjetoDePedido() {
-        // tenantId da tenant reservada "LexCV" (Plan 01) -- propositadamente diferente do
+        // tenantId da tenant reservada "ALCv" (Plan 01) -- propositadamente diferente do
         // tenant que viria a ser criado; se o controller alguma vez ler
         // UserPrincipal.getTenantId() e o injetar no pedido, este teste passaria a falhar.
         autenticarComoPlataformaAdmin(UUID.randomUUID());
@@ -464,21 +464,21 @@ class PlatformAdminControllerTest {
     @Test
     void setTenantAtivo_comFalseSobreLexCVDevolve400ComMensagemExataENuncaChamaSave() {
         UUID tenantId = UUID.randomUUID();
-        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("LexCV").plano(TenantPlano.ENTERPRISE)
+        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("ALCv").plano(TenantPlano.ENTERPRISE)
                 .ativo(true).build();
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantLexCV));
 
         ResponseEntity<?> response = novoController().setTenantAtivo(tenantId, Map.of("ativo", false));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals(Map.of("message", "Não é possível suspender o tenant da plataforma (LexCV)."), response.getBody());
+        assertEquals(Map.of("message", "Não é possível suspender o tenant da plataforma (ALCv)."), response.getBody());
         verify(tenantRepository, never()).save(any());
     }
 
     @Test
     void setTenantAtivo_comTrueSobreLexCVDevolve200EGrava() {
         UUID tenantId = UUID.randomUUID();
-        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("LexCV").plano(TenantPlano.ENTERPRISE)
+        Tenant tenantLexCV = Tenant.builder().id(tenantId).nome("ALCv").plano(TenantPlano.ENTERPRISE)
                 .ativo(false).build();
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantLexCV));
         when(tenantRepository.save(any(Tenant.class))).thenAnswer(invocation -> invocation.getArgument(0));

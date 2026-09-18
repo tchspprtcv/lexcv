@@ -61,7 +61,7 @@ No new Critical or Warning issues were found from an independent adversarial pas
 
 **File:** `web/src/app/(dashboard)/dashboard/page.tsx:397-403, 433-437`
 **Issue:** `isSameCalendarDay(dataInicio, new Date())` compares `getFullYear`/`getMonth`/`getDate` in whatever timezone the *browser* is running in, not the tenant's (Cabo Verde, UTC−01:00). A viewer in a different timezone could see an event mislabeled ("HOJE" vs. a date) right around local midnight.
-**Fix:** If cross-timezone viewing is a real scenario, compute "today" in the tenant's fixed offset (e.g. via `Intl.DateTimeFormat` with an explicit `timeZone`) rather than raw `Date` getters. Low priority given LexCV's single-country usage profile.
+**Fix:** If cross-timezone viewing is a real scenario, compute "today" in the tenant's fixed offset (e.g. via `Intl.DateTimeFormat` with an explicit `timeZone`) rather than raw `Date` getters. Low priority given ALCv's single-country usage profile.
 
 ### IN-02: `RecentProcessosCard`'s error branch shows a fixed generic string instead of the actual query error, inconsistent with its siblings
 

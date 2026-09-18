@@ -65,7 +65,7 @@ The one dynamic-data path this phase's live-verification mandate covers is `webp
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|---------------------|--------|
-| `webpage` `/` page render | rendered `logoDataUrl` in HTML | `fetchBranding()` → `GET /api/v1/public/branding` → `TenantRepository.findFirstByOrderByCreatedAtAsc()` | Yes — independently confirmed: direct `curl` of `/api/v1/public/branding` returned a real `data:image/png;base64,...` payload (not the hardcoded `{nome:"LexCV", logoDataUrl:null}` fail-open fallback) | ✓ FLOWING |
+| `webpage` `/` page render | rendered `logoDataUrl` in HTML | `fetchBranding()` → `GET /api/v1/public/branding` → `TenantRepository.findFirstByOrderByCreatedAtAsc()` | Yes — independently confirmed: direct `curl` of `/api/v1/public/branding` returned a real `data:image/png;base64,...` payload (not the hardcoded `{nome:"ALCv", logoDataUrl:null}` fail-open fallback) | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 

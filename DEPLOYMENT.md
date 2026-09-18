@@ -1,6 +1,6 @@
-# LexCV VPS Deployment Guide
+# ALCv VPS Deployment Guide
 
-Step-by-step runbook for deploying LexCV on a fresh Ubuntu/Debian VPS with automatic HTTPS via Caddy and Let's Encrypt.
+Step-by-step runbook for deploying ALCv on a fresh Ubuntu/Debian VPS with automatic HTTPS via Caddy and Let's Encrypt.
 
 ## Prerequisites
 

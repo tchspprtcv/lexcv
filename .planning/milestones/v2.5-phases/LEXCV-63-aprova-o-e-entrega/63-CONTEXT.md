@@ -14,7 +14,7 @@ O parecer pode ser revisto internamente antes de ser entregue, e uma vez entregu
 ## Implementation Decisions
 
 ### Aprovação Interna
-- Apenas ADMIN pode aprovar (não existe role SUPERVISOR no LexCV; ADVOGADO já é o autor da versão, não faz sentido auto-aprovar) — usa o scope `pareceres:manage` reservado na Fase 61 exatamente para isto
+- Apenas ADMIN pode aprovar (não existe role SUPERVISOR no ALCv; ADVOGADO já é o autor da versão, não faz sentido auto-aprovar) — usa o scope `pareceres:manage` reservado na Fase 61 exatamente para isto
 - Modelagem: campo `aprovado` (Boolean, default `false`) + `aprovadoPorId` (UUID, nullable) + `aprovadoEm` (LocalDateTime, nullable) na entidade `ParecerVersao` — é um campo de estado separado do conteúdo imutável da versão, não gera nova versão
 - Endpoint: `PUT /api/v1/pareceres/solicitacoes/{id}/versoes/{versaoId}/aprovar`, muda o status da solicitação para `EM_REVISAO` se ainda estiver `PENDENTE`/`EM_ELABORACAO`
 - Aprovação é opcional: o endpoint de entrega (PARC-08) NÃO exige aprovação prévia, consistente com a decisão da Fase 61 ("pode haver fluxo adicional de revisão... conforme necessidade e política do escritório")
@@ -23,7 +23,7 @@ O parecer pode ser revisto internamente antes de ser entregue, e uma vez entregu
 - Endpoint de entrega: `PUT /api/v1/pareceres/solicitacoes/{id}/entregar?versaoFinalId={versaoId}` — marca a versão indicada como versão final e muda o status da solicitação para `CONCLUIDO`
 - Quem pode entregar: advogado responsável ou ADMIN, scope `pareceres:manage`
 - Campo de versão final: `versaoFinalId` (UUID, nullable) na própria `ParecerSolicitacao`, apontando para a `ParecerVersao` escolhida
-- Visibilidade pós-entrega: "disponível para consulta pela equipa/cliente" = qualquer utilizador com `pareceres:view` pode consultar/descarregar; não existe portal de cliente externo no LexCV — "cliente" aqui significa a equipa interna que gere aquele cliente. Sem novo endpoint público nesta fase (reutiliza os endpoints GET já existentes das Fases 61/62)
+- Visibilidade pós-entrega: "disponível para consulta pela equipa/cliente" = qualquer utilizador com `pareceres:view` pode consultar/descarregar; não existe portal de cliente externo no ALCv — "cliente" aqui significa a equipa interna que gere aquele cliente. Sem novo endpoint público nesta fase (reutiliza os endpoints GET já existentes das Fases 61/62)
 - Entrega é irreversível: uma vez `CONCLUIDO`, não há endpoint para reverter o status, consistente com a Fase 61 (reatribuição de advogado já bloqueada em `CONCLUIDO`)
 
 ### Claude's Discretion
@@ -61,7 +61,7 @@ Nenhuma referência específica adicional — segue convenções já estabelecid
 <deferred>
 ## Deferred Ideas
 
-- Portal de cliente externo para consulta de pareceres entregues — fora de escopo, não existe ainda no LexCV
+- Portal de cliente externo para consulta de pareceres entregues — fora de escopo, não existe ainda no ALCv
 - Notificação ao cliente quando o parecer é entregue — já listado em REQUIREMENTS.md como Future Requirement (fora de escopo deste milestone)
 - Reversão de status CONCLUIDO — decisão deliberada de irreversibilidade
 

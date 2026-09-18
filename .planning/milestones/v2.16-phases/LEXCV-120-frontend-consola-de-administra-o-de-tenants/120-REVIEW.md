@@ -49,7 +49,7 @@ call chains those files feed into (`SetupService`, `DatabaseSeeder`, `UserPrinci
   found — `SetupController` never issues cookies, `/auth/me` and `/auth/change-password` only ever
   read the `SecurityContext` the filter already gated, and there is no WebSocket/SSE/query-string
   token endpoint anywhere in the backend.
-- **Reserved "LexCV" tenant guard.** Enforced backend-authoritatively in
+- **Reserved "ALCv" tenant guard.** Enforced backend-authoritatively in
   `PlatformAdminController.setTenantAtivo` (`TENANT_RESERVADO.equals(tenant.getNome()) &&
   !novoAtivo` → 400) independently of the frontend's disabled button; a crafted `PATCH` bypassing
   the UI would still be rejected. The frontend mirror (`columns.tsx`, `page.tsx`) uses the same
@@ -64,7 +64,7 @@ call chains those files feed into (`SetupService`, `DatabaseSeeder`, `UserPrinci
   here.
 
 One **Critical** finding remains: every tenant this application can currently create (including
-the reserved `LexCV` platform tenant itself) is provisioned with `plano = NULL`, and the new
+the reserved `ALCv` platform tenant itself) is provisioned with `plano = NULL`, and the new
 admin console's types/UI never account for that — this is not a hypothetical edge case, it is
 independently confirmed against the real dev database by this phase's own `120-HUMAN-UAT.md`
 (point 10: both existing tenants have `plano=NULL`). See CR-01.
@@ -144,7 +144,7 @@ reintroduced anywhere in this diff set.
 
 ## Critical Issues
 
-### CR-01: Newly-provisioned tenants (including the reserved "LexCV" tenant) get `plano = NULL`, which the new console's types/UI assume can never happen (RESOLVED — see Round 2)
+### CR-01: Newly-provisioned tenants (including the reserved "ALCv" tenant) get `plano = NULL`, which the new console's types/UI assume can never happen (RESOLVED — see Round 2)
 
 **Files:**
 - `backend/src/main/java/com/lexcv/models/Tenant.java:35-37` (vs. `:59-61`)
@@ -174,13 +174,13 @@ private Boolean ativo = true;
 Every tenant-creation path builds a `Tenant` without ever calling `.plano(...)`:
 `SetupService.initializeSystem`/`provisionTenant` (the exact endpoint this phase's "Criar Tenant"
 panel calls) and `DatabaseSeeder.seedTenantPlataforma()` (which unconditionally creates the
-reserved `LexCV` tenant on every boot). The result is `plano = NULL` in the database for every
+reserved `ALCv` tenant on every boot). The result is `plano = NULL` in the database for every
 tenant this application has ever created, unless a `PLATAFORMA_ADMIN` separately runs `PUT
 /platform/tenants/{id}` afterward.
 
 This is not hypothetical: `120-HUMAN-UAT.md` point 10 independently confirms it against the real
 dev database — *"`SELECT` final confirma exatamente os 2 tenants originais ('Escritorio A',
-'LexCV'), ambos com `plano=NULL`... idêntico ao estado registado no início da Task 1."*
+'ALCv'), ambos com `plano=NULL`... idêntico ao estado registado no início da Task 1."*
 
 The new console's types/components assume `plano` is always a valid enum member:
 

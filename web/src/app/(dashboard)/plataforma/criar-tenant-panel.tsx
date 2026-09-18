@@ -119,7 +119,7 @@ export function CriarTenantPanel({
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-xl font-semibold">Criar Tenant</CardTitle>
-            <CardDescription>Registe uma nova organização com acesso à plataforma LexCV.</CardDescription>
+            <CardDescription>Registe uma nova organização com acesso à plataforma ALCv.</CardDescription>
           </div>
           <Button
             type="button"

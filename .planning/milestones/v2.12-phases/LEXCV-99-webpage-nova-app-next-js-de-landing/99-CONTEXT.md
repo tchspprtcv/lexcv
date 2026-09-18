@@ -19,11 +19,11 @@ Esta fase cobre exclusivamente LP-03 a LP-12 (conteúdo, comportamento de gate d
 - Hero: título "Gestão jurídica completa para a sua instituição" + subtítulo "Clientes, processos, prazos e documentos — tudo num único painel, com isolamento total por tenant." (reflete o Core Value de PROJECT.md)
 - Secção Funcionalidades/Módulos: uma frase curta por módulo (Clientes, Processos, Agenda/Prazos, Documentos, Financeiro, Notificações), refletindo capacidades reais já validadas em REQUIREMENTS.md — nunca descrições inventadas ou não implementadas
 - Secção Prova Social/Confiança (LP-09): exatamente 4 bullets/cards — isolamento multi-tenant rigoroso, RBAC granular por perfil, trilha de auditoria, ecossistema institucional Cabo Verde/NOSi — nunca contadores/estatísticas fabricadas, nunca testemunhos/logótipos de clientes
-- Contacto/Pedir Demonstração (LP-10): `mailto:contacto@lexcv.cv` com assunto pré-preenchido "Pedido de Demonstração — LexCV"
+- Contacto/Pedir Demonstração (LP-10): `mailto:contacto@lexcv.cv` com assunto pré-preenchido "Pedido de Demonstração — ALCv"
 
 ### Fetch de Branding & Estados de Erro
 - `GET /api/v1/public/branding` é chamado **server-side**, diretamente no Server Component async de `page.tsx` — sem hook/TanStack Query. Isto evita CORS por completo (fetch server-to-server, nunca no browser) — **resolve definitivamente a preocupação WR-01 (CORS) deixada em aberto pela code review da Phase 98**: não há necessidade de configurar `CORS_ALLOWED_ORIGINS` para esta app porque o browser nunca faz a chamada diretamente
-- Tratamento de falha: 404 (sistema não inicializado) → o gate de `proxy.ts` já redireciona para `/setup` antes deste fetch ser relevante (LP-05); erro de rede/timeout no fetch server-side → fail open, renderiza a landing com fallback "LexCV" genérico (nome) — nunca uma página de erro/crash para um visitante anónimo
+- Tratamento de falha: 404 (sistema não inicializado) → o gate de `proxy.ts` já redireciona para `/setup` antes deste fetch ser relevante (LP-05); erro de rede/timeout no fetch server-side → fail open, renderiza a landing com fallback "ALCv" genérico (nome) — nunca uma página de erro/crash para um visitante anónimo
 - Cache: `cache: 'no-store'` no fetch (sempre fresh) — mirrors o padrão já usado por `fetchSetupStatus()` em `web/src/lib/setup.ts`; sem requisito de performance nesta milestone que justifique ISR/ revalidate
 - `proxy.ts` próprio da `webpage/` replica o padrão "fail open" do `web/proxy.ts` (catch → `NextResponse.next()`) — um erro transitório do backend nunca deve bloquear um visitante de ver a landing
 
@@ -56,7 +56,7 @@ Esta fase cobre exclusivamente LP-03 a LP-12 (conteúdo, comportamento de gate d
 - `web/src/components/ui/button.tsx`, `card.tsx`, `badge.tsx` — primitivos CVA + `cn()`, sem acoplamento a autenticação — diretamente copiáveis
 - `web/src/lib/utils.ts` — `cn()` (clsx + tailwind-merge), 6 linhas, dependência de todos os primitivos `ui/`
 - `web/src/lib/setup.ts` — `fetchSetupStatus()`: fetch mínimo (`cache: 'no-store'`, sem `apiFetch`/credentials) — padrão exato a replicar para o fetch de branding, não o wrapper `apiFetch` (que traz `credentials: 'include'` e sistema de toast desnecessários para tráfego anónimo)
-- `web/src/components/shared/dashboard-shell.tsx:262-276` — padrão de fallback de logo (`<img>` com fallback para ícone `Building2` + "LexCV")
+- `web/src/components/shared/dashboard-shell.tsx:262-276` — padrão de fallback de logo (`<img>` com fallback para ícone `Building2` + "ALCv")
 - `web/Dockerfile` — 3-stage build (deps→builder→runner), `output: standalone`, pnpm via corepack, `appuser` não-root — referência para Phase 100, não necessário nesta fase
 
 ### Established Patterns

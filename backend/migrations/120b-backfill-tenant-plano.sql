@@ -11,7 +11,7 @@
 -- time (`plano = 'ENTERPRISE'`). Every tenant created since then was built without ever calling
 -- `.plano(...)` on the entity's builder -- `SetupService.initializeSystem`, `SetupService.
 -- provisionTenant` (the endpoint this phase's "Criar Tenant" panel calls), and `DatabaseSeeder.
--- seedTenantPlataforma()` (the reserved "LexCV" tenant, seeded unconditionally on every boot) --
+-- seedTenantPlataforma()` (the reserved "ALCv" tenant, seeded unconditionally on every boot) --
 -- because `Tenant.plano` had no `@Builder.Default`, unlike `Tenant.ativo` (this same phase's own
 -- field). The result was `plano = NULL` for every tenant this application has ever created since
 -- migration 117 ran, confirmed against the real dev database by this phase's own
@@ -25,8 +25,12 @@
 --
 -- Idempotent: the UPDATE only touches rows still NULL, and both ALTER statements are safe to run
 -- more than once.
-
-UPDATE t_tenant SET plano = 'STARTER' WHERE plano IS NULL;
-
-ALTER TABLE t_tenant ALTER COLUMN plano SET DEFAULT 'STARTER';
-ALTER TABLE t_tenant ALTER COLUMN plano SET NOT NULL;
+UPDATE t_tenant
+SET plano = 'STARTER'
+WHERE plano IS NULL;
+ALTER TABLE t_tenant
+ALTER COLUMN plano
+SET DEFAULT 'STARTER';
+ALTER TABLE t_tenant
+ALTER COLUMN plano
+SET NOT NULL;

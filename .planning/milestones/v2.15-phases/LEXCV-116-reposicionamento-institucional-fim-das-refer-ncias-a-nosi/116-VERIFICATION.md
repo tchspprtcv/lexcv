@@ -8,7 +8,7 @@ overrides_applied: 0
 
 # Phase 116: Reposicionamento Institucional — Fim das Referências a NOSi Verification Report
 
-**Phase Goal:** O LexCV deixa de se descrever, em toda a sua superfície viva (documentação de projeto, landing pública, documentação técnica de referência e dados de demonstração seedados), como ligado à NOSi — passando a referenciar corretamente o SIJ (Sistema Judicial de Cabo Verde) como o seu ecossistema-alvo.
+**Phase Goal:** O ALCv deixa de se descrever, em toda a sua superfície viva (documentação de projeto, landing pública, documentação técnica de referência e dados de demonstração seedados), como ligado à NOSi — passando a referenciar corretamente o SIJ (Sistema Judicial de Cabo Verde) como o seu ecossistema-alvo.
 **Verified:** 2026-07-27T22:15:00Z
 **Status:** passed
 **Re-verification:** No — initial verification
@@ -20,7 +20,7 @@ overrides_applied: 0
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | Visitante anónimo lê, no card "Ecossistema Cabo Verde" da landing pública, uma descrição que referencia o SIJ e nunca a NOSi | ✓ VERIFIED | `webpage/src/components/trust-section.tsx:8` — `desc: "Desenhado para a realidade institucional cabo-verdiana, alinhado ao ecossistema do SIJ (Sistema Judicial de Cabo Verde)."`. Título `"Ecossistema Cabo Verde"` e ícone `Building2` preservados. `grep -iF "nosi"` no ficheiro → 0 matches. |
-| 2 | Secção "What This Is" de `.planning/PROJECT.md` descreve o LexCV alinhado ao ecossistema do SIJ, sem mencionar NOSi | ✓ VERIFIED | `awk '/^## What This Is/{f=1} /^## Core Value/{f=0} f' .planning/PROJECT.md` → `grep -iF "nosi"` = 0 matches; `grep -cF "ecossistema do SIJ (Sistema Judicial de Cabo Verde)"` dentro da secção = 1. Linha 5: "...alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde)...". |
+| 2 | Secção "What This Is" de `.planning/PROJECT.md` descreve o ALCv alinhado ao ecossistema do SIJ, sem mencionar NOSi | ✓ VERIFIED | `awk '/^## What This Is/{f=1} /^## Core Value/{f=0} f' .planning/PROJECT.md` → `grep -iF "nosi"` = 0 matches; `grep -cF "ecossistema do SIJ (Sistema Judicial de Cabo Verde)"` dentro da secção = 1. Linha 5: "...alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde)...". |
 | 3 | Parágrafo 1 de `.trae/documents/SPEC.md` descreve o produto com foco no ecossistema do SIJ, sem mencionar NOSi | ✓ VERIFIED | `.trae/documents/SPEC.md:4` — "...com foco no ecossistema do SIJ (Sistema Judicial de Cabo Verde)." Resto da frase ("desenvolvida pela Speed Tech") intacto. `grep -iF "nosi"` no ficheiro → 0 matches. |
 | 4 | Instalação nova que corra o seed cria tenant de demonstração com identidade genérica, sem nenhum campo associado a NOSi — incluindo o `nome` servido publicamente por `GET /api/v1/public/branding` | ✓ VERIFIED | `DatabaseSeeder.java:64-70` — `.nome("Gabinete Jurídico Demonstração")`, `.nif("000000000")`, `.tipoEntidade("PRIVADO")`, `.email("contacto@lexcv.cv")`, `.telefone("+238 200 0000")`. `PublicController.java:58-64` confirma `t.getNome()` copiado sem condição para `TenantPublicInfoResponse.nome()`, endpoint não autenticado, apenas `nome`+`logoDataUrl` expostos. `mvn -DskipTests compile` → exit 0. |
 | 5 | Nenhuma superfície viva do produto (`backend/src`, `webpage/src`, `web/src` excl. mock legado, `.trae/documents`) contém "nosi" em qualquer capitalização | ✓ VERIFIED | `grep -rniE "nosi" backend/src webpage/src web/src .trae/documents \| grep -v "web/src/server/mock-db.ts"` → 0 matches. Varrimento adicional adversarial (docker-compose*.yml, `backend/**/*.sql`\|`*.yml`\|`*.properties`, outros seeders/fixtures) → 0 matches adicionais. |
@@ -72,7 +72,7 @@ SKIPPED — no `scripts/*/tests/probe-*.sh` declared or found; phase is a pure c
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|--------------|--------|----------|
-| SIJ-01 | 116-01-PLAN.md | PROJECT.md descreve o LexCV sem "NOSi", referenciando o SIJ | ✓ SATISFIED | Truth 2 above; section-scoped `awk` assertion clean, canonical phrase present |
+| SIJ-01 | 116-01-PLAN.md | PROJECT.md descreve o ALCv sem "NOSi", referenciando o SIJ | ✓ SATISFIED | Truth 2 above; section-scoped `awk` assertion clean, canonical phrase present |
 | SIJ-02 | 116-01-PLAN.md | Landing pública (`trust-section.tsx`) sem NOSi no card "Ecossistema Cabo Verde" | ✓ SATISFIED | Truth 1 above; line 8 verified |
 | SIJ-03 | 116-01-PLAN.md | `.trae/documents/SPEC.md` sem "foco no ecossistema do NOSi" | ✓ SATISFIED | Truth 3 above; line 4 verified |
 | SIJ-04 | 116-01-PLAN.md | Tenant seed deixa de representar a NOSi (nome/NIF/email genéricos) | ✓ SATISFIED | Truth 4 above; 5 fields verified generalized (nome/nif/tipoEntidade/email/telefone — 2 fields beyond the literal REQUIREMENTS.md wording, an explicitly user-approved extension per `116-CONTEXT.md`), compiles clean |

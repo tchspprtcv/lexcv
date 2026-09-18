@@ -8,7 +8,7 @@ import java.util.UUID;
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
     /**
-     * Lookup idempotente da tenant reservada de plataforma (nome literal {@code "LexCV"}),
+     * Lookup idempotente da tenant reservada de plataforma (nome literal {@code "ALCv"}),
      * usado por {@code DatabaseSeeder} para garantir find-or-create sem duplicar a tenant
      * em arranques sucessivos da aplicação (Phase 119, PROV-01).
      *
@@ -17,7 +17,7 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
      * {@code IncorrectResultSizeDataAccessException} perante mais de uma linha). Não há
      * constraint {@code unique} em {@code t_tenant.nome}, e {@code seedTenantPlataforma()} corre,
      * sem lock, em todo o arranque -- um arranque concorrente de >1 instância contra a mesma base
-     * de dados vazia pode inserir duas linhas "LexCV". Usar {@code findFirst} garante que essa
+     * de dados vazia pode inserir duas linhas "ALCv". Usar {@code findFirst} garante que essa
      * corrida transitória nunca se transforma num crash-loop permanente em todos os arranques
      * seguintes; apenas ignora a linha extra.
      */

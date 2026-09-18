@@ -95,8 +95,8 @@ Accent reserved for: **module-card icons, anchor-nav hover/active state, one Her
 | Element | Copy |
 |---------|------|
 | Primary CTA | **"Entrar"** — plain `<a href="/login">` (never `next/link`, per LP-11) rendered via `Button`'s `asChild`/`Slot` pattern so it keeps button styling while the actual DOM node stays a real anchor: `<Button asChild variant="secondary" className="rounded-none"><a href="/login">Entrar</a></Button>` in the sticky header (small/secondary, per CONTEXT.md), and `<Button asChild size="lg" className="rounded-none"><a href="/login">Entrar<ArrowRight className="h-4 w-4" /></a></Button>` at the page footer (large/primary, final CTA) — same label and destination both times, matching the existing `(auth)/login/page.tsx`'s own CTA copy ("Entrar") for full continuity between the two apps. Trailing `ArrowRight` icon on the footer instance mirrors `setup/page.tsx`'s own submit-button pattern. |
-| Empty state heading | Not a list/data-empty state (static marketing page, no lists). The nearest equivalent is the branding-unavailable fallback: tenant name renders as the literal text **"LexCV"**. |
-| Empty state body | Fallback pattern replicated exactly from `dashboard-shell.tsx:262-276`: `Building2` icon (lucide-react) + "LexCV" text, whenever `logoDataUrl` is `null` **or** the server-side fetch to `/api/v1/public/branding` errors/times out (fail-open, per CONTEXT.md) — never a broken `<img>` icon, never a blank space where the brand mark should be. |
+| Empty state heading | Not a list/data-empty state (static marketing page, no lists). The nearest equivalent is the branding-unavailable fallback: tenant name renders as the literal text **"ALCv"**. |
+| Empty state body | Fallback pattern replicated exactly from `dashboard-shell.tsx:262-276`: `Building2` icon (lucide-react) + "ALCv" text, whenever `logoDataUrl` is `null` **or** the server-side fetch to `/api/v1/public/branding` errors/times out (fail-open, per CONTEXT.md) — never a broken `<img>` icon, never a blank space where the brand mark should be. |
 | Error state | Not applicable as a user-facing state. Server-side branding-fetch failures fail open silently into the fallback above; the page itself never renders an error/crash screen to an anonymous visitor. The one real "not ready" condition (system never initialized) is handled entirely by `proxy.ts`'s redirect to `/setup` (LP-05), before this fetch is ever reached. |
 | Destructive confirmation | None — zero destructive actions exist in this phase (static content + `mailto:` link only, no forms, no mutations). |
 
@@ -107,7 +107,7 @@ Everything below is **new copy authored in this session**, grounded strictly in 
 **Sticky header:**
 | Element | Copy |
 |---|---|
-| Brand mark | Tenant logo + name from branding endpoint; fallback `Building2` icon + "LexCV" (same pattern as Empty state row above) |
+| Brand mark | Tenant logo + name from branding endpoint; fallback `Building2` icon + "ALCv" (same pattern as Empty state row above) |
 | Nav links | "Funcionalidades" (`#funcionalidades`) · "Confiança" (`#confianca`) · "Contacto" (`#contacto`) — hidden below `md:` (768px), page relies on scroll on mobile rather than a hamburger drawer (avoids introducing a new mobile-nav component for 3 anchor links) |
 | CTA | "Entrar" (see Primary CTA row) |
 
@@ -158,7 +158,7 @@ Grid: 1 column mobile → `sm:grid-cols-2` → `lg:grid-cols-4` (single row on d
 |---|---|
 | Brand mark | Same fallback pattern as header (small scale) |
 | CTA | "Entrar" (large/primary instance, see Primary CTA row) |
-| Fine print | "© {ano atual} LexCV. Plataforma institucional de gestão jurídica." (Label size, muted) |
+| Fine print | "© {ano atual} ALCv. Plataforma institucional de gestão jurídica." (Label size, muted) |
 
 ---
 

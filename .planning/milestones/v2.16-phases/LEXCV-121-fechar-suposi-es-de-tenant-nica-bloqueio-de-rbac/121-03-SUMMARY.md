@@ -25,7 +25,7 @@ key-files:
 
 key-decisions:
   - "Did not stop-and-escalate to the orchestrator when 2 of Task 1's 4 literal grep-based acceptance checks returned non-zero where the plan expected 0 (grep -c 'Repository' on PublicController.java = 1, not 0; grep -cE 'findFirstBy|findTopBy' on TenantRepository.java = 2, not 0) — direct code reading confirmed both are false positives from an overly broad grep pattern coincidentally matching (a) the class's own historical-reference Javadoc comment and (b) a distinct, legitimate, Phase-119-reviewed findFirstByNome(String) exact-name lookup, not a reintroduction of the removed findFirstByOrderByCreatedAtAsc heuristic. Documented transparently in 121-ISOL-AUDIT.md rather than treated as an ISOL-01 regression."
-  - "Classified 4 web/src '?? \"LexCV\"' fallback-default call sites (dashboard-shell.tsx, ficha/page.tsx, termo-honorarios/page.tsx) and 1 backend ResourceController.executarTransicao .findFirst() plus 1 movs.get(0) hit as a 4th, explicit 'unrelated to tenant resolution' outcome rather than force-fitting them into the plan's 3 prescribed outcomes (a/b/c) — none of them determine which tenant's data is served, so none are ISOL-02 candidates in the first place"
+  - "Classified 4 web/src '?? \"ALCv\"' fallback-default call sites (dashboard-shell.tsx, ficha/page.tsx, termo-honorarios/page.tsx) and 1 backend ResourceController.executarTransicao .findFirst() plus 1 movs.get(0) hit as a 4th, explicit 'unrelated to tenant resolution' outcome rather than force-fitting them into the plan's 3 prescribed outcomes (a/b/c) — none of them determine which tenant's data is served, so none are ISOL-02 candidates in the first place"
 
 requirements-completed: [ISOL-01, ISOL-02]
 
@@ -48,7 +48,7 @@ completed: 2026-07-29
 ## Accomplishments
 
 - ISOL-01 confirmado por **execução**, não por leitura: `mvn test -Dtest=PublicControllerTest` → `Tests run: 2, Failures: 0, Errors: 0` (`BUILD SUCCESS`), mais 4 pesquisas independentes registadas literalmente.
-- ISOL-02 re-varrido do zero, por comando explícito (não copiado de `121-CONTEXT.md`), cobrindo `findFirstBy`/`findTopBy`, `.findAll()`, `.get(0)`/`stream().findFirst()`, o literal `"LexCV"`, e `findFirstByOrderByCreatedAtAsc` — sobre `backend/src/main/java` **e** `web/src`. Resultado: 15 superfícies traçadas, todas `COVERED`, zero achados reais.
+- ISOL-02 re-varrido do zero, por comando explícito (não copiado de `121-CONTEXT.md`), cobrindo `findFirstBy`/`findTopBy`, `.findAll()`, `.get(0)`/`stream().findFirst()`, o literal `"ALCv"`, e `findFirstByOrderByCreatedAtAsc` — sobre `backend/src/main/java` **e** `web/src`. Resultado: 15 superfícies traçadas, todas `COVERED`, zero achados reais.
 - Produzido `121-ISOL-AUDIT.md`, reutilizando o formato de tabela de veredito de `97-01-SUMMARY.md` (AUD-01), com secção de comandos de reprodução para a Phase 123 (ISOL-04) poder re-executar a varredura sem a redesenhar.
 - Registado, como contexto de fundo explicitamente fora de âmbito, o padrão `findByXxxId`-sem-`tenantId` (`PITFALLS.md` Pitfall 1) e a assimetria intencional `GET`/`PUT` de `/admin/rbac` deixada pelo Plan 01 — ambos com dono nomeado (Phase 123) para não serem redescobertos como surpresa.
 
@@ -67,9 +67,9 @@ completed: 2026-07-29
 
 - **Não escalado ao orquestrador** apesar de 2 dos 4 checks automatizados literais da Task 1 devolverem valores diferentes de `0` como o plano esperava (`grep -c 'Repository'` = `1`; `grep -cE 'findFirstBy|findTopBy'` = `2`). Confirmado por leitura direta do código, em ambos os casos, que a causa é uma correspondência de grep genérica demasiado ampla — não uma regressão de ISOL-01:
   - `Repository` (1 hit): a mesma linha 15 do docblock de `PublicController.java`, que documenta em prosa histórica o método removido `TenantRepository.findFirstByOrderByCreatedAtAsc()` — texto de comentário, não código vivo.
-  - `findFirstBy|findTopBy` (2 hits): ambos referem-se a `TenantRepository.findFirstByNome(String nome)` — um método distinto, parametrizado, de procura por nome exato da tenant reservada "LexCV" (Phase 119, WR-01/`119-REVIEW.md`), não a assinatura removida.
+  - `findFirstBy|findTopBy` (2 hits): ambos referem-se a `TenantRepository.findFirstByNome(String nome)` — um método distinto, parametrizado, de procura por nome exato da tenant reservada "ALCv" (Phase 119, WR-01/`119-REVIEW.md`), não a assinatura removida.
   Este é o mesmo padrão já documentado várias vezes em `STATE.md` (Phases 119-04, 120-01, 120-02, 121-01): comentário/código auto-referencial a colidir com um gate de verificação baseado em grep literal. Documentado com total transparência em `121-ISOL-AUDIT.md` (secção ISOL-01, "Nota de transparência"), incluindo os valores literais exatos, em vez de reportado como divergência da premissa da fase.
-- Duas superfícies do `.get(0)`/`stream().findFirst()` (backend, `ResourceController.java`) e as 6 ocorrências frontend do literal `"LexCV"` que não são o `plataforma/columns.tsx` (4 fallbacks de UI + 1 metadata de `<title>`) foram classificadas como um 4º desfecho explícito — "não relacionado com resolução de tenant" — em vez de forçadas nas 3 categorias prescritas pelo plano (a/b/c), porque nenhuma delas decide qual tenant é servido.
+- Duas superfícies do `.get(0)`/`stream().findFirst()` (backend, `ResourceController.java`) e as 6 ocorrências frontend do literal `"ALCv"` que não são o `plataforma/columns.tsx` (4 fallbacks de UI + 1 metadata de `<title>`) foram classificadas como um 4º desfecho explícito — "não relacionado com resolução de tenant" — em vez de forçadas nas 3 categorias prescritas pelo plano (a/b/c), porque nenhuma delas decide qual tenant é servido.
 
 ## Deviations from Plan
 

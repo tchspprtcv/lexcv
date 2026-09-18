@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-O LexCV deixa de se descrever, em toda a sua superfície viva (documentação de projeto, landing pública, documentação técnica de referência e dados de demonstração seedados), como ligado à NOSi — passando a referenciar corretamente o SIJ (Sistema Judicial de Cabo Verde) como o seu ecossistema-alvo. Corretção de posicionamento/copy pura — sem nova funcionalidade, sem integração técnica real com o SIJ. `.planning/PROJECT.md` já foi editado na abertura da milestone (fora desta fase); esta fase cobre os 3 ficheiros restantes e fecha formalmente SIJ-01..04.
+O ALCv deixa de se descrever, em toda a sua superfície viva (documentação de projeto, landing pública, documentação técnica de referência e dados de demonstração seedados), como ligado à NOSi — passando a referenciar corretamente o SIJ (Sistema Judicial de Cabo Verde) como o seu ecossistema-alvo. Corretção de posicionamento/copy pura — sem nova funcionalidade, sem integração técnica real com o SIJ. `.planning/PROJECT.md` já foi editado na abertura da milestone (fora desta fase); esta fase cobre os 3 ficheiros restantes e fecha formalmente SIJ-01..04.
 
 </domain>
 

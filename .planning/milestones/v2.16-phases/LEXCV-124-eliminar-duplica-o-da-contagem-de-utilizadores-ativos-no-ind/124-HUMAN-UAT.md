@@ -32,7 +32,7 @@ Depois de gravar uma edição de utilizador (ambas as tentativas, a falhada e a 
 
 ## Reposição do ambiente
 
-`limite_utilizadores` reposto a `NULL` e `teste.advogado@lexcv.cv` reativado via `psql`, ambos confirmados por `SELECT` final: `Escritorio A` e `LexCV` exactamente como estavam no início desta sessão (`plano=STARTER`, `limite_utilizadores=NULL`, 5 e 1 utilizadores ativos respectivamente).
+`limite_utilizadores` reposto a `NULL` e `teste.advogado@lexcv.cv` reativado via `psql`, ambos confirmados por `SELECT` final: `Escritorio A` e `ALCv` exactamente como estavam no início desta sessão (`plano=STARTER`, `limite_utilizadores=NULL`, 5 e 1 utilizadores ativos respectivamente).
 
 ## Resumo
 

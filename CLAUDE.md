@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-LexCV is a multi-tenant legal practice management platform for Cape Verde (clientes, processos, agenda/prazos, documentos, financeiro). The domain language is **Portuguese** — entities, routes, and DTOs use Portuguese names (`cliente`, `processo`, `evento`, `honorario`, `fase`, `parte`, `movimentacao`). Keep new code consistent with that.
+ALCv is a multi-tenant legal practice management platform for Cape Verde (clientes, processos, agenda/prazos, documentos, financeiro). The domain language is **Portuguese** — entities, routes, and DTOs use Portuguese names (`cliente`, `processo`, `evento`, `honorario`, `fase`, `parte`, `movimentacao`). Keep new code consistent with that.
 
 The repo is a two-app monorepo:
 - `backend/` — Spring Boot 3.4.1 / Java 23 REST API + PostgreSQL

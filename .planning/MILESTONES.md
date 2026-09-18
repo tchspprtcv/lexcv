@@ -11,7 +11,7 @@
 - `GET /api/v1/auth/me` agora devolve `tenant_plano` (String do enum ou `null`) e `tenant_limite_utilizadores` (Integer ou `null` = sem limite) a qualquer sessão autenticada, adicionados ao bloco `ifPresent` já existente do `Tenant`, sem query nova nem endpoint novo — fecha o gap de dados que bloqueava o indicador "X/Y" do Plan 02.
 - `UserManagementTab` agora mostra "X/Y utilizadores" (3 estados de copy verbatim), desativa nativamente "Novo Utilizador" no limite com um tooltip que realmente dispara via a tecnica `<span tabIndex={0}>` — a primeira correção efetiva desta composição neste codebase, fechando a dívida documentada desde a Phase 102 (v2.13) — e o toast local do `409` deixa de mostrar o prefixo `API 409: `.
 - All 9 required live-verification points CONFIRMADO against a real running backend+frontend — tooltip-on-disabled-Button fires by mouse and keyboard, all 3 counter states render correctly, 409 toast is clean — plus one significant out-of-scope bug found and flagged separately.
-- PLATAFORMA_ADMIN role and reserved "LexCV" tenant now seed unconditionally on every backend startup, while the bootstrap plataforma@lexcv.cv credential seeds only when app.seed.enabled=true, proven by 5 new Mockito TDD cases plus a hoisted demo-data gate.
+- PLATAFORMA_ADMIN role and reserved "ALCv" tenant now seed unconditionally on every backend startup, while the bootstrap plataforma@lexcv.cv credential seeds only when app.seed.enabled=true, proven by 5 new Mockito TDD cases plus a hoisted demo-data gate.
 - New `SetupService.provisionTenant` method creates a Tenant + initial ADMIN user and returns the saved Tenant, reusing `initializeSystem`'s shared validation but with zero `SystemSetting` singleton-gate interaction, proven by 9 Mockito TDD cases plus a purpose-built `TenantProvisionResponse` DTO.
 - Four surgical guards in `AdminController` (createUser/updateUser reject with 403 before role lookup, getRbac hides the role, updateRbac refuses to let its permissions be rewritten) close the self-escalation vector a tenant `ADMIN` would otherwise have once `PLATAFORMA_ADMIN` exists — proven by 8 new Mockito cases plus the untouched Phase 117 user-limit suite.
 - `POST /api/v1/platform/tenants` gated to `PLATAFORMA_ADMIN` at the class level, proved by a real `AuthorizationManagerBeforeMethodInterceptor` proxy (not reflection), backed by a new `GlobalExceptionHandler` mapping that turns every `@PreAuthorize` refusal backend-wide from `500` into `403` -- closing Success Criteria 3 and 4 of Phase 119.
@@ -213,7 +213,7 @@ Ver `.planning/milestones/v2.7-MILESTONE-AUDIT.md` e `.planning/milestones/v2.7-
 
 **Known gaps at close:**
 
-- **Backend-only** — nenhuma UI frontend foi construída para o módulo de pareceres. Decisão explícita e repetida em todas as 4 fases, mas significa que o módulo ainda não é utilizável através da aplicação LexCV, apenas via chamada API direta. Auditoria da milestone classificou como `tech_debt` (não bloqueante). Recomendação: milestone v2.6 dedicada à UI.
+- **Backend-only** — nenhuma UI frontend foi construída para o módulo de pareceres. Decisão explícita e repetida em todas as 4 fases, mas significa que o módulo ainda não é utilizável através da aplicação ALCv, apenas via chamada API direta. Auditoria da milestone classificou como `tech_debt` (não bloqueante). Recomendação: milestone v2.6 dedicada à UI.
 - `versaoFinalId` (campo de vínculo à versão entregue) só é visível no JSON genérico das respostas GET existentes, sem vista dedicada "parecer entregue"
 - Comparação visual (diff) entre versões não implementada — apenas listagem/detalhe sequencial
 - Sem índice full-text dedicado (tsvector/trigram) — `ILIKE` nativo suficiente para o volume atual
@@ -259,7 +259,7 @@ Ver `.planning/v2.5-MILESTONE-AUDIT.md` e `.planning/milestones/v2.5-ROADMAP.md`
 
 **Key accomplishments:**
 
-- Refatoração completa do data layer e das páginas do módulo de agenda do LexCV de snake_case para camelCase, com tratamento de fuso horário em campos de data, alinhando com a serialização padrão Jackson/Spring Boot do backend.
+- Refatoração completa do data layer e das páginas do módulo de agenda do ALCv de snake_case para camelCase, com tratamento de fuso horário em campos de data, alinhando com a serialização padrão Jackson/Spring Boot do backend.
 - Validação robusta de intervalos de datas no frontend e no backend, com tratamento de exceções de parsing de data no Spring Boot e exibição de toasts de erro detalhados no Next.js.
 - Exposição global de prazos no backend, unificação de eventos e prazos no calendário mensal da agenda com filtros avançados e spinners de carregamento dinâmico.
 

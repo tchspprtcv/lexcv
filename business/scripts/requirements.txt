@@ -1,0 +1,10 @@
+# Dependencias de business/scripts/gerar-docx.py
+#
+# Python >= 3.10 (validado em 3.14.5, /c/Python314 nesta maquina)
+# Instalar:  python -m pip install --user -r business/scripts/requirements.txt
+#
+# NAO ha dependencia de pandoc, Word ou LibreOffice — o script escreve OOXML
+# directamente. A ausencia de LibreOffice/Word nesta maquina significa tambem
+# que a APARENCIA dos .docx nao e confirmavel aqui; so a estrutura.
+
+python-docx==1.2.0

@@ -120,7 +120,7 @@ function TermoHonorariosContent({ id }: { id: string }) {
           processo={processo.data!}
           cliente={cliente.data!}
           honorario={honorario}
-          tenantNome={me.data?.tenant_nome ?? "LexCV"}
+          tenantNome={me.data?.tenant_nome ?? "ALCv"}
         />
       )}
     </div>

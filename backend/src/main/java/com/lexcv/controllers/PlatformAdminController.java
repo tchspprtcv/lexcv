@@ -58,7 +58,7 @@ public class PlatformAdminController {
     // incondicionalmente por DatabaseSeeder.seedTenantPlataforma() (Phase 119). Usado apenas para
     // recusar a suspensão desta tenant específica em setTenantAtivo -- suspendê-la trancaria fora
     // o único PLATAFORMA_ADMIN existente, sem via de recuperação pela aplicação.
-    private static final String TENANT_RESERVADO = "LexCV";
+    private static final String TENANT_RESERVADO = "ALCv";
 
     private final SetupService setupService;
     private final TenantRepository tenantRepository;
@@ -154,7 +154,7 @@ public class PlatformAdminController {
      * suspenso, mesmo em sessões já ativas).
      *
      * <p><b>Guarda da tenant reservada:</b> suspender a tenant reservada (constante
-     * {@code TENANT_RESERVADO}, hoje com o nome {@code LexCV}) trancaria fora o único
+     * {@code TENANT_RESERVADO}, hoje com o nome {@code ALCv}) trancaria fora o único
      * {@code PLATAFORMA_ADMIN} existente, sem nenhuma via de recuperação pela aplicação -- só por
      * SQL manual. A guarda usa comparação literal de {@code nome} porque {@code t_tenant.nome}
      * não tem constraint {@code unique} (ver {@code TenantRepository#findFirstByNome}, WR-01 da
@@ -174,7 +174,7 @@ public class PlatformAdminController {
         }
 
         if (TENANT_RESERVADO.equals(tenant.getNome()) && !novoAtivo) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Não é possível suspender o tenant da plataforma (LexCV)."));
+            return ResponseEntity.badRequest().body(Map.of("message", "Não é possível suspender o tenant da plataforma (ALCv)."));
         }
 
         tenant.setAtivo(novoAtivo);

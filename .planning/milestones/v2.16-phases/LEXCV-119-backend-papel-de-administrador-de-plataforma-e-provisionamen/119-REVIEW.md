@@ -70,15 +70,15 @@ confirmed by reading the current `TenantRepository.java` (25 lines, single metho
 Javadoc prose in `PublicController.java`/`PublicControllerTest.java` explaining *why* the old approach was
 abandoned, and planning/markdown history — zero executable call sites anywhere. `PublicController.getBranding()`
 (`:33-41`) now takes no constructor args, injects no repository, and unconditionally returns
-`TenantPublicInfoResponse{nome="LexCV", logoDataUrl=null}`. Specifically verifying the "no other code path
+`TenantPublicInfoResponse{nome="ALCv", logoDataUrl=null}`. Specifically verifying the "no other code path
 depended on this" claim:
 - `webpage/src/lib/branding.ts` is the *only* real consumer of `GET /api/v1/public/branding` in the repo
   (confirmed via repo-wide grep for `public/branding`/`fetchBranding`). Its own hardcoded
-  `FALLBACK = { nome: "LexCV", logoDataUrl: null }` is now byte-identical to what the backend always returns —
+  `FALLBACK = { nome: "ALCv", logoDataUrl: null }` is now byte-identical to what the backend always returns —
   so the dynamic fetch became a no-op with respect to output, not a behavior change for this consumer, and its
   `if (!response.ok) return FALLBACK` branch is simply never taken anymore (the endpoint can no longer 404).
   `BrandMark`/`HeroSection`/`SiteFooter`/`SiteHeader` all just render whatever `nome`/`logoDataUrl` they're
-  given, with their own `"LexCV"` fallback baked in too — no special-casing anywhere that could misbehave now
+  given, with their own `"ALCv"` fallback baked in too — no special-casing anywhere that could misbehave now
   that the value is always generic.
 - `web/` (the actual tenant-facing app) does **not** call `/public/branding` at all
   (`grep -rn "public/branding" web/src` → no matches). `web/src/lib/setup.ts`'s setup-redirect gate calls only

@@ -1,6 +1,6 @@
 # Architecture Research: Cross-Entity Global Search
 
-**Domain:** Feature integration into an existing multi-tenant Spring Boot 3.4.1 / Java 23 + Next.js 16 legal-practice platform (LexCV, v2.14 milestone)
+**Domain:** Feature integration into an existing multi-tenant Spring Boot 3.4.1 / Java 23 + Next.js 16 legal-practice platform (ALCv, v2.14 milestone)
 **Researched:** 2026-07-18
 **Confidence:** HIGH — every claim below is grounded in direct reads of the current `backend/` and `web/` source tree (files enumerated in Sources), cross-checked against 2 external validations (Microsoft Graph Search API authorization model, shadcn `CommandDialog` Cmd+K convention).
 
@@ -311,5 +311,5 @@ None. This feature touches no external service — it is a purely internal aggre
 - shadcn `CommandDialog` + global Cmd/Ctrl+K listener pattern — confirms the recommended frontend shape is the standard, documented convention for this exact primitive: [Command - shadcn/ui](https://ui.shadcn.com/docs/components/radix/command), [Shadcn KBD UI: Build a Powerful ⌘K Command Menu](https://shadcnstudio.com/blog/shadcn-kbd-ui-component/)
 
 ---
-*Architecture research for: LexCV v2.14 — Pesquisa global funcional cross-entity*
+*Architecture research for: ALCv v2.14 — Pesquisa global funcional cross-entity*
 *Researched: 2026-07-18*

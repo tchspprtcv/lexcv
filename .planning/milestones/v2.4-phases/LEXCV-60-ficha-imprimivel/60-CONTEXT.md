@@ -40,7 +40,7 @@ A página inclui CSS de impressão que oculta a navegação e pagina correctamen
 - **D-08:** **Listagem** (`/clientes`): acção "Ver Ficha" no menu de contexto (3 pontos/kebab) de cada linha — abre `/clientes/[id]/ficha` em nova aba
 
 ### Claude's Discretion
-- Logo/nome do escritório no cabeçalho: usar texto estático "LexCV" ou ler do perfil do tenant — Claude decide
+- Logo/nome do escritório no cabeçalho: usar texto estático "ALCv" ou ler do perfil do tenant — Claude decide
 - Estilos CSS específicos (fontes, bordas das linhas de assinatura): Claude decide com base nas convenções do projecto
 - Se Particular: omitir campos de Empresa; se Empresa: omitir campos demográficos — Claude decide como gerir o espaço em branco
 

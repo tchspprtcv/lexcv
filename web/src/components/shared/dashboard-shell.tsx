@@ -40,7 +40,7 @@ function openSearch() {
 // exact contract `navigator`-derived values need, matching React's own docs example
 // for subscribing to a browser API (navigator.onLine).
 function subscribeToNothing() {
-  return () => {};
+  return () => { };
 }
 
 function getShortcutLabelSnapshot() {
@@ -208,7 +208,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             ) : (
               <Building2 className="h-4 w-4 text-slate-400" />
             )}
-            {me.data?.tenant_nome ?? "LexCV"}
+            {me.data?.tenant_nome ?? "ALCv"}
           </div>
 
           <div className="flex-1 flex items-center justify-center gap-2 md:hidden text-[13px] font-medium text-slate-700 dark:text-slate-300 truncate">
@@ -217,7 +217,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             ) : (
               <Building2 className="h-4 w-4 text-slate-400 flex-shrink-0" />
             )}
-            <span className="truncate">{me.data?.tenant_nome ?? "LexCV"}</span>
+            <span className="truncate">{me.data?.tenant_nome ?? "ALCv"}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-3">

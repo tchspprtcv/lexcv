@@ -16,7 +16,7 @@ Esta substituição não enfraquece a prova: o requisito central é "o mesmo tok
 
 1. **CONFIRMADO** — Como `plataforma@lexcv.cv`, a barra lateral mostra "Dashboard", "Plataforma", "Configurações", "Suporte" — **nenhum** módulo de tenant (Clientes/Processos/Agenda/Documentos/Financeiro/Pareceres) aparece, tanto em desktop (821px) como em mobile (375px, via menu hamburguer). Confirmado por leitura direta do DOM (`a[href]`), não apenas inspeção visual.
 
-2. **CONFIRMADO** — Ecrã "Administração de Tenants" com o cartão "Tenants Registados"; a tabela mostrou inicialmente "Escritorio A" e "LexCV" (com o badge "Plataforma" por baixo do nome). A pesquisa por "Escritorio" filtrou corretamente para 1 linha.
+2. **CONFIRMADO** — Ecrã "Administração de Tenants" com o cartão "Tenants Registados"; a tabela mostrou inicialmente "Escritorio A" e "ALCv" (com o badge "Plataforma" por baixo do nome). A pesquisa por "Escritorio" filtrou corretamente para 1 linha.
 
 3. **CONFIRMADO** — No tenant "Escritorio Teste 120" (criado na Task 1), Editar → Plano `STANDARD` + Limite `1` → Guardar → toast e linha atualizada para `1/1` a vermelho com "limite atingido" (o tenant tem exatamente 1 utilizador ativo). Reabrir Editar, limpar o limite, Guardar → linha passa a `1 · sem limite`. (Nota: a primeira tentativa de limpar o limite falhou por um `ERR_CONNECTION_REFUSED` transitório do backend — ambiental, não um defeito de código; confirmado por retry imediato bem-sucedido e por o backend responder normalmente a pedidos `curl` diretos durante essa janela.)
 
@@ -24,15 +24,15 @@ Esta substituição não enfraquece a prova: o requisito central é "o mesmo tok
 
 5. **CONFIRMADO — PROVA CENTRAL.** Na Janela A, suspendido "Escritorio Teste 120" (AlertDialog com o texto exato "Esta ação bloqueia de imediato o acesso de todos os utilizadores de Escritorio Teste 120, incluindo sessões já iniciadas..." confirmado antes de clicar). Imediatamente a seguir (mesmo ficheiro de cookies da Janela B, **sem logout nem novo login**), `GET /auth/me` devolveu `403` (confirmado 2 vezes, incluindo contra `GET /dashboard`). Tempo decorrido entre a confirmação da suspensão e a recusa: **~1.06 segundos** — o pedido seguinte, não um efeito diferido.
 
-6. **CONFIRMADO** — Ainda sem reutilizar a sessão antiga, uma tentativa de **novo login** como `teste120@exemplo.cv` com a password correta devolveu `403` com a mensagem `"O acesso da sua organização está suspenso. Contacte o suporte LexCV."` — explicitamente sobre suspensão da organização, **não** "Credenciais inválidas".
+6. **CONFIRMADO** — Ainda sem reutilizar a sessão antiga, uma tentativa de **novo login** como `teste120@exemplo.cv` com a password correta devolveu `403` com a mensagem `"O acesso da sua organização está suspenso. Contacte o suporte ALCv."` — explicitamente sobre suspensão da organização, **não** "Credenciais inválidas".
 
-7. **CONFIRMADO** — Rato sobre o botão de suspender (desativado) da linha "LexCV": após ~1.2s, apareceu `role="tooltip"` com o texto exato `"Não é possível suspender o tenant da plataforma (LexCV)."`.
+7. **CONFIRMADO** — Rato sobre o botão de suspender (desativado) da linha "ALCv": após ~1.2s, apareceu `role="tooltip"` com o texto exato `"Não é possível suspender o tenant da plataforma (ALCv)."`.
 
 8. **CONFIRMADO** — Foco de teclado no mesmo `<span tabIndex="0">` (sem rato): o mesmo tooltip, com o mesmo texto exato, apareceu. Segunda utilização bem-sucedida desta composição Tooltip+Button-disabled neste codebase (a primeira foi a Phase 118).
 
 9. **CONFIRMADO** — Reativado "Escritorio Teste 120" via AlertDialog (texto exato "Os utilizadores de Escritorio Teste 120 recuperam o acesso de imediato." confirmado). Imediatamente a seguir: a sessão B **antiga** (mesmo cookie, nunca reemitido) voltou a devolver `200` em `GET /auth/me`, e um novo login também devolveu `200`. UI da Janela A mostrou "Ativo" de volta.
 
-10. **CONFIRMADO** — Ambiente reposto: tenant de teste e o seu utilizador removidos (incluindo a linha `t_user_role` que a instrução original de limpeza do plano não previa — ver nota abaixo). `SELECT` final confirma exatamente os 2 tenants originais ("Escritorio A", "LexCV"), ambos com `plano=NULL`, `limite_utilizadores=NULL`, `ativo=true` — idêntico ao estado registado no início da Task 1.
+10. **CONFIRMADO** — Ambiente reposto: tenant de teste e o seu utilizador removidos (incluindo a linha `t_user_role` que a instrução original de limpeza do plano não previa — ver nota abaixo). `SELECT` final confirma exatamente os 2 tenants originais ("Escritorio A", "ALCv"), ambos com `plano=NULL`, `limite_utilizadores=NULL`, `ativo=true` — idêntico ao estado registado no início da Task 1.
 
 ## Nota sobre a instrução de limpeza do plano (não um defeito de produto)
 
@@ -44,4 +44,4 @@ Durante o ponto 3, o servidor de desenvolvimento frontend (`pnpm dev`, Turbopack
 
 ## Resumo
 
-Os 10 pontos exigidos por este plano têm veredito `CONFIRMADO`. Nenhum `FALHOU`. O Success Criterion 4 do ROADMAP — o mais crítico de toda a fase — deixa de ser uma afirmação verificada apenas estaticamente: foi visto a acontecer, com medição de tempo, entre duas sessões HTTP genuinamente isoladas. Os pontos 5 e 6 têm vereditos separados (corte de sessão vs. bloqueio de login), tal como os pontos 7 e 8 (rato vs. teclado). A guarda do tenant reservado "LexCV" está confirmada, visualmente e por interação. A base de dados de desenvolvimento foi reposta ao estado original.
+Os 10 pontos exigidos por este plano têm veredito `CONFIRMADO`. Nenhum `FALHOU`. O Success Criterion 4 do ROADMAP — o mais crítico de toda a fase — deixa de ser uma afirmação verificada apenas estaticamente: foi visto a acontecer, com medição de tempo, entre duas sessões HTTP genuinamente isoladas. Os pontos 5 e 6 têm vereditos separados (corte de sessão vs. bloqueio de login), tal como os pontos 7 e 8 (rato vs. teclado). A guarda do tenant reservado "ALCv" está confirmada, visualmente e por interação. A base de dados de desenvolvimento foi reposta ao estado original.

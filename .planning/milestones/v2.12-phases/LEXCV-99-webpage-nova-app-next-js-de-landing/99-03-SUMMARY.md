@@ -13,7 +13,7 @@ requires:
 provides:
   - "webpage/src/components/site-header.tsx — sticky header Server Component (BrandMark, 3-anchor nav hidden<md, ThemeToggle, 'Entrar' secondary CTA as real <a href=/login>)"
   - "webpage/src/components/hero-section.tsx — Hero Server Component (BrandMark subordinate to H1, accent hairline, eyebrow, locked H1 Display 48px + locked subtitle, 'Entrar' secondary + 'Ver Funcionalidades' ghost scroll CTA)"
-  - "webpage/src/components/site-footer.tsx — footer Server Component (BrandMark, 'Entrar' large/primary CTA + ArrowRight, dynamic © {getFullYear()} LexCV fine print)"
+  - "webpage/src/components/site-footer.tsx — footer Server Component (BrandMark, 'Entrar' large/primary CTA + ArrowRight, dynamic © {getFullYear()} ALCv fine print)"
 affects: [99-04, 100]
 
 # Tech tracking
@@ -66,14 +66,14 @@ Each task was committed atomically:
 
 1. **Task 1: site-header.tsx (header sticky + nav âncoras + Entrar secondary)** - `9670b23` (feat)
 2. **Task 2: hero-section.tsx (eyebrow + H1 Display + subtítulo + CTAs + branding)** - `355e00a` (feat)
-3. **Task 3: site-footer.tsx (marca + Entrar grande + © {ano} LexCV)** - `a2ca6b8` (feat)
+3. **Task 3: site-footer.tsx (marca + Entrar grande + © {ano} ALCv)** - `a2ca6b8` (feat)
 
 _Plan metadata commit (this SUMMARY, owned by orchestrator) is applied separately after this worktree agent completes._
 
 ## Files Created/Modified
 - `webpage/src/components/site-header.tsx` - sticky header Server Component: `BrandMark` + 3-anchor nav (hidden below `md:`) + `ThemeToggle` + "Entrar" secondary CTA (`asChild` → real `<a href="/login">`)
 - `webpage/src/components/hero-section.tsx` - Hero Server Component: `BrandMark` + accent hairline + eyebrow + locked H1 (Display, flat `text-5xl`) + locked subtitle + "Entrar" secondary CTA + "Ver Funcionalidades" ghost scroll CTA
-- `webpage/src/components/site-footer.tsx` - footer Server Component: `BrandMark` + "Entrar" large/primary CTA (`size="lg"` + `ArrowRight`) + dynamic `© {getFullYear()} LexCV` fine print
+- `webpage/src/components/site-footer.tsx` - footer Server Component: `BrandMark` + "Entrar" large/primary CTA (`size="lg"` + `ArrowRight`) + dynamic `© {getFullYear()} ALCv` fine print
 
 ## Decisions Made
 - Reordered `site-header.tsx`'s nav `className` token order (see `key-decisions` in frontmatter) so the plan's own literal `grep -Fq 'hidden md:flex'` acceptance gate passes — a zero-behavior-change fix, since Tailwind utility classes are applied independently of their order in the `class` attribute. All four original classes (`hidden`, `items-center`, `gap-6`, `md:flex`) are still present; only their left-to-right order in the string changed.

@@ -1,7 +1,7 @@
-# LexCV — Termo de Abertura do Projeto
+# ALCv — Termo de Abertura do Projeto
 
 - **Documento:** Termo de Abertura do Projeto (Project Charter)
-- **Produto:** LexCV — Plataforma Institucional de Gestão Jurídica
+- **Produto:** ALCv — Plataforma Institucional de Gestão Jurídica
 - **Destinatário:** Entidade contratante (escritório de advogados ou instituição)
 - **Versão do produto descrita:** v2.16, encerrada a 30 de julho de 2026
 - **Data de emissão:** agosto de 2026
@@ -10,7 +10,7 @@
 
 ## 1. Enquadramento
 
-O LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde,
+O ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde,
 desenhada para a realidade institucional cabo-verdiana e para a terminologia
 corrente do SIJ (Sistema Judicial de Cabo Verde). **Não existe integração técnica
 com o SIJ — ver ponto 5.2.** Centraliza clientes, processos, agenda e prazos,
@@ -118,7 +118,7 @@ documento foi encerrado em 30 de julho de 2026 (v2.16).
 
 Os pontos seguintes **não** fazem parte do produto e não estão planeados:
 
-- **Integração técnica com o SIJ.** O LexCV descreve-se como alinhado ao
+- **Integração técnica com o SIJ.** O ALCv descreve-se como alinhado ao
   ecossistema do SIJ, mas não existe nem está planeada qualquer troca de dados,
   interface ou autenticação com o sistema judicial.
 - Contabilidade completa ou ERP.

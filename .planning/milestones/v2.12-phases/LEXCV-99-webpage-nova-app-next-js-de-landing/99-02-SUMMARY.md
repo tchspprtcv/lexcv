@@ -22,7 +22,7 @@ tech-stack:
   patterns:
     - "proxy.ts adapted (not copied) from web/proxy.ts: surgically strips every authentication branch (access_token/LOGIN_PATH/DASHBOARD_PATH), keeping only the public setup-gate concern"
     - "Server-to-server fetch (absolute BACKEND_API_ORIGIN, never a relative URL) from a lib consumed by a Server Component — closes CORS entirely, browser never makes the call"
-    - "Fail-open on both routing (proxy.ts catch → NextResponse.next()) and data (branding.ts !ok/catch → {nome:'LexCV', logoDataUrl:null}) — availability-over-strictness tradeoff, named as an accepted risk in the plan's threat model (T-99-03)"
+    - "Fail-open on both routing (proxy.ts catch → NextResponse.next()) and data (branding.ts !ok/catch → {nome:'ALCv', logoDataUrl:null}) — availability-over-strictness tradeoff, named as an accepted risk in the plan's threat model (T-99-03)"
     - "XSS-hardened conditional render: data:image/ prefix guard before ever using an untrusted string as <img src>, mirroring dashboard-shell.tsx's existing fallback pattern"
 
 key-files:
@@ -51,7 +51,7 @@ completed: 2026-07-15
 
 # Phase 99 Plan 02: Setup Gate & Branding Fetch Summary
 
-**Edge `proxy.ts` strips web/'s entire authentication branch (setup-gate only, fail-open); `fetchBranding()` calls the Phase 98 endpoint server-to-server with cache `no-store` and a `{nome:"LexCV"}` fail-open fallback; `BrandMark` hardens the `data:image/` render path against XSS.**
+**Edge `proxy.ts` strips web/'s entire authentication branch (setup-gate only, fail-open); `fetchBranding()` calls the Phase 98 endpoint server-to-server with cache `no-store` and a `{nome:"ALCv"}` fail-open fallback; `BrandMark` hardens the `data:image/` render path against XSS.**
 
 ## Performance
 
@@ -62,7 +62,7 @@ completed: 2026-07-15
 ## Accomplishments
 - `webpage/proxy.ts` lives at the app root (Next.js 16 convention, confirmed against `webpage/node_modules/next/dist/docs/.../proxy.md`), contains only the "not initialized → `/setup`" branch; grep-confirmed absence of `access_token`/`login`/`DASHBOARD`; `catch` fails open via `NextResponse.next()`; matcher excludes `landing-static` (LP-04, LP-05).
 - `webpage/src/lib/setup.ts` is byte-for-byte identical (`diff -q`) to `web/src/lib/setup.ts` — reuses the exact, already-proven `fetchSetupStatus()` mechanism running in production today.
-- `webpage/src/lib/branding.ts` calls `BACKEND_API_ORIGIN` + `/api/v1/public/branding` server-to-server (`cache: "no-store"`), with two independent fail-open paths (`!response.ok` and `catch`) both returning `{nome: "LexCV", logoDataUrl: null}` — zero CORS exposure, zero crash surface for an anonymous visitor (LP-06).
+- `webpage/src/lib/branding.ts` calls `BACKEND_API_ORIGIN` + `/api/v1/public/branding` server-to-server (`cache: "no-store"`), with two independent fail-open paths (`!response.ok` and `catch`) both returning `{nome: "ALCv", logoDataUrl: null}` — zero CORS exposure, zero crash surface for an anonymous visitor (LP-06).
 - `webpage/src/components/brand-mark.tsx` is a Server Component (no `"use client"`) that only renders `<img>` when `logoDataUrl` starts with `"data:image/"`; otherwise falls back to `Building2` + name, mirroring `dashboard-shell.tsx`'s established pattern; zero `dangerouslySetInnerHTML`.
 - `pnpm build` (Turbopack) passes cleanly with all 6 new files present; cross-checked the server chunk's sourcemap to confirm `proxy.ts`'s `SETUP_PATH` constant is genuinely compiled into the middleware bundle (not silently dropped, despite `middleware-manifest.json` showing an empty top-level object — a Turbopack manifest-format quirk, not a build defect).
 

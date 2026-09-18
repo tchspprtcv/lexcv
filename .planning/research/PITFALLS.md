@@ -1,6 +1,6 @@
 # Pitfalls Research
 
-**Domain:** Adding a new cross-entity global search feature (clientes, processos, documentos, pareceres) to an existing production multi-tenant, RBAC'd legal-practice platform (LexCV, v2.14 milestone)
+**Domain:** Adding a new cross-entity global search feature (clientes, processos, documentos, pareceres) to an existing production multi-tenant, RBAC'd legal-practice platform (ALCv, v2.14 milestone)
 **Researched:** 2026-07-18
 **Confidence:** HIGH for all codebase-specific findings (verified by direct inspection of models/repositories/controllers/security config/seed data, not assumed); HIGH for the cmdk `shouldFilter` claim (verified against the project's own existing workaround in `combobox.tsx` AND cross-checked against upstream cmdk documentation); MEDIUM for general multi-tenant-search industry patterns not specific to this codebase.
 

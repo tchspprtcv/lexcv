@@ -236,7 +236,7 @@ Confirmed call site: `<RbacTab />` is invoked with **zero props** today (`settin
       </Button>
     </span>
   </TooltipTrigger>
-  <TooltipContent>Não é possível suspender o tenant da plataforma (LexCV).</TooltipContent>
+  <TooltipContent>Não é possível suspender o tenant da plataforma (ALCv).</TooltipContent>
 </Tooltip>
 ```
 ```tsx
@@ -306,7 +306,7 @@ function RbacTab() {
             </TooltipTrigger>
             <TooltipContent>
               As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-              toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.
+              toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
             </TooltipContent>
           </Tooltip>
         )}
@@ -334,7 +334,7 @@ public class PublicController {
     public ResponseEntity<?> getBranding() {
         return ResponseEntity.ok(
                 TenantPublicInfoResponse.builder()
-                        .nome("LexCV")
+                        .nome("ALCv")
                         .logoDataUrl(null)
                         .build()
         );
@@ -379,7 +379,7 @@ requirements-completed: [ISOL-02]
 | `TenantRepository.findFirstByOrderByCreatedAtAsc()` | No longer exists anywhere in production code (2 remaining hits are historical Javadoc text in `PublicController.java`/`PublicControllerTest.java`) | COVERED (closed by Phase 119 CR-02, ISOL-01) |
 | `PlatformAdminController` cross-tenant iteration (`listTenants`/`updateTenant`/`setTenantAtivo`) | Deliberately operates over ALL tenants by design, gated at class level by `@PreAuthorize("hasRole('PLATAFORMA_ADMIN')")` — never resolves "a single" tenant by heuristic | COVERED (by design, already reviewed Phase 119/120) |
 | `AlertasDiariosJob` (`TenantRepository.findAll()` loop) | Own docblock (`AlertasDiariosJob.java:31-37`) already states: runs off the scheduler thread with no `SecurityContextHolder`/JWT, so `tenantId` is always an explicit loop parameter, never a "guess the tenant" resolution | COVERED (by design, already documented) |
-| hardcoded `"LexCV"` literals (`plataforma/columns.tsx:18`, `DatabaseSeeder`) | Refer to the reserved platform tenant by exact name match, not a "first/oldest tenant" heuristic | COVERED (legitimate reserved-name lookup) |
+| hardcoded `"ALCv"` literals (`plataforma/columns.tsx:18`, `DatabaseSeeder`) | Refer to the reserved platform tenant by exact name match, not a "first/oldest tenant" heuristic | COVERED (legitimate reserved-name lookup) |
 ```
 
 **Explicit "background, not a finding" callout** (per 121-CONTEXT.md's decision — cite, don't fix):

@@ -145,7 +145,7 @@ export async function fetchBranding(): Promise<BrandingResponse> {
     });
     if (!response.ok) return FALLBACK;
     const data = (await response.json()) as BrandingResponse;
-    return { nome: data.nome || "LexCV", logoDataUrl: data.logoDataUrl ?? null };
+    return { nome: data.nome || "ALCv", logoDataUrl: data.logoDataUrl ?? null };
   } catch {
     return FALLBACK;
   }
@@ -165,8 +165,8 @@ Once moved, fixing IN-03 (add `console.error` in `proxy.ts`'s catch) becomes a n
 ### IN-02: `fetchBranding()` casts the response JSON without runtime validation (carried over; line numbers shifted by the CR-01/WR-01 fix)
 
 **File:** `webpage/src/lib/branding.ts:19-20` (previously reported as 22-23; shifted by -3 lines because commit `8aeb1a8` replaced a 5-line inline guard with a 2-line import+call)
-**Issue:** `(await response.json()) as BrandingResponse` (line 19) still trusts the response shape completely; `data.nome || "LexCV"` (line 20) would let a non-string truthy `nome` (contract drift, misbehaving intermediary) reach `<span>{nome}</span>` in `brand-mark.tsx:29` and throw ("Objects are not valid as a React child"), crashing SSR for every visitor. Unchanged in substance from the prior round; not touched by commit `8aeb1a8` beyond the line-shift.
-**Fix:** `typeof data?.nome === "string" ? data.nome : "LexCV"` before use.
+**Issue:** `(await response.json()) as BrandingResponse` (line 19) still trusts the response shape completely; `data.nome || "ALCv"` (line 20) would let a non-string truthy `nome` (contract drift, misbehaving intermediary) reach `<span>{nome}</span>` in `brand-mark.tsx:29` and throw ("Objects are not valid as a React child"), crashing SSR for every visitor. Unchanged in substance from the prior round; not touched by commit `8aeb1a8` beyond the line-shift.
+**Fix:** `typeof data?.nome === "string" ? data.nome : "ALCv"` before use.
 
 ### IN-03: `proxy.ts`'s `catch` still swallows every error silently, with no logging (carried over, unchanged; now also relevant to CR-01)
 

@@ -289,7 +289,7 @@ const PLANO_BADGE_VARIANT: Record<TenantPlano, "gray" | "purple" | "amber"> = {
 <CardHeader className="flex flex-row items-center justify-between space-y-0">
   <div>
     <CardTitle className="text-xl font-semibold">Tenants Registados</CardTitle>
-    <CardDescription>Lista de organizações com acesso à plataforma LexCV.</CardDescription>
+    <CardDescription>Lista de organizações com acesso à plataforma ALCv.</CardDescription>
   </div>
   <Button
     onClick={() => setIsFormOpen(true)}
@@ -306,7 +306,7 @@ const PLANO_BADGE_VARIANT: Record<TenantPlano, "gray" | "purple" | "amber"> = {
 <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
   <div>
     <CardTitle className="text-xl font-semibold">Tenants Registados</CardTitle>
-    <CardDescription>Lista de organizações com acesso à plataforma LexCV.</CardDescription>
+    <CardDescription>Lista de organizações com acesso à plataforma ALCv.</CardDescription>
   </div>
   <div className="flex items-center gap-2">
     <Button asChild variant="outline" className="text-xs py-1.5 px-3 h-auto flex items-center gap-1.5">

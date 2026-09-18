@@ -22,7 +22,7 @@
 
 ### Claude's Discretion
 
-- Logo/nome do escritório no cabeçalho: usar texto estático "LexCV" ou ler do perfil do tenant.
+- Logo/nome do escritório no cabeçalho: usar texto estático "ALCv" ou ler do perfil do tenant.
 - Estilos CSS específicos (fontes, bordas das linhas de assinatura).
 - Se Particular: omitir campos de Empresa; se Empresa: omitir campos demográficos — gerir espaço em branco.
 

@@ -124,7 +124,7 @@ human_verification:
 |------|-----|-----|--------|---------|
 | `relatorio/page.tsx` | `useTenantsAdmin()` → `GET /api/v1/platform/tenants` | `import { useTenantsAdmin } from "@/hooks/use-platform-admin"`, unmodified hook | ✓ WIRED | `page.tsx:14,58`; hook body unchanged (`use-platform-admin.ts`, read in full) |
 | `relatorio/page.tsx` | `relatorioColumns` | `import { relatorioColumns } from "./columns"`, passed directly (no factory call) | ✓ WIRED | `page.tsx:18,184`: `<DataTable columns={relatorioColumns} data={tenantsFiltrados} .../>` |
-| `relatorio/columns.tsx` | `TENANT_RESERVADO` | `import { TENANT_RESERVADO } from "../columns"` (not redeclared) | ✓ WIRED | `columns.tsx:10`; confirmed no local `= "LexCV"` literal in the file |
+| `relatorio/columns.tsx` | `TENANT_RESERVADO` | `import { TENANT_RESERVADO } from "../columns"` (not redeclared) | ✓ WIRED | `columns.tsx:10`; confirmed no local `= "ALCv"` literal in the file |
 | `relatorio/columns.tsx` | `tenant.utilizadoresAtivos` | Direct field read via `accessorFn`, no aggregation | ✓ WIRED | `columns.tsx:79`; gate assertion `utilizadores-sem-recalculo` PASS |
 | `PlatformAdminController.toSummary()` | `UserRepository.countByTenantIdAndAtivoTrue` | Direct method call, same method Phase 117/118 use | ✓ WIRED | `PlatformAdminController.java:198`; only 2 call sites in the whole backend |
 | `plataforma/page.tsx` | `/plataforma/relatorio` | `next/link` `<Link href="/plataforma/relatorio">` inside a `Button asChild` | ✓ WIRED (structural) | `page.tsx:170-173`; route confirmed registered in `pnpm build`; **real click-through not live-tested** |

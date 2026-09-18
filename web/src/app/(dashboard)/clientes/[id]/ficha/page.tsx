@@ -103,7 +103,7 @@ function FichaContent({ id }: { id: string }) {
       ) : cliente.data ? (
         <Ficha
           cliente={cliente.data}
-          tenantNome={me.data?.tenant_nome ?? "LexCV"}
+          tenantNome={me.data?.tenant_nome ?? "ALCv"}
           dataFormatada={dataFormatada}
           advogadosNomes={(advogados.data ?? []).map((a) => a.nome).join(", ")}
           administrativosNomes={(administrativos.data ?? []).map((a) => a.nome).join(", ")}

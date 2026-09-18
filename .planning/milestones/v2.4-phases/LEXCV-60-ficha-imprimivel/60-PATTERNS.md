@@ -144,7 +144,7 @@ function val(v: string | number | undefined | null): React.ReactNode {
 **Tenant name in header:**
 ```tsx
 // me.data?.tenant_nome is available via useMe() — used in dashboard-shell.tsx line 265
-const tenantNome = me.data?.tenant_nome ?? "LexCV";
+const tenantNome = me.data?.tenant_nome ?? "ALCv";
 ```
 
 ---
@@ -396,10 +396,10 @@ if (!permissions.isLoading && !canViewClientes) {
 
 ```tsx
 // In dashboard-shell.tsx line 265:
-{me.data?.tenant_nome ?? "LexCV"}
+{me.data?.tenant_nome ?? "ALCv"}
 // Use same pattern in ficha page:
 const me = useMe();
-const tenantNome = me.data?.tenant_nome ?? "LexCV";
+const tenantNome = me.data?.tenant_nome ?? "ALCv";
 ```
 
 ---
