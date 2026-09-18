@@ -247,14 +247,17 @@ divider(pres, "II", "Operação Diária",
 {
   const s = base(pres);
   header(s, "Secção 4.2 e 4.3 · Monitor executivo", "Prazos urgentes e trilha de atividade");
-  cards(s, [
-    { tag: "4.2", t: "Monitor de Prazos Urgentes", d: "No lado direito do painel, o cartão de prazos urgentes sinaliza em contagem decrescente os atos que exigem intervenção prioritária — por exemplo uma audiência de julgamento com data e hora exatas — permitindo saltar diretamente para a agenda forense com um clique." },
-    { tag: "4.3", t: "Processos Recentes", d: "Tabela com os últimos processos movimentados pelo escritório e o respetivo estado: ATIVO, EM TRIAGEM ou CONCLUÍDO." },
-    { tag: "4.3", t: "Atividade Recente", d: "Fluxo cronológico com o registo de novos documentos submetidos, fases alteradas e eventos concluídos por cada membro da equipa." },
-  ], { x: M, y: 1.78, w: 3.93, h: "auto", cols: 3, gapX: 0.33, centerIn: [1.72, 5.05] });
+  shot(s, "02b_dashboard_completo.png", { x: M, y: 1.75, w: 6.95,
+    caption: "Metade inferior do dashboard — prazos urgentes, processos recentes e atividade da equipa." });
 
-  callout(s, { x: M, y: 5.20, w: 12.1, h: 1.05, label: "Leitura recomendada",
-    text: "Abrir o dashboard no início do dia e tratar primeiro o cartão de prazos urgentes é a prática que melhor mitiga o risco central de qualquer escritório: a perda de um prazo perentório.", tone: C.gold });
+  rows(s, [
+    { t: "Monitor de Prazos Urgentes", d: "Sinaliza em contagem decrescente os atos que exigem intervenção prioritária, com salto direto para a agenda forense." },
+    { t: "Processos Recentes", d: "Últimos processos movimentados e o respetivo estado: ATIVO, EM TRIAGEM ou CONCLUÍDO." },
+    { t: "Atividade Recente", d: "Documentos submetidos, fases alteradas e eventos concluídos por cada membro da equipa." },
+  ], { x: 8.15, y: 1.90, w: 4.55, gap: 1.05 });
+
+  callout(s, { x: 8.15, y: 5.30, w: 4.55, h: 1.45, label: "Leitura recomendada",
+    text: "Abrir o dashboard no início do dia e tratar primeiro os prazos urgentes é a prática que melhor mitiga o risco central do escritório: perder um prazo perentório.", tone: C.gold });
   s.addNotes("Secções 4.2 e 4.3 do manual.");
 }
 
@@ -465,6 +468,46 @@ divider(pres, "III", "Processos Judiciais",
   cards(s, tabs, { x: M, y: 2.08, w: 2.92, h: "auto", cols: 4, gapX: 0.29, gapY: 0.28,
                    titleSize: 13, descSize: 10.5 });
   s.addNotes("Secção 6.3. Os oito separadores do ambiente de processo.");
+}
+
+/* --- 6.3 Separadores em detalhe: quatro pares de capturas reais --- */
+{
+  const pares = [
+    { titulo: "Timeline e Partes", notas: "Separadores timeline e partes.", itens: [
+      { f: "09_tab_timeline.png", cap: "Timeline — feed cronológico do processo.",
+        t: "Timeline Unificada", d: "Decisão de conflict check e movimentações, com filtros por tipo e intervalo de datas." },
+      { f: "09_tab_partes.png", cap: "Partes — intervenientes do litígio.",
+        t: "Gestão de Partes", d: "Autor, réu e mandatários da contraparte, cada um com tipo e NIF." } ] },
+    { titulo: "Fases e Decisões", notas: "Separadores fases e decisoes.", itens: [
+      { f: "09_tab_fases.png", cap: "Fases — estado da tramitação.",
+        t: "Fases Processuais", d: "Cada fase com estado editável, guardado individualmente." },
+      { f: "09_tab_decisoes.png", cap: "Decisões — despachos e sentenças.",
+        t: "Decisões Judiciais", d: "Data, tipo e resumo de cada decisão, com anexação do PDF digitalizado." } ] },
+    { titulo: "Factos e Testemunhas", notas: "Separadores factos e testemunhas.", itens: [
+      { f: "09_tab_factos.png", cap: "Factos — cronologia da matéria de facto.",
+        t: "Factos Relevantes", d: "Factos datados e ordenados, para sustentar a argumentação em audiência." },
+      { f: "09_tab_testemunhas.png", cap: "Testemunhas — rol do processo.",
+        t: "Rol de Testemunhas", d: "Testemunhas de cada lado, com contacto e resumo do depoimento." } ] },
+    { titulo: "Documentos e Auditoria", notas: "Separadores documentos e auditoria.", itens: [
+      { f: "09_tab_documentos.png", cap: "Documentos — peças vinculadas ao processo.",
+        t: "Documentos do Processo", d: "Arquivo das peças vinculadas: procurações, certidões e comprovativos. A lista surge vazia enquanto nada tiver sido carregado." },
+      { f: "09_tab_auditoria.png", cap: "Auditoria — registo imutável de operações.",
+        t: "Trilha de Auditoria", d: "Data, operação, entidade afetada e autor de cada alteração." } ] },
+  ];
+
+  pares.forEach((par) => {
+    const s = base(pres);
+    header(s, "Secção 6.3 · Separadores do processo", par.titulo);
+    par.itens.forEach((it, i) => {
+      const x = M + i * 6.20;
+      shot(s, it.f, { x, y: 1.70, w: 5.90, caption: it.cap });
+      s.addText(it.t, { x, y: 6.00, w: 5.90, h: 0.28, isTextBox: true, margin: 0, valign: "top",
+        fontFace: F.body, fontSize: 13, bold: true, color: C.gold });
+      s.addText(it.d, { x, y: 6.28, w: 5.90, h: 0.62, isTextBox: true, margin: 0, valign: "top",
+        fontFace: F.body, fontSize: 11, color: C.muted, lineSpacingMultiple: 0.95 });
+    });
+    s.addNotes("Secção 6.3 do manual — " + par.notas);
+  });
 }
 
 /* --- 6.3c Fases processuais --- */
