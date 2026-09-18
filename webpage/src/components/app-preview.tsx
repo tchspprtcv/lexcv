@@ -220,7 +220,7 @@ function CenaAgenda() {
   return (
     <Duas proporcao="md:grid-cols-[0.85fr_1fr]">
       <Painel titulo="Setembro 2026" acao={<Chip tom="vermelho">1 prazo fatal</Chip>}>
-        <div className="grid max-w-[232px] grid-cols-7 gap-[3px]">
+        <div className="grid max-w-[196px] grid-cols-7 gap-[2px]">
           {["S", "T", "Q", "Q", "S", "S", "D"].map((d, i) => (
             <div key={i} className="text-center text-[8px] font-semibold uppercase text-slate-300 dark:text-slate-600">
               {d}
@@ -508,7 +508,7 @@ export function AppPreview({ className }: { className?: string }) {
           </nav>
 
           {/* Conteúdo do passo. A chave força a nova cena a reanimar. */}
-          <div className="flex min-h-[252px] flex-1 flex-col overflow-hidden bg-slate-50/40 p-3 dark:bg-transparent md:h-[252px]">
+          <div className="flex min-h-[260px] flex-1 flex-col overflow-hidden bg-slate-50/40 p-3 dark:bg-transparent md:h-[260px]">
             <div key={passo} className="flex-1">
               {atual.conteudo}
             </div>
