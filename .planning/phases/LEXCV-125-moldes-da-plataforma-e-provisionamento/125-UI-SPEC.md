@@ -60,7 +60,7 @@ Exceptions: `p-3` (12px) is used pervasively for table cell padding and compact 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (`text-sm`) | 400 (regular) | 1.5 |
-| Label / micro (badges, module headers, table headers) | 12px (`text-xs`), with a documented 10-11px exception for inline badges (`text-[10px]`/`text-[11px]`, matching existing `Badge` usage in `columns.tsx`) | 600 (semibold) | 1.2 |
+| Label / micro (badges, and the matrix's leading "Módulo / Permissão" header — `settings/page.tsx:923` is `font-semibold`) | 12px (`text-xs`), with a documented 10-11px exception for inline badges (`text-[10px]`/`text-[11px]`, matching existing `Badge` usage in `columns.tsx`) | 600 (semibold) | 1.2 |
 | Card/section heading | 20px (`text-xl`) | 600 (semibold) | 1.2 |
 | Page title | 30px (`text-3xl`) | 600 (semibold) | 1.2 |
 | Empty-state title (reused `EmptyTitle` primitive) | 18px (`text-lg`) | 500 (medium) | 1.2 |
