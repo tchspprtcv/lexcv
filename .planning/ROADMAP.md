@@ -11,7 +11,7 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 - Fases inteiras (124, 125, ...): trabalho planeado deste marco.
 - Fases decimais (124.1, 124.2, ...): inserções urgentes pós-planeamento, se necessário.
 
-- [ ] **Phase 124: Catálogo de Permissões em Base de Dados** - O catálogo de permissões deixa de ser uma lista embutida no controller e passa a viver em `t_permission`, semeado e actualizado com segurança a cada arranque
+- [x] **Phase 124: Catálogo de Permissões em Base de Dados** - O catálogo de permissões deixa de ser uma lista embutida no controller e passa a viver em `t_permission`, semeado e actualizado com segurança a cada arranque (completed 2026-09-20)
 - [ ] **Phase 125: Moldes da Plataforma e Provisionamento** - `PLATAFORMA_ADMIN` gere moldes de papel em `/plataforma`; todo escritório novo nasce com cópias próprias desses moldes
 - [ ] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso
 - [ ] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN`
@@ -30,8 +30,8 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 **Plans**: 2 plans
 
 Plans:
-- [ ] 124-01-PLAN.md — Colunas de catálogo em `Permission` + script manual de migração + `seedRbac()` com catálogo declarativo de 20 permissões em upsert não-destrutivo
-- [ ] 124-02-PLAN.md — `getRbac()` serve `systemPermissions` a partir de `t_permission`, excluindo reservadas à plataforma e sem-rótulo, com contrato de resposta inalterado
+- [x] 124-01-PLAN.md — Colunas de catálogo em `Permission` + script manual de migração + `seedRbac()` com catálogo declarativo de 20 permissões em upsert não-destrutivo
+- [x] 124-02-PLAN.md — `getRbac()` serve `systemPermissions` a partir de `t_permission`, excluindo reservadas à plataforma e sem-rótulo, com contrato de resposta inalterado
 
 ### Phase 125: Moldes da Plataforma e Provisionamento
 **Goal**: A plataforma passa a gerir os moldes de papel numa consola própria, e todo o mecanismo de "instanciar cópia de um molde" nasce e é provado primeiro no caminho de menor risco — um escritório novo — antes de ser reutilizado pela migração.
@@ -99,7 +99,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 124. Catálogo de Permissões em Base de Dados | 0/TBD | Not started | - |
+| 124. Catálogo de Permissões em Base de Dados | 2/2 | Complete   | 2026-09-20 |
 | 125. Moldes da Plataforma e Provisionamento | 0/TBD | Not started | - |
 | 126. Migração de Papéis Existentes | 0/TBD | Not started | - |
 | 127. Papéis e Permissões do Escritório | 0/TBD | Not started | - |
