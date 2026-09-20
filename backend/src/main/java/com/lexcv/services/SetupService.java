@@ -5,9 +5,11 @@ import com.lexcv.models.Role;
 import com.lexcv.models.SystemSetting;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
+import com.lexcv.models.TenantRole;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.SystemSettingRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
@@ -33,6 +38,7 @@ public class SetupService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TenantRoleRepository tenantRoleRepository;
 
     public boolean isInitialized() {
         return systemSettingRepository.findById(SystemSetting.SINGLETON_ID)
@@ -127,7 +133,48 @@ public class SetupService {
                 .build();
         userRepository.save(adminUser);
 
+        instanciarMoldes(tenant.getId());
+
         return tenant;
+    }
+
+    /**
+     * Instancia, dentro da MESMA transacção de {@link #provisionTenant}, uma cópia própria de
+     * cada molde actual para o tenant recém-criado. Quatro invariantes que um refactor futuro
+     * não pode quebrar, cada uma com o seu porquê:
+     *
+     * <p>(1) Corre dentro da MESMA transacção do chamador -- por isso este método não tem
+     * {@code @Transactional} próprio. Se a instanciação falhar, a excepção propaga e o
+     * {@code @Transactional} de {@link #provisionTenant} rebobina tenant + utilizador ADMIN
+     * juntos; um job de instanciação posterior deixaria uma janela com tenant sem papéis.
+     *
+     * <p>(2) {@code new HashSet<>(molde.getPermissions())} é uma CÓPIA, nunca uma referência
+     * partilhada. É isto que torna o papel instanciado um snapshot -- e é a única razão pela
+     * qual editar um molde depois de um escritório já ter sido provisionado não muda a cópia
+     * desse escritório (MOLD-03). Partilhar a colecção desfaria essa garantia silenciosamente.
+     *
+     * <p>(3) {@code moldeId} é proveniência histórica, para mostrar a origem no ecrã de moldes e
+     * distinguir papel próprio de papel instanciado -- nunca uma referência de leitura viva
+     * (não há {@code @ManyToOne} nem navegação JPA de volta a {@link Role}).
+     *
+     * <p>(4) Esta instanciação nunca toca em {@code adminUser.roles}: o administrador inicial
+     * continua a receber o papel GLOBAL {@code ADMIN} (ver {@link #provisionTenant}). Trocar
+     * para o papel instanciado aqui criaria dois caminhos de resolução de autoridade em
+     * simultâneo -- tenants novos por papel de escritório, tenants antigos por papel global --
+     * precisamente o que a Phase 126 existe para eliminar de uma vez.
+     */
+    private void instanciarMoldes(UUID tenantId) {
+        List<Role> moldes = roleRepository.findAllByInstanciavelTrue();
+        for (Role molde : moldes) {
+            TenantRole tenantRole = TenantRole.builder()
+                    .tenantId(tenantId)
+                    .nome(molde.getNome())
+                    .moldeId(molde.getId())
+                    .sistema(true)
+                    .permissions(new HashSet<>(molde.getPermissions()))
+                    .build();
+            tenantRoleRepository.save(tenantRole);
+        }
     }
 
     private void validateRequest(SetupInitializeRequest request) {

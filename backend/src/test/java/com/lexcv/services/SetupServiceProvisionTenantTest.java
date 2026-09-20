@@ -9,6 +9,7 @@ import com.lexcv.models.User;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.SystemSettingRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,8 +50,9 @@ import static org.mockito.Mockito.when;
  * <p>Segue a mesma convenção de todos os testes de serviço deste codebase (ver
  * {@code NotificacaoServiceTest}): sem harness {@code @SpringBootTest}, colaboradores mockados
  * via Mockito, o serviço instanciado diretamente pelo construtor gerado por
- * {@code @RequiredArgsConstructor} (ordem exata dos 5 colaboradores documentada em
- * {@code SetupService}).
+ * {@code @RequiredArgsConstructor} (ordem exata dos 6 colaboradores documentada em
+ * {@code SetupService} -- {@code TenantRoleRepository} acrescentado no fim pela Phase 125
+ * Plan 02, para a instanciacao de moldes dentro de {@code provisionTenant}).
  */
 @ExtendWith(MockitoExtension.class)
 class SetupServiceProvisionTenantTest {
@@ -58,13 +62,21 @@ class SetupServiceProvisionTenantTest {
     @Mock private UserRepository userRepository;
     @Mock private RoleRepository roleRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private TenantRoleRepository tenantRoleRepository;
 
     private SetupService setupService;
 
     @BeforeEach
     void setUp() {
         setupService = new SetupService(
-                systemSettingRepository, tenantRepository, userRepository, roleRepository, passwordEncoder);
+                systemSettingRepository, tenantRepository, userRepository, roleRepository, passwordEncoder,
+                tenantRoleRepository);
+        // Phase 125 Plan 02: provisionTenant passa a ler findAllByInstanciavelTrue() para
+        // instanciar moldes. Um tenant provisionado num cenario sem moldes e valido e nao e o
+        // assunto deste ficheiro (ver SetupServiceInstanciacaoMoldesTest) -- lenient() porque
+        // nem todos os casos deste ficheiro chegam a invocar provisionTenant (ex.: falhas de
+        // validacao antes de qualquer leitura de moldes).
+        lenient().when(roleRepository.findAllByInstanciavelTrue()).thenReturn(List.of());
     }
 
     private SetupInitializeRequest requestValido(String clientName, String adminEmail, String adminPassword) {
