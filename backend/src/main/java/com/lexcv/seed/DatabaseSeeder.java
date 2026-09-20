@@ -433,7 +433,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                         permissionMap.put(entrada.chave(), perm);
                 }
 
-                upsertRolePermissions("ADMIN", permissionMap.values());
+                upsertRolePermissions("ADMIN", permissionMap.values(), true);
 
                 upsertRolePermissions("ASSISTENTE", Arrays.asList(
                                 permissionMap.get("clientes:view"),
@@ -442,7 +442,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 permissionMap.get("agenda:view"),
                                 permissionMap.get("documentos:view"),
                                 permissionMap.get("pareceres:view"),
-                                permissionMap.get("notificacoes:view")));
+                                permissionMap.get("notificacoes:view")), true);
 
                 upsertRolePermissions("TECNICO", Arrays.asList(
                                 permissionMap.get("clientes:view"),
@@ -452,7 +452,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 permissionMap.get("documentos:view"),
                                 permissionMap.get("financeiro:view"),
                                 permissionMap.get("pareceres:view"),
-                                permissionMap.get("notificacoes:view")));
+                                permissionMap.get("notificacoes:view")), true);
 
                 upsertRolePermissions("ADVOGADO", Arrays.asList(
                                 permissionMap.get("clientes:view"),
@@ -469,22 +469,38 @@ public class DatabaseSeeder implements CommandLineRunner {
                                 permissionMap.get("pareceres:view"),
                                 permissionMap.get("pareceres:create"),
                                 permissionMap.get("pareceres:edit"),
-                                permissionMap.get("notificacoes:view")));
+                                permissionMap.get("notificacoes:view")), true);
 
                 // Phase 119 (PROV-01): papel de plataforma com coleccao de permissoes
                 // deliberadamente VAZIA. Opera exclusivamente atraves do seu proprio endpoint
                 // gated por @PreAuthorize("hasRole('PLATAFORMA_ADMIN')") (Plan 04), nunca atraves
                 // do sistema RBAC scoped por tenant -- atribuir-lhe qualquer clientes:*/processos:*/
                 // rbac:manage/users:manage contradiria a decisao bloqueada em CONTEXT.md.
-                upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList());
+                // Phase 125 (MOLD-01): este `false` e a guarda de nivel de dados que impede o
+                // papel de plataforma de se tornar instanciavel, editavel como molde ou
+                // atribuivel a partir de superficie de escritorio -- continuacao das guardas das
+                // Phases 119 e 121, nao uma reinvencao.
+                upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList(), false);
         }
 
-        private void upsertRolePermissions(String roleName, Collection<Permission> permissions) {
+        // Phase 125 (MOLD-01): terceiro argumento `instanciavel` faz este upsert convergir a
+        // marca de molde em cada arranque, exactamente como seedRbac() ja poe
+        // reservadaPlataforma = false nas 20 entradas do catalogo em cada arranque (precedente
+        // da Phase 124) -- e por isso que o script de migracao 126 nao precisa de nenhum UPDATE
+        // de backfill. Tolera getInstanciavel() == null (coluna acabada de ser criada numa base
+        // de dados existente) tratando-o como divergente do valor declarado.
+        private void upsertRolePermissions(String roleName, Collection<Permission> permissions, boolean instanciavel) {
                 Role role = roleRepository.findByNome(roleName)
-                                .orElseGet(() -> roleRepository.save(Role.builder().nome(roleName).build()));
+                                .orElseGet(() -> roleRepository.save(
+                                                Role.builder().nome(roleName).instanciavel(instanciavel).build()));
 
                 boolean changed = role.getPermissions().addAll(permissions);
-                if (changed) {
+                boolean instanciavelDivergente = role.getInstanciavel() == null
+                                || !role.getInstanciavel().equals(Boolean.valueOf(instanciavel));
+                if (instanciavelDivergente) {
+                        role.setInstanciavel(instanciavel);
+                }
+                if (changed || instanciavelDivergente) {
                         roleRepository.save(role);
                 }
         }
