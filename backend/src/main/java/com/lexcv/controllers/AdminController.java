@@ -12,6 +12,7 @@ import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminController {
 
     // Phase 119 (Plan 03): "PLATAFORMA_ADMIN" e um papel reservado, seedado incondicionalmente a
@@ -371,25 +373,24 @@ public class AdminController {
             rolePermissions.put(role.getNome(), perms);
         }
 
-        List<RbacResponse.PermissionDefDto> systemPermissions = Arrays.asList(
-                new RbacResponse.PermissionDefDto("clientes:view", "Visualizar Clientes", "Ver lista e detalhes de clientes", "Clientes"),
-                new RbacResponse.PermissionDefDto("clientes:edit", "Gerir Clientes", "Criar, editar e apagar clientes", "Clientes"),
-                new RbacResponse.PermissionDefDto("processos:view", "Visualizar Processos", "Ver lista e detalhes de processos judiciais", "Processos"),
-                new RbacResponse.PermissionDefDto("processos:edit", "Gerir Processos", "Criar, editar, alterar fases e apagar processos", "Processos"),
-                new RbacResponse.PermissionDefDto("agenda:view", "Visualizar Agenda", "Ver calendário e prazos/eventos", "Agenda"),
-                new RbacResponse.PermissionDefDto("agenda:edit", "Gerir Agenda", "Criar, editar e concluir eventos/prazos", "Agenda"),
-                new RbacResponse.PermissionDefDto("documentos:view", "Visualizar Documentos", "Ver e descarregar documentos", "Documentos"),
-                new RbacResponse.PermissionDefDto("documentos:edit", "Gerir Documentos", "Carregar e apagar documentos", "Documentos"),
-                new RbacResponse.PermissionDefDto("financeiro:view", "Visualizar Financeiro", "Ver honorários, pagamentos e conta corrente", "Financeiro"),
-                new RbacResponse.PermissionDefDto("financeiro:edit", "Gerir Financeiro", "Lançar honorários, pagamentos e gerir conta corrente", "Financeiro"),
-                new RbacResponse.PermissionDefDto("pareceres:view", "Visualizar Pareceres", "Ver lista, detalhe e pesquisa de pareceres jurídicos", "Pareceres"),
-                new RbacResponse.PermissionDefDto("pareceres:create", "Criar Solicitações", "Criar novas solicitações de parecer jurídico", "Pareceres"),
-                new RbacResponse.PermissionDefDto("pareceres:edit", "Elaborar e Entregar Pareceres", "Criar versões, elaborar conteúdo e entregar pareceres", "Pareceres"),
-                new RbacResponse.PermissionDefDto("pareceres:manage", "Aprovar Pareceres", "Aprovação interna de pareceres jurídicos", "Pareceres"),
-                new RbacResponse.PermissionDefDto("notificacoes:view", "Visualizar Notificações", "Ver e marcar como lidas as notificações próprias", "Notificações"),
-                new RbacResponse.PermissionDefDto("rbac:manage", "Gerir Permissões (RBAC)", "Alterar regras de acesso globais por função", "Administração"),
-                new RbacResponse.PermissionDefDto("users:manage", "Gerir Utilizadores", "Criar, ativar/desativar, e configurar utilizadores", "Administração")
-        );
+        // Phase 124 (Plan 02): a lista hardcoded de 17 entradas foi removida --
+        // DatabaseSeeder.seedRbac() e agora a fonte de verdade do catalogo (CATL-01). O filtro
+        // de reservadas a plataforma fica na query derivada do repositorio abaixo, de proposito,
+        // nao aqui (CATL-03). A ordenacao por "ordem" existe porque o RbacTab do ecra de
+        // Definicoes deriva a ordem dos modulos da ordem de chegada deste array.
+        List<Permission> permissoesCatalogo = permissionRepository.findAllByReservadaPlataformaFalse();
+        List<RbacResponse.PermissionDefDto> systemPermissions = permissoesCatalogo.stream()
+                .filter(p -> {
+                    boolean temRotulo = p.getRotulo() != null && !p.getRotulo().isBlank();
+                    if (!temRotulo) {
+                        log.warn("RBAC_CATALOGO: permissão '{}' sem rótulo, excluída de systemPermissions", p.getNome());
+                    }
+                    return temRotulo;
+                })
+                .sorted(Comparator.comparing(Permission::getOrdem, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Permission::getNome))
+                .map(this::toPermissionDef)
+                .collect(Collectors.toList());
 
         RbacResponse response = RbacResponse.builder()
                 .rolePermissions(rolePermissions)
@@ -397,6 +398,19 @@ public class AdminController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    // Phase 124 (Plan 02): mapper entidade -> DTO para getRbac() (analog: PlatformAdminController
+    // .toSummary). key <- Permission.nome (chave tecnica), nome <- Permission.rotulo (rotulo
+    // legivel) -- os dois campos chamam-se "nome" em sitios diferentes e trocar a atribuicao
+    // faria a matriz RBAC mostrar a chave tecnica como rotulo.
+    private RbacResponse.PermissionDefDto toPermissionDef(Permission p) {
+        return RbacResponse.PermissionDefDto.builder()
+                .key(p.getNome())
+                .nome(p.getRotulo())
+                .descricao(p.getDescricao())
+                .modulo(p.getModulo())
+                .build();
     }
 
     // ISOL-03 (Phase 121): so este handler ganha um gate de metodo mais especifico -- Role e
