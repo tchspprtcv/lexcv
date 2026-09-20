@@ -172,6 +172,11 @@ class DatabaseSeederCatalogoPermissoesTest {
         assertEquals(Integer.valueOf(7), clientesViewExistente.getId());
         assertEquals("clientes:view", clientesViewExistente.getNome());
         assertEquals("Visualizar Clientes", clientesViewExistente.getRotulo());
+        // IN-01 (124-REVIEW.md): existente.setReservadaPlataforma(false) (linha 395 de
+        // DatabaseSeeder.java) so estava coberto no caminho de criacao -- esta era a asserção
+        // em falta no caminho de actualizacao, onde o comportamento (um-reservar uma permissao
+        // manualmente reservada no proximo arranque) mais importa.
+        assertEquals(Boolean.FALSE, clientesViewExistente.getReservadaPlataforma());
     }
 
     @Test
