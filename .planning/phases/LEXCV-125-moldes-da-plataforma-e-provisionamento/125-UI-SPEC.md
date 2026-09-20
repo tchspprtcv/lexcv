@@ -29,7 +29,7 @@ created: 2026-09-20
 |----------|-------|
 | Tool | shadcn (already initialized — `components.json` present) |
 | Preset | style: `radix-vega`, baseColor: `neutral`, cssVariables: true, prefix: none |
-| Component library | radix-ui primitives (`AlertDialog`, `Card`, `Button`, `Badge`, `Tooltip`, `Input`, `Label`) — this phase introduces **zero new `components/ui/` primitives**; the permission×molde matrix and its checkboxes are hand-rolled `<table>`/`<input type="checkbox">`, exactly matching the precedent already shipped in `RbacTab` (`web/src/app/(dashboard)/settings/page.tsx:919-990`) |
+| Component library | radix-ui primitives (`AlertDialog`, `Card`, `Button`, `Badge`, `Tooltip`, `Input`, `Label`, `Empty`) — this phase introduces **zero new `components/ui/` primitives**; the permission×molde matrix and its checkboxes are hand-rolled `<table>`/`<input type="checkbox">`, exactly matching the precedent already shipped in `RbacTab` (`web/src/app/(dashboard)/settings/page.tsx:919-990`), with the accessibility corrections specified in Section 5 below |
 | Icon library | lucide-react |
 | Font | `--font-sans: var(--font-geist-sans)` (Geist Sans, project-wide default — no override for this phase) |
 
@@ -51,7 +51,7 @@ Declared values (must be multiples of 4), matching the scale already in use acro
 | 2xl | 48px | Not used in this phase |
 | 3xl | 64px | Not used in this phase |
 
-Exceptions: `p-3` (12px) is used pervasively for table cell padding and compact list rows, matching `RbacTab`'s matrix (`<td className="p-3">`) and `relatorio/columns.tsx`. Carried over unchanged — do not invent a different cell padding for the moldes matrix, it must look cell-for-cell identical to `RbacTab`.
+Exceptions: `p-3` (12px) is used pervasively for table cell padding and compact list rows, matching `RbacTab`'s matrix (`<td className="p-3">`) and `relatorio/columns.tsx`. Carried over unchanged — do not invent a different cell padding for the moldes matrix, it must look cell-for-cell identical to `RbacTab`. This value sits outside the seven named tokens above but is still grid-aligned (a multiple of 4) and precedent-matched; see the Visual-QA Watch Items section — it is a declared exception, not a defect to "fix" into 16px during implementation.
 
 ---
 
@@ -63,8 +63,14 @@ Exceptions: `p-3` (12px) is used pervasively for table cell padding and compact 
 | Label / micro (badges, module headers, table headers) | 12px (`text-xs`), with a documented 10-11px exception for inline badges (`text-[10px]`/`text-[11px]`, matching existing `Badge` usage in `columns.tsx`) | 600 (semibold) | 1.2 |
 | Card/section heading | 20px (`text-xl`) | 600 (semibold) | 1.2 |
 | Page title | 30px (`text-3xl`) | 700 (bold) | 1.2 |
+| Empty-state title (reused `EmptyTitle` primitive) | 18px (`text-lg`) | 500 (medium) | 1.2 |
 
-Only two weights are used: 400 (body/descriptions) and 600 (headings, labels, emphasis). Never introduce a third weight (e.g. medium 500) beyond the one pre-existing exception already in the codebase (`file:font-medium` on the native file input in `criar-tenant-panel.tsx`, out of scope for this phase since there is no file upload here).
+This phase's own hand-authored markup (banner, confirmation dialog, create-panel labels/helper text, matrix headers) uses exactly two weights — 400 and 600 — and that discipline holds for everything newly written here. It does **not** hold project-wide, and this contract should not claim it does: weight 500 already exists in the codebase and this screen deliberately reuses two components that carry it, rather than overriding them to force a stricter scale that isn't actually the project's own convention:
+
+- `RbacTab`'s permission-name cell (`settings/page.tsx:951`, `<div className="font-medium ...">`) is inherited verbatim into the moldes matrix's row-label cell — same reasoning as the rest of Section 5's "structurally identical to `RbacTab`" instruction.
+- `Empty`'s `EmptyTitle` (`components/ui/empty.tsx`, `font-heading text-lg font-medium tracking-tight`) is used as-is for the defensive empty state in Section 3.
+
+Both are accepted in the same register as the pre-existing `file:font-medium` exception already present on the native file input in `criar-tenant-panel.tsx` (out of scope here, cited only as precedent that this codebase already tolerates a documented 500-weight exception where a shared primitive owns the styling). **Do not** override `RbacTab`'s cell or `EmptyTitle` to force everything onto the two-weight scale — that would mean fighting the project's own components for the sake of this document, which is exactly the failure mode this note exists to prevent.
 
 ---
 
@@ -136,7 +142,7 @@ Why a matrix, not per-row edit dialogs: CONTEXT.md locks this explicitly ("A edi
 **Loading / error states** (identical recipe to `RbacTab`, lines 774-803):
 - Loading: centered `Loader2` spinner, `h-48` container.
 - Error: centered `AlertCircle` (red) + `"Não foi possível carregar os moldes de papel."` + outline "Tentar novamente" button calling `refetch()`.
-- Empty (defensive — realistically never hit since 4 moldes are always seeded, but declared per contract): centered `Empty`/`EmptyHeader`/`EmptyTitle`/`EmptyDescription` primitives (`components/ui/empty.tsx`, already in the project) — title "Nenhum molde definido", description "Crie o primeiro molde para que os próximos escritórios provisionados nasçam com papéis prontos a atribuir.", with a "Criar Molde" button inside `EmptyContent`.
+- Empty (defensive — realistically never hit since 4 moldes are always seeded, but declared per contract): centered `Empty`/`EmptyHeader`/`EmptyTitle`/`EmptyDescription` primitives (`components/ui/empty.tsx`, already in the project, used unmodified including its 18px/500-weight `EmptyTitle` — see Typography) — title "Nenhum molde definido", description "Crie o primeiro molde para que os próximos escritórios provisionados nasçam com papéis prontos a atribuir.", with a "Criar Molde" button inside `EmptyContent`.
 
 ### 4. Non-propagation banner (the single most important element)
 
@@ -167,7 +173,7 @@ Structurally identical to `RbacTab` (`settings/page.tsx:919-990`): `<table>` wit
 - **Column header carries the instantiation count**, ambient and always visible (this is what lets the operator "see the scope of what is NOT being changed" without opening the save dialog):
 
 ```tsx
-<th key={molde.id} className="p-3 font-bold text-center text-slate-700 dark:text-slate-300 text-xs tracking-wider">
+<th key={molde.id} scope="col" className="p-3 font-bold text-center text-slate-700 dark:text-slate-300 text-xs tracking-wider">
   <div className="flex flex-col items-center gap-1">
     <span>{molde.nome}</span>
     <Badge variant={molde.escritoriosInstanciados > 0 ? "amber" : "gray"} className="text-[10px] font-semibold">
@@ -182,6 +188,13 @@ Structurally identical to `RbacTab` (`settings/page.tsx:919-990`): `<table>` wit
 Data contract assumption this UI-SPEC imposes on the API: the moldes list payload must carry a per-molde instantiated-office count (e.g. `escritoriosInstanciados: number`, derived from `t_tenant_role` rows whose `molde_id` points at this molde). This is the load-bearing number for the entire "impossible to misread" requirement — flag it to the planner as a required field, not an optional nicety.
 
 - Checkbox cells: identical markup/classes to `RbacTab` (`h-4 w-4 text-blue-600 ... rounded`), minus the `isDisabled`/`isAdminRow` branching described above.
+
+**Accessibility contract for this matrix.** This phase is authoring a *new* matrix rather than copying `RbacTab`'s own component — `RbacTab` itself has no `scope` on its `<th>` elements and wraps each checkbox in a bare `<label>` with no visible text and no `aria-label`, so no accessible name ties any given checkbox to its permission or its molde. That gap is not carried forward here:
+
+- Every column header `<th>` gets `scope="col"` (shown in the snippet above).
+- The row's leading cell — today a `<td>` in `RbacTab` holding the permission's `rotulo`/`descricao` — is promoted to `<th scope="row">` in this matrix. This is the one structural deviation from "identical to `RbacTab`": table semantics require the row header to be a `<th>`, not a `<td>`, for `scope="row"` to be meaningful.
+- Every checkbox carries an explicit accessible name: `aria-label={`${permissao.rotulo} — ${molde.nome}`}` (e.g. `"Ver Clientes — ADVOGADO"`) placed on the `<input type="checkbox">` itself. The surrounding `<label>` padding wrapper (kept, for the larger click target `RbacTab` already uses) has no visible text either way, so the `aria-label` on the input is the only accessible name and must not be omitted.
+- Keyboard traversal: no custom roving-tabindex/grid-navigation widget is introduced — that would be scope creep beyond MOLD-02/03. Checkboxes stay in the browser's native Tab order (one stop per `<input>`), and Space toggles the focused checkbox per native checkbox behavior, exactly as today. The one addition beyond native behavior is that the `scope` attributes above let a screen reader announce row and column context ("permission row, molde column") as focus moves, giving keyboard/screen-reader users the same row×column orientation sighted users get for free from the header layout.
 
 ### 6. Save flow — confirmation is mandatory, not optional
 
@@ -258,7 +271,10 @@ Card
        matching the existing single-column permission checklist already
        shipped in `settings/page.tsx:697-724` (the "Permissões
        Customizadas" picker), not the matrix's multi-column table — there
-       is only one molde being defined here.
+       is only one molde being defined here. Each checkbox in this list
+       also carries `aria-label={permissao.rotulo}` for the same reason
+       given in Section 5 — the visible row text is not itself inside a
+       `<label for>` association.
 
   CardFooter (border-t, justify-end, gap-3)
     [ Cancelar ]  (outline)
@@ -303,7 +319,14 @@ On success: `toast.success('Molde "{NOME}" criado com sucesso. Fica disponível 
 | shadcn official | none — all primitives (`Card`, `Button`, `Badge`, `AlertDialog`, `Input`, `Label`, `Empty`) already exist in `web/src/components/ui/` from prior phases | not required |
 | third-party | none declared | not applicable |
 
-No new dependencies, no new shadcn registry/skill packages. The permission×molde matrix and its checkboxes are hand-rolled markup (`<table>`, `<input type="checkbox">`), matching the existing `RbacTab` precedent exactly rather than introducing a `Table`/`Checkbox` shadcn primitive that isn't already the established pattern for this exact UI shape.
+No new dependencies, no new shadcn registry/skill packages. The permission×molde matrix and its checkboxes are hand-rolled markup (`<table>`, `<input type="checkbox">`), matching the existing `RbacTab` precedent for visual shape while correcting its table-semantics/accessible-name gaps as specified in Section 5, rather than introducing a `Table`/`Checkbox` shadcn primitive that isn't already the established pattern for this exact UI shape.
+
+---
+
+## Visual-QA Watch Items (non-blocking — flag for implementer, not a contract defect)
+
+1. **Two interactive fill colors (amber + blue) on one screen.** The amber "Confirmar e Gravar" button sits alongside blue primary actions ("Guardar Alterações", "Criar Molde"). This is deliberate (see Discretion Note #2 below) — amber marks the one save that needs a different mental model, not routine equal-weight blue. During implementation review, confirm it reads as "the same save action, carrying extra caution" rather than "a second, competing primary action" — in particular, the amber button must only ever appear inside the confirmation `AlertDialog`, never in the main `CardHeader` row alongside the blue trigger that opens it.
+2. **`p-3` (12px) spacing exception.** Falls outside the seven named spacing tokens but is grid-aligned (multiple of 4) and matches existing table-cell precedent (`RbacTab`, `relatorio/columns.tsx`) — see the Spacing Scale exceptions note. Kept intentionally; do not "fix" it into 16px cell padding during implementation, that would make this matrix visually inconsistent with `RbacTab` for no reason.
 
 ---
 
@@ -312,7 +335,7 @@ No new dependencies, no new shadcn registry/skill packages. The permission×mold
 These were not answered by CONTEXT.md/REQUIREMENTS.md and were decided here, consistent with the existing console:
 
 1. **Entry button placement and icon** — chosen "Gerir Moldes" with `LayoutTemplate`, positioned before "Ver Relatório". Reason: read/manage actions precede the primary create action in the existing header, and moldes management is a configuration surface, closer in weight to reporting than to tenant creation.
-2. **Confirm-button color (amber, not blue or red)** — reasoned above: not destructive (red), not routine (blue) — a third, deliberately distinct "caution" semantic, reusing the amber recipe already established elsewhere in this codebase (`processos/novo/page.tsx`) rather than inventing a new hex.
+2. **Confirm-button color (amber, not blue or red)** — reasoned above: not destructive (red), not routine (blue) — a third, deliberately distinct "caution" semantic, reusing the amber recipe already established elsewhere in this codebase (`processos/novo/page.tsx`) rather than inventing a new hex. See Visual-QA Watch Item #1 for the implementer-facing check that this stays legible as a single-action variant, not a second primary.
 3. **New-molde name casing convention (forced uppercase)** — inferred from the four existing seeded molde names all being uppercase; enforced via a submit-time transform (same technique as the existing `adminEmail.toLowerCase()` convention), not by disabling lowercase input, to keep the field feeling ordinary to type into.
 4. **Per-molde instantiation count is ambient (column header), not just inside the confirmation dialog** — the design brief asks the operator to "see the scope of what is NOT being changed"; putting it only inside a modal that appears at save time would mean the operator only learns the scope *after* deciding to change something. Showing it ambiently, on every view of the matrix, lets the number inform the decision, not just the confirmation of an already-made decision.
 5. **No search/filter input on this page** — unlike `/plataforma` and `/plataforma/relatorio`, which search a tenant list that can grow unboundedly, the moldes list is small and grows slowly (a handful of moldes per platform lifetime). A search box would be visual noise with no reuse case yet.
