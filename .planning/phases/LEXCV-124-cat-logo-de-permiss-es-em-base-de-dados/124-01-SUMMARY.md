@@ -117,3 +117,7 @@ None — não há configuração de serviço externo. Registo operacional para a
 ---
 *Phase: 124-cat-logo-de-permiss-es-em-base-de-dados*
 *Completed: 2026-09-20*
+
+## Self-Check: PASSED
+
+All 7 claimed files found on disk (Permission.java, migration script, README.md, DatabaseSeeder.java, UserPrincipal.java, DatabaseSeederCatalogoPermissoesTest.java, this SUMMARY.md). All 4 claimed commit hashes (`d9a2b448`, `7ae33070`, `2c2f3d2e`, `b3927f70`) found in `git log --oneline --all`.
