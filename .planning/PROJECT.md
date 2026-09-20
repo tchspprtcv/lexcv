@@ -8,6 +8,25 @@ ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde, alinh
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
+## Current Milestone: v2.17 RBAC por Escritório
+
+**Goal:** Cada escritório passa a gerir os seus próprios papéis — instanciados como cópia de moldes definidos pela plataforma — sem que nenhuma alteração sua toque nos papéis de outro tenant.
+
+**Target features:**
+- Papéis por escritório (`t_tenant_role` + `t_tenant_role_permission`), com os moldes da plataforma copiados no acto da instanciação (snapshot — alterações posteriores ao molde não propagam)
+- Migração de `t_user_role` para apontar a papéis do tenant, por script manual em `backend/migrations/`
+- `GET/PUT /admin/rbac` tenant-scoped sob `hasAuthority('rbac:manage')`, mais CRUD de papéis próprios do escritório
+- Catálogo de permissões movido do código (`AdminController.getRbac`) para `t_permission`, com rótulo, descrição e categoria semeados no arranque
+- Consola de moldes em `/plataforma` para o `PLATAFORMA_ADMIN`, a substituir a matriz global editável de hoje
+- Auditoria de atribuições — quem alterou que papel, quem atribuiu o quê a quem — com ecrã de consulta
+- Ecrã de Definições (RBAC) deixa de mostrar o badge "Gerido pela Plataforma" e volta a ser editável, agora sobre dados do próprio escritório
+
+**Key context:**
+- As guardas de `PAPEL_PLATAFORMA` das Phases 119/121 têm de ser transportadas para todos os caminhos novos — foram escritas contra uma via real de auto-escalonamento de um `ADMIN` de tenant, não por precaução teórica
+- `t_user_permission` (overrides aditivos por utilizador) mantém-se exactamente como está
+- Sem tecto de permissões por plano nesta versão: o escritório compõe com o catálogo todo menos as reservadas. A ligação a `TenantPlano` fica como porta aberta, não como dívida
+- Sem Flyway no projeto — a migração é script manual mais o arranque em duas fases do `DEPLOYMENT.md`
+
 ## Requirements
 
 ### Validated
@@ -103,7 +122,14 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ### Active
 
-(Nenhum ainda — definir a próxima milestone via `/gsd:new-milestone`)
+<!-- v2.17 — RBAC por Escritório. REQ-IDs em .planning/REQUIREMENTS.md -->
+
+- [ ] Escritório tem papéis próprios, instanciados como cópia (snapshot) dos moldes da plataforma, sem partilhar linhas com outro tenant
+- [ ] Administrador de escritório cria, renomeia, edita e apaga papéis do seu escritório, e atribui-os aos seus utilizadores
+- [ ] `PUT /admin/rbac` escreve apenas papéis do tenant do chamador, sob `hasAuthority('rbac:manage')`
+- [ ] Catálogo de permissões vive em `t_permission` (rótulo, descrição, categoria), não embutido no código do controller
+- [ ] `PLATAFORMA_ADMIN` gere os moldes e o catálogo por consola própria em `/plataforma`
+- [ ] Toda a alteração de papel e de atribuição fica registada e é consultável
 
 ### Out of Scope
 
@@ -299,4 +325,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-30 after v2.16 milestone*
+*Last updated: 2026-09-20 after starting v2.17 milestone*

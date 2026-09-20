@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.16
-milestone_name: Distribuição Multi-Tenant e Faturação por Utilizadores
-status: Awaiting next milestone
-stopped_at: Completed 123-02-PLAN.md
-last_updated: "2026-07-30T15:53:59.555Z"
-last_activity: 2026-07-30 — Milestone v2.16 completed and archived
+milestone: v2.17
+milestone_name: RBAC por Escritório
+status: planning
+last_updated: "2026-09-20T18:51:30.391Z"
+last_activity: 2026-09-20
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 27
-  completed_plans: 27
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-28)
 
 ## Current Position
 
-Phase: Milestone v2.16 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-30 — Milestone v2.16 completed and archived
+Status: Defining requirements
+Last activity: 2026-09-20 — Milestone v2.17 started
 
 ## Performance Metrics
 
