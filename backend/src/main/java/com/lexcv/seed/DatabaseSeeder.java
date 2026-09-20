@@ -308,24 +308,103 @@ public class DatabaseSeeder implements CommandLineRunner {
                 System.out.println("✅ ALCv database successfully seeded with default fixtures.");
         }
 
-        private void seedRbac() {
-                List<String> permKeys = Arrays.asList(
-                                "clientes:view", "clientes:edit",
-                                "processos:view", "processos:edit",
-                                "processos:create", "processos:manage",
-                                "agenda:view", "agenda:edit",
-                                "documentos:view", "documentos:edit",
-                                "financeiro:view", "financeiro:edit", "financeiro:manage",
-                                "rbac:manage", "users:manage",
-                                "pareceres:view", "pareceres:create", "pareceres:edit", "pareceres:manage",
-                                "notificacoes:view");
+        /**
+         * Entrada declarativa do catalogo de permissoes (Phase 124, CATL-01): chave tecnica +
+         * as quatro colunas descritivas de {@link Permission} que este catalogo passa a ser a
+         * fonte de verdade de. {@code ordem} e atribuida em multiplos de 10, por ordem de
+         * declaracao de {@link #CATALOGO_PERMISSOES}, para deixar espaco a insercoes futuras
+         * sem renumerar as existentes.
+         */
+        private record CatalogoEntry(String chave, String rotulo, String descricao, String modulo, int ordem) {
+        }
 
+        // Phase 124 (CATL-01): fonte de verdade do catalogo de permissoes -- a lista Java
+        // equivalente em AdminController.getRbac() (17 entradas, sem processos:create/
+        // processos:manage/financeiro:manage) e apagada pelo Plan 02, que passa a ler
+        // permissionRepository.findAll() em vez desta constante. A ordem de declaracao
+        // reproduz exactamente o agrupamento por modulo que essa lista hoje produz: Clientes,
+        // Processos, Agenda, Documentos, Financeiro, Pareceres, Notificacoes, Administracao.
+        //
+        // Todas as 20 entradas nascem com reservadaPlataforma = false: a reserva do papel
+        // PLATAFORMA_ADMIN (Phase 119, logo abaixo) e por papel -- colecao de permissoes
+        // deliberadamente vazia -- nao por permissao. Nenhuma destas 20 permissoes e hoje
+        // reservada; o mecanismo de marca por permissao existe para as fases 125/127.
+        //
+        // O refresh de campos descritivos numa linha existente e seguro porque `nome` (a
+        // coluna identidade, unica, referenciada por t_role_permission/t_user_permission)
+        // nunca e escrito num upsert -- so as 4 colunas descritivas + reservadaPlataforma sao
+        // actualizadas na instancia devolvida por findByNome, nunca a chave tecnica nem o id.
+        //
+        // As 3 chaves antes invisiveis na matriz RBAC do frontend (processos:create,
+        // processos:manage, financeiro:manage) passam a ser catalogadas e oferecidas: rotulos
+        // e descricoes derivados dos @PreAuthorize reais de ResourceController (ver
+        // 124-CONTEXT.md, secao <specifics>).
+        private static final List<CatalogoEntry> CATALOGO_PERMISSOES = List.of(
+                        new CatalogoEntry("clientes:view", "Visualizar Clientes", "Ver lista e detalhes de clientes",
+                                        "Clientes", 10),
+                        new CatalogoEntry("clientes:edit", "Gerir Clientes", "Criar, editar e apagar clientes",
+                                        "Clientes", 20),
+                        new CatalogoEntry("processos:view", "Visualizar Processos",
+                                        "Ver lista e detalhes de processos judiciais", "Processos", 30),
+                        new CatalogoEntry("processos:edit", "Gerir Processos",
+                                        "Criar, editar, alterar fases e apagar processos", "Processos", 40),
+                        new CatalogoEntry("processos:create", "Iniciar Processos",
+                                        "Registar novos processos em triagem e correr a verificação de conflitos",
+                                        "Processos", 50),
+                        new CatalogoEntry("processos:manage", "Administrar Processos",
+                                        "Formalizar, suspender, encerrar e reabrir processos, reatribuir responsável e consultar o registo de auditoria",
+                                        "Processos", 60),
+                        new CatalogoEntry("agenda:view", "Visualizar Agenda", "Ver calendário e prazos/eventos",
+                                        "Agenda", 70),
+                        new CatalogoEntry("agenda:edit", "Gerir Agenda", "Criar, editar e concluir eventos/prazos",
+                                        "Agenda", 80),
+                        new CatalogoEntry("documentos:view", "Visualizar Documentos", "Ver e descarregar documentos",
+                                        "Documentos", 90),
+                        new CatalogoEntry("documentos:edit", "Gerir Documentos", "Carregar e apagar documentos",
+                                        "Documentos", 100),
+                        new CatalogoEntry("financeiro:view", "Visualizar Financeiro",
+                                        "Ver honorários, pagamentos e conta corrente", "Financeiro", 110),
+                        new CatalogoEntry("financeiro:edit", "Gerir Financeiro",
+                                        "Lançar honorários, pagamentos e gerir conta corrente", "Financeiro", 120),
+                        new CatalogoEntry("financeiro:manage", "Eliminar Lançamentos Financeiros",
+                                        "Eliminar honorários e pagamentos já registados", "Financeiro", 130),
+                        new CatalogoEntry("pareceres:view", "Visualizar Pareceres",
+                                        "Ver lista, detalhe e pesquisa de pareceres jurídicos", "Pareceres", 140),
+                        new CatalogoEntry("pareceres:create", "Criar Solicitações",
+                                        "Criar novas solicitações de parecer jurídico", "Pareceres", 150),
+                        new CatalogoEntry("pareceres:edit", "Elaborar e Entregar Pareceres",
+                                        "Criar versões, elaborar conteúdo e entregar pareceres", "Pareceres", 160),
+                        new CatalogoEntry("pareceres:manage", "Aprovar Pareceres",
+                                        "Aprovação interna de pareceres jurídicos", "Pareceres", 170),
+                        new CatalogoEntry("notificacoes:view", "Visualizar Notificações",
+                                        "Ver e marcar como lidas as notificações próprias", "Notificações", 180),
+                        new CatalogoEntry("rbac:manage", "Gerir Permissões (RBAC)",
+                                        "Alterar regras de acesso globais por função", "Administração", 190),
+                        new CatalogoEntry("users:manage", "Gerir Utilizadores",
+                                        "Criar, ativar/desativar, e configurar utilizadores", "Administração", 200));
+
+        private void seedRbac() {
                 Map<String, Permission> permissionMap = new HashMap<>();
-                for (String key : permKeys) {
-                        Permission perm = permissionRepository.findByNome(key)
-                                        .orElseGet(() -> permissionRepository
-                                                        .save(Permission.builder().nome(key).build()));
-                        permissionMap.put(key, perm);
+                for (CatalogoEntry entrada : CATALOGO_PERMISSOES) {
+                        Permission perm = permissionRepository.findByNome(entrada.chave())
+                                        .map(existente -> {
+                                                existente.setRotulo(entrada.rotulo());
+                                                existente.setDescricao(entrada.descricao());
+                                                existente.setModulo(entrada.modulo());
+                                                existente.setOrdem(entrada.ordem());
+                                                existente.setReservadaPlataforma(false);
+                                                return existente;
+                                        })
+                                        .orElseGet(() -> Permission.builder()
+                                                        .nome(entrada.chave())
+                                                        .rotulo(entrada.rotulo())
+                                                        .descricao(entrada.descricao())
+                                                        .modulo(entrada.modulo())
+                                                        .ordem(entrada.ordem())
+                                                        .reservadaPlataforma(false)
+                                                        .build());
+                        perm = permissionRepository.save(perm);
+                        permissionMap.put(entrada.chave(), perm);
                 }
 
                 upsertRolePermissions("ADMIN", permissionMap.values());

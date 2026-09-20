@@ -32,7 +32,7 @@ public class UserPrincipal implements UserDetails {
                 .collect(Collectors.toSet());
         
         if (roles.contains("ADMIN")) {
-            // Keep in sync with DatabaseSeeder.seedRbac()'s permKeys list.
+            // Keep in sync with DatabaseSeeder.CATALOGO_PERMISSOES (Phase 124).
             permissions.addAll(java.util.Arrays.asList(
                     "clientes:view", "clientes:edit",
                     "processos:view", "processos:edit",
