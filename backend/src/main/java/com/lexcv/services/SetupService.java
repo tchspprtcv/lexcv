@@ -33,6 +33,14 @@ public class SetupService {
     private static final Pattern DATA_URL_IMAGE_PATTERN = Pattern.compile("^data:image/[a-zA-Z0-9.+-]+;base64,.+$");
     private static final int MAX_LOGO_LENGTH = 5_000_000;
 
+    // Phase 125 Plan 02 (MOLD-01): defesa em profundidade sobre o filtro SQL de
+    // findAllByInstanciavelTrue(). A exclusão de PLATAFORMA_ADMIN já é garantida ao nível de
+    // SQL (Role.instanciavel = false, Phase 125 Plan 01), mas uma regressão nesse filtro (ex.:
+    // uma migração futura que reponha a coluna a true por engano) não deve conseguir instanciar
+    // o papel de plataforma como se fosse um molde de escritório. Guarda por nome literal, o
+    // mesmo idioma de TENANT_RESERVADO em PlatformAdminController.
+    private static final String NOME_PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
+
     private final SystemSettingRepository systemSettingRepository;
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
@@ -166,6 +174,9 @@ public class SetupService {
     private void instanciarMoldes(UUID tenantId) {
         List<Role> moldes = roleRepository.findAllByInstanciavelTrue();
         for (Role molde : moldes) {
+            if (NOME_PAPEL_PLATAFORMA.equals(molde.getNome())) {
+                continue;
+            }
             TenantRole tenantRole = TenantRole.builder()
                     .tenantId(tenantId)
                     .nome(molde.getNome())
