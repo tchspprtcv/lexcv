@@ -71,40 +71,38 @@ Reconhecidos, fora deste marco.
 
 ## Traceability
 
-Preenchido durante a criação do roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAPEL-01 | — | Pending |
-| PAPEL-02 | — | Pending |
-| PAPEL-03 | — | Pending |
-| PAPEL-04 | — | Pending |
-| PAPEL-05 | — | Pending |
-| PAPEL-06 | — | Pending |
-| PAPEL-07 | — | Pending |
-| PAPEL-08 | — | Pending |
-| PAPEL-09 | — | Pending |
-| MOLD-01 | — | Pending |
-| MOLD-02 | — | Pending |
-| MOLD-03 | — | Pending |
-| MOLD-04 | — | Pending |
-| CATL-01 | — | Pending |
-| CATL-02 | — | Pending |
-| CATL-03 | — | Pending |
-| CATL-04 | — | Pending |
-| MIGR-01 | — | Pending |
-| MIGR-02 | — | Pending |
-| MIGR-03 | — | Pending |
-| AUDT-01 | — | Pending |
-| AUDT-02 | — | Pending |
-| AUDT-03 | — | Pending |
-| AUDT-04 | — | Pending |
+| PAPEL-01 | Phase 127 | Pending |
+| PAPEL-02 | Phase 127 | Pending |
+| PAPEL-03 | Phase 127 | Pending |
+| PAPEL-04 | Phase 127 | Pending |
+| PAPEL-05 | Phase 127 | Pending |
+| PAPEL-06 | Phase 127 | Pending |
+| PAPEL-07 | Phase 127 | Pending |
+| PAPEL-08 | Phase 127 | Pending |
+| PAPEL-09 | Phase 127 | Pending |
+| MOLD-01 | Phase 125 | Pending |
+| MOLD-02 | Phase 125 | Pending |
+| MOLD-03 | Phase 125 | Pending |
+| MOLD-04 | Phase 125 | Pending |
+| CATL-01 | Phase 124 | Pending |
+| CATL-02 | Phase 124 | Pending |
+| CATL-03 | Phase 124 | Pending |
+| CATL-04 | Phase 127 | Pending |
+| MIGR-01 | Phase 126 | Pending |
+| MIGR-02 | Phase 126 | Pending |
+| MIGR-03 | Phase 126 | Pending |
+| AUDT-01 | Phase 128 | Pending |
+| AUDT-02 | Phase 128 | Pending |
+| AUDT-03 | Phase 128 | Pending |
+| AUDT-04 | Phase 128 | Pending |
 
 **Coverage:**
 - v2.17 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-20 after milestone v2.17 kickoff*
+*Last updated: 2026-09-20 after ROADMAP.md creation (5 phases, 124–128, 24/24 requirements mapped)*

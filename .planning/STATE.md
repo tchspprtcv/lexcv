@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.17
 milestone_name: RBAC por Escritório
 status: planning
-last_updated: "2026-09-20T18:51:30.391Z"
+last_updated: "2026-09-20T19:30:00.000Z"
 last_activity: 2026-09-20
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.16 completo e verificado (8/8 fases) — pronto para `/gsd:complete-milestone`
+**Current focus:** Marco v2.17 RBAC por Escritório — ROADMAP.md criado (5 fases, 124-128), pronto para `/gsd:plan-phase 124`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-09-20 — Milestone v2.17 started
+Phase: 124 of 128 (Catálogo de Permissões em Base de Dados) — not started
+Plan: — (roadmap created; plans defined during /gsd:plan-phase)
+Status: Roadmap created — ready to plan Phase 124
+Last activity: 2026-09-20 — ROADMAP.md created for v2.17 (5 phases, 124-128, 24/24 requirements mapped)
 
 ## Performance Metrics
 
@@ -128,6 +128,8 @@ v2.10–v2.12 roadmap rationale trimmed here at milestone boundary — full deta
 v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its full per-phase decision/lesson log are now archived at `.planning/milestones/v2.13-ROADMAP.md` and `v2.13-REQUIREMENTS.md`; condensed accomplishments and outcomes live in `PROJECT.md`'s Validated requirements and Key Decisions; narrative lessons live in `RETROSPECTIVE.md`'s "Milestone: v2.13" section.
 
 v2.16 roadmap (7 phases, 117–123, plus Phase 124 inserted post-audit; 15/15 requirements, 100% coverage) is now archived at `.planning/milestones/v2.16-ROADMAP.md`; condensed accomplishments and outcomes live in `PROJECT.md`'s Validated requirements and Key Decisions; narrative lessons live in `RETROSPECTIVE.md`'s "Milestone: v2.16" section.
+
+v2.17 roadmap (5 phases, 124–128, 24 requirements, 100% coverage) created 2026-09-20 — dependency spine: catálogo de permissões (124) e esquema de papéis do escritório antes de qualquer leitura/escrita; moldes+provisionamento (125) prova o mecanismo de instanciação no caminho de menor risco antes de o reutilizar; migração (126) é a fase mais arriscada do marco, isolada entre o mecanismo provado e o ecrã editável; CRUD+isolamento+guardas de `PLATAFORMA_ADMIN` (127) só se torna editável depois da migração; auditoria (128) fecha o marco.
 
 ### Decisions
 
@@ -243,10 +245,10 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-07-30T11:56:44.307Z
-Stopped at: Completed 123-02-PLAN.md
+Last session: 2026-09-20T19:30:00.000Z
+Stopped at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Start planning with /gsd:plan-phase 124
