@@ -361,6 +361,23 @@ public class AdminController {
         List<Role> roles = roleRepository.findAll();
         Map<String, List<String>> rolePermissions = new HashMap<>();
 
+        // WR-03 (124-REVIEW.md): rolePermissions abaixo e deliberadamente NAO filtrado por
+        // reservadaPlataforma/rotulo -- ao contrario de systemPermissions mais abaixo, que
+        // ja aplica os dois filtros. Hoje isto e inofensivo porque as 20 entradas do catalogo
+        // (DatabaseSeeder.CATALOGO_PERMISSOES) sao todas reservadaPlataforma=false e com
+        // rotulo preenchido, logo os dois conjuntos de chaves coincidem sempre. Deixa de ser
+        // verdade no exacto momento em que uma fase futura (125/127, ver o comentario CATL-03
+        // em Permission.java) marcar alguma permissao do catalogo como
+        // reservadaPlataforma=true, ou a deixar sem rotulo: se um papel alguma vez detiver
+        // essa chave (SQL directo, endpoint futuro, ou bug em updateRbac), rolePermissions
+        // passa a nomear uma chave sem coluna correspondente em systemPermissions -- forma que
+        // o RbacTab do frontend (que deriva as colunas da matriz de systemPermissions) nao tem
+        // comportamento definido para. Nao corrigido aqui de proposito: filtrar
+        // rolePermissions mudaria o que este endpoint expoe, e a Phase 124 nao muda nenhuma
+        // autoridade nem nenhum gate (124-CONTEXT.md) -- a autorizacao real
+        // (JwtAuthenticationFilter, UserPrincipal.create) continua a ler
+        // Role.getPermissions() directamente e e completamente alheia a
+        // reservadaPlataforma/rotulo.
         for (Role role : roles) {
             // Phase 119 (Plan 03): o ecra de Definicoes (RBAC) de um escritorio nao deve sequer
             // saber que o papel de plataforma existe -- ver o comentario de PAPEL_PLATAFORMA.
