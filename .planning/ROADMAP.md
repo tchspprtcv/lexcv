@@ -27,10 +27,11 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
   1. O catálogo de permissões devolvido pela aplicação reflecte linhas de `t_permission` (rótulo, descrição, categoria incluídos), não a lista Java hardcoded que existia em `AdminController.getRbac`
   2. Reiniciar o backend semeia permissões novas e actualiza rótulo/descrição/categoria das existentes, sem apagar nenhuma atribuição já persistida (`t_role_permission`, `t_user_permission`)
   3. As permissões reservadas à plataforma (as que definem `PLATAFORMA_ADMIN`) nunca aparecem em nenhum catálogo servido a um escritório
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 124-01: TBD
+- [ ] 124-01-PLAN.md — Colunas de catálogo em `Permission` + script manual de migração + `seedRbac()` com catálogo declarativo de 20 permissões em upsert não-destrutivo
+- [ ] 124-02-PLAN.md — `getRbac()` serve `systemPermissions` a partir de `t_permission`, excluindo reservadas à plataforma e sem-rótulo, com contrato de resposta inalterado
 
 ### Phase 125: Moldes da Plataforma e Provisionamento
 **Goal**: A plataforma passa a gerir os moldes de papel numa consola própria, e todo o mecanismo de "instanciar cópia de um molde" nasce e é provado primeiro no caminho de menor risco — um escritório novo — antes de ser reutilizado pela migração.
