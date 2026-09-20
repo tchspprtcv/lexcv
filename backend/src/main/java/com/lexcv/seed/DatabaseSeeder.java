@@ -383,6 +383,32 @@ public class DatabaseSeeder implements CommandLineRunner {
                         new CatalogoEntry("users:manage", "Gerir Utilizadores",
                                         "Criar, ativar/desativar, e configurar utilizadores", "Administração", 200));
 
+        /**
+         * WR-02 (124-REVIEW.md): mesma classe de corrida check-then-act de
+         * {@code seedTenantPlataforma()}/{@code seedUtilizadorPlataforma()} logo abaixo --
+         * find-then-insert por {@code t_permission.nome} sem lock nem retry, repetido para cada
+         * uma das 20 entradas de {@link #CATALOGO_PERMISSOES}. Duas instancias a arrancar em
+         * simultaneo contra a mesma base de dados vazia/parcial podem ambas observar
+         * {@code findByNome(...) == empty} para a mesma chave dentro da sua propria transacao
+         * ainda nao commitada e ambas tentarem {@code INSERT}, violando a constraint
+         * {@code unique = true} de {@code Permission.nome}.
+         *
+         * <p>Aqui o efeito e pior que nos dois casos irmaos: {@code seedRbac()} e a PRIMEIRA
+         * instrucao do unico metodo {@code @Transactional} que e {@code run()}, logo uma
+         * {@code DataIntegrityViolationException} aqui faz rollback a transacao de arranque
+         * inteira (tenant e utilizador de plataforma incluidos) e aborta o arranque dessa
+         * instancia por completo -- nao apenas uma linha duplicada como no caso da tenant, nem
+         * uma falha isolada de um unico utilizador como no caso do utilizador de plataforma.
+         *
+         * <p>Aceite tal e qual, pela mesma razao dos dois casos irmaos: risco de arranque num
+         * contexto de deployment tipicamente single-instance, sem superficie exposta a
+         * utilizadores, e um restart subsequente e nao-concorrente da instancia perdedora
+         * resolve-se sozinho -- o upsert idempotente tolera-o, nao e um crash-loop permanente.
+         * Um lock consultivo do Postgres ou um catch de {@code DataIntegrityViolationException}
+         * por entrada resolveriam isto, mas estao fora do ambito desta fase (124-CONTEXT.md nao
+         * autoriza mudar o comportamento de arranque); fica registado aqui como risco residual
+         * aceite, tal como nos dois metodos irmaos, e nao corrigido.
+         */
         private void seedRbac() {
                 Map<String, Permission> permissionMap = new HashMap<>();
                 for (CatalogoEntry entrada : CATALOGO_PERMISSOES) {
