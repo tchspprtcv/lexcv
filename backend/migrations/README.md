@@ -126,6 +126,10 @@ Everything else in this directory is **skip** on a fresh install:
   give every new row a non-null `plano`.
 - `125` — **FORBIDDEN.** See the stop banner above. The script now refuses to run here on its
   own (guard), but do not treat that as licence to try it: a fresh database never needs it.
+- `126-add-tenant-role-tables.sql` — redundant, but unlike the group above it will not error:
+  `ddl-auto` already created `t_tenant_role`, `t_tenant_role_permission` and
+  `t_role.instanciavel`, and every statement in the script guards its own creation, so running
+  it against a fresh database simply changes nothing.
 
 ---
 
@@ -151,6 +155,7 @@ database*. Verify per database, not per environment — the environments have dr
 | 12 | `120b-backfill-tenant-plano.sql` | Backfills `plano = 'STARTER'` on rows still `NULL`, then tightens the column to `NOT NULL DEFAULT 'STARTER'`. **Existing-database only.** Skipping it on a DB where `117` already ran causes a hard `500 DataIntegrityViolationException` on the first tenant save. | **Yes** — declares and delivers idempotency. |
 | 13 | `124-add-permission-catalogo-columns.sql` | Adds `t_permission.rotulo`/`descricao`/`modulo`/`ordem`/`reservada_plataforma` (Phase 124, catalogue of permissions). No backfill UPDATE — `DatabaseSeeder.seedRbac()` populates existing rows on the very next boot. | **Yes** — every statement uses `ADD COLUMN IF NOT EXISTS`. |
 | 14 | `125-convert-tenant-logo-data-url-to-text.sql` | Converts `t_tenant.logo_data_url` from a Large Object (`oid`) column to plain `text`. **Existing-database only — see the stop banner.** Required only where the column is currently `oid`; without it the app fails schema validation after the `@Lob` removal deploy. | **No** — but it now refuses safely (guard), instead of destroying. |
+| 15 | `126-add-tenant-role-tables.sql` | Creates `t_tenant_role` + `t_tenant_role_permission` and adds `t_role.instanciavel` (Phase 125, moldes e papeis de escritorio); no backfill — the seeder converges on the very next boot. | **Yes** — every statement uses `IF NOT EXISTS`. |
 
 ### Verify before running `125`
 
@@ -171,7 +176,7 @@ WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
 
 ## Re-run safety
 
-Only **4 of the 14** scripts tolerate being run twice:
+Only **5 of the 15** scripts tolerate being run twice:
 
 | Safe to re-run | Why |
 |---|---|
@@ -179,6 +184,7 @@ Only **4 of the 14** scripts tolerate being run twice:
 | `111` | `CREATE EXTENSION IF NOT EXISTS`. |
 | `120b` | Explicitly designed for it: the `UPDATE` is `WHERE plano IS NULL`, and `SET DEFAULT` / `SET NOT NULL` are idempotent. |
 | `124-add-permission-catalogo-columns` | Every `ALTER TABLE` uses `ADD COLUMN IF NOT EXISTS`. |
+| `126-add-tenant-role-tables` | every statement uses `IF NOT EXISTS` |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -202,7 +208,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **6 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **7 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -212,6 +218,7 @@ As of the last verification, on a client (existing) database, **6 scripts are ou
 | `120b-backfill-tenant-plano.sql` | Run on the **development** database only (2026-07-30). Pending everywhere else. |
 | `124-add-permission-catalogo-columns.sql` | Pending — new in this phase. |
 | `125-convert-tenant-logo-data-url-to-text.sql` | **No execution record anywhere.** Determine its status per database using the `information_schema` query above. |
+| `126-add-tenant-role-tables.sql` | Pending — new in this phase. |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
 is precisely why this checklist exists: **do not treat planning documents as the record of
