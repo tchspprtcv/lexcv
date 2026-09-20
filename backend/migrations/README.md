@@ -149,7 +149,8 @@ database*. Verify per database, not per environment — the environments have dr
 | 10 | `117-add-tenant-plano-limite-utilizadores.sql` | Adds `t_tenant.plano` + `limite_utilizadores`, backfills existing rows to `'ENTERPRISE'`. `limite_utilizadores` is deliberately left `NULL` = "sem limite". | No |
 | 11 | `120-add-tenant-ativo.sql` | Adds `t_tenant.ativo BOOLEAN NOT NULL DEFAULT TRUE`. | **No — read the warning below.** |
 | 12 | `120b-backfill-tenant-plano.sql` | Backfills `plano = 'STARTER'` on rows still `NULL`, then tightens the column to `NOT NULL DEFAULT 'STARTER'`. **Existing-database only.** Skipping it on a DB where `117` already ran causes a hard `500 DataIntegrityViolationException` on the first tenant save. | **Yes** — declares and delivers idempotency. |
-| 13 | `125-convert-tenant-logo-data-url-to-text.sql` | Converts `t_tenant.logo_data_url` from a Large Object (`oid`) column to plain `text`. **Existing-database only — see the stop banner.** Required only where the column is currently `oid`; without it the app fails schema validation after the `@Lob` removal deploy. | **No** — but it now refuses safely (guard), instead of destroying. |
+| 13 | `124-add-permission-catalogo-columns.sql` | Adds `t_permission.rotulo`/`descricao`/`modulo`/`ordem`/`reservada_plataforma` (Phase 124, catalogue of permissions). No backfill UPDATE — `DatabaseSeeder.seedRbac()` populates existing rows on the very next boot. | **Yes** — every statement uses `ADD COLUMN IF NOT EXISTS`. |
+| 14 | `125-convert-tenant-logo-data-url-to-text.sql` | Converts `t_tenant.logo_data_url` from a Large Object (`oid`) column to plain `text`. **Existing-database only — see the stop banner.** Required only where the column is currently `oid`; without it the app fails schema validation after the `@Lob` removal deploy. | **No** — but it now refuses safely (guard), instead of destroying. |
 
 ### Verify before running `125`
 
@@ -170,13 +171,14 @@ WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
 
 ## Re-run safety
 
-Only **3 of the 13** scripts tolerate being run twice:
+Only **4 of the 14** scripts tolerate being run twice:
 
 | Safe to re-run | Why |
 |---|---|
 | `74` | The `UPDATE` converges — no rows left matching. |
 | `111` | `CREATE EXTENSION IF NOT EXISTS`. |
 | `120b` | Explicitly designed for it: the `UPDATE` is `WHERE plano IS NULL`, and `SET DEFAULT` / `SET NOT NULL` are idempotent. |
+| `124-add-permission-catalogo-columns` | Every `ALTER TABLE` uses `ADD COLUMN IF NOT EXISTS`. |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -200,7 +202,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **5 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **6 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -208,6 +210,7 @@ As of the last verification, on a client (existing) database, **5 scripts are ou
 | `117-add-tenant-plano-limite-utilizadores.sql` | Pending — recorded in `.planning/STATE.md:144` |
 | `120-add-tenant-ativo.sql` | Pending — recorded in `.planning/STATE.md:145` |
 | `120b-backfill-tenant-plano.sql` | Run on the **development** database only (2026-07-30). Pending everywhere else. |
+| `124-add-permission-catalogo-columns.sql` | Pending — new in this phase. |
 | `125-convert-tenant-logo-data-url-to-text.sql` | **No execution record anywhere.** Determine its status per database using the `information_schema` query above. |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
