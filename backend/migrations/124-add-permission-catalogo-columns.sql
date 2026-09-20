@@ -17,11 +17,20 @@
 --
 -- Deliberately NO backfill UPDATE for rotulo/descricao/modulo/ordem here: this script only
 -- creates the columns. DatabaseSeeder.seedRbac() runs unconditionally on the very next boot
--- (it is the first statement of CommandLineRunner.run(), before the app serves its first
--- request) and populates all 20 existing t_permission rows with their descriptive fields,
--- and lowers reservada_plataforma from its DEFAULT TRUE to FALSE on those same 20 catalogue
--- entries in that same boot. There is no exposure window: the seeder is a CommandLineRunner,
--- it always completes before the HTTP listener starts accepting requests.
+-- (it is the first statement of CommandLineRunner.run()) and populates all 20 existing
+-- t_permission rows with their descriptive fields, and lowers reservada_plataforma from its
+-- DEFAULT TRUE to FALSE on those same 20 catalogue entries in that same boot.
+--
+-- There IS a narrow exposure window, and it fails closed, not open: Spring Boot's embedded
+-- Tomcat starts accepting connections during context refresh
+-- (ServletWebServerApplicationContext.finishRefresh(), inside AbstractApplicationContext
+-- .refresh()), which completes BEFORE SpringApplication.callRunners() invokes
+-- DatabaseSeeder.run(). Until that single @Transactional run() commits, every row this
+-- script just added still carries its DEFAULT TRUE, so GET /api/v1/admin/rbac legitimately
+-- returns systemPermissions: [] in that window (findAllByReservadaPlataformaFalse() filters
+-- every row out). That is a temporary under-exposure (an empty catalogue), never an
+-- over-exposure, and it self-heals as soon as the seeder's transaction commits -- which
+-- happens very early in the boot sequence, before any other seeding work runs.
 --
 -- Idempotent: every ADD COLUMN statement below uses IF NOT EXISTS, so this script is safe to
 -- run twice against the same database.
