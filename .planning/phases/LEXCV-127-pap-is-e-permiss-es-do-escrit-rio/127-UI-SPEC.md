@@ -97,7 +97,7 @@ Do **not** override any of the inherited rows above to force them onto the two-w
 | Dominant (60%) | `white` / `dark:bg-slate-950` | Page canvas, table body rows — inherited, unmodified by this phase |
 | Secondary (30%) | `slate-50`/`slate-100`/`slate-200` (light), `slate-800`/`slate-900` (dark) | Card surface (`bg-white/50 dark:bg-slate-900/50`), table header row, module separator rows, borders — inherited, unmodified |
 | Accent (10%) | `blue-600` | **Reserved for:** the "Guardar Alterações" matrix-save button (solid), the "Criar Papel" trigger button in `CardHeader` (outline) and its panel's solid submit button, the rename dialog's "Guardar Nome" submit button, checked-state checkboxes in the matrix (`text-blue-600`, matching `RbacTab`), focus rings. No other element may use blue as a fill or as badge/text color. |
-| Destructive | `red-600` | **Reserved for:** the "Apagar Papel" action button inside the delete confirmation `AlertDialog`, and field validation error text (reserved-name / duplicate-name messages, `text-red-600`). This is the first destructive-colored `AlertDialogAction` in this codebase (existing `AlertDialogAction` usages elsewhere are all non-destructive confirms styled blue or default) — the hue is not invented: it matches the `text-red-600` error-message convention and the `hover:text-red-500` delete-icon-button convention already established in this same file (`settings/page.tsx:542`, the user-delete icon button) and across the app. |
+| Destructive | `red-600` | **Reserved for:** the "Apagar Papel" action button inside the delete confirmation `AlertDialog`, and field validation error text (reserved-name / duplicate-name messages, `text-red-600`). This **matches the destructive-red `AlertDialogAction` convention already shipped** in `financeiro/[id]/page.tsx:369-374` and `:562-567` (`bg-red-600 hover:bg-red-700 text-white`, honorário and pagamento deletion), `agenda/[id]/page.tsx:222-234` (via the `bg-destructive` semantic, which `globals.css:66` maps to red), and `plataforma/page.tsx:555-566` — the same file this spec cites in §9 for the open-on-error recovery convention. Red already carries exactly this meaning here, which is why it is the right choice rather than a new one. The hue also matches the `text-red-600` error-message convention and the `hover:text-red-500` delete-icon-button convention already established in this same file (`settings/page.tsx:542`, the user-delete icon button) and across the app. |
 
 No amber/caution color in this phase — a deliberate divergence from `125-UI-SPEC.md`'s analog. Phase 125 needed amber because editing a *molde* has a delayed, easy-to-misread effect on other tenants (non-propagation). Nothing in this screen has that shape: every change here is local to the office's own tenant, and takes effect immediately (PAPEL-03 — no delayed, easy-to-misread consequence to flag with a third semantic color). Introducing amber here anyway would imply a caution that does not exist and would compete visually with the one color that does carry real weight in this screen: red, for the one truly destructive, irreversible action (delete).
 
@@ -106,6 +106,12 @@ Accent reserved for: "Guardar Alterações", "Criar Papel" (trigger + panel subm
 ---
 
 ## Screen Structure
+
+### Focal point
+
+**The permission matrix is the primary visual anchor of this tab.** It occupies the bulk of `CardContent` and it is what an administrator came here to read and change; everything else — the note box above it, the per-column badges, the kebab menus, the save button — is supporting apparatus around it. When a layout decision forces a trade-off, the matrix stays legible and the apparatus yields.
+
+The secondary anchor is the **state of "Guardar Alterações"**: whether there are unsaved changes is the one piece of status an administrator must never have to guess at, because this tab now lets them lose work by navigating away.
 
 ### 0. Implementation note carried over from Decision 2b (CONTEXT.md) — not a visual requirement, but constrains how the component below is assembled
 
@@ -458,7 +464,7 @@ No new dependencies, no new shadcn registry/skill packages. The permission×role
 ## Visual-QA Watch Items (non-blocking — flag for implementer, not a contract defect)
 
 1. **Two-row role column headers under `min-w-[140px]`.** With a long role name (e.g. a custom "Assistente Jurídico Sénior") plus two badges plus a kebab trigger stacked in ~140px, wrapping is expected and acceptable (`flex-wrap` is already specified on the badge row); do not widen the column indiscriminately for one long name at the expense of every other column's alignment — truncate the name with `title={role.nome}` for the tooltip-on-hover full text instead, if a specific name overflows badly.
-2. **Destructive red on `AlertDialogAction` is new to this codebase.** Confirm during implementation review that `bg-red-600 hover:bg-red-700 text-white` reads clearly against both the light and dark `AlertDialogContent` background (`bg-popover`) — the existing precedents for `AlertDialogAction` in this codebase are all blue/default, so this is the first time red is checked in that exact context.
+2. **Destructive red on `AlertDialogAction` follows existing precedent — verify it reads consistently with it.** `bg-red-600 hover:bg-red-700 text-white` is already shipped on destructive confirms in `financeiro/[id]/page.tsx`, `agenda/[id]/page.tsx` and `plataforma/page.tsx`. During implementation review, compare this dialog side by side with the tenant-suspend dialog in `plataforma/page.tsx:555-566` and confirm they read as the same convention, in both light and dark `AlertDialogContent` (`bg-popover`).
 3. **`p-3` and `min-w-[140px]` spacing exceptions** — see Spacing Scale. Kept intentionally; do not "fix" into named-token values during implementation.
 
 ---
