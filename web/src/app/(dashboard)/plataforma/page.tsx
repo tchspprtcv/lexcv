@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { FileChartColumn, Lock, Pencil, Plus, Unlock } from "lucide-react";
+import { FileChartColumn, LayoutTemplate, Lock, Pencil, Plus, Unlock } from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import {
@@ -166,6 +166,12 @@ function PlataformaPageContent() {
               <CardDescription>Lista de organizações com acesso à plataforma ALCv.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="text-xs py-1.5 px-3 h-auto flex items-center gap-1.5">
+                <Link href="/plataforma/moldes">
+                  <LayoutTemplate className="h-4 w-4" />
+                  Gerir Moldes
+                </Link>
+              </Button>
               <Button asChild variant="outline" className="text-xs py-1.5 px-3 h-auto flex items-center gap-1.5">
                 <Link href="/plataforma/relatorio">
                   <FileChartColumn className="h-4 w-4" />
