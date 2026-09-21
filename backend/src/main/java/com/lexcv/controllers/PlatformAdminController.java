@@ -1,11 +1,17 @@
 package com.lexcv.controllers;
 
+import com.lexcv.dtos.MoldesConsolaResponse;
 import com.lexcv.dtos.SetupInitializeRequest;
 import com.lexcv.dtos.TenantAdminSummaryResponse;
 import com.lexcv.dtos.TenantProvisionResponse;
 import com.lexcv.dtos.TenantUpdateRequest;
+import com.lexcv.models.Permission;
+import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.repositories.PermissionRepository;
+import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
 import lombok.RequiredArgsConstructor;
@@ -60,9 +66,18 @@ public class PlatformAdminController {
     // o único PLATAFORMA_ADMIN existente, sem via de recuperação pela aplicação.
     private static final String TENANT_RESERVADO = "ALCv";
 
+    // Phase 125 (MOLD-02/03/04): continuacao das guardas das Phases 119/121 -- este papel nunca
+    // e instanciavel (Role.instanciavel semeado false, Plan 01), nunca aparece como molde
+    // editavel na consola de plataforma, e nunca e atribuivel a partir de superficie de
+    // escritorio. Mesmo registo de TENANT_RESERVADO acima, nao uma reinvencao.
+    private static final String PAPEL_RESERVADO = "PLATAFORMA_ADMIN";
+
     private final SetupService setupService;
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
+    private final TenantRoleRepository tenantRoleRepository;
 
     @PostMapping("/tenants")
     public ResponseEntity<?> createTenant(@RequestBody SetupInitializeRequest request) {
@@ -184,6 +199,48 @@ public class PlatformAdminController {
     }
 
     /**
+     * {@code GET /api/v1/platform/moldes} (Phase 125, MOLD-02): payload único da consola de
+     * moldes -- catálogo de permissões elegíveis mais a lista de moldes instanciáveis, cada um
+     * com o número de escritórios que já o instanciaram. Ver o doc-comment de
+     * {@link MoldesConsolaResponse} para a razão do payload único (um só pedido sob o gate de
+     * classe exclusivo de {@code PLATAFORMA_ADMIN}, em vez de reutilizar {@code GET /admin/rbac},
+     * cujo gate é mais largo).
+     *
+     * <p>O catálogo exclui permissões reservadas à plataforma ao nível de SQL
+     * ({@link PermissionRepository#findAllByReservadaPlataformaFalse()}) e, em Java, qualquer
+     * permissão sem rótulo utilizável -- o {@code aria-label} de cada checkbox do UI-SPEC
+     * (secção 5) é {@code "${permissao.rotulo} — ${molde.nome}"} e fica sem sentido com um rótulo
+     * em branco. Ordenado por {@code ordem} (nulos no fim) com desempate por nome, tolerando uma
+     * base de dados onde a migração correu mas o seeder ainda não populou {@code ordem}.
+     *
+     * <p>Os moldes vêm de {@link RoleRepository#findAllByInstanciavelTrue()}, com uma exclusão
+     * defensiva adicional por nome literal de {@link #PAPEL_RESERVADO} -- defesa em profundidade
+     * sobre o filtro SQL, mesma disciplina de três camadas independentes já aplicada em
+     * {@code SetupService.instanciarMoldes} (Plan 02).
+     */
+    @GetMapping("/moldes")
+    public ResponseEntity<?> listMoldes() {
+        List<MoldesConsolaResponse.PermissaoDto> permissoes = permissionRepository.findAllByReservadaPlataformaFalse().stream()
+                .filter(p -> p.getRotulo() != null && !p.getRotulo().trim().isEmpty())
+                .sorted(Comparator
+                        .comparing(Permission::getOrdem, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Permission::getNome))
+                .map(this::toPermissaoDto)
+                .collect(Collectors.toList());
+
+        List<MoldesConsolaResponse.MoldeDto> moldes = roleRepository.findAllByInstanciavelTrue().stream()
+                .filter(role -> !PAPEL_RESERVADO.equals(role.getNome()))
+                .sorted(Comparator.comparing(Role::getNome, String.CASE_INSENSITIVE_ORDER))
+                .map(this::toMoldeDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(MoldesConsolaResponse.builder()
+                .permissoes(permissoes)
+                .moldes(moldes)
+                .build());
+    }
+
+    /**
      * Projeta um {@link Tenant} para o contrato de resposta partilhado pelos 3 handlers acima --
      * ver o doc-comment de {@link TenantAdminSummaryResponse} para o que fica deliberadamente de
      * fora.
@@ -196,6 +253,43 @@ public class PlatformAdminController {
                 .limiteUtilizadores(tenant.getLimiteUtilizadores())
                 .ativo(tenant.getAtivo())
                 .utilizadoresAtivos(userRepository.countByTenantIdAndAtivoTrue(tenant.getId()))
+                .build();
+    }
+
+    /**
+     * Mapeia uma entidade {@link Permission} para {@link MoldesConsolaResponse.PermissaoDto} com
+     * campos nomeados via {@code builder()} -- {@code key} vem de {@code nome} (a chave técnica),
+     * {@code nome} vem de {@code rotulo} (o rótulo legível). Nunca um construtor posicional: os
+     * dois campos chamam-se "nome" em sítios diferentes, e uma troca silenciosa faria a consola
+     * mostrar a chave técnica como rótulo (armadilha identificada na Phase 124, ver
+     * {@code AdminController#toPermissionDef}).
+     */
+    private MoldesConsolaResponse.PermissaoDto toPermissaoDto(Permission permission) {
+        return MoldesConsolaResponse.PermissaoDto.builder()
+                .key(permission.getNome())
+                .nome(permission.getRotulo())
+                .descricao(permission.getDescricao())
+                .modulo(permission.getModulo())
+                .build();
+    }
+
+    /**
+     * Mapeia uma entidade {@link Role} (molde) para {@link MoldesConsolaResponse.MoldeDto},
+     * incluindo a contagem viva de {@code escritoriosInstanciados} via
+     * {@link TenantRoleRepository#countByMoldeId(Integer)} -- calculada por molde, exatamente
+     * como {@link #toSummary(Tenant)} já faz com
+     * {@code userRepository.countByTenantIdAndAtivoTrue}.
+     */
+    private MoldesConsolaResponse.MoldeDto toMoldeDto(Role role) {
+        List<String> chaves = role.getPermissions().stream()
+                .map(Permission::getNome)
+                .sorted()
+                .collect(Collectors.toList());
+        return MoldesConsolaResponse.MoldeDto.builder()
+                .id(role.getId())
+                .nome(role.getNome())
+                .permissoes(chaves)
+                .escritoriosInstanciados(tenantRoleRepository.countByMoldeId(role.getId()))
                 .build();
     }
 }

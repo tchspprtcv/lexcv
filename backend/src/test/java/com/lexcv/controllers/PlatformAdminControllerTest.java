@@ -9,7 +9,10 @@ import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.TenantPlano;
+import com.lexcv.repositories.PermissionRepository;
+import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
 import org.junit.jupiter.api.AfterEach;
@@ -87,6 +90,15 @@ class PlatformAdminControllerTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private PermissionRepository permissionRepository;
+
+    @Mock
+    private TenantRoleRepository tenantRoleRepository;
+
     @AfterEach
     void limparSecurityContext() {
         SecurityContextHolder.clearContext();
@@ -101,7 +113,8 @@ class PlatformAdminControllerTest {
     }
 
     private PlatformAdminController novoController() {
-        return new PlatformAdminController(setupService, tenantRepository, userRepository);
+        return new PlatformAdminController(setupService, tenantRepository, userRepository,
+                roleRepository, permissionRepository, tenantRoleRepository);
     }
 
     /**
