@@ -8,6 +8,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,6 +60,7 @@ class AdminControllerLimiteUtilizadoresTest {
     @Mock private PermissionRepository permissionRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -86,7 +88,7 @@ class AdminControllerLimiteUtilizadoresTest {
     }
 
     private AdminController novoController() {
-        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository, resolucaoPapeisService);
     }
 
     @Test

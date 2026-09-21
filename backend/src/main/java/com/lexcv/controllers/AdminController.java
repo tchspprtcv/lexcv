@@ -6,11 +6,13 @@ import com.lexcv.dtos.UserResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantRole;
 import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -66,6 +68,7 @@ public class AdminController {
     private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantRepository tenantRepository;
+    private final ResolucaoPapeisService resolucaoPapeisService;
 
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
@@ -74,13 +77,11 @@ public class AdminController {
 
         List<User> users = userRepository.findByTenantId(principal.getTenantId());
         // Map to UserResponse
+        // Phase 126 (Plan 04): papeis+permissoes (parcelas 1+2) pelo resolvedor unico --
+        // papeis de escritorio se existirem, senao globais. Ver ResolucaoPapeisService.
         List<UserResponse> responses = users.stream().map(u -> {
-            Set<String> roles = u.getRoles().stream().map(Role::getNome).collect(Collectors.toSet());
-            Set<String> permissions = u.getRoles().stream()
-                    .flatMap(r -> r.getPermissions().stream())
-                    .map(Permission::getNome)
-                    .collect(Collectors.toSet());
-            u.getPermissions().forEach(permissions::add);
+            Set<String> nomesPapeis = resolucaoPapeisService.resolverNomesPapeis(u);
+            Set<String> permissions = resolucaoPapeisService.resolverPermissoesEfectivas(u);
 
             return UserResponse.builder()
                     .id(u.getId())
@@ -89,7 +90,7 @@ public class AdminController {
                     .email(u.getEmail())
                     .telefone(u.getTelefone())
                     .avatar_url(u.getAvatarUrl())
-                    .roles(roles)
+                    .roles(nomesPapeis)
                     .permissions(permissions)
                     .ativo(u.getAtivo())
                     .build();
@@ -169,6 +170,15 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("message", "Pelo menos uma role válida é obrigatória."));
         }
 
+        // Phase 126 (Plan 04): o caminho de escrita que tem de acompanhar o cutover de leitura --
+        // sem isto, a autoridade efectiva do utilizador criado (resolvida pelo lado de escritorio
+        // assim que o tenant tiver algum papel convertido) nunca refletiria os papeis globais
+        // escritos abaixo. O tenant usado e sempre o do principal autenticado -- nunca um valor
+        // vindo do corpo do pedido -- a mesma fronteira de isolamento multi-tenant que o resto
+        // deste controller ja respeita; o metodo do resolvedor filtra por esse tenant, logo um
+        // TenantRole homonimo de outro escritorio e inalcancavel por construcao.
+        Set<TenantRole> tenantRoles = resolucaoPapeisService.resolverPapeisDeEscritorio(principal.getTenantId(), roles);
+
         // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant, aplicado através do
         // helper partilhado limiteUtilizadoresExcedido (ver o seu comentário para o contrato completo e
         // para a nota CR-01 sobre porque este helper existe e é chamado a partir de dois sítios).
@@ -206,6 +216,7 @@ public class AdminController {
                 .email(email)
                 .passwordHash(passwordEncoder.encode((String) body.get("password")))
                 .roles(roles)
+                .tenantRoles(tenantRoles)
                 .permissions(permissions)
                 .ativo(ativoInicial)
                 .telefone(body.containsKey("telefone") ? (String) body.get("telefone") : "")
@@ -219,7 +230,7 @@ public class AdminController {
                 .tenant_id(user.getTenantId())
                 .nome(user.getNome())
                 .email(user.getEmail())
-                .roles(user.getRoles().stream().map(Role::getNome).collect(Collectors.toSet()))
+                .roles(resolucaoPapeisService.resolverNomesPapeis(user))
                 .permissions(permissions)
                 .ativo(user.getAtivo())
                 .build();
@@ -298,6 +309,13 @@ public class AdminController {
             }
             if (!roles.isEmpty()) {
                 user.setRoles(roles);
+                // Phase 126 (Plan 04): mesmo caminho de escrita de createUser -- ver o comentario
+                // la. Sem esta linha, um admin que mudasse o papel de um utilizador aqui veria a
+                // operacao devolver 200 sem nenhum efeito na autoridade real dessa pessoa, porque
+                // o resolvedor le o lado de escritorio quando o utilizador ja o tem. Copia
+                // (HashSet novo), nunca a colecao devolvida pelo resolvedor.
+                user.setTenantRoles(new HashSet<>(
+                        resolucaoPapeisService.resolverPapeisDeEscritorio(principal.getTenantId(), roles)));
             }
         }
 

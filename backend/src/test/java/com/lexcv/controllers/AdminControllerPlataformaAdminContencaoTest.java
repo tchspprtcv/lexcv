@@ -10,6 +10,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,6 +80,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Mock private PermissionRepository permissionRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -96,7 +99,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     }
 
     private AdminController novoController() {
-        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository, resolucaoPapeisService);
     }
 
     private Map<String, Object> corpoCriacaoComRoles(List<String> roles) {
@@ -195,6 +198,10 @@ class AdminControllerPlataformaAdminContencaoTest {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente()));
         when(roleRepository.findByNome("TECNICO")).thenReturn(Optional.of(Role.builder().id(2).nome("TECNICO").build()));
+        // Phase 126 (Plan 04): updateUser tambem povoa tenantRoles quando roles nao e vazio --
+        // ver AdminControllerAtribuicaoPapeisEscritorioTest para a prova comportamental completa
+        // desse caminho de escrita; aqui so precisa de nao rebentar com NPE.
+        when(resolucaoPapeisService.resolverPapeisDeEscritorio(any(), any())).thenReturn(Set.of());
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ResponseEntity<?> response = novoController().updateUser(USER_ID, Map.of("roles", List.of("TECNICO")));

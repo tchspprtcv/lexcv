@@ -7,6 +7,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -47,9 +48,10 @@ class AdminControllerRbacCatalogoTest {
     @Mock private PermissionRepository permissionRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     private AdminController novoController() {
-        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository, resolucaoPapeisService);
     }
 
     private Permission permissao(String nome, String rotulo, String descricao, String modulo, Integer ordem) {
