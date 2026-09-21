@@ -140,8 +140,9 @@ public class PlatformAdminController {
      * alheia ao email.
      */
     private boolean isViolacaoDeEmailDuplicado(DataIntegrityViolationException ex) {
-        Throwable causaMaisEspecifica = ex.getMostSpecificCause();
-        String mensagem = causaMaisEspecifica != null ? causaMaisEspecifica.getMessage() : null;
+        // getMostSpecificCause() nunca devolve null -- na ausencia de uma causa encadeada,
+        // devolve a propria excecao (contrato de NestedRuntimeException).
+        String mensagem = ex.getMostSpecificCause().getMessage();
         return mensagem != null && mensagem.toLowerCase(Locale.ROOT).contains("email");
     }
 
