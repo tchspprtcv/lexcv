@@ -4,6 +4,7 @@ import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import com.lexcv.services.NotificacaoService;
+import com.lexcv.services.ResolucaoPapeisService;
 import com.lexcv.services.RiscoPrazoService;
 import com.lexcv.services.StorageService;
 import org.junit.jupiter.api.AfterEach;
@@ -82,6 +83,7 @@ class ResourceControllerUploadDocumentoTest {
     @Mock private TestemunhaRepository testemunhaRepository;
     @Mock private FactoRepository factoRepository;
     @Mock private ParecerSolicitacaoRepository parecerSolicitacaoRepository;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     // Collaborators of the REAL NotificacaoService instance (not ResourceController constructor
     // params themselves).
@@ -152,7 +154,7 @@ class ResourceControllerUploadDocumentoTest {
                 pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
                 auditLogRepository, storageService, riscoPrazoService, notificacaoService,
                 clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
-                testemunhaRepository, factoRepository, parecerSolicitacaoRepository);
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService);
 
         ResponseEntity<?> response = controller.uploadDocumento(file, PROCESSO_ID, null, null, null, null);
 
@@ -223,7 +225,7 @@ class ResourceControllerUploadDocumentoTest {
                 pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
                 auditLogRepository, storageService, riscoPrazoService, notificacaoService,
                 clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
-                testemunhaRepository, factoRepository, parecerSolicitacaoRepository);
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService);
 
         ResponseEntity<?> response = controller.uploadDocumento(file, null, CLIENTE_ID, null, null, null);
 

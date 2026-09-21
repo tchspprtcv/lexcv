@@ -19,6 +19,7 @@ import com.lexcv.dtos.DashboardKpiResponse;
 import com.lexcv.dtos.UserSummaryResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
+import com.lexcv.services.ResolucaoPapeisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -81,6 +82,7 @@ public class ResourceController {
     // ParecerSolicitacao.clienteId (nullable = false, validated by ParecerController) off the
     // secondary client before it is deleted -- see the migration loop there for context.
     private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
+    private final ResolucaoPapeisService resolucaoPapeisService;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -94,6 +96,15 @@ public class ResourceController {
             "comercial", List.of("clienteId", "numeroProcesso", "areaJuridica", "dataInicio", "origem"),
             "default", List.of("clienteId", "tipoProcesso", "areaJuridica", "dataInicio", "origem")
     );
+
+    // Phase 126 Plano 05: designam MOLDES globais em t_role (semeados pelo DatabaseSeeder,
+    // estaveis), NAO os nomes de papeis de escritorio que um tenant possa ver no ecra -- a
+    // Phase 127 (PAPEL-04) deixa um escritorio renomear estes ultimos. Nao "arrumar" estas
+    // constantes para o rotulo que o escritorio ve: e exactamente a diferenca entre um literal
+    // que sobrevive a essa renomeacao e um que nao sobrevive.
+    private static final String NOME_MOLDE_ADVOGADO = "ADVOGADO";
+    private static final String NOME_MOLDE_ASSISTENTE = "ASSISTENTE";
+    private static final String NOME_MOLDE_TECNICO = "TECNICO";
 
     // ==========================================
     // WORKFLOW — mapa de transições permitidas por estado
@@ -500,7 +511,11 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
         }
 
-        if (user.getRoles().stream().noneMatch(r -> "ADVOGADO".equals(r.getNome()))) {
+        // Phase 126 Plano 05: verificacao de PROVENIENCIA (moldeId), nao de permissao -- ver
+        // NOME_MOLDE_ADVOGADO acima. A conversao para verificacao por permissao esta diferida a
+        // espera de decisao de produto (126-CONTEXT.md, <deferred>): e observavel, nao um
+        // detalhe de implementacao.
+        if (!resolucaoPapeisService.temPapelDeMolde(user, NOME_MOLDE_ADVOGADO)) {
             return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ADVOGADO"));
         }
 
@@ -562,7 +577,13 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
         }
 
-        if (user.getRoles().stream().noneMatch(r -> "ASSISTENTE".equals(r.getNome()) || "TECNICO".equals(r.getNome()))) {
+        // Phase 126 Plano 05: verificacao de PROVENIENCIA (moldeId), nao de permissao -- ver
+        // NOME_MOLDE_ASSISTENTE/NOME_MOLDE_TECNICO acima. O OR preserva a semantica do
+        // noneMatch original; a conversao para verificacao por permissao esta diferida a espera
+        // de decisao de produto (126-CONTEXT.md, <deferred>): e observavel, nao um detalhe de
+        // implementacao.
+        if (!resolucaoPapeisService.temPapelDeMolde(user, NOME_MOLDE_ASSISTENTE)
+                && !resolucaoPapeisService.temPapelDeMolde(user, NOME_MOLDE_TECNICO)) {
             return ResponseEntity.badRequest().body(Map.of("message", "Utilizador não tem o papel ASSISTENTE ou TECNICO"));
         }
 
