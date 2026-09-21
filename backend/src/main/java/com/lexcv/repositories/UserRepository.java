@@ -36,4 +36,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // 122 (relatório de utilização) reutilizam este mesmo método (Success Criteria 4 da fase) —
     // não duplicar esta contagem noutro sítio.
     long countByTenantIdAndAtivoTrue(UUID tenantId);
+
+    // Phase 127 (Plano 02, PAPEL-05): quantos utilizadores detêm um dado TenantRole -- a guarda
+    // do plano 04 usa este número para recusar DELETE /admin/rbac/papeis/{id} quando > 0
+    // (127-CONTEXT.md Decisão 4: "a verificação é por contagem, não por tentativa-e-erro sobre
+    // uma violação de chave estrangeira"). Derivada sobre a propriedade de coleção
+    // User.tenantRoles (t_user_tenant_role, EAGER, ver User.java:77-84), no mesmo idioma de
+    // countByTenantIdAndAtivoTrue acima e de TenantRoleRepository.countByMoldeId -- nunca um
+    // findBy...(id) seguido de .isEmpty()/.size(), e nunca um save() dentro de um
+    // try/catch(DataIntegrityViolationException) sobre a FK: uma contagem não muta estado e não
+    // paga o custo de carregar a lista inteira de utilizadores só para os contar.
+    long countByTenantRolesId(UUID tenantRoleId);
 }
