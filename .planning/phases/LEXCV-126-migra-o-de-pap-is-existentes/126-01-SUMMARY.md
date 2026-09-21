@@ -104,3 +104,7 @@ Schema is in place and dormant. `t_user_tenant_role` exists (script `127`), `Use
 ---
 *Phase: 126-migracao-de-papeis-existentes*
 *Completed: 2026-09-21*
+
+## Self-Check: PASSED
+
+All 6 claimed files found on disk; all 4 commit hashes (`aee658ad`, `5d1d008c`, `c24e7413`, `206f9c66`) found in `git log`.
