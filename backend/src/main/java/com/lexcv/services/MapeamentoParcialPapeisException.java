@@ -26,9 +26,13 @@ public class MapeamentoParcialPapeisException extends RuntimeException {
         super("Os seguintes papeis nao tem ainda um papel de escritorio correspondente neste "
                 + "tenant: " + papeisSemCorrespondencia + ". O catalogo de moldes deste escritorio "
                 + "precisa de ser actualizado antes de continuar.");
-        this.papeisSemCorrespondencia = papeisSemCorrespondencia;
+        // SpotBugs EI_EXPOSE_REP2: copia defensiva -- nunca guardar a referencia recebida do
+        // chamador, que podia continuar mutavel do lado de fora depois de construida a excepcao.
+        this.papeisSemCorrespondencia = Set.copyOf(papeisSemCorrespondencia);
     }
 
+    // SpotBugs EI_EXPOSE_REP: Set.copyOf ja devolve um Set imutavel, seguro para devolver
+    // directamente -- nao ha campo mutavel interno a proteger de segunda mao aqui.
     public Set<String> getPapeisSemCorrespondencia() {
         return papeisSemCorrespondencia;
     }
