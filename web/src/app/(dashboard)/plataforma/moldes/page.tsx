@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Loader2,
+  Plus,
   RotateCcw,
   Save,
   TriangleAlert,
@@ -28,8 +29,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { toast } from "@/hooks/use-toast";
 import { useMe } from "@/hooks/use-me";
-import { useMoldes, useUpdateMoldes } from "@/hooks/use-platform-moldes";
-import type { MoldesConsola, MoldeSummary } from "@/types/platform-moldes";
+import { useCreateMolde, useMoldes, useUpdateMoldes } from "@/hooks/use-platform-moldes";
+import type { MoldeCreateRequest, MoldesConsola, MoldeSummary } from "@/types/platform-moldes";
+
+import { CriarMoldePanel } from "./criar-molde-panel";
 
 // O nome literal do papel de plataforma nunca pode aparecer como molde nesta
 // matriz -- o backend ja garante isto (Role.instanciavel=false para
@@ -86,8 +89,10 @@ function construirEstadoLocal(data: MoldesConsola): LocalPermissoes {
 function MoldesPlataformaContent() {
   const moldes = useMoldes();
   const atualizarMoldes = useUpdateMoldes();
+  const criarMolde = useCreateMolde();
 
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
 
   // Estado local de edição, mais a referência do último payload já aplicado
   // a ele. Quando a query devolve dados novos (referência diferente), o
@@ -152,6 +157,21 @@ function MoldesPlataformaContent() {
 
   const existeDiff = moldesAlterados.length > 0;
 
+  const handleCreateSubmit = async (payload: MoldeCreateRequest) => {
+    try {
+      await criarMolde.mutateAsync(payload);
+      toast.success(
+        `Molde "${payload.nome}" criado com sucesso. Fica disponível para escritórios provisionados a partir de agora.`,
+      );
+      setIsFormOpen(false);
+    } catch {
+      // O wrapper de fetch partilhado (apiFetch) ja mostrou o toast com a
+      // mensagem do backend (ex.: nome duplicado). Mantemos o painel aberto
+      // com o input intacto -- mesma convencao de recuperacao de
+      // CriarTenantPanel.
+    }
+  };
+
   const handleConfirmarGravacao = async () => {
     try {
       await atualizarMoldes.mutateAsync({
@@ -194,24 +214,42 @@ function MoldesPlataformaContent() {
         </div>
       </div>
 
-      <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-          <div>
-            <CardTitle className="text-xl font-semibold">Matriz de Moldes</CardTitle>
-            <CardDescription>
-              Permissões atribuídas a cada molde. Escritórios já provisionados não são afetados
-              por alterações feitas aqui.
-            </CardDescription>
-          </div>
-          <Button
-            onClick={() => setIsConfirmOpen(true)}
-            disabled={!existeDiff}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
-          >
-            <Save className="h-4 w-4" />
-            Guardar Alterações
-          </Button>
-        </CardHeader>
+      {isFormOpen ? (
+        <CriarMoldePanel
+          onCancel={() => setIsFormOpen(false)}
+          onSubmit={handleCreateSubmit}
+          isSubmitting={criarMolde.isPending}
+          permissoes={data?.permissoes ?? []}
+        />
+      ) : (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="text-xl font-semibold">Matriz de Moldes</CardTitle>
+              <CardDescription>
+                Permissões atribuídas a cada molde. Escritórios já provisionados não são afetados
+                por alterações feitas aqui.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsFormOpen(true)}
+                className="flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Criar Molde
+              </Button>
+              <Button
+                onClick={() => setIsConfirmOpen(true)}
+                disabled={!existeDiff}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+              >
+                <Save className="h-4 w-4" />
+                Guardar Alterações
+              </Button>
+            </div>
+          </CardHeader>
 
         <CardContent className="space-y-4">
           {/* Banner de não-propagação -- camada 1 de 3 do aviso, permanente e
@@ -251,7 +289,16 @@ function MoldesPlataformaContent() {
                   papéis prontos a atribuir.
                 </EmptyDescription>
               </EmptyHeader>
-              <EmptyContent />
+              <EmptyContent>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFormOpen(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Criar Molde
+                </Button>
+              </EmptyContent>
             </Empty>
           ) : (
             <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-md">
@@ -339,6 +386,7 @@ function MoldesPlataformaContent() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* AlertDialog de confirmação -- camada 3 de 3 do aviso de
           não-propagação. Gravar nunca chama a mutação directamente a partir
