@@ -50,7 +50,7 @@ const COLUMNS_PATH = path.join(PLATAFORMA_DIR, "columns.tsx");
 const CRIAR_TENANT_PANEL_PATH = path.join(PLATAFORMA_DIR, "criar-tenant-panel.tsx");
 
 const GUARDA_TENANT_RESERVADO_PHRASE =
-  "Não é possível suspender o tenant da plataforma (LexCV).";
+  "Não é possível suspender o tenant da plataforma (ALCv).";
 
 /**
  * Remove comentarios de um conteudo-fonte TypeScript/TSX antes de o usar em
@@ -190,7 +190,7 @@ async function main() {
     {
       id: "guarda-tenant-reservado",
       descricao:
-        "columns.tsx contem a frase 'Não é possível suspender o tenant da plataforma (LexCV).' byte-identica",
+        "columns.tsx contem a frase 'Não é possível suspender o tenant da plataforma (ALCv).' byte-identica",
       predicate: () => columnsSource.includes(GUARDA_TENANT_RESERVADO_PHRASE),
     },
     {

@@ -40,7 +40,7 @@ const SETTINGS_PAGE_PATH = path.join(
 );
 
 const TOOLTIP_PHRASE_NORMALIZADA =
-  "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma LexCV — já não podem ser alteradas a partir de um escritório individual.".replace(
+  "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.".replace(
     /\s+/g,
     " "
   );
