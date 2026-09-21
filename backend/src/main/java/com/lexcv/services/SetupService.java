@@ -170,8 +170,14 @@ public class SetupService {
      * para o papel instanciado aqui criaria dois caminhos de resolução de autoridade em
      * simultâneo -- tenants novos por papel de escritório, tenants antigos por papel global --
      * precisamente o que a Phase 126 existe para eliminar de uma vez.
+     *
+     * <p>(5) Package-private (não {@code private}) desde a Phase 126 Plan 03, exactamente para
+     * ser reutilizado por {@link MigracaoPapeisEscritorioService#migrar()} -- a conversão de
+     * escritórios já existentes precisa do MESMO laço, não de uma segunda definição capaz de
+     * divergir. Não existe, e não deve passar a existir, um segundo laço de instanciação de
+     * moldes em nenhum outro ficheiro do pacote.
      */
-    private void instanciarMoldes(UUID tenantId) {
+    void instanciarMoldes(UUID tenantId) {
         List<Role> moldes = roleRepository.findAllByInstanciavelTrue();
         for (Role molde : moldes) {
             if (NOME_PAPEL_PLATAFORMA.equals(molde.getNome())) {
