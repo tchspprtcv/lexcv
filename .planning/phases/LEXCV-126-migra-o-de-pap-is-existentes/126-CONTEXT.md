@@ -95,6 +95,12 @@ Nota herdada que continua a valer: a divergência da Phase 124 (`rolePermissions
 ## Deferred Ideas
 
 - Verificação por permissão em vez de proveniência de papel nos três sítios de lógica de negócio — muda comportamento observável, precisa de decisão de produto (ver Decisão 2)
+
+- **`ParecerController:411` e `ParecerController:482` — bloqueador de pré-requisito para a Phase 127, não um adiamento livre.** O plan-checker desta fase encontrou dois `principal.getRoles().contains("ADMIN")` que nem a Decisão 2, nem o `126-PATTERNS.md`, nem o levantamento inicial tinham identificado. Gatilham quem pode entregar um parecer e criar uma versão de parecer. São da mesma classe de fragilidade que a Decisão 2 existe para eliminar.
+
+  Não são convertidos nesta fase por uma razão técnica, não de conveniência: `principal.getRoles()` devolve um `Set<String>` de nomes, não entidades, pelo que resolver por proveniência exigiria que o `UserPrincipal` passasse a transportar `moldeId` — alteração ao contrato do principal que extravasa o âmbito de uma fase de migração.
+
+  Imediatamente depois da migração continuam correctos, porque `TenantRole.nome` é cópia literal do nome do molde. **Passam a estar errados no instante em que a Phase 127 entregar PAPEL-04 (renomear papel). A Phase 127 tem de os fechar antes de enviar essa capacidade** — caso contrário, um escritório que renomeie o seu papel de administrador perde silenciosamente a capacidade de entregar pareceres.
 - Remover `t_user_role.role_id` depois de a conversão estabilizar — fase própria, depois de o marco fechar
 - Corrigir a corrida de check-then-act no arranque do seeder — risco residual aceite e documentado na Phase 124 (WR-02)
 - Tecto de permissões por plano (`TenantPlano`) — requisitos futuros TECT-01/TECT-02
