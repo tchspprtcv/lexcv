@@ -1,0 +1,223 @@
+package com.lexcv.controllers;
+
+import com.lexcv.config.UserPrincipal;
+import com.lexcv.dtos.PapelCreateRequest;
+import com.lexcv.dtos.PapelRenameRequest;
+import com.lexcv.models.Permission;
+import com.lexcv.models.TenantRole;
+import com.lexcv.repositories.PermissionRepository;
+import com.lexcv.repositories.RoleRepository;
+import com.lexcv.repositories.TenantRoleRepository;
+import com.lexcv.repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * {@code /api/v1/admin/rbac/roles} (Phase 127, Plano 04, PAPEL-02/PAPEL-04/PAPEL-05/PAPEL-07/
+ * PAPEL-08/PAPEL-09): CRUD dos papéis PRÓPRIOS do escritório do chamador -- criar, renomear,
+ * apagar. Estas três operações não cabem na matriz de {@link AdminController#getRbac()}/
+ * {@link AdminController#updateRbac}, que só lê/escreve o conjunto de permissões de papéis já
+ * existentes.
+ *
+ * <p><b>Porque é uma classe NOVA, e não mais três handlers em {@link AdminController}:</b> desde
+ * o Plano 02 desta fase, o gate de CLASSE de {@link AdminController} é
+ * {@code hasAuthority('users:manage')}. Uma anotação de método mais específica SUBSTITUI -- nunca
+ * soma a -- a anotação de classe (documentado no próprio {@link AdminController}, e provado por
+ * proxy real em {@code AdminControllerRbacAutorizacaoTest}); se um handler de CRUD de papéis
+ * fosse acrescentado ali e alguém se esquecesse do {@code @PreAuthorize} de método, esse handler
+ * herdaria silenciosamente {@code users:manage} em vez de {@code rbac:manage} -- um alargamento
+ * de gate por omissão, não por decisão. Uma classe dedicada com um gate de CLASSE
+ * {@code hasAuthority('rbac:manage')} não pode ser esquecida desta forma: QUALQUER handler
+ * acrescentado aqui fica automaticamente coberto, sem anotação de método nenhuma. Mesma disciplina
+ * que {@link PlatformAdminController} já segue -- uma classe, uma autoridade.
+ *
+ * <p>{@code /api/v1/admin/rbac} (em {@link AdminController}) e {@code /api/v1/admin/rbac/roles}
+ * (aqui) são mapeamentos distintos e não-ambíguos -- o primeiro lê/escreve o CONJUNTO DE
+ * PERMISSÕES de papéis existentes; este cria/renomeia/apaga papéis em si.
+ *
+ * <p>Cada handler aqui resolve o tenant exclusivamente a partir do principal autenticado
+ * ({@code SecurityContextHolder} -> {@code principal.getTenantId()}), nunca de um valor do corpo
+ * ou do path do pedido -- a mesma fronteira de isolamento multi-tenant que
+ * {@link AdminController#listUsers()} já usa (PAPEL-07).
+ *
+ * <p>{@code UserRepository}/{@code RoleRepository} são injetados aqui já a pensar no
+ * {@code DELETE} desta mesma classe (contagem de atribuições e proveniência do molde ADMIN) --
+ * ainda sem chamador neste commit, ver o handler abaixo acrescentado a seguir.
+ */
+@RestController
+@RequestMapping("/api/v1/admin/rbac/roles")
+@PreAuthorize("hasAuthority('rbac:manage')")
+@RequiredArgsConstructor
+@Slf4j
+public class OfficeRolesController {
+
+    // Redeclarado aqui (não importado) porque os originais em AdminController são private --
+    // mesma disciplina que ResolucaoPapeisService redeclara NOME_PAPEL_PLATAFORMA. Ver
+    // AdminController para o histórico completo (Phase 119/CR-01, 119-REVIEW.md) de porque as
+    // duas formas (crua e prefixada ROLE_) são bloqueadas: UserPrincipal.create não prefixa
+    // "permissions" com "ROLE_", por isso a string já-prefixada é a que realmente satisfaria
+    // hasRole('PLATAFORMA_ADMIN') se chegasse a uma lista de autoridades por essa via.
+    private static final String PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
+    private static final String PAPEL_PLATAFORMA_AUTORIDADE = "ROLE_" + PAPEL_PLATAFORMA;
+
+    private final TenantRoleRepository tenantRoleRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
+
+    private UUID getTenantId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        return principal.getTenantId();
+    }
+
+    /**
+     * Valida e normaliza um nome submetido para {@link #createRole}/{@link #renameRole}: rejeita
+     * nulo/vazio, retira espaços nas pontas SEM alterar maiúsculas/minúsculas (UI-SPEC §7/§8 --
+     * ao contrário de {@code PlatformAdminController.createMolde}, que normaliza moldes para
+     * maiúsculas, um papel de escritório é nomeado livremente pelo próprio administrador -- "
+     * Recepção", "Financeiro Sénior" --, não existe convenção de maiúsculas de plataforma a
+     * respeitar aqui) e recusa, de forma case-insensitive, qualquer uma das duas formas
+     * reservadas.
+     */
+    private ResponseEntity<?> validarNome(String nomeSubmetido) {
+        if (nomeSubmetido == null || nomeSubmetido.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "O nome do papel é obrigatório."));
+        }
+
+        String nome = nomeSubmetido.trim();
+        String nomeParaComparacao = nome.toUpperCase(Locale.ROOT);
+        if (PAPEL_PLATAFORMA.equals(nomeParaComparacao) || PAPEL_PLATAFORMA_AUTORIDADE.equals(nomeParaComparacao)) {
+            return ResponseEntity.badRequest().body(Map.of("message",
+                    "Este nome está reservado à plataforma e não pode ser usado."));
+        }
+
+        return null;
+    }
+
+    /**
+     * {@code POST /api/v1/admin/rbac/roles} (PAPEL-02): cria um novo papel próprio do escritório
+     * do chamador, com o nome e o conjunto inicial de permissões escolhidos pelo administrador.
+     */
+    @PostMapping("")
+    public ResponseEntity<?> createRole(@RequestBody PapelCreateRequest request) {
+        UUID tenantId = getTenantId();
+
+        String nomeSubmetido = request == null ? null : request.getNome();
+        ResponseEntity<?> erroNome = validarNome(nomeSubmetido);
+        if (erroNome != null) {
+            return erroNome;
+        }
+        String nome = nomeSubmetido.trim();
+
+        if (tenantRoleRepository.findByTenantIdAndNome(tenantId, nome).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório."));
+        }
+
+        Map<String, Permission> catalogoPorChave = permissionRepository.findAllByReservadaPlataformaFalse().stream()
+                .collect(Collectors.toMap(Permission::getNome, p -> p));
+
+        Set<Permission> permissoesResolvidas = new HashSet<>();
+        if (request.getPermissoes() != null) {
+            for (String chave : request.getPermissoes()) {
+                Permission permissao = catalogoPorChave.get(chave);
+                if (permissao == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
+                }
+                permissoesResolvidas.add(permissao);
+            }
+        }
+
+        try {
+            // moldeId(null) + sistema(false): um papel criado de raiz por um administrador não tem
+            // nenhuma proveniência de molde. Consequência deliberada (Phase 126, documentada aqui
+            // de novo por clareza): este papel nunca pode ser "protegido" -- não é o papel de
+            // administrador do escritório nem nenhum outro papel instanciado -- e
+            // ResolucaoPapeisService.temPapelDeMolde nunca o vai corresponder a nenhum molde. É o
+            // limite já assumido pela Fase 126, não uma lacuna nova desta fase.
+            TenantRole novoPapel = TenantRole.builder()
+                    .tenantId(tenantId)
+                    .nome(nome)
+                    .moldeId(null)
+                    .sistema(false)
+                    .permissions(permissoesResolvidas)
+                    .build();
+            TenantRole papelGravado = tenantRoleRepository.save(novoPapel);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
+        } catch (DataIntegrityViolationException ex) {
+            // Duplicacao concorrente: a constraint unica (tenant_id, nome) de t_tenant_role apanha
+            // na base de dados uma corrida entre dois pedidos com o mesmo nome que passaram ambos
+            // o pre-check acima -- mesmo idioma de PlatformAdminController.createMolde para nome
+            // de molde duplicado.
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório."));
+        }
+    }
+
+    /**
+     * {@code PUT /api/v1/admin/rbac/roles/{id}} (PAPEL-04): renomeia um papel próprio já
+     * existente do escritório do chamador. Alterar o nome está deliberadamente disponível também
+     * para o papel de administrador do escritório protegido (PAPEL-08 proíbe APAGAR ou DESPOJAR
+     * de permissões esse papel, nunca renomeá-lo) -- é precisamente porque o nome deste papel
+     * passa a ser editável que o resto desta fase discrimina o papel protegido por proveniência
+     * ({@code moldeId}), nunca por nome. Este handler nunca toca em {@code permissions},
+     * {@code moldeId}, {@code sistema} nem em nenhuma atribuição de utilizador -- exatamente o
+     * que o diálogo de renomear promete ao operador (UI-SPEC §7).
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> renameRole(@PathVariable UUID id, @RequestBody PapelRenameRequest request) {
+        UUID tenantId = getTenantId();
+
+        TenantRole tenantRole = tenantRoleRepository.findById(id).orElse(null);
+        if (tenantRole == null || !tenantRole.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado"));
+        }
+
+        String nomeSubmetido = request == null ? null : request.getNome();
+        ResponseEntity<?> erroNome = validarNome(nomeSubmetido);
+        if (erroNome != null) {
+            return erroNome;
+        }
+        String nome = nomeSubmetido.trim();
+
+        boolean duplicadoNoutroId = tenantRoleRepository.findByTenantIdAndNome(tenantId, nome)
+                .filter(outro -> !outro.getId().equals(id))
+                .isPresent();
+        if (duplicadoNoutroId) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório."));
+        }
+
+        tenantRole.setNome(nome);
+        try {
+            TenantRole papelGravado = tenantRoleRepository.save(tenantRole);
+            return ResponseEntity.ok(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
+        } catch (DataIntegrityViolationException ex) {
+            // Mesmo idioma de createRole: corrida concorrente apanhada pela constraint unica
+            // (tenant_id, nome), nao pelo pre-check acima.
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório."));
+        }
+    }
+}
