@@ -194,16 +194,47 @@ class PlatformAdminControllerTest {
     // transacao (User.id usa GenerationType.UUID, sem round-trip a BD antes disso), pelo que a
     // DataIntegrityViolationException so pode ser apanhada aqui, a volta desta chamada, nunca
     // dentro do proprio metodo do servico. Sem este catch, cairia no handler global 500.
+    //
+    // WR-01 (125-REVIEW.md) estreitou o catch para so mapear a mensagem de email quando a causa
+    // mais especifica da excecao realmente menciona "email" -- por isso este teste passa a
+    // construir a excecao com uma causa que imita o detalhe real que o Postgres devolve numa
+    // violacao de unicidade de email (em vez de uma mensagem generica), para continuar a provar o
+    // caminho feliz desta corrida em vez de deixar de exercitar a guarda nova.
     @Test
-    void createTenant_comDataIntegrityViolationExceptionDevolve400ComMensagemDeEmailDuplicado() {
+    void createTenant_comDataIntegrityViolationExceptionDeEmailDevolve400ComMensagemDeEmailDuplicado() {
         SetupInitializeRequest request = pedidoValido();
+        Throwable causaSql = new java.sql.SQLException(
+                "duplicate key value violates unique constraint \"uk_t_user_email\"\n"
+                        + "  Detail: Key (email)=(admin@escritorionovo.cv) already exists.");
         when(setupService.provisionTenant(request))
-                .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+                .thenThrow(new DataIntegrityViolationException("could not execute statement", causaSql));
 
         ResponseEntity<?> response = novoController().createTenant(request);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(Map.of("message", "Já existe um utilizador com este email."), response.getBody());
+    }
+
+    // WR-01 (125-REVIEW.md): a mesma transacao de provisionTenant tambem corre
+    // instanciarMoldes(...) (Phase 125), que pode lancar DataIntegrityViolationException por uma
+    // razao totalmente alheia ao email (ex.: uma constraint de t_tenant_role). Antes deste fix, o
+    // catch em createTenant mapeava QUALQUER DataIntegrityViolationException para "Já existe um
+    // utilizador com este email.", disfarçando a causa real. Prova que uma violacao sem "email" na
+    // causa mais especifica propaga tal e qual, em vez de ser mal rotulada.
+    @Test
+    void createTenant_comDataIntegrityViolationExceptionNaoRelacionadaComEmailPropaga() {
+        SetupInitializeRequest request = pedidoValido();
+        Throwable causaSql = new java.sql.SQLException(
+                "duplicate key value violates unique constraint \"uk_tenant_role_tenant_nome\"\n"
+                        + "  Detail: Key (tenant_id, nome)=(...) already exists.");
+        DataIntegrityViolationException excecaoNaoRelacionada =
+                new DataIntegrityViolationException("could not execute statement", causaSql);
+        when(setupService.provisionTenant(request)).thenThrow(excecaoNaoRelacionada);
+
+        DataIntegrityViolationException lancada = assertThrows(DataIntegrityViolationException.class,
+                () -> novoController().createTenant(request));
+
+        assertEquals(excecaoNaoRelacionada, lancada);
     }
 
     @Test

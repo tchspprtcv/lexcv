@@ -112,8 +112,37 @@ public class PlatformAdminController {
             // excecao para o pedido perdedor de uma corrida concorrente com o mesmo adminEmail.
             // Traduzida para a mesma mensagem/400 do caso nao-concorrente (pre-check), para o
             // comportamento visivel ao cliente nao depender de timing.
-            return ResponseEntity.badRequest().body(Map.of("message", "Já existe um utilizador com este email."));
+            //
+            // WR-01 (125-REVIEW.md): este catch cobre TODA a transacao de provisionTenant, que
+            // desde a Phase 125 tambem chama instanciarMoldes(...) -- um Set de
+            // tenantRoleRepository.save(...) dentro da MESMA transacao, portanto tambem capaz de
+            // lancar DataIntegrityViolationException (ex.: uma futura regressao na unicidade de
+            // t_tenant_role, ou qualquer outra FK/constraint inesperada). Sem esta guarda, QUALQUER
+            // violacao aqui apanhada seria reportada ao operador como "Já existe um utilizador com
+            // este email.", mesmo quando o email nao teve nada a ver -- enganando quem estiver a
+            // diagnosticar o incidente. So reclamamos a mensagem de email quando a causa mais
+            // especifica da excecao (a SQLException do driver, tipicamente com o detalhe do
+            // Postgres "Key (email)=(...) already exists.") menciona mesmo "email"; qualquer outra
+            // violacao propaga tal e qual para o handler global (Exception 500 em
+            // GlobalExceptionHandler), que reporta a excecao real em vez de a disfarçar.
+            if (isViolacaoDeEmailDuplicado(ex)) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Já existe um utilizador com este email."));
+            }
+            throw ex;
         }
+    }
+
+    /**
+     * Inspeciona a causa mais especifica de uma {@link DataIntegrityViolationException} para
+     * decidir se e mesmo a corrida de email duplicado que o catch de {@link #createTenant} foi
+     * escrito para tratar (WR-01, 125-REVIEW.md) -- nunca assume isso so pela classe da excecao,
+     * porque a mesma transacao tambem pode falhar por uma constraint de {@code t_tenant_role}
+     * alheia ao email.
+     */
+    private boolean isViolacaoDeEmailDuplicado(DataIntegrityViolationException ex) {
+        Throwable causaMaisEspecifica = ex.getMostSpecificCause();
+        String mensagem = causaMaisEspecifica != null ? causaMaisEspecifica.getMessage() : null;
+        return mensagem != null && mensagem.toLowerCase(Locale.ROOT).contains("email");
     }
 
     /**
