@@ -56,10 +56,14 @@ Plans:
   1. Correr a migração instancia os moldes actuais em cada tenant já existente e reaponta cada `t_user_role` para o papel de escritório equivalente, preservando exactamente as atribuições anteriores
   2. Uma verificação pós-migração compara, utilizador a utilizador, o conjunto de permissões efectivas antes e depois da migração, e falha de forma visível perante qualquer divergência
   3. `backend/migrations/README.md` e a secção de arranque em duas fases do `DEPLOYMENT.md` documentam o lugar exacto deste script na sequência de deploy
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
 
 Plans:
-- [ ] 126-01: TBD
+- [ ] 126-01-PLAN.md — Associação `User` → `TenantRole` em `t_user_tenant_role` (coexistindo com `t_user_role`), script manual `127` e documentação de deploy (MIGR-03)
+- [ ] 126-02-PLAN.md — Resolvedor único de autoridade (colapsando a união triplicada) e verificação de deriva zero capaz de reprovar (MIGR-02)
+- [ ] 126-03-PLAN.md — Conversão convergente por tenant reutilizando `instanciarMoldes`, runner de arranque e verificação na mesma transacção
+- [ ] 126-04-PLAN.md — Cutover de leitura em `JwtAuthenticationFilter`, `AuthController` e `AdminController`, mais o caminho de escrita de papéis que tem de acompanhar
+- [ ] 126-05-PLAN.md — Os três sítios de lógica de negócio passam de comparação por nome para proveniência (`TenantRole.moldeId`)
 
 ### Phase 127: Papéis e Permissões do Escritório
 **Goal**: O administrador de um escritório gere por inteiro os papéis do seu próprio escritório — sem depender da plataforma para nada disto — com a certeza absoluta de que nada do que faz alcança outro tenant ou o papel da própria plataforma.
@@ -101,7 +105,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 |-------|----------------|--------|-----------|
 | 124. Catálogo de Permissões em Base de Dados | 2/2 | Complete   | 2026-09-20 |
 | 125. Moldes da Plataforma e Provisionamento | 6/6 | Complete   | 2026-09-21 |
-| 126. Migração de Papéis Existentes | 0/TBD | Not started | - |
+| 126. Migração de Papéis Existentes | 0/5 | Planned | - |
 | 127. Papéis e Permissões do Escritório | 0/TBD | Not started | - |
 | 128. Auditoria de Atribuições de Papéis | 0/TBD | Not started | - |
 
