@@ -375,7 +375,9 @@ function MoldesPlataformaContent() {
                   <span>
                     <strong>{molde.nome}</strong> —{" "}
                     {temEscritorios
-                      ? `${molde.escritoriosInstanciados} escritório(s) já têm uma cópia própria deste molde. Nenhum deles é alterado por esta gravação.`
+                      ? molde.escritoriosInstanciados === 1
+                        ? "1 escritório já tem uma cópia própria deste molde. Não é alterado por esta gravação."
+                        : `${molde.escritoriosInstanciados} escritórios já têm uma cópia própria deste molde. Nenhum deles é alterado por esta gravação.`
                       : "0 escritórios instanciaram este molde ainda. Esta alteração não tem impacto em nenhum escritório existente."}
                   </span>
                 </li>

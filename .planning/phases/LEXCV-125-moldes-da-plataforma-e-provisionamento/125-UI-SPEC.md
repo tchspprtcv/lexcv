@@ -216,7 +216,7 @@ AlertDialogHeader
 <ul> (outside AlertDialogDescription, one row per changed molde)
   For each changed molde, one row:
     - escritoriosInstanciados > 0:
-      "{NOME} — {N} escritório(s) já têm uma cópia própria deste molde.
+      "{NOME} — {N} escritórios já têm uma cópia própria deste molde.
        Nenhum deles é alterado por esta gravação."
     - escritoriosInstanciados === 0:
       "{NOME} — 0 escritórios instanciaram este molde ainda. Esta alteração
@@ -301,7 +301,7 @@ On success: `toast.success('Molde "{NOME}" criado com sucesso. Fica disponível 
 | Primary CTA (create) | "Criar Molde" |
 | Confirmation dialog title | "Confirmar alterações aos moldes" |
 | Confirmation dialog lead | "Vai gravar alterações de permissões nos moldes abaixo. Esta gravação não altera nenhum papel já copiado para um escritório existente — só afeta escritórios provisionados a partir de agora." |
-| Confirmation row, N escritórios > 0 | "{NOME} — {N} escritório(s) já têm uma cópia própria deste molde. Nenhum deles é alterado por esta gravação." |
+| Confirmation row, N escritórios > 0 | "{NOME} — {N} escritórios já têm uma cópia própria deste molde. Nenhum deles é alterado por esta gravação." |
 | Confirmation row, 0 escritórios | "{NOME} — 0 escritórios instanciaram este molde ainda. Esta alteração não tem impacto em nenhum escritório existente." |
 | Confirmation action button | "Confirmar e Gravar" |
 | Persistent banner | "Alterar um molde não atualiza escritórios já criados. Cada escritório recebe, no momento em que é provisionado, uma cópia própria e independente de cada molde (snapshot) — editar o molde depois disso não muda essa cópia. Só os escritórios provisionados a partir de agora recebem o conjunto de permissões que gravar aqui." |
