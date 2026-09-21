@@ -33,9 +33,9 @@
 
 ### Migração
 
-- [ ] **MIGR-01**: A migração instancia os moldes em cada tenant existente e repõe as atribuições actuais sem que nenhum utilizador ganhe ou perca acesso
-- [ ] **MIGR-02**: Existe uma verificação pós-migração que compara, por utilizador, o conjunto de permissões efectivas antes e depois, e falha se divergirem
-- [ ] **MIGR-03**: A migração está documentada em `backend/migrations/README.md`, com o seu lugar no arranque em duas fases do `DEPLOYMENT.md`
+- [x] **MIGR-01**: A migração instancia os moldes em cada tenant existente e repõe as atribuições actuais sem que nenhum utilizador ganhe ou perca acesso
+- [x] **MIGR-02**: Existe uma verificação pós-migração que compara, por utilizador, o conjunto de permissões efectivas antes e depois, e falha se divergirem
+- [x] **MIGR-03**: A migração está documentada em `backend/migrations/README.md`, com o seu lugar no arranque em duas fases do `DEPLOYMENT.md`
 
 ### Auditoria de Atribuições
 
@@ -90,9 +90,9 @@ Reconhecidos, fora deste marco.
 | CATL-02 | Phase 124 | Complete |
 | CATL-03 | Phase 124 | Complete |
 | CATL-04 | Phase 127 | Pending |
-| MIGR-01 | Phase 126 | Pending |
-| MIGR-02 | Phase 126 | Pending |
-| MIGR-03 | Phase 126 | Pending |
+| MIGR-01 | Phase 126 | Complete |
+| MIGR-02 | Phase 126 | Complete |
+| MIGR-03 | Phase 126 | Complete |
 | AUDT-01 | Phase 128 | Pending |
 | AUDT-02 | Phase 128 | Pending |
 | AUDT-03 | Phase 128 | Pending |
@@ -105,4 +105,4 @@ Reconhecidos, fora deste marco.
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-21 after Phases 124 and 125 completed (7/24 requirements complete)*
+*Last updated: 2026-09-21 after Phases 124-126 completed (10/24 requirements complete)*

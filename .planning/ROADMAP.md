@@ -13,7 +13,7 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 
 - [x] **Phase 124: Catálogo de Permissões em Base de Dados** - O catálogo de permissões deixa de ser uma lista embutida no controller e passa a viver em `t_permission`, semeado e actualizado com segurança a cada arranque (completed 2026-09-20)
 - [x] **Phase 125: Moldes da Plataforma e Provisionamento** - `PLATAFORMA_ADMIN` gere moldes de papel em `/plataforma`; todo escritório novo nasce com cópias próprias desses moldes (completed 2026-09-21)
-- [ ] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso
+- [x] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso (completed 2026-09-21)
 - [ ] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN`
 - [ ] **Phase 128: Auditoria de Atribuições de Papéis** - Toda a alteração de papel e de atribuição fica registada de forma imutável e consultável por escritório
 
@@ -59,11 +59,11 @@ Plans:
 **Plans**: 5 plans (4 waves)
 
 Plans:
-- [ ] 126-01-PLAN.md — Associação `User` → `TenantRole` em `t_user_tenant_role` (coexistindo com `t_user_role`), script manual `127` e documentação de deploy (MIGR-03)
-- [ ] 126-02-PLAN.md — Resolvedor único de autoridade (colapsando a união triplicada) e verificação de deriva zero capaz de reprovar (MIGR-02)
-- [ ] 126-03-PLAN.md — Conversão convergente por tenant reutilizando `instanciarMoldes`, runner de arranque e verificação na mesma transacção
-- [ ] 126-04-PLAN.md — Cutover de leitura em `JwtAuthenticationFilter`, `AuthController` e `AdminController`, mais o caminho de escrita de papéis que tem de acompanhar
-- [ ] 126-05-PLAN.md — Os três sítios de lógica de negócio passam de comparação por nome para proveniência (`TenantRole.moldeId`)
+- [x] 126-01-PLAN.md — Associação `User` → `TenantRole` em `t_user_tenant_role` (coexistindo com `t_user_role`), script manual `127` e documentação de deploy (MIGR-03)
+- [x] 126-02-PLAN.md — Resolvedor único de autoridade (colapsando a união triplicada) e verificação de deriva zero capaz de reprovar (MIGR-02)
+- [x] 126-03-PLAN.md — Conversão convergente por tenant reutilizando `instanciarMoldes`, runner de arranque e verificação na mesma transacção
+- [x] 126-04-PLAN.md — Cutover de leitura em `JwtAuthenticationFilter`, `AuthController` e `AdminController`, mais o caminho de escrita de papéis que tem de acompanhar
+- [x] 126-05-PLAN.md — Os três sítios de lógica de negócio passam de comparação por nome para proveniência (`TenantRole.moldeId`)
 
 ### Phase 127: Papéis e Permissões do Escritório
 **Goal**: O administrador de um escritório gere por inteiro os papéis do seu próprio escritório — sem depender da plataforma para nada disto — com a certeza absoluta de que nada do que faz alcança outro tenant ou o papel da própria plataforma.
@@ -105,7 +105,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 |-------|----------------|--------|-----------|
 | 124. Catálogo de Permissões em Base de Dados | 2/2 | Complete   | 2026-09-20 |
 | 125. Moldes da Plataforma e Provisionamento | 6/6 | Complete   | 2026-09-21 |
-| 126. Migração de Papéis Existentes | 0/5 | Planned | - |
+| 126. Migração de Papéis Existentes | 5/5 | Complete   | 2026-09-21 |
 | 127. Papéis e Permissões do Escritório | 0/TBD | Not started | - |
 | 128. Auditoria de Atribuições de Papéis | 0/TBD | Not started | - |
 
