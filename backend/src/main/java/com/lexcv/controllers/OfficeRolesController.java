@@ -4,6 +4,7 @@ import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.PapelCreateRequest;
 import com.lexcv.dtos.PapelRenameRequest;
 import com.lexcv.models.Permission;
+import com.lexcv.models.Role;
 import com.lexcv.models.TenantRole;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -58,10 +60,6 @@ import java.util.stream.Collectors;
  * ({@code SecurityContextHolder} -> {@code principal.getTenantId()}), nunca de um valor do corpo
  * ou do path do pedido -- a mesma fronteira de isolamento multi-tenant que
  * {@link AdminController#listUsers()} já usa (PAPEL-07).
- *
- * <p>{@code UserRepository}/{@code RoleRepository} são injetados aqui já a pensar no
- * {@code DELETE} desta mesma classe (contagem de atribuições e proveniência do molde ADMIN) --
- * ainda sem chamador neste commit, ver o handler abaixo acrescentado a seguir.
  */
 @RestController
 @RequestMapping("/api/v1/admin/rbac/roles")
@@ -219,5 +217,72 @@ public class OfficeRolesController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                     "Já existe um papel com este nome neste escritório."));
         }
+    }
+
+    /**
+     * {@code DELETE /api/v1/admin/rbac/roles/{id}} (PAPEL-05/PAPEL-08/PAPEL-09): apaga um papel
+     * próprio do escritório do chamador. Ordem das guardas, da mais barata para a mais cara, e
+     * nada é apagado antes de TODAS passarem:
+     * <ol>
+     *   <li>Fronteira cross-tenant (T-127-18): {@code findById} ausente OU {@code tenantId}
+     *   diferente do principal -> 404, nunca 403 -- devolver 403 permitiria a um escritório
+     *   distinguir "id inexistente" de "id de outro tenant", uma sonda de enumeração que 404
+     *   fecha por construção.</li>
+     *   <li>Proveniência (PAPEL-08/T-127-19): o papel de administrador do escritório nunca pode
+     *   ser apagado. O discriminador é {@code moldeId} contra o id do molde global "ADMIN" --
+     *   NUNCA {@code nome.equals("ADMIN")} -- precisamente porque esta fase torna o nome editável;
+     *   uma comparação de nome deixaria de funcionar na primeira vez que um escritório renomeasse
+     *   este papel. Mesmo raciocínio já documentado em
+     *   {@code ResolucaoPapeisService.temPapelDeMolde}. O papel de plataforma
+     *   ({@code PLATAFORMA_ADMIN}) também é recusado aqui por defesa em profundidade (PAPEL-09),
+     *   embora nunca deva ser alcançável por este endpoint (nunca aparece na leitura tenant-scoped
+     *   que alimentaria o ecrã).</li>
+     *   <li>Atribuição (PAPEL-05/T-127-20): uma CONTAGEM
+     *   ({@link UserRepository#countByTenantRolesId(UUID)}), nunca uma lista carregada e depois
+     *   verificada com {@code isEmpty()}, e nunca uma escrita apanhada num
+     *   {@code catch (DataIntegrityViolationException)} sobre a FK -- 127-CONTEXT.md Decisão 4
+     *   exige que esta seja uma decisão que a aplicação toma, não um erro de base de dados que
+     *   interpreta, para que a mensagem possa nomear o número exato e o cliente possa mostrar o
+     *   caminho "remova-os em Gestão de Utilizadores" (UI-SPEC §7).</li>
+     *   <li>Só então {@code deleteById} + 204. {@code TenantRole.permissions} é o lado
+     *   PROPRIETÁRIO de {@code t_tenant_role_permission} (ver {@link TenantRole}), por isso as
+     *   suas linhas de junção vão com a entidade sem limpeza manual; o passo 3 já garante que não
+     *   restam linhas {@code t_user_tenant_role} a apontar para este id.</li>
+     * </ol>
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteRole(@PathVariable UUID id) {
+        UUID tenantId = getTenantId();
+
+        TenantRole tenantRole = tenantRoleRepository.findById(id).orElse(null);
+        if (tenantRole == null || !tenantRole.getTenantId().equals(tenantId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado"));
+        }
+
+        Integer adminMoldeId = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
+        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
+
+        boolean ehPapelDeAdministrador = adminMoldeId != null && adminMoldeId.equals(tenantRole.getMoldeId());
+        if (ehPapelDeAdministrador) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este é o papel de administrador do escritório e não pode ser apagado."));
+        }
+
+        boolean ehPapelDePlataforma = (plataformaMoldeId != null && plataformaMoldeId.equals(tenantRole.getMoldeId()))
+                || PAPEL_PLATAFORMA.equals(tenantRole.getNome())
+                || PAPEL_PLATAFORMA_AUTORIDADE.equals(tenantRole.getNome());
+        if (ehPapelDePlataforma) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "O papel de administrador de plataforma é reservado e não pode ser apagado a partir daqui."));
+        }
+
+        long atribuicoes = userRepository.countByTenantRolesId(id);
+        if (atribuicoes > 0) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este papel está atribuído a " + atribuicoes + " utilizador(es) e não pode ser apagado."));
+        }
+
+        tenantRoleRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
