@@ -1,6 +1,9 @@
 package com.lexcv.controllers;
 
+import com.lexcv.dtos.MoldeCreateRequest;
+import com.lexcv.dtos.MoldeProvisionResponse;
 import com.lexcv.dtos.MoldesConsolaResponse;
+import com.lexcv.dtos.MoldesUpdateRequest;
 import com.lexcv.dtos.SetupInitializeRequest;
 import com.lexcv.dtos.TenantAdminSummaryResponse;
 import com.lexcv.dtos.TenantProvisionResponse;
@@ -19,6 +22,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +33,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -220,6 +228,143 @@ public class PlatformAdminController {
      */
     @GetMapping("/moldes")
     public ResponseEntity<?> listMoldes() {
+        return ResponseEntity.ok(montarConsolaResponse());
+    }
+
+    /**
+     * {@code PUT /api/v1/platform/moldes} (Phase 125, MOLD-02/MOLD-03): grava em lote o conjunto
+     * de permissões de um ou mais moldes -- validate-then-write, nenhuma entrada é gravada antes
+     * de todas as entradas do pedido passarem todas as guardas, para que um pedido inválido nunca
+     * deixe metade dos moldes alterados. As chaves de permissão são resolvidas exclusivamente
+     * pela mesma leitura filtrada de {@link #listMoldes()}
+     * ({@link PermissionRepository#findAllByReservadaPlataformaFalse()}) -- nunca por
+     * {@code findById} sobre um id cru -- para que uma permissão reservada à plataforma nunca
+     * possa entrar num molde por via de um corpo de pedido (T-125-20).
+     *
+     * <p><b>Este handler nunca lê nem escreve {@link TenantRoleRepository}</b>, a não ser a
+     * contagem de leitura dentro de {@link #toMoldeDto(Role)} usada para reprojectar a resposta.
+     * O papel instanciado é um snapshot (MOLD-03, decisão bloqueada da fase) -- propagar aqui
+     * contradiria essa decisão e invalidaria o aviso de não-propagação que o ecrã promete ao
+     * operador (T-125-19).
+     */
+    @Transactional
+    @PutMapping("/moldes")
+    public ResponseEntity<?> updateMoldes(@RequestBody MoldesUpdateRequest request) {
+        if (request == null || request.getMoldes() == null || request.getMoldes().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "A lista de moldes é obrigatória."));
+        }
+
+        Map<String, Permission> catalogoPorChave = permissionRepository.findAllByReservadaPlataformaFalse().stream()
+                .collect(Collectors.toMap(Permission::getNome, permissao -> permissao));
+
+        // Validate-then-write (T-125-21): resolve e valida TODAS as entradas antes de gravar
+        // qualquer uma. resolvido preserva a ordem de chegada apenas por clareza -- a gravacao em
+        // si nao depende de ordem.
+        Map<Role, Set<Permission>> resolvido = new java.util.LinkedHashMap<>();
+        for (MoldesUpdateRequest.MoldePermissoesEntry entrada : request.getMoldes()) {
+            if (entrada.getId() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "O id do molde é obrigatório."));
+            }
+
+            Role role = roleRepository.findById(entrada.getId()).orElse(null);
+            if (role == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Molde não encontrado."));
+            }
+
+            if (!Boolean.TRUE.equals(role.getInstanciavel())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Este papel não é um molde da plataforma."));
+            }
+
+            if (PAPEL_RESERVADO.equals(role.getNome())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "O papel PLATAFORMA_ADMIN não pode ser editado como molde."));
+            }
+
+            if (entrada.getPermissoes() == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "A lista de permissões é obrigatória."));
+            }
+
+            Set<Permission> permissoesResolvidas = new HashSet<>();
+            for (String chave : entrada.getPermissoes()) {
+                Permission permissao = catalogoPorChave.get(chave);
+                if (permissao == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
+                }
+                permissoesResolvidas.add(permissao);
+            }
+
+            resolvido.put(role, permissoesResolvidas);
+        }
+
+        for (Map.Entry<Role, Set<Permission>> entry : resolvido.entrySet()) {
+            Role role = entry.getKey();
+            role.setPermissions(new HashSet<>(entry.getValue()));
+            roleRepository.save(role);
+        }
+
+        return ResponseEntity.ok(montarConsolaResponse());
+    }
+
+    /**
+     * {@code POST /api/v1/platform/moldes} (Phase 125, MOLD-04): cria um novo molde já marcado
+     * como instanciável ({@code instanciavel = true}), disponível para escritórios provisionados
+     * a partir daí. O nome é normalizado para maiúsculas (coerente com os 4 moldes semeados) antes
+     * de qualquer comparação ou gravação.
+     */
+    @PostMapping("/moldes")
+    public ResponseEntity<?> createMolde(@RequestBody MoldeCreateRequest request) {
+        if (request == null || request.getNome() == null || request.getNome().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "O nome do molde é obrigatório."));
+        }
+
+        String nomeNormalizado = request.getNome().trim().toUpperCase(Locale.ROOT);
+
+        if (PAPEL_RESERVADO.equals(nomeNormalizado)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Este nome está reservado à plataforma e não pode ser usado como molde."));
+        }
+
+        if (roleRepository.findByNome(nomeNormalizado).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Já existe um papel com este nome."));
+        }
+
+        Map<String, Permission> catalogoPorChave = permissionRepository.findAllByReservadaPlataformaFalse().stream()
+                .collect(Collectors.toMap(Permission::getNome, permissao -> permissao));
+
+        Set<Permission> permissoesResolvidas = new HashSet<>();
+        if (request.getPermissoes() != null) {
+            for (String chave : request.getPermissoes()) {
+                Permission permissao = catalogoPorChave.get(chave);
+                if (permissao == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
+                }
+                permissoesResolvidas.add(permissao);
+            }
+        }
+
+        try {
+            Role role = Role.builder()
+                    .nome(nomeNormalizado)
+                    .instanciavel(true)
+                    .permissions(permissoesResolvidas)
+                    .build();
+            Role roleGravado = roleRepository.save(role);
+            MoldeProvisionResponse response = MoldeProvisionResponse.builder()
+                    .id(roleGravado.getId())
+                    .nome(roleGravado.getNome())
+                    .build();
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (DataIntegrityViolationException ex) {
+            // Duplicacao concorrente: a constraint unica de Role.nome apanha na base de dados uma
+            // corrida entre dois pedidos com o mesmo nome que passaram ambos o pre-check acima --
+            // mesmo idioma de createTenant/DataIntegrityViolationException para email duplicado.
+            return ResponseEntity.badRequest().body(Map.of("message", "Já existe um papel com este nome."));
+        }
+    }
+
+    /**
+     * Monta o payload único de {@link #listMoldes()} e reutilizado por {@link #updateMoldes} para
+     * devolver as contagens {@code escritoriosInstanciados} já atualizadas sem um segundo pedido.
+     */
+    private MoldesConsolaResponse montarConsolaResponse() {
         List<MoldesConsolaResponse.PermissaoDto> permissoes = permissionRepository.findAllByReservadaPlataformaFalse().stream()
                 .filter(p -> p.getRotulo() != null && !p.getRotulo().trim().isEmpty())
                 .sorted(Comparator
@@ -234,10 +379,10 @@ public class PlatformAdminController {
                 .map(this::toMoldeDto)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(MoldesConsolaResponse.builder()
+        return MoldesConsolaResponse.builder()
                 .permissoes(permissoes)
                 .moldes(moldes)
-                .build());
+                .build();
     }
 
     /**
