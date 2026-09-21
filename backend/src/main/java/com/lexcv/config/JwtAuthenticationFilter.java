@@ -68,8 +68,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // reage a string "ADMIN" estar no conjunto de nomes devolvido, cego a origem do
                     // papel (escritorio ou global). E exactamente essa cegueira que faz este cutover
                     // funcionar sem tocar em UserPrincipal.java.
+                    //
+                    // Phase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): resolverMoldeIds e a
+                    // TERCEIRA parcela resolvida a partir do MESMO User ja carregado na linha 44
+                    // -- nenhuma query adicional, a invariante "uma query por pedido, sem
+                    // memorizacao" (comentario acima) mantem-se intacta. Carrega proveniencia de
+                    // molde no UserPrincipal para que sitios de logica de negocio que so tem o
+                    // principal (nao um User carregado), como ParecerController:423/494, decidam
+                    // por proveniencia sem uma segunda query.
                     Set<String> roles = resolucaoPapeisService.resolverNomesPapeis(user);
                     Set<String> permissions = resolucaoPapeisService.resolverPermissoesEfectivas(user);
+                    Set<Integer> moldeIds = resolucaoPapeisService.resolverMoldeIds(user);
 
                     UserPrincipal principal = UserPrincipal.create(
                             user.getId(),
@@ -77,7 +86,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             user.getNome(),
                             user.getEmail(),
                             roles,
-                            permissions
+                            permissions,
+                            moldeIds
                     );
 
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

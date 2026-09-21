@@ -1,5 +1,6 @@
 package com.lexcv.services;
 
+import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.TenantRole;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -162,6 +164,64 @@ public class ResolucaoPapeisService {
         }
         return user.getRoles().stream()
                 .anyMatch(r -> nomeMolde.equals(r.getNome()));
+    }
+
+    /**
+     * Ids de molde ("moldeId") dos papeis efectivos do utilizador -- papeis de escritorio se
+     * existirem, senao papeis globais. Fase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): a fonte
+     * que {@link com.lexcv.config.JwtAuthenticationFilter} passa a resolver uma vez por pedido,
+     * ao lado de {@link #resolverNomesPapeis} e {@link #resolverPermissoesEfectivas}, para que o
+     * {@link UserPrincipal} passe a transportar proveniencia sem introduzir uma segunda query.
+     *
+     * <p>Ramo de escritorio: mapeia {@code user.getTenantRoles()} para {@link TenantRole#getMoldeId()},
+     * ignorando nulos -- um papel criado de raiz por um escritorio tem {@code moldeId} nulo e
+     * NUNCA deve reclamar proveniencia de nenhum molde, o mesmo limite deliberado ja documentado
+     * em {@link #temPapelDeMolde(User, String)}. Ramo de globalidade (administrador de
+     * plataforma): mapeia {@code user.getRoles()} para {@link Role#getId()} -- um papel global E
+     * o seu proprio molde, por isso o caminho do administrador de plataforma continua a
+     * funcionar de forma uniforme. Devolve sempre um {@link Set} mutavel-independente, nunca uma
+     * vista sobre a colecao da entidade -- o mesmo contrato que os outros dois resolvedores
+     * documentam.
+     */
+    public Set<Integer> resolverMoldeIds(User user) {
+        if (usaPapeisDeEscritorio(user)) {
+            return user.getTenantRoles().stream()
+                    .map(TenantRole::getMoldeId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toCollection(HashSet::new));
+        }
+        return user.getRoles().stream()
+                .map(Role::getId)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    /**
+     * Sobrecarga de {@link #temPapelDeMolde(User, String)} para sitios de logica de negocio que
+     * so tem o {@link UserPrincipal} da {@code SecurityContext}, nao um {@link User} carregado
+     * ({@code ParecerController:423/494}, 127-CONTEXT.md Decisao 2a). Esses sitios ja injectam
+     * {@code UserRepository}, mas carregar o utilizador outra vez ali duplicaria a query por
+     * pedido que {@code JwtAuthenticationFilter} documenta como unica e deliberadamente sem
+     * memorizacao ({@code JwtAuthenticationFilter:50-58}). Esta sobrecarga custa uma unica
+     * consulta indexada na pequena tabela global de papeis ({@code roleRepository.findByNome})
+     * e zero cargas adicionais de utilizador -- o mesmo perfil de custo que os tres sitios ja
+     * convertidos sobre {@link User} pagam -- porque o principal ja carrega {@code moldeIds},
+     * resolvido uma vez pelo filtro via {@link #resolverMoldeIds(User)}. E exactamente por isso
+     * que a invariante "uma query por pedido, sem memorizacao" sobrevive a PAPEL-04.
+     *
+     * <p>Falha para o lado fechado, nunca aberto: devolve {@code false} quando o nome do molde
+     * nao resolve para nenhum {@link Role} global, e quando {@code moldeIds} e nulo ou vazio.
+     */
+    public boolean temPapelDeMolde(UserPrincipal principal, String nomeMolde) {
+        if (principal == null || principal.getMoldeIds() == null || principal.getMoldeIds().isEmpty()) {
+            return false;
+        }
+        Integer moldeId = roleRepository.findByNome(nomeMolde)
+                .map(Role::getId)
+                .orElse(null);
+        if (moldeId == null) {
+            return false;
+        }
+        return principal.getMoldeIds().contains(moldeId);
     }
 
     /**

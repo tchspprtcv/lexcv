@@ -23,8 +23,15 @@ public class UserPrincipal implements UserDetails {
     private final Set<String> roles;
     private final Set<String> permissions;
     private final Collection<? extends GrantedAuthority> authorities;
+    // Phase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): ids de molde dos papeis efectivos do
+    // utilizador, resolvidos UMA vez pelo filtro de autenticacao via
+    // ResolucaoPapeisService.resolverMoldeIds -- ver o comentario la para os dois ramos
+    // (escritorio/global). @Builder.Default para que os muitos fixtures de teste que usam
+    // UserPrincipal.builder() sem este campo continuem a compilar e nunca sofram NPE.
+    @Builder.Default
+    private final Set<Integer> moldeIds = Set.of();
 
-    public static UserPrincipal create(UUID userId, UUID tenantId, String nome, String email, Set<String> roles, Set<String> dbPermissions) {
+    public static UserPrincipal create(UUID userId, UUID tenantId, String nome, String email, Set<String> roles, Set<String> dbPermissions, Set<Integer> moldeIds) {
         Set<String> permissions = new java.util.HashSet<>(dbPermissions);
         
         Set<SimpleGrantedAuthority> authorities = roles.stream()
@@ -58,6 +65,7 @@ public class UserPrincipal implements UserDetails {
                 .roles(roles)
                 .permissions(permissions)
                 .authorities(authorities)
+                .moldeIds(moldeIds != null ? moldeIds : Set.of())
                 .build();
     }
 

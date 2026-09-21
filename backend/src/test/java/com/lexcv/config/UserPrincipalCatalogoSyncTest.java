@@ -38,6 +38,7 @@ class UserPrincipalCatalogoSyncTest {
                 "Admin Teste",
                 "admin@teste.cv",
                 Set.of("ADMIN"),
+                Set.of(),
                 Set.of());
 
         assertEquals(chavesCatalogo, admin.getPermissions());

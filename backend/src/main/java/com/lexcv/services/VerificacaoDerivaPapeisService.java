@@ -86,13 +86,18 @@ public class VerificacaoDerivaPapeisService {
                     .collect(Collectors.toSet());
             permissoesGlobais.addAll(user.getPermissions());
 
+            // Phase 127 (PAPEL-04): Set.of() aqui, nao resolverMoldeIds -- este metodo mede o
+            // mundo ANTES da conversao (ver o comentario acima do metodo), que por definicao nao
+            // tem proveniencia de escritorio a medir, e nao pode passar por ResolucaoPapeisService
+            // pela mesma razao que o resto do metodo nao passa. Nao e um esquecimento.
             UserPrincipal principal = UserPrincipal.create(
                     user.getId(),
                     user.getTenantId(),
                     user.getNome(),
                     user.getEmail(),
                     nomesGlobais,
-                    permissoesGlobais);
+                    permissoesGlobais,
+                    Set.of());
 
             antes.put(user.getId(), new EstadoEfectivo(principal.getRoles(), principal.getPermissions()));
         }
@@ -135,6 +140,7 @@ public class VerificacaoDerivaPapeisService {
 
             Set<String> nomesDepois = resolucaoPapeisService.resolverNomesPapeis(user);
             Set<String> permissoesDepois = resolucaoPapeisService.resolverPermissoesEfectivas(user);
+            Set<Integer> moldeIdsDepois = resolucaoPapeisService.resolverMoldeIds(user);
 
             UserPrincipal principalDepois = UserPrincipal.create(
                     user.getId(),
@@ -142,7 +148,8 @@ public class VerificacaoDerivaPapeisService {
                     user.getNome(),
                     user.getEmail(),
                     nomesDepois,
-                    permissoesDepois);
+                    permissoesDepois,
+                    moldeIdsDepois);
 
             Set<String> papeisPerdidos = diferenca(estadoAntes.getPapeis(), principalDepois.getRoles());
             Set<String> papeisGanhos = diferenca(principalDepois.getRoles(), estadoAntes.getPapeis());

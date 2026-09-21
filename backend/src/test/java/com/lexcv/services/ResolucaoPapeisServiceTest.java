@@ -1,5 +1,6 @@
 package com.lexcv.services;
 
+import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.TenantRole;
@@ -264,5 +265,70 @@ class ResolucaoPapeisServiceTest {
                 () -> service.resolverPapeisDeEscritorio(tenantId, List.of(advogadoGlobal, novoPapelGlobal)));
 
         assertEquals(Set.of("NOVO_PAPEL"), ex.getPapeisSemCorrespondencia());
+    }
+
+    // Caso 10 (Phase 127, PAPEL-04) -- resolverMoldeIds, ramo de escritorio: devolve os moldeIds
+    // dos TenantRoles do utilizador, ignorando um papel de raiz com moldeId nulo (o mesmo limite
+    // deliberado de temPapelDeMolde).
+    @Test
+    void resolverMoldeIds_comPapeisDeEscritorio_devolveMoldeIdsIgnorandoNulos() {
+        TenantRole comMolde = TenantRole.builder().nome("ADVOGADO").moldeId(2).build();
+        TenantRole deRaiz = TenantRole.builder().nome("Papel Inventado").moldeId(null).build();
+
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .roles(new HashSet<>())
+                .tenantRoles(new HashSet<>(Set.of(comMolde, deRaiz)))
+                .permissions(new HashSet<>())
+                .build();
+
+        assertEquals(Set.of(2), service.resolverMoldeIds(user));
+    }
+
+    // Caso 11 -- resolverMoldeIds, fallback de plataforma: sem papeis de escritorio, os ids dos
+    // papeis globais sao devolvidos directamente -- um papel global E o seu proprio molde.
+    @Test
+    void resolverMoldeIds_semPapeisDeEscritorio_caiParaIdsDosPapeisGlobais() {
+        Role plataformaAdmin = Role.builder().id(1).nome("PLATAFORMA_ADMIN").build();
+
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .roles(new HashSet<>(Set.of(plataformaAdmin)))
+                .tenantRoles(new HashSet<>())
+                .permissions(new HashSet<>())
+                .build();
+
+        assertEquals(Set.of(1), service.resolverMoldeIds(user));
+    }
+
+    // Caso 12 -- temPapelDeMolde(UserPrincipal, String) verdadeiro quando o principal carrega o
+    // moldeId do molde pedido.
+    @Test
+    void temPapelDeMoldePrincipal_comMoldeIdCorrespondente_devolveTrue() {
+        Role adminGlobal = Role.builder().id(1).nome("ADMIN").build();
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.of(adminGlobal));
+
+        UserPrincipal principal = UserPrincipal.builder().moldeIds(Set.of(1)).build();
+
+        assertTrue(service.temPapelDeMolde(principal, "ADMIN"));
+    }
+
+    // Caso 13 -- temPapelDeMolde(UserPrincipal, String) falha fechado quando o nome do molde nao
+    // resolve para nenhum Role global.
+    @Test
+    void temPapelDeMoldePrincipal_nomeDeMoldeSemCorrespondencia_devolveFalse() {
+        when(roleRepository.findByNome("INEXISTENTE")).thenReturn(Optional.empty());
+
+        UserPrincipal principal = UserPrincipal.builder().moldeIds(Set.of(1)).build();
+
+        assertFalse(service.temPapelDeMolde(principal, "INEXISTENTE"));
+    }
+
+    // Caso 14 -- temPapelDeMolde(UserPrincipal, String) falha fechado quando moldeIds esta vazio.
+    @Test
+    void temPapelDeMoldePrincipal_comMoldeIdsVazio_devolveFalse() {
+        UserPrincipal principal = UserPrincipal.builder().moldeIds(Set.of()).build();
+
+        assertFalse(service.temPapelDeMolde(principal, "ADMIN"));
     }
 }
