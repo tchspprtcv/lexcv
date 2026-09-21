@@ -33,8 +33,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -260,7 +260,7 @@ public class PlatformAdminController {
         // Validate-then-write (T-125-21): resolve e valida TODAS as entradas antes de gravar
         // qualquer uma. resolvido preserva a ordem de chegada apenas por clareza -- a gravacao em
         // si nao depende de ordem.
-        Map<Role, Set<Permission>> resolvido = new java.util.LinkedHashMap<>();
+        Map<Role, Set<Permission>> resolvido = new LinkedHashMap<>();
         for (MoldesUpdateRequest.MoldePermissoesEntry entrada : request.getMoldes()) {
             if (entrada.getId() == null) {
                 return ResponseEntity.badRequest().body(Map.of("message", "O id do molde é obrigatório."));
