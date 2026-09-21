@@ -4,6 +4,7 @@ import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -55,6 +56,9 @@ class JwtAuthenticationFilterTenantSuspensoTest {
     private TenantRepository tenantRepository;
 
     @Mock
+    private ResolucaoPapeisService resolucaoPapeisService;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -72,7 +76,7 @@ class JwtAuthenticationFilterTenantSuspensoTest {
     }
 
     private JwtAuthenticationFilter novoFiltro() {
-        return new JwtAuthenticationFilter(tokenProvider, userRepository, tenantRepository);
+        return new JwtAuthenticationFilter(tokenProvider, userRepository, tenantRepository, resolucaoPapeisService);
     }
 
     private void stubTokenValidoPara(UUID userId) {
@@ -110,8 +114,14 @@ class JwtAuthenticationFilterTenantSuspensoTest {
         UUID userId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         stubTokenValidoPara(userId);
-        when(userRepository.findById(userId)).thenReturn(Optional.of(utilizador(userId, tenantId, true)));
+        User utilizador = utilizador(userId, tenantId, true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(utilizador));
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantComAtivo(tenantId, true)));
+        // Este teste nao prova resolucao de papeis (isso e JwtAuthenticationFilterPapeisEscritorioTest)
+        // -- so tem de nao rebentar com NPE, ja que o caminho autenticado agora sempre chama o
+        // resolvedor. Um Set vazio e suficiente para as asserçoes deste caso.
+        when(resolucaoPapeisService.resolverNomesPapeis(utilizador)).thenReturn(java.util.Set.of());
+        when(resolucaoPapeisService.resolverPermissoesEfectivas(utilizador)).thenReturn(java.util.Set.of());
 
         correrFiltro();
 

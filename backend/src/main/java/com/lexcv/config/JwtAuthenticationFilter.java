@@ -1,11 +1,10 @@
 package com.lexcv.config;
 
-import com.lexcv.models.Permission;
-import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,7 +21,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -31,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
+    private final ResolucaoPapeisService resolucaoPapeisService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -57,16 +56,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // autenticado -- deliberadamente sem nenhuma forma de memorizacao/reutilizacao
                 // entre pedidos, porque o requisito e "imediato", nao "no proximo login".
                 if (user != null && user.getAtivo() && tenant != null && Boolean.TRUE.equals(tenant.getAtivo())) {
-                    Set<String> roles = user.getRoles().stream()
-                            .map(Role::getNome)
-                            .collect(Collectors.toSet());
-
-                    Set<String> permissions = user.getRoles().stream()
-                            .flatMap(r -> r.getPermissions().stream())
-                            .map(Permission::getNome)
-                            .collect(Collectors.toSet());
-
-                    user.getPermissions().forEach(permissions::add);
+                    // Phase 126 (Plan 04, o cutover de leitura): resolve por ResolucaoPapeisService
+                    // em vez de ler os papeis globais do utilizador diretamente da colecao Role --
+                    // papeis de escritorio (TenantRole) quando o utilizador os tem, papeis globais
+                    // quando nao tem (o administrador de plataforma, permanentemente -- 126-CONTEXT.md
+                    // Decisao 3). (a) nenhuma query nova: tenantRoles e FetchType.EAGER (User.java),
+                    // por isso o userRepository.findById(userId) da linha 45 ja a traz -- a invariante
+                    // de "uma query por pedido, sem memorizacao" do comentario acima (linhas 50-58)
+                    // mantem-se intacta. (b) a parcela 3 (o bloco ADMIN) NAO migrou para o resolvedor
+                    // -- fica deliberadamente no metodo de fabrica de UserPrincipal logo abaixo, que
+                    // reage a string "ADMIN" estar no conjunto de nomes devolvido, cego a origem do
+                    // papel (escritorio ou global). E exactamente essa cegueira que faz este cutover
+                    // funcionar sem tocar em UserPrincipal.java.
+                    Set<String> roles = resolucaoPapeisService.resolverNomesPapeis(user);
+                    Set<String> permissions = resolucaoPapeisService.resolverPermissoesEfectivas(user);
 
                     UserPrincipal principal = UserPrincipal.create(
                             user.getId(),
