@@ -7,6 +7,7 @@ import com.lexcv.models.User;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -35,21 +36,58 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ResolucaoPapeisService {
+
+    // WR-01 (126-REVIEW.md): o discriminador REAL do administrador de plataforma -- ver
+    // usaPapeisDeEscritorio. Mesmo nome literal usado em AdminController.PAPEL_PLATAFORMA e
+    // MigracaoPapeisEscritorioService.TENANT_RESERVADO; declarado aqui em vez de importado porque
+    // ambas as constantes de origem sao private nas respectivas classes. Verificar por papel
+    // global (user.getRoles(), sempre EAGER, sem query extra) em vez de tenant reservado evita
+    // introduzir uma segunda query por pedido em JwtAuthenticationFilter.
+    private static final String NOME_PAPEL_PLATAFORMA = "PLATAFORMA_ADMIN";
 
     private final TenantRoleRepository tenantRoleRepository;
     private final RoleRepository roleRepository;
 
     /**
      * A UNICA avaliacao desta condicao em todo o servico -- todos os metodos publicos passam por
-     * aqui, nunca replicam a condicao inline. Um utilizador sem nenhum papel de escritorio (o
-     * administrador de plataforma, permanentemente -- ver 126-CONTEXT.md Decisao 3) cai
-     * silenciosamente para os papeis globais, seguindo o mesmo idioma defensivo de
-     * JwtAuthenticationFilter:45-48 (orElse(null) mais guarda por null, nunca controlo de fluxo
-     * por excepcao).
+     * aqui, nunca replicam a condicao inline.
+     *
+     * <p>WR-01 (126-REVIEW.md): "tenantRoles vazio" DEIXOU de ser, por si so, o sinal de "e o
+     * administrador de plataforma". Essa era a afirmacao original deste comentario, e era falsa
+     * na pratica: tambem descrevia o administrador fundador de qualquer escritorio acabado de
+     * provisionar, ate ao proximo arranque que corresse MigracaoPapeisEscritorioService --
+     * SetupService.provisionTenant/initializeSystem passaram a atribuir o TenantRole ADMIN ao
+     * fundador de imediato precisamente para fechar essa janela (ver o comentario la), mas esta
+     * classe nao pode continuar a assumir "vazio implica plataforma" como se fosse garantido por
+     * outro lado -- um dado ausente e indistinguivel de uma conversao falhada ou de uma corrida
+     * de arranque (WR-03). O discriminador real agora e {@link #ehAdministradorDePlataforma},
+     * baseado no papel global {@code PLATAFORMA_ADMIN} (Decisao 3, 126-CONTEXT.md), nunca na
+     * ausencia de dados. Continua, tal como antes, a falhar para o lado seguro (papeis globais)
+     * quando tenantRoles esta vazio por qualquer motivo -- nunca tranca ninguem fora -- mas agora
+     * regista um aviso quando quem cai nesse ramo NAO e o administrador de plataforma, para que o
+     * gap fique observavel em vez de silencioso.
      */
     private boolean usaPapeisDeEscritorio(User user) {
-        return user.getTenantRoles() != null && !user.getTenantRoles().isEmpty();
+        if (user.getTenantRoles() != null && !user.getTenantRoles().isEmpty()) {
+            return true;
+        }
+        if (!ehAdministradorDePlataforma(user)) {
+            log.warn("Utilizador {} (tenant {}) resolve por papeis globais com tenantRoles vazio "
+                    + "sem ser o administrador de plataforma -- verificar se "
+                    + "MigracaoPapeisEscritorioService ja convergiu este tenant, ou se o "
+                    + "provisionamento do administrador fundador ainda nao lhe atribuiu o "
+                    + "TenantRole ADMIN (WR-01, 126-REVIEW.md). Continua a resolver por papeis "
+                    + "globais -- falha para o lado seguro, nunca tranca o utilizador fora.",
+                    user.getEmail(), user.getTenantId());
+        }
+        return false;
+    }
+
+    private boolean ehAdministradorDePlataforma(User user) {
+        return user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> NOME_PAPEL_PLATAFORMA.equals(r.getNome()));
     }
 
     /**
