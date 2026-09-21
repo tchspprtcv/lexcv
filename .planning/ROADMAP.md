@@ -75,11 +75,18 @@ Plans:
   3. Nenhuma acção de um administrador de escritório tem qualquer efeito visível ou persistido sobre os papéis, permissões ou atribuições de outro escritório
   4. Um papel atribuído a um utilizador não pode ser apagado; um papel sem atribuições pode; o papel de administrador do próprio escritório nunca pode ser apagado nem despojado das permissões que o tornam administrador
   5. `PLATAFORMA_ADMIN` nunca é listado, nunca é atribuível e é inalcançável a partir de qualquer ecrã ou endpoint de escritório
-**Plans**: TBD
+**Plans**: 8 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 127-01: TBD
+- [ ] 127-01-PLAN.md — `UserPrincipal` ganha proveniência de molde; as duas guardas por nome de `ParecerController` passam a decidir por proveniência (dívida 2a)
+- [ ] 127-02-PLAN.md — DTOs do contrato de escritório, contagem de atribuições, e `/api/v1/admin` passa a ser guardado por autoridade (`users:manage` / `rbac:manage`) em vez do nome do papel ADMIN
+- [ ] 127-03-PLAN.md — `GET/PUT /admin/rbac` tenant-scoped sobre `t_tenant_role`, gate ISOL-03 reformado por escrito, regra de piso do papel de administrador, isolamento provado com dois tenants
+- [ ] 127-04-PLAN.md — `OfficeRolesController`: criar, renomear e apagar papéis próprios, com recusa por contagem (PAPEL-05) e por proveniência (PAPEL-08)
+- [ ] 127-05-PLAN.md — atribuição de papéis a utilizadores por id, espelho derivado de `t_user_role`, e `tenant_role_ids` no contrato de leitura (Decisão 6)
+- [ ] 127-06-PLAN.md — contratos de frontend: tipos, schema Zod, fusão de edições não gravadas por id, e reescrita de `use-admin.ts` sem `mock-db`
+- [ ] 127-07-PLAN.md — reescrita do `RbacTab` como consola editável de papéis do escritório, com painel de criação, diálogo de renomeação e confirmação de eliminação
+- [ ] 127-08-PLAN.md — selector de papéis por id em Gestão de Utilizadores, reescrita do gate `verify:bloqueio-rbac` para provar a nova garantia, e verificação humana ao vivo
 
 ### Phase 128: Auditoria de Atribuições de Papéis
 **Goal**: Toda a alteração de papel e de atribuição de papel fica registada de forma permanente, com autoria e alvo, e é consultável — mas nunca editável — por escritório.
