@@ -12,7 +12,7 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 - Fases decimais (124.1, 124.2, ...): inserções urgentes pós-planeamento, se necessário.
 
 - [x] **Phase 124: Catálogo de Permissões em Base de Dados** - O catálogo de permissões deixa de ser uma lista embutida no controller e passa a viver em `t_permission`, semeado e actualizado com segurança a cada arranque (completed 2026-09-20)
-- [ ] **Phase 125: Moldes da Plataforma e Provisionamento** - `PLATAFORMA_ADMIN` gere moldes de papel em `/plataforma`; todo escritório novo nasce com cópias próprias desses moldes
+- [x] **Phase 125: Moldes da Plataforma e Provisionamento** - `PLATAFORMA_ADMIN` gere moldes de papel em `/plataforma`; todo escritório novo nasce com cópias próprias desses moldes (completed 2026-09-21)
 - [ ] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso
 - [ ] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN`
 - [ ] **Phase 128: Auditoria de Atribuições de Papéis** - Toda a alteração de papel e de atribuição fica registada de forma imutável e consultável por escritório
@@ -46,7 +46,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 125-01: TBD
+- [x] 125-01: TBD
 
 ### Phase 126: Migração de Papéis Existentes
 **Goal**: Todo escritório que já existe antes deste marco é convertido, por script manual, para papéis próprios — sem que um único utilizador ganhe ou perca uma única permissão efectiva.
@@ -100,7 +100,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 124. Catálogo de Permissões em Base de Dados | 2/2 | Complete   | 2026-09-20 |
-| 125. Moldes da Plataforma e Provisionamento | 0/TBD | Not started | - |
+| 125. Moldes da Plataforma e Provisionamento | 6/6 | Complete   | 2026-09-21 |
 | 126. Migração de Papéis Existentes | 0/TBD | Not started | - |
 | 127. Papéis e Permissões do Escritório | 0/TBD | Not started | - |
 | 128. Auditoria de Atribuições de Papéis | 0/TBD | Not started | - |

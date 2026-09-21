@@ -19,16 +19,16 @@
 
 ### Moldes e Provisionamento
 
-- [ ] **MOLD-01**: Um escritório provisionado de novo nasce com os papéis-molde já instanciados como cópia própria, prontos a atribuir
-- [ ] **MOLD-02**: `PLATAFORMA_ADMIN` consulta e edita os moldes na consola `/plataforma`
-- [ ] **MOLD-03**: Editar um molde não altera nenhum papel já instanciado em nenhum escritório
-- [ ] **MOLD-04**: `PLATAFORMA_ADMIN` cria um molde novo, que passa a ser instanciado nos escritórios provisionados a partir daí
+- [x] **MOLD-01**: Um escritório provisionado de novo nasce com os papéis-molde já instanciados como cópia própria, prontos a atribuir
+- [x] **MOLD-02**: `PLATAFORMA_ADMIN` consulta e edita os moldes na consola `/plataforma`
+- [x] **MOLD-03**: Editar um molde não altera nenhum papel já instanciado em nenhum escritório
+- [x] **MOLD-04**: `PLATAFORMA_ADMIN` cria um molde novo, que passa a ser instanciado nos escritórios provisionados a partir daí
 
 ### Catálogo de Permissões
 
-- [ ] **CATL-01**: O catálogo de permissões (nome técnico, rótulo, descrição, categoria) é servido a partir da base de dados, não de uma lista embutida no código do controller
-- [ ] **CATL-02**: O arranque semeia e actualiza o catálogo sem apagar nenhuma atribuição já existente
-- [ ] **CATL-03**: As permissões reservadas à plataforma não são oferecidas ao escritório em nenhuma superfície
+- [x] **CATL-01**: O catálogo de permissões (nome técnico, rótulo, descrição, categoria) é servido a partir da base de dados, não de uma lista embutida no código do controller
+- [x] **CATL-02**: O arranque semeia e actualiza o catálogo sem apagar nenhuma atribuição já existente
+- [x] **CATL-03**: As permissões reservadas à plataforma não são oferecidas ao escritório em nenhuma superfície
 - [ ] **CATL-04**: `rbac:manage` passa a ser a autoridade que de facto governa quem edita permissões dentro de um escritório
 
 ### Migração
@@ -82,13 +82,13 @@ Reconhecidos, fora deste marco.
 | PAPEL-07 | Phase 127 | Pending |
 | PAPEL-08 | Phase 127 | Pending |
 | PAPEL-09 | Phase 127 | Pending |
-| MOLD-01 | Phase 125 | Pending |
-| MOLD-02 | Phase 125 | Pending |
-| MOLD-03 | Phase 125 | Pending |
-| MOLD-04 | Phase 125 | Pending |
-| CATL-01 | Phase 124 | Pending |
-| CATL-02 | Phase 124 | Pending |
-| CATL-03 | Phase 124 | Pending |
+| MOLD-01 | Phase 125 | Complete |
+| MOLD-02 | Phase 125 | Complete |
+| MOLD-03 | Phase 125 | Complete |
+| MOLD-04 | Phase 125 | Complete |
+| CATL-01 | Phase 124 | Complete |
+| CATL-02 | Phase 124 | Complete |
+| CATL-03 | Phase 124 | Complete |
 | CATL-04 | Phase 127 | Pending |
 | MIGR-01 | Phase 126 | Pending |
 | MIGR-02 | Phase 126 | Pending |
@@ -105,4 +105,4 @@ Reconhecidos, fora deste marco.
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-20 after ROADMAP.md creation (5 phases, 124–128, 24/24 requirements mapped)*
+*Last updated: 2026-09-21 after Phases 124 and 125 completed (7/24 requirements complete)*
