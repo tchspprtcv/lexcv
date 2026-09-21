@@ -150,6 +150,18 @@ Schema-validation: wrong column type encountered in column [logo_data_url] in ta
 
 Fix it with the corresponding script in `backend/migrations/`. Do **not** switch back to `update` to make the error go away.
 
+### Phase 126 — conversão de papéis de escritório e verificação de deriva zero
+
+Four questions an operator asks at 3am after this deploy.
+
+**1. What to run, and when.** `backend/migrations/127-add-user-tenant-role-table.sql` runs **before** the install picks up the deploy that introduces the `User.tenantRoles` field, for the same reason as every other script in that directory: an install running `validate` refuses to start without the table. On an install still in stage 1 (`ddl-auto=update`) the script is redundant but harmless.
+
+**2. Where the data conversion happens.** Not in the script. On the next boot, in Java, by a convergent, idempotent service — the same category of work as `DatabaseSeeder.seedRbac()`, which this guide already documents elsewhere as running unconditionally **even in production with `SEED_ENABLED=false`** (it is the first statement of `CommandLineRunner.run()`, ahead of the `seedEnabled` gate). Practical consequence, stated explicitly: **an operator does not "run the role migration"; it runs itself on the first boot after the deploy.** Booting the same release twice does not duplicate anything.
+
+**3. What a boot failure after this deploy means.** This is the part unique to this phase: the zero-drift verification (MIGR-02) compares, user by user, the set of effective permissions before and after the conversion, and **aborts the boot** if they diverge, naming the user's email and the diverging permissions in the log. A backend that fails to start after this deploy, with that message in the log, is not an infrastructure failure — it is the safety net doing its job. The correct response is to **not force the boot**: the conversion runs inside a transaction, so a failure never leaves partially-converted data.
+
+**4. How to roll back.** `t_user_role` stays populated — nothing in this phase deletes or alters it. Rolling back is a code-deploy rollback, which goes back to reading global roles; the rows in `t_user_tenant_role` become orphaned and harmless. Restoring a backup is **not** required, and there is **no `DROP COLUMN` to undo.**
+
 ### Hostinger path (`docker-compose.hostinger.yml`)
 
 The Hostinger install is a **single** compose file — no `docker-compose.prod.yml` override — so every command above changes. The procedure is otherwise identical: the two keys come from `.env` in the same directory as the compose file.
@@ -279,4 +291,4 @@ Images are tagged with both `:latest` and the git SHA (`:${{ github.sha }}`). `d
 1. Docker Engine and the Compose plugin are installed on the host.
 2. The host can pull from `ghcr.io/tchspprtcv/lexcv` (public images need no login; private ones need `docker login ghcr.io` with a token carrying `read:packages`).
 3. The deploy directory contains the compose file you intend to use plus a valid `.env` (see `.env.example`) — for the two-file path, also `docker-compose.prod.yml` and `Caddyfile.prod`.
-4. You know which stage the target install is in — see [Database Schema — Two-Stage Boot](#database-schema--two-stage-boot). A first-ever deploy runs stage 1 and then stage 2; every later deploy assumes the install is already in stage 2 (`SPRING_JPA_HIBERNATE_DDL_AUTO=validate`, `SEED_ENABLED=false`) and that any pending script in `backend/migrations/` has been applied first.
+4. You know which stage the target install is in — see [Database Schema — Two-Stage Boot](#database-schema--two-stage-boot). A first-ever deploy runs stage 1 and then stage 2; every later deploy assumes the install is already in stage 2 (`SPRING_JPA_HIBERNATE_DDL_AUTO=validate`, `SEED_ENABLED=false`) and that any pending script in `backend/migrations/` has been applied first. Deploying Phase 126 (office-role migration)? See [Phase 126 — conversão de papéis de escritório e verificação de deriva zero](#phase-126--conversão-de-papéis-de-escritório-e-verificação-de-deriva-zero).
