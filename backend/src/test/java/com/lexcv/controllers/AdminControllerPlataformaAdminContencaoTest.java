@@ -1,14 +1,16 @@
 package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
-import com.lexcv.dtos.RbacResponse;
+import com.lexcv.dtos.OfficeRbacResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantRole;
 import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
@@ -81,6 +83,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
     @Mock private ResolucaoPapeisService resolucaoPapeisService;
+    @Mock private TenantRoleRepository tenantRoleRepository;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -99,7 +102,8 @@ class AdminControllerPlataformaAdminContencaoTest {
     }
 
     private AdminController novoController() {
-        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository, resolucaoPapeisService);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder,
+                tenantRepository, resolucaoPapeisService, tenantRoleRepository);
     }
 
     private Map<String, Object> corpoCriacaoComRoles(List<String> roles) {
@@ -210,27 +214,35 @@ class AdminControllerPlataformaAdminContencaoTest {
         verify(userRepository, times(1)).save(any());
     }
 
-    // Caso 6 — getRbac nao expoe o papel de plataforma: roleRepository.findAll() devolve os quatro
-    // papeis de tenant mais um Role "PLATAFORMA_ADMIN"; o mapa devolvido tem de o excluir.
+    // Caso 6 — getRbac nao expoe o papel de plataforma: Phase 127 (Plano 03) tornou este handler
+    // tenant-scoped -- tenantRoleRepository.findByTenantId devolve os quatro papeis de tenant mais
+    // um TenantRole "PLATAFORMA_ADMIN"; a lista devolvida (agora OfficeRbacResponse.papeis, nao
+    // mais o RbacResponse.rolePermissions nome-keyed) tem de o excluir.
     @Test
     void getRbac_naoExpoePapelDePlataforma() {
-        Role admin = Role.builder().id(1).nome("ADMIN").build();
-        Role advogado = Role.builder().id(2).nome("ADVOGADO").build();
-        Role tecnico = Role.builder().id(3).nome("TECNICO").build();
-        Role assistente = Role.builder().id(4).nome("ASSISTENTE").build();
-        Role plataformaAdmin = Role.builder().id(5).nome("PLATAFORMA_ADMIN").build();
-        when(roleRepository.findAll()).thenReturn(List.of(admin, advogado, tecnico, assistente, plataformaAdmin));
+        autenticarComoPrincipalDoTenant();
+        TenantRole admin = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ADMIN").build();
+        TenantRole advogado = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ADVOGADO").build();
+        TenantRole tecnico = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("TECNICO").build();
+        TenantRole assistente = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ASSISTENTE").build();
+        TenantRole plataformaAdmin = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("PLATAFORMA_ADMIN").build();
+        when(tenantRoleRepository.findByTenantId(TENANT_ID))
+                .thenReturn(List.of(admin, advogado, tecnico, assistente, plataformaAdmin));
 
         ResponseEntity<?> response = novoController().getRbac();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        RbacResponse body = (RbacResponse) response.getBody();
-        assertEquals(4, body.getRolePermissions().size());
-        assertFalse(body.getRolePermissions().containsKey("PLATAFORMA_ADMIN"));
+        OfficeRbacResponse body = (OfficeRbacResponse) response.getBody();
+        assertEquals(4, body.getPapeis().size());
+        assertFalse(body.getPapeis().stream().anyMatch(p -> "PLATAFORMA_ADMIN".equals(p.getNome())));
     }
 
     // Caso 7 — updateRbac ignora uma entrada PLATAFORMA_ADMIN: o endpoint continua a responder
     // normalmente, mas as permissoes do papel reservado nunca sao tocadas.
+    //
+    // Phase 127 (Plano 02): updateRbac fica DELIBERADAMENTE por mexer neste plano -- ver o
+    // comentario do handler. O plano 03 desta fase converte este caso para OfficeRbacUpdateRequest
+    // (id-keyed) na MESMA alteracao que muda o gate e o corpo do handler.
     @Test
     void updateRbac_ignoraEntradaPlataformaAdmin() {
         Map<String, Object> body = Map.of(

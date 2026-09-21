@@ -82,7 +82,7 @@ class AdminControllerAtribuicaoPapeisEscritorioTest {
         ResolucaoPapeisService resolucaoPapeisService =
                 new ResolucaoPapeisService(tenantRoleRepository, roleRepository);
         return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder,
-                tenantRepository, resolucaoPapeisService);
+                tenantRepository, resolucaoPapeisService, tenantRoleRepository);
     }
 
     private Map<String, Object> corpoCriacaoComRoles(List<String> roles) {

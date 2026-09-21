@@ -6,6 +6,7 @@ import com.lexcv.models.Role;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +72,7 @@ class AdminControllerRbacAutorizacaoTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
     @Mock private ResolucaoPapeisService resolucaoPapeisService;
+    @Mock private TenantRoleRepository tenantRoleRepository;
 
     @AfterEach
     void limparSecurityContext() {
@@ -78,7 +80,8 @@ class AdminControllerRbacAutorizacaoTest {
     }
 
     private AdminController novoController() {
-        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder, tenantRepository, resolucaoPapeisService);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder,
+                tenantRepository, resolucaoPapeisService, tenantRoleRepository);
     }
 
     /**
@@ -146,10 +149,14 @@ class AdminControllerRbacAutorizacaoTest {
     // ---------------------------------------------------------------------------------------
 
     // Cenário 1: a autoridade crua (não prefixada) "rbac:manage" satisfaz o novo gate.
+    // Phase 127 (Plano 03): getRbac passou a tenant-scoped -- precisa de um UserPrincipal real
+    // (não apenas uma lista de autoridades) e stub de tenantRoleRepository.findByTenantId, nunca
+    // mais roleRepository.findAll().
     @Test
     void getRbac_comAutoridadeRbacManageCruaObtemSucesso() {
-        autenticarComoAuthorities("rbac:manage");
-        when(roleRepository.findAll()).thenReturn(List.of());
+        UUID tenantId = UUID.randomUUID();
+        autenticarComoPrincipalComAuthorities(tenantId, "rbac:manage");
+        when(tenantRoleRepository.findByTenantId(tenantId)).thenReturn(List.of());
         AdminController proxy = novoProxyComMethodSecurity();
 
         ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
@@ -164,7 +171,7 @@ class AdminControllerRbacAutorizacaoTest {
         AdminController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
-        verify(roleRepository, never()).findAll();
+        verify(tenantRoleRepository, never()).findByTenantId(any());
     }
 
     // Cenário 3: ROLE_PLATAFORMA_ADMIN sozinho já não chega -- a leitura de plataforma sobre esta
@@ -175,7 +182,7 @@ class AdminControllerRbacAutorizacaoTest {
         AdminController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
-        verify(roleRepository, never()).findAll();
+        verify(tenantRoleRepository, never()).findByTenantId(any());
     }
 
     // Cenário 4: a armadilha hasAuthority-vs-hasRole (127-CONTEXT.md Decisão 3) fixada em teste --
@@ -189,7 +196,7 @@ class AdminControllerRbacAutorizacaoTest {
         AdminController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
-        verify(roleRepository, never()).findAll();
+        verify(tenantRoleRepository, never()).findByTenantId(any());
     }
 
     // ---------------------------------------------------------------------------------------
@@ -230,7 +237,7 @@ class AdminControllerRbacAutorizacaoTest {
         AdminController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
-        verify(roleRepository, never()).findAll();
+        verify(tenantRoleRepository, never()).findByTenantId(any());
     }
 
     // ---------------------------------------------------------------------------------------

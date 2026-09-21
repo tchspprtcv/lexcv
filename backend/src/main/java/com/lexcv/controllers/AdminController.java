@@ -1,7 +1,8 @@
 package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
-import com.lexcv.dtos.RbacResponse;
+import com.lexcv.dtos.OfficeRbacResponse;
+import com.lexcv.dtos.OfficeRbacUpdateRequest;
 import com.lexcv.dtos.UserResponse;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
@@ -11,6 +12,7 @@ import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.MapeamentoParcialPapeisException;
 import com.lexcv.services.ResolucaoPapeisService;
@@ -81,6 +83,11 @@ public class AdminController {
     private final PasswordEncoder passwordEncoder;
     private final TenantRepository tenantRepository;
     private final ResolucaoPapeisService resolucaoPapeisService;
+    // Phase 127 (Plano 03, PAPEL-01/PAPEL-08): fonte tenant-scoped de leitura/escrita de
+    // getRbac/updateRbac -- ver os dois handlers abaixo. Adicionado no fim da lista, apos
+    // resolucaoPapeisService, para nao reordenar os construtores posicionais ja existentes nos
+    // testes deste controller.
+    private final TenantRoleRepository tenantRoleRepository;
 
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
@@ -450,44 +457,64 @@ public class AdminController {
     // permissao (DatabaseSeeder.upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList(),
     // false)) -- retirar aqui o acesso de PLATAFORMA_ADMIN fecha uma leitura de plataforma sobre
     // uma superficie de escritorio, nunca quebra um chamador legitimo (a tensao que PAPEL-09 pede
-    // para apertar). O corpo do metodo (incluindo a exclusao deliberada de PAPEL_PLATAFORMA da
-    // resposta, abaixo) fica inalterado neste plano -- so quem pode chamar muda; o corpo em si
-    // (ainda global, nao tenant-scoped) e reescrito pelo plano 03 em conjunto com o gate de
-    // updateRbac.
+    // para apertar).
+    //
+    // Phase 127 (Plano 03, PAPEL-01/PAPEL-08): o corpo deste handler deixou de ser global -- le
+    // exclusivamente os TenantRole do tenant do chamador (tenantRoleRepository.findByTenantId
+    // (principal.getTenantId())), nunca roleRepository.findAll(), no mesmo idioma de tenant-
+    // scoping que listUsers ja usa neste ficheiro (linha ~88): o tenant vem sempre do principal
+    // autenticado, nunca de um parametro ou corpo de pedido. "protegido"/"podeApagar" sao
+    // calculados aqui por proveniencia (TenantRole.moldeId contra o id do Role global "ADMIN"),
+    // nunca por comparacao de nome -- ver o doc-comment de OfficeRbacResponse.PapelDto.
+    //
+    // WR-03 (124-REVIEW.md) -- FECHADO ESTRUTURALMENTE por este plano, nao apenas corrigido: a
+    // preocupacao original era que rolePermissions pudesse nomear uma chave sem coluna
+    // correspondente em systemPermissions. Essa possibilidade desaparece aqui porque as
+    // permissoes de cada papel (PapelDto.permissoes) vem agora do proprio snapshot
+    // t_tenant_role_permission do papel, nao de um mapa Java construido a parte -- uma chave fora
+    // do catalogo servido simplesmente nao e uma coluna renderizavel na matriz, mas continua a
+    // ser um dado legitimo do papel (nunca escondido/filtrado aqui). E o caminho de ESCRITA
+    // (updateRbac, abaixo) que mantem os dois conjuntos alinhados na origem, recusando qualquer
+    // chave submetida que nao exista no catalogo servido -- ver "Permissão desconhecida" ali.
     @PreAuthorize("hasAuthority('rbac:manage')")
     @GetMapping("/rbac")
     public ResponseEntity<?> getRbac() {
-        List<Role> roles = roleRepository.findAll();
-        Map<String, List<String>> rolePermissions = new HashMap<>();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
-        // WR-03 (124-REVIEW.md): rolePermissions abaixo e deliberadamente NAO filtrado por
-        // reservadaPlataforma/rotulo -- ao contrario de systemPermissions mais abaixo, que
-        // ja aplica os dois filtros. Hoje isto e inofensivo porque as 20 entradas do catalogo
-        // (DatabaseSeeder.CATALOGO_PERMISSOES) sao todas reservadaPlataforma=false e com
-        // rotulo preenchido, logo os dois conjuntos de chaves coincidem sempre. Deixa de ser
-        // verdade no exacto momento em que uma fase futura (125/127, ver o comentario CATL-03
-        // em Permission.java) marcar alguma permissao do catalogo como
-        // reservadaPlataforma=true, ou a deixar sem rotulo: se um papel alguma vez detiver
-        // essa chave (SQL directo, endpoint futuro, ou bug em updateRbac), rolePermissions
-        // passa a nomear uma chave sem coluna correspondente em systemPermissions -- forma que
-        // o RbacTab do frontend (que deriva as colunas da matriz de systemPermissions) nao tem
-        // comportamento definido para. Nao corrigido aqui de proposito: filtrar
-        // rolePermissions mudaria o que este endpoint expoe, e a Phase 124 nao muda nenhuma
-        // autoridade nem nenhum gate (124-CONTEXT.md) -- a autorizacao real
-        // (JwtAuthenticationFilter, UserPrincipal.create) continua a ler
-        // Role.getPermissions() directamente e e completamente alheia a
-        // reservadaPlataforma/rotulo.
-        for (Role role : roles) {
-            // Phase 119 (Plan 03): o ecra de Definicoes (RBAC) de um escritorio nao deve sequer
-            // saber que o papel de plataforma existe -- ver o comentario de PAPEL_PLATAFORMA.
-            if (PAPEL_PLATAFORMA.equals(role.getNome())) {
-                continue;
-            }
-            List<String> perms = role.getPermissions().stream()
-                    .map(Permission::getNome)
-                    .collect(Collectors.toList());
-            rolePermissions.put(role.getNome(), perms);
-        }
+        // Resolvidos UMA vez por pedido, antes do laço de projeção -- nunca dentro dele.
+        Integer adminMoldeId = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
+        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
+
+        List<TenantRole> tenantRoles = tenantRoleRepository.findByTenantId(principal.getTenantId());
+
+        // Phase 119 (Plan 03) + Phase 127 (Plano 03, PAPEL-09): tripla guarda -- nome cru, nome
+        // prefixado ROLE_ (defesa em profundidade, mesma disciplina de PAPEL_PLATAFORMA_AUTORIDADE
+        // acima) e proveniencia (moldeId). Só a proveniência sobrevive a uma renomeação do papel
+        // reservado -- um TenantRole instanciado do molde PLATAFORMA_ADMIN nunca deve aparecer na
+        // matriz de um escritório, mesmo que alguém o renomeie.
+        List<OfficeRbacResponse.PapelDto> papeis = tenantRoles.stream()
+                .filter(tr -> !PAPEL_PLATAFORMA.equals(tr.getNome())
+                        && !PAPEL_PLATAFORMA_AUTORIDADE.equals(tr.getNome())
+                        && (plataformaMoldeId == null || !plataformaMoldeId.equals(tr.getMoldeId())))
+                .sorted(Comparator.comparing(TenantRole::getNome))
+                .map(tr -> {
+                    boolean protegido = adminMoldeId != null && adminMoldeId.equals(tr.getMoldeId());
+                    long utilizadoresAtribuidos = userRepository.countByTenantRolesId(tr.getId());
+                    List<String> permissoesDoPapel = tr.getPermissions().stream()
+                            .map(Permission::getNome)
+                            .collect(Collectors.toList());
+                    return OfficeRbacResponse.PapelDto.builder()
+                            .id(tr.getId())
+                            .nome(tr.getNome())
+                            .sistema(Boolean.TRUE.equals(tr.getSistema()))
+                            .protegido(protegido)
+                            .podeApagar(utilizadoresAtribuidos == 0 && !protegido)
+                            .utilizadoresAtribuidos(utilizadoresAtribuidos)
+                            .permissoes(permissoesDoPapel)
+                            .build();
+                })
+                .collect(Collectors.toList());
 
         // Phase 124 (Plan 02): a lista hardcoded de 17 entradas foi removida --
         // DatabaseSeeder.seedRbac() e agora a fonte de verdade do catalogo (CATL-01). O filtro
@@ -495,7 +522,7 @@ public class AdminController {
         // nao aqui (CATL-03). A ordenacao por "ordem" existe porque o RbacTab do ecra de
         // Definicoes deriva a ordem dos modulos da ordem de chegada deste array.
         List<Permission> permissoesCatalogo = permissionRepository.findAllByReservadaPlataformaFalse();
-        List<RbacResponse.PermissionDefDto> systemPermissions = permissoesCatalogo.stream()
+        List<OfficeRbacResponse.PermissaoDefDto> permissoesDoCatalogo = permissoesCatalogo.stream()
                 .filter(p -> {
                     boolean temRotulo = p.getRotulo() != null && !p.getRotulo().isBlank();
                     if (!temRotulo) {
@@ -508,20 +535,21 @@ public class AdminController {
                 .map(this::toPermissionDef)
                 .collect(Collectors.toList());
 
-        RbacResponse response = RbacResponse.builder()
-                .rolePermissions(rolePermissions)
-                .systemPermissions(systemPermissions)
+        OfficeRbacResponse response = OfficeRbacResponse.builder()
+                .papeis(papeis)
+                .permissoes(permissoesDoCatalogo)
                 .build();
 
         return ResponseEntity.ok(response);
     }
 
-    // Phase 124 (Plan 02): mapper entidade -> DTO para getRbac() (analog: PlatformAdminController
-    // .toSummary). key <- Permission.nome (chave tecnica), nome <- Permission.rotulo (rotulo
-    // legivel) -- os dois campos chamam-se "nome" em sitios diferentes e trocar a atribuicao
-    // faria a matriz RBAC mostrar a chave tecnica como rotulo.
-    private RbacResponse.PermissionDefDto toPermissionDef(Permission p) {
-        return RbacResponse.PermissionDefDto.builder()
+    // Phase 124 (Plan 02); retargetado para OfficeRbacResponse pelo Plano 03: mapper entidade ->
+    // DTO para getRbac() (analog: PlatformAdminController.toSummary). key <- Permission.nome
+    // (chave tecnica), nome <- Permission.rotulo (rotulo legivel) -- os dois campos chamam-se
+    // "nome" em sitios diferentes e trocar a atribuicao faria a matriz RBAC mostrar a chave
+    // tecnica como rotulo.
+    private OfficeRbacResponse.PermissaoDefDto toPermissionDef(Permission p) {
+        return OfficeRbacResponse.PermissaoDefDto.builder()
                 .key(p.getNome())
                 .nome(p.getRotulo())
                 .descricao(p.getDescricao())
