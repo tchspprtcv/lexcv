@@ -6,12 +6,11 @@ import com.lexcv.dtos.ChangePasswordRequest;
 import com.lexcv.dtos.LoginRequest;
 import com.lexcv.dtos.LoginResponse;
 import com.lexcv.dtos.UserResponse;
-import com.lexcv.models.Permission;
-import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,11 +20,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -36,6 +35,7 @@ public class AuthController {
     private final TenantRepository tenantRepository;
     private final JwtTokenProvider tokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final ResolucaoPapeisService resolucaoPapeisService;
 
     // Simple in-memory rate limiter (for demonstration/basic protection)
     private final Map<String, Integer> loginAttempts = new java.util.concurrent.ConcurrentHashMap<>();
@@ -123,7 +123,10 @@ public class AuthController {
             ));
         }
 
-        List<String> roles = user.getRoles().stream().map(Role::getNome).collect(Collectors.toList());
+        // Phase 126 (Plan 04): nomes de papeis pelo resolvedor unico -- papeis de escritorio se
+        // existirem, senao globais. O tokenProvider continua a exigir List<String>, por isso
+        // converte-se o Set devolvido, sem mudar a assinatura do provider.
+        List<String> roles = new ArrayList<>(resolucaoPapeisService.resolverNomesPapeis(user));
         String accessToken = tokenProvider.generateAccessToken(user.getId(), user.getTenantId(), roles);
         String refreshToken = tokenProvider.generateRefreshToken(user.getId(), user.getTenantId(), roles);
 
@@ -186,7 +189,8 @@ public class AuthController {
                 ));
             }
 
-            List<String> roles = user.getRoles().stream().map(Role::getNome).collect(Collectors.toList());
+            // Phase 126 (Plan 04): mesma resolucao de login() -- ver o comentario la.
+            List<String> roles = new ArrayList<>(resolucaoPapeisService.resolverNomesPapeis(user));
             String newAccessToken = tokenProvider.generateAccessToken(user.getId(), user.getTenantId(), roles);
             String newRefreshToken = tokenProvider.generateRefreshToken(user.getId(), user.getTenantId(), roles);
 
@@ -199,6 +203,10 @@ public class AuthController {
         }
     }
 
+    // Phase 126 (Plan 04): NAO convertido de proposito -- le os papeis/permissoes ja
+    // resolvidos do UserPrincipal (autenticado pelo filtro, ver Task 1), por isso fica
+    // correto por consequencia do cutover do filtro. Acrescentar aqui uma chamada ao
+    // resolvedor criaria uma quarta copia da uniao onde hoje nao existe nenhuma.
     @GetMapping("/me")
     public ResponseEntity<?> getMe() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -255,12 +263,13 @@ public class AuthController {
 
         user = userRepository.save(user);
 
-        Set<String> roles = user.getRoles().stream().map(Role::getNome).collect(Collectors.toSet());
-        Set<String> permissions = user.getRoles().stream()
-                .flatMap(r -> r.getPermissions().stream())
-                .map(Permission::getNome)
-                .collect(Collectors.toSet());
-        user.getPermissions().forEach(permissions::add);
+        // Phase 126 (Plan 04): resolvido sobre a instancia devolvida por save() (ordem que
+        // importa -- nao sobre a variavel anterior), pelo resolvedor unico. So parcelas 1+2
+        // (papeis+permissoes resolvidos, mais permissoes diretas) -- deliberadamente sem o
+        // bloco ADMIN: PUT /auth/me nunca o incluiu na resposta, e nao e este plano que muda
+        // esse contrato.
+        Set<String> roles = resolucaoPapeisService.resolverNomesPapeis(user);
+        Set<String> permissions = resolucaoPapeisService.resolverPermissoesEfectivas(user);
 
         UserResponse response = UserResponse.builder()
                 .id(user.getId())

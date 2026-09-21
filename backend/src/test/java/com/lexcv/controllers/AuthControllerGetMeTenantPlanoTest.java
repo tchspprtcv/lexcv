@@ -7,6 +7,7 @@ import com.lexcv.models.Tenant;
 import com.lexcv.models.TenantPlano;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +50,7 @@ class AuthControllerGetMeTenantPlanoTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private JwtTokenProvider tokenProvider;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -65,7 +67,7 @@ class AuthControllerGetMeTenantPlanoTest {
     }
 
     private AuthController novoController() {
-        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder);
+        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder, resolucaoPapeisService);
     }
 
     @Test

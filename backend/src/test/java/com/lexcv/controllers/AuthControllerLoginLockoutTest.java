@@ -5,6 +5,7 @@ import com.lexcv.dtos.LoginRequest;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,13 +49,14 @@ class AuthControllerLoginLockoutTest {
     @Mock private TenantRepository tenantRepository;
     @Mock private JwtTokenProvider tokenProvider;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private ResolucaoPapeisService resolucaoPapeisService;
 
     private static final String EMAIL = "alvo@lexcv.cv";
     private static final String PASSWORD_ERRADA = "password-errada";
     private static final String HASH_REAL = "hash-real-irrelevante";
 
     private AuthController novoController() {
-        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder);
+        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder, resolucaoPapeisService);
     }
 
     private HttpServletRequest mockRequestComIp(String ip) {

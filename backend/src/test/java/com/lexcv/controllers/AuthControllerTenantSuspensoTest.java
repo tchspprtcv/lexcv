@@ -6,6 +6,7 @@ import com.lexcv.models.Tenant;
 import com.lexcv.models.User;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,11 +60,14 @@ class AuthControllerTenantSuspensoTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private ResolucaoPapeisService resolucaoPapeisService;
+
     private static final String SENHA_EM_TEXTO_PLANO = "Pa$$w0rd1";
     private static final String HASH_PASSWORD = "hash-de-teste";
 
     private AuthController novoController() {
-        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder);
+        return new AuthController(userRepository, tenantRepository, tokenProvider, passwordEncoder, resolucaoPapeisService);
     }
 
     private LoginRequest pedidoLoginValido(String email) {
@@ -119,6 +124,7 @@ class AuthControllerTenantSuspensoTest {
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantComAtivo(tenantId, true)));
         when(tokenProvider.generateAccessToken(any(), any(), any())).thenReturn("access-token-novo");
         when(tokenProvider.generateRefreshToken(any(), any(), any())).thenReturn("refresh-token-novo");
+        when(resolucaoPapeisService.resolverNomesPapeis(any())).thenReturn(Set.of());
 
         ResponseEntity<?> response =
                 novoController().login(pedidoLoginValido(email), mock(HttpServletRequest.class));
@@ -200,6 +206,7 @@ class AuthControllerTenantSuspensoTest {
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenantComAtivo(tenantId, true)));
         when(tokenProvider.generateAccessToken(any(), any(), any())).thenReturn("novo-access-token");
         when(tokenProvider.generateRefreshToken(any(), any(), any())).thenReturn("novo-refresh-token");
+        when(resolucaoPapeisService.resolverNomesPapeis(any())).thenReturn(Set.of());
 
         ResponseEntity<?> response = novoController().refresh("refresh-valido", null);
 
