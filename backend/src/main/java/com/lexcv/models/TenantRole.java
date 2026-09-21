@@ -17,6 +17,18 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// WR-02 (126-REVIEW.md): igualdade explicita por (tenantId, nome) -- o par que
+// @UniqueConstraint acima ja declara como identidade logica desta entidade, o mesmo padrao que
+// Role.java:15 usa para "nome" (unico globalmente ali). Sem isto, TenantRole caia no equals/
+// hashCode de identidade de Object, e a idempotencia de
+// MigracaoPapeisEscritorioService.migrar() (alvo.equals(user.getTenantRoles())) so funcionava
+// por coincidencia do identity-map do Hibernate dentro da mesma transaccao -- uma garantia real
+// mas implicita, nunca documentada como requisito, e que um refactor futuro (duas transaccoes,
+// EntityManager.clear()/.detach(), sessao stateless) quebraria silenciosamente. "id" fica de
+// fora de proposito -- e gerado, nao faz parte da identidade logica, e dois TenantRole com o
+// mesmo (tenantId, nome) mas ids diferentes (ex.: linha recriada apos remocao) devem continuar a
+// contar como a mesma entidade para este calculo.
+@EqualsAndHashCode(of = {"tenantId", "nome"})
 public class TenantRole {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
