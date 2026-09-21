@@ -12,7 +12,8 @@
     "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs",
     "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs",
     "verify:bloqueio-rbac": "node scripts/verify-bloqueio-rbac.mjs",
-    "verify:relatorio-utilizacao": "node scripts/verify-relatorio-utilizacao.mjs"
+    "verify:relatorio-utilizacao": "node scripts/verify-relatorio-utilizacao.mjs",
+    "verify:consola-moldes": "node scripts/verify-consola-moldes.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
