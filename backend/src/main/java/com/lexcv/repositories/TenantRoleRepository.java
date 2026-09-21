@@ -7,6 +7,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface TenantRoleRepository extends JpaRepository<TenantRole, UUID> {
+    // IN-01 (125-REVIEW.md): sem chamador ainda em backend/src/main -- scaffolding deliberado
+    // para fases futuras, nao codigo morto:
+    //   - findByTenantId: a Phase 127 (CRUD de escritorio) precisa de listar os t_tenant_role de
+    //     um tenant.
+    //   - findByTenantIdAndNome: a Phase 126 (migracao) precisa de repontar t_user_role de um
+    //     papel global para o TenantRole homonimo do proprio tenant.
+    // Revisitar em cada uma dessas fases; se continuarem sem chamador depois delas, remover.
     List<TenantRole> findByTenantId(UUID tenantId);
     Optional<TenantRole> findByTenantIdAndNome(UUID tenantId, String nome);
 
