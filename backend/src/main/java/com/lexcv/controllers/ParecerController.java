@@ -56,6 +56,11 @@ public class ParecerController {
     // entre um literal que sobrevive a essa renomeacao e um que nao sobrevive.
     private static final String NOME_MOLDE_ADVOGADO = "ADVOGADO";
 
+    // Phase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): idem, para o molde ADMIN -- designa o
+    // molde global, nao o nome do papel de escritorio que este mesmo phase deixa um tenant
+    // renomear.
+    private static final String NOME_MOLDE_ADMIN = "ADMIN";
+
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
@@ -418,9 +423,15 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Versão não encontrada"));
         }
 
+        // Phase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): TenantRole.nome deixa de ser um
+        // substituto fiavel do nome do molde a partir do momento em que esta mesma fase entrega
+        // a renomeacao -- a verificacao por proveniencia sobrevive a uma renomeacao, a
+        // comparacao por nome literal nao. Sibling ja convertido: validateAdvogado (linha 83).
+        // A sobrecarga temPapelDeMolde(UserPrincipal, ...) existe precisamente porque aqui so
+        // temos o principal da SecurityContext, nao um User carregado.
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-        boolean isAdmin = principal.getRoles().contains("ADMIN");
+        boolean isAdmin = resolucaoPapeisService.temPapelDeMolde(principal, NOME_MOLDE_ADMIN);
         boolean isResponsavel = solicitacao.getAdvogadoId() != null
                 && solicitacao.getAdvogadoId().equals(principal.getUserId());
         if (!isAdmin && !isResponsavel) {
@@ -489,9 +500,13 @@ public class ParecerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Solicitação não encontrada"));
         }
 
+        // Phase 127 (PAPEL-04, 127-CONTEXT.md Decisao 2a): mesma razao do sitio irmao em
+        // entregarSolicitacao acima -- TenantRole.nome deixa de ser um substituto fiavel do nome
+        // do molde a partir do momento em que esta mesma fase entrega a renomeacao. Sibling ja
+        // convertido: validateAdvogado (linha 83).
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-        boolean isAdmin = principal.getRoles().contains("ADMIN");
+        boolean isAdmin = resolucaoPapeisService.temPapelDeMolde(principal, NOME_MOLDE_ADMIN);
         boolean isResponsavel = solicitacao.getAdvogadoId() != null
                 && solicitacao.getAdvogadoId().equals(principal.getUserId());
         if (!isAdmin && !isResponsavel) {
