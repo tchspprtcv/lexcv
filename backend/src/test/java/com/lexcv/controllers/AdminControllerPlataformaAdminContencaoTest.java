@@ -2,6 +2,7 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.OfficeRbacResponse;
+import com.lexcv.dtos.OfficeRbacUpdateRequest;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
@@ -237,41 +238,52 @@ class AdminControllerPlataformaAdminContencaoTest {
         assertFalse(body.getPapeis().stream().anyMatch(p -> "PLATAFORMA_ADMIN".equals(p.getNome())));
     }
 
-    // Caso 7 — updateRbac ignora uma entrada PLATAFORMA_ADMIN: o endpoint continua a responder
-    // normalmente, mas as permissoes do papel reservado nunca sao tocadas.
-    //
-    // Phase 127 (Plano 02): updateRbac fica DELIBERADAMENTE por mexer neste plano -- ver o
-    // comentario do handler. O plano 03 desta fase converte este caso para OfficeRbacUpdateRequest
-    // (id-keyed) na MESMA alteracao que muda o gate e o corpo do handler.
+    // Caso 7 — updateRbac recusa com 403 uma entrada PLATAFORMA_ADMIN: Phase 127 (Plano 03)
+    // trocou o "continue" silencioso original por uma recusa explícita antes de qualquer escrita
+    // (ver o comentário do handler) -- forma mais forte da mesma contenção que este ficheiro
+    // existe para provar, nunca uma regressão dela. Convertido para OfficeRbacUpdateRequest
+    // (id-keyed) na MESMA alteração que mudou o gate e o corpo do handler, per 127-CONTEXT.md
+    // Decisão 1.
     @Test
-    void updateRbac_ignoraEntradaPlataformaAdmin() {
-        Map<String, Object> body = Map.of(
-                "rolePermissions", Map.of("PLATAFORMA_ADMIN", List.of("clientes:view", "users:manage"))
-        );
+    void updateRbac_recusaEntradaPlataformaAdminCom403() {
+        autenticarComoPrincipalDoTenant();
+        TenantRole plataformaAdmin = TenantRole.builder()
+                .id(UUID.randomUUID()).tenantId(TENANT_ID).nome("PLATAFORMA_ADMIN").build();
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(plataformaAdmin));
 
-        ResponseEntity<?> response = novoController().updateRbac(body);
+        OfficeRbacUpdateRequest.PapelPermissoesDto entrada = new OfficeRbacUpdateRequest.PapelPermissoesDto();
+        entrada.setId(plataformaAdmin.getId());
+        entrada.setPermissoes(List.of("clientes:view", "users:manage"));
+        OfficeRbacUpdateRequest request = new OfficeRbacUpdateRequest();
+        request.setPapeis(List.of(entrada));
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(roleRepository, never()).save(any());
-        verify(roleRepository, never()).findByNome("PLATAFORMA_ADMIN");
+        ResponseEntity<?> response = novoController().updateRbac(request);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(tenantRoleRepository, never()).save(any());
     }
 
-    // Caso 8 — nao-regressao: updateRbac continua a editar papeis de tenant.
+    // Caso 8 — nao-regressao: updateRbac continua a editar papeis proprios do escritorio
+    // (id-keyed desde Phase 127 Plano 03, nunca mais nome-keyed sobre Role global).
     @Test
     void updateRbac_continuaAEditarPapeisDeTenant() {
-        when(roleRepository.findByNome("ASSISTENTE"))
-                .thenReturn(Optional.of(Role.builder().id(4).nome("ASSISTENTE").build()));
-        when(permissionRepository.findByNome("clientes:view"))
-                .thenReturn(Optional.of(Permission.builder().id(1).nome("clientes:view").build()));
+        autenticarComoPrincipalDoTenant();
+        TenantRole assistente = TenantRole.builder()
+                .id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ASSISTENTE").build();
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(assistente));
+        when(permissionRepository.findAllByReservadaPlataformaFalse())
+                .thenReturn(List.of(Permission.builder().id(1).nome("clientes:view").build()));
 
-        Map<String, Object> body = Map.of(
-                "rolePermissions", Map.of("ASSISTENTE", List.of("clientes:view"))
-        );
+        OfficeRbacUpdateRequest.PapelPermissoesDto entrada = new OfficeRbacUpdateRequest.PapelPermissoesDto();
+        entrada.setId(assistente.getId());
+        entrada.setPermissoes(List.of("clientes:view"));
+        OfficeRbacUpdateRequest request = new OfficeRbacUpdateRequest();
+        request.setPapeis(List.of(entrada));
 
-        ResponseEntity<?> response = novoController().updateRbac(body);
+        ResponseEntity<?> response = novoController().updateRbac(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(roleRepository, times(1)).save(any());
+        verify(tenantRoleRepository, times(1)).save(any());
     }
 
     // Caso 9 — createUser recusa "permissions": ["ROLE_PLATAFORMA_ADMIN"] com 403 -- reproducao

@@ -557,55 +557,144 @@ public class AdminController {
                 .build();
     }
 
-    // ISOL-03 (Phase 121): so este handler ganha um gate de metodo mais especifico -- Role e
-    // Permission sao tabelas globais de plataforma, sem coluna tenant_id (ver PAPEL_PLATAFORMA
-    // acima), pelo que um ADMIN de um escritorio a gravar esta matriz reescreveria exatamente as
-    // mesmas linhas de que dependem os utilizadores TECNICO/ADVOGADO/ASSISTENTE de todos os
-    // outros escritorios. A anotacao de metodo abaixo substitui -- nunca soma a -- o gate de
-    // classe desta controller (a mais especifica ganha, nunca sao combinadas com E logico); todos
-    // os restantes handlers continuam governados apenas pelo gate de classe.
+    // ISOL-03 (Phase 121) -- HISTORICO, substituido pelo comentario abaixo, nunca apagado sem
+    // explicacao (127-CONTEXT.md Decisao 1): este handler foi fechado a PLATAFORMA_ADMIN porque
+    // Role e Permission eram tabelas globais de plataforma, sem coluna tenant_id, pelo que um
+    // ADMIN de escritorio a gravar esta matriz reescreveria exatamente as mesmas linhas de que
+    // dependiam os utilizadores TECNICO/ADVOGADO/ASSISTENTE de TODOS os outros escritorios --
+    // correto na altura.
     //
-    // Phase 127 (Plano 02, 127-CONTEXT.md Decisao 1): este gate fica DELIBERADAMENTE por mexer
-    // neste plano, ao contrario do de getRbac acima. O plano 03 desta fase muda os dois gates
-    // (este e o de getRbac) e o CORPO deste handler NA MESMA alteracao -- nunca em sequencia --
-    // porque abrir este gate a hasAuthority('rbac:manage') antes do corpo passar a escrever
-    // TenantRole (tenant-scoped) em vez de Role (global) reabriria, mesmo que so por um plano de
-    // duracao, exactamente a escrita cross-tenant que o ISOL-03 acima fechou: um ADMIN de
-    // escritorio conseguiria de novo gravar a mesma matriz global partilhada por todos os
-    // outros escritorios.
-    @PreAuthorize("hasRole('PLATAFORMA_ADMIN')")
+    // Phase 127 (Plano 03, 127-CONTEXT.md Decisao 1): essa razao desapareceu. As Fases 125/126
+    // deram a cada escritorio os seus proprios papeis em t_tenant_role, e a resolucao de
+    // autoridade (ResolucaoPapeisService/JwtAuthenticationFilter) ja le de la -- gravar esta
+    // matriz deixou de tocar em linhas partilhadas. Este handler agora escreve exclusivamente
+    // TenantRole cujo tenant_id e o do chamador (ver a resolucao de papeisDoTenant abaixo,
+    // idioma identico ao de listUsers/resolverTenantRolesOuErro neste ficheiro), por isso o gate
+    // pode ser uma permissao de escritorio (hasAuthority('rbac:manage')) em vez do papel de
+    // plataforma. ISTO NAO E uma reversao da Fase 121 -- e o cumprimento da condicao que a
+    // tornava temporaria. QUALQUER alteracao futura que alargue este handler de volta a Role/
+    // Permission globais TEM de restaurar o gate hasRole('PLATAFORMA_ADMIN') NA MESMA alteracao,
+    // ou reabre exatamente a escrita cross-tenant que o ISOL-03 original fechava.
+    //
+    // A anotacao de metodo abaixo substitui -- nunca soma a -- o gate de classe desta controller
+    // (a mais especifica ganha, nunca sao combinadas com E logico); todos os restantes handlers
+    // continuam governados apenas pelo gate de classe.
+    //
+    // Sem @Transactional, de proposito: cada guarda abaixo (id desconhecido, chave de permissao
+    // desconhecida, papel de plataforma, piso do administrador) recusa o pedido INTEIRO antes de
+    // tocar em tenantRoleRepository.save -- a fase de validacao (validate-then-write, mesmo idioma
+    // de PlatformAdminController.updateMoldes) e inteiramente sem efeitos secundarios, por isso um
+    // pedido recusado nunca deixa nada parcialmente escrito, mesmo sem uma transaccao a envolver
+    // as chamadas.
+    @PreAuthorize("hasAuthority('rbac:manage')")
     @PutMapping("/rbac")
-    public ResponseEntity<?> updateRbac(@RequestBody Map<String, Object> body) {
-        if (!body.containsKey("rolePermissions")) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Mapeamento rolePermissions é obrigatório"));
+    public ResponseEntity<?> updateRbac(@RequestBody OfficeRbacUpdateRequest request) {
+        if (request == null || request.getPapeis() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Mapeamento de papéis é obrigatório"));
         }
 
-        Map<?, ?> newRolePermissions = (Map<?, ?>) body.get("rolePermissions");
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
-        for (Map.Entry<?, ?> entry : newRolePermissions.entrySet()) {
-            String roleName = (String) entry.getKey();
-            // Protection: Admin is immutable.
-            // Phase 119 (Plan 03): PLATAFORMA_ADMIN e igualmente imutavel por este caminho --
-            // DatabaseSeeder.upsertRolePermissions so faz addAll e nunca remove, pelo que uma
-            // injecao de permissoes aqui persistiria para sempre, sem reparacao no arranque
-            // seguinte. Ver o comentario de PAPEL_PLATAFORMA.
-            if ("ADMIN".equals(roleName) || PAPEL_PLATAFORMA.equals(roleName)) {
-                continue;
+        // Cada id submetido só é resolvido contra ESTE mapa -- construído exclusivamente a partir
+        // do tenant do chamador (nunca de um valor do corpo do pedido, mesmo idioma de listUsers
+        // acima). Um id de outro tenant está simplesmente ausente daqui, por isso a
+        // inalcançabilidade cross-tenant é garantida por construção, não por uma comparação que
+        // se poderia esquecer de fazer (T-127-11).
+        Map<UUID, TenantRole> papeisDoTenant = tenantRoleRepository.findByTenantId(principal.getTenantId()).stream()
+                .collect(Collectors.toMap(TenantRole::getId, tr -> tr));
+
+        // Resolvido UMA vez, a partir do MESMO catálogo servido por getRbac -- nunca por
+        // permissionRepository.findById sobre um id cru -- para que uma permissão reservada à
+        // plataforma nunca possa entrar num papel de escritório por via de um corpo de pedido
+        // (T-127-13, mesma defesa de PlatformAdminController.updateMoldes).
+        Map<String, Permission> catalogoPorChave = permissionRepository.findAllByReservadaPlataformaFalse().stream()
+                .collect(Collectors.toMap(Permission::getNome, p -> p));
+
+        Integer adminMoldeId = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
+        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
+
+        // Validate-then-write: NENHUMA entrada é gravada antes de TODAS as entradas do pedido
+        // passarem todas as guardas -- mesmo idioma de PlatformAdminController.updateMoldes.
+        Map<TenantRole, Set<Permission>> resolvido = new LinkedHashMap<>();
+        for (OfficeRbacUpdateRequest.PapelPermissoesDto entrada : request.getPapeis()) {
+            UUID id = entrada.getId();
+            TenantRole tenantRole = id == null ? null : papeisDoTenant.get(id);
+            if (tenantRole == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado: " + id));
             }
 
-            Role role = roleRepository.findByNome(roleName).orElse(null);
-            if (role != null) {
-                List<?> permsList = (List<?>) entry.getValue();
-                Set<Permission> permissions = new HashSet<>();
-                for (Object pObj : permsList) {
-                    String pName = (String) pObj;
-                    permissionRepository.findByNome(pName).ifPresent(permissions::add);
+            // Tripla guarda (T-127-12): nome cru, nome prefixado ROLE_ e proveniência -- só a
+            // proveniência sobrevive a uma renomeação, mas as outras duas ficam por defesa em
+            // profundidade, mesma disciplina do resto deste ficheiro.
+            if (PAPEL_PLATAFORMA.equals(tenantRole.getNome())
+                    || PAPEL_PLATAFORMA_AUTORIDADE.equals(tenantRole.getNome())
+                    || (plataformaMoldeId != null && plataformaMoldeId.equals(tenantRole.getMoldeId()))) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser alterado a partir daqui."));
+            }
+
+            List<String> chavesSubmetidas = entrada.getPermissoes() == null ? List.of() : entrada.getPermissoes();
+            Set<Permission> permissoesResolvidas = new HashSet<>();
+            for (String chave : chavesSubmetidas) {
+                Permission permissao = catalogoPorChave.get(chave);
+                if (permissao == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
                 }
-                role.setPermissions(permissions);
-                roleRepository.save(role);
+                permissoesResolvidas.add(permissao);
             }
+
+            // Piso do administrador (PAPEL-08, 127-CONTEXT.md Decisao 4b): discriminado por
+            // proveniência (moldeId), nunca por nome -- o nome deste papel passa a ser editável
+            // nesta fase.
+            boolean protegido = adminMoldeId != null && adminMoldeId.equals(tenantRole.getMoldeId());
+            if (protegido) {
+                Set<String> chavesAtuais = tenantRole.getPermissions().stream()
+                        .map(Permission::getNome).collect(Collectors.toSet());
+                Set<String> chavesSubmetidasSet = permissoesResolvidas.stream()
+                        .map(Permission::getNome).collect(Collectors.toSet());
+
+                Set<String> removidas = new HashSet<>(chavesAtuais);
+                removidas.removeAll(chavesSubmetidasSet);
+                if (!removidas.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                            "O papel de administrador do escritório não pode perder as permissões que o "
+                                    + "tornam administrador: " + String.join(", ", removidas)));
+                }
+
+                // Verificação independente da regra de superconjunto acima, embora esta
+                // normalmente já a implique: é o invariante que mantém os gates do plano 02
+                // (users:manage/rbac:manage) alcançáveis mesmo que o estado guardado tenha sido
+                // editado à mão fora da aplicação (ex.: SQL direto) -- nunca confiar apenas na
+                // comparação de conjuntos para esta garantia específica.
+                List<String> autoridadesDeGateEmFalta = new ArrayList<>();
+                if (!chavesSubmetidasSet.contains("rbac:manage")) {
+                    autoridadesDeGateEmFalta.add("rbac:manage");
+                }
+                if (!chavesSubmetidasSet.contains("users:manage")) {
+                    autoridadesDeGateEmFalta.add("users:manage");
+                }
+                if (!autoridadesDeGateEmFalta.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                            "O papel de administrador do escritório não pode perder as permissões que o "
+                                    + "tornam administrador: " + String.join(", ", autoridadesDeGateEmFalta)));
+                }
+            }
+
+            resolvido.put(tenantRole, permissoesResolvidas);
         }
 
+        for (Map.Entry<TenantRole, Set<Permission>> entry : resolvido.entrySet()) {
+            TenantRole tenantRole = entry.getKey();
+            tenantRole.setPermissions(new HashSet<>(entry.getValue()));
+            tenantRoleRepository.save(tenantRole);
+        }
+
+        // PAPEL-03: nenhum mecanismo extra é preciso para que isto tenha efeito numa sessão já
+        // aberta -- JwtAuthenticationFilter re-resolve a autoridade a partir de tenantRoles
+        // (EAGER) do utilizador em CADA pedido autenticado, deliberadamente sem memorização (ver
+        // JwtAuthenticationFilter:50-58), por isso o pedido seguinte a este save já traz as
+        // permissões novas.
         return ResponseEntity.ok(Map.of("message", "Permissões de perfis (RBAC) atualizadas com sucesso!"));
     }
 }
