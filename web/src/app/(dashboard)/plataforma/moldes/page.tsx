@@ -33,6 +33,7 @@ import { useCreateMolde, useMoldes, useUpdateMoldes } from "@/hooks/use-platform
 import type { MoldeCreateRequest, MoldesConsola, MoldeSummary } from "@/types/platform-moldes";
 
 import { CriarMoldePanel } from "./criar-molde-panel";
+import { mesclarEstadoLocal, type LocalPermissoes } from "./merge-local-permissoes";
 
 // O nome literal do papel de plataforma nunca pode aparecer como molde nesta
 // matriz -- o backend ja garante isto (Role.instanciavel=false para
@@ -76,16 +77,6 @@ export default function MoldesPlataformaPage() {
   return <MoldesPlataformaContent />;
 }
 
-type LocalPermissoes = Record<number, Set<string>>;
-
-function construirEstadoLocal(data: MoldesConsola): LocalPermissoes {
-  const estado: LocalPermissoes = {};
-  for (const molde of data.moldes) {
-    estado[molde.id] = new Set(molde.permissoes);
-  }
-  return estado;
-}
-
 function MoldesPlataformaContent() {
   const moldes = useMoldes();
   const atualizarMoldes = useUpdateMoldes();
@@ -96,21 +87,31 @@ function MoldesPlataformaContent() {
 
   // Estado local de edição, mais a referência do último payload já aplicado
   // a ele. Quando a query devolve dados novos (referência diferente), o
-  // estado local é reinicializado a partir do payload fresco -- este é o
-  // padrão de ajuste de estado em render já estabelecido neste codebase
-  // (comparar uma referência do payload aplicado e reinicializar quando
-  // mudou), não `useEffect` com `setState`, que o ESLint deste projecto
-  // rejeita (`react-hooks/set-state-in-effect`). Como `data` só muda de
-  // referência quando o TanStack Query recebe um payload genuinamente novo
-  // (fetch inicial ou invalidação pós-gravação), isto nunca apaga
-  // silenciosamente uma edição local não gravada a meio de um render normal.
+  // estado local é reconciliado com o payload fresco -- este é o padrão de
+  // ajuste de estado em render já estabelecido neste codebase (comparar
+  // uma referência do payload aplicado e reagir quando mudou), não
+  // `useEffect` com `setState`, que o ESLint deste projecto rejeita
+  // (`react-hooks/set-state-in-effect`).
+  //
+  // CR-01 (125-REVIEW.md): "reconciliado", não "reinicializado" -- a versão
+  // anterior desta reset reconstruía `localPermissoes` do zero
+  // (`construirEstadoLocal(data)`) sempre que `data` mudava de referência,
+  // o que também acontece quando `useCreateMolde` invalida
+  // `MOLDES_LIST_KEY` depois de "Criar Molde", uma ação sem nenhuma relação
+  // com a matriz -- apagando em silêncio qualquer checkbox tocado e ainda
+  // não gravado. `mesclarEstadoLocal` (ver o seu próprio doc-comment para a
+  // decisão completa) faz merge: preserva o valor local de qualquer molde
+  // que o operador tenha tocado (`touchedMoldeIds`) e só inicializa a
+  // partir do payload fresco os moldes nunca tocados, incluindo um molde
+  // recém-criado.
   const [appliedData, setAppliedData] = React.useState<MoldesConsola | null>(null);
   const [localPermissoes, setLocalPermissoes] = React.useState<LocalPermissoes | null>(null);
+  const [touchedMoldeIds, setTouchedMoldeIds] = React.useState<Set<number>>(new Set());
 
   const data = moldes.data ?? null;
   if (data && data !== appliedData) {
     setAppliedData(data);
-    setLocalPermissoes(construirEstadoLocal(data));
+    setLocalPermissoes((prevLocal) => mesclarEstadoLocal(data, prevLocal, touchedMoldeIds));
   }
 
   const moldesFiltrados = React.useMemo<MoldeSummary[]>(() => {
@@ -124,6 +125,15 @@ function MoldesPlataformaContent() {
   }, [data]);
 
   const handleToggle = (moldeId: number, permKey: string) => {
+    // Marca este molde como "tocado" -- é o que diz a mesclarEstadoLocal,
+    // no próximo payload fresco, para preservar o valor local deste molde
+    // em vez de o substituir (CR-01).
+    setTouchedMoldeIds((prev) => {
+      if (prev.has(moldeId)) return prev;
+      const seguinte = new Set(prev);
+      seguinte.add(moldeId);
+      return seguinte;
+    });
     setLocalPermissoes((prev) => {
       if (!prev) return prev;
       const atual = prev[moldeId] ?? new Set<string>();
@@ -173,15 +183,30 @@ function MoldesPlataformaContent() {
   };
 
   const handleConfirmarGravacao = async () => {
+    const idsGravados = moldesAlterados.map((molde) => molde.id);
     try {
       await atualizarMoldes.mutateAsync({
-        moldes: moldesAlterados.map((molde) => ({
-          id: molde.id,
-          permissoes: Array.from(localPermissoes?.[molde.id] ?? new Set<string>()),
+        moldes: idsGravados.map((id) => ({
+          id,
+          permissoes: Array.from(localPermissoes?.[id] ?? new Set<string>()),
         })),
       });
       toast.success("Moldes atualizados com sucesso.");
       setIsConfirmOpen(false);
+      // Os moldes que acabaram de ser gravados deixam de estar "por
+      // gravar" -- da próxima vez que `data` mudar de referência (a
+      // invalidação de MOLDES_LIST_KEY que esta própria mutação dispara a
+      // seguir, no mínimo), mesclarEstadoLocal volta a aceitar o valor do
+      // servidor para estes moldes em vez de continuar a preservar
+      // indefinidamente um valor local que já foi gravado.
+      setTouchedMoldeIds((prev) => {
+        if (prev.size === 0) return prev;
+        const seguinte = new Set(prev);
+        for (const id of idsGravados) {
+          seguinte.delete(id);
+        }
+        return seguinte;
+      });
     } catch {
       // O wrapper de fetch partilhado (apiFetch) ja mostrou o toast com a
       // mensagem do backend. Mantemos o AlertDialog aberto -- convencao ja
