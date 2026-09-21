@@ -98,7 +98,26 @@ public class MigracaoPapeisEscritorioService {
             }
 
             for (User user : utilizadoresDoTenant) {
-                Set<TenantRole> alvo = resolucaoPapeisService.resolverPapeisDeEscritorio(tenantId, user.getRoles());
+                Set<TenantRole> alvo;
+                try {
+                    alvo = resolucaoPapeisService.resolverPapeisDeEscritorio(tenantId, user.getRoles());
+                } catch (MapeamentoParcialPapeisException e) {
+                    // CR-01/WR-04 (126-REVIEW.md): correspondencia PARCIAL para este utilizador --
+                    // alguns dos seus papeis globais tem TenantRole homonimo neste tenant, outros
+                    // nao (ex.: um molde tornado instanciavel DEPOIS de este tenant ja ter sido
+                    // convertido). Ao contrario do aborto por deriva (verificarSemDeriva, mais
+                    // abaixo), NAO se aborta a transaccao inteira por um unico utilizador com
+                    // catalogo desactualizado -- fica sem papeis de escritorio, registado aqui, e
+                    // continua a resolver por papeis globais, exactamente a mesma postura de
+                    // seguranca do ramo "sem correspondencia" logo a seguir. O que muda e que
+                    // NUNCA se grava o subconjunto parcial (o que nao seria aceitavel, ver CR-01).
+                    log.warn("Utilizador {} tem correspondencia PARCIAL de papel de escritorio no "
+                            + "tenant {} -- papeis sem TenantRole homonimo: {}. Fica sem papeis de "
+                            + "escritorio (nunca grava um subconjunto parcial) e continua a "
+                            + "resolver por papeis globais ate o catalogo de moldes deste tenant "
+                            + "ser actualizado.", user.getEmail(), tenantId, e.getPapeisSemCorrespondencia());
+                    continue;
+                }
 
                 if (alvo.isEmpty()) {
                     log.warn("Utilizador {} sem equivalente de papel de escritorio no tenant {} para os "

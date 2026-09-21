@@ -243,4 +243,26 @@ class ResolucaoPapeisServiceTest {
         assertNotNull(resultado);
         assertTrue(resultado.isEmpty());
     }
+
+    // Caso 9 (CR-01/WR-04, 126-REVIEW.md) -- O TESTE QUE PROVA O ACHADO: correspondencia PARCIAL
+    // (ADVOGADO mapeia, NOVO_PAPEL nao) lanca MapeamentoParcialPapeisException nomeando o papel
+    // sem correspondencia, em vez de devolver silenciosamente o subconjunto {ADVOGADO}. Contra o
+    // codigo NAO corrigido, este teste falha: o metodo devolvia Set.of(tenantRoleAdvogado) sem
+    // lancar nada, e assertThrows reprovava por nenhuma excepcao ter sido lancada.
+    @Test
+    void resolverPapeisDeEscritorio_comCorrespondenciaParcial_lancaMapeamentoParcialNomeandoOPapelEmFalta() {
+        UUID tenantId = UUID.randomUUID();
+        Role advogadoGlobal = Role.builder().id(1).nome("ADVOGADO").build();
+        Role novoPapelGlobal = Role.builder().id(2).nome("NOVO_PAPEL").build();
+        TenantRole tenantRoleAdvogado = TenantRole.builder().id(UUID.randomUUID()).tenantId(tenantId).nome("ADVOGADO").build();
+
+        when(tenantRoleRepository.findByTenantIdAndNome(tenantId, "ADVOGADO")).thenReturn(Optional.of(tenantRoleAdvogado));
+        when(tenantRoleRepository.findByTenantIdAndNome(tenantId, "NOVO_PAPEL")).thenReturn(Optional.empty());
+
+        MapeamentoParcialPapeisException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                MapeamentoParcialPapeisException.class,
+                () -> service.resolverPapeisDeEscritorio(tenantId, List.of(advogadoGlobal, novoPapelGlobal)));
+
+        assertEquals(Set.of("NOVO_PAPEL"), ex.getPapeisSemCorrespondencia());
+    }
 }

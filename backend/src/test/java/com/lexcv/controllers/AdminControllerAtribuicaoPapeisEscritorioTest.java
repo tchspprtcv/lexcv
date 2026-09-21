@@ -225,6 +225,63 @@ class AdminControllerAtribuicaoPapeisEscritorioTest {
         verify(userRepository, never()).save(any());
     }
 
+    // Caso 5b (CR-01/WR-04, 126-REVIEW.md) -- O TESTE QUE PROVA O ACHADO: createUser com
+    // roles: ["ADVOGADO", "NOVO_PAPEL"], onde ADVOGADO tem TenantRole homonimo e NOVO_PAPEL nao
+    // (o cenario exacto do achado -- um molde tornado instanciavel DEPOIS de este tenant ja ter
+    // sido convertido) tem de devolver 409, nomeando o papel sem correspondencia, e NUNCA gravar
+    // nada. Contra o codigo NAO corrigido, este teste falha: a resposta era 201 CREATED e
+    // userRepository.save era chamado com tenantRoles = {ADVOGADO} apenas -- o subconjunto
+    // parcial silencioso que o achado descreve.
+    @Test
+    void createUser_comCorrespondenciaParcialDePapeis_devolve409ENuncaGrava() {
+        autenticarComoPrincipalDoTenant();
+        Role advogadoGlobal = Role.builder().id(1).nome("ADVOGADO").build();
+        Role novoPapelGlobal = Role.builder().id(2).nome("NOVO_PAPEL").build();
+        TenantRole advogadoEscritorio = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ADVOGADO").build();
+        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(advogadoGlobal));
+        when(roleRepository.findByNome("NOVO_PAPEL")).thenReturn(Optional.of(novoPapelGlobal));
+        when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "ADVOGADO")).thenReturn(Optional.of(advogadoEscritorio));
+        when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "NOVO_PAPEL")).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response =
+                novoController().createUser(corpoCriacaoComRoles(List.of("ADVOGADO", "NOVO_PAPEL")));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertTrue(((String) body.get("message")).contains("NOVO_PAPEL"));
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 5c (CR-01/WR-04, 126-REVIEW.md) -- mesma prova para updateUser: mudar um utilizador
+    // existente para roles: ["ADVOGADO", "NOVO_PAPEL"] com correspondencia parcial devolve 409 e
+    // nao grava -- nem o `roles` global nem o `tenantRoles` parcial. Este e o segundo dos dois
+    // sitios de escrita nomeados no achado (AdminController.java:219, :317-318).
+    @Test
+    void updateUser_comCorrespondenciaParcialDePapeis_devolve409ENuncaGrava() {
+        autenticarComoPrincipalDoTenant();
+        Role advogadoGlobalOriginal = Role.builder().id(1).nome("ADVOGADO").build();
+        User existente = utilizadorExistente(Set.of(advogadoGlobalOriginal));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(existente));
+
+        Role advogadoGlobal = Role.builder().id(1).nome("ADVOGADO").build();
+        Role novoPapelGlobal = Role.builder().id(2).nome("NOVO_PAPEL").build();
+        TenantRole advogadoEscritorio = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("ADVOGADO").build();
+        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(advogadoGlobal));
+        when(roleRepository.findByNome("NOVO_PAPEL")).thenReturn(Optional.of(novoPapelGlobal));
+        when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "ADVOGADO")).thenReturn(Optional.of(advogadoEscritorio));
+        when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "NOVO_PAPEL")).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response =
+                novoController().updateUser(USER_ID, Map.of("roles", List.of("ADVOGADO", "NOVO_PAPEL")));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertTrue(((String) body.get("message")).contains("NOVO_PAPEL"));
+        verify(userRepository, never()).save(any());
+    }
+
     // Caso 6: listUsers devolve as permissoes resolvidas pelo lado de escritorio para um
     // utilizador convertido, e pelo lado global para um nao convertido -- prova comportamental
     // de que a leitura (Task 3, sitio 1) tambem usa o resolvedor real.

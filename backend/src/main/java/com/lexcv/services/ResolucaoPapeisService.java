@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -128,14 +129,36 @@ public class ResolucaoPapeisService {
     /**
      * Para cada papel global dado, procura o {@link TenantRole} homonimo do tenant. E o seam que
      * o comentario IN-01 de {@code TenantRoleRepository} antecipava -- usado pelo Plano 03
-     * (conversao de dados) e pelo Plano 04 (caminho de escrita do AdminController). Devolve
-     * conjunto vazio quando nenhum corresponde -- nunca nulo, nunca excepcao.
+     * (conversao de dados) e pelo Plano 04 (caminho de escrita do AdminController).
+     *
+     * <p>CR-01/WR-04 (126-REVIEW.md): distingue as TRES saidas possiveis em vez de confundir duas
+     * delas num unico {@code Set} ambiguo -- a ambiguidade original era precisamente a causa raiz
+     * de CR-01. (1) Todos os papeis pedidos mapeiam -- devolve o conjunto completo. (2) Nenhum
+     * papel pedido mapeia (incluindo o caso de {@code papeisGlobais} vazio) -- devolve
+     * {@link Set#of()}, exactamente como antes; todos os chamadores actuais (AdminController,
+     * MigracaoPapeisEscritorioService) ja tratam este caso como "sem correspondencia, ficar em
+     * papeis globais" e continuam a fazê-lo sem alteracao. (3) ALGUNS papeis mapeiam e outros nao
+     * -- esta e a saida que era anteriormente devolvida como um {@code Set} parcial silencioso
+     * (CR-01: escrito directamente em {@code user.tenantRoles}, um {@code 200}/{@code 201} a
+     * esconder que a autoridade efectiva do utilizador ficaria incompleta). Passa a lancar
+     * {@link MapeamentoParcialPapeisException}, nomeando os papeis sem correspondencia, para que
+     * cada chamador decida explicitamente o que fazer -- nunca mais escrever esse subconjunto sem
+     * mais.
      */
     public Set<TenantRole> resolverPapeisDeEscritorio(UUID tenantId, Collection<Role> papeisGlobais) {
-        return papeisGlobais.stream()
-                .map(role -> tenantRoleRepository.findByTenantIdAndNome(tenantId, role.getNome()))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toSet());
+        Set<TenantRole> encontrados = new HashSet<>();
+        Set<String> semCorrespondencia = new HashSet<>();
+        for (Role role : papeisGlobais) {
+            Optional<TenantRole> tenantRole = tenantRoleRepository.findByTenantIdAndNome(tenantId, role.getNome());
+            if (tenantRole.isPresent()) {
+                encontrados.add(tenantRole.get());
+            } else {
+                semCorrespondencia.add(role.getNome());
+            }
+        }
+        if (!encontrados.isEmpty() && !semCorrespondencia.isEmpty()) {
+            throw new MapeamentoParcialPapeisException(semCorrespondencia);
+        }
+        return encontrados;
     }
 }

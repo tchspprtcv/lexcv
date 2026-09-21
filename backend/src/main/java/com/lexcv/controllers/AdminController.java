@@ -12,6 +12,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.MapeamentoParcialPapeisException;
 import com.lexcv.services.ResolucaoPapeisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -131,6 +132,51 @@ public class AdminController {
         return Optional.empty();
     }
 
+    // CR-01/WR-04 (126-REVIEW.md): par de valores devolvido pelo wrapper abaixo -- exactamente um
+    // dos dois campos e nao-nulo. Java nao tem tipo soma leve para isto sem puxar uma dependencia
+    // nova, e um par assim, usado so internamente, e mais simples e mais legivel aqui do que um
+    // Either genérico.
+    private record ResolucaoTenantRolesOuErro(Set<TenantRole> tenantRoles, ResponseEntity<?> erro) {
+        static ResolucaoTenantRolesOuErro sucesso(Set<TenantRole> tenantRoles) {
+            return new ResolucaoTenantRolesOuErro(tenantRoles, null);
+        }
+
+        static ResolucaoTenantRolesOuErro erro(ResponseEntity<?> erro) {
+            return new ResolucaoTenantRolesOuErro(null, erro);
+        }
+    }
+
+    // CR-01/WR-04 (126-REVIEW.md): ponto UNICO onde createUser/updateUser chamam
+    // ResolucaoPapeisService.resolverPapeisDeEscritorio -- escolha deliberada (a) do fix do
+    // achado: falhar o pedido em vez de (b) instanciar o TenantRole em falta na hora. Precedente
+    // ja estabelecido neste ficheiro para "pre-requisito em falta": SetupService faz
+    // roleRepository.findByNome("ADMIN").orElseThrow(...) em vez de criar o papel ADMIN sobre a
+    // marcha; a convergencia do catalogo de moldes (instanciarMoldes) e responsabilidade exclusiva
+    // de SetupService.provisionTenant/initializeSystem e de MigracaoPapeisEscritorioService, nunca
+    // um efeito lateral de um pedido de CRUD de utilizadores -- misturar as duas coisas aqui
+    // obrigaria este controller a reimplementar a logica de instanciacao (snapshot de permissoes,
+    // moldeId, sistema=true) ou a injectar SetupService so para isto, e ainda deixaria por
+    // resolver que transaccao rebobina se a instanciacao falhar a meio de um update de utilizador.
+    // Falhar com 409, nomeando o(s) papel(eis) sem correspondencia, empurra a correcao para onde
+    // ela pertence -- o catalogo de moldes -- e nunca escreve o subconjunto parcial (o que NAO e
+    // aceitavel, ver CR-01).
+    private ResolucaoTenantRolesOuErro resolverTenantRolesOuErro(UUID tenantId, Set<Role> roles) {
+        try {
+            return ResolucaoTenantRolesOuErro.sucesso(
+                    resolucaoPapeisService.resolverPapeisDeEscritorio(tenantId, roles));
+        } catch (MapeamentoParcialPapeisException e) {
+            log.warn("Mapeamento PARCIAL de papeis de escritorio recusado para o tenant {} -- "
+                    + "papeis sem TenantRole homonimo: {}. Pedido recusado antes de qualquer "
+                    + "escrita -- nunca grava um subconjunto silencioso (CR-01/WR-04, "
+                    + "126-REVIEW.md).", tenantId, e.getPapeisSemCorrespondencia());
+            return ResolucaoTenantRolesOuErro.erro(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Os seguintes papéis ainda não têm um papel de escritório correspondente "
+                            + "neste tenant: " + String.join(", ", e.getPapeisSemCorrespondencia())
+                            + ". Contacte o administrador de plataforma para atualizar o catálogo "
+                            + "de moldes antes de atribuir este papel.")));
+        }
+    }
+
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> body) {
         if (!body.containsKey("nome") || !body.containsKey("email") || !body.containsKey("password") || !body.containsKey("roles")) {
@@ -177,7 +223,17 @@ public class AdminController {
         // vindo do corpo do pedido -- a mesma fronteira de isolamento multi-tenant que o resto
         // deste controller ja respeita; o metodo do resolvedor filtra por esse tenant, logo um
         // TenantRole homonimo de outro escritorio e inalcancavel por construcao.
-        Set<TenantRole> tenantRoles = resolucaoPapeisService.resolverPapeisDeEscritorio(principal.getTenantId(), roles);
+        //
+        // CR-01/WR-04 (126-REVIEW.md): correspondencia PARCIAL (alguns dos "roles" pedidos tem
+        // TenantRole homonimo, outros nao) e recusada aqui, ANTES de qualquer escrita -- ver
+        // resolverTenantRolesOuErro. Sem isto, o subconjunto encontrado seria gravado em silencio
+        // e a resposta 201 esconderia que a autoridade efectiva do utilizador criado ficaria
+        // incompleta.
+        ResolucaoTenantRolesOuErro resolucao = resolverTenantRolesOuErro(principal.getTenantId(), roles);
+        if (resolucao.erro() != null) {
+            return resolucao.erro();
+        }
+        Set<TenantRole> tenantRoles = resolucao.tenantRoles();
 
         // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant, aplicado através do
         // helper partilhado limiteUtilizadoresExcedido (ver o seu comentário para o contrato completo e
@@ -308,14 +364,23 @@ public class AdminController {
                 roleRepository.findByNome(roleName).ifPresent(roles::add);
             }
             if (!roles.isEmpty()) {
+                // CR-01/WR-04 (126-REVIEW.md): resolver o mapeamento de escritorio ANTES de
+                // mutar `user` -- se a correspondencia for parcial, o pedido tem de ser recusado
+                // sem que roles/tenantRoles fiquem inconsistentes em memoria (mesmo que nada
+                // ainda tivesse sido persistido, ver o comentario de resolverTenantRolesOuErro).
+                ResolucaoTenantRolesOuErro resolucao =
+                        resolverTenantRolesOuErro(principal.getTenantId(), roles);
+                if (resolucao.erro() != null) {
+                    return resolucao.erro();
+                }
+
                 user.setRoles(roles);
                 // Phase 126 (Plan 04): mesmo caminho de escrita de createUser -- ver o comentario
                 // la. Sem esta linha, um admin que mudasse o papel de um utilizador aqui veria a
                 // operacao devolver 200 sem nenhum efeito na autoridade real dessa pessoa, porque
                 // o resolvedor le o lado de escritorio quando o utilizador ja o tem. Copia
                 // (HashSet novo), nunca a colecao devolvida pelo resolvedor.
-                user.setTenantRoles(new HashSet<>(
-                        resolucaoPapeisService.resolverPapeisDeEscritorio(principal.getTenantId(), roles)));
+                user.setTenantRoles(new HashSet<>(resolucao.tenantRoles()));
             }
         }
 
