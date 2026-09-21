@@ -29,7 +29,18 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+// Phase 127 (Plano 02, PAPEL-08/PAPEL-09): todo o handler governado por este gate de classe e
+// gestao de utilizadores -- gatear pelo nome literal do papel ADMIN deixou de ser seguro no
+// exacto momento em que esta fase torna TenantRole.nome editavel (PAPEL-04):
+// UserPrincipal.create deriva "ROLE_<nome efectivo do papel>", pelo que um escritorio que
+// renomeie o seu proprio papel de administrador deixa de satisfazer hasRole('ADMIN') e fica
+// trancado fora de TODA a superficie /api/v1/admin -- gestao de utilizadores incluida, e do
+// proprio ecra RBAC que lhe permitiria desfazer a renomeacao. Esse e exactamente o
+// autotrancamento silencioso (403 sem explicacao) que PAPEL-08 proibe. hasAuthority('users:manage')
+// sobrevive a renomeacao porque a permissao esta agregada ao TenantRole, nao ao seu nome. O
+// invariante que torna este gate seguro: a regra de piso do plano 03 garante que o papel de
+// administrador do escritorio nunca pode perder users:manage/rbac:manage.
+@PreAuthorize("hasAuthority('users:manage')")
 @RequiredArgsConstructor
 @Slf4j
 public class AdminController {
@@ -428,17 +439,22 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Utilizador removido com sucesso!"));
     }
 
-    // CR-01 (121-REVIEW.md): getRbac ganha aqui uma segunda autoridade aceite -- alargamento so de
-    // LEITURA sobre um catalogo estrutural de plataforma (papeis/permissoes), nunca sobre dados de
-    // tenant. Sem isto, o unico chamador que passou a poder escrever esta matriz apos a guarda de
-    // updateRbac acima (PLATAFORMA_ADMIN) era simultaneamente o unico que nao a podia ler primeiro
-    // -- DatabaseSeeder.seedUtilizadorPlataforma atribui-lhe so PLATAFORMA_ADMIN, nunca ADMIN, e
-    // updateRbac substitui (nunca funde) as permissoes de cada papel submetido, pelo que o primeiro
-    // uso real deste endpoint pelo seu unico chamador legitimo estava a uma submissao incompleta de
-    // apagar permissoes de plataforma inteira. O corpo do metodo (incluindo a exclusao deliberada
-    // de PAPEL_PLATAFORMA da resposta, abaixo) fica inalterado -- so quem pode chamar muda, nunca o
-    // que e devolvido.
-    @PreAuthorize("hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')")
+    // Phase 127 (Plano 02, PAPEL-09): getRbac passa a gatear por hasAuthority('rbac:manage'),
+    // deixando de aceitar hasRole('PLATAFORMA_ADMIN'). O CR-01 original (121-REVIEW.md) tinha
+    // aceitado essa segunda autoridade porque PLATAFORMA_ADMIN se tinha tornado o UNICO escritor
+    // desta matriz (ver o gate historico de updateRbac abaixo) e ficava, por isso, incapaz de a
+    // ler primeiro -- um alargamento so de LEITURA, necessario apenas enquanto a escrita
+    // pertencia a plataforma. O plano 03 desta fase devolve a escrita ao proprio escritorio
+    // (rbac:manage tenant-scoped); PLATAFORMA_ADMIN passa a gerir moldes de papel em
+    // /platform/moldes, nunca a matriz de um escritorio individual, e nao detem nenhuma
+    // permissao (DatabaseSeeder.upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList(),
+    // false)) -- retirar aqui o acesso de PLATAFORMA_ADMIN fecha uma leitura de plataforma sobre
+    // uma superficie de escritorio, nunca quebra um chamador legitimo (a tensao que PAPEL-09 pede
+    // para apertar). O corpo do metodo (incluindo a exclusao deliberada de PAPEL_PLATAFORMA da
+    // resposta, abaixo) fica inalterado neste plano -- so quem pode chamar muda; o corpo em si
+    // (ainda global, nao tenant-scoped) e reescrito pelo plano 03 em conjunto com o gate de
+    // updateRbac.
+    @PreAuthorize("hasAuthority('rbac:manage')")
     @GetMapping("/rbac")
     public ResponseEntity<?> getRbac() {
         List<Role> roles = roleRepository.findAll();
@@ -520,6 +536,15 @@ public class AdminController {
     // outros escritorios. A anotacao de metodo abaixo substitui -- nunca soma a -- o gate de
     // classe desta controller (a mais especifica ganha, nunca sao combinadas com E logico); todos
     // os restantes handlers continuam governados apenas pelo gate de classe.
+    //
+    // Phase 127 (Plano 02, 127-CONTEXT.md Decisao 1): este gate fica DELIBERADAMENTE por mexer
+    // neste plano, ao contrario do de getRbac acima. O plano 03 desta fase muda os dois gates
+    // (este e o de getRbac) e o CORPO deste handler NA MESMA alteracao -- nunca em sequencia --
+    // porque abrir este gate a hasAuthority('rbac:manage') antes do corpo passar a escrever
+    // TenantRole (tenant-scoped) em vez de Role (global) reabriria, mesmo que so por um plano de
+    // duracao, exactamente a escrita cross-tenant que o ISOL-03 acima fechou: um ADMIN de
+    // escritorio conseguiria de novo gravar a mesma matriz global partilhada por todos os
+    // outros escritorios.
     @PreAuthorize("hasRole('PLATAFORMA_ADMIN')")
     @PutMapping("/rbac")
     public ResponseEntity<?> updateRbac(@RequestBody Map<String, Object> body) {

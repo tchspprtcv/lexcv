@@ -1,5 +1,6 @@
 package com.lexcv.controllers;
 
+import com.lexcv.config.UserPrincipal;
 import com.lexcv.models.Permission;
 import com.lexcv.models.Role;
 import com.lexcv.repositories.PermissionRepository;
@@ -28,6 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,24 +43,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Prova comportamental (ISOL-03, Phase 121) de que a anotacao de metodo
- * {@code @PreAuthorize("hasRole('PLATAFORMA_ADMIN')")} de {@code updateRbac} substitui -- e nao
- * soma a -- a anotacao de classe {@code @PreAuthorize("hasRole('ADMIN')")} de
- * {@link AdminController}.
+ * Prova comportamental, por proxy real de method security (nunca por reflexão sobre a anotação
+ * para os casos comportamentais), de que {@link AdminController} está gateado por AUTORIDADE de
+ * permissão (Phase 127, Plano 02, PAPEL-08/PAPEL-09) e não pelo nome literal do papel ADMIN --
+ * `users:manage` no gate de classe, `rbac:manage` em {@code getRbac}.
  *
- * <p>Este ficheiro existe separado de {@link AdminControllerPlataformaAdminContencaoTest} porque
- * prova uma coisa diferente: aqui prova-se o <em>gate de autorizacao</em> em si -- algo que so um
- * proxy AOP real de method security consegue avaliar, nunca uma chamada Java direta ao controller
- * (que trata {@code @PreAuthorize} como metadados inertes). O ficheiro de contencao prova
- * <em>guardas de corpo de handler</em> (ex.: {@code updateRbac} ignorar uma entrada
- * "PLATAFORMA_ADMIN"), chamando o controller diretamente -- as duas provas sao complementares, uma
- * nao substitui a outra.
+ * <p>Isto substitui a prova anterior (Phase 121, ISOL-03/CR-01), cuja premissa era
+ * {@code hasRole('ADMIN')} de classe e {@code hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')} em
+ * {@code getRbac} -- ambas deixaram de ser verdadeiras com este plano. O ficheiro continua a
+ * provar {@code updateRbac} separadamente: esse gate ({@code hasRole('PLATAFORMA_ADMIN')}) fica
+ * deliberadamente por mexer até o plano 03 desta fase reescrever o seu corpo para tenant-scoped
+ * (127-CONTEXT.md Decisão 1) -- ver o comentário acima do handler.
  *
- * <p>{@link AdminController} e a primeira classe deste codebase a combinar uma anotacao de classe
- * com uma anotacao de metodo mais especifica na mesma classe (confirmado por grep de todos os
- * {@code @PreAuthorize} em {@code controllers/}) -- por isso a semantica "a mais especifica ganha"
- * do Spring Security e provada aqui comportamentalmente, com um proxy CGLIB real
- * ({@link AuthorizationManagerBeforeMethodInterceptor#preAuthorize()}), e nunca assumida por
+ * <p>{@link AdminController} continua a ser a única classe deste codebase a combinar uma
+ * anotação de classe com uma anotação de método mais específica na mesma classe -- por isso a
+ * semântica "a mais específica ganha" do Spring Security continua provada aqui
+ * comportamentalmente, com um proxy CGLIB real
+ * ({@link AuthorizationManagerBeforeMethodInterceptor#preAuthorize()}), nunca assumida por
  * analogia com outro controller.
  */
 @ExtendWith(MockitoExtension.class)
@@ -93,14 +95,17 @@ class AdminControllerRbacAutorizacaoTest {
     }
 
     /**
-     * Autentica com autoridades ja prefixadas ("ROLE_..."), nunca cruas -- ver 121-PATTERNS.md
-     * para a armadilha explicita de nao copiar {@code PlatformAdminControllerTest.autenticarComoRoles}
-     * (que constroi autoridades sem o prefixo "ROLE_"). Se usassemos autoridades nao prefixadas
-     * aqui, uma recusa seria trivialmente verdadeira pelo motivo errado -- a autoridade nunca
-     * satisfaria nenhum {@code hasRole(...)}, logo o teste nao distinguiria "o override funciona"
-     * de "o contexto de seguranca estava simplesmente vazio". {@code updateRbac} nunca le
-     * {@code SecurityContextHolder} no seu corpo, por isso uma lista de autoridades sem
-     * {@code UserPrincipal} e suficiente (mais simples que {@code autenticarComoPlataformaAdmin}).
+     * Autentica com uma lista crua de autoridades, sem {@link UserPrincipal} (o principal fica
+     * {@code null}). Correto para {@code getRbac}/{@code updateRbac}, cujos corpos nunca leem
+     * {@code SecurityContextHolder} -- mas NUNCA para {@code listUsers}, que desembrulha
+     * {@code (UserPrincipal) auth.getPrincipal()} e chamaria {@code getTenantId()} sobre
+     * {@code null}; para esse handler usar {@link #autenticarComoPrincipalComAuthorities}.
+     *
+     * <p>As autoridades passadas aqui são usadas EXATAMENTE como escritas -- nunca prefixadas
+     * automaticamente com {@code "ROLE_"}. Isto é deliberado: alguns testes abaixo (a armadilha
+     * {@code hasAuthority} vs {@code hasRole} de 127-CONTEXT.md Decisão 3) precisam de distinguir
+     * a forma crua {@code "rbac:manage"} da forma prefixada {@code "ROLE_rbac:manage"}, e só o
+     * chamador decide qual passar.
      */
     private void autenticarComoAuthorities(String... authorities) {
         List<SimpleGrantedAuthority> autoridades = Arrays.stream(authorities)
@@ -110,12 +115,133 @@ class AdminControllerRbacAutorizacaoTest {
                 .setAuthentication(new UsernamePasswordAuthenticationToken(null, null, autoridades));
     }
 
-    // Direcao 1: um chamador que genuinamente satisfaz o GATE DE CLASSE antigo (hasRole('ADMIN'),
-    // ou seja, detem a autoridade prefixada "ROLE_ADMIN") e, mesmo assim, recusado -- prova que a
-    // anotacao de metodo SUBSTITUI, e nao apenas soma a, a anotacao de classe para este metodo
-    // especifico. Sem stubs: o corpo do handler nunca corre neste estado (nem em GREEN, para este
-    // chamador), por isso qualquer stub ficaria por usar e dispararia UnnecessaryStubbingException
-    // do modo estrito do Mockito.
+    /**
+     * Autentica com um {@link UserPrincipal} real (não apenas uma lista de autoridades) -- exigido
+     * por qualquer handler que leia {@code SecurityContextHolder} no seu corpo, como
+     * {@code listUsers} (chama {@code principal.getTenantId()}). Construído diretamente via
+     * {@code UserPrincipal.builder()}, nunca via {@code UserPrincipal.create}: este teste precisa
+     * de controlar as autoridades cruas exatas do principal (incluindo formas que
+     * {@code UserPrincipal.create} nunca produziria, como um papel renomeado com espaço), não a
+     * derivação normal a partir de "roles"/"permissions".
+     */
+    private void autenticarComoPrincipalComAuthorities(UUID tenantId, String... authorities) {
+        List<SimpleGrantedAuthority> autoridades = Arrays.stream(authorities)
+                .map(SimpleGrantedAuthority::new)
+                .toList();
+        UserPrincipal principal = UserPrincipal.builder()
+                .userId(UUID.randomUUID())
+                .tenantId(tenantId)
+                .nome("Principal de Teste")
+                .email("principal@escritorio-teste.cv")
+                .roles(Set.of())
+                .permissions(Set.of())
+                .authorities(autoridades)
+                .build();
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, autoridades));
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // getRbac: hasAuthority('rbac:manage') -- Cenário 1 (127-02-PLAN.md)
+    // ---------------------------------------------------------------------------------------
+
+    // Cenário 1: a autoridade crua (não prefixada) "rbac:manage" satisfaz o novo gate.
+    @Test
+    void getRbac_comAutoridadeRbacManageCruaObtemSucesso() {
+        autenticarComoAuthorities("rbac:manage");
+        when(roleRepository.findAll()).thenReturn(List.of());
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    // Cenário 2: ROLE_ADMIN sozinho já não chega -- prova que o gate deixou de ser um hasRole.
+    @Test
+    void getRbac_comApenasRoleAdminERecusado() {
+        autenticarComoAuthorities("ROLE_ADMIN");
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
+        verify(roleRepository, never()).findAll();
+    }
+
+    // Cenário 3: ROLE_PLATAFORMA_ADMIN sozinho já não chega -- a leitura de plataforma sobre esta
+    // superfície de escritório foi retirada (PAPEL-09).
+    @Test
+    void getRbac_comApenasRolePlataformaAdminERecusado() {
+        autenticarComoAuthorities("ROLE_PLATAFORMA_ADMIN");
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
+        verify(roleRepository, never()).findAll();
+    }
+
+    // Cenário 4: a armadilha hasAuthority-vs-hasRole (127-CONTEXT.md Decisão 3) fixada em teste --
+    // "ROLE_rbac:manage" é a forma ERRADA (o que hasRole('rbac:manage') procuraria); com o gate
+    // correto (hasAuthority), esta forma tem de continuar recusada. Se uma edição futura trocar
+    // hasAuthority por hasRole aqui, este teste passa a falhar em vez de 403 silenciosamente todos
+    // os chamadores reais.
+    @Test
+    void getRbac_comAutoridadePrefixadaRoleRbacManageERecusado() {
+        autenticarComoAuthorities("ROLE_rbac:manage");
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
+        verify(roleRepository, never()).findAll();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // listUsers: hasAuthority('users:manage') via o gate de CLASSE -- Cenários 5 e 6a
+    // ---------------------------------------------------------------------------------------
+
+    // Cenário 5: a regressão que esta tarefa existe para prevenir -- um chamador cuja única
+    // autoridade em forma de papel é "ROLE_Administrador do Escritório" (um papel de escritório
+    // RENOMEADO, já não "ADMIN") continua a alcançar a gestão de utilizadores, porque detém
+    // "users:manage" diretamente.
+    @Test
+    void listUsers_comAutoridadeUsersManageEPapelDeEscritorioRenomeadoObtemSucesso() {
+        UUID tenantId = UUID.randomUUID();
+        autenticarComoPrincipalComAuthorities(tenantId, "users:manage", "ROLE_Administrador do Escritório");
+        when(userRepository.findByTenantId(tenantId)).thenReturn(List.of());
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        ResponseEntity<?> response = assertDoesNotThrow(proxy::listUsers);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    // Cenário 6a: as duas autoridades não são intercambiáveis -- rbac:manage sozinho não abre a
+    // gestão de utilizadores (o gate de classe).
+    @Test
+    void listUsers_comApenasRbacManageERecusado() {
+        autenticarComoAuthorities("rbac:manage");
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, proxy::listUsers);
+        verify(userRepository, never()).findByTenantId(any());
+    }
+
+    // Cenário 6b (o inverso): users:manage sozinho não abre a matriz RBAC.
+    @Test
+    void getRbac_comApenasUsersManageERecusado() {
+        autenticarComoAuthorities("users:manage");
+        AdminController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, () -> proxy.getRbac());
+        verify(roleRepository, never()).findAll();
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // updateRbac: hasRole('PLATAFORMA_ADMIN') -- deliberadamente INTOCADO neste plano (Decisão 1).
+    // Cenário 7: estas duas asserções ficam temporariamente como estavam; o plano 03 desta fase
+    // inverte-as (o gate passa a hasAuthority('rbac:manage'), tenant-scoped) na mesma alteração
+    // que reescreve o corpo do handler para deixar de escrever Role/Permission globais -- ver o
+    // comentário acima de updateRbac em AdminController para a razão de gate e corpo terem de
+    // mudar juntos. Ler a sua inversão nesse plano como intencional, não como regressão.
+    // ---------------------------------------------------------------------------------------
+
     @Test
     void updateRbac_comRoleAdminDeTenantNormalERecusadoMesmoSatisfazendoOGateDeClasse() {
         autenticarComoAuthorities("ROLE_ADMIN");
@@ -126,9 +252,6 @@ class AdminControllerRbacAutorizacaoTest {
         verify(roleRepository, never()).save(any());
     }
 
-    // Direcao 2 (o inverso): um chamador que NAO satisfaz de todo o hasRole('ADMIN') de classe, mas
-    // DETEM ROLE_PLATAFORMA_ADMIN, ainda assim atravessa o gate -- prova que as duas anotacoes nao
-    // sao combinadas com E logico (se fossem, este chamador seria tambem recusado erradamente).
     @Test
     void updateRbac_comRolePlataformaAdminPassaOGateMesmoSemHasRoleAdmin() {
         autenticarComoAuthorities("ROLE_PLATAFORMA_ADMIN");
@@ -145,9 +268,12 @@ class AdminControllerRbacAutorizacaoTest {
         verify(roleRepository, times(1)).save(any());
     }
 
-    // Prova, por reflexao, que updateRbac tem a sua propria anotacao de metodo com o valor exato
-    // esperado -- espelha anotacaoDeClasseTemValorExatoHasRolePlataformaAdmin de
-    // PlatformAdminControllerTest.
+    // ---------------------------------------------------------------------------------------
+    // Não-regressão por reflexão -- valor exato das anotações. Complementar às provas
+    // comportamentais acima, nunca substituto: reflexão sozinha nunca provaria que o proxy de
+    // method security realmente aplica o valor declarado.
+    // ---------------------------------------------------------------------------------------
+
     @Test
     void updateRbac_temAnotacaoDeMetodoComValorExatoHasRolePlataformaAdmin() throws NoSuchMethodException {
         Method metodo = AdminController.class.getMethod("updateRbac", Map.class);
@@ -157,59 +283,20 @@ class AdminControllerRbacAutorizacaoTest {
         assertEquals("hasRole('PLATAFORMA_ADMIN')", anotacao.value());
     }
 
-    // CR-01 (121-REVIEW.md): a decisao original de 121-CONTEXT.md era deixar getRbac sem anotacao
-    // de metodo -- mas isso deixava o unico chamador capaz de escrever a matriz (PLATAFORMA_ADMIN)
-    // sem nenhuma forma de a ler primeiro (ver o comentario do handler). Este teste substitui
-    // getRbac_continuaSemAnotacaoDeMetodo, cuja premissa (nenhuma anotacao de metodo) deixou de
-    // ser verdadeira com este fix: prova, por reflexao, que getRbac passa a ter a sua propria
-    // anotacao de metodo, alargada para aceitar tambem PLATAFORMA_ADMIN sem deixar de aceitar
-    // ADMIN.
     @Test
-    void getRbac_temAnotacaoDeMetodoComValorExatoHasRoleAdminOuPlataformaAdmin() throws NoSuchMethodException {
+    void getRbac_temAnotacaoDeMetodoComValorExatoHasAuthorityRbacManage() throws NoSuchMethodException {
         Method metodo = AdminController.class.getMethod("getRbac");
         PreAuthorize anotacao = metodo.getAnnotation(PreAuthorize.class);
 
         assertNotNull(anotacao);
-        assertEquals("hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')", anotacao.value());
+        assertEquals("hasAuthority('rbac:manage')", anotacao.value());
     }
 
-    // CR-01 (121-REVIEW.md): prova comportamental, pelo proxy real de method security, de que um
-    // chamador com apenas ROLE_PLATAFORMA_ADMIN (o unico papel que o utilizador seedado em
-    // DatabaseSeeder.seedUtilizadorPlataforma alguma vez detem) agora consegue ler a matriz -- o
-    // gap real que motivou este fix: antes, este chamador passava em updateRbac mas era sempre
-    // recusado em getRbac, sem nenhuma forma de validar o estado atual antes de o substituir.
     @Test
-    void getRbac_comRolePlataformaAdminObtemSucesso() {
-        autenticarComoAuthorities("ROLE_PLATAFORMA_ADMIN");
-        when(roleRepository.findAll()).thenReturn(List.of());
-        AdminController proxy = novoProxyComMethodSecurity();
-
-        ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-
-    // CR-01 (121-REVIEW.md): nao-regressao -- um ADMIN de tenant continua a conseguir ler a matriz
-    // tal como antes deste fix; o alargamento e estritamente aditivo (uma segunda autoridade
-    // aceite), nunca retira o acesso que ja existia.
-    @Test
-    void getRbac_comRoleAdminContinuaAObterSucesso() {
-        autenticarComoAuthorities("ROLE_ADMIN");
-        when(roleRepository.findAll()).thenReturn(List.of());
-        AdminController proxy = novoProxyComMethodSecurity();
-
-        ResponseEntity<?> response = assertDoesNotThrow(() -> proxy.getRbac());
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-
-    // Guarda de regressao para os restantes handlers de AdminController (utilizadores, etc.), que
-    // continuam governados apenas pelo gate de classe.
-    @Test
-    void anotacaoDeClasseContinuaHasRoleAdmin() {
+    void anotacaoDeClasseAgoraHasAuthorityUsersManage() {
         PreAuthorize anotacao = AdminController.class.getAnnotation(PreAuthorize.class);
 
         assertNotNull(anotacao);
-        assertEquals("hasRole('ADMIN')", anotacao.value());
+        assertEquals("hasAuthority('users:manage')", anotacao.value());
     }
 }
