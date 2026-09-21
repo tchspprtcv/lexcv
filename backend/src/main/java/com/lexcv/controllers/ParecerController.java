@@ -13,6 +13,7 @@ import com.lexcv.repositories.ParecerVersaoRepository;
 import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.NotificacaoService;
+import com.lexcv.services.ResolucaoPapeisService;
 import com.lexcv.services.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,13 @@ public class ParecerController {
     private final StorageService storageService;
     private final AuditLogRepository auditLogRepository;
     private final NotificacaoService notificacaoService;
+    private final ResolucaoPapeisService resolucaoPapeisService;
+
+    // Phase 126 Plano 05: designa o MOLDE global do advogado em t_role (semeado pelo
+    // DatabaseSeeder, estavel), NAO o nome do papel de escritorio que um tenant possa ver no
+    // ecra -- a Phase 127 (PAPEL-04) deixa um escritorio renomear esse ultimo. E a diferenca
+    // entre um literal que sobrevive a essa renomeacao e um que nao sobrevive.
+    private static final String NOME_MOLDE_ADVOGADO = "ADVOGADO";
 
     private UUID getTenantId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -57,6 +65,12 @@ public class ParecerController {
     /**
      * Validates that advogadoId references a User belonging to this tenant with role ADVOGADO.
      * Returns the validated User on success, or null if validation fails.
+     *
+     * <p>Phase 126 Plano 05: a verificacao de papel e de PROVENIENCIA (molde), nao de nome --
+     * sobrevive a uma renomeacao do papel de escritorio ADVOGADO (Phase 127, PAPEL-04). Um papel
+     * criado de raiz por um escritorio (moldeId nulo) NUNCA satisfaz esta verificacao, tal como
+     * hoje um papel inventado por um escritorio nao corresponde ao nome literal -- limite
+     * deliberado, nao um descuido (126-CONTEXT.md, Decisao 2).
      */
     private User validateAdvogado(UUID advogadoId, UUID tenantId) {
         User user = userRepository.findById(advogadoId).orElse(null);
@@ -66,9 +80,7 @@ public class ParecerController {
         if (user == null || !tenantId.equals(user.getTenantId()) || Boolean.FALSE.equals(user.getAtivo())) {
             return null;
         }
-        boolean isAdvogado = user.getRoles().stream()
-                .anyMatch(r -> "ADVOGADO".equals(r.getNome()));
-        if (!isAdvogado) {
+        if (!resolucaoPapeisService.temPapelDeMolde(user, NOME_MOLDE_ADVOGADO)) {
             return null;
         }
         return user;
