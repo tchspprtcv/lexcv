@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+// Phase 126 Plan 03: ordem explicita -- a conversao de papeis de escritorio (MigracaoPapeisRunner) depende de seedRbac() ja ter convergido Role.instanciavel, e a ordem relativa entre dois CommandLineRunner nao anotados e indefinida.
+@Order(Ordered.LOWEST_PRECEDENCE - 100)
 public class DatabaseSeeder implements CommandLineRunner {
 
         private final TenantRepository tenantRepository;
