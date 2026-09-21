@@ -289,10 +289,24 @@ public class PlatformAdminController {
         // Validate-then-write (T-125-21): resolve e valida TODAS as entradas antes de gravar
         // qualquer uma. resolvido preserva a ordem de chegada apenas por clareza -- a gravacao em
         // si nao depende de ordem.
+        //
+        // WR-02 (125-REVIEW.md): resolvido e um Map<Role, ...> chaveado pela entidade Role, cujo
+        // equals() e sobre "nome" (@EqualsAndHashCode(of = "nome")) -- por isso duas entradas do
+        // pedido com o MESMO id resolveriam sempre para a MESMA chave e resolvido.put(...) da
+        // segunda entrada substituiria silenciosamente as permissoes ja resolvidas da primeira,
+        // contradizendo a promessa "nenhuma entrada e gravada antes de TODAS passarem" do proprio
+        // doc-comment deste metodo -- so a ultima entrada duplicada sobreviveria. idsVistos deteta
+        // isto ANTES de resolvido ser tocado e recusa o pedido inteiro, em vez de colapsar as
+        // entradas em silencio.
+        Set<Integer> idsVistos = new HashSet<>();
         Map<Role, Set<Permission>> resolvido = new LinkedHashMap<>();
         for (MoldesUpdateRequest.MoldePermissoesEntry entrada : request.getMoldes()) {
             if (entrada.getId() == null) {
                 return ResponseEntity.badRequest().body(Map.of("message", "O id do molde é obrigatório."));
+            }
+
+            if (!idsVistos.add(entrada.getId())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Molde duplicado no pedido: " + entrada.getId()));
             }
 
             Role role = roleRepository.findById(entrada.getId()).orElse(null);

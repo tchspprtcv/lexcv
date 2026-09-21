@@ -339,6 +339,34 @@ class PlatformAdminControllerMoldesTest {
         verify(roleRepository, never()).save(any());
     }
 
+    // WR-02 (125-REVIEW.md): resolvido era um Map<Role, ...> chaveado por Role.equals() (sobre
+    // "nome"), pelo que duas entradas do pedido com o mesmo id resolviam para a mesma chave e a
+    // segunda sobrescrevia silenciosamente a primeira -- so a ultima entrada duplicada era
+    // gravada, contradizendo a promessa de validate-then-write do proprio doc-comment do metodo.
+    // Prova que o pedido inteiro e agora recusado, nomeando o id duplicado, e que roleRepository
+    // nunca chega a gravar nada.
+    @Test
+    void updateMoldes_comIdDuplicadoDevolve400NomeandoOIdENuncaGrava() {
+        Role advogado = molde(10, "ADVOGADO", new HashSet<>());
+        lenient().when(roleRepository.findById(10)).thenReturn(Optional.of(advogado));
+        lenient().when(permissionRepository.findAllByReservadaPlataformaFalse()).thenReturn(List.of());
+
+        MoldesUpdateRequest.MoldePermissoesEntry primeiraEntrada = new MoldesUpdateRequest.MoldePermissoesEntry();
+        primeiraEntrada.setId(10);
+        primeiraEntrada.setPermissoes(List.of());
+        MoldesUpdateRequest.MoldePermissoesEntry segundaEntradaDuplicada = new MoldesUpdateRequest.MoldePermissoesEntry();
+        segundaEntradaDuplicada.setId(10);
+        segundaEntradaDuplicada.setPermissoes(List.of());
+        MoldesUpdateRequest request = new MoldesUpdateRequest();
+        request.setMoldes(List.of(primeiraEntrada, segundaEntradaDuplicada));
+
+        ResponseEntity<?> response = novoController().updateMoldes(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("10"));
+        verify(roleRepository, never()).save(any());
+    }
+
     // ---- Grupo A: comportamento de createMolde ----
 
     @Test
