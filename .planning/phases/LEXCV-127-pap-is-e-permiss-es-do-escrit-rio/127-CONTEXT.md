@@ -49,8 +49,23 @@ A Fase 126 não os converteu por razão técnica explícita: `principal.getRoles
 
 PAPEL-07 pede que nenhuma acção de um escritório alcance outro. Isso não se prova com um comentário: prova-se com um teste que monta dois tenants, grava no primeiro e assere que o segundo não mudou. A Fase 121 deixou um precedente de como se prova um gate a sério (proxy real `AuthorizationManagerBeforeMethodInterceptor` + `ProxyFactory`, nunca reflexão sobre a anotação) e a Fase 126 deixou o precedente de provar isolamento multi-tenant em teste.
 
+### Decisão 6 — A atribuição de papéis a utilizadores passa a ser por identidade, não por nome
+
+Encontrado no mapeamento de padrões desta fase, e é uma colisão entre duas alterações que ninguém tinha ligado:
+
+`AdminController.createUser`/`updateUser` recebem hoje **nomes de papéis globais** (`roleRepository.findByNome`) e a Fase 126 fê-los resolver o `TenantRole` equivalente por nome, via `resolverPapeisDeEscritorio`. A correcção da revisão da Fase 126 fez esse método **lançar excepção em mapeamento parcial** — decisão correcta, que fechou um crítico onde permissões desapareciam em silêncio.
+
+Junte-se a isso a renomeação que esta fase entrega: um escritório renomeia "ADVOGADO" para "Advogado Sénior", e a partir daí atribuir esse papel a um utilizador resolve o papel global "ADVOGADO", não encontra `TenantRole` homónimo, e devolve **409**. A gestão de utilizadores parte por causa de uma renomeação feita noutro ecrã.
+
+**Decisão:** a atribuição passa a referir papéis do escritório por **id**, não por nome. É o modelo correcto agora — um administrador escolhe de entre os papéis do seu próprio escritório, que é precisamente o que os requisitos PAPEL-01 e PAPEL-06 descrevem. O caminho por nome global deixa de ser usado para atribuição.
+
+Isto tem consequência no frontend: o formulário de utilizador passa a listar os papéis do escritório (com os seus nomes actuais, editáveis) em vez dos nomes globais. Planear em conjunto, não como afterthought — um sem o outro deixa a gestão de utilizadores quebrada.
+
 ### Claude's Discretion
-A forma dos endpoints de CRUD, a organização do ecrã reescrito, e a estrutura dos testes ficam ao critério do executor, desde que as cinco decisões acima sejam respeitadas.
+A forma dos endpoints de CRUD, a organização do ecrã reescrito, e a estrutura dos testes ficam ao critério do executor, desde que as seis decisões acima sejam respeitadas.
+
+### Correcção factual para o planeamento
+`UserPrincipal.create` tem **dois** sítios de chamada em produção — `JwtAuthenticationFilter` e `VerificacaoDerivaPapeisService` (duas vezes). O `AuthController` **não** o chama directamente, ao contrário do que o levantamento inicial supôs. Vários testes chamam-no e precisam de acompanhar qualquer alteração de assinatura.
 </decisions>
 
 <code_context>
