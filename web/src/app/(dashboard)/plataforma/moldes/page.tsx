@@ -2,15 +2,33 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, Loader2, RotateCcw, TriangleAlert } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+  RotateCcw,
+  Save,
+  TriangleAlert,
+} from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { toast } from "@/hooks/use-toast";
 import { useMe } from "@/hooks/use-me";
-import { useMoldes } from "@/hooks/use-platform-moldes";
+import { useMoldes, useUpdateMoldes } from "@/hooks/use-platform-moldes";
 import type { MoldesConsola, MoldeSummary } from "@/types/platform-moldes";
 
 // O nome literal do papel de plataforma nunca pode aparecer como molde nesta
@@ -67,6 +85,9 @@ function construirEstadoLocal(data: MoldesConsola): LocalPermissoes {
 
 function MoldesPlataformaContent() {
   const moldes = useMoldes();
+  const atualizarMoldes = useUpdateMoldes();
+
+  const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
 
   // Estado local de edição, mais a referência do último payload já aplicado
   // a ele. Quando a query devolve dados novos (referência diferente), o
@@ -111,6 +132,45 @@ function MoldesPlataformaContent() {
     });
   };
 
+  // Diff entre o estado local e o ultimo payload obtido, por molde,
+  // comparando conjuntos de chaves (nao ordem de array). So os moldes
+  // efectivamente alterados entram em moldesAlterados -- quem so tocou no
+  // ADVOGADO nao deve ter de ler sobre o ASSISTENTE no AlertDialog.
+  const moldesAlterados = React.useMemo<MoldeSummary[]>(() => {
+    if (!localPermissoes) return [];
+    return moldesFiltrados.filter((molde) => {
+      const local = localPermissoes[molde.id];
+      if (!local) return false;
+      const original = new Set(molde.permissoes);
+      if (local.size !== original.size) return true;
+      for (const key of local) {
+        if (!original.has(key)) return true;
+      }
+      return false;
+    });
+  }, [localPermissoes, moldesFiltrados]);
+
+  const existeDiff = moldesAlterados.length > 0;
+
+  const handleConfirmarGravacao = async () => {
+    try {
+      await atualizarMoldes.mutateAsync({
+        moldes: moldesAlterados.map((molde) => ({
+          id: molde.id,
+          permissoes: Array.from(localPermissoes?.[molde.id] ?? new Set<string>()),
+        })),
+      });
+      toast.success("Moldes atualizados com sucesso.");
+      setIsConfirmOpen(false);
+    } catch {
+      // O wrapper de fetch partilhado (apiFetch) ja mostrou o toast com a
+      // mensagem do backend. Mantemos o AlertDialog aberto -- convencao ja
+      // estabelecida no AlertDialog de estado do tenant em
+      // plataforma/page.tsx -- para o operador poder tentar de novo sem
+      // refazer o diff.
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -143,9 +203,14 @@ function MoldesPlataformaContent() {
               por alterações feitas aqui.
             </CardDescription>
           </div>
-          {/* Slot para o botão "Guardar Alterações" -- acrescentado no
-              Plan 05 Task 2 junto do fluxo de gravação/AlertDialog. O botão
-              de criação de molde é do Plan 06 e não pertence a este slot. */}
+          <Button
+            onClick={() => setIsConfirmOpen(true)}
+            disabled={!existeDiff}
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+          >
+            <Save className="h-4 w-4" />
+            Guardar Alterações
+          </Button>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -274,6 +339,65 @@ function MoldesPlataformaContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* AlertDialog de confirmação -- camada 3 de 3 do aviso de
+          não-propagação. Gravar nunca chama a mutação directamente a partir
+          do botão azul que abre este diálogo; só o AlertDialogAction abaixo
+          o faz. */}
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar alterações aos moldes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vai gravar alterações de permissões nos moldes abaixo. Esta gravação não altera
+              nenhum papel já copiado para um escritório existente — só afeta escritórios
+              provisionados a partir de agora.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <ul className="space-y-2 text-sm">
+            {moldesAlterados.map((molde) => {
+              const temEscritorios = molde.escritoriosInstanciados > 0;
+              return (
+                <li
+                  key={molde.id}
+                  className={
+                    temEscritorios
+                      ? "flex items-start gap-2 text-amber-700 dark:text-amber-400"
+                      : "flex items-start gap-2 text-slate-600 dark:text-slate-400"
+                  }
+                >
+                  {temEscritorios ? (
+                    <TriangleAlert className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <span className="mt-2 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-600 flex-shrink-0" />
+                  )}
+                  <span>
+                    <strong>{molde.nome}</strong> —{" "}
+                    {temEscritorios
+                      ? `${molde.escritoriosInstanciados} escritório(s) já têm uma cópia própria deste molde. Nenhum deles é alterado por esta gravação.`
+                      : "0 escritórios instanciaram este molde ainda. Esta alteração não tem impacto em nenhum escritório existente."}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={atualizarMoldes.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={atualizarMoldes.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmarGravacao();
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {atualizarMoldes.isPending ? "A gravar..." : "Confirmar e Gravar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
