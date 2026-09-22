@@ -23,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -76,6 +77,27 @@ public class AdminController {
     // profundidade, mesmo a crua nao bastando por si so para o bypass.
     private static final String PAPEL_PLATAFORMA_AUTORIDADE = "ROLE_" + PAPEL_PLATAFORMA;
 
+    // Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 04: createUser, updateUser, deleteUser e
+    // updateRbac (abaixo) sao @Transactional a partir daqui. A razao: o evento de auditoria
+    // (Plano 02, AuditoriaRbacService) que o Plano 05 acrescenta a estes quatro caminhos de
+    // escrita tem de fazer commit ou rollback JUNTO com a mudanca que descreve, nunca
+    // separadamente -- ou ficam ambos gravados, ou nenhum.
+    //
+    // Isto introduz um problema que nao existia enquanto estes handlers nao eram transaccionais:
+    // com open-in-view ligado (default do Spring Boot, nao sobreposto em application.yml deste
+    // repositorio), a entidade User carregada por findById em updateUser permanece GERIDA durante
+    // o pedido inteiro. Sem a regra abaixo, um updateUser recusado a meio do metodo (por exemplo,
+    // um "roles" invalido devolvido DEPOIS de ja ter chamado
+    // setEmail/setNome/setTelefone/setAvatarUrl/setAtivo mais acima no mesmo pedido) faria o
+    // dirty-checking do Hibernate persistir essas mutacoes no commit -- mesmo o pedido tendo sido
+    // recusado. Um ResponseEntity de erro (400/403/404/409) devolvido de dentro de um metodo
+    // @Transactional e, do ponto de vista do Spring, um retorno NORMAL: o TransactionInterceptor
+    // faz commit, recusa incluida, a nao ser que algo marque a transaccao como rollback-only.
+    //
+    // Por isso: TODA resposta nao-2xx destes quatro handlers passa por
+    // RecusaTransacional.recusar(...), que marca a transaccao corrente como rollback-only -- ver
+    // essa classe para o mecanismo completo e para o porque de tambem cobrir
+    // DataIntegrityViolationException apanhadas. Sucessos nunca passam por recusar.
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -322,27 +344,28 @@ public class AdminController {
     // caminho novo de atribuicao tem de usar ids de TenantRole, nunca nomes globais.
 
     @PostMapping("/users")
+    @Transactional
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> body) {
         if (!body.containsKey("nome") || !body.containsKey("email") || !body.containsKey("password") || !body.containsKey("tenantRoleIds")) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Nome, email, password e tenantRoleIds são obrigatórios."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Nome, email, password e tenantRoleIds são obrigatórios.")));
         }
 
         // Phase 127 (Plano 05, Decisao 6, T-127-28): "roles" (nome global) deixou de ser aceite
         // para atribuicao -- um cliente desatualizado que ainda o envie e recusado explicitamente,
         // nunca ignorado em silencio, para que a atribuicao nunca "nao faca nada" sem aviso.
         if (body.containsKey("roles")) {
-            return ResponseEntity.badRequest().body(Map.of("message",
-                    "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message",
+                    "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório.")));
         }
 
         String password = (String) body.get("password");
         if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
-            return ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial.")));
         }
 
         String email = (String) body.get("email");
         if (userRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Já existe um utilizador registado com este endereço de email."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Já existe um utilizador registado com este endereço de email.")));
         }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -356,7 +379,7 @@ public class AdminController {
         ResolucaoPapeisEscritorioOuErro resolucao =
                 resolverPapeisEscritorioPorId(principal.getTenantId(), tenantRoleIdsList);
         if (resolucao.erro() != null) {
-            return resolucao.erro();
+            return RecusaTransacional.recusar(resolucao.erro());
         }
         Set<TenantRole> tenantRoles = resolucao.tenantRoles();
         Set<Role> mirror = derivarMirrorGlobalDePapeis(tenantRoles);
@@ -371,7 +394,7 @@ public class AdminController {
         if (ativoInicial) {
             Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
             if (limiteExcedido.isPresent()) {
-                return limiteExcedido.get();
+                return RecusaTransacional.recusar(limiteExcedido.get());
             }
         }
 
@@ -382,8 +405,8 @@ public class AdminController {
         // ja-prefixada que realmente satisfaz hasRole('PLATAFORMA_ADMIN') quando vinda deste campo.
         for (Object pObj : permsList) {
             if (PAPEL_PLATAFORMA.equals(pObj) || PAPEL_PLATAFORMA_AUTORIDADE.equals(pObj)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
-                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+                return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório.")));
             }
         }
 
@@ -422,13 +445,14 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}")
+    @Transactional
     public ResponseEntity<?> updateUser(@PathVariable UUID id, @RequestBody Map<String, Object> body) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
         User user = userRepository.findById(id).orElse(null);
         if (user == null || !user.getTenantId().equals(principal.getTenantId())) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado")));
         }
 
         // CR-01 (127-REVIEW.md): snapshot do ESTADO ORIGINAL -- antes de QUALQUER mutação feita
@@ -444,7 +468,7 @@ public class AdminController {
             String email = (String) body.get("email");
             Optional<User> existing = userRepository.findByEmail(email);
             if (existing.isPresent() && !existing.get().getId().equals(id)) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Já existe outro utilizador com este email."));
+                return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Já existe outro utilizador com este email.")));
             }
             user.setEmail(email);
         }
@@ -457,7 +481,7 @@ public class AdminController {
             // para primitivo -- um "ativo": null explícito (JSON válido; a chave fica presente no
             // Map com valor null) não pode rebentar com NullPointerException.
             if (!(body.get("ativo") instanceof Boolean novoAtivo)) {
-                return ResponseEntity.badRequest().body(Map.of("message", "O campo ativo deve ser um valor booleano."));
+                return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "O campo ativo deve ser um valor booleano.")));
             }
             // CR-01 (117-REVIEW.md): reativar um utilizador (false -> true) é o segundo caminho capaz
             // de tornar um utilizador ativo, além de createUser — sem esta verificação o limite era
@@ -467,7 +491,7 @@ public class AdminController {
             if (novoAtivo && !Boolean.TRUE.equals(user.getAtivo())) {
                 Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
                 if (limiteExcedido.isPresent()) {
-                    return limiteExcedido.get();
+                    return RecusaTransacional.recusar(limiteExcedido.get());
                 }
             }
             // CR-01 (127-REVIEW.md): desativar (true -> false) e o segundo caminho, alem da
@@ -480,7 +504,7 @@ public class AdminController {
                 Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
                         detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
                 if (bloqueioUltimoAdministrador.isPresent()) {
-                    return bloqueioUltimoAdministrador.get();
+                    return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
                 }
             }
             user.setAtivo(novoAtivo);
@@ -489,7 +513,7 @@ public class AdminController {
         if (body.containsKey("password") && ((String) body.get("password")).trim().length() > 0) {
             String password = (String) body.get("password");
             if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
-                return ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial."));
+                return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial.")));
             }
             user.setPasswordHash(passwordEncoder.encode(password));
         }
@@ -499,8 +523,8 @@ public class AdminController {
         // O return acontece antes de qualquer userRepository.save(user), por isso nenhuma
         // mutacao ja aplicada em memoria (nome/email/telefone/etc.) e persistida.
         if (body.containsKey("roles")) {
-            return ResponseEntity.badRequest().body(Map.of("message",
-                    "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message",
+                    "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório.")));
         }
 
         if (body.containsKey("tenantRoleIds")) {
@@ -512,7 +536,7 @@ public class AdminController {
             ResolucaoPapeisEscritorioOuErro resolucao =
                     resolverPapeisEscritorioPorId(principal.getTenantId(), tenantRoleIdsList);
             if (resolucao.erro() != null) {
-                return resolucao.erro();
+                return RecusaTransacional.recusar(resolucao.erro());
             }
 
             Set<TenantRole> tenantRoles = resolucao.tenantRoles();
@@ -530,7 +554,7 @@ public class AdminController {
             Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
                     detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), deteraPapelProtegidoDepois);
             if (bloqueioUltimoAdministrador.isPresent()) {
-                return bloqueioUltimoAdministrador.get();
+                return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
             }
 
             Set<Role> mirror = derivarMirrorGlobalDePapeis(tenantRoles);
@@ -549,8 +573,8 @@ public class AdminController {
             // (nome/email/telefone/roles/etc.) e persistida.
             for (Object pObj : permsList) {
                 if (PAPEL_PLATAFORMA.equals(pObj) || PAPEL_PLATAFORMA_AUTORIDADE.equals(pObj)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
-                            "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
+                    return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                            "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório.")));
                 }
             }
 
@@ -567,17 +591,18 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
+    @Transactional
     public ResponseEntity<?> deleteUser(@PathVariable UUID id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
         if (principal.getUserId().equals(id)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Não é permitido apagar a sua própria conta de utilizador administrador."));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Não é permitido apagar a sua própria conta de utilizador administrador.")));
         }
 
         User user = userRepository.findById(id).orElse(null);
         if (user == null || !user.getTenantId().equals(principal.getTenantId())) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado")));
         }
 
         // CR-01 (127-REVIEW.md): a auto-eliminação já está recusada acima (principal == id); esta
@@ -590,7 +615,7 @@ public class AdminController {
         Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
                 detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
         if (bloqueioUltimoAdministrador.isPresent()) {
-            return bloqueioUltimoAdministrador.get();
+            return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
         }
 
         userRepository.deleteById(id);
@@ -731,17 +756,36 @@ public class AdminController {
     // (a mais especifica ganha, nunca sao combinadas com E logico); todos os restantes handlers
     // continuam governados apenas pelo gate de classe.
     //
-    // Sem @Transactional, de proposito: cada guarda abaixo (id desconhecido, chave de permissao
-    // desconhecida, papel de plataforma, piso do administrador) recusa o pedido INTEIRO antes de
-    // tocar em tenantRoleRepository.save -- a fase de validacao (validate-then-write, mesmo idioma
-    // de PlatformAdminController.updateMoldes) e inteiramente sem efeitos secundarios, por isso um
-    // pedido recusado nunca deixa nada parcialmente escrito, mesmo sem uma transaccao a envolver
-    // as chamadas.
+    // Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 04: agora @Transactional -- a razao "Sem
+    // @Transactional, de proposito" que esteve aqui ate agora deixou de se aplicar. A premissa
+    // continua correcta: cada guarda abaixo (id desconhecido, chave de permissao desconhecida,
+    // papel de plataforma, piso do administrador) recusa o pedido INTEIRO antes de tocar em
+    // tenantRoleRepository.save -- validate-then-write, mesmo idioma de
+    // PlatformAdminController.updateMoldes -- por isso a fase de validacao continua inteiramente
+    // sem efeitos secundarios. Mas a CONCLUSAO ("nao precisa de transaccao") ja nao se sustenta,
+    // por duas razoes.
+    //
+    // Primeira: o evento de auditoria (Plano 02, AuditoriaRbacService) que o Plano 05 acrescenta a
+    // este caminho e uma segunda escrita que tem de fazer commit ou rollback JUNTO com a matriz de
+    // permissoes que descreve.
+    //
+    // Segunda -- um defeito PRE-EXISTENTE que esta transaccao tambem corrige, nao um risco novo
+    // introduzido pela auditoria: o caminho aceite grava cada papel num save() PROPRIO, cada um na
+    // sua transaccao implicita. Uma falha a meio do ciclo (por exemplo, uma constraint de base de
+    // dados violada no segundo save de tres) deixava a matriz parcialmente escrita -- o primeiro
+    // papel ja gravado com o novo conjunto de permissoes, os restantes intactos -- um estado que
+    // nenhum pedido, aceite ou recusado, deveria conseguir produzir.
+    //
+    // As recusas abaixo continuam a passar por RecusaTransacional.recusar, apesar de
+    // validate-then-write significar que, na pratica, elas proprias nao mutam nada -- mantem a
+    // regra uniforme nos sete handlers cobertos por esta fase (Planos 03/04), em vez de updateRbac
+    // ser a unica excepcao.
     @PreAuthorize("hasAuthority('rbac:manage')")
     @PutMapping("/rbac")
+    @Transactional
     public ResponseEntity<?> updateRbac(@RequestBody OfficeRbacUpdateRequest request) {
         if (request == null || request.getPapeis() == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Mapeamento de papéis é obrigatório"));
+            return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Mapeamento de papéis é obrigatório")));
         }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -772,7 +816,7 @@ public class AdminController {
             UUID id = entrada.getId();
             TenantRole tenantRole = id == null ? null : papeisDoTenant.get(id);
             if (tenantRole == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado: " + id));
+                return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado: " + id)));
             }
 
             // Tripla guarda (T-127-12): nome cru, nome prefixado ROLE_ e proveniência -- só a
@@ -781,8 +825,8 @@ public class AdminController {
             if (PAPEL_PLATAFORMA.equals(tenantRole.getNome())
                     || PAPEL_PLATAFORMA_AUTORIDADE.equals(tenantRole.getNome())
                     || (plataformaMoldeId != null && plataformaMoldeId.equals(tenantRole.getMoldeId()))) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
-                        "O papel de administrador de plataforma é reservado e não pode ser alterado a partir daqui."));
+                return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser alterado a partir daqui.")));
             }
 
             List<String> chavesSubmetidas = entrada.getPermissoes() == null ? List.of() : entrada.getPermissoes();
@@ -790,7 +834,7 @@ public class AdminController {
             for (String chave : chavesSubmetidas) {
                 Permission permissao = catalogoPorChave.get(chave);
                 if (permissao == null) {
-                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
+                    return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave)));
                 }
                 permissoesResolvidas.add(permissao);
             }
@@ -808,9 +852,9 @@ public class AdminController {
                 Set<String> removidas = new HashSet<>(chavesAtuais);
                 removidas.removeAll(chavesSubmetidasSet);
                 if (!removidas.isEmpty()) {
-                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                             "O papel de administrador do escritório não pode perder as permissões que o "
-                                    + "tornam administrador: " + String.join(", ", removidas)));
+                                    + "tornam administrador: " + String.join(", ", removidas))));
                 }
 
                 // Verificação independente da regra de superconjunto acima, embora esta
@@ -826,9 +870,9 @@ public class AdminController {
                     autoridadesDeGateEmFalta.add("users:manage");
                 }
                 if (!autoridadesDeGateEmFalta.isEmpty()) {
-                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                             "O papel de administrador do escritório não pode perder as permissões que o "
-                                    + "tornam administrador: " + String.join(", ", autoridadesDeGateEmFalta)));
+                                    + "tornam administrador: " + String.join(", ", autoridadesDeGateEmFalta))));
                 }
             }
 
