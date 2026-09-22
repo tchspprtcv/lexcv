@@ -174,36 +174,49 @@ public class OfficeRolesController {
             }
         }
 
+        // moldeId(null) + sistema(false): um papel criado de raiz por um administrador não tem
+        // nenhuma proveniência de molde. Consequência deliberada (Phase 126, documentada aqui
+        // de novo por clareza): este papel nunca pode ser "protegido" -- não é o papel de
+        // administrador do escritório nem nenhum outro papel instanciado -- e
+        // ResolucaoPapeisService.temPapelDeMolde nunca o vai corresponder a nenhum molde. É o
+        // limite já assumido pela Fase 126, não uma lacuna nova desta fase.
+        TenantRole novoPapel = TenantRole.builder()
+                .tenantId(tenantId)
+                .nome(nome)
+                .moldeId(null)
+                .sistema(false)
+                .permissions(permissoesResolvidas)
+                .build();
+
+        TenantRole papelGravado;
         try {
-            // moldeId(null) + sistema(false): um papel criado de raiz por um administrador não tem
-            // nenhuma proveniência de molde. Consequência deliberada (Phase 126, documentada aqui
-            // de novo por clareza): este papel nunca pode ser "protegido" -- não é o papel de
-            // administrador do escritório nem nenhum outro papel instanciado -- e
-            // ResolucaoPapeisService.temPapelDeMolde nunca o vai corresponder a nenhum molde. É o
-            // limite já assumido pela Fase 126, não uma lacuna nova desta fase.
-            TenantRole novoPapel = TenantRole.builder()
-                    .tenantId(tenantId)
-                    .nome(nome)
-                    .moldeId(null)
-                    .sistema(false)
-                    .permissions(permissoesResolvidas)
-                    .build();
             // saveAndFlush (Plano 03), nao save: forca a escrita a base de dados AQUI, dentro
             // deste try, para que uma violacao concorrente da constraint unica (tenant_id, nome)
             // caia neste catch como 409 -- em vez de so aparecer no commit da transacao, ja fora
             // do catch, como 500 nao tratado.
-            TenantRole papelGravado = tenantRoleRepository.saveAndFlush(novoPapel);
-            auditoriaRbacService.registarPapelCriado(tenantId, principal, papelGravado);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
+            papelGravado = tenantRoleRepository.saveAndFlush(novoPapel);
         } catch (DataIntegrityViolationException ex) {
             // Duplicacao concorrente: a constraint unica (tenant_id, nome) de t_tenant_role apanha
             // na base de dados uma corrida entre dois pedidos com o mesmo nome que passaram ambos
             // o pre-check acima -- mesmo idioma de PlatformAdminController.createMolde para nome
             // de molde duplicado.
+            //
+            // WR-01 (128-REVIEW.md): este catch apanha SO a escrita de tenantRoleRepository, NUNCA
+            // a chamada de auditoria abaixo -- a mesma disciplina que deleteRole (mais abaixo neste
+            // ficheiro) ja segue, e que WR-01 (127-REVIEW.md) ja tinha corrigido la para o mesmo
+            // motivo. Antes desta correcao, uma DataIntegrityViolationException lancada pela
+            // PROPRIA escrita de auditoria (auditLogRepository.save dentro de
+            // registarPapelCriado, ex.: uma futura constraint em t_audit_log) era apanhada aqui e
+            // devolvida ao cliente como "nome duplicado" -- uma mensagem factualmente errada que
+            // mandaria quem esta a diagnosticar a olhar para a causa errada. O rollback continua
+            // correcto de qualquer forma (RecusaTransacional.recusar marca a transaccao inteira
+            // como rollback-only); so a MENSAGEM devolvida estava errada.
             return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                     "Já existe um papel com este nome neste escritório.")));
         }
+        auditoriaRbacService.registarPapelCriado(tenantId, principal, papelGravado);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
     }
 
     /**
@@ -248,23 +261,29 @@ public class OfficeRolesController {
         // novo nome nos dois lados.
         String nomeAntigo = tenantRole.getNome();
         tenantRole.setNome(nome);
+
+        TenantRole papelGravado;
         try {
             // saveAndFlush (Plano 03): mesma razao de createRole -- forca a violacao de
             // unicidade concorrente a aparecer aqui, dentro do catch, em vez de so no commit.
-            TenantRole papelGravado = tenantRoleRepository.saveAndFlush(tenantRole);
-            if (!nomeAntigo.equals(nome)) {
-                // Uma renomeacao para o MESMO nome (nome submetido == nome actual) nao e uma
-                // mudanca -- nao ha o que descrever no historico, por isso nenhum evento.
-                auditoriaRbacService.registarPapelRenomeado(
-                        tenantId, principal, papelGravado.getId(), nomeAntigo, papelGravado.getNome());
-            }
-            return ResponseEntity.ok(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
+            papelGravado = tenantRoleRepository.saveAndFlush(tenantRole);
         } catch (DataIntegrityViolationException ex) {
             // Mesmo idioma de createRole: corrida concorrente apanhada pela constraint unica
             // (tenant_id, nome), nao pelo pre-check acima.
+            //
+            // WR-01 (128-REVIEW.md): mesma correcao de createRole -- este catch apanha SO a
+            // escrita de tenantRoleRepository, NUNCA a chamada de auditoria abaixo, para que uma
+            // falha na PROPRIA escrita de auditoria nunca seja mal-reportada como nome duplicado.
             return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                     "Já existe um papel com este nome neste escritório.")));
         }
+        if (!nomeAntigo.equals(nome)) {
+            // Uma renomeacao para o MESMO nome (nome submetido == nome actual) nao e uma
+            // mudanca -- nao ha o que descrever no historico, por isso nenhum evento.
+            auditoriaRbacService.registarPapelRenomeado(
+                    tenantId, principal, papelGravado.getId(), nomeAntigo, papelGravado.getNome());
+        }
+        return ResponseEntity.ok(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
     }
 
     /**

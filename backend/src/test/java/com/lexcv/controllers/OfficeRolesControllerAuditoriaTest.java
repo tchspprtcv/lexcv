@@ -211,6 +211,34 @@ class OfficeRolesControllerAuditoriaTest {
         assertTrue(status.isRollbackOnly());
     }
 
+    // WR-01 (128-REVIEW.md): prova que uma DataIntegrityViolationException lancada pela PROPRIA
+    // escrita de auditoria (registarPapelCriado), nunca pela escrita de tenantRoleRepository, NAO
+    // e apanhada pelo catch de nome duplicado -- teria de propagar tal e qual, provocando
+    // rollback, e NUNCA um 409 "Já existe um papel com este nome neste escritório." (que seria
+    // uma mentira: o nome era unico, foi a escrita de auditoria que falhou). Falha contra o
+    // codigo anterior a esta correcao, onde a chamada de auditoria estava DENTRO do mesmo
+    // try/catch de saveAndFlush.
+    @Test
+    void createRole_eventoDeAuditoriaLancaDataIntegrityViolation_naoEMalReportadoComoNomeDuplicado() {
+        autenticarComoPrincipalDoTenant(TENANT_ID);
+        SimpleTransactionStatus status = new SimpleTransactionStatus();
+        when(txManager.getTransaction(any())).thenReturn(status);
+        when(tenantRoleRepository.findByTenantIdAndNome(eq(TENANT_ID), any())).thenReturn(Optional.empty());
+        when(permissionRepository.findAllByReservadaPlataformaFalse()).thenReturn(List.of());
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        doThrow(new DataIntegrityViolationException("falha nao relacionada ao gravar o evento de auditoria"))
+                .when(auditoriaRbacService).registarPapelCriado(any(), any(), any());
+
+        PapelCreateRequest request = new PapelCreateRequest();
+        request.setNome("Recepção");
+        OfficeRolesController proxy = novoProxyComTransacaoReal();
+
+        assertThrows(DataIntegrityViolationException.class, () -> proxy.createRole(request));
+
+        verify(txManager).rollback(status);
+        verify(txManager, never()).commit(any());
+    }
+
     // ---------------------------------------------------------------------------------------
     // renameRole
     // ---------------------------------------------------------------------------------------
@@ -278,6 +306,29 @@ class OfficeRolesControllerAuditoriaTest {
         verifyNoInteractions(auditoriaRbacService);
         verify(txManager).commit(status);
         assertTrue(status.isRollbackOnly());
+    }
+
+    // WR-01 (128-REVIEW.md): mesma prova de createRole, agora para registarPapelRenomeado.
+    @Test
+    void renameRole_eventoDeAuditoriaLancaDataIntegrityViolation_naoEMalReportadoComoNomeDuplicado() {
+        autenticarComoPrincipalDoTenant(TENANT_ID);
+        SimpleTransactionStatus status = new SimpleTransactionStatus();
+        when(txManager.getTransaction(any())).thenReturn(status);
+        TenantRole papel = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).nome("Antigo").build();
+        when(tenantRoleRepository.findById(papel.getId())).thenReturn(Optional.of(papel));
+        when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "Novo")).thenReturn(Optional.empty());
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        doThrow(new DataIntegrityViolationException("falha nao relacionada ao gravar o evento de auditoria"))
+                .when(auditoriaRbacService).registarPapelRenomeado(any(), any(), any(), any(), any());
+
+        PapelRenameRequest request = new PapelRenameRequest();
+        request.setNome("Novo");
+        OfficeRolesController proxy = novoProxyComTransacaoReal();
+
+        assertThrows(DataIntegrityViolationException.class, () -> proxy.renameRole(papel.getId(), request));
+
+        verify(txManager).rollback(status);
+        verify(txManager, never()).commit(any());
     }
 
     // ---------------------------------------------------------------------------------------
