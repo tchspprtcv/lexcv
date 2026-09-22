@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.17
 milestone_name: RBAC por Escritório
-status: planning
-last_updated: "2026-09-20T19:30:00.000Z"
-last_activity: 2026-09-20
+status: executing
+last_updated: "2026-09-22T00:00:00.000Z"
+last_activity: 2026-09-22
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 5
+  total_plans: 30
+  completed_plans: 30
+  percent: 100
 ---
 
 # Project State
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-28)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.17 RBAC por Escritório — ROADMAP.md criado (5 fases, 124-128), pronto para `/gsd:plan-phase 124`
+**Current focus:** Marco v2.17 RBAC por Escritório — as 5 fases (124-128) executaram, verificaram e foram revistas; 24/24 requisitos completos; a caminho do fecho do marco
 
 ## Current Position
 
-Phase: 124 of 128 (Catálogo de Permissões em Base de Dados) — not started
-Plan: — (roadmap created; plans defined during /gsd:plan-phase)
-Status: Roadmap created — ready to plan Phase 124
-Last activity: 2026-09-20 — ROADMAP.md created for v2.17 (5 phases, 124-128, 24/24 requirements mapped)
+Phase: 128 of 128 (Auditoria de Atribuições de Papéis) — complete
+Plan: 30 de 30 planos concluídos nas 5 fases (124: 2, 125: 6, 126: 5, 127: 8, 128: 9)
+Status: Marco pronto para auditoria de fecho (`/gsd:audit-milestone`). Nada foi enviado para o remoto — os commits do marco continuam todos locais.
+Last activity: 2026-09-22 — Phase 128 fechada: revisão de código (3 correcções aplicadas, 1 aceite), revisão de UI advisory 20/24 (3 correcções prioritárias aplicadas), 432 testes backend verdes, 7 gates `verify:*` verdes
+
+**Nota de correcção do próprio STATE.md:** este cabeçalho esteve a dizer `status: planning` com 0 de 5 fases concluídas desde 2026-09-20, enquanto as cinco fases corriam. Foi o índice que ficou parado, não o trabalho — os artefactos de cada fase, o REQUIREMENTS.md (24/24) e o histórico de commits estavam todos correctos. Corrigido a 2026-09-22, antes da auditoria de fecho, para que a auditoria não medisse contra um estado falso.
 
 ## Performance Metrics
 

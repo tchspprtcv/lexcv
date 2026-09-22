@@ -125,9 +125,23 @@ export function AuditoriaTab() {
 
   return (
     <div className="space-y-6">
+      {/* 128-UI-REVIEW.md (correccao 1): a tabela de tipografia do 128-UI-SPEC.md declara tres
+          CardTitle, incluindo "Auditoria de Atribuicoes de Papeis", mas o diagrama de estrutura
+          da mesma spec so desenha dois cartoes -- contradicao interna. Resolvida a favor do
+          cabecalho: todas as outras abas das Definicoes identificam o proprio ecra no primeiro
+          titulo que mostram ("Utilizadores Registados", "Papeis do Escritorio"), e sem ele esta
+          aba abria em "Filtros", sem dizer filtros de que. */}
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold">Auditoria de Atribuições de Papéis</h2>
+        <p className="text-sm text-slate-500">
+          Registo permanente de quem alterou papéis e permissões neste escritório, e quando. Só de
+          consulta: nenhum registo pode ser editado ou apagado.
+        </p>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle className="text-xl font-semibold">Filtros</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -140,7 +154,18 @@ export function AuditoriaTab() {
               placeholder="Todos os utilizadores"
               searchPlaceholder="Pesquisar utilizador por nome..."
               loading={hasUsersManage && adminUsers.isPending}
+              disabled={!hasUsersManage}
             />
+            {/* 128-UI-REVIEW.md (correccao 3): a lista de utilizadores exige users:manage, por
+                isso um administrador so com rbac:manage -- publico legitimo desta aba -- via um
+                filtro com uma unica opcao e nenhuma explicacao. A limitacao mantem-se (evita um
+                403 ao abrir a aba), mas deixa de ser silenciosa. */}
+            {!hasUsersManage ? (
+              <p className="text-sm text-slate-500">
+                Filtrar por utilizador exige a permissão de gestão de utilizadores. Os eventos de
+                todos os utilizadores continuam listados abaixo.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -173,7 +198,7 @@ export function AuditoriaTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Resultados</CardTitle>
+          <CardTitle className="text-xl font-semibold">Resultados</CardTitle>
         </CardHeader>
         <CardContent>
           {auditoria.isPending ? (
