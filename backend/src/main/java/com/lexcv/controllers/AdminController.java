@@ -184,23 +184,31 @@ public class AdminController {
                     .body(Map.of("message", "Pelo menos um papel do escritório é obrigatório.")));
         }
 
+        // UNICA chamada a repositorio ate este ponto -- "a lista de papeis do tenant" que a
+        // acceptance criteria do plano 05 refere para o caso de id malformado: nenhum outro
+        // repositorio e tocado antes de todos os ids terem sido validados como UUID.
         Map<UUID, TenantRole> papeisDoTenant = tenantRoleRepository.findByTenantId(tenantId).stream()
                 .collect(Collectors.toMap(TenantRole::getId, tr -> tr));
 
-        // Resolvido UMA vez, fora do laco -- mesmo idioma de getRbac/updateRbac (plano 03) para o
-        // discriminador de proveniencia do papel reservado.
-        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
-
-        Set<TenantRole> resolvidos = new HashSet<>();
+        // Primeira passagem: so faz parsing, nunca toca em papeisDoTenant nem em roleRepository --
+        // um id malformado falha aqui, antes de qualquer outra consulta, mesmo que outro id da
+        // mesma lista fosse valido.
+        List<UUID> ids = new ArrayList<>(idsSubmetidos.size());
         for (Object idObj : idsSubmetidos) {
-            UUID id;
             try {
-                id = UUID.fromString(String.valueOf(idObj));
+                ids.add(UUID.fromString(String.valueOf(idObj)));
             } catch (IllegalArgumentException e) {
                 return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.badRequest()
                         .body(Map.of("message", "Identificador de papel inválido: " + idObj)));
             }
+        }
 
+        // Resolvido UMA vez, so depois de todos os ids terem passado no parsing -- mesmo idioma de
+        // getRbac/updateRbac (plano 03) para o discriminador de proveniencia do papel reservado.
+        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
+
+        Set<TenantRole> resolvidos = new HashSet<>();
+        for (UUID id : ids) {
             TenantRole tenantRole = papeisDoTenant.get(id);
             if (tenantRole == null) {
                 return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.status(HttpStatus.NOT_FOUND)
