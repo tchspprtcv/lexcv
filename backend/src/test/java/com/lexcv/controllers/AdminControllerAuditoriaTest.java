@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -233,6 +234,29 @@ class AdminControllerAuditoriaTest {
         verify(auditoriaRbacService).registarAtribuicoes(
                 eq(TENANT_ID), eq(principal), alvoCaptor.capture(), eq(Set.of()), eq(Set.of(papelA)), isNull());
         assertEquals("nova@escritorio.cv", alvoCaptor.getValue().getEmail());
+    }
+
+    // IN-01 (128-REVIEW.md): body.containsKey("password") e verdadeiro mesmo para "password": null
+    // -- antes desta correcao, password.matches(...) lancava NullPointerException nao tratada em
+    // vez de devolver o 400 estruturado que este handler sempre devolveu para uma password
+    // invalida. Prova tambem que uma recusa aqui nunca toca auditoriaRbacService.
+    @Test
+    void createUser_comPasswordExplicitamenteNulo_devolveQuatrocentosSemNPE() {
+        autenticarComoPrincipalDoTenant(TENANT_ID, PRINCIPAL_ID);
+
+        // HashMap (nao Map.of): Map.of lanca NPE em QUALQUER valor nulo, e o proprio ponto deste
+        // teste e um corpo com "password" presente e explicitamente nulo -- distinto de
+        // "password" ausente, que containsKey ja rejeitaria antes de chegar aqui.
+        Map<String, Object> corpo = new HashMap<>();
+        corpo.put("nome", "Nova Colaboradora");
+        corpo.put("email", "nova@escritorio.cv");
+        corpo.put("password", null);
+        corpo.put("tenantRoleIds", List.of());
+
+        ResponseEntity<?> response = novoController().createUser(corpo);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // ---------------------------------------------------------------------------------------

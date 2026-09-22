@@ -410,8 +410,12 @@ public class AdminController {
                     "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório.")));
         }
 
-        String password = (String) body.get("password");
-        if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
+        // IN-01 (128-REVIEW.md): body.containsKey("password") acima e verdadeiro mesmo para um
+        // corpo JSON com "password": null -- so o instanceof (nunca um cast cru) distingue esse
+        // caso, evitando uma NullPointerException em password.matches(...) que antes so era
+        // apanhada pelo catch-all de GlobalExceptionHandler como 500 nao estruturado.
+        if (!(body.get("password") instanceof String password)
+                || !password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
             return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial.")));
         }
 
