@@ -13,7 +13,8 @@
     "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs",
     "verify:papeis-escritorio": "node scripts/verify-papeis-escritorio.mjs",
     "verify:relatorio-utilizacao": "node scripts/verify-relatorio-utilizacao.mjs",
-    "verify:consola-moldes": "node scripts/verify-consola-moldes.mjs"
+    "verify:consola-moldes": "node scripts/verify-consola-moldes.mjs",
+    "verify:auditoria-rbac": "node scripts/verify-auditoria-rbac.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
