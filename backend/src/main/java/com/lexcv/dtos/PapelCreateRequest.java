@@ -6,7 +6,7 @@ import lombok.Setter;
 import java.util.List;
 
 /**
- * Corpo de {@code POST /api/v1/admin/rbac/papeis} (Phase 127, PAPEL-01): cria um novo papel
+ * Corpo de {@code POST /api/v1/admin/rbac/roles} (Phase 127, PAPEL-01): cria um novo papel
  * próprio do escritório do chamador, com o conjunto inicial de permissões dado.
  */
 @Getter
