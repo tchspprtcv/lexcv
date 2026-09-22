@@ -11,7 +11,6 @@ import {
   Plus,
   Trash2,
   Edit,
-  Check,
   X,
   Loader2,
   UserCheck,
@@ -73,7 +72,7 @@ import { renomearPapelSchema, type RenomearPapelFormValues } from "@/schemas/pap
 import { mesclarEstadoLocal, type LocalPermissoesPapeis } from "./merge-local-papeis";
 import { CriarPapelPanel } from "./criar-papel-panel";
 import { PapelAcoesMenu } from "./papel-acoes-menu";
-import type { AdminUser } from "@/types/admin-users";
+import type { AdminUser, AdminUserSavePayload } from "@/types/admin-users";
 import type { OfficePapel, OfficeRbac, PapelCreateRequest } from "@/types/office-rbac";
 import type { NotificacaoCategoria } from "@/types/notificacoes";
 
@@ -215,9 +214,12 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [message, setMessage] = React.useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  // Load all system permissions to display in custom permissions overrides
+  // Load all system permissions to display in custom permissions overrides, and the office's
+  // own roles to display in the role picker below (PAPEL-06) -- ambos vem do mesmo payload de
+  // /admin/rbac, ja tenant-scoped no servidor.
   const { data: rbacData } = useOfficeRbac();
   const systemPermissions = rbacData?.permissoes || [];
+  const officePapeis = rbacData?.papeis || [];
 
   // Indicador "X/Y utilizadores" (Phase 118 PLAN-03, fonte trocada na Phase 124)
   // — useMe() dedupe pela cache partilhada ["auth","me"], nao e um segundo
@@ -241,7 +243,9 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 
   const handleEditClick = (user: AdminUser) => {
     setEditingUser(user);
-    setSelectedRoles(user.roles);
+    // tenant_role_ids, nao roles -- so o id sobrevive a uma renomeacao de papel (Phase 127,
+    // Plano 05, Decisao 6; ver o doc-comment de AdminUser em types/admin-users.ts).
+    setSelectedRoles(user.tenant_role_ids);
     setSelectedPermissions(user.permissions || []);
     setUserPassword("");
     setIsFormOpen(true);
@@ -252,11 +256,13 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     setEditingUser({
       nome: "",
       email: "",
-      roles: ["ASSISTENTE"],
       ativo: true,
       permissions: [],
     });
-    setSelectedRoles(["ASSISTENTE"]);
+    // Papeis ja nao sao um union fixo (ADMIN/TECNICO/ADVOGADO/ASSISTENTE) -- o primeiro papel
+    // do escritorio serve de valor por omissao sensato para um novo utilizador, sujeito a ser
+    // trocado pelo administrador no picker abaixo.
+    setSelectedRoles(officePapeis[0] ? [officePapeis[0].id] : []);
     setSelectedPermissions([]);
     setUserPassword("");
     setIsFormOpen(true);
@@ -302,10 +308,14 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
       return;
     }
 
-    const payload = {
+    // tenantRoleIds, nunca roles -- o backend recusa com 400 qualquer corpo que inclua `roles`
+    // (Phase 127, Plano 05, Decisao 6): a atribuicao de papeis passa a ser feita
+    // exclusivamente por id, nunca por nome. Este e o par frontend dessa decisao; enviar
+    // `roles` aqui voltaria a partir todas as gravacoes de utilizador.
+    const payload: Partial<AdminUserSavePayload> = {
       nome: editingUser.nome,
       email: editingUser.email,
-      roles: selectedRoles,
+      tenantRoleIds: selectedRoles,
       permissions: selectedPermissions,
       ativo: editingUser.ativo !== false,
       telefone: editingUser.telefone || "",
@@ -346,13 +356,16 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     }
   };
 
-  const toggleRole = (role: string) => {
-    if (selectedRoles.includes(role)) {
+  const toggleRole = (papelId: string) => {
+    // Guarda de "pelo menos um papel", mantida verbatim -- so a comparacao mudou de nome
+    // (string literal) para id, ja que o nome deixa de ser uma chave estavel (papeis podem ser
+    // renomeados nesta fase).
+    if (selectedRoles.includes(papelId)) {
       if (selectedRoles.length > 1) {
-        setSelectedRoles(selectedRoles.filter((r) => r !== role));
+        setSelectedRoles(selectedRoles.filter((id) => id !== papelId));
       }
     } else {
-      setSelectedRoles([...selectedRoles, role]);
+      setSelectedRoles([...selectedRoles, papelId]);
     }
   };
 
@@ -689,25 +702,37 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 </div>
               </div>
 
-              {/* Roles selection */}
+              {/* Roles selection -- lista dinamica dos papeis do proprio escritorio (PAPEL-06),
+                  reusando o padrao visual exato do picker "Permissões Customizadas" abaixo:
+                  container com scroll, uma linha clicavel por item, checkbox pointer-events-none
+                  dentro dela, estados neutros de hover (nao o azul da aba RBAC). */}
               <div className="space-y-2">
-                <Label>Funções / Perfis de Acesso</Label>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-                  {(["ADMIN", "TECNICO", "ADVOGADO", "ASSISTENTE"] as const).map((role) => {
-                    const isChecked = selectedRoles.includes(role);
+                <Label>Papéis do Escritório</Label>
+                <div className="grid gap-3 grid-cols-1 md:grid-cols-2 max-h-56 overflow-y-auto p-3 border border-slate-200 dark:border-slate-800 rounded-md bg-slate-50/30 dark:bg-slate-950/10">
+                  {officePapeis.map((papel) => {
+                    const isChecked = selectedRoles.includes(papel.id);
                     return (
-                      <button
-                        type="button"
-                        key={role}
-                        onClick={() => toggleRole(role)}
-                        className={`flex items-center justify-between px-3 py-2 border rounded-md text-xs font-medium transition-all ${isChecked
-                            ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-sm"
-                            : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/30"
+                      <div
+                        key={papel.id}
+                        onClick={() => toggleRole(papel.id)}
+                        className={`flex items-center justify-between gap-2 p-2 border rounded-md cursor-pointer transition-all ${isChecked
+                            ? "border-slate-300 bg-slate-100/50 dark:border-slate-700 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100"
+                            : "border-transparent hover:bg-slate-100/50 dark:hover:bg-slate-900/30 text-slate-600 dark:text-slate-400"
                           }`}
                       >
-                        {role}
-                        {isChecked && <Check className="h-3.5 w-3.5" />}
-                      </button>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => { }} // handled by click div
+                            className="rounded h-3.5 w-3.5 pointer-events-none flex-shrink-0"
+                          />
+                          <span className="text-xs font-semibold truncate">{papel.nome}</span>
+                        </div>
+                        <Badge variant={papel.sistema ? "gray" : "outline"} className="flex-shrink-0">
+                          {papel.sistema ? "Predefinido" : "Criado por si"}
+                        </Badge>
+                      </div>
                     );
                   })}
                 </div>
