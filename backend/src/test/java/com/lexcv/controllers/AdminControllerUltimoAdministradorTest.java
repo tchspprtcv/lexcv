@@ -9,6 +9,7 @@ import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.AuditoriaRbacService;
 import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,7 @@ class AdminControllerUltimoAdministradorTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRepository tenantRepository;
     @Mock private TenantRoleRepository tenantRoleRepository;
+    @Mock private AuditoriaRbacService auditoriaRbacService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID ADMIN_USER_ID = UUID.randomUUID();
@@ -84,7 +86,7 @@ class AdminControllerUltimoAdministradorTest {
         ResolucaoPapeisService resolucaoPapeisService =
                 new ResolucaoPapeisService(tenantRoleRepository, roleRepository);
         return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder,
-                tenantRepository, resolucaoPapeisService, tenantRoleRepository);
+                tenantRepository, resolucaoPapeisService, tenantRoleRepository, auditoriaRbacService);
     }
 
     private TenantRole papelProtegido() {

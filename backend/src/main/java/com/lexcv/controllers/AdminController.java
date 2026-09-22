@@ -14,6 +14,7 @@ import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.AuditoriaRbacService;
 import com.lexcv.services.ResolucaoPapeisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -109,6 +110,12 @@ public class AdminController {
     // resolucaoPapeisService, para nao reordenar os construtores posicionais ja existentes nos
     // testes deste controller.
     private final TenantRoleRepository tenantRoleRepository;
+    // Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 05: unico escritor dos eventos de auditoria
+    // RBAC (AuditoriaRbacService, Plano 02) chamado pelas quatro escritas transaccionais abaixo --
+    // ver updateRbac/createUser/updateUser/deleteUser. Adicionado no fim da lista, apos
+    // tenantRoleRepository, pela mesma razao: os construtores posicionais ja existentes nos testes
+    // deste controller so ganham um argumento final, nunca sao reordenados.
+    private final AuditoriaRbacService auditoriaRbacService;
 
     @GetMapping("/users")
     public ResponseEntity<?> listUsers() {
@@ -280,6 +287,14 @@ public class AdminController {
         static ResolucaoPapeisEscritorioOuErro erro(ResponseEntity<?> erro) {
             return new ResolucaoPapeisEscritorioOuErro(null, erro);
         }
+    }
+
+    // Phase 128 (AUDT-01, Decisao 3, 128-CONTEXT.md), Plano 05: par de conjuntos de chaves de
+    // permissao (adicionadas/removidas) calculado por updateRbac para UM papel, contra o estado
+    // CORRENTE em BD -- ver o comentario no corpo de updateRbac. Passado directamente a
+    // AuditoriaRbacService.registarPermissoesAlteradas, que e um no-op quando ambos os lados estao
+    // vazios.
+    private record DiffPermissoesPapel(Set<String> adicionadas, Set<String> removidas) {
     }
 
     // Phase 127 (Plano 05, Decisao 6): ponto UNICO de resolucao de "tenantRoleIds" submetido por
@@ -467,6 +482,13 @@ public class AdminController {
 
         user = userRepository.save(user);
 
+        // Phase 128 (AUDT-02, Decisao 3): papel_atribuir por cada papel atribuido na criacao --
+        // "antes" e sempre vazio (utilizador novo nunca deteve nenhum papel), "motivo" e null
+        // (criacao normal, nao provisionamento nem eliminacao). Chamado DEPOIS do save, dentro da
+        // mesma transaccao @Transactional deste handler -- uma falha aqui reverte tambem a
+        // criacao do utilizador (RecusaTransacional nao se aplica: este e o caminho de SUCESSO).
+        auditoriaRbacService.registarAtribuicoes(principal.getTenantId(), principal, user, Set.of(), user.getTenantRoles(), null);
+
         UserResponse response = UserResponse.builder()
                 .id(user.getId())
                 .tenant_id(user.getTenantId())
@@ -500,6 +522,13 @@ public class AdminController {
         Integer adminMoldeIdParaUltimoAdministrador = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
         DetentorPapelProtegidoOriginal detentorOriginal =
                 DetentorPapelProtegidoOriginal.de(user, adminMoldeIdParaUltimoAdministrador);
+
+        // Phase 128 (AUDT-02, Decisao 3): snapshot do conjunto de papeis ANTES de qualquer
+        // mutacao deste metodo -- mesma disciplina do snapshot de "detentorOriginal" acima, e pela
+        // mesma razao: user.getTenantRoles() e mutado mais abaixo (bloco "tenantRoleIds"), por
+        // isso o "antes" tem de ser copiado agora, nunca lido do objeto ja mutado. Copia (HashSet
+        // novo), nunca a colecao gerida pelo Hibernate.
+        Set<TenantRole> papeisAntes = new HashSet<>(user.getTenantRoles());
 
         if (body.containsKey("email")) {
             String email = (String) body.get("email");
@@ -624,6 +653,16 @@ public class AdminController {
 
         user = userRepository.save(user);
 
+        // Phase 128 (AUDT-02, Decisao 3): so registamos atribuicao/remocao de papel quando o
+        // pedido efectivamente submeteu "tenantRoleIds" -- desativacao, nome, email, password e
+        // "permissions" nao sao atribuicoes de papel e nao devem gerar papel_atribuir/
+        // papel_retirar (fora do ambito da Decisao 3). registarAtribuicoes por si so ja e um
+        // no-op quando antes/depois resolvem ao mesmo conjunto de ids, mas a guarda abaixo evita
+        // sequer chamar o servico quando "tenantRoleIds" nao fez parte deste pedido.
+        if (body.containsKey("tenantRoleIds")) {
+            auditoriaRbacService.registarAtribuicoes(principal.getTenantId(), principal, user, papeisAntes, user.getTenantRoles(), null);
+        }
+
         return ResponseEntity.ok(user);
     }
 
@@ -655,7 +694,22 @@ public class AdminController {
             return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
         }
 
+        // Phase 128 (AUDT-02, Decisao 3, T-128-25): snapshot ANTES do hard delete -- depois de
+        // userRepository.deleteById(id) o utilizador deixa de existir em BD, mas o objeto `user`
+        // em memoria continua a transportar o id e o nome (JPA nao os limpa), que
+        // AuditoriaRbacService.registarAtribuicoes usa para o snapshot "alvoNome" gravado em
+        // detalhe (revised Decisao 2). Sem este evento, a eliminacao apagaria a historia de quais
+        // papeis este utilizador deteve, sem deixar qualquer registo do fim dessa atribuicao.
+        Set<TenantRole> papeisAntes = new HashSet<>(user.getTenantRoles());
+
         userRepository.deleteById(id);
+
+        // Um utilizador sem nenhum papel produz zero eventos aqui -- registarAtribuicoes
+        // devolve-se sem gravar quando antes/depois resolvem ao mesmo conjunto (vazio, neste
+        // caso).
+        auditoriaRbacService.registarAtribuicoes(principal.getTenantId(), principal, user, papeisAntes, Set.of(),
+                AuditoriaRbacService.MOTIVO_UTILIZADOR_ELIMINADO);
+
         return ResponseEntity.ok(Map.of("message", "Utilizador removido com sucesso!"));
     }
 
@@ -849,6 +903,13 @@ public class AdminController {
         // Validate-then-write: NENHUMA entrada é gravada antes de TODAS as entradas do pedido
         // passarem todas as guardas -- mesmo idioma de PlatformAdminController.updateMoldes.
         Map<TenantRole, Set<Permission>> resolvido = new LinkedHashMap<>();
+        // Phase 128 (AUDT-01, Decisao 3): diff de chaves de permissao por papel, calculado AQUI --
+        // contra tenantRole.getPermissions() CORRENTE, antes de qualquer setPermissions -- e
+        // guardado num mapa paralelo indexado pelo mesmo TenantRole que o ciclo de escrita abaixo
+        // percorre. AuditoriaRbacService.registarPermissoesAlteradas ja e um no-op quando os dois
+        // conjuntos estao vazios, por isso um PUT de matriz completa que so muda um papel produz
+        // exactamente um evento.
+        Map<TenantRole, DiffPermissoesPapel> diffsPorPapel = new LinkedHashMap<>();
         for (OfficeRbacUpdateRequest.PapelPermissoesDto entrada : request.getPapeis()) {
             UUID id = entrada.getId();
             TenantRole tenantRole = id == null ? null : papeisDoTenant.get(id);
@@ -913,6 +974,19 @@ public class AdminController {
                 }
             }
 
+            // Phase 128 (AUDT-01): diff calculado contra o conjunto CORRENTE (tenantRole.getPermissions(),
+            // ainda nao mutado) e o conjunto submetido -- guardado ANTES do resolvido.put abaixo,
+            // que e o unico ponto que este ciclo usa para decidir o que persistir.
+            Set<String> chavesAtuaisParaDiff = tenantRole.getPermissions().stream()
+                    .map(Permission::getNome).collect(Collectors.toSet());
+            Set<String> chavesSubmetidasParaDiff = permissoesResolvidas.stream()
+                    .map(Permission::getNome).collect(Collectors.toSet());
+            Set<String> adicionadas = new HashSet<>(chavesSubmetidasParaDiff);
+            adicionadas.removeAll(chavesAtuaisParaDiff);
+            Set<String> removidasDiff = new HashSet<>(chavesAtuaisParaDiff);
+            removidasDiff.removeAll(chavesSubmetidasParaDiff);
+            diffsPorPapel.put(tenantRole, new DiffPermissoesPapel(adicionadas, removidasDiff));
+
             resolvido.put(tenantRole, permissoesResolvidas);
         }
 
@@ -920,6 +994,14 @@ public class AdminController {
             TenantRole tenantRole = entry.getKey();
             tenantRole.setPermissions(new HashSet<>(entry.getValue()));
             tenantRoleRepository.save(tenantRole);
+
+            // Phase 128 (AUDT-01, Decisao 3): evento gravado DEPOIS do save, dentro da mesma
+            // transaccao -- o servico e um no-op quando o diff deste papel esta vazio (papel
+            // resubmetido sem alteracao real), por isso um PUT de matriz completa que so muda um
+            // papel produz exactamente um evento.
+            DiffPermissoesPapel diff = diffsPorPapel.get(tenantRole);
+            auditoriaRbacService.registarPermissoesAlteradas(principal.getTenantId(), principal, tenantRole,
+                    diff.adicionadas(), diff.removidas());
         }
 
         // PAPEL-03: nenhum mecanismo extra é preciso para que isto tenha efeito numa sessão já
