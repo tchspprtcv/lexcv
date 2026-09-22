@@ -194,19 +194,56 @@ public class AdminController {
     // mutacao anterior no mesmo metodo. Cada chamador calcula os dois flags a partir do seu
     // proprio contexto, sempre relativos ao ESTADO ORIGINAL em BD (nunca ao objeto `user` ja
     // mutado em memoria) para a parcela "antes".
-    private Optional<ResponseEntity<?>> guardaUltimoAdministrador(UUID papelProtegidoId,
+    //
+    // Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 04 -- fecho da corrida (127-REVIEW.md CR-01
+    // continuava aberto para concorrencia, mesmo depois da guarda original): antes desta
+    // alteracao, dois pedidos concorrentes que reduzissem CADA UM um detentor diferente do mesmo
+    // papel protegido podiam ambos observar a mesma contagem "antes" (ex.: 2), ambos concluir que
+    // sobra pelo menos um, e ambos prosseguir -- deixando a contagem real em zero apesar de cada
+    // pedido, isolado, ter sido correctamente avaliado. Agora, ANTES de contar, o metodo adquire
+    // um lock PESSIMISTIC_WRITE de uma UNICA linha sobre o proprio TenantRole protegido
+    // (tenantRoleRepository.bloquearParaAlteracaoDeDetentores) -- so funciona porque este metodo
+    // corre sempre dentro de um chamador @Transactional (Plano 04 garante isso nos tres
+    // call sites), e o lock e mantido ate ao commit dessa transaccao. O segundo pedido concorrente
+    // bloqueia nesse ponto ate o primeiro terminar; sob PostgreSQL READ COMMITTED (isolamento por
+    // omissao, nao alterado por este plano), CADA instrucao SQL le um snapshot fresco no momento
+    // em que corre -- por isso a contagem que corre a seguir ao lock, no segundo pedido, ja ve o
+    // efeito COMMITADO do primeiro, e recusa correctamente. A contagem em si tambem mudou: passa a
+    // excluir o proprio utilizador a ser alterado (countByTenantRolesIdAndAtivoTrueAndIdNot),
+    // porque sob @Transactional o Hibernate pode fazer flush automatico da mutacao pendente deste
+    // utilizador antes desta query correr -- contar os OUTROS e correcto quer isso tenha
+    // acontecido ou nao, sem depender de uma assuncao sobre o estado do flush.
+    //
+    // Limites residuais, registados explicitamente:
+    // - so os caminhos que passam por esta guarda ficam serializados. Sao os UNICOS caminhos
+    //   capazes de reduzir detentores activos do papel protegido: createUser so acrescenta, e
+    //   OfficeRolesController#deleteRole recusa apagar o proprio papel protegido -- nenhum dos
+    //   dois precisa do lock.
+    // - uma edicao directa na base de dados (fora da aplicacao) esta fora deste ambito -- mesma
+    //   postura ja assumida para o floor-lock da Phase 127.
+    // - o lock e de UMA UNICA linha (sempre o mesmo TenantRole protegido), nunca dois locks em
+    //   sequencia dentro do mesmo pedido, por isso nao introduz risco de deadlock por ordenacao.
+    // - em testes unitarios sem transaccao real, o lock e um no-op de mock -- a serializacao real
+    //   e demonstrada por este raciocinio mais o teste de integracao (IT) abaixo, nao por um teste
+    //   concorrente local (Testcontainers/Docker nao corre localmente neste ambiente).
+    private Optional<ResponseEntity<?>> guardaUltimoAdministrador(UUID utilizadorId, UUID papelProtegidoId,
             boolean detentorContadoAntes, boolean detentorContadoDepois) {
         if (papelProtegidoId == null || !detentorContadoAntes || detentorContadoDepois) {
             // Nada a guardar: ou este utilizador nunca contou como detentor activo do papel
             // protegido, ou continua a contar depois da operacao -- em nenhum dos casos esta
-            // operacao pode reduzir a contagem de detentores activos a zero.
+            // operacao pode reduzir a contagem de detentores activos a zero. Nem o lock nem a
+            // contagem sao chamados quando a guarda nao e relevante.
             return Optional.empty();
         }
-        long detentoresAtivos = userRepository.countByTenantRolesIdAndAtivoTrue(papelProtegidoId);
-        if (detentoresAtivos <= 1) {
-            // Este utilizador e contabilizado em detentoresAtivos (a sua linha em BD ainda nao foi
-            // gravada com o novo estado) -- <= 1 significa que ele e o UNICO detentor activo, logo
-            // esta operacao deixaria a contagem em zero.
+        // Lock ANTES da contagem, sempre -- e a ordem que fecha a corrida (ver o doc-comment
+        // acima). O resultado devolvido nao e usado; o proposito e exclusivamente adquirir o lock
+        // sobre esta linha e mante-lo ate ao commit da transaccao do chamador.
+        tenantRoleRepository.bloquearParaAlteracaoDeDetentores(papelProtegidoId);
+        long outrosDetentoresAtivos =
+                userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(papelProtegidoId, utilizadorId);
+        if (outrosDetentoresAtivos == 0) {
+            // Nenhum OUTRO utilizador activo detem o papel protegido -- esta operacao deixaria a
+            // contagem em zero.
             return Optional.of(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
                     "Esta operação deixaria o escritório sem nenhum utilizador ativo com o papel de "
                             + "administrador do escritório.")));
@@ -502,7 +539,7 @@ public class AdminController {
             // continuar a deter o papel.
             if (!novoAtivo) {
                 Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
-                        detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
+                        id, detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
                 if (bloqueioUltimoAdministrador.isPresent()) {
                     return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
                 }
@@ -552,7 +589,7 @@ public class AdminController {
                     && tenantRoles.stream().anyMatch(tr -> detentorOriginal.papelProtegidoId().equals(tr.getId()))
                     && Boolean.TRUE.equals(user.getAtivo());
             Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
-                    detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), deteraPapelProtegidoDepois);
+                    id, detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), deteraPapelProtegidoDepois);
             if (bloqueioUltimoAdministrador.isPresent()) {
                 return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
             }
@@ -613,7 +650,7 @@ public class AdminController {
         DetentorPapelProtegidoOriginal detentorOriginal =
                 DetentorPapelProtegidoOriginal.de(user, adminMoldeIdParaUltimoAdministrador);
         Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
-                detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
+                id, detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
         if (bloqueioUltimoAdministrador.isPresent()) {
             return RecusaTransacional.recusar(bloqueioUltimoAdministrador.get());
         }

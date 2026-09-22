@@ -13,6 +13,7 @@ import com.lexcv.services.ResolucaoPapeisService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -115,7 +117,11 @@ class AdminControllerUltimoAdministradorTest {
 
         when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
         when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(admin, outro));
-        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+        // Phase 128 (Plano 04): a contagem passa a excluir o proprio utilizador -- "nenhum OUTRO
+        // detentor activo" (0), nao mais "so ele" (1, valor pre-128). O significado muda por um:
+        // o antigo 1L ("so ele detem, incluido na contagem") corresponde agora a 0L ("nenhum
+        // outro"); o antigo 2L ("ele + mais um") corresponde agora a 1L ("mais um, excluindo-o").
+        when(userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID)).thenReturn(0L);
 
         ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID,
                 Map.of("tenantRoleIds", List.of(outro.getId().toString())));
@@ -136,7 +142,8 @@ class AdminControllerUltimoAdministradorTest {
                 .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
 
         when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
-        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+        // Phase 128 (Plano 04): 0 = nenhum OUTRO detentor activo (ver comentario no Caso 1).
+        when(userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID)).thenReturn(0L);
 
         ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID, Map.of("ativo", false));
 
@@ -157,7 +164,8 @@ class AdminControllerUltimoAdministradorTest {
                 .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
 
         when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(administrador));
-        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+        // Phase 128 (Plano 04): 0 = nenhum OUTRO detentor activo (ver comentario no Caso 1).
+        when(userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID)).thenReturn(0L);
 
         ResponseEntity<?> response = novoController().deleteUser(ADMIN_USER_ID);
 
@@ -180,9 +188,10 @@ class AdminControllerUltimoAdministradorTest {
 
         when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
         when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(admin, outro));
-        // Dois detentores activos (este utilizador + um segundo administrador) -- remover deste
+        // Phase 128 (Plano 04): 1 = um OUTRO detentor activo (o antigo "2L, ele + mais um" torna-se
+        // "1L, so o outro" depois de excluir o proprio utilizador da contagem) -- remover deste
         // ainda deixa um.
-        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(2L);
+        when(userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID)).thenReturn(1L);
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID,
@@ -190,5 +199,58 @@ class AdminControllerUltimoAdministradorTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(userRepository).save(any());
+    }
+
+    // Caso 5 (Plano 04, InOrder): o lock e adquirido ANTES da contagem -- nunca depois. Prova a
+    // ORDEM exacta que fecha a corrida documentada no doc-comment de guardaUltimoAdministrador,
+    // nao apenas que os dois metodos sao chamados.
+    @Test
+    void updateUser_removendoOPapelProtegido_bloqueiaAntesDeContar() {
+        autenticarComo(ADMIN_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole admin = papelProtegido();
+        TenantRole outro = papelNaoProtegido();
+        User utilizador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Administrador")
+                .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(admin, outro));
+        when(userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID)).thenReturn(1L);
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        novoController().updateUser(ADMIN_USER_ID, Map.of("tenantRoleIds", List.of(outro.getId().toString())));
+
+        InOrder ordem = inOrder(tenantRoleRepository, userRepository);
+        ordem.verify(tenantRoleRepository).bloquearParaAlteracaoDeDetentores(admin.getId());
+        ordem.verify(userRepository).countByTenantRolesIdAndAtivoTrueAndIdNot(admin.getId(), ADMIN_USER_ID);
+    }
+
+    // Caso 6 (Plano 04): quando a guarda NAO e relevante -- o utilizador nunca deteve o papel
+    // protegido, ou continua a dete-lo depois da operacao -- nem o lock nem a contagem sao
+    // chamados. Prova que o lock nao e adquirido em toda escrita de updateUser, so quando a
+    // remocao do papel protegido esta realmente em causa.
+    @Test
+    void updateUser_semTocarNoPapelProtegido_naoBloqueiaNemConta() {
+        autenticarComo(ADMIN_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole outro = papelNaoProtegido();
+        TenantRole outroAinda = TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID)
+                .nome("Financeiro").moldeId(null).build();
+        // Este utilizador nunca deteve o papel protegido -- so papeis nao protegidos.
+        User utilizador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Colaborador")
+                .email("colab@escritorio.cv").ativo(true).tenantRoles(Set.of(outro)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(outro, outroAinda));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID,
+                Map.of("tenantRoleIds", List.of(outroAinda.getId().toString())));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(tenantRoleRepository, never()).bloquearParaAlteracaoDeDetentores(any());
+        verify(userRepository, never()).countByTenantRolesIdAndAtivoTrueAndIdNot(any(), any());
     }
 }

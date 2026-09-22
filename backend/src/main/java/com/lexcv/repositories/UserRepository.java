@@ -57,4 +57,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // -- um utilizador já desativado não conta como "detentor" para este efeito, porque já não
     // exerce a autoridade do papel.
     long countByTenantRolesIdAndAtivoTrue(UUID tenantRoleId);
+
+    // Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 04: variante de countByTenantRolesIdAndAtivoTrue
+    // acima que exclui explicitamente o utilizador que esta a ser alterado -- a guarda de "ultimo
+    // administrador" passa a contar "quantos OUTROS detentores activos existem", nunca "quantos
+    // detentores activos existem incluindo este". Necessario porque, sob @Transactional (Plano
+    // 04), o Hibernate pode fazer AUTO flush da mutacao pendente deste utilizador (ex.:
+    // user.setAtivo(false) ja aplicado em memoria por outra parte do mesmo metodo, ou uma
+    // colecao ja reatribuida) antes de uma query sobre User correr -- nesse caso a antiga
+    // assuncao "a sua propria linha ainda nao foi gravada, por isso ele continua contado" deixa
+    // de ser garantida. Contar os OUTROS e correcto quer tenha havido flush ou nao: se este
+    // utilizador vai deixar de contar, ele nunca deveria fazer parte da contagem que decide se a
+    // operacao pode prosseguir.
+    long countByTenantRolesIdAndAtivoTrueAndIdNot(UUID tenantRoleId, UUID userId);
 }

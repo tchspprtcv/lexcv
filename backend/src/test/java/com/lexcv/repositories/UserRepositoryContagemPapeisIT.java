@@ -66,6 +66,17 @@ class UserRepositoryContagemPapeisIT {
                 .build());
     }
 
+    private User novoUser(UUID tenantId, String email, Set<TenantRole> tenantRoles, boolean ativo) {
+        return userRepository.save(User.builder()
+                .tenantId(tenantId)
+                .nome("Utilizador de Teste")
+                .email(email)
+                .passwordHash("hash-irrelevante-para-este-teste")
+                .ativo(ativo)
+                .tenantRoles(tenantRoles)
+                .build());
+    }
+
     @Test
     void countByTenantRolesId_papelSemAtribuicoes_devolveZero() {
         UUID tenantId = UUID.randomUUID();
@@ -112,5 +123,27 @@ class UserRepositoryContagemPapeisIT {
 
         assertEquals(2, userRepository.countByTenantRolesId(papelA.getId()));
         assertEquals(1, userRepository.countByTenantRolesId(papelB.getId()));
+    }
+
+    /**
+     * Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 04: prova contra PostgreSQL real que
+     * {@link UserRepository#countByTenantRolesIdAndAtivoTrueAndIdNot} -- a contagem que a guarda
+     * de "ultimo administrador" (128-04-PLAN.md Task 2) usa apos adquirir o lock -- exclui tanto o
+     * utilizador passado (A) como qualquer detentor INACTIVO (C), contando apenas OUTROS
+     * detentores activos (B). Tres utilizadores detem o mesmo papel: A activo, B activo, C
+     * inactivo -- a contagem, excluindo A, tem de dar exactamente 1 (so B).
+     */
+    @Test
+    void countByTenantRolesIdAndAtivoTrueAndIdNot_excluiOProprioUtilizadorEOsInactivos() {
+        UUID tenantId = UUID.randomUUID();
+        TenantRole papel = novoTenantRole(tenantId, "ADMIN_TESTE");
+
+        User utilizadorA = novoUser(tenantId, "a-" + UUID.randomUUID() + "@teste.cv", Set.of(papel), true);
+        novoUser(tenantId, "b-" + UUID.randomUUID() + "@teste.cv", Set.of(papel), true);
+        novoUser(tenantId, "c-" + UUID.randomUUID() + "@teste.cv", Set.of(papel), false);
+
+        long contagem = userRepository.countByTenantRolesIdAndAtivoTrueAndIdNot(papel.getId(), utilizadorA.getId());
+
+        assertEquals(1, contagem);
     }
 }
