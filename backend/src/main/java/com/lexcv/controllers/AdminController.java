@@ -150,6 +150,99 @@ public class AdminController {
         return Optional.empty();
     }
 
+    // Phase 127 (Plano 05, 127-CONTEXT.md Decisao 6): par de valores devolvido pelo resolvedor de
+    // atribuicao POR ID abaixo -- mesma forma/razao de ser do par historico ResolucaoTenantRolesOuErro
+    // (ainda usado por updateUser ate ao Plano 05/Tarefa 2 converter tambem esse handler).
+    private record ResolucaoPapeisEscritorioOuErro(Set<TenantRole> tenantRoles, ResponseEntity<?> erro) {
+        static ResolucaoPapeisEscritorioOuErro sucesso(Set<TenantRole> tenantRoles) {
+            return new ResolucaoPapeisEscritorioOuErro(tenantRoles, null);
+        }
+
+        static ResolucaoPapeisEscritorioOuErro erro(ResponseEntity<?> erro) {
+            return new ResolucaoPapeisEscritorioOuErro(null, erro);
+        }
+    }
+
+    // Phase 127 (Plano 05, Decisao 6): ponto UNICO de resolucao de "tenantRoleIds" submetido por
+    // createUser/updateUser. Fecha a colisao que o CONTEXT.md descreve: atribuicao deixou de
+    // resolver por NOME de papel global (roleRepository.findByNome + resolverPapeisDeEscritorio),
+    // que quebrava com 409 sempre que um escritorio renomeasse um papel (Decisao 6, Fase 126
+    // 409 de mapeamento parcial). Cada id e resolvido apenas contra um mapa construido a partir de
+    // tenantRoleRepository.findByTenantId(tenantId) -- NUNCA findById -- para que um id de outro
+    // tenant fique simplesmente ausente, sem depender de uma comparacao de tenant que alguem se
+    // pudesse esquecer de escrever (T-127-23, mesma tecnica do plano 03 em updateRbac).
+    //
+    // Validate-then-resolve: cada guarda abaixo devolve erro ANTES de acrescentar o papel ao
+    // conjunto resolvido, nunca depois -- por isso um pedido recusado nunca deixa um subconjunto
+    // parcial no valor de retorno (mesma disciplina de updateRbac/CR-01 126-REVIEW.md).
+    private ResolucaoPapeisEscritorioOuErro resolverPapeisEscritorioPorId(UUID tenantId, List<?> idsSubmetidos) {
+        if (idsSubmetidos == null || idsSubmetidos.isEmpty()) {
+            return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.badRequest()
+                    .body(Map.of("message", "Pelo menos um papel do escritório é obrigatório.")));
+        }
+
+        Map<UUID, TenantRole> papeisDoTenant = tenantRoleRepository.findByTenantId(tenantId).stream()
+                .collect(Collectors.toMap(TenantRole::getId, tr -> tr));
+
+        // Resolvido UMA vez, fora do laco -- mesmo idioma de getRbac/updateRbac (plano 03) para o
+        // discriminador de proveniencia do papel reservado.
+        Integer plataformaMoldeId = roleRepository.findByNome(PAPEL_PLATAFORMA).map(Role::getId).orElse(null);
+
+        Set<TenantRole> resolvidos = new HashSet<>();
+        for (Object idObj : idsSubmetidos) {
+            UUID id;
+            try {
+                id = UUID.fromString(String.valueOf(idObj));
+            } catch (IllegalArgumentException e) {
+                return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.badRequest()
+                        .body(Map.of("message", "Identificador de papel inválido: " + idObj)));
+            }
+
+            TenantRole tenantRole = papeisDoTenant.get(id);
+            if (tenantRole == null) {
+                return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "Papel não encontrado neste escritório: " + id)));
+            }
+
+            // Tripla guarda (PAPEL-09, T-127-24): nome cru, nome prefixado ROLE_ (defesa em
+            // profundidade, mesma disciplina de PAPEL_PLATAFORMA_AUTORIDADE acima) e proveniencia
+            // (moldeId) -- so a proveniencia sobrevive a uma renomeacao do papel reservado, mas as
+            // outras duas ficam para fechar o terceiro caminho (atribuicao a utilizador) com a
+            // mesma tripla guarda que getRbac/updateRbac ja aplicam a leitura/escrita da matriz.
+            if (PAPEL_PLATAFORMA.equals(tenantRole.getNome())
+                    || PAPEL_PLATAFORMA_AUTORIDADE.equals(tenantRole.getNome())
+                    || (plataformaMoldeId != null && plataformaMoldeId.equals(tenantRole.getMoldeId()))) {
+                return ResolucaoPapeisEscritorioOuErro.erro(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
+                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório.")));
+            }
+
+            resolvidos.add(tenantRole);
+        }
+
+        return ResolucaoPapeisEscritorioOuErro.sucesso(resolvidos);
+    }
+
+    // Phase 127 (Plano 05, Decisao 6): deriva o mirror global t_user_role a partir da PROVENIENCIA
+    // dos papeis de escritorio resolvidos acima -- nunca a partir de um nome que o utilizador
+    // tenha escrito. Fase 126 manteve t_user_role povoado deliberadamente para reversibilidade
+    // (remover a coluna esta diferido para depois deste marco), e
+    // UserRepository.findByTenantIdAndRoleName/findByTenantIdAndRoleNameIn/
+    // findByTenantIdAndRoleNameAndAtivoTrue continuam a le-lo -- consumidos por
+    // NotificacaoService (fan-out ADMIN) e AlertasDiariosJob. Um papel que um escritorio criou de
+    // raiz (moldeId nulo) nao contribui nada para este mirror -- consequencia aceite e inofensiva:
+    // ResolucaoPapeisService.usaPapeisDeEscritorio escolhe sempre o ramo de escritorio quando
+    // tenantRoles nao esta vazio, por isso a autoridade EFECTIVA do utilizador nunca depende deste
+    // mirror (T-127-29).
+    private Set<Role> derivarMirrorGlobalDePapeis(Set<TenantRole> tenantRoles) {
+        Set<Role> mirror = new HashSet<>();
+        for (TenantRole tenantRole : tenantRoles) {
+            if (tenantRole.getMoldeId() != null) {
+                roleRepository.findById(tenantRole.getMoldeId()).ifPresent(mirror::add);
+            }
+        }
+        return mirror;
+    }
+
     // CR-01/WR-04 (126-REVIEW.md): par de valores devolvido pelo wrapper abaixo -- exactamente um
     // dos dois campos e nao-nulo. Java nao tem tipo soma leve para isto sem puxar uma dependencia
     // nova, e um par assim, usado so internamente, e mais simples e mais legivel aqui do que um
@@ -197,8 +290,16 @@ public class AdminController {
 
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> body) {
-        if (!body.containsKey("nome") || !body.containsKey("email") || !body.containsKey("password") || !body.containsKey("roles")) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Nome, email, password e roles são obrigatórios."));
+        if (!body.containsKey("nome") || !body.containsKey("email") || !body.containsKey("password") || !body.containsKey("tenantRoleIds")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Nome, email, password e tenantRoleIds são obrigatórios."));
+        }
+
+        // Phase 127 (Plano 05, Decisao 6, T-127-28): "roles" (nome global) deixou de ser aceite
+        // para atribuicao -- um cliente desatualizado que ainda o envie e recusado explicitamente,
+        // nunca ignorado em silencio, para que a atribuicao nunca "nao faca nada" sem aviso.
+        if (body.containsKey("roles")) {
+            return ResponseEntity.badRequest().body(Map.of("message",
+                    "O campo \"roles\" deixou de ser aceite para atribuição de papéis; use \"tenantRoleIds\" com os ids dos papéis do escritório."));
         }
 
         String password = (String) body.get("password");
@@ -214,44 +315,18 @@ public class AdminController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
 
-        List<?> rolesList = (List<?>) body.get("roles");
-
-        // Phase 119 (Plan 03): recusar antes do lookup -- ver o comentario de PAPEL_PLATAFORMA.
-        for (Object rObj : rolesList) {
-            if (PAPEL_PLATAFORMA.equals(rObj)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message",
-                        "O papel de administrador de plataforma é reservado e não pode ser atribuído a partir da gestão de utilizadores do escritório."));
-            }
-        }
-
-        Set<Role> roles = new HashSet<>();
-        for (Object rObj : rolesList) {
-            String roleName = (String) rObj;
-            roleRepository.findByNome(roleName).ifPresent(roles::add);
-        }
-
-        if (roles.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Pelo menos uma role válida é obrigatória."));
-        }
-
-        // Phase 126 (Plan 04): o caminho de escrita que tem de acompanhar o cutover de leitura --
-        // sem isto, a autoridade efectiva do utilizador criado (resolvida pelo lado de escritorio
-        // assim que o tenant tiver algum papel convertido) nunca refletiria os papeis globais
-        // escritos abaixo. O tenant usado e sempre o do principal autenticado -- nunca um valor
-        // vindo do corpo do pedido -- a mesma fronteira de isolamento multi-tenant que o resto
-        // deste controller ja respeita; o metodo do resolvedor filtra por esse tenant, logo um
-        // TenantRole homonimo de outro escritorio e inalcancavel por construcao.
-        //
-        // CR-01/WR-04 (126-REVIEW.md): correspondencia PARCIAL (alguns dos "roles" pedidos tem
-        // TenantRole homonimo, outros nao) e recusada aqui, ANTES de qualquer escrita -- ver
-        // resolverTenantRolesOuErro. Sem isto, o subconjunto encontrado seria gravado em silencio
-        // e a resposta 201 esconderia que a autoridade efectiva do utilizador criado ficaria
-        // incompleta.
-        ResolucaoTenantRolesOuErro resolucao = resolverTenantRolesOuErro(principal.getTenantId(), roles);
+        // Phase 127 (Plano 05, Decisao 6): atribuicao por id de papel de escritorio, nunca por
+        // nome global -- ver resolverPapeisEscritorioPorId. O tenant usado e sempre o do principal
+        // autenticado -- nunca um valor vindo do corpo do pedido -- a mesma fronteira de
+        // isolamento multi-tenant que o resto deste controller ja respeita (T-127-23).
+        List<?> tenantRoleIdsList = (List<?>) body.get("tenantRoleIds");
+        ResolucaoPapeisEscritorioOuErro resolucao =
+                resolverPapeisEscritorioPorId(principal.getTenantId(), tenantRoleIdsList);
         if (resolucao.erro() != null) {
             return resolucao.erro();
         }
         Set<TenantRole> tenantRoles = resolucao.tenantRoles();
+        Set<Role> mirror = derivarMirrorGlobalDePapeis(tenantRoles);
 
         // Phase 117 (PLAN-02/PLAN-04): limite de utilizadores ativos por tenant, aplicado através do
         // helper partilhado limiteUtilizadoresExcedido (ver o seu comentário para o contrato completo e
@@ -289,7 +364,7 @@ public class AdminController {
                 .nome((String) body.get("nome"))
                 .email(email)
                 .passwordHash(passwordEncoder.encode((String) body.get("password")))
-                .roles(roles)
+                .roles(mirror)
                 .tenantRoles(tenantRoles)
                 .permissions(permissions)
                 .ativo(ativoInicial)
