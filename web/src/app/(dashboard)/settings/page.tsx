@@ -69,7 +69,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { renomearPapelSchema, type RenomearPapelFormValues } from "@/schemas/papeis-escritorio";
-import { mesclarEstadoLocal, type LocalPermissoesPapeis } from "./merge-local-papeis";
+import {
+  mesclarEstadoLocal,
+  papeisComAlteracoesPorGravar,
+  rotuloPapeisPorGravar,
+  type LocalPermissoesPapeis,
+} from "./merge-local-papeis";
 import { CriarPapelPanel } from "./criar-papel-panel";
 import { PapelAcoesMenu } from "./papel-acoes-menu";
 import type { AdminUser, AdminUserSavePayload } from "@/types/admin-users";
@@ -814,6 +819,22 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 // ==========================================
 // RBAC SYSTEM CONFIGURATION MATRIX SUB-COMPONENT
 // ==========================================
+
+// Fix 1 (127-UI-REVIEW.md, Top 3 Priority Fixes #1): rascunho da matriz por gravar, guardado
+// FORA de React (variavel de modulo), nunca em estado do componente nem em prop. RbacTab tem de
+// manter a assinatura literal `function RbacTab() {` -- e o marcador de bloco que
+// scripts/verify-papeis-escritorio.mjs usa para delimitar o componente -- por isso este rascunho
+// nao pode viajar por props. Uma variavel de modulo e a unica via que sobrevive ao
+// desmontar/remontar de RbacTab quando o administrador muda de separador em Definicoes e volta,
+// sem manter as outras abas sempre montadas (o que alargaria o raio de impacto a
+// UserProfileForm/UserPasswordForm/NotificationPreferencesTab, fora do escopo desta correcao).
+// Sincronizada a cada render de RbacTab, no mesmo padrao de "ajustar estado durante o render" ja
+// usado abaixo para `appliedData` -- nunca em `useEffect`, que o ESLint deste projecto rejeita
+// (`react-hooks/set-state-in-effect`) e que aqui seria superfluo (a atribuicao e sincrona e
+// idempotente, nao dispara um novo render).
+let rbacRascunhoPermissoes: LocalPermissoesPapeis | null = null;
+let rbacRascunhoTocados: Set<string> = new Set();
+
 function RbacTab() {
   // Regra dos Hooks (UI-SPEC §0): TODOS os hooks abaixo -- a query, as quatro
   // mutacoes, e todo o useState/useMemo/useForm -- tem de ser chamados
@@ -831,8 +852,15 @@ function RbacTab() {
   // e reagir quando mudou), nao `useEffect` com `setState`, que o ESLint
   // deste projecto rejeita (`react-hooks/set-state-in-effect`).
   const [appliedData, setAppliedData] = React.useState<OfficeRbac | null>(null);
-  const [localPermissoes, setLocalPermissoes] = React.useState<LocalPermissoesPapeis | null>(null);
-  const [touchedPapelIds, setTouchedPapelIds] = React.useState<Set<string>>(new Set());
+  // Fix 1: inicializados a partir do rascunho de modulo (nao de `null`/`new Set()`), para que um
+  // remontar de RbacTab apos o administrador mudar de separador recupere as edicoes nao gravadas
+  // em vez de as perder -- ver comentario junto de `rbacRascunhoPermissoes` acima.
+  const [localPermissoes, setLocalPermissoes] = React.useState<LocalPermissoesPapeis | null>(
+    () => rbacRascunhoPermissoes,
+  );
+  const [touchedPapelIds, setTouchedPapelIds] = React.useState<Set<string>>(
+    () => rbacRascunhoTocados,
+  );
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [papelEmRenomeacao, setPapelEmRenomeacao] = React.useState<OfficePapel | null>(null);
   const [papelEmEliminacao, setPapelEmEliminacao] = React.useState<OfficePapel | null>(null);
@@ -863,22 +891,41 @@ function RbacTab() {
 
   // Diff entre o estado local e o ultimo payload obtido, por papel,
   // comparando conjuntos de chaves (nao ordem de array) -- mesma tecnica de
-  // moldesAlterados em plataforma/moldes/page.tsx.
-  const papeisAlterados = React.useMemo<OfficePapel[]>(() => {
-    if (!localPermissoes) return [];
-    return papeis.filter((papel) => {
-      const local = localPermissoes[papel.id];
-      if (!local) return false;
-      const original = new Set(papel.permissoes);
-      if (local.size !== original.size) return true;
-      for (const key of local) {
-        if (!original.has(key)) return true;
-      }
-      return false;
-    });
-  }, [localPermissoes, papeis]);
+  // moldesAlterados em plataforma/moldes/page.tsx. Extraida para
+  // merge-local-papeis.ts (Fix 1) para ter prova automatizada fora do componente.
+  const papeisAlterados = React.useMemo(
+    () => papeisComAlteracoesPorGravar(papeis, localPermissoes),
+    [localPermissoes, papeis],
+  );
 
   const existeDiff = papeisAlterados.length > 0;
+
+  // Fix 1: mantem o rascunho de modulo alinhado com o estado local depois de cada commit --
+  // reatribuir uma variavel externa DURANTE o render e um efeito lateral que o React Compiler
+  // deste projecto rejeita (regra `react-hooks/globals`, "Cannot reassign variables declared
+  // outside of the component/hook"); a propria mensagem da regra aponta para um efeito quando a
+  // variavel nao e usada na renderizacao em si, que e exactamente este caso -- o rascunho so e
+  // lido no `useState(() => ...)` de um FUTURO mount de RbacTab, nunca no render actual.
+  React.useEffect(() => {
+    rbacRascunhoPermissoes = localPermissoes;
+    rbacRascunhoTocados = touchedPapelIds;
+  }, [localPermissoes, touchedPapelIds]);
+
+  // Fix 1: mesmo com o rascunho de modulo acima a sobreviver a troca de separador dentro da
+  // aplicacao, sair da pagina de facto (fechar o separador, recarregar, navegar para outro URL)
+  // perde essa variavel -- o processo JS e reiniciado. Aviso nativo do browser antes de descartar
+  // edicoes nao gravadas. Nao e uma chamada de negocio (nenhum pedido de rede/mutacao), por isso
+  // nao cai na proibicao de useEffect para chamadas de negocio deste projecto -- e o idiom padrao
+  // do React para sincronizar com um sistema externo (o evento beforeunload do browser).
+  React.useEffect(() => {
+    if (!existeDiff) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [existeDiff]);
 
   if (isLoading) {
     return (
@@ -1022,6 +1069,19 @@ function RbacTab() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto">
+              {existeDiff && (
+                // Fix 1 (127-UI-REVIEW.md achado #1): indicador de dirty-state sempre visivel,
+                // nao so a mudanca de opacidade do botao. Cor neutra (nao azul) e peso 600 --
+                // dentro dos valores ja declarados pela UI-SPEC (Color §Secondary,
+                // Typography's 12px/text-xs 400/600 para prosa micro), sem abrir uma nova
+                // excecao ao mesmo contrato que os achados #2/#3 apontam como incompleto.
+                <span
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  aria-live="polite"
+                >
+                  {rotuloPapeisPorGravar(papeisAlterados.length)}
+                </span>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setIsFormOpen(true)}

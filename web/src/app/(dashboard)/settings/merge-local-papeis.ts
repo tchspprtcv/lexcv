@@ -1,4 +1,4 @@
-import type { OfficeRbac } from "@/types/office-rbac";
+import type { OfficePapel, OfficeRbac } from "@/types/office-rbac";
 
 /**
  * Estado local de edição da matriz permissão × papel: por `papelId` (UUID string do
@@ -70,4 +70,43 @@ export function mesclarEstadoLocal(
     }
   }
   return estadoFresco;
+}
+
+/**
+ * Papéis cujo estado local (`localPermissoes`) diverge do último payload gravado
+ * (`papel.permissoes`), comparando o CONJUNTO de chaves, não a ordem do array. Extraída de
+ * `RbacTab` (settings/page.tsx) para que a base da deteção de "há edições por gravar" -- usada
+ * tanto pelo estado disabled/enabled do botão "Guardar Alterações" como pelo indicador de
+ * contagem introduzido por 127-UI-REVIEW.md (achado #1, "unsaved-edit state has no signal
+ * beyond default button opacity") -- tenha uma prova automatizada fora do componente React.
+ */
+export function papeisComAlteracoesPorGravar(
+  papeis: readonly OfficePapel[],
+  localPermissoes: LocalPermissoesPapeis | null,
+): OfficePapel[] {
+  if (!localPermissoes) return [];
+  return papeis.filter((papel) => {
+    const local = localPermissoes[papel.id];
+    if (!local) return false;
+    const original = new Set(papel.permissoes);
+    if (local.size !== original.size) return true;
+    for (const key of local) {
+      if (!original.has(key)) return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Rótulo do indicador de dirty-state junto de "Guardar Alterações" (127-UI-REVIEW.md achado
+ * #1): até agora a única pista de que havia edições por gravar era o próprio botão passar de
+ * desvanecido a azul sólido -- fácil de não notar num ecrã cujo foco visual deliberado é a
+ * matriz, não a barra de ferramentas do cabeçalho. Pluraliza em português de Cabo Verde, na
+ * mesma convenção já usada no resto do ecrã para o badge de contagem de utilizadores
+ * (`${N} utilizador(es)`, page.tsx).
+ */
+export function rotuloPapeisPorGravar(quantidade: number): string {
+  return quantidade === 1
+    ? "1 papel com alterações por gravar"
+    : `${quantidade} papéis com alterações por gravar`;
 }

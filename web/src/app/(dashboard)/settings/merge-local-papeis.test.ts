@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { construirEstadoLocal, mesclarEstadoLocal } from "./merge-local-papeis";
+import {
+  construirEstadoLocal,
+  mesclarEstadoLocal,
+  papeisComAlteracoesPorGravar,
+  rotuloPapeisPorGravar,
+} from "./merge-local-papeis";
 import type { OfficeRbac } from "@/types/office-rbac";
 
 // Generalização de `plataforma/moldes/merge-local-permissoes.test.ts` (Phase 125, CR-01) para
@@ -154,5 +159,61 @@ describe("merge-local-papeis: reset da matriz de papeis nao pode apagar edicoes 
     expect(resultado[PAPEL_2]!.has("processos:view")).toBe(true);
     // O papel renomeado continua endereçável sob a MESMA chave (o seu id).
     expect(resultado[PAPEL_1]!.has("clientes:view")).toBe(true);
+  });
+});
+
+// 127-UI-REVIEW.md, Top 3 Priority Fixes #1: o único sinal de "há edições por gravar" era o
+// botão "Guardar Alterações" passar de desvanecido a azul sólido. `papeisComAlteracoesPorGravar`
+// é a mesma comparação de conjuntos que já decidia o disabled/enabled desse botão, extraída de
+// RbacTab (settings/page.tsx) para ficar coberta por um teste fora do componente React;
+// `rotuloPapeisPorGravar` é o texto do novo indicador de contagem introduzido a par do botão.
+describe("papeisComAlteracoesPorGravar: deteção de edições locais por gravar", () => {
+  it("localPermissoes null não reporta nenhum papel alterado", () => {
+    expect(papeisComAlteracoesPorGravar(payloadInicial.papeis, null)).toEqual([]);
+  });
+
+  it("um papel cujo conjunto local é idêntico ao gravado não é reportado", () => {
+    const local = construirEstadoLocal(payloadInicial);
+    expect(papeisComAlteracoesPorGravar(payloadInicial.papeis, local)).toEqual([]);
+  });
+
+  it("um papel com uma permissão adicionada localmente é reportado", () => {
+    const local = construirEstadoLocal(payloadInicial);
+    local[PAPEL_1]!.add("processos:view");
+
+    const resultado = papeisComAlteracoesPorGravar(payloadInicial.papeis, local);
+
+    expect(resultado.map((papel) => papel.id)).toEqual([PAPEL_1]);
+  });
+
+  it("um papel com uma permissão removida localmente é reportado, mesmo com o mesmo tamanho de conjunto que outro papel alterado", () => {
+    const local = construirEstadoLocal(payloadInicial);
+    local[PAPEL_1]!.delete("clientes:view"); // fica vazio, tamanho 0
+
+    const resultado = papeisComAlteracoesPorGravar(payloadInicial.papeis, local);
+
+    expect(resultado.map((papel) => papel.id)).toEqual([PAPEL_1]);
+  });
+
+  it("vários papéis alterados em simultâneo são todos reportados", () => {
+    const local = construirEstadoLocal(payloadInicial);
+    local[PAPEL_1]!.add("processos:view");
+    local[PAPEL_2]!.add("clientes:view");
+
+    const resultado = papeisComAlteracoesPorGravar(payloadInicial.papeis, local);
+
+    expect(resultado.map((papel) => papel.id).sort()).toEqual([PAPEL_1, PAPEL_2].sort());
+  });
+});
+
+describe("rotuloPapeisPorGravar: pluralização do indicador junto de 'Guardar Alterações'", () => {
+  it("singular para exatamente 1 papel", () => {
+    expect(rotuloPapeisPorGravar(1)).toBe("1 papel com alterações por gravar");
+  });
+
+  it("plural para 0 ou mais de 1 papel", () => {
+    expect(rotuloPapeisPorGravar(0)).toBe("0 papéis com alterações por gravar");
+    expect(rotuloPapeisPorGravar(2)).toBe("2 papéis com alterações por gravar");
+    expect(rotuloPapeisPorGravar(11)).toBe("11 papéis com alterações por gravar");
   });
 });
