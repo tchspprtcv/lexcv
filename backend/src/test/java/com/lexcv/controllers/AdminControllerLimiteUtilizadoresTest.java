@@ -1,8 +1,8 @@
 package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
-import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
+import com.lexcv.models.TenantRole;
 import com.lexcv.models.User;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
@@ -80,12 +80,23 @@ class AdminControllerLimiteUtilizadoresTest {
                 .setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, List.of()));
     }
 
+    // Phase 127 (Plano 05, Decisao 6): fixture id de papel de escritorio -- a atribuicao deixou de
+    // ser por nome global ("roles": ["ADVOGADO"]), por isso cada teste que cria um utilizador tem
+    // de estubar tenantRoleRepository.findByTenantId(TENANT_ID) para que este id resolva. moldeId
+    // fica nulo de proposito: estes testes provam o limite de utilizadores, nao a proveniencia do
+    // mirror global -- ver AdminControllerAtribuicaoPapeisEscritorioTest para essa prova.
+    private static final UUID TENANT_ROLE_ADVOGADO_ID = UUID.randomUUID();
+
+    private TenantRole tenantRoleAdvogado() {
+        return TenantRole.builder().id(TENANT_ROLE_ADVOGADO_ID).tenantId(TENANT_ID).nome("ADVOGADO").build();
+    }
+
     private Map<String, Object> corpoValido() {
         return Map.of(
                 "nome", "Novo Utilizador",
                 "email", EMAIL,
                 "password", PASSWORD,
-                "roles", List.of("ADVOGADO")
+                "tenantRoleIds", List.of(TENANT_ROLE_ADVOGADO_ID.toString())
         );
     }
 
@@ -98,7 +109,7 @@ class AdminControllerLimiteUtilizadoresTest {
     void createUser_noLimiteDevolve409ENaoGravaNada() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(tenantRepository.findById(TENANT_ID))
                 .thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).limiteUtilizadores(3).build()));
         when(userRepository.countByTenantIdAndAtivoTrue(TENANT_ID)).thenReturn(3L);
@@ -114,7 +125,7 @@ class AdminControllerLimiteUtilizadoresTest {
     void createUser_abaixoDoLimiteDevolve201EGravaUmaVez() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(tenantRepository.findById(TENANT_ID))
                 .thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).limiteUtilizadores(3).build()));
         when(userRepository.countByTenantIdAndAtivoTrue(TENANT_ID)).thenReturn(2L);
@@ -131,7 +142,7 @@ class AdminControllerLimiteUtilizadoresTest {
     void createUser_limiteNuloNuncaBloqueiaENaoExecutaContagem() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         // limiteUtilizadores fica null (sem limite) por omissao -- o contrato estabelecido em 117-01.
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).build()));
         when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
@@ -147,7 +158,7 @@ class AdminControllerLimiteUtilizadoresTest {
     void createUser_contagemAoVivoLibertaVagaAposDesativacao() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(tenantRepository.findById(TENANT_ID))
                 .thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).limiteUtilizadores(3).build()));
         // Simula um utilizador desativado entre os dois pedidos: a 1a chamada ve 3 ativos (no
@@ -175,7 +186,7 @@ class AdminControllerLimiteUtilizadoresTest {
     void createUser_comAtivoFalseNuncaVerificaLimiteEDevolve201() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
-        when(roleRepository.findByNome("ADVOGADO")).thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

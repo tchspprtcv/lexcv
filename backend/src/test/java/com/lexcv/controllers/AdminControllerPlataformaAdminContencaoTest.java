@@ -4,7 +4,6 @@ import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.OfficeRbacResponse;
 import com.lexcv.dtos.OfficeRbacUpdateRequest;
 import com.lexcv.models.Permission;
-import com.lexcv.models.Role;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.TenantRole;
 import com.lexcv.models.User;
@@ -28,7 +27,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -107,24 +105,48 @@ class AdminControllerPlataformaAdminContencaoTest {
                 tenantRepository, resolucaoPapeisService, tenantRoleRepository);
     }
 
-    private Map<String, Object> corpoCriacaoComRoles(List<String> roles) {
+    // Phase 127 (Plano 05, Decisao 6): fixtures de id de papel de escritorio -- a atribuicao
+    // deixou de aceitar nomes globais ("roles": [...]); estes ids sao os que os corpos de pedido
+    // abaixo submetem, e tenantRoleRepository.findByTenantId(TENANT_ID) tem de os devolver para
+    // que resolvam. TENANT_ROLE_PLATAFORMA_ADMIN_ID representa um TenantRole reservado --
+    // teoricamente inalcancavel pelos caminhos normais de CRUD de papeis (Plano 04), mas a guarda
+    // de proveniencia/nome tem de fechar mesmo esta terceira via de defesa em profundidade, tal
+    // como getRbac/updateRbac ja fazem (ver os Casos 6/7 abaixo).
+    private static final UUID TENANT_ROLE_ADVOGADO_ID = UUID.randomUUID();
+    private static final UUID TENANT_ROLE_TECNICO_ID = UUID.randomUUID();
+    private static final UUID TENANT_ROLE_PLATAFORMA_ADMIN_ID = UUID.randomUUID();
+
+    private TenantRole tenantRoleAdvogado() {
+        return TenantRole.builder().id(TENANT_ROLE_ADVOGADO_ID).tenantId(TENANT_ID).nome("ADVOGADO").build();
+    }
+
+    private TenantRole tenantRoleTecnico() {
+        return TenantRole.builder().id(TENANT_ROLE_TECNICO_ID).tenantId(TENANT_ID).nome("TECNICO").build();
+    }
+
+    private TenantRole tenantRolePlataformaAdmin() {
+        return TenantRole.builder().id(TENANT_ROLE_PLATAFORMA_ADMIN_ID).tenantId(TENANT_ID).nome("PLATAFORMA_ADMIN").build();
+    }
+
+    private Map<String, Object> corpoCriacaoComTenantRoleIds(List<UUID> tenantRoleIds) {
         return Map.of(
                 "nome", "Novo Utilizador",
                 "email", EMAIL,
                 "password", PASSWORD,
-                "roles", roles
+                "tenantRoleIds", tenantRoleIds.stream().map(UUID::toString).toList()
         );
     }
 
-    // CR-01 (119-REVIEW.md): "roles" continua obrigatorio (ver a validacao de entrada de
+    // CR-01 (119-REVIEW.md): "tenantRoleIds" continua obrigatorio (ver a validacao de entrada de
     // createUser) mesmo nos casos que testam exclusivamente "permissions" -- usa-se sempre um
-    // papel de tenant legitimo aqui para que a guarda de "roles" nunca seja o motivo do 403.
+    // papel de tenant legitimo aqui para que a guarda de atribuicao de papeis nunca seja o motivo
+    // do 403.
     private Map<String, Object> corpoCriacaoComPermissions(List<String> permissions) {
         return Map.of(
                 "nome", "Novo Utilizador",
                 "email", EMAIL,
                 "password", PASSWORD,
-                "roles", List.of("ADVOGADO"),
+                "tenantRoleIds", List.of(TENANT_ROLE_ADVOGADO_ID.toString()),
                 "permissions", permissions
         );
     }
@@ -139,19 +161,27 @@ class AdminControllerPlataformaAdminContencaoTest {
                 .build();
     }
 
-    // Caso 1 — createUser recusa PLATAFORMA_ADMIN com 403, antes do lookup do papel.
+    // Caso 1 — createUser recusa PLATAFORMA_ADMIN com 403. Phase 127 (Plano 05, Decisao 6):
+    // atribuicao passou a ser por id de TenantRole -- a unica forma de exercitar esta guarda
+    // agora e submeter o id de um TenantRole cujo nome (ou moldeId) e o do papel reservado, tal
+    // como getRbac/updateRbac ja provam (Casos 6/7 abaixo). A antiga asserção "nunca chama
+    // roleRepository.findByNome('PLATAFORMA_ADMIN') antes do lookup" deixou de se aplicar -- essa
+    // chamada agora acontece SEMPRE, para resolver o moldeId reservado usado na guarda de
+    // proveniencia (ver resolverPapeisEscritorioPorId); a garantia que sobrevive, e que este
+    // teste continua a provar, é 403 e nenhuma escrita.
     @Test
     void createUser_recusaPlataformaAdminCom403EAntesDoLookup() {
         autenticarComoPrincipalDoTenant();
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRolePlataformaAdmin()));
 
-        ResponseEntity<?> response = novoController().createUser(corpoCriacaoComRoles(List.of("PLATAFORMA_ADMIN")));
+        ResponseEntity<?> response = novoController()
+                .createUser(corpoCriacaoComTenantRoleIds(List.of(TENANT_ROLE_PLATAFORMA_ADMIN_ID)));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
         assertTrue(mensagem.toLowerCase().contains("plataforma"));
         assertTrue(mensagem.toLowerCase().contains("reservado"));
         verify(userRepository, never()).save(any());
-        verify(roleRepository, never()).findByNome("PLATAFORMA_ADMIN");
     }
 
     // Caso 2 — createUser recusa PLATAFORMA_ADMIN mesmo misturado com um papel legitimo (nao basta
@@ -159,9 +189,11 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_recusaPlataformaAdminMesmoMisturadoComPapelLegitimo() {
         autenticarComoPrincipalDoTenant();
+        when(tenantRoleRepository.findByTenantId(TENANT_ID))
+                .thenReturn(List.of(tenantRoleAdvogado(), tenantRolePlataformaAdmin()));
 
         ResponseEntity<?> response = novoController()
-                .createUser(corpoCriacaoComRoles(List.of("ADVOGADO", "PLATAFORMA_ADMIN")));
+                .createUser(corpoCriacaoComTenantRoleIds(List.of(TENANT_ROLE_ADVOGADO_ID, TENANT_ROLE_PLATAFORMA_ADMIN_ID)));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(userRepository, never()).save(any());
@@ -171,27 +203,29 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_continuaAFuncionarParaPapeisDeTenant() {
         autenticarComoPrincipalDoTenant();
-        when(roleRepository.findByNome("ADVOGADO"))
-                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).build()));
         when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ResponseEntity<?> response = novoController().createUser(corpoCriacaoComRoles(List.of("ADVOGADO")));
+        ResponseEntity<?> response = novoController()
+                .createUser(corpoCriacaoComTenantRoleIds(List.of(TENANT_ROLE_ADVOGADO_ID)));
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         verify(userRepository, times(1)).save(any());
     }
 
     // Caso 4 — updateUser recusa PLATAFORMA_ADMIN com 403 e nao altera os papeis (segundo caminho de
-    // escalada: promover uma conta ja existente, incluindo a propria).
+    // escalada: promover uma conta ja existente, incluindo a propria). Phase 127 (Plano 05,
+    // Decisao 6): mesma conversao id-based do Caso 1 -- ver o comentario la.
     @Test
     void updateUser_recusaPlataformaAdminCom403ENaoAlteraPapeis() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRolePlataformaAdmin()));
 
         ResponseEntity<?> response = novoController()
-                .updateUser(USER_ID, Map.of("roles", List.of("PLATAFORMA_ADMIN")));
+                .updateUser(USER_ID, Map.of("tenantRoleIds", List.of(TENANT_ROLE_PLATAFORMA_ADMIN_ID.toString())));
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(userRepository, never()).save(any());
@@ -202,14 +236,11 @@ class AdminControllerPlataformaAdminContencaoTest {
     void updateUser_continuaAPermitirMudarEntrePapeisDeTenant() {
         autenticarComoPrincipalDoTenant();
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(utilizadorExistente()));
-        when(roleRepository.findByNome("TECNICO")).thenReturn(Optional.of(Role.builder().id(2).nome("TECNICO").build()));
-        // Phase 126 (Plan 04): updateUser tambem povoa tenantRoles quando roles nao e vazio --
-        // ver AdminControllerAtribuicaoPapeisEscritorioTest para a prova comportamental completa
-        // desse caminho de escrita; aqui so precisa de nao rebentar com NPE.
-        when(resolucaoPapeisService.resolverPapeisDeEscritorio(any(), any())).thenReturn(Set.of());
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleTecnico()));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ResponseEntity<?> response = novoController().updateUser(USER_ID, Map.of("roles", List.of("TECNICO")));
+        ResponseEntity<?> response = novoController()
+                .updateUser(USER_ID, Map.of("tenantRoleIds", List.of(TENANT_ROLE_TECNICO_ID.toString())));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(userRepository, times(1)).save(any());
@@ -293,11 +324,10 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_recusaPermissionRolePlataformaAdminCom403() {
         autenticarComoPrincipalDoTenant();
-        // "roles": ["ADVOGADO"] tem de resolver para uma Role real -- senao createUser devolveria
-        // 400 ("Pelo menos uma role válida é obrigatória") antes de sequer chegar a guarda de
-        // "permissions" sob teste aqui. Ver corpoCriacaoComPermissions.
-        when(roleRepository.findByNome("ADVOGADO"))
-                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        // "tenantRoleIds": [id do papel ADVOGADO] tem de resolver para um TenantRole real --
+        // senao createUser devolveria 404 antes de sequer chegar a guarda de "permissions" sob
+        // teste aqui. Ver corpoCriacaoComPermissions.
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
 
         ResponseEntity<?> response = novoController()
                 .createUser(corpoCriacaoComPermissions(List.of("ROLE_PLATAFORMA_ADMIN")));
@@ -314,8 +344,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_recusaPermissionPlataformaAdminCruaCom403() {
         autenticarComoPrincipalDoTenant();
-        when(roleRepository.findByNome("ADVOGADO"))
-                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
 
         ResponseEntity<?> response = novoController()
                 .createUser(corpoCriacaoComPermissions(List.of("PLATAFORMA_ADMIN")));
@@ -329,8 +358,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_recusaPermissionPlataformaAdminMesmoMisturadaComPermissionLegitima() {
         autenticarComoPrincipalDoTenant();
-        when(roleRepository.findByNome("ADVOGADO"))
-                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
 
         ResponseEntity<?> response = novoController().createUser(
                 corpoCriacaoComPermissions(List.of("clientes:view", "ROLE_PLATAFORMA_ADMIN")));
@@ -343,8 +371,7 @@ class AdminControllerPlataformaAdminContencaoTest {
     @Test
     void createUser_continuaAAceitarPermissionsLegitimas() {
         autenticarComoPrincipalDoTenant();
-        when(roleRepository.findByNome("ADVOGADO"))
-                .thenReturn(Optional.of(Role.builder().id(1).nome("ADVOGADO").build()));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(tenantRoleAdvogado()));
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(Tenant.builder().id(TENANT_ID).build()));
         when(passwordEncoder.encode(PASSWORD)).thenReturn("hash-irrelevante");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
