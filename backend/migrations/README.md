@@ -134,6 +134,10 @@ Everything else in this directory is **skip** on a fresh install:
   not error: `ddl-auto` already created `t_user_tenant_role`, and the script's own
   `CREATE TABLE IF NOT EXISTS` guards its creation, so running it against a fresh database
   simply changes nothing.
+- `128-add-audit-log-detalhe.sql` — redundant, but unlike the `FORBIDDEN` group it will not
+  error: `ddl-auto` already created `t_audit_log.detalhe` (Phase 128, RBAC audit), and the
+  script's own `ADD COLUMN IF NOT EXISTS` guards its creation, so running it against a fresh
+  database simply changes nothing.
 
 ---
 
@@ -161,6 +165,7 @@ database*. Verify per database, not per environment — the environments have dr
 | 14 | `125-convert-tenant-logo-data-url-to-text.sql` | Converts `t_tenant.logo_data_url` from a Large Object (`oid`) column to plain `text`. **Existing-database only — see the stop banner.** Required only where the column is currently `oid`; without it the app fails schema validation after the `@Lob` removal deploy. | **No** — but it now refuses safely (guard), instead of destroying. |
 | 15 | `126-add-tenant-role-tables.sql` | Creates `t_tenant_role` + `t_tenant_role_permission` and adds `t_role.instanciavel` (Phase 125, moldes e papeis de escritorio); no backfill — the seeder converges on the very next boot. | **Yes** — every statement uses `IF NOT EXISTS`. |
 | 16 | `127-add-user-tenant-role-table.sql` | Creates `t_user_tenant_role` (Phase 126, migração de papéis existentes); no backfill — the conversion of existing users to office roles runs in Java on the next boot. `t_user_role` is not touched. | **Yes** — `CREATE TABLE IF NOT EXISTS`. |
+| 17 | `128-add-audit-log-detalhe.sql` | Adds nullable `t_audit_log.detalhe` (Phase 128, auditoria de RBAC); no backfill — existing rows stay `NULL`, only new RBAC audit events populate it. `t_audit_log` itself has **no creation script in this directory** — it was created by `ddl-auto: update` (Phase 87 era) and exists on every install today because every environment currently runs `update`; this script only adds a column to that already-existing table. | **Yes** — `ADD COLUMN IF NOT EXISTS`. |
 
 ### Verify before running `125`
 
@@ -181,7 +186,7 @@ WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
 
 ## Re-run safety
 
-Only **6 of 16** scripts tolerate being run twice:
+Only **7 of 17** scripts tolerate being run twice:
 
 | Safe to re-run | Why |
 |---|---|
@@ -191,6 +196,7 @@ Only **6 of 16** scripts tolerate being run twice:
 | `124-add-permission-catalogo-columns` | Every `ALTER TABLE` uses `ADD COLUMN IF NOT EXISTS`. |
 | `126-add-tenant-role-tables` | every statement uses `IF NOT EXISTS` |
 | `127-add-user-tenant-role-table.sql` | the single statement uses `CREATE TABLE IF NOT EXISTS` |
+| `128-add-audit-log-detalhe.sql` | the single statement uses `ADD COLUMN IF NOT EXISTS` |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -214,7 +220,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **8 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **9 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -226,6 +232,7 @@ As of the last verification, on a client (existing) database, **8 scripts are ou
 | `125-convert-tenant-logo-data-url-to-text.sql` | **No execution record anywhere.** Determine its status per database using the `information_schema` query above. |
 | `126-add-tenant-role-tables.sql` | Pending — new in this phase. |
 | `127-add-user-tenant-role-table.sql` | Pending — new in this phase. |
+| `128-add-audit-log-detalhe.sql` | Pending, new in this phase. |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
 is precisely why this checklist exists: **do not treat planning documents as the record of

@@ -1,0 +1,33 @@
+-- Phase 128 (AUDT-01/AUDT-02): add nullable `detalhe` column to t_audit_log
+--
+-- IMPORTANT: This is a REQUIRED manual production migration script. It MUST be run
+-- manually (e.g. via psql or DBeaver) against the database BEFORE or DURING deploying the
+-- code change that adds the `detalhe` field to the `AuditLog` entity
+-- (backend/src/main/java/com/lexcv/models/AuditLog.java).
+--
+-- Why: `application.yml` runs `ddl-auto: update` and creates this column by itself on a
+-- fresh/dev database from the entity mapping. A database running with
+-- `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` refuses to start without it -- `validate` never
+-- creates or alters schema, it only checks the existing schema is compatible at startup.
+-- There is no automated migration runner in this repository (no Flyway, no Liquibase --
+-- only Hibernate `ddl-auto` for schema evolution). Execution of this script is therefore
+-- manual: run it once against each environment's database (staging/prod) before that
+-- environment picks up the deploy that introduces this field.
+--
+-- Provenance note: `t_audit_log` itself has NO creation script in this directory and no
+-- entry in this file's inventory tables -- the table was created by `ddl-auto: update`
+-- (Phase 87 era, before this migrations directory's convention of one script per schema
+-- change existed) and exists on every install today, because every environment currently
+-- runs `update` (see CLAUDE.md and the "STOP" banner at the top of this directory's
+-- README.md). This script only ADDs a column to that already-existing table -- it does not,
+-- and cannot, create t_audit_log itself.
+--
+-- Nullable, no backfill: existing rows are processo/parecer audit events (transicao_estado,
+-- conflict_check_decisao, documento_download, documento_eliminacao, parecer_*,
+-- processo_atribuir) that never had a "what changed" detail. They stay NULL forever -- only
+-- the new RBAC audit-write path (AuditoriaRbacService, Plan 02) populates this column, and
+-- only for its own new rows.
+--
+-- Idempotent: ADD COLUMN IF NOT EXISTS, safe to run twice against the same database.
+
+ALTER TABLE t_audit_log ADD COLUMN IF NOT EXISTS detalhe TEXT;
