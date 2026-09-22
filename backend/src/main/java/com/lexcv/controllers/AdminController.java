@@ -580,8 +580,11 @@ public class AdminController {
             user.setAtivo(novoAtivo);
         }
 
-        if (body.containsKey("password") && ((String) body.get("password")).trim().length() > 0) {
-            String password = (String) body.get("password");
+        // A password e OPCIONAL neste handler: ausente, nula ou em branco significam "nao mudar".
+        // O `instanceof` (nunca um cast cru) cobre os tres casos de uma vez -- `(String) null`
+        // passa no cast e fazia `.trim()` lancar uma NullPointerException nao tratada, devolvendo
+        // 500 onde o contrato manda ignorar o campo. Mesma correcao que IN-01 em createUser.
+        if (body.get("password") instanceof String password && !password.trim().isEmpty()) {
             if (!password.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")) {
                 return RecusaTransacional.recusar(ResponseEntity.badRequest().body(Map.of("message", "A password deve ter no mínimo 8 caracteres, uma maiúscula, uma minúscula, um número e um caractere especial.")));
             }

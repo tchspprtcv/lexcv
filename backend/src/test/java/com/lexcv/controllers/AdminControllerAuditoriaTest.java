@@ -308,6 +308,37 @@ class AdminControllerAuditoriaTest {
         verifyNoInteractions(auditoriaRbacService);
     }
 
+    // Mesma classe de fragilidade que IN-01 (128-REVIEW.md), no handler irmao: aqui o cast cru
+    // `((String) body.get("password")).trim()` aceita um null -- o cast passa, e `.trim()` lanca
+    // uma NullPointerException nao tratada. Isso devolvia 500 onde o contrato deste campo, que e
+    // OPCIONAL no updateUser, manda simplesmente ignorar a password e gravar o resto do pedido.
+    // Nao foi encontrado pela revisao da fase (esta linha nao e codigo deste marco), mas e o
+    // mesmo defeito, por isso fecha-se aqui em vez de ficar em divida.
+    @Test
+    void updateUser_comPasswordExplicitamenteNulo_ignoraOCampoSemNPE() {
+        autenticarComoPrincipalDoTenant(TENANT_ID, PRINCIPAL_ID);
+        UUID alvoId = UUID.randomUUID();
+
+        User utilizador = User.builder().id(alvoId).tenantId(TENANT_ID).nome("Alvo")
+                .email("alvo@escritorio.cv").ativo(true).passwordHash("hash-original")
+                .tenantRoles(Set.of()).build();
+        when(userRepository.findById(alvoId)).thenReturn(Optional.of(utilizador));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // HashMap, pelo mesmo motivo do caso de createUser: Map.of rejeita valores nulos, e o
+        // ponto deste teste e "password" PRESENTE e explicitamente nulo.
+        Map<String, Object> corpo = new HashMap<>();
+        corpo.put("password", null);
+
+        ResponseEntity<?> response = novoController().updateUser(alvoId, corpo);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // A password fica intacta: um null nao e uma password nova nem um pedido de a apagar.
+        assertEquals("hash-original", utilizador.getPasswordHash());
+        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(auditoriaRbacService);
+    }
+
     // tenantRoleIds contendo o papel reservado a plataforma -- 403 antes de qualquer mutacao,
     // nenhum evento.
     @Test
