@@ -129,3 +129,7 @@ None — this plan only adds calls into `AuditoriaRbacService` (Plan 02, already
 ---
 *Phase: 128-auditoria-de-atribui-es-de-pap-is*
 *Completed: 2026-09-22*
+
+## Self-Check: PASSED
+
+All 10 created/modified source files plus this SUMMARY.md verified present on disk. All three commit hashes (`f3c6abd1`, `4f6c1f13`, `d5ee4584`) verified present in `git log --oneline --all`. No missing items.
