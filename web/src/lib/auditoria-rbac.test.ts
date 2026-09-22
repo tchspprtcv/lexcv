@@ -53,6 +53,23 @@ describe("auditoriaEventoToSentence / auditoriaEventoToTexto", () => {
     expect(auditoriaEventoToTexto(entry)).toBe("Maria Silva renomeou o papel Antigo para Novo.");
   });
 
+  it("papel_renomear with nomeAntigo/nomeNovo null falls back to 'nome desconhecido', not 'um papel removido' (WR-02, 128-REVIEW.md)", () => {
+    const entry = baseEntry({
+      acao: "papel_renomear",
+      categoria: "papel",
+      autorNome: "Maria Silva",
+      nomeAntigo: null,
+      nomeNovo: null,
+    });
+    const segmentos = auditoriaEventoToSentence(entry);
+    expect(segmentos.filter((s) => s.texto === "nome desconhecido")).toHaveLength(2);
+    expect(segmentos.some((s) => s.texto === "nome desconhecido" && s.destaque)).toBe(true);
+    expect(segmentos.some((s) => s.texto === "um papel removido")).toBe(false);
+    expect(auditoriaEventoToTexto(entry)).toBe(
+      "Maria Silva renomeou o papel nome desconhecido para nome desconhecido.",
+    );
+  });
+
   it("papel_apagar renders 'Maria Silva apagou o papel Financeiro.'", () => {
     const entry = baseEntry({
       acao: "papel_apagar",

@@ -23,6 +23,15 @@ export type SegmentoFrase = { texto: string; destaque: boolean };
 const AUTOR_REMOVIDO = "um administrador removido";
 const ALVO_REMOVIDO = "um utilizador removido";
 const PAPEL_REMOVIDO = "um papel removido";
+// WR-02 (128-REVIEW.md): distinto de PAPEL_REMOVIDO de propósito. PAPEL_REMOVIDO significa "o
+// papel em si já não existe" (correto para papelSegmento, usado por
+// papel_criar/papel_apagar/papel_permissoes_alterar/papel_atribuir/papel_retirar, onde um
+// papelNome nulo pode mesmo significar que o papel foi entretanto apagado). Num evento
+// papel_renomear o papel continua a existir -- só o SNAPSHOT do nome antigo/novo é que falhou a
+// resolver (evento legado anterior à coluna `detalhe`, ou um `detalhe` malformado). Reutilizar
+// PAPEL_REMOVIDO aqui produziria "Maria Silva renomeou o papel um papel removido para um papel
+// removido.", que lê como se o papel tivesse sido apagado -- falso.
+const NOME_DESCONHECIDO = "nome desconhecido";
 const EVENTO_DESCONHECIDO = "Evento de auditoria não reconhecido.";
 
 function autorSegmento(entry: AuditoriaRbacEntry): SegmentoFrase {
@@ -38,11 +47,11 @@ function papelSegmento(entry: AuditoriaRbacEntry): SegmentoFrase {
 }
 
 function nomeAntigoSegmento(entry: AuditoriaRbacEntry): SegmentoFrase {
-  return { texto: entry.nomeAntigo ?? PAPEL_REMOVIDO, destaque: true };
+  return { texto: entry.nomeAntigo ?? NOME_DESCONHECIDO, destaque: true };
 }
 
 function nomeNovoSegmento(entry: AuditoriaRbacEntry): SegmentoFrase {
-  return { texto: entry.nomeNovo ?? PAPEL_REMOVIDO, destaque: true };
+  return { texto: entry.nomeNovo ?? NOME_DESCONHECIDO, destaque: true };
 }
 
 const CONSTRUTORES: Record<AuditoriaRbacAcao, (entry: AuditoriaRbacEntry) => SegmentoFrase[]> = {
