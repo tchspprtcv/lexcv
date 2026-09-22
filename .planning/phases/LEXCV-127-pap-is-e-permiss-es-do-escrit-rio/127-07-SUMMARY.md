@@ -247,3 +247,8 @@ None - no external service configuration required.
 ---
 *Phase: 127-pap-is-e-permiss-es-do-escrit-rio*
 *Completed: 2026-09-22*
+
+## Self-Check: PASSED
+
+All 4 created/modified files verified present on disk; all 3 commits
+(`7d52d5ca`, `4511acf3`, `8a7c98a6`) verified present in `git log`.
