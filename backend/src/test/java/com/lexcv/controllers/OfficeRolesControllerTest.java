@@ -438,4 +438,30 @@ class OfficeRolesControllerTest {
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         verify(tenantRoleRepository, times(1)).deleteById(tecnico.getId());
     }
+
+    // Caso 13 (WR-01, 127-REVIEW.md): a corrida entre a contagem (0, no momento da guarda) e o
+    // deleteById -- uma atribuicao concorrente (PUT /admin/users/{id}) insere uma linha
+    // t_user_tenant_role depois do count, e a FK real reagiria com
+    // DataIntegrityViolationException no proprio deleteById. Simulado aqui fazendo
+    // tenantRoleRepository.deleteById lancar essa excecao apesar da contagem ter devolvido 0 --
+    // tem de virar 409 (a mesma recusa que a contagem teria dado se tivesse corrido depois), nunca
+    // propagar como 500 nao tratado.
+    @Test
+    void deleteRole_corridaEntreContagemEDeleteEDevolve409EmVezDe500() {
+        autenticarComoPrincipalDoTenant(TENANT_ID);
+        TenantRole tecnico = TenantRole.builder()
+                .id(UUID.randomUUID()).tenantId(TENANT_ID).nome("TECNICO").build();
+        when(tenantRoleRepository.findById(tecnico.getId())).thenReturn(Optional.of(tecnico));
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.empty());
+        when(roleRepository.findByNome("PLATAFORMA_ADMIN")).thenReturn(Optional.empty());
+        when(userRepository.countByTenantRolesId(tecnico.getId())).thenReturn(0L);
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk violation"))
+                .when(tenantRoleRepository).deleteById(tecnico.getId());
+
+        ResponseEntity<?> response = assertDoesNotThrow(() -> novoController().deleteRole(tecnico.getId()));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
+        assertTrue(mensagem.contains("atribuído"));
+    }
 }

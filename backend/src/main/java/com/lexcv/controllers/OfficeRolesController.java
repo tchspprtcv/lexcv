@@ -282,7 +282,24 @@ public class OfficeRolesController {
                     "Este papel está atribuído a " + atribuicoes + " utilizador(es) e não pode ser apagado."));
         }
 
-        tenantRoleRepository.deleteById(id);
+        try {
+            tenantRoleRepository.deleteById(id);
+        } catch (DataIntegrityViolationException ex) {
+            // WR-01 (127-REVIEW.md): a contagem acima e deliberadamente CHECK-then-ACT, nao uma
+            // transaccao/lock (ver o doc-comment da guarda de atribuicao acima) -- entre o count e
+            // este deleteById, um PUT /admin/users/{id} concorrente com este id em tenantRoleIds
+            // pode inserir uma linha t_user_tenant_role que ainda nao existia na contagem. Sem este
+            // catch, a FK apanhava essa corrida como DataIntegrityViolationException nao tratada ->
+            // 500 nao estruturado, em vez do 409 que a contagem foi desenhada para produzir. Apanha
+            // SO esta excecao NESTE ponto (nunca um catch generico a volta do metodo inteiro -- a
+            // Fase 125 ja tinha corrigido um catch demasiado largo que rotulava mal violacoes nao
+            // relacionadas) e devolve a MESMA mensagem que a contagem já dá, porque semanticamente
+            // é o mesmo motivo de recusa (atribuição concorrente), só apanhado num sítio diferente.
+            // A janela de corrida check-then-act em si permanece aceite tal e qual -- este catch só
+            // corrige a FORMA da falha (500 -> 409), não elimina a corrida.
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este papel está atribuído a um ou mais utilizadores e não pode ser apagado."));
+        }
         return ResponseEntity.noContent().build();
     }
 }
