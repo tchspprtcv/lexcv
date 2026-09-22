@@ -11,7 +11,7 @@
     "verify:juizo-origem": "node scripts/verify-juizo-origem-roundtrip.mjs",
     "verify:limite-utilizadores": "node scripts/verify-limite-utilizadores-indicator.mjs",
     "verify:consola-tenants": "node scripts/verify-consola-tenants.mjs",
-    "verify:bloqueio-rbac": "node scripts/verify-bloqueio-rbac.mjs",
+    "verify:papeis-escritorio": "node scripts/verify-papeis-escritorio.mjs",
     "verify:relatorio-utilizacao": "node scripts/verify-relatorio-utilizacao.mjs",
     "verify:consola-moldes": "node scripts/verify-consola-moldes.mjs"
   },
