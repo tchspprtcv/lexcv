@@ -83,9 +83,15 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>("profile");
 
   // Admin queries
-  const isAdmin = me?.roles?.includes("ADMIN");
-  const hasUsersManage = can.manage("users") || isAdmin;
-  const hasRbacManage = can.manage("rbac") || isAdmin;
+  // WR-02 (127-REVIEW.md): a antiga guarda `me?.roles?.includes("ADMIN")` comparava pelo NOME
+  // efectivo do papel -- exactamente o que PAPEL-04 torna editavel nesta fase. Um escritorio que
+  // renomeasse o seu papel de administrador via PUT /admin/rbac/roles/{id} perdia, em silencio,
+  // esta segunda via de visibilidade das abas (nunca a real, ja que can.manage(...) nao depende
+  // do nome). Removida por inteiro -- a permissao efectiva (rbac:manage/users:manage) ja cobre a
+  // visibilidade pretendida, na mesma disciplina de proveniencia (nunca nome) que o resto desta
+  // fase aplica em ParecerController/OfficeRolesController/AdminController.
+  const hasUsersManage = can.manage("users");
+  const hasRbacManage = can.manage("rbac");
 
   // Render tabs
   return (

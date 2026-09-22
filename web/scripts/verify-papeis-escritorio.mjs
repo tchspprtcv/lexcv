@@ -16,7 +16,11 @@
 //     precede o primeiro early return" para "TODO hook do bloco precede o
 //     primeiro early return" — mais forte que o original, porque a aba
 //     reescrita pode ja nao chamar useMe().
-//   - A09 (nao-regressao da visibilidade da aba) sobrevive verbatim.
+//   - A09 (nao-regressao da visibilidade da aba) sobrevive, mas ja NAO verbatim: o WR-02 de
+//     127-REVIEW.md apanhou o fallback `|| isAdmin` (comparacao pelo nome literal "ADMIN") como
+//     logica morta/enganadora e pediu a sua remocao -- a assercao foi reescrita para provar a
+//     garantia CORRIGIDA (visibilidade so por permissao efectiva), preservando a nao-regressao
+//     original sem preservar a forma exacta da condicao.
 //   - A06/A07/A08 (badge+tooltip "Gerido pela Plataforma") sao apagadas,
 //     nao adaptadas — a aparelhagem desapareceu.
 //   - A03/A04/A05/A10/A11/A12 sao invertidas ou re-visadas para a nova
@@ -178,11 +182,22 @@ async function main() {
       },
     },
     {
-      id: "hasrbacmanage-inalterado",
+      // WR-02 (127-REVIEW.md): a antiga A09 provava que a visibilidade da aba sobrevivia
+      // verbatim, incluindo o fallback `|| isAdmin` que comparava pelo NOME literal "ADMIN" --
+      // exactamente o que PAPEL-04 torna editavel. Essa mesma revisao apanhou o fallback como
+      // logica morta/enganadora (nunca um gap de seguranca, porque estava sempre OR'd com a
+      // permissao real) e pediu a sua remocao. Esta assercao foi reescrita, nao apagada, para
+      // provar a garantia CORRIGIDA: a visibilidade das abas depende SO da permissao efectiva
+      // (rbac:manage/users:manage), nunca de um literal de nome de papel -- o que sobrevive de
+      // A09 e a garantia de nao-regressao ("a aba continua visivel"), nao a forma exacta da
+      // condicao.
+      id: "hasrbacmanage-sem-fallback-por-nome",
       descricao:
-        'o ficheiro completo (sem comentarios) contem \'const hasRbacManage = can.manage("rbac") || isAdmin;\' — a antiga A09 verbatim: a visibilidade da aba nao e alterada por esta fase (Decisao 3 muda o que rbac:manage governa, nao quem ve a aba)',
+        'o ficheiro completo (sem comentarios) contem \'const hasRbacManage = can.manage("rbac");\' e \'const hasUsersManage = can.manage("users");\', e NAO contem \'isAdmin\' — substitui a antiga A09: a visibilidade da aba continua a existir, mas deixa de ter um segundo caminho por nome literal de papel (WR-02, 127-REVIEW.md)',
       predicate: () =>
-        settingsPage.includes('const hasRbacManage = can.manage("rbac") || isAdmin;'),
+        settingsPage.includes('const hasRbacManage = can.manage("rbac");') &&
+        settingsPage.includes('const hasUsersManage = can.manage("users");') &&
+        !settingsPage.includes("isAdmin"),
     },
 
     // ---- Inversoes da garantia retirada ----
