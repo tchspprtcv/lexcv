@@ -69,6 +69,7 @@ class SetupServiceInstanciacaoMoldesTest {
     @Mock private RoleRepository roleRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRoleRepository tenantRoleRepository;
+    @Mock private AuditoriaRbacService auditoriaRbacService;
 
     private SetupService setupService;
 
@@ -76,7 +77,7 @@ class SetupServiceInstanciacaoMoldesTest {
     void setUp() {
         setupService = new SetupService(
                 systemSettingRepository, tenantRepository, userRepository, roleRepository, passwordEncoder,
-                tenantRoleRepository);
+                tenantRoleRepository, auditoriaRbacService);
     }
 
     private SetupInitializeRequest requestValido(String clientName, String adminEmail, String adminPassword) {

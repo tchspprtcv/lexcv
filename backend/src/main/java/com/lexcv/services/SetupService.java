@@ -48,6 +48,7 @@ public class SetupService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final TenantRoleRepository tenantRoleRepository;
+    private final AuditoriaRbacService auditoriaRbacService;
 
     public boolean isInitialized() {
         return systemSettingRepository.findById(SystemSetting.SINGLETON_ID)
@@ -109,6 +110,15 @@ public class SetupService {
         systemSettingRepository.save(settings);
     }
 
+    // Phase 128 Plan 06 (Decisao 4, 128-CONTEXT.md): initializeSystem deliberadamente NAO chama
+    // auditoriaRbacService. E o wizard publico de primeiro arranque, sem nenhum principal
+    // autenticado -- nao ha "quem" para gravar como autor, e a instalacao ainda nao tem nenhum
+    // escritorio anterior cujo historico faca sentido abrir com este evento. E a mesma categoria
+    // que a conversao de arranque da Phase 126 (MigracaoPapeisEscritorioService.migrar(), tambem
+    // sem chamada a auditoriaRbacService): arranque de sistema, nao decisao de uma pessoa. So
+    // provisionTenant (chamado pelo PLATAFORMA_ADMIN autenticado a partir da consola) grava
+    // evento -- ver o seu Javadoc.
+
     /**
      * Caminho de provisionamento gated a {@code PLATAFORMA_ADMIN} (invocado pelo
      * {@code PlatformAdminController} do Plan 04) -- distinto do wizard público
@@ -122,6 +132,23 @@ public class SetupService {
      * plataforma. Devolve a {@link Tenant} guardada (com {@code id} preenchido), ao contrário de
      * {@link #initializeSystem} (que devolve {@code void}), porque o controlador precisa do
      * {@code id}/{@code nome} para construir a resposta 201.
+     *
+     * <p><b>Phase 128 Plan 06 (Decisão 4, 128-CONTEXT.md — item ao critério do executor, decidido
+     * SIM):</b> depois de {@link #instanciarMoldesEAtribuirAdminFundador} atribuir o {@link
+     * TenantRole} ADMIN ao fundador, este método grava esse evento como a primeira linha do
+     * histórico do escritório, chamando o método de registo de atribuições de {@link
+     * AuditoriaRbacService} — DENTRO desta mesma transacção {@code @Transactional} (propagação
+     * {@code MANDATORY} nesse método: se a escrita do evento falhar, toda a criação do tenant
+     * rebobina com ela). Decidido SIM porque a condição do Decisão 4 se verifica ("se for
+     * simples de fazer na mesma transacção, fazer") — {@code provisionTenant} já era
+     * transacional. O autor é gravado como {@code null}, nunca o {@code PLATAFORMA_ADMIN} que
+     * invocou este método a partir da consola de plataforma: esse utilizador pertence ao tenant
+     * reservado da plataforma, e gravar o seu id ou nome no registo de OUTRO tenant seria uma
+     * fuga de identidade entre tenants (T-128-29, STRIDE — Information Disclosure). Um evento com
+     * autor {@code null} é interpretado pelo ecrã de consulta como um evento de sistema ("A
+     * plataforma atribuiu..."), nunca atribuído a uma pessoa. Ver o comentário em {@link
+     * #initializeSystem} para o porquê de esse caminho, e a conversão de arranque da Phase 126
+     * ({@code MigracaoPapeisEscritorioService}), ficarem deliberadamente de fora.
      */
     @Transactional
     public Tenant provisionTenant(SetupInitializeRequest request) {
@@ -152,6 +179,10 @@ public class SetupService {
         userRepository.save(adminUser);
 
         instanciarMoldesEAtribuirAdminFundador(tenant.getId(), adminUser, adminRole);
+
+        auditoriaRbacService.registarAtribuicoes(
+                tenant.getId(), null, adminUser, Set.of(), adminUser.getTenantRoles(),
+                AuditoriaRbacService.MOTIVO_PROVISIONAMENTO);
 
         return tenant;
     }

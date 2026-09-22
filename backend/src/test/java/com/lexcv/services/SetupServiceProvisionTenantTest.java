@@ -5,6 +5,7 @@ import com.lexcv.models.Role;
 import com.lexcv.models.SystemSetting;
 import com.lexcv.models.Tenant;
 import com.lexcv.models.TenantPlano;
+import com.lexcv.models.TenantRole;
 import com.lexcv.models.User;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.SystemSettingRepository;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -63,6 +67,7 @@ class SetupServiceProvisionTenantTest {
     @Mock private RoleRepository roleRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRoleRepository tenantRoleRepository;
+    @Mock private AuditoriaRbacService auditoriaRbacService;
 
     private SetupService setupService;
 
@@ -70,7 +75,7 @@ class SetupServiceProvisionTenantTest {
     void setUp() {
         setupService = new SetupService(
                 systemSettingRepository, tenantRepository, userRepository, roleRepository, passwordEncoder,
-                tenantRoleRepository);
+                tenantRoleRepository, auditoriaRbacService);
         // Phase 125 Plan 02: provisionTenant passa a ler findAllByInstanciavelTrue() para
         // instanciar moldes. Um tenant provisionado num cenario sem moldes e valido e nao e o
         // assunto deste ficheiro (ver SetupServiceInstanciacaoMoldesTest) -- lenient() porque
@@ -292,5 +297,59 @@ class SetupServiceProvisionTenantTest {
         ArgumentCaptor<Tenant> tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
         verify(tenantRepository).save(tenantCaptor.capture());
         assertEquals(TenantPlano.STARTER, tenantCaptor.getValue().getPlano());
+    }
+
+    // Phase 128 Plan 06 (AUDT-02, Decisao 4): provisionamento de escritorio novo passa a gravar
+    // a atribuicao do administrador fundador como o primeiro evento do historico do tenant,
+    // dentro da mesma transacao de provisionTenant.
+
+    // Caso 10 -- ADMIN instanciavel: registarAtribuicoes chamado UMA vez, com o tenant recem-
+    // criado, autor null (nao o PLATAFORMA_ADMIN invocador -- T-128-29), o fundador como alvo,
+    // antes vazio e depois = o TenantRole ADMIN que acabou de ser atribuido.
+    @Test
+    void provisionTenant_comAdminInstanciavel_registaAtribuicaoDeProvisionamentoNaMesmaTransacao() {
+        Role adminRole = Role.builder().id(1).nome("ADMIN").permissions(new HashSet<>()).build();
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(roleRepository.findAllByInstanciavelTrue()).thenReturn(List.of(adminRole));
+        when(userRepository.findByEmail("auditado@escritorio.cv")).thenReturn(Optional.empty());
+        stubTenantSaveComIdGerado();
+
+        SetupInitializeRequest request =
+                requestValido("Escritorio Auditado", "auditado@escritorio.cv", "Pa$$w0rd");
+        Tenant resultado = setupService.provisionTenant(request);
+
+        ArgumentCaptor<User> alvoCaptor = ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<Set> depoisCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(auditoriaRbacService, times(1)).registarAtribuicoes(
+                eq(resultado.getId()), isNull(), alvoCaptor.capture(), eq(Set.of()), depoisCaptor.capture(),
+                eq(AuditoriaRbacService.MOTIVO_PROVISIONAMENTO));
+
+        assertEquals("auditado@escritorio.cv", alvoCaptor.getValue().getEmail());
+        assertEquals(1, depoisCaptor.getValue().size());
+        TenantRole tenantRoleGravado = (TenantRole) depoisCaptor.getValue().iterator().next();
+        assertEquals("ADMIN", tenantRoleGravado.getNome());
+    }
+
+    // Caso 11 -- sem ADMIN instanciavel: o fundador fica sem TenantRole (Caso 2 de
+    // SetupServiceAtribuicaoAdminFundadorTest), por isso registarAtribuicoes e chamado com
+    // "depois" tambem vazio -- nenhuma atribuicao real aconteceu, e AuditoriaRbacServiceTest ja
+    // prova que um diff antes/depois iguais nao grava nenhuma linha (zero saves). Este teste so
+    // prova o lado de SetupService: continua a chamar o metodo (nunca condicionalmente), nunca
+    // com um TenantRole fantasma em "depois".
+    @Test
+    void provisionTenant_semAdminInstanciavel_registaAtribuicaoComDepoisVazioSemAtribuicaoReal() {
+        Role adminRole = Role.builder().id(1).nome("ADMIN").permissions(new HashSet<>()).build();
+        when(roleRepository.findByNome("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(roleRepository.findAllByInstanciavelTrue()).thenReturn(List.of());
+        when(userRepository.findByEmail("semaudit@escritorio.cv")).thenReturn(Optional.empty());
+        stubTenantSaveComIdGerado();
+
+        SetupInitializeRequest request =
+                requestValido("Escritorio Sem Admin Instanciavel", "semaudit@escritorio.cv", "Pa$$w0rd");
+        Tenant resultado = setupService.provisionTenant(request);
+
+        verify(auditoriaRbacService, times(1)).registarAtribuicoes(
+                eq(resultado.getId()), isNull(), any(User.class), eq(Set.of()), eq(Set.of()),
+                eq(AuditoriaRbacService.MOTIVO_PROVISIONAMENTO));
     }
 }

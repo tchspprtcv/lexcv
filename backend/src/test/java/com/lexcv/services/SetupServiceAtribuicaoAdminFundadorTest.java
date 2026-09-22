@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -57,6 +58,7 @@ class SetupServiceAtribuicaoAdminFundadorTest {
     @Mock private RoleRepository roleRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TenantRoleRepository tenantRoleRepository;
+    @Mock private AuditoriaRbacService auditoriaRbacService;
 
     private SetupService setupService;
 
@@ -64,7 +66,7 @@ class SetupServiceAtribuicaoAdminFundadorTest {
     void setUp() {
         setupService = new SetupService(
                 systemSettingRepository, tenantRepository, userRepository, roleRepository, passwordEncoder,
-                tenantRoleRepository);
+                tenantRoleRepository, auditoriaRbacService);
     }
 
     private SetupInitializeRequest requestValido(String clientName, String adminEmail, String adminPassword) {
@@ -163,6 +165,11 @@ class SetupServiceAtribuicaoAdminFundadorTest {
         User ultimoEstadoGravado = userCaptor.getAllValues().get(userCaptor.getAllValues().size() - 1);
         assertEquals(1, ultimoEstadoGravado.getTenantRoles().size());
         assertEquals("ADMIN", ultimoEstadoGravado.getTenantRoles().iterator().next().getNome());
+
+        // Phase 128 Plan 06 (Decisao 4): initializeSystem e o wizard publico de primeiro
+        // arranque, sem principal autenticado -- nunca toca em auditoriaRbacService, ao
+        // contrario de provisionTenant.
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 4 -- o administrador de plataforma nunca passa por provisionTenant/initializeSystem
