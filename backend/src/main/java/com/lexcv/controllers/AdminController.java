@@ -153,6 +153,63 @@ public class AdminController {
         return Optional.empty();
     }
 
+    // Phase 127 fix (CR-01, 127-REVIEW.md): guarda de "ultimo administrador ACTIVO" -- simetrica a
+    // guarda de existencia de OfficeRolesController#deleteRole (PAPEL-05/Decisao 4) e ao piso de
+    // permissoes de updateRbac (PAPEL-08), mas para a ATRIBUICAO/ACTIVACAO do papel protegido
+    // (moldeId do molde global "ADMIN"), que nenhuma das outras duas guardas cobre. Sem esta
+    // guarda, updateUser (via tenantRoleIds OU via "ativo": false) e deleteUser podiam reduzir a
+    // zero o numero de utilizadores ACTIVOS do papel protegido, trancando o escritorio inteiro
+    // fora de /api/v1/admin/** -- o auto-trancamento silencioso que PAPEL-08 proibe. createUser
+    // nunca precisa desta guarda: so acrescenta utilizadores, nunca reduz detentores existentes.
+    //
+    // Contagem, nunca tentativa-e-erro sobre uma FK -- mesma disciplina de
+    // OfficeRolesController#deleteRole (userRepository.countByTenantRolesIdAndAtivoTrue).
+    //
+    // `detentorContadoAntes`/`detentorContadoDepois` sao passados EXPLICITAMENTE pelo chamador
+    // (nunca lidos de dentro deste metodo a partir de `user`) porque updateUser pode mutar `user`
+    // a meio do pedido (ex.: "ativo" processado antes de "tenantRoleIds" no mesmo pedido) -- ler
+    // o estado directamente daqui seria ambiguo sobre se reflecte o ANTES ou o DEPOIS de uma
+    // mutacao anterior no mesmo metodo. Cada chamador calcula os dois flags a partir do seu
+    // proprio contexto, sempre relativos ao ESTADO ORIGINAL em BD (nunca ao objeto `user` ja
+    // mutado em memoria) para a parcela "antes".
+    private Optional<ResponseEntity<?>> guardaUltimoAdministrador(UUID papelProtegidoId,
+            boolean detentorContadoAntes, boolean detentorContadoDepois) {
+        if (papelProtegidoId == null || !detentorContadoAntes || detentorContadoDepois) {
+            // Nada a guardar: ou este utilizador nunca contou como detentor activo do papel
+            // protegido, ou continua a contar depois da operacao -- em nenhum dos casos esta
+            // operacao pode reduzir a contagem de detentores activos a zero.
+            return Optional.empty();
+        }
+        long detentoresAtivos = userRepository.countByTenantRolesIdAndAtivoTrue(papelProtegidoId);
+        if (detentoresAtivos <= 1) {
+            // Este utilizador e contabilizado em detentoresAtivos (a sua linha em BD ainda nao foi
+            // gravada com o novo estado) -- <= 1 significa que ele e o UNICO detentor activo, logo
+            // esta operacao deixaria a contagem em zero.
+            return Optional.of(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Esta operação deixaria o escritório sem nenhum utilizador ativo com o papel de "
+                            + "administrador do escritório.")));
+        }
+        return Optional.empty();
+    }
+
+    // Phase 127 fix (CR-01): par (id do papel protegido que este utilizador detem, se algum;
+    // detinha-o enquanto activo) calculado a partir do ESTADO ORIGINAL de `user`, ANTES de
+    // qualquer mutacao de updateUser/deleteUser -- ver o doc-comment de guardaUltimoAdministrador
+    // acima para porque isto nao pode ser recalculado a meio do metodo a partir de `user` mutado.
+    private record DetentorPapelProtegidoOriginal(UUID papelProtegidoId, boolean detinhaAtivo) {
+        static DetentorPapelProtegidoOriginal de(User user, Integer adminMoldeId) {
+            if (adminMoldeId == null) {
+                return new DetentorPapelProtegidoOriginal(null, false);
+            }
+            UUID papelId = user.getTenantRoles().stream()
+                    .filter(tr -> adminMoldeId.equals(tr.getMoldeId()))
+                    .map(TenantRole::getId)
+                    .findFirst().orElse(null);
+            boolean detinhaAtivo = papelId != null && Boolean.TRUE.equals(user.getAtivo());
+            return new DetentorPapelProtegidoOriginal(papelId, detinhaAtivo);
+        }
+    }
+
     // Phase 127 (Plano 05, 127-CONTEXT.md Decisao 6): par de valores devolvido pelo resolvedor de
     // atribuicao POR ID abaixo -- mesma forma/razao de ser do par historico ResolucaoTenantRolesOuErro
     // (ainda usado por updateUser ate ao Plano 05/Tarefa 2 converter tambem esse handler).
@@ -374,6 +431,15 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
         }
 
+        // CR-01 (127-REVIEW.md): snapshot do ESTADO ORIGINAL -- antes de QUALQUER mutação feita
+        // por este método -- usado pelas duas guardas de "último administrador ativo" abaixo
+        // (ativo: true -> false, e remoção do papel via tenantRoleIds). Ver o doc-comment de
+        // guardaUltimoAdministrador para porque isto tem de ser calculado aqui, e não a meio do
+        // método a partir de `user` já mutado.
+        Integer adminMoldeIdParaUltimoAdministrador = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
+        DetentorPapelProtegidoOriginal detentorOriginal =
+                DetentorPapelProtegidoOriginal.de(user, adminMoldeIdParaUltimoAdministrador);
+
         if (body.containsKey("email")) {
             String email = (String) body.get("email");
             Optional<User> existing = userRepository.findByEmail(email);
@@ -402,6 +468,19 @@ public class AdminController {
                 Optional<ResponseEntity<?>> limiteExcedido = limiteUtilizadoresExcedido(principal.getTenantId());
                 if (limiteExcedido.isPresent()) {
                     return limiteExcedido.get();
+                }
+            }
+            // CR-01 (127-REVIEW.md): desativar (true -> false) e o segundo caminho, alem da
+            // remoção via tenantRoleIds abaixo, capaz de reduzir a zero os detentores ATIVOS do
+            // papel protegido -- se este utilizador for o único, recusar antes de qualquer
+            // mutação. `detentorContadoDepois` é sempre `false` aqui: por definição, desativar
+            // significa que este utilizador deixa de contar como ativo, independentemente de
+            // continuar a deter o papel.
+            if (!novoAtivo) {
+                Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
+                        detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
+                if (bloqueioUltimoAdministrador.isPresent()) {
+                    return bloqueioUltimoAdministrador.get();
                 }
             }
             user.setAtivo(novoAtivo);
@@ -437,6 +516,23 @@ public class AdminController {
             }
 
             Set<TenantRole> tenantRoles = resolucao.tenantRoles();
+
+            // CR-01 (127-REVIEW.md): a remoção do papel protegido é o caminho PRINCIPAL desta
+            // guarda -- recusar ANTES de qualquer mutação (mesma disciplina validate-then-write
+            // de CR-01/WR-04 126-REVIEW.md acima). `detentorContadoDepois` usa o `user.getAtivo()`
+            // JÁ MUTADO se "ativo" também estava presente neste pedido (processado antes deste
+            // bloco) -- correto: se o mesmo pedido desativa e remove o papel, só a desativação
+            // (guardada acima) precisa de recusar; se o utilizador já foi confirmado como
+            // continuando ativo, esta guarda usa esse facto para decidir se ele continua a contar.
+            boolean deteraPapelProtegidoDepois = detentorOriginal.papelProtegidoId() != null
+                    && tenantRoles.stream().anyMatch(tr -> detentorOriginal.papelProtegidoId().equals(tr.getId()))
+                    && Boolean.TRUE.equals(user.getAtivo());
+            Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
+                    detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), deteraPapelProtegidoDepois);
+            if (bloqueioUltimoAdministrador.isPresent()) {
+                return bloqueioUltimoAdministrador.get();
+            }
+
             Set<Role> mirror = derivarMirrorGlobalDePapeis(tenantRoles);
             // Copia (HashSet novo), nunca a colecao devolvida pelo resolvedor -- mesma disciplina
             // do createUser/mirror acima.
@@ -482,6 +578,19 @@ public class AdminController {
         User user = userRepository.findById(id).orElse(null);
         if (user == null || !user.getTenantId().equals(principal.getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Utilizador não encontrado"));
+        }
+
+        // CR-01 (127-REVIEW.md): a auto-eliminação já está recusada acima (principal == id); esta
+        // guarda fecha a lacuna irmã -- eliminar o ÚLTIMO detentor ativo do papel protegido A
+        // PARTIR DE OUTRA conta com users:manage próprio. `detentorContadoDepois` é sempre `false`:
+        // eliminar o utilizador remove-o incondicionalmente de qualquer contagem.
+        Integer adminMoldeIdParaUltimoAdministrador = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
+        DetentorPapelProtegidoOriginal detentorOriginal =
+                DetentorPapelProtegidoOriginal.de(user, adminMoldeIdParaUltimoAdministrador);
+        Optional<ResponseEntity<?>> bloqueioUltimoAdministrador = guardaUltimoAdministrador(
+                detentorOriginal.papelProtegidoId(), detentorOriginal.detinhaAtivo(), false);
+        if (bloqueioUltimoAdministrador.isPresent()) {
+            return bloqueioUltimoAdministrador.get();
         }
 
         userRepository.deleteById(id);

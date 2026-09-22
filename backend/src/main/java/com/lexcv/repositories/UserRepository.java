@@ -47,4 +47,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // try/catch(DataIntegrityViolationException) sobre a FK: uma contagem não muta estado e não
     // paga o custo de carregar a lista inteira de utilizadores só para os contar.
     long countByTenantRolesId(UUID tenantRoleId);
+
+    // Phase 127 fix (CR-01, 127-REVIEW.md): quantos utilizadores ACTIVOS detêm um dado TenantRole
+    // -- a guarda de "último administrador" em AdminController usa este número para recusar
+    // qualquer operação (remoção de atribuição, desativação, eliminação de utilizador) que
+    // deixaria o papel de administrador do escritório sem nenhum detentor activo, trancando o
+    // escritório inteiro fora de /api/v1/admin/**. Variante de countByTenantRolesId acima que
+    // também filtra por `ativo = true`, no mesmo idioma de findByTenantIdAndRoleNameAndAtivoTrue
+    // -- um utilizador já desativado não conta como "detentor" para este efeito, porque já não
+    // exerce a autoridade do papel.
+    long countByTenantRolesIdAndAtivoTrue(UUID tenantRoleId);
 }

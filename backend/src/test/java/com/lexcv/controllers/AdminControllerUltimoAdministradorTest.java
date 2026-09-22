@@ -1,0 +1,194 @@
+package com.lexcv.controllers;
+
+import com.lexcv.config.UserPrincipal;
+import com.lexcv.models.Role;
+import com.lexcv.models.TenantRole;
+import com.lexcv.models.User;
+import com.lexcv.repositories.PermissionRepository;
+import com.lexcv.repositories.RoleRepository;
+import com.lexcv.repositories.TenantRepository;
+import com.lexcv.repositories.TenantRoleRepository;
+import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.ResolucaoPapeisService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * CR-01 (127-REVIEW.md): prova que {@link AdminController#updateUser} e
+ * {@link AdminController#deleteUser} nao conseguem deixar o escritorio sem NENHUM utilizador
+ * ACTIVO a deter o papel de administrador do escritorio (discriminado por proveniencia --
+ * {@code moldeId} do molde global "ADMIN", nunca por nome, mesma disciplina do resto da fase).
+ *
+ * <p>Antes desta correcao, tres mecanismos independentes protegiam este papel -- existencia
+ * ({@code OfficeRolesController#deleteRole}), piso de permissoes
+ * ({@code AdminController#updateRbac}), e auto-eliminacao da PROPRIA conta
+ * ({@code AdminController#deleteUser}, que ja recusava {@code principal.getUserId().equals(id)})
+ * -- mas nenhum protegia a ATRIBUICAO/ACTIVACAO: {@code updateUser} podia retirar o papel do
+ * unico detentor (a si proprio ou a outro utilizador com {@code users:manage} independente),
+ * desativa-lo, ou {@code deleteUser} podia apaga-lo, todos em auto-trancamento silencioso de todo
+ * o escritorio fora de {@code /api/v1/admin/**} -- exactamente o que PAPEL-08 proibe.
+ *
+ * <p>Segue a convencao de {@code AdminControllerAtribuicaoPapeisEscritorioTest}: sem MockMvc,
+ * instanciacao directa do controller com colaboradores Mockito.
+ */
+@ExtendWith(MockitoExtension.class)
+class AdminControllerUltimoAdministradorTest {
+
+    @Mock private UserRepository userRepository;
+    @Mock private RoleRepository roleRepository;
+    @Mock private PermissionRepository permissionRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private TenantRepository tenantRepository;
+    @Mock private TenantRoleRepository tenantRoleRepository;
+
+    private static final UUID TENANT_ID = UUID.randomUUID();
+    private static final UUID ADMIN_USER_ID = UUID.randomUUID();
+    private static final UUID OUTRO_USER_ID = UUID.randomUUID();
+    private static final Integer ADMIN_MOLDE_ID = 1;
+
+    @AfterEach
+    void limparSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComo(UUID userId) {
+        UserPrincipal principal = UserPrincipal.builder().userId(userId).tenantId(TENANT_ID).build();
+        SecurityContextHolder.getContext()
+                .setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+    }
+
+    private AdminController novoController() {
+        ResolucaoPapeisService resolucaoPapeisService =
+                new ResolucaoPapeisService(tenantRoleRepository, roleRepository);
+        return new AdminController(userRepository, roleRepository, permissionRepository, passwordEncoder,
+                tenantRepository, resolucaoPapeisService, tenantRoleRepository);
+    }
+
+    private TenantRole papelProtegido() {
+        return TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID)
+                .nome("ADMIN").moldeId(ADMIN_MOLDE_ID).sistema(true).build();
+    }
+
+    private TenantRole papelNaoProtegido() {
+        return TenantRole.builder().id(UUID.randomUUID()).tenantId(TENANT_ID)
+                .nome("Consultor").moldeId(null).build();
+    }
+
+    private void stubMoldeAdmin() {
+        lenient().when(roleRepository.findByNome("ADMIN"))
+                .thenReturn(Optional.of(Role.builder().id(ADMIN_MOLDE_ID).nome("ADMIN").build()));
+    }
+
+    // Caso 1: o unico administrador do escritorio remove o papel protegido de SI PROPRIO via
+    // tenantRoleIds (substituindo-o por um papel nao protegido) -- tem de ser recusado com 409,
+    // e o utilizador nunca pode ser gravado com o novo conjunto de papeis.
+    @Test
+    void updateUser_unicoAdministradorRemoveOPapelProtegidoDeSiProprio_recusadoCom409() {
+        autenticarComo(ADMIN_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole admin = papelProtegido();
+        TenantRole outro = papelNaoProtegido();
+        User utilizador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Administrador")
+                .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(admin, outro));
+        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+
+        ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID,
+                Map.of("tenantRoleIds", List.of(outro.getId().toString())));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 2: o unico administrador ACTIVO e desativado (ativo: true -> false) sem lhe tocar nos
+    // papeis -- tem de ser recusado com 409, sem gravar.
+    @Test
+    void updateUser_unicoAdministradorActivoEDesativado_recusadoCom409() {
+        autenticarComo(ADMIN_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole admin = papelProtegido();
+        User utilizador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Administrador")
+                .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
+        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+
+        ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID, Map.of("ativo", false));
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        verify(userRepository, never()).save(any());
+    }
+
+    // Caso 3: o unico administrador ACTIVO e eliminado por outro utilizador com users:manage
+    // proprio -- tem de ser recusado com 409, sem apagar. (deleteUser ja recusa AUTO-eliminacao;
+    // este caso prova a lacuna irma -- eliminar o ULTIMO administrador a partir de outra conta.)
+    @Test
+    void deleteUser_unicoAdministradorActivoEliminadoPorOutro_recusadoCom409() {
+        autenticarComo(OUTRO_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole admin = papelProtegido();
+        User administrador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Administrador")
+                .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(administrador));
+        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(1L);
+
+        ResponseEntity<?> response = novoController().deleteUser(ADMIN_USER_ID);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        verify(userRepository, never()).deleteById(any());
+    }
+
+    // Caso 4 (nao-regressao): com DOIS administradores activos, remover o papel protegido de UM
+    // deles continua a suceder -- a guarda so recusa quando isso zeraria a contagem de detentores
+    // activos, nunca antes disso.
+    @Test
+    void updateUser_comDoisAdministradoresActivos_removerDeUmSucede() {
+        autenticarComo(ADMIN_USER_ID);
+        stubMoldeAdmin();
+
+        TenantRole admin = papelProtegido();
+        TenantRole outro = papelNaoProtegido();
+        User utilizador = User.builder().id(ADMIN_USER_ID).tenantId(TENANT_ID).nome("Administrador")
+                .email("admin@escritorio.cv").ativo(true).tenantRoles(Set.of(admin)).build();
+
+        when(userRepository.findById(ADMIN_USER_ID)).thenReturn(Optional.of(utilizador));
+        when(tenantRoleRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(admin, outro));
+        // Dois detentores activos (este utilizador + um segundo administrador) -- remover deste
+        // ainda deixa um.
+        when(userRepository.countByTenantRolesIdAndAtivoTrue(admin.getId())).thenReturn(2L);
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ResponseEntity<?> response = novoController().updateUser(ADMIN_USER_ID,
+                Map.of("tenantRoleIds", List.of(outro.getId().toString())));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(userRepository).save(any());
+    }
+}
