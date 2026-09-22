@@ -39,10 +39,10 @@
 
 ### Auditoria de Atribuições
 
-- [ ] **AUDT-01**: Cada criação, alteração e remoção de papel fica registada com autor, momento e o que mudou
-- [ ] **AUDT-02**: Cada atribuição e remoção de papel a um utilizador fica registada com autor, momento e utilizador alvo
-- [ ] **AUDT-03**: Administrador de escritório consulta o registo de auditoria do seu escritório, e apenas desse
-- [ ] **AUDT-04**: O registo de auditoria não é editável nem apagável a partir de nenhuma superfície da aplicação
+- [x] **AUDT-01**: Cada criação, alteração e remoção de papel fica registada com autor, momento e o que mudou
+- [x] **AUDT-02**: Cada atribuição e remoção de papel a um utilizador fica registada com autor, momento e utilizador alvo
+- [x] **AUDT-03**: Administrador de escritório consulta o registo de auditoria do seu escritório, e apenas desse
+- [x] **AUDT-04**: O registo de auditoria não é editável nem apagável a partir de nenhuma superfície da aplicação
 
 ## Future Requirements
 
@@ -93,16 +93,17 @@ Reconhecidos, fora deste marco.
 | MIGR-01 | Phase 126 | Complete |
 | MIGR-02 | Phase 126 | Complete |
 | MIGR-03 | Phase 126 | Complete |
-| AUDT-01 | Phase 128 | Pending |
-| AUDT-02 | Phase 128 | Pending |
-| AUDT-03 | Phase 128 | Pending |
-| AUDT-04 | Phase 128 | Pending |
+| AUDT-01 | Phase 128 | Complete |
+| AUDT-02 | Phase 128 | Complete |
+| AUDT-03 | Phase 128 | Complete |
+| AUDT-04 | Phase 128 | Complete |
 
 **Coverage:**
 - v2.17 requirements: 24 total
 - Mapped to phases: 24
 - Unmapped: 0 ✓
+- Complete: 24 ✓
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-22 after Phases 124-127 completed (20/24 requirements complete)*
+*Last updated: 2026-09-22 after Phase 128 completed (24/24 requirements complete)*

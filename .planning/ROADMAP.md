@@ -16,7 +16,7 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 - [x] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso (completed 2026-09-21)
 - [x] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN`
  (completed 2026-09-22)
-- [ ] **Phase 128: Auditoria de Atribuições de Papéis** - Toda a alteração de papel e de atribuição fica registada de forma imutável e consultável por escritório
+- [x] **Phase 128: Auditoria de Atribuições de Papéis** - Toda a alteração de papel e de atribuição fica registada de forma imutável e consultável por escritório (completed 2026-09-22)
 
 ## Phase Details
 
@@ -102,15 +102,15 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 128-01-PLAN.md — `detalhe` + `@Immutable` em `AuditLog`, `AuditLogRepository` estreitado para `Repository`, migração manual 128 + README, gate estrutural de imutabilidade (wave 1)
-- [ ] 128-02-PLAN.md — `AuditoriaRbacService` (escritor/leitor único, MANDATORY), `AuditoriaRbacEntradaDto`, `RecusaTransacional.recusar` (wave 2)
-- [ ] 128-03-PLAN.md — `OfficeRolesController` criar/renomear/apagar: `@Transactional`, evento na mesma transacção, recusas em rollback (wave 3)
-- [ ] 128-04-PLAN.md — `AdminController` updateRbac/createUser/updateUser/deleteUser: `@Transactional`, recusas em rollback, comentário de updateRbac reescrito, corrida do último administrador fechada com lock (wave 3)
-- [ ] 128-05-PLAN.md — Eventos de permissões e de atribuição/retirada/eliminação no `AdminController` (wave 4)
-- [ ] 128-06-PLAN.md — Evento de provisionamento do administrador fundador em `SetupService.provisionTenant` (wave 3)
-- [ ] 128-07-PLAN.md — `GET /api/v1/admin/rbac/auditoria` sob `rbac:manage`, paginado, prova de dois tenants (wave 3)
-- [ ] 128-08-PLAN.md — Tipos, `lib/auditoria-rbac.ts` (frases PT-CV + fallback) com vitest, hook `useOfficeRbacAuditoria` (wave 4)
-- [ ] 128-09-PLAN.md — Separador "Auditoria" nas Definições, script de verificação só-leitura, verificação humana (wave 5)
+- [x] 128-01-PLAN.md — `detalhe` + `@Immutable` em `AuditLog`, `AuditLogRepository` estreitado para `Repository`, migração manual 128 + README, gate estrutural de imutabilidade (wave 1)
+- [x] 128-02-PLAN.md — `AuditoriaRbacService` (escritor/leitor único, MANDATORY), `AuditoriaRbacEntradaDto`, `RecusaTransacional.recusar` (wave 2)
+- [x] 128-03-PLAN.md — `OfficeRolesController` criar/renomear/apagar: `@Transactional`, evento na mesma transacção, recusas em rollback (wave 3)
+- [x] 128-04-PLAN.md — `AdminController` updateRbac/createUser/updateUser/deleteUser: `@Transactional`, recusas em rollback, comentário de updateRbac reescrito, corrida do último administrador fechada com lock (wave 3)
+- [x] 128-05-PLAN.md — Eventos de permissões e de atribuição/retirada/eliminação no `AdminController` (wave 4)
+- [x] 128-06-PLAN.md — Evento de provisionamento do administrador fundador em `SetupService.provisionTenant` (wave 3)
+- [x] 128-07-PLAN.md — `GET /api/v1/admin/rbac/auditoria` sob `rbac:manage`, paginado, prova de dois tenants (wave 3)
+- [x] 128-08-PLAN.md — Tipos, `lib/auditoria-rbac.ts` (frases PT-CV + fallback) com vitest, hook `useOfficeRbacAuditoria` (wave 4)
+- [x] 128-09-PLAN.md — Separador "Auditoria" nas Definições, script de verificação só-leitura, verificação humana (wave 5)
 
 ## Progress
 
@@ -123,7 +123,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 | 125. Moldes da Plataforma e Provisionamento | 6/6 | Complete   | 2026-09-21 |
 | 126. Migração de Papéis Existentes | 5/5 | Complete   | 2026-09-21 |
 | 127. Papéis e Permissões do Escritório | 8/8 | Complete   | 2026-09-22 |
-| 128. Auditoria de Atribuições de Papéis | 0/9 | Planned | - |
+| 128. Auditoria de Atribuições de Papéis | 9/9 | Complete   | 2026-09-22 |
 
 ---
 *Roadmap created: 2026-09-20*
