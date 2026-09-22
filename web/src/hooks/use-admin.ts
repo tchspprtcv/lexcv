@@ -1,8 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 
 import type { AdminUser, AdminUserSavePayload } from "@/types/admin-users";
+import type {
+  AuditoriaRbacListFilters,
+  AuditoriaRbacPageResponse,
+} from "@/types/auditoria-rbac";
 import type {
   OfficeRbac,
   OfficeRbacUpdateRequest,
@@ -43,9 +47,14 @@ export function useAdminSaveUser(id?: string) {
       });
     },
     onSuccess: async () => {
+      // Atribuir/alterar o papel de um utilizador escreve um evento de auditoria RBAC
+      // (AuditoriaRbacService.registarAtribuicoes) -- o registo de auditoria tem de refletir
+      // essa mudança na mesma sessão, por isso OFFICE_RBAC_AUDITORIA_KEY é invalidado a par de
+      // "admin"/"users".
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
         queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
+        queryClient.invalidateQueries({ queryKey: OFFICE_RBAC_AUDITORIA_KEY }),
       ]);
     },
   });
@@ -60,12 +69,56 @@ export function useAdminDeleteUser(id: string) {
         method: "DELETE",
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      // Eliminar um utilizador escreve um evento papel_retirar por cada papel que ele tinha
+      // (motivo utilizador_eliminado) -- o registo de auditoria tem de refletir essa mudança na
+      // mesma sessão.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+        queryClient.invalidateQueries({ queryKey: OFFICE_RBAC_AUDITORIA_KEY }),
+      ]);
     },
   });
 }
 
 const OFFICE_RBAC_KEY = ["admin", "rbac"] as const;
+
+// Phase 128 (AUDT-01/02/03), Plano 08: deliberadamente aninhada sob OFFICE_RBAC_KEY (nunca uma
+// chave irmã) -- o TanStack Query invalida por prefixo, por isso as quatro mutações de papel e
+// matriz (useSaveOfficeRbac / useCreateOfficeRole / useRenameOfficeRole / useDeleteOfficeRole),
+// que já invalidam OFFICE_RBAC_KEY, atualizam também o registo de auditoria sem nenhuma mudança
+// nelas. Só as duas mutações de utilizador (acima) precisam de uma invalidação explícita, porque
+// a chave delas ("admin"/"users") não é prefixo de OFFICE_RBAC_AUDITORIA_KEY.
+const OFFICE_RBAC_AUDITORIA_KEY = ["admin", "rbac", "auditoria"] as const;
+
+function buildAuditoriaSearch(filters: AuditoriaRbacListFilters): string {
+  const params = new URLSearchParams();
+  if (filters.utilizadorAlvoId) params.set("utilizadorAlvoId", filters.utilizadorAlvoId);
+  if (filters.papelId) params.set("papelId", filters.papelId);
+  if (filters.page !== undefined) params.set("page", String(filters.page));
+  if (filters.size !== undefined) params.set("size", String(filters.size));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+// Hook só de leitura (useQuery) -- per o Read-Only Guarantee de 128-UI-SPEC.md (AUDT-04), nenhum
+// hook de mutação contra o endpoint de auditoria pode alguma vez ser acrescentado a este
+// ficheiro.
+export function useOfficeRbacAuditoria(filters: AuditoriaRbacListFilters = {}) {
+  return useQuery({
+    queryKey: [
+      ...OFFICE_RBAC_AUDITORIA_KEY,
+      filters.utilizadorAlvoId ?? "",
+      filters.papelId ?? "",
+      filters.page ?? 0,
+      filters.size ?? 20,
+    ],
+    queryFn: () =>
+      apiFetch<AuditoriaRbacPageResponse>("/admin/rbac/auditoria" + buildAuditoriaSearch(filters)),
+    enabled: typeof window !== "undefined",
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
 
 export function useOfficeRbac() {
   const enabled = typeof window !== "undefined";
