@@ -14,7 +14,7 @@ Este marco substitui o modelo actual de papéis globais fixos-por-plataforma por
 - [x] **Phase 124: Catálogo de Permissões em Base de Dados** - O catálogo de permissões deixa de ser uma lista embutida no controller e passa a viver em `t_permission`, semeado e actualizado com segurança a cada arranque (completed 2026-09-20)
 - [x] **Phase 125: Moldes da Plataforma e Provisionamento** - `PLATAFORMA_ADMIN` gere moldes de papel em `/plataforma`; todo escritório novo nasce com cópias próprias desses moldes (completed 2026-09-21)
 - [x] **Phase 126: Migração de Papéis Existentes** - Cada escritório já existente é convertido para papéis próprios, com verificação formal de que ninguém ganha nem perde acesso (completed 2026-09-21)
-- [ ] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN`
+- [x] **Phase 127: Papéis e Permissões do Escritório** - Administrador de escritório cria, edita, renomeia, apaga e atribui os papéis do seu próprio escritório, com isolamento total de outros tenants e do `PLATAFORMA_ADMIN` (completed 2026-09-22)
 - [ ] **Phase 128: Auditoria de Atribuições de Papéis** - Toda a alteração de papel e de atribuição fica registada de forma imutável e consultável por escritório
 
 ## Phase Details
@@ -79,14 +79,14 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 127-01-PLAN.md — `UserPrincipal` ganha proveniência de molde; as duas guardas por nome de `ParecerController` passam a decidir por proveniência (dívida 2a)
-- [ ] 127-02-PLAN.md — DTOs do contrato de escritório, contagem de atribuições, e `/api/v1/admin` passa a ser guardado por autoridade (`users:manage` / `rbac:manage`) em vez do nome do papel ADMIN
-- [ ] 127-03-PLAN.md — `GET/PUT /admin/rbac` tenant-scoped sobre `t_tenant_role`, gate ISOL-03 reformado por escrito, regra de piso do papel de administrador, isolamento provado com dois tenants
-- [ ] 127-04-PLAN.md — `OfficeRolesController`: criar, renomear e apagar papéis próprios, com recusa por contagem (PAPEL-05) e por proveniência (PAPEL-08)
-- [ ] 127-05-PLAN.md — atribuição de papéis a utilizadores por id, espelho derivado de `t_user_role`, e `tenant_role_ids` no contrato de leitura (Decisão 6)
-- [ ] 127-06-PLAN.md — contratos de frontend: tipos, schema Zod, fusão de edições não gravadas por id, e reescrita de `use-admin.ts` sem `mock-db`
-- [ ] 127-07-PLAN.md — reescrita do `RbacTab` como consola editável de papéis do escritório, com painel de criação, diálogo de renomeação e confirmação de eliminação
-- [ ] 127-08-PLAN.md — selector de papéis por id em Gestão de Utilizadores, reescrita do gate `verify:bloqueio-rbac` para provar a nova garantia, e verificação humana ao vivo
+- [x] 127-01-PLAN.md — `UserPrincipal` ganha proveniência de molde; as duas guardas por nome de `ParecerController` passam a decidir por proveniência (dívida 2a)
+- [x] 127-02-PLAN.md — DTOs do contrato de escritório, contagem de atribuições, e `/api/v1/admin` passa a ser guardado por autoridade (`users:manage` / `rbac:manage`) em vez do nome do papel ADMIN
+- [x] 127-03-PLAN.md — `GET/PUT /admin/rbac` tenant-scoped sobre `t_tenant_role`, gate ISOL-03 reformado por escrito, regra de piso do papel de administrador, isolamento provado com dois tenants
+- [x] 127-04-PLAN.md — `OfficeRolesController`: criar, renomear e apagar papéis próprios, com recusa por contagem (PAPEL-05) e por proveniência (PAPEL-08)
+- [x] 127-05-PLAN.md — atribuição de papéis a utilizadores por id, espelho derivado de `t_user_role`, e `tenant_role_ids` no contrato de leitura (Decisão 6)
+- [x] 127-06-PLAN.md — contratos de frontend: tipos, schema Zod, fusão de edições não gravadas por id, e reescrita de `use-admin.ts` sem `mock-db`
+- [x] 127-07-PLAN.md — reescrita do `RbacTab` como consola editável de papéis do escritório, com painel de criação, diálogo de renomeação e confirmação de eliminação
+- [x] 127-08-PLAN.md — selector de papéis por id em Gestão de Utilizadores, reescrita do gate `verify:bloqueio-rbac` para provar a nova garantia, e verificação humana ao vivo
 
 ### Phase 128: Auditoria de Atribuições de Papéis
 **Goal**: Toda a alteração de papel e de atribuição de papel fica registada de forma permanente, com autoria e alvo, e é consultável — mas nunca editável — por escritório.
@@ -113,7 +113,7 @@ Phases execute in numeric order: 124 → 125 → 126 → 127 → 128
 | 124. Catálogo de Permissões em Base de Dados | 2/2 | Complete   | 2026-09-20 |
 | 125. Moldes da Plataforma e Provisionamento | 6/6 | Complete   | 2026-09-21 |
 | 126. Migração de Papéis Existentes | 5/5 | Complete   | 2026-09-21 |
-| 127. Papéis e Permissões do Escritório | 0/TBD | Not started | - |
+| 127. Papéis e Permissões do Escritório | 8/8 | Complete   | 2026-09-22 |
 | 128. Auditoria de Atribuições de Papéis | 0/TBD | Not started | - |
 
 ---

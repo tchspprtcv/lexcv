@@ -7,15 +7,15 @@
 
 ### Papéis do Escritório
 
-- [ ] **PAPEL-01**: Administrador de escritório vê a lista dos papéis do seu escritório, e apenas desses
-- [ ] **PAPEL-02**: Administrador de escritório cria um papel novo, escolhendo nome e conjunto de permissões
-- [ ] **PAPEL-03**: Administrador de escritório altera as permissões de um papel do seu escritório e a mudança tem efeito na sessão dos utilizadores afetados
-- [ ] **PAPEL-04**: Administrador de escritório renomeia um papel do seu escritório
-- [ ] **PAPEL-05**: Administrador de escritório apaga um papel que não esteja atribuído a nenhum utilizador, e é impedido de apagar um que esteja
-- [ ] **PAPEL-06**: Administrador de escritório atribui um ou mais papéis do escritório a um utilizador, ao criar e ao editar
-- [ ] **PAPEL-07**: Nenhuma alteração feita por um escritório altera os papéis, permissões ou acessos de qualquer outro escritório
-- [ ] **PAPEL-08**: O papel de administrador do escritório não pode ser apagado nem despojado das permissões que o tornam administrador
-- [ ] **PAPEL-09**: O papel `PLATAFORMA_ADMIN` não é listado, atribuível nem alcançável a partir de qualquer ecrã ou endpoint de escritório
+- [x] **PAPEL-01**: Administrador de escritório vê a lista dos papéis do seu escritório, e apenas desses
+- [x] **PAPEL-02**: Administrador de escritório cria um papel novo, escolhendo nome e conjunto de permissões
+- [x] **PAPEL-03**: Administrador de escritório altera as permissões de um papel do seu escritório e a mudança tem efeito na sessão dos utilizadores afetados
+- [x] **PAPEL-04**: Administrador de escritório renomeia um papel do seu escritório
+- [x] **PAPEL-05**: Administrador de escritório apaga um papel que não esteja atribuído a nenhum utilizador, e é impedido de apagar um que esteja
+- [x] **PAPEL-06**: Administrador de escritório atribui um ou mais papéis do escritório a um utilizador, ao criar e ao editar
+- [x] **PAPEL-07**: Nenhuma alteração feita por um escritório altera os papéis, permissões ou acessos de qualquer outro escritório
+- [x] **PAPEL-08**: O papel de administrador do escritório não pode ser apagado nem despojado das permissões que o tornam administrador
+- [x] **PAPEL-09**: O papel `PLATAFORMA_ADMIN` não é listado, atribuível nem alcançável a partir de qualquer ecrã ou endpoint de escritório
 
 ### Moldes e Provisionamento
 
@@ -29,7 +29,7 @@
 - [x] **CATL-01**: O catálogo de permissões (nome técnico, rótulo, descrição, categoria) é servido a partir da base de dados, não de uma lista embutida no código do controller
 - [x] **CATL-02**: O arranque semeia e actualiza o catálogo sem apagar nenhuma atribuição já existente
 - [x] **CATL-03**: As permissões reservadas à plataforma não são oferecidas ao escritório em nenhuma superfície
-- [ ] **CATL-04**: `rbac:manage` passa a ser a autoridade que de facto governa quem edita permissões dentro de um escritório
+- [x] **CATL-04**: `rbac:manage` passa a ser a autoridade que de facto governa quem edita permissões dentro de um escritório
 
 ### Migração
 
@@ -73,15 +73,15 @@ Reconhecidos, fora deste marco.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAPEL-01 | Phase 127 | Pending |
-| PAPEL-02 | Phase 127 | Pending |
-| PAPEL-03 | Phase 127 | Pending |
-| PAPEL-04 | Phase 127 | Pending |
-| PAPEL-05 | Phase 127 | Pending |
-| PAPEL-06 | Phase 127 | Pending |
-| PAPEL-07 | Phase 127 | Pending |
-| PAPEL-08 | Phase 127 | Pending |
-| PAPEL-09 | Phase 127 | Pending |
+| PAPEL-01 | Phase 127 | Complete |
+| PAPEL-02 | Phase 127 | Complete |
+| PAPEL-03 | Phase 127 | Complete |
+| PAPEL-04 | Phase 127 | Complete |
+| PAPEL-05 | Phase 127 | Complete |
+| PAPEL-06 | Phase 127 | Complete |
+| PAPEL-07 | Phase 127 | Complete |
+| PAPEL-08 | Phase 127 | Complete |
+| PAPEL-09 | Phase 127 | Complete |
 | MOLD-01 | Phase 125 | Complete |
 | MOLD-02 | Phase 125 | Complete |
 | MOLD-03 | Phase 125 | Complete |
@@ -89,7 +89,7 @@ Reconhecidos, fora deste marco.
 | CATL-01 | Phase 124 | Complete |
 | CATL-02 | Phase 124 | Complete |
 | CATL-03 | Phase 124 | Complete |
-| CATL-04 | Phase 127 | Pending |
+| CATL-04 | Phase 127 | Complete |
 | MIGR-01 | Phase 126 | Complete |
 | MIGR-02 | Phase 126 | Complete |
 | MIGR-03 | Phase 126 | Complete |
@@ -105,4 +105,4 @@ Reconhecidos, fora deste marco.
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-21 after Phases 124-126 completed (10/24 requirements complete)*
+*Last updated: 2026-09-22 after Phases 124-127 completed (20/24 requirements complete)*
