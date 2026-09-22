@@ -10,6 +10,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.AuditoriaRbacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,6 +62,17 @@ import java.util.stream.Collectors;
  * ({@code SecurityContextHolder} -> {@code principal.getTenantId()}), nunca de um valor do corpo
  * ou do path do pedido -- a mesma fronteira de isolamento multi-tenant que
  * {@link AdminController#listUsers()} já usa (PAPEL-07).
+ *
+ * <p><b>Phase 128 (Decisao 3, 128-CONTEXT.md), Plano 03:</b> {@code createRole}, {@code
+ * renameRole} e {@code deleteRole} sao {@code @Transactional} porque o evento de auditoria
+ * ({@link AuditoriaRbacService}) e a mudanca que ele descreve tem de fazer commit ou rollback
+ * juntos -- ou ficam ambos, ou nenhum. Cada escrita e forcada a base de dados DENTRO do seu
+ * {@code try} (com {@code saveAndFlush} em vez de {@code save}, ou com {@code flush()} explicito
+ * apos {@code deleteById}) porque, sem esse flush, uma violacao de unicidade ou de FK so
+ * apareceria no COMMIT da transacao, ja fora do {@code catch}, e chegaria ao chamador como 500 nao
+ * tratado em vez do 409 estruturado que estes handlers sempre devolveram. Toda a resposta
+ * nao-2xx (400/404/409) passa por {@link RecusaTransacional#recusar}, que marca a transacao como
+ * rollback-only -- um pedido recusado nao grava evento nenhum, porque nao houve mudanca.
  */
 @RestController
 @RequestMapping("/api/v1/admin/rbac/roles")
@@ -81,11 +94,23 @@ public class OfficeRolesController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    // ULTIMO campo deliberadamente (Plano 03): @RequiredArgsConstructor gera a construcao
+    // posicional pela ordem de declaracao, por isso acrescentar este campo aqui so acrescenta um
+    // argumento no FIM da lista -- nao reordena os quatro existentes.
+    private final AuditoriaRbacService auditoriaRbacService;
+
+    /**
+     * O {@link UserPrincipal} autenticado -- fonte unica do tenant E do autor de cada evento de
+     * auditoria (Decisao 3, 128-CONTEXT.md: "o autor e o tenant vem do principal autenticado,
+     * nunca do corpo do pedido").
+     */
+    private UserPrincipal getPrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (UserPrincipal) auth.getPrincipal();
+    }
 
     private UUID getTenantId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-        return principal.getTenantId();
+        return getPrincipal().getTenantId();
     }
 
     /**
@@ -117,19 +142,21 @@ public class OfficeRolesController {
      * do chamador, com o nome e o conjunto inicial de permissões escolhidos pelo administrador.
      */
     @PostMapping("")
+    @Transactional
     public ResponseEntity<?> createRole(@RequestBody PapelCreateRequest request) {
         UUID tenantId = getTenantId();
+        UserPrincipal principal = getPrincipal();
 
         String nomeSubmetido = request == null ? null : request.getNome();
         ResponseEntity<?> erroNome = validarNome(nomeSubmetido);
         if (erroNome != null) {
-            return erroNome;
+            return RecusaTransacional.recusar(erroNome);
         }
         String nome = nomeSubmetido.trim();
 
         if (tenantRoleRepository.findByTenantIdAndNome(tenantId, nome).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Já existe um papel com este nome neste escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório.")));
         }
 
         Map<String, Permission> catalogoPorChave = permissionRepository.findAllByReservadaPlataformaFalse().stream()
@@ -140,7 +167,8 @@ public class OfficeRolesController {
             for (String chave : request.getPermissoes()) {
                 Permission permissao = catalogoPorChave.get(chave);
                 if (permissao == null) {
-                    return ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave));
+                    return RecusaTransacional.recusar(
+                            ResponseEntity.badRequest().body(Map.of("message", "Permissão desconhecida: " + chave)));
                 }
                 permissoesResolvidas.add(permissao);
             }
@@ -160,7 +188,12 @@ public class OfficeRolesController {
                     .sistema(false)
                     .permissions(permissoesResolvidas)
                     .build();
-            TenantRole papelGravado = tenantRoleRepository.save(novoPapel);
+            // saveAndFlush (Plano 03), nao save: forca a escrita a base de dados AQUI, dentro
+            // deste try, para que uma violacao concorrente da constraint unica (tenant_id, nome)
+            // caia neste catch como 409 -- em vez de so aparecer no commit da transacao, ja fora
+            // do catch, como 500 nao tratado.
+            TenantRole papelGravado = tenantRoleRepository.saveAndFlush(novoPapel);
+            auditoriaRbacService.registarPapelCriado(tenantId, principal, papelGravado);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
         } catch (DataIntegrityViolationException ex) {
@@ -168,8 +201,8 @@ public class OfficeRolesController {
             // na base de dados uma corrida entre dois pedidos com o mesmo nome que passaram ambos
             // o pre-check acima -- mesmo idioma de PlatformAdminController.createMolde para nome
             // de molde duplicado.
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Já existe um papel com este nome neste escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório.")));
         }
     }
 
@@ -184,18 +217,21 @@ public class OfficeRolesController {
      * que o diálogo de renomear promete ao operador (UI-SPEC §7).
      */
     @PutMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> renameRole(@PathVariable UUID id, @RequestBody PapelRenameRequest request) {
         UUID tenantId = getTenantId();
+        UserPrincipal principal = getPrincipal();
 
         TenantRole tenantRole = tenantRoleRepository.findById(id).orElse(null);
         if (tenantRole == null || !tenantRole.getTenantId().equals(tenantId)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado"));
+            return RecusaTransacional.recusar(
+                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado")));
         }
 
         String nomeSubmetido = request == null ? null : request.getNome();
         ResponseEntity<?> erroNome = validarNome(nomeSubmetido);
         if (erroNome != null) {
-            return erroNome;
+            return RecusaTransacional.recusar(erroNome);
         }
         String nome = nomeSubmetido.trim();
 
@@ -203,19 +239,31 @@ public class OfficeRolesController {
                 .filter(outro -> !outro.getId().equals(id))
                 .isPresent();
         if (duplicadoNoutroId) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Já existe um papel com este nome neste escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório.")));
         }
 
+        // Capturado ANTES do setNome (Plano 03): e o valor que registarPapelRenomeado precisa
+        // para o "nome antigo" do evento -- depois do setNome, tenantRole.getNome() ja seria o
+        // novo nome nos dois lados.
+        String nomeAntigo = tenantRole.getNome();
         tenantRole.setNome(nome);
         try {
-            TenantRole papelGravado = tenantRoleRepository.save(tenantRole);
+            // saveAndFlush (Plano 03): mesma razao de createRole -- forca a violacao de
+            // unicidade concorrente a aparecer aqui, dentro do catch, em vez de so no commit.
+            TenantRole papelGravado = tenantRoleRepository.saveAndFlush(tenantRole);
+            if (!nomeAntigo.equals(nome)) {
+                // Uma renomeacao para o MESMO nome (nome submetido == nome actual) nao e uma
+                // mudanca -- nao ha o que descrever no historico, por isso nenhum evento.
+                auditoriaRbacService.registarPapelRenomeado(
+                        tenantId, principal, papelGravado.getId(), nomeAntigo, papelGravado.getNome());
+            }
             return ResponseEntity.ok(Map.of("id", papelGravado.getId(), "nome", papelGravado.getNome()));
         } catch (DataIntegrityViolationException ex) {
             // Mesmo idioma de createRole: corrida concorrente apanhada pela constraint unica
             // (tenant_id, nome), nao pelo pre-check acima.
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Já existe um papel com este nome neste escritório."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Já existe um papel com este nome neste escritório.")));
         }
     }
 
@@ -251,12 +299,15 @@ public class OfficeRolesController {
      * </ol>
      */
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> deleteRole(@PathVariable UUID id) {
         UUID tenantId = getTenantId();
+        UserPrincipal principal = getPrincipal();
 
         TenantRole tenantRole = tenantRoleRepository.findById(id).orElse(null);
         if (tenantRole == null || !tenantRole.getTenantId().equals(tenantId)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado"));
+            return RecusaTransacional.recusar(
+                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Papel não encontrado")));
         }
 
         Integer adminMoldeId = roleRepository.findByNome("ADMIN").map(Role::getId).orElse(null);
@@ -264,42 +315,56 @@ public class OfficeRolesController {
 
         boolean ehPapelDeAdministrador = adminMoldeId != null && adminMoldeId.equals(tenantRole.getMoldeId());
         if (ehPapelDeAdministrador) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Este é o papel de administrador do escritório e não pode ser apagado."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este é o papel de administrador do escritório e não pode ser apagado.")));
         }
 
         boolean ehPapelDePlataforma = (plataformaMoldeId != null && plataformaMoldeId.equals(tenantRole.getMoldeId()))
                 || PAPEL_PLATAFORMA.equals(tenantRole.getNome())
                 || PAPEL_PLATAFORMA_AUTORIDADE.equals(tenantRole.getNome());
         if (ehPapelDePlataforma) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "O papel de administrador de plataforma é reservado e não pode ser apagado a partir daqui."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "O papel de administrador de plataforma é reservado e não pode ser apagado a partir daqui.")));
         }
 
         long atribuicoes = userRepository.countByTenantRolesId(id);
         if (atribuicoes > 0) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Este papel está atribuído a " + atribuicoes + " utilizador(es) e não pode ser apagado."));
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este papel está atribuído a " + atribuicoes + " utilizador(es) e não pode ser apagado.")));
         }
 
         try {
             tenantRoleRepository.deleteById(id);
+            // flush() explicito (Plano 03): sem isto, o DELETE so seria emitido para a base de
+            // dados no commit da transaccao -- ja fora deste try -- e a violacao de FK chegaria ao
+            // chamador como 500 nao tratado em vez do 409 que este catch existe para produzir.
+            tenantRoleRepository.flush();
         } catch (DataIntegrityViolationException ex) {
-            // WR-01 (127-REVIEW.md): a contagem acima e deliberadamente CHECK-then-ACT, nao uma
-            // transaccao/lock (ver o doc-comment da guarda de atribuicao acima) -- entre o count e
-            // este deleteById, um PUT /admin/users/{id} concorrente com este id em tenantRoleIds
-            // pode inserir uma linha t_user_tenant_role que ainda nao existia na contagem. Sem este
-            // catch, a FK apanhava essa corrida como DataIntegrityViolationException nao tratada ->
-            // 500 nao estruturado, em vez do 409 que a contagem foi desenhada para produzir. Apanha
-            // SO esta excecao NESTE ponto (nunca um catch generico a volta do metodo inteiro -- a
-            // Fase 125 ja tinha corrigido um catch demasiado largo que rotulava mal violacoes nao
-            // relacionadas) e devolve a MESMA mensagem que a contagem já dá, porque semanticamente
-            // é o mesmo motivo de recusa (atribuição concorrente), só apanhado num sítio diferente.
-            // A janela de corrida check-then-act em si permanece aceite tal e qual -- este catch só
-            // corrige a FORMA da falha (500 -> 409), não elimina a corrida.
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
-                    "Este papel está atribuído a um ou mais utilizadores e não pode ser apagado."));
+            // WR-01 (127-REVIEW.md), actualizado no Plano 03: a contagem acima continua
+            // deliberadamente CHECK-then-ACT, nao uma transaccao/lock (ver o doc-comment da
+            // guarda de atribuicao acima) -- entre o count e este deleteById, um PUT
+            // /admin/users/{id} concorrente com este id em tenantRoleIds pode inserir uma linha
+            // t_user_tenant_role que ainda nao existia na contagem. @Transactional ao nivel do
+            // metodo, no isolamento por omissao (READ COMMITTED), NAO fecha esta janela -- nao e
+            // um lock, e as duas transaccoes veem o estado uma da outra normalmente assim que cada
+            // uma faz commit; o flush() acima e o que garante que a FK e avaliada AQUI, dentro
+            // deste try, e nao silenciosamente adiada para o commit da transaccao global. Sem o
+            // flush, a FK apanhava esta corrida como DataIntegrityViolationException nao tratada
+            // no commit -> 500 nao estruturado, em vez do 409 que a contagem foi desenhada para
+            // produzir. Apanha SO esta excecao NESTE ponto (nunca um catch generico a volta do
+            // metodo inteiro -- a Fase 125 ja tinha corrigido um catch demasiado largo que
+            // rotulava mal violacoes nao relacionadas) e devolve a MESMA mensagem que a contagem
+            // ja da, porque semanticamente e o mesmo motivo de recusa (atribuicao concorrente), so
+            // apanhado num sitio diferente. A janela de corrida check-then-act em si permanece
+            // aceite tal e qual -- este catch so corrige a FORMA da falha (500 -> 409), nao
+            // elimina a corrida. O evento de auditoria nunca sobrevive a este rollback: como
+            // registarPapelApagado so e chamado DEPOIS do try (abaixo), uma FK apanhada aqui nunca
+            // chega a gerar evento nenhum -- a transaccao inteira (DELETE + o que quer que tivesse
+            // sido gravado antes dele) reverte junto com a recusa.
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message",
+                    "Este papel está atribuído a um ou mais utilizadores e não pode ser apagado.")));
         }
+        auditoriaRbacService.registarPapelApagado(tenantId, principal, tenantRole);
         return ResponseEntity.noContent().build();
     }
 }

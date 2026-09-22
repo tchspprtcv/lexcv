@@ -10,6 +10,7 @@ import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.RoleRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
+import com.lexcv.services.AuditoriaRbacService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -66,6 +68,7 @@ class OfficeRolesControllerTest {
     @Mock private UserRepository userRepository;
     @Mock private RoleRepository roleRepository;
     @Mock private PermissionRepository permissionRepository;
+    @Mock private AuditoriaRbacService auditoriaRbacService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
     private static final UUID OUTRO_TENANT_ID = UUID.randomUUID();
@@ -77,7 +80,8 @@ class OfficeRolesControllerTest {
     }
 
     private OfficeRolesController novoController() {
-        return new OfficeRolesController(tenantRoleRepository, userRepository, roleRepository, permissionRepository);
+        return new OfficeRolesController(
+                tenantRoleRepository, userRepository, roleRepository, permissionRepository, auditoriaRbacService);
     }
 
     /**
@@ -126,7 +130,7 @@ class OfficeRolesControllerTest {
     }
 
     /**
-     * Resposta padrão para {@code tenantRoleRepository.save(any())} num teste de criação: devolve
+     * Resposta padrão para {@code tenantRoleRepository.saveAndFlush(any())} num teste de criação: devolve
      * a mesma entidade passada, atribuindo-lhe um id gerado se ainda não tiver um -- imita o
      * comportamento real do Hibernate (id gerado ao gravar) sem o qual
      * {@code Map.of("id", ..., "nome", ...)} no handler rebentaria com {@code NullPointerException}
@@ -147,7 +151,7 @@ class OfficeRolesControllerTest {
     void createRole_comAutoridadeRbacManageCruaObtemSucesso() {
         autenticarComoPrincipalDoTenant(TENANT_ID);
         when(tenantRoleRepository.findByTenantIdAndNome(eq(TENANT_ID), any())).thenReturn(Optional.empty());
-        when(tenantRoleRepository.save(any())).thenAnswer(inv -> {
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> {
             TenantRole tr = inv.getArgument(0);
             tr.setId(UUID.randomUUID());
             return tr;
@@ -169,7 +173,7 @@ class OfficeRolesControllerTest {
         OfficeRolesController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.createRole(request));
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
     }
 
     // Armadilha hasAuthority-vs-hasRole (127-CONTEXT.md Decisão 3): "ROLE_rbac:manage" é a forma
@@ -184,7 +188,7 @@ class OfficeRolesControllerTest {
         OfficeRolesController proxy = novoProxyComMethodSecurity();
 
         assertThrows(AccessDeniedException.class, () -> proxy.renameRole(id, request));
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -207,7 +211,7 @@ class OfficeRolesControllerTest {
     void createRole_gravaNoTenantDoChamadorComMoldeIdNuloESistemaFalso() {
         autenticarComoPrincipalDoTenant(TENANT_ID);
         when(tenantRoleRepository.findByTenantIdAndNome(eq(TENANT_ID), any())).thenReturn(Optional.empty());
-        when(tenantRoleRepository.save(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
 
         PapelCreateRequest request = new PapelCreateRequest();
         request.setNome("Financeiro Sénior");
@@ -216,7 +220,7 @@ class OfficeRolesControllerTest {
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         ArgumentCaptor<TenantRole> captor = ArgumentCaptor.forClass(TenantRole.class);
-        verify(tenantRoleRepository).save(captor.capture());
+        verify(tenantRoleRepository).saveAndFlush(captor.capture());
         TenantRole gravado = captor.getValue();
         assertEquals(TENANT_ID, gravado.getTenantId());
         assertNull(gravado.getMoldeId());
@@ -230,7 +234,7 @@ class OfficeRolesControllerTest {
     void createRole_preservaMaiusculasEMinusculasDoNomeSubmetido() {
         autenticarComoPrincipalDoTenant(TENANT_ID);
         when(tenantRoleRepository.findByTenantIdAndNome(eq(TENANT_ID), any())).thenReturn(Optional.empty());
-        when(tenantRoleRepository.save(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
 
         PapelCreateRequest request = new PapelCreateRequest();
         request.setNome("Recepção");
@@ -238,7 +242,7 @@ class OfficeRolesControllerTest {
         novoController().createRole(request);
 
         ArgumentCaptor<TenantRole> captor = ArgumentCaptor.forClass(TenantRole.class);
-        verify(tenantRoleRepository).save(captor.capture());
+        verify(tenantRoleRepository).saveAndFlush(captor.capture());
         assertEquals("Recepção", captor.getValue().getNome());
     }
 
@@ -256,7 +260,8 @@ class OfficeRolesControllerTest {
 
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(), "falhou para: " + nomeReservado);
         }
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 5: uma chave de permissão fora do catálogo servido é recusada com 400, nenhuma
@@ -276,7 +281,8 @@ class OfficeRolesControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
         assertTrue(mensagem.contains("Permissão desconhecida"));
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 6: um nome duplicado no MESMO tenant é recusado com 409, sem escrita; o mesmo nome só
@@ -291,13 +297,14 @@ class OfficeRolesControllerTest {
         requestDuplicado.setNome("ADVOGADO");
         ResponseEntity<?> respostaDuplicado = novoController().createRole(requestDuplicado);
         assertEquals(HttpStatus.CONFLICT, respostaDuplicado.getStatusCode());
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(auditoriaRbacService);
 
         // O mesmo nome, mas colidindo apenas noutro tenant -- deve ser aceite.
         when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "ASSISTENTE")).thenReturn(Optional.empty());
         lenient().when(tenantRoleRepository.findByTenantIdAndNome(OUTRO_TENANT_ID, "ASSISTENTE"))
                 .thenReturn(Optional.of(TenantRole.builder().id(UUID.randomUUID()).tenantId(OUTRO_TENANT_ID).nome("ASSISTENTE").build()));
-        when(tenantRoleRepository.save(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
 
         PapelCreateRequest requestNoutroTenant = new PapelCreateRequest();
         requestNoutroTenant.setNome("ASSISTENTE");
@@ -323,7 +330,7 @@ class OfficeRolesControllerTest {
                 .build();
         when(tenantRoleRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
         when(tenantRoleRepository.findByTenantIdAndNome(TENANT_ID, "Administrador do Escritório")).thenReturn(Optional.empty());
-        when(tenantRoleRepository.save(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
+        when(tenantRoleRepository.saveAndFlush(any())).thenAnswer(inv -> simularGravacaoComIdGerado(inv.getArgument(0)));
 
         PapelRenameRequest request = new PapelRenameRequest();
         request.setNome("Administrador do Escritório");
@@ -332,7 +339,7 @@ class OfficeRolesControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ArgumentCaptor<TenantRole> captor = ArgumentCaptor.forClass(TenantRole.class);
-        verify(tenantRoleRepository).save(captor.capture());
+        verify(tenantRoleRepository).saveAndFlush(captor.capture());
         TenantRole gravado = captor.getValue();
         assertEquals("Administrador do Escritório", gravado.getNome());
         assertEquals(ADMIN_MOLDE_ID, gravado.getMoldeId());
@@ -355,8 +362,9 @@ class OfficeRolesControllerTest {
         ResponseEntity<?> response = novoController().renameRole(papelDoOutroTenant.getId(), request);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        verify(tenantRoleRepository, never()).save(any());
+        verify(tenantRoleRepository, never()).saveAndFlush(any());
         assertEquals("ADVOGADO", papelDoOutroTenant.getNome());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -381,6 +389,7 @@ class OfficeRolesControllerTest {
         String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
         assertTrue(mensagem.contains("2"));
         verify(tenantRoleRepository, never()).deleteById(any());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 10 (PAPEL-08): o papel protegido é recusado mesmo SEM nenhuma atribuição e mesmo
@@ -403,6 +412,7 @@ class OfficeRolesControllerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         verify(tenantRoleRepository, never()).deleteById(any());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 11 (PAPEL-07): um id de OUTRO tenant é recusado com 404, sem apagar e sem sequer
@@ -419,6 +429,7 @@ class OfficeRolesControllerTest {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         verify(tenantRoleRepository, never()).deleteById(any());
         verify(userRepository, never()).countByTenantRolesId(any());
+        verifyNoInteractions(auditoriaRbacService);
     }
 
     // Caso 12: um papel sem atribuições e sem proveniência protegida é apagado com sucesso -- 204
@@ -463,5 +474,6 @@ class OfficeRolesControllerTest {
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         String mensagem = (String) ((Map<?, ?>) response.getBody()).get("message");
         assertTrue(mensagem.contains("atribuído"));
+        verifyNoInteractions(auditoriaRbacService);
     }
 }
