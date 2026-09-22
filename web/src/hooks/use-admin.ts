@@ -65,32 +65,6 @@ export function useAdminDeleteUser(id: string) {
   });
 }
 
-// DEPRECATED (Phase 127, Plano 06): shim de compatibilidade só para o `RbacTab` ainda por
-// reescrever de `settings/page.tsx` (forma anterior a esta fase, tipada contra o módulo mock
-// pré-backend). O Plano 07 reescreve esse ecrã inteiro contra `useOfficeRbac`/
-// `useSaveOfficeRbac` abaixo -- remover este bloco nessa altura, e não antes: sem ele,
-// `settings/page.tsx` deixa de resolver o import e o build inteiro fica bloqueado por uma
-// razão que não é o objectivo deste plano (ver 127-06-SUMMARY.md). O tipo é estrutural, não
-// importado de `@/server`, para não violar a proibição de import mock deste ficheiro -- mas
-// não é a forma que o backend hoje devolve em `/admin/rbac` (que já é `OfficeRbac`, não isto);
-// esse desalinhamento é pré-existente a este plano e é exactamente o que o Plano 07 fecha.
-export interface RbacResponse {
-  rolePermissions: Record<string, string[]>;
-  systemPermissions: { key: string; nome: string; descricao: string; modulo: string }[];
-}
-
-/** @deprecated Use `useOfficeRbac` — removido quando o Plano 07 reescrever `RbacTab`. */
-export function useAdminRbac() {
-  const enabled = typeof window !== "undefined";
-
-  return useQuery({
-    queryKey: ["admin", "rbac", "legacy"],
-    queryFn: () => apiFetch<RbacResponse>("/admin/rbac"),
-    enabled,
-    staleTime: 60_000,
-  });
-}
-
 const OFFICE_RBAC_KEY = ["admin", "rbac"] as const;
 
 export function useOfficeRbac() {

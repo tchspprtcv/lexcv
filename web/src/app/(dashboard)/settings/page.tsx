@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import {
   User,
   Lock,
@@ -26,7 +28,11 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useMe } from "@/hooks/use-me";
 import {
   useAdminUsers,
-  useAdminRbac
+  useOfficeRbac,
+  useSaveOfficeRbac,
+  useCreateOfficeRole,
+  useRenameOfficeRole,
+  useDeleteOfficeRole,
 } from "@/hooks/use-admin";
 import {
   useNotificacaoPreferencias,
@@ -43,7 +49,32 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { MockUser, MockRole, MockPermission } from "@/server/mock-db";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { renomearPapelSchema, type RenomearPapelFormValues } from "@/schemas/papeis-escritorio";
+import { mesclarEstadoLocal, type LocalPermissoesPapeis } from "./merge-local-papeis";
+import { CriarPapelPanel } from "./criar-papel-panel";
+import { PapelAcoesMenu } from "./papel-acoes-menu";
+import type { AdminUser } from "@/types/admin-users";
+import type { OfficePapel, OfficeRbac, PapelCreateRequest } from "@/types/office-rbac";
 import type { NotificacaoCategoria } from "@/types/notificacoes";
 
 type TabId = "profile" | "security" | "users" | "rbac" | "notificacoes";
@@ -175,18 +206,18 @@ export default function SettingsPage() {
 function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
   const { data: users, isLoading, isError, refetch } = useAdminUsers();
 
-  const [editingUser, setEditingUser] = React.useState<Partial<MockUser> | null>(null);
+  const [editingUser, setEditingUser] = React.useState<Partial<AdminUser> | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedRoles, setSelectedRoles] = React.useState<MockRole[]>([]);
-  const [selectedPermissions, setSelectedPermissions] = React.useState<MockPermission[]>([]);
+  const [selectedRoles, setSelectedRoles] = React.useState<string[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([]);
   const [userPassword, setUserPassword] = React.useState("");
 
   const [searchTerm, setSearchTerm] = React.useState("");
   const [message, setMessage] = React.useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // Load all system permissions to display in custom permissions overrides
-  const { data: rbacData } = useAdminRbac();
-  const systemPermissions = rbacData?.systemPermissions || [];
+  const { data: rbacData } = useOfficeRbac();
+  const systemPermissions = rbacData?.permissoes || [];
 
   // Indicador "X/Y utilizadores" (Phase 118 PLAN-03, fonte trocada na Phase 124)
   // — useMe() dedupe pela cache partilhada ["auth","me"], nao e um segundo
@@ -208,7 +239,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
         ? `${activeUserCount}/${tenantUserLimit} utilizadores · limite atingido`
         : `${activeUserCount}/${tenantUserLimit} utilizadores`;
 
-  const handleEditClick = (user: MockUser) => {
+  const handleEditClick = (user: AdminUser) => {
     setEditingUser(user);
     setSelectedRoles(user.roles);
     setSelectedPermissions(user.permissions || []);
@@ -315,7 +346,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     }
   };
 
-  const toggleRole = (role: MockRole) => {
+  const toggleRole = (role: string) => {
     if (selectedRoles.includes(role)) {
       if (selectedRoles.length > 1) {
         setSelectedRoles(selectedRoles.filter((r) => r !== role));
@@ -325,7 +356,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
     }
   };
 
-  const togglePermission = (perm: MockPermission) => {
+  const togglePermission = (perm: string) => {
     if (selectedPermissions.includes(perm)) {
       setSelectedPermissions(selectedPermissions.filter((p) => p !== perm));
     } else {
@@ -662,7 +693,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
               <div className="space-y-2">
                 <Label>Funções / Perfis de Acesso</Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-                  {(["ADMIN", "TECNICO", "ADVOGADO", "ASSISTENTE"] as MockRole[]).map((role) => {
+                  {(["ADMIN", "TECNICO", "ADVOGADO", "ASSISTENTE"] as const).map((role) => {
                     const isChecked = selectedRoles.includes(role);
                     return (
                       <button
@@ -753,23 +784,70 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
 // RBAC SYSTEM CONFIGURATION MATRIX SUB-COMPONENT
 // ==========================================
 function RbacTab() {
-  const { data: rbac, isLoading, isError, refetch } = useAdminRbac();
-  const me = useMe();
-  // Espelho de UX, nao fronteira de autorizacao: o bloqueio real vive na
-  // anotacao de metodo do backend (Plan 01, AdminController.updateRbac).
-  // Esta verificacao apenas evita expor, na interface, uma acao que hoje
-  // resultaria num 403 confuso para quem ja nao a pode executar — na
-  // linha do comentario equivalente em dashboard-shell.tsx.
-  const isPlatformAdmin = me.isFetched && (me.data?.roles?.includes("PLATAFORMA_ADMIN") ?? false);
-  type RolePermissionsMap = Record<MockRole, MockPermission[]>;
+  // Regra dos Hooks (UI-SPEC §0): TODOS os hooks abaixo -- a query, as quatro
+  // mutacoes, e todo o useState/useMemo/useForm -- tem de ser chamados
+  // incondicionalmente, antes do primeiro early return (isLoading/isError).
+  // Uma futura edicao NAO pode inserir um hook novo depois desses returns.
+  const { data: rbac, isLoading, isError, refetch } = useOfficeRbac();
+  const guardarPermissoes = useSaveOfficeRbac();
+  const criarPapel = useCreateOfficeRole();
+  const renomearPapel = useRenameOfficeRole();
+  const apagarPapel = useDeleteOfficeRole();
 
-  const [localRolePermissions, setLocalRolePermissions] = React.useState<RolePermissionsMap | null>(null);
-  const [saving, setSaving] = React.useState(false);
-  const [success, setSuccess] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  // Estado local de edicao, mais a referencia do ultimo payload ja aplicado
+  // a ele -- mesmo padrao de ajuste de estado em render de
+  // plataforma/moldes/page.tsx (comparar uma referencia do payload aplicado
+  // e reagir quando mudou), nao `useEffect` com `setState`, que o ESLint
+  // deste projecto rejeita (`react-hooks/set-state-in-effect`).
+  const [appliedData, setAppliedData] = React.useState<OfficeRbac | null>(null);
+  const [localPermissoes, setLocalPermissoes] = React.useState<LocalPermissoesPapeis | null>(null);
+  const [touchedPapelIds, setTouchedPapelIds] = React.useState<Set<string>>(new Set());
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [papelEmRenomeacao, setPapelEmRenomeacao] = React.useState<OfficePapel | null>(null);
+  const [papelEmEliminacao, setPapelEmEliminacao] = React.useState<OfficePapel | null>(null);
 
-  const effectiveRolePermissions =
-    localRolePermissions ?? (rbac?.rolePermissions as RolePermissionsMap | undefined);
+  const renameForm = useForm<RenomearPapelFormValues>({
+    resolver: zodResolver(renomearPapelSchema),
+    defaultValues: { nome: "" },
+  });
+
+  const data = rbac ?? null;
+  if (data && data !== appliedData) {
+    setAppliedData(data);
+    // Reconciliado (mesclarEstadoLocal), nunca reinicializado -- preserva a
+    // edicao local de qualquer papel tocado, mesmo quando este mesmo payload
+    // fresco vem de uma mutacao sem nenhuma relacao com a matriz (criar,
+    // renomear ou apagar outro papel). Ver o doc-comment de
+    // mesclarEstadoLocal em merge-local-papeis.ts para a decisao completa.
+    setLocalPermissoes((prevLocal) => mesclarEstadoLocal(data, prevLocal, touchedPapelIds));
+  }
+
+  const papeis = React.useMemo(() => data?.papeis ?? [], [data]);
+  const permissoes = React.useMemo(() => data?.permissoes ?? [], [data]);
+
+  const modulos = React.useMemo(
+    () => Array.from(new Set(permissoes.map((p) => p.modulo))),
+    [permissoes],
+  );
+
+  // Diff entre o estado local e o ultimo payload obtido, por papel,
+  // comparando conjuntos de chaves (nao ordem de array) -- mesma tecnica de
+  // moldesAlterados em plataforma/moldes/page.tsx.
+  const papeisAlterados = React.useMemo<OfficePapel[]>(() => {
+    if (!localPermissoes) return [];
+    return papeis.filter((papel) => {
+      const local = localPermissoes[papel.id];
+      if (!local) return false;
+      const original = new Set(papel.permissoes);
+      if (local.size !== original.size) return true;
+      for (const key of local) {
+        if (!original.has(key)) return true;
+      }
+      return false;
+    });
+  }, [localPermissoes, papeis]);
+
+  const existeDiff = papeisAlterados.length > 0;
 
   if (isLoading) {
     return (
@@ -794,202 +872,381 @@ function RbacTab() {
     );
   }
 
-  if (!effectiveRolePermissions) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  const systemPermissions = rbac?.systemPermissions || [];
-  const roles: MockRole[] = ["ADMIN", "TECNICO", "ADVOGADO", "ASSISTENTE"];
-
-  const handleCheckboxChange = (role: MockRole, permKey: MockPermission) => {
-    if (role === "ADMIN") return; // Admin permissions are immutable (always enabled)
-    if (!isPlatformAdmin) return; // WR-01 (121-REVIEW.md): matriz é só-leitura para quem não pode gravar
-
-    const base = effectiveRolePermissions;
-    const currentPerms = base[role] || [];
-    let nextPerms: MockPermission[] = [];
-
-    if (currentPerms.includes(permKey)) {
-      nextPerms = currentPerms.filter((p: string) => p !== permKey);
-    } else {
-      nextPerms = [...currentPerms, permKey];
-    }
-
-    setLocalRolePermissions({
-      ...base,
-      [role]: nextPerms,
+  const handleToggle = (papelId: string, permKey: string) => {
+    setTouchedPapelIds((prev) => {
+      if (prev.has(papelId)) return prev;
+      const seguinte = new Set(prev);
+      seguinte.add(papelId);
+      return seguinte;
+    });
+    setLocalPermissoes((prev) => {
+      if (!prev) return prev;
+      const atual = prev[papelId] ?? new Set<string>();
+      const seguinte = new Set(atual);
+      if (seguinte.has(permKey)) {
+        seguinte.delete(permKey);
+      } else {
+        seguinte.add(permKey);
+      }
+      return { ...prev, [papelId]: seguinte };
     });
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    setSuccess(null);
-    setError(null);
+    const idsGravados = papeisAlterados.map((papel) => papel.id);
     try {
-      await apiFetch("/admin/rbac", {
-        method: "PUT",
-        body: JSON.stringify({ rolePermissions: effectiveRolePermissions }),
+      await guardarPermissoes.mutateAsync({
+        papeis: idsGravados.map((id) => ({
+          id,
+          permissoes: Array.from(localPermissoes?.[id] ?? new Set<string>()),
+        })),
       });
-      setSuccess("Configurações do RBAC (Regras de Acesso) atualizadas com sucesso!");
-      toast.success("Configurações do RBAC atualizadas com sucesso!");
-      refetch();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao guardar definições de RBAC.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setSaving(false);
+      toast.success("Permissões atualizadas com sucesso.");
+      // Os papeis que acabaram de ser gravados deixam de estar "por gravar"
+      // -- mesclarEstadoLocal volta a aceitar o valor do servidor para eles
+      // no proximo payload fresco, em vez de continuar a preservar
+      // indefinidamente um valor local que ja foi gravado.
+      setTouchedPapelIds((prev) => {
+        if (prev.size === 0) return prev;
+        const seguinte = new Set(prev);
+        for (const id of idsGravados) {
+          seguinte.delete(id);
+        }
+        return seguinte;
+      });
+    } catch {
+      // O wrapper de fetch partilhado (apiFetch) ja mostrou o toast com a
+      // mensagem do backend.
     }
   };
 
-  // Group permissions by module
-  const modules = Array.from(new Set(systemPermissions.map((p) => p.modulo)));
+  const handleCreateSubmit = async (payload: PapelCreateRequest) => {
+    try {
+      const criado = await criarPapel.mutateAsync(payload);
+      toast.success(`Papel "${criado.nome}" criado com sucesso.`);
+      setIsFormOpen(false);
+    } catch {
+      // apiFetch ja mostrou o toast com a mensagem do backend (ex.: nome
+      // duplicado). Mantemos o painel aberto com o input intacto.
+    }
+  };
+
+  const openRename = (papel: OfficePapel) => {
+    renameForm.reset({ nome: papel.nome });
+    setPapelEmRenomeacao(papel);
+  };
+
+  const handleRenameSubmit = async (values: RenomearPapelFormValues) => {
+    if (!papelEmRenomeacao) return;
+    try {
+      const atualizado = await renomearPapel.mutateAsync({
+        id: papelEmRenomeacao.id,
+        nome: values.nome,
+      });
+      toast.success(`Papel renomeado para "${atualizado.nome}".`);
+      setPapelEmRenomeacao(null);
+    } catch {
+      // apiFetch ja mostrou o toast; mantemos o Dialog aberto.
+    }
+  };
+
+  const openDelete = (papel: OfficePapel) => setPapelEmEliminacao(papel);
+
+  const handleConfirmDelete = async () => {
+    if (!papelEmEliminacao) return;
+    const { id, nome } = papelEmEliminacao;
+    try {
+      await apagarPapel.mutateAsync(id);
+      toast.success(`Papel "${nome}" apagado.`);
+      setPapelEmEliminacao(null);
+      setTouchedPapelIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const seguinte = new Set(prev);
+        seguinte.delete(id);
+        return seguinte;
+      });
+    } catch {
+      // apiFetch ja mostrou o toast; mantemos o AlertDialog aberto.
+    }
+  };
 
   return (
-    <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-        <div>
-          <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            Matriz de Regras de Acesso (RBAC)
-          </CardTitle>
-          <CardDescription>
-            Defina quais as permissões atribuídas globalmente a cada perfil profissional.
-          </CardDescription>
-        </div>
-        {isPlatformAdmin ? (
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 self-start sm:self-auto"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Guardar Regras
-          </Button>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="self-start sm:self-auto">
-                <Badge variant="outline" className="gap-1">
-                  <Lock className="h-3 w-3" />
-                  Gerido pela Plataforma
-                </Badge>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-              toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </CardHeader>
+    <>
+      {isFormOpen ? (
+        <CriarPapelPanel
+          onCancel={() => setIsFormOpen(false)}
+          onSubmit={handleCreateSubmit}
+          isSubmitting={criarPapel.isPending}
+          permissoes={permissoes}
+        />
+      ) : (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-xl">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+            <div>
+              <CardTitle className="text-xl font-semibold">Papéis do Escritório</CardTitle>
+              <CardDescription>
+                Crie, edite, renomeie e atribua os papéis do seu escritório. Estas definições
+                pertencem apenas ao seu escritório — não afetam outros escritórios da
+                plataforma.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsFormOpen(true)}
+                className="flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+              >
+                <Plus className="h-4 w-4" />
+                Criar Papel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={!existeDiff || guardarPermissoes.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3 h-auto"
+              >
+                {guardarPermissoes.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Guardar Alterações
+              </Button>
+            </div>
+          </CardHeader>
 
-      <CardContent className="space-y-4">
-        {success && (
-          <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm border border-emerald-500/20 rounded-md">
-            {success}
-          </div>
-        )}
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 text-slate-700 dark:text-slate-300 text-xs border border-blue-500/10 rounded-md flex items-start gap-2.5">
+              <ShieldAlert className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
+              <div>
+                <strong>O papel de administrador do escritório</strong> mantém sempre as
+                permissões que o tornam administrador — não é possível removê-las nem apagar
+                esse papel. As alterações a qualquer papel aplicam-se de imediato às sessões já
+                abertas dos utilizadores afetados; não é preciso iniciar sessão novamente.
+              </div>
+            </div>
 
-        {error && (
-          <div className="p-3 bg-red-500/10 text-red-600 dark:text-red-400 text-sm border border-red-500/20 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 text-slate-700 dark:text-slate-300 text-xs border border-blue-500/10 rounded-md flex items-start gap-2.5">
-          <ShieldAlert className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
-          <div>
-            <strong>Nota Importante:</strong> O perfil de administrador (<strong>ADMIN</strong>) possui acessos totais e incondicionais por padrão. As suas caixas de seleção estão marcadas e bloqueadas permanentemente para evitar o bloqueio acidental do painel de administração.
-            {!isPlatformAdmin && (
-              // IN-01 (121-REVIEW.md): a mesma mensagem do Tooltip do Badge "Gerido pela
-              // Plataforma" acima, mas sempre visível -- quem nunca passa o rato/foca o Badge
-              // também precisa de saber porque as alterações na matriz não persistem.
-              <>
-                {" "}As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a
-                toda a plataforma ALCv — já não podem ser alteradas a partir de um escritório individual.
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-md">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-slate-100/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="p-3 font-semibold text-slate-600 dark:text-slate-400 min-w-[280px]">Módulo / Permissão</th>
-                {roles.map((role) => (
-                  <th
-                    key={role}
-                    className="p-3 font-bold text-center text-slate-700 dark:text-slate-300 text-xs tracking-wider"
+            {papeis.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>Nenhum papel definido</EmptyTitle>
+                  <EmptyDescription>
+                    Crie o primeiro papel do seu escritório para poder atribuí-lo a
+                    utilizadores.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsFormOpen(true)}
+                    className="flex items-center gap-1.5"
                   >
-                    {role}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {modules.map((mod) => {
-                const modPerms = systemPermissions.filter((p) => p.modulo === mod);
-                return (
-                  <React.Fragment key={mod}>
-                    {/* Module Separator header */}
-                    <tr className="bg-slate-50 dark:bg-slate-900/50">
-                      <td colSpan={5} className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        {mod}
-                      </td>
-                    </tr>
-                    {modPerms.map((perm) => (
-                      <tr
-                        key={perm.key}
-                        className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors"
+                    <Plus className="h-4 w-4" />
+                    Criar Papel
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            ) : (
+              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-md">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-slate-100/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="p-3 font-semibold text-slate-600 dark:text-slate-400 min-w-[280px]"
                       >
-                        <td className="p-3">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">{perm.nome}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{perm.descricao}</div>
-                        </td>
-                        {roles.map((role) => {
-                          const isAssigned = (effectiveRolePermissions[role] || []).includes(perm.key);
-                          const isAdminRow = role === "ADMIN";
-                          // WR-01 (121-REVIEW.md): alarga o estado desabilitado/esbatido a toda a
-                          // matriz quando quem a vê não a pode gravar — sem isto, um ADMIN de tenant
-                          // via a matriz como interativa (clicava e alternava localmente) mesmo sem
-                          // o botão Guardar alguma vez renderizar para si. "checked" fica ligado só a
-                          // isAdminRow (não a isDisabled): a coluna ADMIN mostra-se sempre marcada por
-                          // ter acessos totais implícitos, mas as restantes colunas não podem passar a
-                          // "sempre marcadas" só por estarem desabilitadas para leitura.
-                          const isDisabled = isAdminRow || !isPlatformAdmin;
-
-                          return (
-                            <td key={role} className="p-3 text-center">
-                              <label className="inline-flex items-center justify-center cursor-pointer p-2">
-                                <input
-                                  type="checkbox"
-                                  checked={isAssigned || isAdminRow}
-                                  disabled={isDisabled}
-                                  onChange={() => handleCheckboxChange(role, perm.key)}
-                                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-800 rounded transition-all ${isDisabled
-                                      ? "cursor-not-allowed text-blue-500/55 opacity-60"
-                                      : "cursor-pointer"
-                                    }`}
-                                />
-                              </label>
+                        Módulo / Permissão
+                      </th>
+                      {papeis.map((papel) => (
+                        <th
+                          key={papel.id}
+                          scope="col"
+                          className="p-3 font-bold text-center text-slate-700 dark:text-slate-300 text-xs tracking-wider min-w-[140px]"
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1">
+                              {papel.protegido && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Lock className="h-3 w-3 text-slate-400" aria-label="Papel protegido" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Este é o papel de administrador do escritório. Não pode
+                                    ser apagado nem perder as permissões que o tornam
+                                    administrador.
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              <span>{papel.nome}</span>
+                              <PapelAcoesMenu
+                                papel={papel}
+                                onRenomear={() => openRename(papel)}
+                                onApagar={() => openDelete(papel)}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                              <Badge variant={papel.sistema ? "gray" : "outline"}>
+                                {papel.sistema ? "Predefinido" : "Criado por si"}
+                              </Badge>
+                              <Badge variant="gray">
+                                {papel.utilizadoresAtribuidos} utilizador
+                                {papel.utilizadoresAtribuidos === 1 ? "" : "es"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {modulos.map((mod) => {
+                      const permissoesDoModulo = permissoes.filter((p) => p.modulo === mod);
+                      return (
+                        <React.Fragment key={mod}>
+                          <tr className="bg-slate-50 dark:bg-slate-900/50">
+                            <td
+                              colSpan={papeis.length + 1}
+                              className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest"
+                            >
+                              {mod}
                             </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                          </tr>
+                          {permissoesDoModulo.map((permissao) => (
+                            <tr
+                              key={permissao.key}
+                              className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors"
+                            >
+                              <th scope="row" className="p-3 text-left">
+                                <div className="font-medium text-slate-900 dark:text-slate-100">
+                                  {permissao.nome}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  {permissao.descricao}
+                                </div>
+                              </th>
+                              {papeis.map((papel) => {
+                                const isChecked =
+                                  localPermissoes?.[papel.id]?.has(permissao.key) ?? false;
+                                // Bloqueio de piso: a chave e sempre `protegido`, nunca a
+                                // string literal "ADMIN" -- o nome deste papel passa a ser
+                                // editavel a partir deste mesmo ecra nesta fase, por isso
+                                // qualquer comparacao pelo literal deixaria de proteger o
+                                // papel assim que o escritorio o renomeasse. O conjunto
+                                // fixo vem de `papel.permissoes` (o payload persistido no
+                                // servidor), nunca do estado local editado.
+                                const isLockedFloor =
+                                  papel.protegido && papel.permissoes.includes(permissao.key);
+                                return (
+                                  <td key={papel.id} className="p-3 text-center">
+                                    <label className="inline-flex items-center justify-center cursor-pointer p-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked || isLockedFloor}
+                                        disabled={isLockedFloor}
+                                        onChange={() => handleToggle(papel.id, permissao.key)}
+                                        aria-label={`${permissao.nome} — ${papel.nome}`}
+                                        className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-800 rounded transition-all ${
+                                          isLockedFloor
+                                            ? "cursor-not-allowed text-blue-500/55 opacity-60"
+                                            : "cursor-pointer"
+                                        }`}
+                                      />
+                                    </label>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog
+        open={!!papelEmRenomeacao}
+        onOpenChange={(open) => {
+          if (!open) setPapelEmRenomeacao(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renomear papel</DialogTitle>
+            <DialogDescription>
+              Isto altera apenas o nome apresentado — não muda as permissões nem os
+              utilizadores atualmente atribuídos a este papel. O novo nome fica visível de
+              imediato em toda a aplicação.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={renameForm.handleSubmit(handleRenameSubmit)}>
+            <div className="space-y-2">
+              <Label htmlFor="roleRename">Novo nome</Label>
+              <Input
+                id="roleRename"
+                aria-invalid={!!renameForm.formState.errors.nome}
+                className="bg-slate-50 dark:bg-slate-950"
+                {...renameForm.register("nome")}
+              />
+              {renameForm.formState.errors.nome ? (
+                <p className="text-sm text-red-600">{renameForm.formState.errors.nome.message}</p>
+              ) : null}
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Nome atual: {papelEmRenomeacao?.nome}
+              </p>
+            </div>
+            <DialogFooter className="mt-6">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={renomearPapel.isPending}
+              >
+                {renomearPapel.isPending ? "A gravar..." : "Guardar Nome"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!papelEmEliminacao}
+        onOpenChange={(open) => {
+          if (!open) setPapelEmEliminacao(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar o papel &quot;{papelEmEliminacao?.nome}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O papel deixa de existir e as suas permissões
+              deixam de estar disponíveis para atribuição. Nenhum utilizador tem este papel
+              atribuído atualmente, por isso é seguro apagá-lo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={apagarPapel.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={apagarPapel.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmDelete();
+              }}
+            >
+              {apagarPapel.isPending ? "A apagar..." : "Apagar Papel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
