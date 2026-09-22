@@ -31,7 +31,11 @@ Decisão: acrescentar uma coluna **nullable** `detalhe` com o conteúdo da mudan
 
 Isto exige a migração manual **128**. Já há oito pendentes em produção. É a única alteração de esquema desta fase e deve ser o mais pequena possível: `ADD COLUMN IF NOT EXISTS`, idempotente, no inventário do README em ordem numérica. Nota para o planeamento: `t_audit_log` **não tem script em `backend/migrations/` nem entrada no inventário**, foi criada pelo `ddl-auto: update`. O CLAUDE.md diz que todos os ambientes correm `update` hoje, logo a tabela existe em produção. Mas um script `ALTER TABLE` sobre uma tabela que o inventário nunca registou merece uma linha no README a dizer de onde ela vem.
 
-`detalhe` guarda nomes de papéis e chaves de permissão, que são configuração. Não guarda nome, email nem outro dado pessoal do utilizador alvo: esse vai por id em `entidade_id`, resolvido para apresentação na leitura. Assim o registo não duplica dados pessoais que depois ficariam a divergir da ficha do utilizador.
+`detalhe` guarda nomes de papéis, chaves de permissão e **o nome de apresentação do autor e do utilizador alvo no momento do evento**. O id do alvo continua em `entidade_id` e o do autor em `autor_id`.
+
+**Esta parte foi revista depois de um bloqueio do checker do contrato de desenho.** A primeira versão desta decisão não guardava nomes: resolvia-os pelo id na altura da leitura, para não duplicar dados pessoais. Isso falha contra um facto do código: `AdminController.deleteUser` faz **apagamento definitivo** (`userRepository.deleteById`). Um utilizador apagado resolve para `null`, e isto em todos os eventos que o referem, não só no da eliminação. Um registo de responsabilidade que esquece quem agiu, ou quem perdeu o acesso, deixa de responder à pergunta para que existe, e o caso mais comum de investigação é precisamente sobre alguém que já saiu.
+
+Guarda-se só o **nome** (`User.nome`), nunca email, telefone ou outro dado. É o identificador mínimo que mantém o registo legível depois de a pessoa ser removida. Um nome guardado neste registo não é actualizado se a pessoa mudar de nome: fica o nome que tinha quando o evento aconteceu, que é o comportamento correcto para um histórico.
 
 ### Decisão 3: o evento e a mudança gravam na mesma transacção
 
