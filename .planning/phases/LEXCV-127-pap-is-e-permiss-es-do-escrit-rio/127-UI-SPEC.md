@@ -1,10 +1,11 @@
 ---
 phase: 127
 slug: pap-is-e-permiss-es-do-escrit-rio
-status: draft
+status: approved
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, cssVariables true, iconLibrary lucide) — components.json already present, no re-init needed
 created: 2026-09-21
+reviewed_at: 2026-09-21
 ---
 
 # Phase 127 — UI Design Contract
@@ -85,6 +86,7 @@ That two-size, two-weight discipline does **not** extend to component primitives
 | Page title (Settings `h1`, above the tab strip, unmodified by this phase) | 30px (`text-3xl`) | 700 (`font-bold`) | `settings/page.tsx:65` — pre-existing, outside this phase's scope, listed only because it is visible in the composed screen |
 | Matrix column header + module-group row + permission row-label `<th>` (reused **verbatim** from `RbacTab`, see Screen Structure §3) | 12px header/module (`text-xs`), 14px row-label (`text-sm`, inherited from `<table>`) | 700 (`font-bold`) header/module; 500 (`font-medium`) row-label div | `settings/page.tsx:927` (`font-bold` column header), `:941` (`font-bold` module row), `:951` (`font-medium` row-label div) |
 | Permission row sub-label (description under the permission name) | 11px (`text-[11px]`) | 400 | `settings/page.tsx:952` — reused verbatim |
+| `CriarPapelPanel` permission-checklist description (added by `127-UI-REVIEW.md` finding #3 — Typography, 2026-09-22) | 10px (`text-[10px]`) | 400 (inherits, no weight class set) | `criar-papel-panel.tsx:139` — inherited verbatim from Phase 125's `criar-molde-panel.tsx:143`, same reuse mandate as the matrix's own sub-label row above. Distinct from, and one pixel smaller than, the matrix's `text-[11px]` sub-label directly above because it comes from a different reused snippet (the create-panel checklist, not the matrix), not because this phase chose a second micro size on purpose. |
 
 Do **not** override any of the inherited rows above to force them onto the two-weight scale claimed for new prose — that would mean fighting the project's own shared components (`Button`, `Label`, `Badge`, `Dialog`) for the sake of this document, which is exactly the failure mode `125-UI-SPEC.md`'s note exists to prevent. Counting every row above: the full set of weights in play across this screen is **400, 500, 600, 700** — four weights total, none invented by this phase, all traceable to either a cited primitive or a byte-for-byte reused snippet.
 
@@ -96,12 +98,14 @@ Do **not** override any of the inherited rows above to force them onto the two-w
 |------|-------|-------|
 | Dominant (60%) | `white` / `dark:bg-slate-950` | Page canvas, table body rows — inherited, unmodified by this phase |
 | Secondary (30%) | `slate-50`/`slate-100`/`slate-200` (light), `slate-800`/`slate-900` (dark) | Card surface (`bg-white/50 dark:bg-slate-900/50`), table header row, module separator rows, borders — inherited, unmodified |
-| Accent (10%) | `blue-600` | **Reserved for:** the "Guardar Alterações" matrix-save button (solid), the "Criar Papel" trigger button in `CardHeader` (outline) and its panel's solid submit button, the rename dialog's "Guardar Nome" submit button, checked-state checkboxes in the matrix (`text-blue-600`, matching `RbacTab`), focus rings. No other element may use blue as a fill or as badge/text color. |
+| Accent (10%) | `blue-600` | **Reserved for:** the "Guardar Alterações" matrix-save button (solid), the "Criar Papel" trigger button in `CardHeader` (outline) and its panel's solid submit button, the rename dialog's "Guardar Nome" submit button, checked-state checkboxes in the matrix (`text-blue-600`, matching `RbacTab`), focus rings. No other element may use blue as a fill or as badge/text color, except the one declared inherited exception below. |
 | Destructive | `red-600` | **Reserved for:** the "Apagar Papel" action button inside the delete confirmation `AlertDialog`, and field validation error text (reserved-name / duplicate-name messages, `text-red-600`). This **matches the destructive-red `AlertDialogAction` convention already shipped** in `financeiro/[id]/page.tsx:369-374` and `:562-567` (`bg-red-600 hover:bg-red-700 text-white`, honorário and pagamento deletion), `agenda/[id]/page.tsx:222-234` (via the `bg-destructive` semantic, which `globals.css:66` maps to red), and `plataforma/page.tsx:555-566` — the same file this spec cites in §9 for the open-on-error recovery convention. Red already carries exactly this meaning here, which is why it is the right choice rather than a new one. The hue also matches the `text-red-600` error-message convention and the `hover:text-red-500` delete-icon-button convention already established in this same file (`settings/page.tsx:542`, the user-delete icon button) and across the app. |
 
 No amber/caution color in this phase — a deliberate divergence from `125-UI-SPEC.md`'s analog. Phase 125 needed amber because editing a *molde* has a delayed, easy-to-misread effect on other tenants (non-propagation). Nothing in this screen has that shape: every change here is local to the office's own tenant, and takes effect immediately (PAPEL-03 — no delayed, easy-to-misread consequence to flag with a third semantic color). Introducing amber here anyway would imply a caution that does not exist and would compete visually with the one color that does carry real weight in this screen: red, for the one truly destructive, irreversible action (delete).
 
-Accent reserved for: "Guardar Alterações", "Criar Papel" (trigger + panel submit), "Guardar Nome" (rename), matrix checked checkboxes, focus rings — explicitly, nothing else. Provenance badges and the user-count badge are intentionally **neutral** (`gray`/`outline` `Badge` variants only) — see Screen Structure §3 for why coloring them was rejected.
+Accent reserved for: "Guardar Alterações", "Criar Papel" (trigger + panel submit), "Guardar Nome" (rename), matrix checked checkboxes, focus rings — plus the one inherited exception below. Provenance badges and the user-count badge are intentionally **neutral** (`gray`/`outline` `Badge` variants only) — see Screen Structure §3 for why coloring them was rejected.
+
+**Declared exception, inherited from Phase 125 (added by `127-UI-REVIEW.md` finding #2 — Color, 2026-09-22).** `CriarPapelPanel`'s permission checklist (`criar-papel-panel.tsx:124-128,135`) also uses blue: `border-blue-500/50 bg-blue-500/5 dark:bg-blue-500/10` on a selected permission row, and `text-blue-600` on that row's (non-interactive, `pointer-events-none`) checkbox. This is not novel drift — it is byte-for-byte identical to Phase 125's `criar-molde-panel.tsx:126-139`, which the reuse mandate (Scope Recap above) required this panel to copy structurally. The original omission was this section's, not the implementation's: unlike the Spacing section, which explicitly lists `p-3`/`min-w-[140px]` as accepted carry-overs, this Color section never carved out the create-panel's reused blue as an exception, so the contract read as violated by code that was simply doing what §8 (Create role) already mandated. Treat this pairing (selected-row border/background + checkbox tint, exclusively inside the permission checklist of the create panel) as reserved alongside the Accent row above — it may not spread to any other element of this screen, and any *new* blue usage this phase introduces must still stay within the Accent row's explicit list.
 
 ---
 
@@ -482,11 +486,15 @@ No new dependencies, no new shadcn registry/skill packages. The permission×role
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (2026-09-21, after 1 correction round). Amended post-approval by
+`127-UI-REVIEW.md` (2026-09-22, findings #2 and #3): the Color and Typography sections below now
+carve out `CriarPapelPanel`'s inherited blue selected-row/checkbox treatment and its `text-[10px]`
+permission description as declared exceptions, matching what had already shipped — the audited
+screen was not changed, only this contract's account of it.
