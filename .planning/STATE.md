@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.17
 milestone_name: RBAC por Escritório
-status: executing
-last_updated: "2026-09-22T00:00:00.000Z"
-last_activity: 2026-09-22
+status: Awaiting next milestone
+stopped_at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
+last_updated: "2026-09-23T11:35:27.844Z"
+last_activity: 2026-09-23 — Milestone v2.17 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -17,25 +18,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-28)
+See: .planning/PROJECT.md (updated 2026-09-23)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.17 RBAC por Escritório — as 5 fases (124-128) executaram, verificaram e foram revistas; 24/24 requisitos completos; a caminho do fecho do marco
+**Current focus:** Nenhum marco activo. v2.17 enviado a 2026-09-23; próxima fase é a **129**. Abrir o próximo marco com `/gsd:new-milestone`.
 
 ## Current Position
 
-Phase: 128 of 128 (Auditoria de Atribuições de Papéis) — complete
-Plan: 30 de 30 planos concluídos nas 5 fases (124: 2, 125: 6, 126: 5, 127: 8, 128: 9)
-Status: Marco pronto para auditoria de fecho (`/gsd:audit-milestone`). Nada foi enviado para o remoto — os commits do marco continuam todos locais.
-Last activity: 2026-09-22 — Phase 128 fechada: revisão de código (3 correcções aplicadas, 1 aceite), revisão de UI advisory 20/24 (3 correcções prioritárias aplicadas), 432 testes backend verdes, 7 gates `verify:*` verdes
-
-**Nota de correcção do próprio STATE.md:** este cabeçalho esteve a dizer `status: planning` com 0 de 5 fases concluídas desde 2026-09-20, enquanto as cinco fases corriam. Foi o índice que ficou parado, não o trabalho — os artefactos de cada fase, o REQUIREMENTS.md (24/24) e o histórico de commits estavam todos correctos. Corrigido a 2026-09-22, antes da auditoria de fecho, para que a auditoria não medisse contra um estado falso.
+Phase: Milestone v2.17 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-09-23 — Milestone v2.17 completed and archived
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 118
+- Total plans completed: 148 (118 até v2.16 + 30 no v2.17)
 - Average duration: —
 - Total execution time: —
 
@@ -174,6 +173,36 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 
 ## Deferred Items
 
+### Reconhecidos e adiados no fecho do marco v2.17 (2026-09-23)
+
+O utilizador pediu o fecho do marco; os 4 itens abertos que a auditoria pré-fecho encontrou foram
+reconhecidos como adiados, não resolvidos. **Nenhum deles indica defeito** — todos exigem backend a
+correr, PostgreSQL/MinIO alcançáveis e um browser interactivo, que a corrida autónoma não tinha. Os
+executores registaram-nos como PENDENTE em vez de os simular.
+
+| Categoria | Item | Estado |
+|---|---|---|
+| verification_gap | Phase 124 — `124-VERIFICATION.md`: 1 checkpoint ao vivo (matriz com 20 permissões em 8 módulos, ordem estável, `PLATAFORMA_ADMIN` ausente) | human_needed |
+| verification_gap | Phase 125 — `125-VERIFICATION.md`: 6 testes ao vivo (consola de moldes, criar molde, instanciação por SQL, não-propagação, gate 403, acessibilidade da matriz) | human_needed |
+| verification_gap | Phase 127 — `127-VERIFICATION.md`: 12 passos ao vivo. **O passo 9 é o mais importante do marco:** renomear o próprio papel de administrador, recarregar, confirmar que `/api/v1/admin` continua alcançável | human_needed |
+| verification_gap | Phase 128 — `128-VERIFICATION.md`: 8 passos ao vivo (aba Auditoria, filtros e paginador, sobrevivência do rascunho da 127 ao mudar de aba) | human_needed |
+
+**A par destes, duas dívidas operacionais do v2.17 que não são código:**
+
+- **9 migrações manuais pendentes** numa base de dados de cliente, 4 delas novas neste marco
+  (`124-add-permission-catalogo-columns.sql`, `126-add-tenant-role-tables.sql`,
+  `127-add-user-tenant-role-table.sql`, `128-add-audit-log-detalhe.sql`). O inventário autoritativo é
+  `backend/migrations/README.md` — e ele próprio avisa para não tratar documentos de planeamento como
+  registo do que já correu.
+- **IN-02 aceite, não corrigido:** `GlobalExceptionHandler` devolve `ex.getMessage()` ao cliente.
+  Mudá-lo afecta todo o backend e é decisão maior do que uma correcção de fase.
+- **Dois ITs de Testcontainers** compilam mas não correm localmente (npipe do Docker); esperados em CI.
+- **Pergunta de produto em aberto:** um papel criado de raiz pelo escritório (`moldeId` nulo) deve
+  poder ter responsáveis de processo? Hoje não pode, preservado deliberadamente da Phase 126.
+- **Lacuna do projecto, não deste marco:** `workflow.nyquist_validation` está activo mas nenhuma fase
+  produziu um `VALIDATION.md` em toda a história do repositório.
+
+
 Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md` for full detail — 0 cross-phase integration gaps found; only 2 non-blocking WARNINGs, neither requiring a fix before close). Most are now in-scope for v2.11 (see Pending Todos above for explicit requirement ownership):
 
 | Category | Item | Status |
@@ -253,4 +282,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Start planning with /gsd:plan-phase 124
+- Start the next milestone with /gsd-new-milestone

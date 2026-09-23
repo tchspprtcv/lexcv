@@ -8,24 +8,19 @@ ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde, alinh
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone: v2.17 RBAC por Escritório
+## Current Milestone: nenhum activo
 
-**Goal:** Cada escritório passa a gerir os seus próprios papéis — instanciados como cópia de moldes definidos pela plataforma — sem que nenhuma alteração sua toque nos papéis de outro tenant.
+O marco **v2.17 RBAC por Escritório** foi enviado a 2026-09-23 (Phases 124–128, 30 planos, 24/24
+requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.17-*`.
 
-**Target features:**
-- Papéis por escritório (`t_tenant_role` + `t_tenant_role_permission`), com os moldes da plataforma copiados no acto da instanciação (snapshot — alterações posteriores ao molde não propagam)
-- Migração de `t_user_role` para apontar a papéis do tenant, por script manual em `backend/migrations/`
-- `GET/PUT /admin/rbac` tenant-scoped sob `hasAuthority('rbac:manage')`, mais CRUD de papéis próprios do escritório
-- Catálogo de permissões movido do código (`AdminController.getRbac`) para `t_permission`, com rótulo, descrição e categoria semeados no arranque
-- Consola de moldes em `/plataforma` para o `PLATAFORMA_ADMIN`, a substituir a matriz global editável de hoje
-- Auditoria de atribuições — quem alterou que papel, quem atribuiu o quê a quem — com ecrã de consulta
-- Ecrã de Definições (RBAC) deixa de mostrar o badge "Gerido pela Plataforma" e volta a ser editável, agora sobre dados do próprio escritório
+A próxima fase é a **129** — a numeração nunca reinicia. Abrir o próximo marco com
+`/gsd:new-milestone`.
 
-**Key context:**
-- As guardas de `PAPEL_PLATAFORMA` das Phases 119/121 têm de ser transportadas para todos os caminhos novos — foram escritas contra uma via real de auto-escalonamento de um `ADMIN` de tenant, não por precaução teórica
-- `t_user_permission` (overrides aditivos por utilizador) mantém-se exactamente como está
-- Sem tecto de permissões por plano nesta versão: o escritório compõe com o catálogo todo menos as reservadas. A ligação a `TenantPlano` fica como porta aberta, não como dívida
-- Sem Flyway no projeto — a migração é script manual mais o arranque em duas fases do `DEPLOYMENT.md`
+**Duas dívidas do v2.17 que não são código e sobrevivem ao fecho:**
+- 9 migrações manuais pendentes numa base de dados de cliente, 4 delas novas neste marco (124, 126,
+  127, 128). O inventário autoritativo é `backend/migrations/README.md`, não documentos de
+  planeamento.
+- 4 listas de verificação ao vivo em aberto (fases 124, 125, 127, 128). Nenhuma indica defeito.
 
 ## Requirements
 
@@ -120,16 +115,23 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 - ✓ Relatório interno de utilização por tenant (`/plataforma/relatorio` — nome/plano/limite/utilizadores ativos, reutiliza o mesmo endpoint da consola, zero mutações) para suportar faturação manual — v2.16 (Phase 122)
 - ✓ (fecho de dívida técnica pós-auditoria) Indicador "X/Y utilizadores" passa a consumir `tenant_utilizadores_ativos` de `GET /auth/me` em vez de recalcular a contagem no cliente — a auditoria de integração da milestone encontrou esta duplicação de lógica (fonte única do backend com só 2 dos 3 consumidores esperados); o utilizador escolheu fechar antes de encerrar o marco, em vez de aceitar como dívida rastreada — v2.16 (Phase 124, adicionada pós-auditoria)
 
+- ✓ **RBAC por escritório** — cada tenant passa a ter papéis próprios em `t_tenant_role`/`t_tenant_role_permission`, instanciados como cópia (snapshot) dos moldes da plataforma; `PLATAFORMA_ADMIN` gere os moldes em `/plataforma/moldes` e editar um molde nunca propaga para um papel já instanciado — v2.17 (Phases 125-126)
+- ✓ **Administrador de escritório é dono dos seus papéis** — listar, criar, renomear, editar permissões, apagar (recusado por contagem de atribuições) e atribuir a utilizadores por id, com efeito imediato na sessão já aberta; o papel de administrador tem piso de permissões e não é apagável, discriminado por proveniência (`moldeId`) e não por nome, precisamente porque o nome passou a ser editável — v2.17 (Phase 127)
+- ✓ **`rbac:manage` passa finalmente a governar** quem edita permissões dentro de um escritório, e o gate `hasRole('ADMIN')` de `/api/v1/admin` dá lugar a `hasAuthority('users:manage')` para que um administrador que renomeie o seu próprio papel não se tranque de fora — v2.17 (Phase 127, CATL-04)
+- ✓ **Catálogo de permissões em base de dados** — 20 permissões com rótulo, descrição, módulo e ordem em `t_permission`, semeadas por upsert não-destrutivo; fecha a divergência 17-vs-20 que fazia a matriz RBAC perder silenciosamente 3 permissões em cada gravação — v2.17 (Phase 124)
+- ✓ **Migração sem deriva de acesso** — conversão convergente no arranque reutilizando `SetupService.instanciarMoldes`, com verificação por utilizador que compara permissões efectivas antes/depois e aborta o arranque se divergirem; as comparações por nome literal de papel (`"ADVOGADO"`, `"ASSISTENTE"`, `"TECNICO"`, `"ADMIN"`) deram lugar a resolução por proveniência — v2.17 (Phase 126)
+- ✓ **Auditoria imutável de papéis e atribuições** — evento e mutação na mesma transacção (um pedido recusado não escreve evento), registo consultável em Definições → Auditoria restrito ao próprio escritório, em frases de português de Cabo Verde; a imutabilidade é estrutural (`@Immutable`, repositório estreitado para não ter métodos de remoção), não uma questão de disciplina — v2.17 (Phase 128)
+
 ### Active
 
-<!-- v2.17 — RBAC por Escritório. REQ-IDs em .planning/REQUIREMENTS.md -->
+Nenhum requisito activo. O próximo marco define os seus com `/gsd:new-milestone`.
 
-- [ ] Escritório tem papéis próprios, instanciados como cópia (snapshot) dos moldes da plataforma, sem partilhar linhas com outro tenant
-- [ ] Administrador de escritório cria, renomeia, edita e apaga papéis do seu escritório, e atribui-os aos seus utilizadores
-- [ ] `PUT /admin/rbac` escreve apenas papéis do tenant do chamador, sob `hasAuthority('rbac:manage')`
-- [ ] Catálogo de permissões vive em `t_permission` (rótulo, descrição, categoria), não embutido no código do controller
-- [ ] `PLATAFORMA_ADMIN` gere os moldes e o catálogo por consola própria em `/plataforma`
-- [ ] Toda a alteração de papel e de atribuição fica registada e é consultável
+Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais ao próximo marco:
+- Tecto de permissões por plano de subscrição (`TenantPlano` × catálogo) — TECT-01/TECT-02
+- Converter os overrides por utilizador (`t_user_permission`) em papéis do escritório e retirar a
+  tabela — OVER-01
+- Responder à pergunta de produto em aberto: um papel criado de raiz pelo escritório (`moldeId`
+  nulo) deve poder ter responsáveis de processo? Hoje não pode, preservado deliberadamente.
 
 ### Out of Scope
 
@@ -278,10 +280,31 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current State
 
-**Shipped:** v2.16 (2026-07-30) — Distribuição Multi-Tenant e Faturação por Utilizadores. Evolução de "1 deployment por escritório" para instância partilhada multi-tenant: limite de utilizadores ativos por tenant com bloqueio `409` e indicador "X/Y" (Phases 117-118); papel `PLATAFORMA_ADMIN` (zero permissões `scope:action`) + tenant reservada "ALCv" + `SetupService.provisionTenant` sem depender do gate singleton de `/setup` (Phase 119); consola `/plataforma` para criar/listar/ajustar/suspender tenants, suspensão corta sessões já abertas em ~1s comprovado ao vivo (Phase 120); landing pública sempre com marca genérica + `PUT /admin/rbac` deixa de ser editável por escritório, gated a `PLATAFORMA_ADMIN` (Phase 121); relatório de utilização por tenant para faturação manual (Phase 122); auditoria de isolamento dedicada confirma as 3 novas superfícies sem fuga entre tenants (Phase 123). Fase 124 (inserida pós-auditoria, por escolha explícita do utilizador) fechou uma duplicação de lógica encontrada pela auditoria de integração — o indicador de utilizadores passou a consumir a fonte única do backend em vez de recalcular no cliente, confirmado ao vivo no browser. 8/8 fases, 27/27 planos, 15/15 requisitos satisfeitos. Status: `passed` (auditoria original `tech_debt`, ambos os itens resolvidos: 1 fechado pela Fase 124, o outro é uma pré-condição de deployment — 3 migrações SQL manuais pendentes de produção, já geridas em `123-ISOL-AUDIT.md`). Ver `.planning/milestones/v2.16-MILESTONE-AUDIT.md`.
+**Shipped:** v2.17 (2026-09-23) — RBAC por Escritório. O modelo de papéis globais fixos-por-plataforma
+deu lugar a papéis próprios de cada escritório, instanciados como cópia (snapshot) dos moldes que a
+plataforma define: catálogo de 20 permissões movido do código para `t_permission` com rótulo,
+descrição e módulo (Phase 124); consola de moldes em `/plataforma/moldes` e instanciação no
+provisionamento, onde editar um molde nunca propaga para um papel já instanciado (Phase 125);
+conversão convergente no arranque de todos os escritórios existentes, com verificação por utilizador
+que aborta o arranque se alguém ganhar ou perder uma permissão efectiva, e as comparações por nome
+literal de papel substituídas por resolução por proveniência (Phase 126); o administrador de
+escritório a criar, renomear, editar, apagar e atribuir os seus próprios papéis, com piso de
+permissões no papel de administrador e isolamento provado com dois tenants (Phase 127); auditoria
+imutável na mesma transacção da mutação que descreve, consultável em Definições restrita ao próprio
+escritório (Phase 128). 5/5 fases, 30/30 planos, 24/24 requisitos. Status: `tech_debt` — zero
+requisitos insatisfeitos, zero órfãos, 7/7 costuras de integração WIRED, 3/3 fluxos E2E sem quebra;
+a dívida é operacional e não de código (9 migrações manuais pendentes, 4 novas neste marco, e 4
+listas de verificação ao vivo em aberto). Quatro dívidas herdadas foram descobertas por revisão em
+camadas e não pelo roadmap — autorização por literal de nome, um gate estrutural a afirmar o inverso
+do que a fase entregava, atribuição por nome global a colidir com a renomeação, e o próprio
+`hasRole('ADMIN')` a tornar-se um auto-bloqueio assim que os nomes passaram a ser editáveis — e cada
+crítico encontrado em revisão foi corrigido com um teste que falha contra o código anterior, não
+registado como dívida. Ver `.planning/milestones/v2.17-MILESTONE-AUDIT.md`.
 
 <details>
-<summary>Histórico anterior (v1.0–v2.15)</summary>
+<summary>Histórico anterior (v1.0–v2.16)</summary>
+
+**v2.16** (2026-07-30) — Distribuição Multi-Tenant e Faturação por Utilizadores. Evolução de "1 deployment por escritório" para instância partilhada multi-tenant: limite de utilizadores ativos por tenant com bloqueio `409` e indicador "X/Y" (Phases 117-118); papel `PLATAFORMA_ADMIN` (zero permissões `scope:action`) + tenant reservada "ALCv" + `SetupService.provisionTenant` sem depender do gate singleton de `/setup` (Phase 119); consola `/plataforma` para criar/listar/ajustar/suspender tenants, suspensão corta sessões já abertas em ~1s comprovado ao vivo (Phase 120); landing pública sempre com marca genérica + `PUT /admin/rbac` deixa de ser editável por escritório, gated a `PLATAFORMA_ADMIN` (Phase 121); relatório de utilização por tenant para faturação manual (Phase 122); auditoria de isolamento dedicada confirma as 3 novas superfícies sem fuga entre tenants (Phase 123). Fase 124 (inserida pós-auditoria, por escolha explícita do utilizador) fechou uma duplicação de lógica encontrada pela auditoria de integração — o indicador de utilizadores passou a consumir a fonte única do backend em vez de recalcular no cliente, confirmado ao vivo no browser. 8/8 fases, 27/27 planos, 15/15 requisitos satisfeitos. Status: `passed` (auditoria original `tech_debt`, ambos os itens resolvidos: 1 fechado pela Fase 124, o outro é uma pré-condição de deployment — 3 migrações SQL manuais pendentes de produção, já geridas em `123-ISOL-AUDIT.md`). Ver `.planning/milestones/v2.16-MILESTONE-AUDIT.md`.
 
 **v2.15** (2026-07-27) — Reposicionamento SIJ. Correção de posicionamento institucional: remoção de todas as referências vivas a "NOSi" (agência de TI/transformação digital do governo cabo-verdiano) em `PROJECT.md`, na landing pública (`webpage/trust-section.tsx`), em `.trae/documents/SPEC.md` e no tenant de demonstração seedado (`DatabaseSeeder.java`), substituídas pelo enquadramento correto: ALCv alinhado ao ecossistema do SIJ (Sistema Judicial de Cabo Verde) — Phase 116, fase única. A auditoria de integração da milestone encontrou que a generalização do tenant seed corrigia um raio de impacto maior do que o originalmente identificado no threat model da fase: o nome "NOSi" era servido não só pelo endpoint público `GET /api/v1/public/branding` (landing) mas também por `GET /api/v1/auth/me` a qualquer utilizador autenticado — visível na app shell e em 2 documentos legais imprimíveis (Ficha Cliente, Termo de Honorários) — corrigido automaticamente pela mesma alteração de dados seed, sem código adicional. 4/4 requisitos satisfeitos. Status: `passed` — sem bloqueios, sem dívida técnica nova; correção é prospetiva apenas (seeder INSERT-only, ambientes já seedados antes desta milestone mantêm os dados antigos até reseed manual — aceite explicitamente no threat model da fase). Ver `.planning/milestones/v2.15-MILESTONE-AUDIT.md`.
 **v2.14** (2026-07-22) — UI/UX Melhorias. Pesquisa global funcional cross-entity — backend `GET /api/v1/pesquisa` (Cliente/Processo/Documento/Parecer, tenant+RBAC por ramo, ranking exato/prefixo antes de substring) + paleta de comando Ctrl+K/⌘K no frontend (debounce 300ms, agrupamento, destaque, recentes em sessão, sementeira `?q=` nas 4 listas via "Ver todos") — Phases 111-112. Filtro de Estado promovido para a barra sempre visível em Processos (Phase 113). Token `--radius` revertido de reto (`0`) para arredondado (`0.5rem`) em ambos os apps, com sweep de 271 overrides `rounded-none` ilegítimos que mascaravam a mudança via `tailwind-merge` (Phase 114, `human_needed` — 2 critérios de sucesso são afirmações de renderização visual só parcialmente confirmadas ao vivo). Ícones em todos os botões + filtros ícone-only em 5 módulos, Pareceres/Notificações deliberadamente excluídos (Phase 115, 11 planos, checkpoint humano ao vivo confirmou os 11 itens). Fase inserida pós-fecho (115.1) resolveu 3 gaps reportados pelo utilizador imediatamente após a v2.14 funcional fechar — criação de Processo/Parecer a partir da ficha de cliente, correção do redirect "Entrar" do `webpage/` público, alinhamento visual dos filtros de Pareceres — com UAT ao vivo (backend+web+webpage a correr em conjunto) a encontrar e corrigir 1 bug real que 3 rondas de revisão de código estática não tinham apanhado (mensagem de recuperação de cliente-em-falta nunca renderizava, causa raiz em `watch()` sobre um campo RHF não controlado). 15/15 requisitos formais satisfeitos + 3 itens informais da Phase 115.1 (nunca registados em REQUIREMENTS.md, ad hoc). Status: `tech_debt` — sem bloqueios; dívida residual documentada inclui a visual QA da Phase 114 substantiva mas não totalmente fechada, e 2 itens de UAT da Phase 115.1 bloqueados por uma credencial de teste desatualizada nesta base de dados de desenvolvimento de longa duração, não por dúvida no código. Ver `.planning/milestones/v2.14-MILESTONE-AUDIT.md`.
@@ -325,4 +348,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-20 after starting v2.17 milestone*
+*Last updated: 2026-09-23 after v2.17 milestone*

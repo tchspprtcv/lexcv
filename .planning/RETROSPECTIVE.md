@@ -567,6 +567,54 @@ Evolution from "1 deployment per office" to a shared multi-tenant instance, deli
 
 ---
 
+## Milestone: v2.17 — RBAC por Escritório
+
+**Shipped:** 2026-09-23
+**Phases:** 5 | **Plans:** 30 | **Tasks:** 66
+
+### What Was Built
+
+The model of fixed, platform-global roles gave way to each office owning its own roles, instantiated as a snapshot copy of platform-defined templates. The permission catalogue moved out of the controller into `t_permission` with label, description, module and ordering (Phase 124) — which incidentally closed a live 17-vs-20 divergence that made the RBAC matrix silently drop three permissions on every save. A `/plataforma/moldes` console and instantiation-on-provisioning proved the copy mechanism on the lowest-risk path first, with a three-layer warning so nobody mistakes snapshot for propagation (Phase 125). The riskiest phase then reused that same mechanism to convert every existing office at boot, gated by a per-user zero-drift check that aborts startup if anyone would gain or lose an effective permission, and replaced role-name literal comparisons with provenance resolution (Phase 126). Only then did the office screens become editable: create, rename, edit, delete and assign, with a permission floor on the administrator role and isolation proven with two tenants (Phase 127). Auditing closed the milestone, writing each event in the same transaction as the mutation it describes, queryable per office in Portuguese of Cabo Verde sentences (Phase 128).
+
+### What Worked
+
+- **Sequencing the snapshot mechanism before the migration that depends on it.** Phase 125 proved `instanciarMoldes` on new-office provisioning, where a mistake costs nothing; Phase 126 then reused the exact same method to convert live offices. The migration inherited a mechanism already under test instead of introducing one.
+- **Making the zero-drift check obtain its permissions the same way production does.** `VerificacaoDerivaPapeisService` calls `UserPrincipal.create` on both the before and after sides rather than re-deriving the union. The ADMIN permission block is therefore included by construction — a hand-rolled comparison would have missed it and green-lit a migration that silently changed who sees client and financial data.
+- **Layered review found four inherited debts the roadmap never anticipated**, each recorded in a CONTEXT before planning rather than discovered mid-execution: name-literal authorization in `ParecerController`, a `verify:` gate asserting the exact inverse of what Phase 127 was about to ship, assignment-by-global-name colliding with the rename capability, and `hasRole('ADMIN')` becoming a self-lockout the moment role names became editable. None were visible from inside a single phase.
+- **Every critical found in review was fixed, not logged, and each fix was proven by a test that fails against the pre-fix code.** Three criticals (125/126/127) plus three Phase 128 findings. The failing-first discipline caught one case where the obvious fix was wrong and a broader one was needed: the sole-administrator hole existed on deactivation and deletion too, not only on role removal.
+- **Structural immutability instead of disciplined restraint.** AUDT-04 was met by narrowing `AuditLogRepository` from `JpaRepository` to a three-method `Repository`, so delete methods stop existing rather than merely going uncalled — and the gate proving it was verified by reverting to `JpaRepository` and watching it fail.
+- **Provenance (`moldeId`) as the discriminator everywhere a name was previously compared.** This is what makes rename safe, and it was applied consistently across authorization, the protected-role floor, and business logic.
+
+### What Was Inefficient
+
+- **The UI-SPEC checker blocked Phase 125 twice on a typography self-contradiction**, and its own suggested fix would have introduced a defect — eliminating weight 700 was wrong because `RbacTab` genuinely uses `font-bold`. The block was correct; the remedy needed independent checking rather than application.
+- **`STATE.md` drifted for the entire milestone and nobody noticed until close.** It read `status: planning` with 0 of 5 phases from 2026-09-20 while all five ran. The work was never at risk — ROADMAP, REQUIREMENTS and git were all correct — but the file that exists to orient a fresh session was the one lying, and it had to be corrected before the audit so the audit was not measuring against a false state.
+- **Three `verify:*` gates were silently broken by an earlier LexCV→ALCv rename**, and `verify:relatorio-utilizacao` had been passing for the wrong reason. A gate that cannot fail is worse than no gate; these needed an out-of-phase fix commit mid-milestone.
+- **A plan claimed `RbacResponse` had "exactly two references" when it had four**, including a 14-case containment suite from Phase 119. Executing that plan as written would have broken test compilation. The plan-checker caught it, but only because a factual claim was stated precisely enough to check.
+- **Environment friction cost real time and caused one genuine planning gap:** JDK 26 is the shell default and breaks Lombok (every maven invocation needs `JAVA_HOME` forced to 23); bash `grep` returns false negatives on alternation and character-class patterns, which produced a wrong count that reached a plan before the checker caught it; Testcontainers cannot run locally at all (Docker npipe).
+- **Four session rate limits and one network failure interrupted the run.** Recovery was cheap each time because the discipline was to check disk state first and resume the existing agent rather than respawn — twice real work was recovered from disk (Phase 125's six plans, Phase 127-01's uncommitted edits).
+
+### Patterns Established
+
+- **Resolve by provenance, never by name, once a name is user-editable.** `TenantRole.moldeId` as a bare non-navigable column, plus `temPapelDeMolde`.
+- **`RecusaTransacional.recusar`** — every non-2xx return from a `@Transactional` handler marks the transaction rollback-only, so a refusal can never commit partially applied in-memory edits.
+- **A single writer/reader service with `Propagation.MANDATORY`** for cross-cutting records: the audit event physically cannot be written outside a caller's transaction.
+- **Node-only structural gates must be proven able to fail** before being trusted, and must not strip comments if that is what lets them pass vacuously.
+- **Retire a superseded guard in writing.** Phase 121's `ISOL-03` comment was replaced with an explanation of why it no longer applies, not deleted — otherwise the next reader assumes someone removed it by mistake.
+
+### Key Lessons
+
+- **A gate written to prove a guarantee becomes a liability the moment a later phase inverts that guarantee.** `verify:bloqueio-rbac` had 12 assertions proving an office admin *cannot* save the RBAC matrix; Phase 127 shipped the opposite. Rewriting it to prove the new guarantee — while keeping the one assertion (the Hooks rule) that was orthogonal to who can save — was the correct move, and identifying it during discussion rather than at execution is what made it cheap.
+- **"The names are copies of the template names" is true exactly until you ship renaming.** Every piece of logic resting on that coincidence must be converted in the same phase that makes names editable, not after.
+- **Cross-phase auditing keeps finding what phase-scoped review structurally cannot** — the third milestone running where this holds. This time the integration check also overstated one warning, which is its own lesson: a subagent's report is evidence, not a verdict, and the claim "no executed test proves X" was checkable in under a minute and turned out to be wrong.
+- **Autonomous authorization to accept routine decisions is not authorization to defer defects.** Every critical found in review was fixed within the run; what was deferred was only work that genuinely needs a human and a running environment.
+
+### Cost Observations
+
+- Model mix: orchestration on Opus, subagents predominantly on Sonnet per the resolved model profile (`balanced`). Exact per-model token shares were not instrumented, so no percentages are claimed here.
+- Sessions: one long autonomous run, interrupted and resumed six times (four rate limits, one network failure, one context compaction).
+- Notable: the expensive failures were not model failures but environment ones — a JDK that breaks the build, a `grep` that lies, and a Docker socket that blocks the only tests that could prove real-database rollback.
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Days | Files | Requirements |
@@ -584,5 +632,6 @@ Evolution from "1 deployment per office" to a shared multi-tenant instance, deli
 | v2.14 UI/UX Melhorias | 6 (incl. 1 urgent decimal insertion) | 23 | 4 | 68 | 15/15 + 3 informal (0 integration gaps at re-audit; 1 phase human_needed on rendering-only criteria, substantively de-risked; 1 real bug found+fixed via live UAT) |
 | v2.15 Reposicionamento SIJ | 1 | 1 | 1 | 3 | 4/4 (0 audit gaps; 1 integration finding — undocumented 2nd data-exposure flow, fixed automatically by the same seed-data change) |
 | v2.16 Distribuição Multi-Tenant e Faturação | 8 (incl. 1 inserted post-audit) | 27 | 2 | 55 | 15/15 (audit found 2 tech-debt items — 1 closed inline by the inserted Phase 124, 1 a deployment pre-condition, not code debt) |
+| v2.17 RBAC por Escritório | 5 | 30 | 3 | 207 | 24/24 (0 audit gaps, 0 orphans, 7/7 integration seams wired; `tech_debt` verdict is operational only — 9 pending manual migrations and 4 open live-verification checklists) |
 
 *Table grows with each milestone*

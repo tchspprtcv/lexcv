@@ -1,5 +1,64 @@
 # Milestones
 
+## v2.17 RBAC por Escritório (Shipped: 2026-09-23)
+
+**Phases completed:** 5 phases, 30 plans, 66 tasks
+
+**Delivered:** cada escritório passa a ser dono dos seus próprios papéis — criados a partir de moldes
+que a plataforma define, copiados por snapshot na instanciação, renomeáveis e editáveis pelo
+administrador do escritório sem que nada do que ele faça alcance outro tenant, e com cada alteração
+e atribuição registada de forma imutável e consultável.
+
+**Stats:** 174 commits · 207 ficheiros alterados · +35 665 / −1 414 linhas · 2026-09-20 → 2026-09-22
+· 432 testes backend, 55 vitest, 7 gates estruturais, todos verdes
+
+**Requisitos:** 24/24 completos (PAPEL-01..09, MOLD-01..04, CATL-01..04, MIGR-01..03, AUDT-01..04).
+Auditoria de fecho: `tech_debt` — zero requisitos insatisfeitos, zero órfãos, 7/7 costuras de
+integração WIRED, 3/3 fluxos E2E sem ponto de quebra.
+
+**Known deferred items at close: 4** (ver STATE.md, secção Deferred Items) — as quatro listas de
+verificação ao vivo das fases 124, 125, 127 e 128. Nenhuma indica defeito: todas exigem backend,
+PostgreSQL/MinIO e browser, que a corrida autónoma não tinha. A par delas ficam 9 migrações manuais
+pendentes numa base de dados de cliente, 4 delas novas neste marco.
+
+**Key accomplishments:**
+
+- `Permission` ganha rótulo/descrição/módulo/ordem/reservadaPlataforma; `seedRbac()` passa a semear um catálogo declarativo de 20 permissões com upsert não-destrutivo, e as 3 chaves antes invisíveis na matriz RBAC (`processos:create`, `processos:manage`, `financeiro:manage`) ganham rótulo próprio.
+- `AdminController.getRbac()` deixa de embutir 17 `PermissionDefDto` hardcoded e passa a servir `systemPermissions` a partir de `t_permission` via uma query derivada que exclui permissões reservadas à plataforma ao nível de SQL, mantendo o contrato de resposta e o gate de autorização byte-a-byte iguais.
+- Role ganha coluna instanciavel com default fechado, TenantRole/TenantRoleRepository nascem com proveniencia historica nao-navegavel, e DatabaseSeeder converge a marca de molde nos 5 papeis globais em cada arranque.
+- `SetupService.provisionTenant` instancia, dentro da sua transaccao existente, uma copia (`TenantRole`) de cada molde instanciavel com permissoes copiadas por `new HashSet<>()`, mantendo o administrador inicial no papel GLOBAL `ADMIN`.
+- GET/PUT/POST /api/v1/platform/moldes expostos em PlatformAdminController sob o gate de classe herdado, com 4 DTOs novos independentes do contrato de GET /admin/rbac, e prova por proxy AOP real (com demonstracao de RED genuino) de que um ADMIN de escritorio nunca alcanca nenhum dos 3 handlers.
+- Tipos TypeScript e hooks TanStack Query para `/platform/moldes` verificados linha a linha contra os DTOs Java já enviados no Plan 03, mais o botão "Gerir Moldes" que torna `/plataforma/moldes` alcançável a partir de `/plataforma`.
+- Ecrã `/plataforma/moldes` completo: matriz permissão × molde acessível e dinâmica, com o aviso de não-propagação em três camadas (banner permanente, badge de contagem por coluna, `AlertDialog` obrigatório) que garante que ninguém confunde snapshot com propagação ao editar um molde.
+- Painel inline "Criar Molde" (schema Zod com recusa case-insensitive de PLATAFORMA_ADMIN + checklist de permissoes por modulo), gate estrutural Node-only de 16 assercoes que reprova genuinamente se o aviso de nao-propagacao em tres camadas ou a acessibilidade da matriz forem removidos, e os 16 pontos do checkpoint humano de fecho da fase registados como pendentes (nao inventados).
+- Added `User.tenantRoles` (EAGER `@ManyToMany` over new `t_user_tenant_role`) alongside the untouched `User.roles`/`t_user_role`, plus idempotent migration `127` and the README/DEPLOYMENT.md documentation — zero behavior change, zero authority-resolution files touched.
+- Built `ResolucaoPapeisService` (single office-vs-global authority resolver, collapsing the union triplicated across `JwtAuthenticationFilter`/`AuthController.updateMe`/`AdminController.listUsers`) and `VerificacaoDerivaPapeisService` (MIGR-02's zero-drift safety net, which obtains all three permission parcels by calling `UserPrincipal.create` on both sides instead of re-deriving the ADMIN block) — 16 Mockito tests, two genuine RED demonstrations, zero call sites touched.
+- Built `MigracaoPapeisEscritorioService.migrar()` (converging per-tenant conversion reusing `SetupService.instanciarMoldes`, skipping the reserved `ALCv` tenant, verifying zero drift inside the same transaction) plus `MigracaoPapeisRunner` (boot-time `CommandLineRunner`, explicitly ordered after `DatabaseSeeder`, uncaught exceptions abort boot by design) — 9 Mockito tests, two genuine RED demonstrations, zero call sites of role/permission resolution touched.
+- JwtAuthenticationFilter, AuthController e AdminController passam a resolver papéis/permissões por `ResolucaoPapeisService` em vez de `user.getRoles()` direto, e `AdminController.createUser`/`updateUser` passam a povoar `tenantRoles` ao escrever papéis, fechando o risco de uma atribuição de papel devolver 200 sem qualquer efeito real na autoridade do utilizador.
+- `ParecerController.validateAdvogado` e os dois sitios de `ResourceController` (`addClienteAdvogado`, `addClienteAdministrativo`) deixam de comparar `user.getRoles()` por nome literal ("ADVOGADO"/"ASSISTENTE"/"TECNICO") e passam a resolver por `TenantRole.moldeId` via `ResolucaoPapeisService.temPapelDeMolde` -- sobrevivendo a uma renomeacao de papel de escritorio que a Phase 127 (PAPEL-04) vai permitir.
+- UserPrincipal now carries `moldeIds` (resolved once per request by JwtAuthenticationFilter via a new `ResolucaoPapeisService.resolverMoldeIds`), and both `ParecerController` ADMIN guards decide by that provenance instead of comparing `principal.getRoles().contains("ADMIN")` — so a renamed office ADMIN role keeps the ability to deliver pareceres and create versions.
+- Four new office-scoped RBAC DTOs (id-keyed write contract) plus `UserRepository.countByTenantRolesId` land the read/write/count building blocks plans 03-05 need, and `/api/v1/admin`'s class gate and `getRbac` gate move from `hasRole('ADMIN')`/`hasRole('ADMIN') or hasRole('PLATAFORMA_ADMIN')` to `hasAuthority('users:manage')`/`hasAuthority('rbac:manage')` so a renamed office administrator role never locks itself out.
+- `GET/PUT /api/v1/admin/rbac` now operate exclusively over the caller's own `t_tenant_role` rows -- `PUT` gated by `hasAuthority('rbac:manage')` with an id-keyed, validate-then-write body enforcing the administrator floor-lock, and the historic `ISOL-03` gate is retired in writing rather than silently removed, with an 11-case behavioral test proving isolation, provenance-based protection, and the live-session effect.
+- New `OfficeRolesController` at `/api/v1/admin/rbac/roles`, gated at the class level by `hasAuthority('rbac:manage')`, gives an office administrator create/rename/delete for their own roles -- delete refuses by a live assignment count and, independently, by ADMIN-molde provenance (never by name, since this same phase makes the name editable).
+- AdminController.createUser/updateUser assign TenantRole by id instead of resolving global role names, closing the rename-triggered 409 trapdoor Decisão 6 identified, with a provenance-derived t_user_role mirror for reversibility
+- Typed office-RBAC contract (UUID-string role ids), Zod validation schema, an id-keyed
+
+unsaved-edit merge generalized to create/rename/delete, and a `use-admin.ts` rewrite with five
+new TanStack RBAC hooks — no mock-db import, no `setQueryData`.
+
+- Rewrote `RbacTab` from a read-only four-role matrix gated by `isPlatformAdmin`/literal-`"ADMIN"` into the office's own editable permission x role console — dynamic role columns, create/rename/delete, `protegido`-based floor-lock — per the approved 127-UI-SPEC.md.
+- UserManagementTab now assigns the office's own roles by id via a dynamic checkbox list (PAPEL-06), and `verify:bloqueio-rbac` was renamed to `verify:papeis-escritorio` and rewritten from 12 assertions proving a read-only RBAC screen to 18 assertions proving the opposite: an editable, provenance-locked, id-keyed console.
+- Nullable `detalhe` column plus `@Immutable` on `AuditLog`, `AuditLogRepository` narrowed from `JpaRepository` to a three-method `Repository<AuditLog, Long>` with a paginated tenant-scoped RBAC finder, migration 128, and a 6-test structural gate proving the repository has no mutating surface — verified by making it fail on a real revert to `JpaRepository`.
+- The single writer/reader of RBAC audit events (`AuditoriaRbacService`, five `Propagation.MANDATORY` write methods plus a paginated `listar`) and the `RecusaTransacional.recusar` helper that plans 03-05 will use so a refused request marks its transaction rollback-only instead of committing partial edits — the rollback mechanism proven under a real `TransactionInterceptor`, not a mock.
+- `updateRbac`/`createUser`/`updateUser`/`deleteUser` are now `@Transactional` with all 26 non-2xx returns routed through `RecusaTransacional.recusar` (rollback-only on refusal, proven with an in-memory-mutation-then-refuse case), and the Phase 127 last-administrator check-then-act race is closed with a `PESSIMISTIC_WRITE` lock on the protected `TenantRole` acquired before an exclude-self active-holder count, in lock-before-count order proved by `InOrder`.
+- `AdminController`'s four transactional write handlers (`updateRbac`, `createUser`, `updateUser`, `deleteUser`) now call `AuditoriaRbacService` inside their existing `@Transactional` boundary — a per-role permission diff computed against the pre-write state for `updateRbac`, and role-assignment diffs (snapshotted before mutation, or before the hard delete) for the other three — with a dedicated 11-test Mockito suite proving both the argument shape of every successful call and the silence of every refused one.
+- `SetupService.provisionTenant` now calls `AuditoriaRbacService.registarAtribuicoes` in its existing `@Transactional` boundary right after the founding admin's `TenantRole` is set, recording the office's first audit event with `autor null` (never the invoking `PLATAFORMA_ADMIN`) and `motivo "provisionamento"`; `initializeSystem` and the Phase 126 boot conversion stay silent, with the reasoning now written into `SetupService`'s own Javadoc/comments.
+- `GET /api/v1/admin/rbac/auditoria` — a new, GET-only, class-gated (`hasAuthority('rbac:manage')`) controller that pages through a tenant's own RBAC audit events, tenant always resolved from `UserPrincipal` never a request parameter, proven with a real `@PreAuthorize` proxy at the controller level and a Testcontainers SQL-level IT (compiled, execution deferred).
+- The frontend contract for the Auditoria tab: `AuditoriaRbacEntry`/`ListFilters`/`PageResponse` types mirroring the shipped `GET /api/v1/admin/rbac/auditoria`, a pure `auditoriaEventoToSentence` composer that turns structured events into PT-CV sentences with a binding null-name fallback and an unknown-`acao` placeholder (17 vitest tests), and `useOfficeRbacAuditoria` — a read-only paginated hook whose cache is kept fresh by every RBAC and user mutation already in `use-admin.ts`.
+- The read-only "Auditoria" tab shipped in Definicoes: a Filtros card (Combobox for utilizador alvo, `<select>` for papel by id) and a Resultados card rendering PT-CV audit sentences (author/target/role names `font-semibold`) with a 20-per-page pager, wired additively into `settings/page.tsx` alongside a new structural verify gate (`verify:auditoria-rbac`) that is proven able to fail.
+
+---
+
 ## v2.16 Distribuição Multi-Tenant e Faturação por Utilizadores (Shipped: 2026-07-30)
 
 **Phases completed:** 8 phases, 27 plans, 58 tasks
