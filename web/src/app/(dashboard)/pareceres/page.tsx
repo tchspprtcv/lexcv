@@ -30,7 +30,11 @@ export default function ParecerPage() {
   const permissions = usePermissions();
   const canView = permissions.can.view("pareceres");
 
-  if (permissions.isFetched && !canView) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canView) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo de pareceres."

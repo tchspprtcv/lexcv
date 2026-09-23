@@ -31,7 +31,11 @@ export default function ParecerCreatePage() {
   const permissions = usePermissions();
   const canCreatePareceres = permissions.can.create("pareceres");
 
-  if (permissions.isFetched && !canCreatePareceres) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canCreatePareceres) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar solicitações de parecer."

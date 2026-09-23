@@ -24,7 +24,11 @@ export default function HonorarioCreatePage() {
   const permissions = usePermissions();
   const canCreateFinanceiro = permissions.can.create("financeiro");
 
-  if (permissions.isFetched && !canCreateFinanceiro) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canCreateFinanceiro) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar honorários."

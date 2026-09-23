@@ -225,7 +225,11 @@ export default function ProcessoDetailPage({ params }: PageProps) {
   const canEditProcessos = permissions.can.edit("processos");
   const canManageProcessos = permissions.can.manage("processos");
 
-  if (permissions.isFetched && !canViewProcessos) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canViewProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este processo."

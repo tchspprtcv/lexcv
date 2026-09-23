@@ -28,7 +28,11 @@ export default function EventoCreatePage() {
   const permissions = usePermissions();
   const canCreateAgenda = permissions.can.create("agenda");
 
-  if (permissions.isFetched && !canCreateAgenda) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canCreateAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para criar eventos."

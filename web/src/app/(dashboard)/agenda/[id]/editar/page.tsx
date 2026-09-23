@@ -65,7 +65,11 @@ export default function EventoEditPage(props: PageProps) {
     );
   }
 
-  if (permissions.isFetched && !canEditAgenda) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canEditAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para editar eventos."

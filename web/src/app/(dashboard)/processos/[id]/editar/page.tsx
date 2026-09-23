@@ -40,7 +40,11 @@ export default function ProcessoEditPage({ params }: PageProps) {
   const permissions = usePermissions();
   const canEditProcessos = permissions.can.edit("processos");
 
-  if (permissions.isFetched && !canEditProcessos) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canEditProcessos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para editar processos."

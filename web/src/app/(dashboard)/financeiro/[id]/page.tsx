@@ -78,7 +78,11 @@ export default function HonorarioDetailPage(props: PageProps) {
   const canViewClientes = permissions.can.view("clientes");
   const canViewProcessos = permissions.can.view("processos");
 
-  if (permissions.isFetched && !canViewFinanceiro) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canViewFinanceiro) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar este honorário."

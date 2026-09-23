@@ -25,7 +25,11 @@ export default function AgendaPage() {
   const canViewAgenda = permissions.can.view("agenda");
   const canCreateAgenda = permissions.can.create("agenda");
 
-  if (permissions.isFetched && !canViewAgenda) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canViewAgenda) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar a agenda."

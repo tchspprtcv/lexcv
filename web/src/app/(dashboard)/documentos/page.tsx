@@ -36,7 +36,11 @@ export default function DocumentosPage() {
     defaultValues: { processo_id: "", cliente_id: "" },
   });
 
-  if (permissions.isFetched && !canViewDocumentos) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canViewDocumentos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar documentos."

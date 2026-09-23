@@ -103,7 +103,11 @@ export default function FinanceiroPage() {
   const canViewFinanceiro = permissions.can.view("financeiro");
   const canCreateFinanceiro = permissions.can.create("financeiro");
 
-  if (permissions.isFetched && !canViewFinanceiro) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canViewFinanceiro) {
     return (
       <AccessDeniedState
         description="Não tem permissão para consultar o módulo financeiro."

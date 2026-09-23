@@ -120,7 +120,11 @@ export default function DocumentoUploadPage() {
     }
   };
 
-  if (permissions.isFetched && !canCreateDocumentos) {
+  if (!permissions.isFetched) {
+    return null;
+  }
+
+  if (!canCreateDocumentos) {
     return (
       <AccessDeniedState
         description="Não tem permissão para enviar documentos."
