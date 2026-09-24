@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
-status: executing
-stopped_at: All 4 phases complete — starting milestone lifecycle (audit → complete → cleanup)
-last_updated: "2026-09-24T04:00:00.000Z"
-last_activity: 2026-09-24 — Phase 132 (Configuração) concluída, verificação passed — todas as 4 fases do marco v2.18 completas
+status: Awaiting next milestone
+stopped_at: Milestone v2.18 completed and archived
+last_updated: "2026-09-24T05:00:00.000Z"
+last_activity: 2026-09-24 — Milestone v2.18 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Marco v2.18 — substituir a marca "ALCv" por "LexCV" em todo o código ativo, UI, configuração e documentação viva do projeto. Arquivo histórico (`.planning/milestones/*`, `.planning/research/*`, `MILESTONES.md`, `RETROSPECTIVE.md`) fica fora de âmbito.
+**Current focus:** Nenhum marco activo. v2.18 enviado a 2026-09-24; próxima fase é a **133**. Abrir o próximo marco com `/gsd:new-milestone`.
 
 ## Current Position
 
-Phase: Milestone v2.18 phases complete — lifecycle (audit → complete → cleanup) pending
+Phase: Milestone v2.18 complete
 Plan: —
-Status: All 4 phases (129-132) complete and verified (passed); proceeding to milestone audit
-Last activity: 2026-09-24 — Phase 132 (Configuração) concluída: backend/pom.xml description → "LexCV", mvn package limpo; docker-compose.hostinger.yml's alcv.tech domain preservado por decisão
+Status: Awaiting next milestone
+Last activity: 2026-09-24 — Milestone v2.18 completed and archived
 
 ## Performance Metrics
 
