@@ -1,20 +1,34 @@
-# ALCv
+# LexCV
 
 ## What This Is
 
-ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde, alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
+LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
 
 ## Core Value
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone: nenhum activo
+## Current Milestone: v2.18 Rebrand ALCv → LexCV
 
-O marco **v2.17 RBAC por Escritório** foi enviado a 2026-09-23 (Phases 124–128, 30 planos, 24/24
-requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.17-*`.
+**Goal:** Substituir a marca "ALCv" por "LexCV" em todo o código ativo, UI, configuração e
+documentação viva do projeto — incluindo o tenant reservado da plataforma, com migração de dados
+documentada.
 
-A próxima fase é a **129** — a numeração nunca reinicia. Abrir o próximo marco com
-`/gsd:new-milestone`.
+**Target features:**
+- Identidade do projeto e documentação viva (`PROJECT.md`, `CLAUDE.md`, `DEPLOYMENT.md`,
+  `.trae/documents/SPEC.md`, `backend/migrations/README.md`, `docs/`, `business/`)
+- Frontend `web/` e `webpage/` — títulos, metadata, componentes de marca, branding fallback
+- Backend — seed de dados e tenant reservado "ALCv" → "LexCV" com migração SQL documentada
+- Configuração — `.env.example`, `docker-compose*.yml`
+
+**Fora de âmbito (decisão explícita):** arquivo histórico já enviado (`.planning/milestones/*`,
+`.planning/research/*`, `.planning/MILESTONES.md`, `.planning/RETROSPECTIVE.md`) — mantém-se como
+registo do que aconteceu, sem reescrita retroativa.
+
+O marco anterior, **v2.17 RBAC por Escritório**, foi enviado a 2026-09-23 (Phases 124–128, 30
+planos, 24/24 requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.17-*`.
+
+A próxima fase é a **129** — a numeração nunca reinicia.
 
 **Duas dívidas do v2.17 que não são código e sobrevivem ao fecho:**
 - 9 migrações manuais pendentes numa base de dados de cliente, 4 delas novas neste marco (124, 126,
@@ -124,9 +138,9 @@ A próxima fase é a **129** — a numeração nunca reinicia. Abrir o próximo 
 
 ### Active
 
-Nenhum requisito activo. O próximo marco define os seus com `/gsd:new-milestone`.
+Definidos pelo marco v2.18 (Rebrand ALCv → LexCV) — ver `.planning/REQUIREMENTS.md`.
 
-Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais ao próximo marco:
+Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais a um marco futuro:
 - Tecto de permissões por plano de subscrição (`TenantPlano` × catálogo) — TECT-01/TECT-02
 - Converter os overrides por utilizador (`t_user_permission`) em papéis do escritório e retirar a
   tabela — OVER-01
@@ -348,4 +362,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-23 after v2.17 milestone*
+*Last updated: 2026-09-24 — milestone v2.18 (Rebrand ALCv → LexCV) started*

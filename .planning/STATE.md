@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.17
-milestone_name: RBAC por Escritório
-status: Awaiting next milestone
-stopped_at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
-last_updated: "2026-09-23T11:35:27.844Z"
-last_activity: 2026-09-23 — Milestone v2.17 completed and archived
+milestone: v2.18
+milestone_name: Rebrand ALCv → LexCV
+status: planning
+stopped_at: Defining requirements
+last_updated: "2026-09-24T00:00:00.000Z"
+last_activity: 2026-09-24 — Milestone v2.18 started
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-23)
+See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Nenhum marco activo. v2.17 enviado a 2026-09-23; próxima fase é a **129**. Abrir o próximo marco com `/gsd:new-milestone`.
+**Current focus:** Marco v2.18 — substituir a marca "ALCv" por "LexCV" em todo o código ativo, UI, configuração e documentação viva do projeto. Arquivo histórico (`.planning/milestones/*`, `.planning/research/*`, `MILESTONES.md`, `RETROSPECTIVE.md`) fica fora de âmbito.
 
 ## Current Position
 
-Phase: Milestone v2.17 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-23 — Milestone v2.17 completed and archived
+Status: Defining requirements
+Last activity: 2026-09-24 — Milestone v2.18 started
 
 ## Performance Metrics
 
