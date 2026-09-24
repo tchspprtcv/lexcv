@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
-status: planning
-stopped_at: ROADMAP.md created (Phases 129-132, 9/9 requirements mapped)
-last_updated: "2026-09-24T00:00:00.000Z"
-last_activity: 2026-09-24 — ROADMAP.md criado para v2.18 (Phases 129-132, 9/9 requisitos mapeados)
+status: executing
+stopped_at: Phase 129 complete, starting Phase 130
+last_updated: "2026-09-24T01:00:00.000Z"
+last_activity: 2026-09-24 — Phase 129 (Identidade e Documentação) concluída, verificação passed
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 129 — Identidade e Documentação (not started)
+Phase: 130 — Frontend — Marca LexCV (not started)
 Plan: —
-Status: Roadmap created, awaiting phase breakdown
-Last activity: 2026-09-24 — ROADMAP.md criado para v2.18 (Phases 129-132: 129 Identidade e Documentação, 130 Frontend — Marca LexCV, 131 Backend — Tenant Reservado LexCV, 132 Configuração)
+Status: Phase 129 complete (verification passed), advancing to Phase 130
+Last activity: 2026-09-24 — Phase 129 (Identidade e Documentação) concluída: CLAUDE.md, DEPLOYMENT.md, backend/migrations/README.md, .trae/documents/SPEC.md, manual do utilizador (md/html/pptx) e documentação comercial (business/) atualizados para "LexCV"; domínio real alcv.tech preservado por decisão
 
 ## Performance Metrics
 

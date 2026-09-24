@@ -192,7 +192,7 @@ def main() -> None:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Manual do Utilizador — ALCv</title>
+  <title>Manual do Utilizador — LexCV</title>
   <style>{CSS}  </style>
 </head>
 
@@ -200,12 +200,12 @@ def main() -> None:
   <div class="wrap">
     <header class="doc">
       <div><span class="pill">Oficial</span><span class="pill-meta">Versão 1.0 • Cabo Verde</span></div>
-      <h1>Manual do Utilizador — Plataforma Jurídica ALCv</h1>
+      <h1>Manual do Utilizador — Plataforma Jurídica LexCV</h1>
       <p>Guia ilustrado com capturas de ecrã da plataforma
          <a href="https://www.alcv.tech" target="_blank" rel="noopener">www.alcv.tech</a>.</p>
     </header>
 {corpo}
-    <footer class="doc">© 2026 ALCv. Todos os direitos reservados.</footer>
+    <footer class="doc">© 2026 LexCV. Todos os direitos reservados.</footer>
   </div>
 </body>
 

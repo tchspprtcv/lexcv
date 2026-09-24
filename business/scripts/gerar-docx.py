@@ -19,7 +19,7 @@ Nao usa pandoc, nem Word, nem LibreOffice.
 
 Familia tipografica
 -------------------
-"ALCv Institucional" — a familia originalmente usada em termo-de-abertura.docx,
+"LexCV Institucional" — a familia originalmente usada em termo-de-abertura.docx,
 escolhida por ser a unica das tres em uso que define de facto um sistema (corpo
 Calibri 11/1.15, rampa de titulos em azul-marinho, regua horizontal fina,
 caixa de citacao com barra lateral, tabela com cabecalho sombreado). As outras
@@ -75,7 +75,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 # --------------------------------------------------------------------------
-# ESPECIFICACAO da familia "ALCv Institucional"
+# ESPECIFICACAO da familia "LexCV Institucional"
 # --------------------------------------------------------------------------
 
 FONTE_TEXTO = "Calibri"
@@ -608,7 +608,7 @@ def construir(blocos: list[Bloco], paisagem: bool = False) -> "docx.document.Doc
 
     titulo = next((b.texto for b in blocos if b.tipo == "titulo" and b.nivel == 1), "")
     doc.core_properties.title = re.sub(r"[`*_]", "", titulo)
-    doc.core_properties.author = "ALCv — business/scripts/gerar-docx.py"
+    doc.core_properties.author = "LexCV — business/scripts/gerar-docx.py"
     doc.core_properties.comments = (
         "Artefacto derivado. A fonte de verdade e o .md com o mesmo nome. "
         "Nao editar este ficheiro a mao; regenerar com business/scripts/gerar-docx.py."

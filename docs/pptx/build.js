@@ -3,9 +3,9 @@ const { C, F, W, H, M, base, header, shot, rows, cards, callout, sh } = require(
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE";          // 13.3 x 7.5 — set before any slide
-pres.author = "ALCv";
-pres.company = "ALCv — Legal Practice Management Platform";
-pres.title = "Manual do Utilizador — Plataforma Jurídica ALCv";
+pres.author = "LexCV";
+pres.company = "LexCV — Legal Practice Management Platform";
+pres.title = "Manual do Utilizador — Plataforma Jurídica LexCV";
 
 /* ------------------------------------------------------------------ 1. CAPA */
 {
@@ -14,7 +14,7 @@ pres.title = "Manual do Utilizador — Plataforma Jurídica ALCv";
   s.addShape("ellipse", { x: 9.3, y: -2.2, w: 6.6, h: 6.6, fill: { color: C.surface }, line: { color: C.surface } });
   s.addShape("ellipse", { x: 10.4, y: -1.1, w: 4.4, h: 4.4, fill: { color: C.bgDeep }, line: { color: C.goldDim, width: 1 } });
 
-  s.addText("ALCv", { x: M, y: 1.30, w: 6, h: 0.5, isTextBox: true, margin: 0,
+  s.addText("LexCV", { x: M, y: 1.30, w: 6, h: 0.5, isTextBox: true, margin: 0,
     fontFace: F.body, fontSize: 15, bold: true, color: C.gold, charSpacing: 4 });
   s.addText("Manual do Utilizador", { x: M, y: 1.90, w: 8.6, h: 1.0, isTextBox: true, margin: 0,
     fontFace: F.head, fontSize: 46, bold: true, color: C.text });
@@ -41,7 +41,7 @@ pres.title = "Manual do Utilizador — Plataforma Jurídica ALCv";
     s.addText(v, { x: M + 1.85, y, w: 8.5, h: 0.3, isTextBox: true, margin: 0,
       fontFace: F.body, fontSize: 12, color: C.text });
   });
-  s.addNotes("Capa. Manual do Utilizador da Plataforma Jurídica ALCv, versão 1.0, Setembro de 2026.");
+  s.addNotes("Capa. Manual do Utilizador da Plataforma Jurídica LexCV, versão 1.0, Setembro de 2026.");
 }
 
 /* ------------------------------------------------------- 2. ÍNDICE GERAL */
@@ -114,7 +114,7 @@ divider(pres, "I", "Fundamentos",
   const s = base(pres);
   header(s, "Secção 1 · Visão geral e enquadramento", "Quatro pilares sustentam a plataforma");
   s.addText(
-    "O ALCv é uma plataforma integrada de gestão forense desenhada para a realidade de Cabo Verde, cobrindo a tramitação nos tribunais de comarca, tribunais de relação e Supremo Tribunal de Justiça.",
+    "O LexCV é uma plataforma integrada de gestão forense desenhada para a realidade de Cabo Verde, cobrindo a tramitação nos tribunais de comarca, tribunais de relação e Supremo Tribunal de Justiça.",
     { x: M, y: 1.54, w: 12.1, h: 0.55, isTextBox: true, margin: 0,
       fontFace: F.body, fontSize: 13, color: C.muted, lineSpacingMultiple: 1.0 });
 
@@ -145,7 +145,7 @@ divider(pres, "I", "Fundamentos",
   ], { x: M, y: 1.80, w: 4.55, gap: 0.92 });
 
   callout(s, { x: M, y: 4.72, w: 4.55, h: 1.45, label: "Credenciais de exemplo",
-    text: "Utilizador: admin@alcv.cv\nPalavra-passe: definida no convite ou na configuração inicial do escritório.", tone: C.ice });
+    text: "Utilizador: admin@lexcv.cv\nPalavra-passe: definida no convite ou na configuração inicial do escritório.", tone: C.ice });
 
   shot(s, "01_login.png", { x: 5.75, y: 1.75, w: 6.95,
     caption: "Ecrã de login inicial — autenticação por email profissional e palavra-passe." });
@@ -842,9 +842,9 @@ divider(pres, "V", "Administração e Prática",
       fontFace: F.body, fontSize: 13, color: C.text, lineSpacingMultiple: 1.0 });
   });
 
-  s.addText("ALCv · www.alcv.tech", { x: 4.6, y: 6.28, w: 5, h: 0.32, isTextBox: true, margin: 0,
+  s.addText("LexCV · www.alcv.tech", { x: 4.6, y: 6.28, w: 5, h: 0.32, isTextBox: true, margin: 0,
     fontFace: F.body, fontSize: 12, bold: true, color: C.gold });
-  s.addText("© 2026 ALCv. Todos os direitos reservados.", { x: 8.6, y: 6.28, w: 4.1, h: 0.32, isTextBox: true, margin: 0,
+  s.addText("© 2026 LexCV. Todos os direitos reservados.", { x: 8.6, y: 6.28, w: 4.1, h: 0.32, isTextBox: true, margin: 0,
     fontFace: F.body, fontSize: 10.5, color: C.muted, align: "right" });
   s.addNotes("Encerramento.");
 }

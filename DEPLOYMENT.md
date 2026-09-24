@@ -1,6 +1,6 @@
-# ALCv VPS Deployment Guide
+# LexCV VPS Deployment Guide
 
-Step-by-step runbook for deploying ALCv on a fresh Ubuntu/Debian VPS with automatic HTTPS via Caddy and Let's Encrypt.
+Step-by-step runbook for deploying LexCV on a fresh Ubuntu/Debian VPS with automatic HTTPS via Caddy and Let's Encrypt.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Step-by-step runbook for deploying ALCv on a fresh Ubuntu/Debian VPS with automa
   ```
   apt update && apt install -y docker.io docker-compose-plugin
   ```
-- A domain name (e.g. `alcv.example.com`) with an **A record** pointing to the VPS public IP
+- A domain name (e.g. `lexcv.example.com`) with an **A record** pointing to the VPS public IP
 - DNS must fully propagate before starting the stack — Caddy's ACME HTTP-01 challenge requires the domain to resolve to the VPS
 
 ## Firewall

@@ -1,6 +1,6 @@
 # Manual migrations — operational checklist
 
-**This file is the authoritative migration checklist for ALCv.** It lives next to the
+**This file is the authoritative migration checklist for LexCV.** It lives next to the
 `.sql` files, is versioned with the code, and is the only place where the migration
 inventory is maintained. Any other document (commercial, planning, deployment) must link
 here rather than restate the list.
