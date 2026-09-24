@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
 status: executing
-stopped_at: Phase 131 complete, starting Phase 132
-last_updated: "2026-09-24T03:00:00.000Z"
-last_activity: 2026-09-24 — Phase 131 (Backend — Tenant Reservado LexCV) concluída, verificação passed
+stopped_at: All 4 phases complete — starting milestone lifecycle (audit → complete → cleanup)
+last_updated: "2026-09-24T04:00:00.000Z"
+last_activity: 2026-09-24 — Phase 132 (Configuração) concluída, verificação passed — todas as 4 fases do marco v2.18 completas
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 75
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 132 — Configuração (not started)
+Phase: Milestone v2.18 phases complete — lifecycle (audit → complete → cleanup) pending
 Plan: —
-Status: Phase 131 complete (verification passed), advancing to Phase 132
-Last activity: 2026-09-24 — Phase 131 (Backend — Tenant Reservado LexCV) concluída: tenant reservado "ALCv"→"LexCV" em 13 ficheiros backend (7 produção + 6 teste), migração SQL 131 criada e documentada, 432/432 testes passam, SpotBugs limpo (JDK 23 indisponível no ambiente — verificado com -Dmaven.compiler.release=21 sem tocar pom.xml)
+Status: All 4 phases (129-132) complete and verified (passed); proceeding to milestone audit
+Last activity: 2026-09-24 — Phase 132 (Configuração) concluída: backend/pom.xml description → "LexCV", mvn package limpo; docker-compose.hostinger.yml's alcv.tech domain preservado por decisão
 
 ## Performance Metrics
 
