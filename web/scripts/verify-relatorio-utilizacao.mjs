@@ -129,10 +129,10 @@ async function main() {
     {
       id: "colunas-nome-reservado-importado",
       descricao:
-        'relatorio/columns.tsx importa de "../columns" e nao redeclara o literal do nome reservado (= "ALCv")',
+        'relatorio/columns.tsx importa de "../columns" e nao redeclara o literal do nome reservado (= "LexCV")',
       predicate: () => {
         const importsFromColumns = /from\s+"\.\.\/columns"/.test(relatorioColumns);
-        const hasReservedLiteral = relatorioColumns.includes('= "ALCv"');
+        const hasReservedLiteral = relatorioColumns.includes('= "LexCV"');
         return importsFromColumns && !hasReservedLiteral;
       },
     },

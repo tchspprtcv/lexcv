@@ -1,8 +1,8 @@
-# ALCv
+# LexCV
 
 ## What This Is
 
-ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde, alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
+LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, alinhada ao ecossistema do SIJ (Sistema Judicial de Cabo Verde), focada em centralizar clientes, processos, agenda/prazos, documentos e financeiro básico. O produto é multi-entidade (multi-tenant) e desenhado para operação segura, com frontend Web responsivo como primeira entrega.
 
 ## Core Value
 
@@ -10,14 +10,19 @@ Permitir que uma instituição gerencie o ciclo completo de processos jurídicos
 
 ## Current Milestone: nenhum activo
 
-O marco **v2.17 RBAC por Escritório** foi enviado a 2026-09-23 (Phases 124–128, 30 planos, 24/24
-requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.17-*`.
+O marco **v2.18 Rebrand ALCv → LexCV** foi enviado a 2026-09-24 (Phases 129–132, 4 planos, 9/9
+requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.18-*`.
 
-A próxima fase é a **129** — a numeração nunca reinicia. Abrir o próximo marco com
+A próxima fase é a **133** — a numeração nunca reinicia. Abrir o próximo marco com
 `/gsd:new-milestone`.
 
+**Uma dívida do v2.18 que não é código e sobrevive ao fecho:**
+- 10ª migração manual pendente numa base de dados de cliente (`131-rename-tenant-reservado-lexcv.sql`,
+  junta-se às 9 já pendentes desde o v2.17). O inventário autoritativo é
+  `backend/migrations/README.md`, não documentos de planeamento.
+
 **Duas dívidas do v2.17 que não são código e sobrevivem ao fecho:**
-- 9 migrações manuais pendentes numa base de dados de cliente, 4 delas novas neste marco (124, 126,
+- 9 migrações manuais pendentes numa base de dados de cliente, 4 delas novas nesse marco (124, 126,
   127, 128). O inventário autoritativo é `backend/migrations/README.md`, não documentos de
   planeamento.
 - 4 listas de verificação ao vivo em aberto (fases 124, 125, 127, 128). Nenhuma indica defeito.
@@ -122,11 +127,14 @@ A próxima fase é a **129** — a numeração nunca reinicia. Abrir o próximo 
 - ✓ **Migração sem deriva de acesso** — conversão convergente no arranque reutilizando `SetupService.instanciarMoldes`, com verificação por utilizador que compara permissões efectivas antes/depois e aborta o arranque se divergirem; as comparações por nome literal de papel (`"ADVOGADO"`, `"ASSISTENTE"`, `"TECNICO"`, `"ADMIN"`) deram lugar a resolução por proveniência — v2.17 (Phase 126)
 - ✓ **Auditoria imutável de papéis e atribuições** — evento e mutação na mesma transacção (um pedido recusado não escreve evento), registo consultável em Definições → Auditoria restrito ao próprio escritório, em frases de português de Cabo Verde; a imutabilidade é estrutural (`@Immutable`, repositório estreitado para não ter métodos de remoção), não uma questão de disciplina — v2.17 (Phase 128)
 
+- ✓ **Rebrand ALCv → LexCV** — marca substituída em toda a documentação técnica/comercial viva, em `web/`+`webpage/` (incluindo o literal `TENANT_RESERVADO`), no tenant reservado da plataforma no backend (com migração SQL documentada), e em `pom.xml`; domínio real de produção `alcv.tech` deliberadamente preservado — v2.18 (Phase 129)
+- ✓ (achado fora do roadmap, resolvido antes do fecho) Segundo manual do utilizador em `.docs/manual_utilizador_lexcv.md` corrigido; apresentação comercial obsoleta `apresentacao-alcv.pptx` removida após confirmar que `apresentacao-lexcv.pptx` já era a substituta completa — resolve a T-003 de `.planning/TAREFAS.md` — v2.18 (auditoria de milestone)
+
 ### Active
 
 Nenhum requisito activo. O próximo marco define os seus com `/gsd:new-milestone`.
 
-Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais ao próximo marco:
+Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais a um marco futuro:
 - Tecto de permissões por plano de subscrição (`TenantPlano` × catálogo) — TECT-01/TECT-02
 - Converter os overrides por utilizador (`t_user_permission`) em papéis do escritório e retirar a
   tabela — OVER-01
@@ -280,8 +288,26 @@ Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais ao pr�
 
 ## Current State
 
-**Shipped:** v2.17 (2026-09-23) — RBAC por Escritório. O modelo de papéis globais fixos-por-plataforma
-deu lugar a papéis próprios de cada escritório, instanciados como cópia (snapshot) dos moldes que a
+**Shipped:** v2.18 (2026-09-24) — Rebrand ALCv → LexCV. Marca substituída em todo o código ativo,
+UI, configuração e documentação viva: documentação técnica e comercial (Phase 129); ambas as apps
+frontend `web/`+`webpage/`, incluindo o literal `TENANT_RESERVADO` (Phase 130); o tenant reservado
+da plataforma no backend, com nova migração SQL documentada para bases de dados já provisionadas
+(Phase 131); `pom.xml`/`docker-compose*.yml` (Phase 132). O domínio real de produção `alcv.tech`
+foi deliberadamente preservado em todos os 5 ficheiros onde aparece, e o arquivo histórico
+(`.planning/milestones/*`, `MILESTONES.md`, `RETROSPECTIVE.md`) não foi reescrito — ambas decisões
+explícitas do utilizador. 4/4 fases, 4/4 planos, 9/9 requisitos. Status: `passed` — a auditoria de
+milestone encontrou 2 achados fora do âmbito declarado (um segundo manual do utilizador em
+`.docs/`, e a apresentação comercial obsoleta `apresentacao-alcv.pptx` bloqueada na tarefa T-003 de
+`.planning/TAREFAS.md`), e o utilizador escolheu resolvê-los antes do fecho em vez de os aceitar
+como dívida — comparação directa de conteúdo confirmou que "ALCV" era mesmo a marca anterior do
+produto (não um cliente nem lixo), a apresentação obsoleta foi removida, e T-003 foi fechada. Ver
+`.planning/milestones/v2.18-MILESTONE-AUDIT.md`.
+
+<details>
+<summary>Histórico anterior (v1.0–v2.17)</summary>
+
+**v2.17** (2026-09-23) — RBAC por Escritório. O modelo de papéis globais fixos-por-plataforma deu
+lugar a papéis próprios de cada escritório, instanciados como cópia (snapshot) dos moldes que a
 plataforma define: catálogo de 20 permissões movido do código para `t_permission` com rótulo,
 descrição e módulo (Phase 124); consola de moldes em `/plataforma/moldes` e instanciação no
 provisionamento, onde editar um molde nunca propaga para um papel já instanciado (Phase 125);
@@ -300,9 +326,6 @@ do que a fase entregava, atribuição por nome global a colidir com a renomeaç�
 `hasRole('ADMIN')` a tornar-se um auto-bloqueio assim que os nomes passaram a ser editáveis — e cada
 crítico encontrado em revisão foi corrigido com um teste que falha contra o código anterior, não
 registado como dívida. Ver `.planning/milestones/v2.17-MILESTONE-AUDIT.md`.
-
-<details>
-<summary>Histórico anterior (v1.0–v2.16)</summary>
 
 **v2.16** (2026-07-30) — Distribuição Multi-Tenant e Faturação por Utilizadores. Evolução de "1 deployment por escritório" para instância partilhada multi-tenant: limite de utilizadores ativos por tenant com bloqueio `409` e indicador "X/Y" (Phases 117-118); papel `PLATAFORMA_ADMIN` (zero permissões `scope:action`) + tenant reservada "ALCv" + `SetupService.provisionTenant` sem depender do gate singleton de `/setup` (Phase 119); consola `/plataforma` para criar/listar/ajustar/suspender tenants, suspensão corta sessões já abertas em ~1s comprovado ao vivo (Phase 120); landing pública sempre com marca genérica + `PUT /admin/rbac` deixa de ser editável por escritório, gated a `PLATAFORMA_ADMIN` (Phase 121); relatório de utilização por tenant para faturação manual (Phase 122); auditoria de isolamento dedicada confirma as 3 novas superfícies sem fuga entre tenants (Phase 123). Fase 124 (inserida pós-auditoria, por escolha explícita do utilizador) fechou uma duplicação de lógica encontrada pela auditoria de integração — o indicador de utilizadores passou a consumir a fonte única do backend em vez de recalcular no cliente, confirmado ao vivo no browser. 8/8 fases, 27/27 planos, 15/15 requisitos satisfeitos. Status: `passed` (auditoria original `tech_debt`, ambos os itens resolvidos: 1 fechado pela Fase 124, o outro é uma pré-condição de deployment — 3 migrações SQL manuais pendentes de produção, já geridas em `123-ISOL-AUDIT.md`). Ver `.planning/milestones/v2.16-MILESTONE-AUDIT.md`.
 
@@ -348,4 +371,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-23 after v2.17 milestone*
+*Last updated: 2026-09-24 after v2.18 milestone*

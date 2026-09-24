@@ -1,12 +1,12 @@
 # Proposta — Estratégia de Distribuição Multi-Tenant e Controlo de Faturação por Utilizadores
 
-**Produto:** ALCv — plataforma de gestão de escritórios jurídicos (Cabo Verde)
+**Produto:** LexCV — plataforma de gestão de escritórios jurídicos (Cabo Verde)
 **Data:** 28 de julho de 2026
 **Base:** leitura do código atual (`backend/`, `web/`) e do histórico em `.planning/` (PROJECT.md, ROADMAP.md, STATE.md, MILESTONES.md, RETROSPECTIVE.md)
 
 ## 1. Resumo executivo
 
-O ALCv já tem a fundação técnica certa para multi-tenancy — todas as entidades têm `tenant_id`, o contexto de segurança injeta-o via JWT, e há um histórico de auditorias (AUD-01) e correções de IDOR que mostram que o isolamento entre tenants é levado a sério. O que falta não é isolamento de dados — é **distribuição**: hoje, cada escritório novo significa um deployment novo (VPS, Postgres, MinIO, Docker Compose, DNS, certificado). Isso não escala e não dá controlo centralizado sobre quantos utilizadores cada cliente tem.
+O LexCV já tem a fundação técnica certa para multi-tenancy — todas as entidades têm `tenant_id`, o contexto de segurança injeta-o via JWT, e há um histórico de auditorias (AUD-01) e correções de IDOR que mostram que o isolamento entre tenants é levado a sério. O que falta não é isolamento de dados — é **distribuição**: hoje, cada escritório novo significa um deployment novo (VPS, Postgres, MinIO, Docker Compose, DNS, certificado). Isso não escala e não dá controlo centralizado sobre quantos utilizadores cada cliente tem.
 
 A recomendação central desta proposta é: **evoluir de "1 deployment por escritório" para uma instância partilhada onde cada escritório é uma `Tenant` na mesma base de dados**, reaproveitando o isolamento por `tenant_id` que já existe. Isto é o que torna "agregar escritórios" barato e rápido (criar uma linha, não uma VPS), e é o que torna o controlo de utilizadores para faturação trivial (uma tabela, não N bases de dados separadas).
 
@@ -53,9 +53,9 @@ A recomendação é usar o modelo partilhado como caminho principal — é o que
 
 1. **Substituir o gate singleton por um provisionamento repetível.** Hoje `SetupService.initializeSystem()` só corre uma vez por instalação. Proposta: manter o wizard `/setup` público para o *primeiro* arranque (bootstrap da própria plataforma), e expor uma operação equivalente — "criar tenant" — apenas para um papel novo de **administrador de plataforma** (ver ponto 3). Tecnicamente é quase o mesmo código de `SetupService`, só deixa de estar amarrado à flag `SystemSetting.initialized`.
 
-2. **Resolver as duas suposições de "tenant única" que o próprio código já assinala.** `TenantRepository.findFirstByOrderByCreatedAtAsc()` e `PublicController.getBranding()` deixam de fazer sentido com >1 tenant. Como não há (ainda) signup público, a opção mais simples é: o site institucional deixa de tentar mostrar branding "da" tenant (não faz sentido com várias) e passa a mostrar sempre a marca ALCv genérica — resolve o problema sem introduzir subdomínios. Branding por escritório (logo/nome) continua a aparecer dentro da aplicação autenticada, que já sabe o `tenantId` do utilizador.
+2. **Resolver as duas suposições de "tenant única" que o próprio código já assinala.** `TenantRepository.findFirstByOrderByCreatedAtAsc()` e `PublicController.getBranding()` deixam de fazer sentido com >1 tenant. Como não há (ainda) signup público, a opção mais simples é: o site institucional deixa de tentar mostrar branding "da" tenant (não faz sentido com várias) e passa a mostrar sempre a marca LexCV genérica — resolve o problema sem introduzir subdomínios. Branding por escritório (logo/nome) continua a aparecer dentro da aplicação autenticada, que já sabe o `tenantId` do utilizador.
 
-3. **Introduzir um papel de administrador de plataforma**, distinto do `ADMIN` de cada escritório (que continua só a gerir o seu próprio tenant). Pode ser um `Role` novo (`PLATAFORMA_ADMIN`) associado a uma tenant reservada "ALCv" — dá-te (só a ti) um ecrã interno para: listar tenants, criar um novo, ver utilizadores ativos por tenant, ajustar o limite de utilizadores/plano, suspender um tenant que não pague.
+3. **Introduzir um papel de administrador de plataforma**, distinto do `ADMIN` de cada escritório (que continua só a gerir o seu próprio tenant). Pode ser um `Role` novo (`PLATAFORMA_ADMIN`) associado a uma tenant reservada "LexCV" — dá-te (só a ti) um ecrã interno para: listar tenants, criar um novo, ver utilizadores ativos por tenant, ajustar o limite de utilizadores/plano, suspender um tenant que não pague.
 
 4. **Bloquear `PUT /api/v1/admin/rbac` para deixar de ser editável por cada tenant.** É a correção mais importante desta lista — sem ela, dois escritórios no mesmo deployment interferem um com o outro através de um ecrã de configurações aparentemente inofensivo. Para já, a opção de menor risco é tornar a gestão de permissões por papel uma operação de plataforma (fixa para todos os tenants), e retirar essa capacidade ao ADMIN de cada escritório. Se no futuro fizer sentido comercial ter papéis verdadeiramente por-escritório, isso implica dar `tenant_id` a `Role`, o que é uma mudança maior — não a proponho agora porque ninguém pediu essa funcionalidade ainda.
 

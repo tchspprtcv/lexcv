@@ -17,7 +17,6 @@ suposição.
 | ID | Tarefa | Pergunta que precisa de resposta |
 |---|---|---|
 | T-002 | Reconciliar as 3 cópias da especificação do módulo de parecer | Qual das três é a canónica? |
-| T-003 | Resolver as duas apresentações divergentes | O que é "ALCV" — cliente, marca anterior, ou obsoleto? |
 | T-006 | Commitar a reorganização de `business/` | Commito? Há um rename staged desde 2026-08-21 |
 | T-025 | O `postgres` e o `minio` ficam publicados no anfitrião pelo caminho de instalação que o `DEPLOYMENT.md` manda usar? | O `DEPLOYMENT.md` manda `-f docker-compose.yml -f docker-compose.prod.yml`, mas o `prod.yml` só faz `ports: !reset []` ao **backend** — o `postgres` (`5433:5432`) e o `minio` (`9000`, `9001`) do ficheiro base continuam publicados. Se for esse o caminho real, a consola do MinIO é alcançável pela 9001 direta, contornando a autenticação básica do Caddy. Qual dos dois ficheiros é o autoritativo para produção? |
 | T-021 | **O perfil `prod` nunca é ativado — `application-prod.yml` é ficheiro morto** | Achado por dois agentes em separado e confirmado por mim: `grep "SPRING_PROFILES_ACTIVE\|profiles" docker-compose*.yml backend/Dockerfile` = **zero**. Não é só o `ddl-auto`: `server.error.include-message: never` não está ativo (a produção devolve mensagens de exceção nas respostas de erro) e `forward-headers-strategy: framework` também não — e o comentário do próprio `application-prod.yml` diz que o bloqueio de login em `AuthController.login` depende dele para obter o IP real através do Caddy. Sem perfil, `getRemoteAddr()` devolve o IP do contentor Caddy para toda a gente e o bloqueio por tentativas colapsa num balde global. Ativo o perfil? |
@@ -80,12 +79,19 @@ propaga o erro em vez de o corrigir.
 - 2026-08-21 criada, bloqueada à nascença
 
 ### T-003 — Resolver as duas apresentações
-**Dono:** — · **Estado:** BLOQUEADA
+**Dono:** — · **Estado:** CONCLUÍDA
 **Evidência:** `business/apresentacoes/apresentacao-alcv.pptx` (versionado no git)
 e `apresentacao-lexcv.pptx` (não versionado). Conteúdos não comparados.
 **Pergunta ao humano:** "ALCV" é um cliente, uma marca anterior, ou lixo?
 **Histórico:**
 - 2026-08-21 criada, bloqueada à nascença
+- 2026-09-24 resolvida durante o marco v2.18 (Rebrand ALCv → LexCV): conteúdo dos dois ficheiros
+  comparado diretamente — `apresentacao-alcv.pptx` (21 slides, "ALCV" em todo o lado) e
+  `apresentacao-lexcv.pptx` (20 slides, zero menções a "ALCv", mesmo conteúdo já rebrandado).
+  Resposta: "ALCV" é a marca anterior deste produto, não um cliente nem lixo — confirmado pelo
+  próprio texto do deck ("ALCV é uma plataforma web multi-tenant para escritórios de advocacia em
+  Cabo Verde..."). `apresentacao-lexcv.pptx` já era a substituta completa. `apresentacao-alcv.pptx`
+  removida (`git rm`) por decisão explícita do utilizador; recuperável no histórico git.
 
 ### T-004 — Extrair `.md` fonte do plano financeiro
 **Dono:** `lexcv-redator` · **Estado:** BACKLOG

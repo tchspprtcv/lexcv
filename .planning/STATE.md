@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.17
-milestone_name: RBAC por Escritório
+milestone: v2.18
+milestone_name: Rebrand ALCv → LexCV
 status: Awaiting next milestone
-stopped_at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
-last_updated: "2026-09-23T11:35:27.844Z"
-last_activity: 2026-09-23 — Milestone v2.17 completed and archived
+stopped_at: Milestone v2.18 completed and archived
+last_updated: "2026-09-24T05:00:00.000Z"
+last_activity: 2026-09-24 — Milestone v2.18 completed and archived
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 30
-  completed_plans: 30
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-23)
+See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Nenhum marco activo. v2.17 enviado a 2026-09-23; próxima fase é a **129**. Abrir o próximo marco com `/gsd:new-milestone`.
+**Current focus:** Nenhum marco activo. v2.18 enviado a 2026-09-24; próxima fase é a **133**. Abrir o próximo marco com `/gsd:new-milestone`.
 
 ## Current Position
 
-Phase: Milestone v2.17 complete
+Phase: Milestone v2.18 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-09-23 — Milestone v2.17 completed and archived
+Last activity: 2026-09-24 — Milestone v2.18 completed and archived
 
 ## Performance Metrics
 
@@ -132,6 +132,8 @@ v2.16 roadmap (7 phases, 117–123, plus Phase 124 inserted post-audit; 15/15 re
 
 v2.17 roadmap (5 phases, 124–128, 24 requirements, 100% coverage) created 2026-09-20 — dependency spine: catálogo de permissões (124) e esquema de papéis do escritório antes de qualquer leitura/escrita; moldes+provisionamento (125) prova o mecanismo de instanciação no caminho de menor risco antes de o reutilizar; migração (126) é a fase mais arriscada do marco, isolada entre o mecanismo provado e o ecrã editável; CRUD+isolamento+guardas de `PLATAFORMA_ADMIN` (127) só se torna editável depois da migração; auditoria (128) fecha o marco.
 
+v2.18 roadmap (4 phases, 129–132, 9 requirements, 100% coverage) created 2026-09-24 — pura renomeação de marca ALCv→LexCV, sem novo research (decisão explícita, marco não introduz features). Fases derivadas por área de ficheiros, não por dependência forte: 129 (documentação/identidade) e 132 (configuração Maven/Compose) são texto puro de baixo risco; 130 (frontend `web/`+`webpage/`+scripts de verificação) agrupa FRONT-01/02/03 por serem todos ficheiros de marca de frontend, independentes entre si; 131 mantém BACK-01 (rename do tenant reservado no código) e BACK-02 (migração SQL correspondente) juntos por tocarem a mesma área, conforme instrução do orquestrador. As 4 fases não têm dependências reais entre si e podem em princípio correr em qualquer ordem — a numeração sequencial 129→132 é apenas a ordem de execução escolhida, não uma cadeia de bloqueio.
+
 ### Decisions
 
 Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase decision log has been cleared here at the v2.16 milestone boundary (per the standard milestone-close state-trim) — see PROJECT.md Key Decisions, `.planning/milestones/v2.16-ROADMAP.md`, and `.planning/RETROSPECTIVE.md` for the complete record.
@@ -145,6 +147,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - `backend/migrations/74-cleanup-nif-documento-tipo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - `backend/migrations/117-add-tenant-plano-limite-utilizadores.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - `backend/migrations/120-add-tenant-ativo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
+- `backend/migrations/131-rename-tenant-reservado-lexcv.sql` — manual-execution script (v2.18 Phase 131), must be run against every existing database before/alongside the rebrand deploy: renames the reserved-tenant row from "ALCv" to "LexCV" so `tenantRepository.findFirstByNome("LexCV")` still finds it instead of seeding a duplicate reserved tenant on next boot.
 - ~~`backend/migrations/120b-backfill-tenant-plano.sql` — manual-execution script, must be run against the database before/alongside next deploy~~ — **RUN against this dev database on 2026-07-30, during Phase 122's live UAT (Plan 04, scenario A3).** Originally recorded here as "cosmetic only" (a wrong plano badge) — **that was an underestimate.** Live UAT found the real consequence is a hard `500 DataIntegrityViolationException` on ANY `tenantRepository.save(tenant)` call against a pre-existing `plano = NULL` row (confirmed: attempting to suspend "Escritorio A" via `PATCH /platform/tenants/{id}/ativo` 500'd before the migration ran, 200'd cleanly after) — `@Builder.Default` only supplies a default for entities *built* via the Lombok builder, it has zero effect on entities Hibernate *loads* from an already-populated, still-nullable column. **This means any production deployment of Phase 120's code without first running this migration would 500 on the very first tenant-suspend attempt against pre-existing data** — this is a functional blocker, not a cosmetic one, and this note is left here (rather than deleted) specifically so a future deploy checklist doesn't under-prioritize it based on the old "cosmetic" framing. Confirmed fixed in this dev DB: `SELECT nome, plano FROM t_tenant` now shows `STARTER` for both existing tenants, and the same suspend operation that 500'd now returns `200`.
 - ~~REG_COMERCIAL and other `DocumentoTipo` values still render as raw enum strings instead of translated Portuguese labels~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `getDocumentoTipoLabel` helper added, applied at both cliente render sites (detail page + printable ficha).
 - ~~No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `ClienteNifValidationTest` added (standalone `jakarta.validation.Validator`, 4 scenarios: valid/blank/wrong-length/non-numeric).
@@ -297,10 +300,10 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-09-20T19:30:00.000Z
-Stopped at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
+Last session: 2026-09-24T00:00:00.000Z
+Stopped at: ROADMAP.md created for v2.18 (Phases 129-132, 9/9 requirements mapped)
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review and approve ROADMAP.md, then break down Phase 129 with /gsd:plan-phase 129

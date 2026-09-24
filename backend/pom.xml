@@ -14,7 +14,7 @@
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>backend</name>
-    <description>ALCv Legal System Backend (Spring Boot + PostgreSQL)</description>
+    <description>LexCV Legal System Backend (Spring Boot + PostgreSQL)</description>
     
     <properties>
         <java.version>23</java.version>

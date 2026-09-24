@@ -248,7 +248,7 @@ function ClientesPageContent({
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Módulo de Clientes</h1>
           <div className="mt-2 flex items-center text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
-            <span>ALCv</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Gestão de Clientes</span>
+            <span>LexCV</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Gestão de Clientes</span>
           </div>
         </div>
 

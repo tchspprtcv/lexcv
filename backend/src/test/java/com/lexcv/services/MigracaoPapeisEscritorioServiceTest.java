@@ -204,15 +204,15 @@ class MigracaoPapeisEscritorioServiceTest {
         verify(setupService, never()).instanciarMoldes(any());
     }
 
-    // Caso 6 -- tenant reservada ALCv saltada. E este o teste que falha se o administrador de
+    // Caso 6 -- tenant reservada LexCV saltada. E este o teste que falha se o administrador de
     // plataforma for trancado para fora: plataforma@lexcv.cv tem PLATAFORMA_ADMIN global, que nao
     // e instanciavel; se a migracao lhe atribuisse papeis de escritorio, o resolvedor passaria a
     // ler o lado de escritorio e ele perderia toda a autoridade de plataforma no instante do
     // arranque seguinte.
     @Test
-    void migrar_tenantReservadaALCv_ehSaltadaSemLerUtilizadoresNemInstanciarMoldes() {
+    void migrar_tenantReservadaLexCV_ehSaltadaSemLerUtilizadoresNemInstanciarMoldes() {
         UUID tenantReservadoId = UUID.randomUUID();
-        Tenant tenantReservado = Tenant.builder().id(tenantReservadoId).nome("ALCv").build();
+        Tenant tenantReservado = Tenant.builder().id(tenantReservadoId).nome("LexCV").build();
 
         when(tenantRepository.findAll()).thenReturn(List.of(tenantReservado));
 

@@ -108,7 +108,7 @@ class AuthControllerTenantSuspensoTest {
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(
-                Map.of("message", "O acesso da sua organização está suspenso. Contacte o suporte ALCv."),
+                Map.of("message", "O acesso da sua organização está suspenso. Contacte o suporte LexCV."),
                 response.getBody());
         assertNull(response.getHeaders().get(HttpHeaders.SET_COOKIE));
         verify(tokenProvider, never()).generateAccessToken(any(), any(), any());
@@ -147,7 +147,7 @@ class AuthControllerTenantSuspensoTest {
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertEquals(
-                Map.of("message", "O acesso da sua organização está suspenso. Contacte o suporte ALCv."),
+                Map.of("message", "O acesso da sua organização está suspenso. Contacte o suporte LexCV."),
                 response.getBody());
         verify(tokenProvider, never()).generateAccessToken(any(), any(), any());
     }

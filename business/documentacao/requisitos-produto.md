@@ -1,7 +1,7 @@
-# ALCv — Documento de Requisitos de Produto (PRD)
+# LexCV — Documento de Requisitos de Produto (PRD)
 
 - **Documento:** Requisitos de Produto
-- **Produto:** ALCv — Plataforma Institucional de Gestão Jurídica
+- **Produto:** LexCV — Plataforma Institucional de Gestão Jurídica
 - **Destinatário:** Entidade contratante (escritório de advogados ou instituição)
 - **Versão do produto descrita:** v2.16, encerrada a 30 de julho de 2026
 - **Data de emissão:** agosto de 2026
@@ -14,7 +14,7 @@
 
 ## 1. Objetivo do produto
 
-O ALCv é uma plataforma institucional de gestão jurídica para Cabo Verde, com
+O LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, com
 toda a linguagem do produto em português e a terminologia corrente da prática
 jurídica: cliente, processo, parte, fase, movimentação, evento, prazo,
 honorário, parecer e documento.
@@ -49,9 +49,9 @@ cargo que ocupa.
 
 | Papel | Perfil típico | O que faz |
 |---|---|---|
-| **PLATAFORMA_ADMIN** | Operador do ALCv | Cria e lista escritórios, ajusta plano e limite de utilizadores, suspende escritórios, consulta o relatório de utilização e define a matriz de permissões da plataforma. Não tem qualquer permissão sobre dados de clientes, processos ou documentos de nenhum escritório. |
+| **PLATAFORMA_ADMIN** | Operador do LexCV | Cria e lista escritórios, ajusta plano e limite de utilizadores, suspende escritórios, consulta o relatório de utilização e define a matriz de permissões da plataforma. Não tem qualquer permissão sobre dados de clientes, processos ou documentos de nenhum escritório. |
 
-O papel **PLATAFORMA_ADMIN** vive num escritório reservado ("ALCv") e opera
+O papel **PLATAFORMA_ADMIN** vive num escritório reservado ("LexCV") e opera
 exclusivamente pela consola `/plataforma`. A suspensão de um escritório corta as
 sessões já abertas desse escritório em poucos segundos.
 

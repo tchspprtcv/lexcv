@@ -1,6 +1,6 @@
 # business/ — Trilho de Produto e Negócio
 
-Casa de todos os artefactos **não-código** do ALCv: propostas, especificações para
+Casa de todos os artefactos **não-código** do LexCV: propostas, especificações para
 cliente, contratos, apresentações. O trilho de engenharia vive em `.planning/`
 (GSD); este é o trilho paralelo.
 
@@ -53,7 +53,7 @@ Regras que decorrem disto:
 - **Não escrever conversores novos.** Os seis `.docx` foram, antes disto,
   gerados por três famílias de script diferentes, nenhuma versionada — daí a
   divergência tipográfica entre eles. Há um conversor, é este.
-- Todos os documentos partilham a família **«ALCv Institucional»** (Carta
+- Todos os documentos partilham a família **«LexCV Institucional»** (Carta
   retrato, Calibri 11/1.15, rampa de títulos azul-marinho, tabela com cabeçalho
   sombreado e repetido). A especificação vive no topo do script, não numa
   convenção oral.

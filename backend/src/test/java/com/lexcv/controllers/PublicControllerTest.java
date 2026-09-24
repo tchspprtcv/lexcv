@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * CR-02 (119-REVIEW.md) / ISOL-01 (Phase 121, já satisfeito por esta correção): antes desta
  * mudança, {@code getBranding()} devolvia a marca da tenant mais antiga por {@code createdAt}
  * ({@code TenantRepository.findFirstByOrderByCreatedAtAsc()}) -- o que, a partir da Phase 119
- * (seeding incondicional da tenant reservada "ALCv" em {@code DatabaseSeeder.seedTenantPlataforma()}),
- * passaria a devolver sempre a marca genérica "ALCv" em vez da marca real do primeiro cliente de
+ * (seeding incondicional da tenant reservada "LexCV" em {@code DatabaseSeeder.seedTenantPlataforma()}),
+ * passaria a devolver sempre a marca genérica "LexCV" em vez da marca real do primeiro cliente de
  * qualquer instalação nova, silenciosamente e para sempre (ver 119-REVIEW.md, CR-02). O endpoint
  * deixou de resolver qualquer {@code Tenant} -- por isso este teste já não injeta nem mocka
  * {@code TenantRepository} (o controller deixou de o receber no construtor) e limita-se a provar
@@ -30,7 +30,7 @@ class PublicControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         TenantPublicInfoResponse body = (TenantPublicInfoResponse) response.getBody();
-        assertEquals("ALCv", body.getNome());
+        assertEquals("LexCV", body.getNome());
         assertNull(body.getLogoDataUrl());
     }
 
@@ -46,7 +46,7 @@ class PublicControllerTest {
         TenantPublicInfoResponse segunda = (TenantPublicInfoResponse) controller.getBranding().getBody();
 
         assertEquals(primeira, segunda);
-        assertEquals("ALCv", segunda.getNome());
+        assertEquals("LexCV", segunda.getNome());
         assertNull(segunda.getLogoDataUrl());
     }
 }

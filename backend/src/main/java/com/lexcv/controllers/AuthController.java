@@ -119,7 +119,7 @@ public class AuthController {
         Tenant tenant = tenantRepository.findById(user.getTenantId()).orElse(null);
         if (tenant == null || !Boolean.TRUE.equals(tenant.getAtivo())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                    "message", "O acesso da sua organização está suspenso. Contacte o suporte ALCv."
+                    "message", "O acesso da sua organização está suspenso. Contacte o suporte LexCV."
             ));
         }
 

@@ -1,4 +1,4 @@
-// Shared theme + layout helpers for the ALCv manual deck.
+// Shared theme + layout helpers for the LexCV manual deck.
 const path = require("path");
 const IMG = path.join(__dirname, "..", "images") + path.sep;
 

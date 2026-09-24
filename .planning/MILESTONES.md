@@ -1,5 +1,54 @@
 # Milestones
 
+## v2.18 Rebrand ALCv → LexCV (Shipped: 2026-09-24)
+
+**Phases completed:** 4 phases, 4 plans, 0 tasks
+
+**Delivered:** substituição da marca "ALCv" por "LexCV" em todo o código ativo, UI, configuração e
+documentação viva do projeto — documentação técnica e comercial (Phase 129), ambas as apps
+frontend `web/`/`webpage/` incluindo o literal `TENANT_RESERVADO` (Phase 130), o tenant reservado
+da plataforma no backend com migração SQL documentada para bases de dados já provisionadas (Phase
+131), e `pom.xml`/`docker-compose*.yml` (Phase 132). O domínio real de produção `alcv.tech` foi
+deliberadamente preservado em todos os 5 ficheiros onde aparece, por decisão explícita, e o
+arquivo histórico (`.planning/milestones/*`, `MILESTONES.md`, `RETROSPECTIVE.md`) não foi
+reescrito.
+
+**Stats:** 9 commits · 82 ficheiros alterados · +1085 / −243 linhas · 2026-09-24 · 432 testes
+backend, 3 scripts de verificação frontend (45/45 asserções), `pnpm build` limpo em `web/`+
+`webpage/`, SpotBugs limpo
+
+**Requisitos:** 9/9 completos (IDENT-01..03, FRONT-01..03, BACK-01..02, CONFIG-01). Auditoria de
+fecho: `passed` — zero requisitos insatisfeitos. A auditoria encontrou 2 achados fora do âmbito
+declarado (um segundo manual do utilizador em `.docs/`, e a apresentação comercial obsoleta
+`apresentacao-alcv.pptx` bloqueada na tarefa T-003 de `.planning/TAREFAS.md`) — ambos resolvidos
+antes do fecho, por escolha explícita do utilizador, em vez de aceites como dívida.
+
+**Known deferred items at close: 0.** Uma 10ª migração SQL manual pendente
+(`131-rename-tenant-reservado-lexcv.sql`) junta-se às 9 já pendentes desde o v2.17 — nenhuma nova
+dívida de código, só mais um passo de deployment manual (ver `backend/migrations/README.md`).
+
+**Key accomplishments:**
+
+- `CLAUDE.md`, `DEPLOYMENT.md`, `backend/migrations/README.md`, `.trae/documents/SPEC.md`, o
+  manual do utilizador (fonte + HTML + PPTX regenerados) e 8 documentos comerciais (+ 6 `.docx`
+  regenerados) passam a referir "LexCV"; `admin@alcv.cv` corrigido para `admin@lexcv.cv` em toda a
+  documentação, alinhando com o valor já real no seed.
+- `web/` e `webpage/` — títulos, metadata, breadcrumbs, fallback de nome de tenant e o literal
+  `TENANT_RESERVADO` em `plataforma/columns.tsx` passam a "LexCV"; `contacto@alcv.cv` →
+  `contacto@lexcv.cv` na landing pública.
+- Tenant reservado da plataforma renomeado em 7 ficheiros de produção + 6 de teste no backend, com
+  nova migração SQL `131-rename-tenant-reservado-lexcv.sql` documentada para instalações já
+  provisionadas.
+- `backend/pom.xml` (`<description>`) atualizado; nenhum `docker-compose*.yml` continha o token de
+  marca.
+- Achado fora do roadmap: um segundo manual do utilizador em `.docs/manual_utilizador_lexcv.md`
+  (nome de ficheiro já em "lexcv", conteúdo ainda em "ALCv") corrigido; a apresentação comercial
+  obsoleta `apresentacao-alcv.pptx` (21 slides, "ALCV" em todo o lado) removida depois de confirmar
+  que `apresentacao-lexcv.pptx` (20 slides, zero "ALCv") já era a substituta completa — resolve a
+  T-003 de `.planning/TAREFAS.md`.
+
+---
+
 ## v2.17 RBAC por Escritório (Shipped: 2026-09-23)
 
 **Phases completed:** 5 phases, 30 plans, 66 tasks

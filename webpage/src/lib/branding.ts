@@ -1,7 +1,7 @@
 import type { BrandingResponse } from "@/types/branding";
 import { getBackendOrigin } from "@/lib/backend-origin";
 
-const FALLBACK: BrandingResponse = { nome: "ALCv", logoDataUrl: null };
+const FALLBACK: BrandingResponse = { nome: "LexCV", logoDataUrl: null };
 
 export async function fetchBranding(): Promise<BrandingResponse> {
   try {
@@ -19,7 +19,7 @@ export async function fetchBranding(): Promise<BrandingResponse> {
       return FALLBACK;
     }
     const data = (await response.json()) as BrandingResponse;
-    return { nome: data.nome || "ALCv", logoDataUrl: data.logoDataUrl ?? null };
+    return { nome: data.nome || "LexCV", logoDataUrl: data.logoDataUrl ?? null };
   } catch {
     // rede/timeout server-side → fail open, nunca crash para um visitante anónimo
     return FALLBACK;

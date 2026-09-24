@@ -54,7 +54,7 @@ import static org.mockito.Mockito.when;
  * construtor gerado por {@code @RequiredArgsConstructor} (6 colaboradores, {@code
  * TenantRoleRepository} por último).
  *
- * <p>Nota de âmbito: a tenant reservada {@code ALCv} não é coberta por este ficheiro porque
+ * <p>Nota de âmbito: a tenant reservada {@code LexCV} não é coberta por este ficheiro porque
  * <b>não passa por {@code provisionTenant}</b> -- nasce em {@code
  * DatabaseSeeder.seedTenantPlataforma()}, que não conhece {@code TenantRoleRepository}
  * (verificado pelo gate de grep do Plan 01). É por construção, não por guarda, que ela nunca
