@@ -26,7 +26,7 @@ export function BrandMark({
       ) : (
         <Building2 className="h-4 w-4 text-slate-400" />
       )}
-      <span>{nome || "ALCv"}</span>
+      <span>{nome || "LexCV"}</span>
     </span>
   );
 }

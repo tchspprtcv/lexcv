@@ -5,14 +5,14 @@
  * fim das secções e no rodapé — e porque o dia em que deixar de ser um mailto
  * (formulário, agendamento) muda-se aqui e não em seis sítios.
  */
-const EMAIL = "contacto@alcv.cv";
+const EMAIL = "contacto@lexcv.cv";
 
 export function getDemoUrl(origem?: string) {
-  const assunto = "Pedido de demonstração — ALCv";
+  const assunto = "Pedido de demonstração — LexCV";
   const corpo = [
     "Bom dia,",
     "",
-    "Gostaríamos de conhecer o ALCv.",
+    "Gostaríamos de conhecer o LexCV.",
     "",
     "Escritório/instituição:",
     "Número de utilizadores previstos:",

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
 status: executing
-stopped_at: Phase 129 complete, starting Phase 130
-last_updated: "2026-09-24T01:00:00.000Z"
-last_activity: 2026-09-24 — Phase 129 (Identidade e Documentação) concluída, verificação passed
+stopped_at: Phase 130 complete, starting Phase 131
+last_updated: "2026-09-24T02:00:00.000Z"
+last_activity: 2026-09-24 — Phase 130 (Frontend — Marca LexCV) concluída, verificação passed
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 25
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 130 — Frontend — Marca LexCV (not started)
+Phase: 131 — Backend — Tenant Reservado LexCV (not started)
 Plan: —
-Status: Phase 129 complete (verification passed), advancing to Phase 130
-Last activity: 2026-09-24 — Phase 129 (Identidade e Documentação) concluída: CLAUDE.md, DEPLOYMENT.md, backend/migrations/README.md, .trae/documents/SPEC.md, manual do utilizador (md/html/pptx) e documentação comercial (business/) atualizados para "LexCV"; domínio real alcv.tech preservado por decisão
+Status: Phase 130 complete (verification passed), advancing to Phase 131
+Last activity: 2026-09-24 — Phase 130 (Frontend — Marca LexCV) concluída: web/ e webpage/ atualizados para "LexCV" (incl. TENANT_RESERVADO em plataforma/columns.tsx e contacto@lexcv.cv), ambos os builds pnpm limpos, 45/45 asserções dos 3 scripts de verificação PASS
 
 ## Performance Metrics
 

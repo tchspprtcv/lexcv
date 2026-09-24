@@ -7,7 +7,7 @@
 ## Phases
 
 - [x] **Phase 129: Identidade e Documentação** - Documentação técnica ativa, manual do utilizador e documentação comercial passam a referir "LexCV"
-- [ ] **Phase 130: Frontend — Marca LexCV** - Ambas as apps frontend (`web/`, `webpage/`) e os scripts de verificação manual passam a mostrar/referir "LexCV"
+- [x] **Phase 130: Frontend — Marca LexCV** - Ambas as apps frontend (`web/`, `webpage/`) e os scripts de verificação manual passam a mostrar/referir "LexCV"
 - [ ] **Phase 131: Backend — Tenant Reservado LexCV** - Tenant reservado da plataforma renomeado no código, com migração SQL documentada para bases de dados já provisionadas
 - [ ] **Phase 132: Configuração** - `pom.xml` e ficheiros `docker-compose*.yml` passam a referir "LexCV"
 
@@ -61,7 +61,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 129. Identidade e Documentação | 1/1 | Complete | 2026-09-24 |
-| 130. Frontend — Marca LexCV | 0/TBD | Not started | - |
+| 130. Frontend — Marca LexCV | 1/1 | Complete | 2026-09-24 |
 | 131. Backend — Tenant Reservado LexCV | 0/TBD | Not started | - |
 | 132. Configuração | 0/TBD | Not started | - |
 

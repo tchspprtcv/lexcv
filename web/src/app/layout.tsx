@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ALCv",
+  title: "LexCV",
   description: "Plataforma institucional de gestão jurídica (MVP)",
 };
 

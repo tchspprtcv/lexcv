@@ -107,7 +107,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Definições de Sistema</h1>
           <div className="mt-2 flex items-center text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
-            <span>ALCv</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Configurações Gerais e Segurança</span>
+            <span>LexCV</span> <span className="mx-2 text-slate-300 dark:text-slate-700">/</span> <span className="text-blue-600 dark:text-blue-400">Configurações Gerais e Segurança</span>
           </div>
         </div>
       </div>
@@ -458,7 +458,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
             <div>
               <CardTitle className="text-xl font-semibold">Utilizadores Registados</CardTitle>
               <CardDescription>
-                Lista de profissionais com credenciais de acesso ao sistema ALCv.
+                Lista de profissionais com credenciais de acesso ao sistema LexCV.
               </CardDescription>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -718,7 +718,7 @@ function UserManagementTab({ currentUserId }: { currentUserId?: string }) {
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Status de Utilizador</h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Utilizadores desativados são imediatamente impedidos de fazer login no ALCv.
+                    Utilizadores desativados são imediatamente impedidos de fazer login no LexCV.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

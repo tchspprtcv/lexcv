@@ -15,7 +15,7 @@ import type { TenantAdminSummary, TenantPlano } from "@/types/platform-admin";
  * Nome literal do tenant reservado da plataforma. Exportado para o page.tsx
  * (Plan 05) reaproveitar o mesmo literal nos cards mobile, em vez de o repetir.
  */
-export const TENANT_RESERVADO = "ALCv";
+export const TENANT_RESERVADO = "LexCV";
 
 const PLANO_BADGE_VARIANT: Record<TenantPlano, "gray" | "purple" | "amber"> = {
   STARTER: "gray",
@@ -78,7 +78,7 @@ function TenantAcoesCell({
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>Não é possível suspender o tenant da plataforma (ALCv).</TooltipContent>
+          <TooltipContent>Não é possível suspender o tenant da plataforma (LexCV).</TooltipContent>
         </Tooltip>
       ) : (
         <Tooltip>

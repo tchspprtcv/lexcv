@@ -215,7 +215,7 @@ async function main() {
         const semBadge = !settingsPage.includes("Gerido pela Plataforma");
         const normalizado = settingsPage.replace(/\s+/g, " ");
         const semTooltipAntigo = !normalizado.includes(
-          "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma ALCv"
+          "As regras de acesso por perfil (RBAC) passaram a ser uma configuração fixa e comum a toda a plataforma LexCV"
         );
         return semBadge && semTooltipAntigo;
       },
