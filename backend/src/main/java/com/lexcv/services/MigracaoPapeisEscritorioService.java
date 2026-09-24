@@ -52,7 +52,7 @@ public class MigracaoPapeisEscritorioService {
     // global, que não é instanciável; se esta migração lhe atribuísse papéis de escritório, o
     // resolvedor passaria a ler o lado de escritório e ele perderia toda a autoridade de
     // plataforma no instante do arranque seguinte (126-CONTEXT.md, Decisão 3).
-    private static final String TENANT_RESERVADO = "ALCv";
+    private static final String TENANT_RESERVADO = "LexCV";
 
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;

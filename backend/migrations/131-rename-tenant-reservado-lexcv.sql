@@ -1,0 +1,30 @@
+-- Phase 131 (BACK-01/BACK-02): rename the platform's reserved tenant row from
+-- "ALCv" to "LexCV" on an already-provisioned database.
+--
+-- Why: as of this phase, DatabaseSeeder.seedTenantPlataforma() (backend/src/main/java/
+-- com/lexcv/seed/DatabaseSeeder.java), PublicController.getBranding()'s fallback, and the
+-- reserved-tenant literal in PlatformAdminController/MigracaoPapeisEscritorioService/
+-- TenantRepository's Javadoc all changed their literal from "ALCv" to "LexCV" (part of the
+-- v2.18 rebrand). Application code looks the reserved tenant up by exact name
+-- (tenantRepository.findFirstByNome("LexCV")) -- on a database seeded before this phase,
+-- that row is still named "ALCv" and would no longer be found, causing
+-- seedTenantPlataforma() to insert a SECOND reserved-tenant row named "LexCV" on next boot
+-- (see the pre-existing idempotency caveat in TenantRepository's Javadoc about concurrent
+-- seeding being able to insert duplicate reserved-tenant rows -- the same risk class, this
+-- time guaranteed rather than a race).
+--
+-- What this does: renames the existing "ALCv" row(s) to "LexCV" in place, preserving the
+-- row's id, plano, ativo and every other column -- so any existing PLATAFORMA_ADMIN user,
+-- provisioned tenant, or audit-log reference tied to that tenant id is unaffected.
+--
+-- Idempotent: the UPDATE only touches rows still named 'ALCv'; a second run matches zero
+-- rows and changes nothing. Safe to run against a database where seedTenantPlataforma()
+-- already inserted a duplicate "LexCV" row after an upgrade without this script -- that
+-- duplicate is left untouched (its nome is already 'LexCV', not 'ALCv') and is a separate,
+-- pre-existing data-quality issue this script does not attempt to fix.
+--
+-- Fresh install: not needed. seedTenantPlataforma() creates the reserved tenant as
+-- "LexCV" directly on first boot -- there is no "ALCv" row to rename. Running this script
+-- against a fresh database is harmless (UPDATE matches zero rows).
+
+UPDATE t_tenant SET nome = 'LexCV' WHERE nome = 'ALCv';

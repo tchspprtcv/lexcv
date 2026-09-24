@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
  * ({@code TenantRepository.findFirstByOrderByCreatedAtAsc()}), sob a suposição de deployment
  * single-tenant (WR-01, Phase 98 code review). A partir da Phase 119,
  * {@code DatabaseSeeder.seedTenantPlataforma()} passou a criar incondicionalmente, em todo o
- * arranque, a tenant reservada "ALCv" antes de qualquer tenant de cliente real -- tornando-a
+ * arranque, a tenant reservada "LexCV" antes de qualquer tenant de cliente real -- tornando-a
  * garantidamente a tenant mais antiga, para sempre, em qualquer instalação nova, e fazendo este
- * endpoint devolver sempre a marca genérica "ALCv" em vez da marca real do cliente,
+ * endpoint devolver sempre a marca genérica "LexCV" em vez da marca real do cliente,
  * silenciosamente e para sempre. Em vez de tentar excluir a tenant reservada dessa procura (o que
  * continuaria frágil perante qualquer 3ª tenant real futura), este endpoint deixa de resolver "a"
- * tenant: devolve sempre a marca genérica ALCv, tal como decidido em
+ * tenant: devolve sempre a marca genérica LexCV, tal como decidido em
  * {@code proposta_multitenancy_distribuicao_faturacao.md} (secção 4.2, ponto 2) e adotado como
  * ISOL-01 na Phase 121. Branding por escritório continua disponível dentro da aplicação
  * autenticada via {@code GET /auth/me} (que já resolve o tenantId real do utilizador a partir do
@@ -34,7 +34,7 @@ public class PublicController {
     public ResponseEntity<?> getBranding() {
         return ResponseEntity.ok(
                 TenantPublicInfoResponse.builder()
-                        .nome("ALCv")
+                        .nome("LexCV")
                         .logoDataUrl(null)
                         .build()
         );

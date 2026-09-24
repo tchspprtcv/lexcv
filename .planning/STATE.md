@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
 status: executing
-stopped_at: Phase 130 complete, starting Phase 131
-last_updated: "2026-09-24T02:00:00.000Z"
-last_activity: 2026-09-24 — Phase 130 (Frontend — Marca LexCV) concluída, verificação passed
+stopped_at: Phase 131 complete, starting Phase 132
+last_updated: "2026-09-24T03:00:00.000Z"
+last_activity: 2026-09-24 — Phase 131 (Backend — Tenant Reservado LexCV) concluída, verificação passed
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 50
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 131 — Backend — Tenant Reservado LexCV (not started)
+Phase: 132 — Configuração (not started)
 Plan: —
-Status: Phase 130 complete (verification passed), advancing to Phase 131
-Last activity: 2026-09-24 — Phase 130 (Frontend — Marca LexCV) concluída: web/ e webpage/ atualizados para "LexCV" (incl. TENANT_RESERVADO em plataforma/columns.tsx e contacto@lexcv.cv), ambos os builds pnpm limpos, 45/45 asserções dos 3 scripts de verificação PASS
+Status: Phase 131 complete (verification passed), advancing to Phase 132
+Last activity: 2026-09-24 — Phase 131 (Backend — Tenant Reservado LexCV) concluída: tenant reservado "ALCv"→"LexCV" em 13 ficheiros backend (7 produção + 6 teste), migração SQL 131 criada e documentada, 432/432 testes passam, SpotBugs limpo (JDK 23 indisponível no ambiente — verificado com -Dmaven.compiler.release=21 sem tocar pom.xml)
 
 ## Performance Metrics
 
@@ -147,6 +147,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - `backend/migrations/74-cleanup-nif-documento-tipo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - `backend/migrations/117-add-tenant-plano-limite-utilizadores.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
 - `backend/migrations/120-add-tenant-ativo.sql` — manual-execution script, must be run against the database before/alongside next deploy (no migration runner in this repo).
+- `backend/migrations/131-rename-tenant-reservado-lexcv.sql` — manual-execution script (v2.18 Phase 131), must be run against every existing database before/alongside the rebrand deploy: renames the reserved-tenant row from "ALCv" to "LexCV" so `tenantRepository.findFirstByNome("LexCV")` still finds it instead of seeding a duplicate reserved tenant on next boot.
 - ~~`backend/migrations/120b-backfill-tenant-plano.sql` — manual-execution script, must be run against the database before/alongside next deploy~~ — **RUN against this dev database on 2026-07-30, during Phase 122's live UAT (Plan 04, scenario A3).** Originally recorded here as "cosmetic only" (a wrong plano badge) — **that was an underestimate.** Live UAT found the real consequence is a hard `500 DataIntegrityViolationException` on ANY `tenantRepository.save(tenant)` call against a pre-existing `plano = NULL` row (confirmed: attempting to suspend "Escritorio A" via `PATCH /platform/tenants/{id}/ativo` 500'd before the migration ran, 200'd cleanly after) — `@Builder.Default` only supplies a default for entities *built* via the Lombok builder, it has zero effect on entities Hibernate *loads* from an already-populated, still-nullable column. **This means any production deployment of Phase 120's code without first running this migration would 500 on the very first tenant-suspend attempt against pre-existing data** — this is a functional blocker, not a cosmetic one, and this note is left here (rather than deleted) specifically so a future deploy checklist doesn't under-prioritize it based on the old "cosmetic" framing. Confirmed fixed in this dev DB: `SELECT nome, plano FROM t_tenant` now shows `STARTER` for both existing tenants, and the same suspend operation that 500'd now returns `200`.
 - ~~REG_COMERCIAL and other `DocumentoTipo` values still render as raw enum strings instead of translated Portuguese labels~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `getDocumentoTipoLabel` helper added, applied at both cliente render sites (detail page + printable ficha).
 - ~~No automated backend tests cover the 4 NIF validation scenarios introduced in Phase 73.1~~ — CLOSED by v2.11 Phase 97-02 (AUD-03): `ClienteNifValidationTest` added (standalone `jakarta.validation.Validator`, 4 scenarios: valid/blank/wrong-length/non-numeric).
