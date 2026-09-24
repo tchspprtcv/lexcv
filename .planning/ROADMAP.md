@@ -1,62 +1,87 @@
-# Roadmap: ALCv
+# Roadmap: LexCV — v2.18 Rebrand ALCv → LexCV
 
-## Milestones
-
-- ✅ **v2.0 Módulo Financeiro** — Phases 43–46 (complete 2026-06-18)
-- ✅ **v2.1 Agenda Avançada** — Phases 47–49 (complete 2026-06-18)
-- ✅ **v2.2 Document Storage MinIO** — Phases 50–52 (complete 2026-06-19)
-- ✅ **v2.3 Responsividade App** — Phases 53–56 (complete 2026-06-21)
-- ✅ **v2.4 Ficha de Cliente** — Phases 57–60 (complete 2026-06-30)
-- ✅ **v2.5 Módulo de Parecer Jurídico** — Phases 61–64 (complete 2026-06-30)
-- ✅ **v2.6 Módulo de Parecer Jurídico — UI** — Phases 65–69 (complete 2026-07-01)
-- ✅ **v2.7 Melhoria Gestão de Clientes** — Phases 70–73.1 (complete 2026-07-02)
-- ✅ **v2.8 Refatoração Ficha de Cliente** — Phases 74–79 (complete 2026-07-06)
-- ✅ **v2.9 Melhoria Módulo Processos** — Phases 80–84 (complete 2026-07-08)
-- ✅ **v2.10 Notificações e Alertas** — Phases 85–89 (complete 2026-07-10)
-- ✅ **v2.11 Auditoria Técnica e Notificações Avançadas** — Phases 90–97 (complete 2026-07-14)
-- ✅ **v2.12 Landing Page** — Phases 98–100 (complete 2026-07-15)
-- ✅ **v2.13 Refactor UI/UX (shadcn/ui)** — Phases 101–110 (complete 2026-07-18)
-- ✅ **v2.14 UI/UX Melhorias** — Phases 111–115.1 (complete 2026-07-22)
-- ✅ **v2.15 Reposicionamento SIJ** — Phase 116 (complete 2026-07-27)
-- ✅ **v2.16 Distribuição Multi-Tenant e Faturação por Utilizadores** — Phases 117–123 (complete 2026-07-30)
-- ✅ **v2.17 RBAC por Escritório** — Phases 124–128 (shipped 2026-09-23)
+**Milestone:** v2.18
+**Granularity:** standard
+**Phases:** 129–132 (continuing from v2.17's last phase, 128 — numbering never restarts)
 
 ## Phases
 
-<details>
-<summary>✅ v2.17 RBAC por Escritório (Phases 124–128) — SHIPPED 2026-09-23</summary>
+- [ ] **Phase 129: Identidade e Documentação** - Documentação técnica ativa, manual do utilizador e documentação comercial passam a referir "LexCV"
+- [ ] **Phase 130: Frontend — Marca LexCV** - Ambas as apps frontend (`web/`, `webpage/`) e os scripts de verificação manual passam a mostrar/referir "LexCV"
+- [ ] **Phase 131: Backend — Tenant Reservado LexCV** - Tenant reservado da plataforma renomeado no código, com migração SQL documentada para bases de dados já provisionadas
+- [ ] **Phase 132: Configuração** - `pom.xml` e ficheiros `docker-compose*.yml` passam a referir "LexCV"
 
-- [x] Phase 124: Catálogo de Permissões em Base de Dados (2/2 plans) — completed 2026-09-20
-- [x] Phase 125: Moldes da Plataforma e Provisionamento (6/6 plans) — completed 2026-09-21
-- [x] Phase 126: Migração de Papéis Existentes (5/5 plans) — completed 2026-09-21
-- [x] Phase 127: Papéis e Permissões do Escritório (8/8 plans) — completed 2026-09-22
-- [x] Phase 128: Auditoria de Atribuições de Papéis (9/9 plans) — completed 2026-09-22
+## Phase Details
 
-Detalhe completo das fases, planos e decisões: `.planning/milestones/v2.17-ROADMAP.md`
-Auditoria de fecho: `.planning/milestones/v2.17-MILESTONE-AUDIT.md`
-Verificação de integração: `.planning/milestones/v2.17-INTEGRATION-CHECK.md`
+### Phase 129: Identidade e Documentação
+**Goal**: Toda a documentação técnica ativa, o manual do utilizador (e os scripts que o geram) e a documentação comercial referem o produto como "LexCV", não "ALCv"
+**Depends on**: Nothing (first phase, pura substituição textual)
+**Requirements**: IDENT-01, IDENT-02, IDENT-03
+**Success Criteria** (what must be TRUE):
+  1. `CLAUDE.md`, `DEPLOYMENT.md`, `backend/migrations/README.md` e `.trae/documents/SPEC.md` referem "LexCV"; uma busca por "alcv" (case-insensitive) nesses ficheiros não devolve nenhuma ocorrência de marca
+  2. `docs/MANUAL_DO_UTILIZADOR.md` e os scripts geradores (`docs/html/build.py`, `docs/pptx/build.js`, `docs/pptx/theme.js`) referem "LexCV"; regenerar `docs/MANUAL_DO_UTILIZADOR.html`/`.pptx` a partir desses scripts produz saída com "LexCV" e sem erros
+  3. `business/README.md`, todo o conteúdo em `business/documentacao/*` e `business/propostas/*`, e `business/scripts/gerar-docx.py` referem "LexCV"
+**Plans**: TBD
 
-</details>
+### Phase 130: Frontend — Marca LexCV
+**Goal**: Todo o texto de marca visível ao utilizador nas apps `web/` e `webpage/`, e os scripts de verificação manual do frontend, usam "LexCV"
+**Depends on**: Nothing (independente de Phase 129 e 131 — ficheiros distintos)
+**Requirements**: FRONT-01, FRONT-02, FRONT-03
+**Success Criteria** (what must be TRUE):
+  1. App `web/` mostra "LexCV" em título de página, metadata, e em todo texto de marca visível (`dashboard-shell.tsx`, `layout.tsx`, `setup/page.tsx`, `settings/page.tsx`, ficha de cliente/processo, `plataforma/*`)
+  2. App `webpage/` (landing pública) mostra "LexCV" nos componentes/libs de marca (`brand-mark.tsx`, `site-footer.tsx`, `branding.ts`, `contacto.ts`, `layout.tsx`)
+  3. `pnpm build` corre limpo em `web/` e em `webpage/` depois das alterações
+  4. Os 3 scripts de verificação manual (`web/scripts/verify-consola-tenants.mjs`, `verify-papeis-escritorio.mjs`, `verify-relatorio-utilizacao.mjs`) referem "LexCV" nos seus textos/logs e continuam a correr sem erro
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 131: Backend — Tenant Reservado LexCV
+**Goal**: O tenant reservado da plataforma passa a chamar-se "LexCV" (não "ALCv") em todo o código backend, com uma migração SQL documentada para renomear a linha já existente em instalações já provisionadas
+**Depends on**: Nothing (independente de Phase 129/130 — código backend distinto; BACK-01/BACK-02 mantidos juntos por tocarem a mesma área)
+**Requirements**: BACK-01, BACK-02
+**Success Criteria** (what must be TRUE):
+  1. `DatabaseSeeder`, `PublicController`, `AuthController`, `PlatformAdminController`, `Tenant`, `TenantRepository` e `MigracaoPapeisEscritorioService` referem "LexCV" como nome do tenant reservado, não "ALCv"
+  2. Os testes associados (`AuthControllerTenantSuspensoTest`, `PlatformAdminControllerTest`, `PublicControllerTest`, `DatabaseSeederPlataformaAdminTest`, `MigracaoPapeisEscritorioServiceTest`, `SetupServiceInstanciacaoMoldesTest`) passam com a nova string, e `mvn test` corre limpo no backend
+  3. Um arranque do backend com seed contra uma base de dados limpa cria o tenant reservado já como "LexCV"
+  4. Existe uma nova migração SQL em `backend/migrations/` que renomeia a linha de tenant "ALCv" já existente em bases de dados de instalações já provisionadas, com entrada correspondente em `backend/migrations/README.md`
+**Plans**: TBD
+
+### Phase 132: Configuração
+**Goal**: Os ficheiros de configuração e build do projeto (Maven, Docker Compose) referem "LexCV"
+**Depends on**: Nothing (independente das restantes fases — ficheiros de configuração, não código de aplicação)
+**Requirements**: CONFIG-01
+**Success Criteria** (what must be TRUE):
+  1. `backend/pom.xml` (`<description>`) refere "LexCV"
+  2. `docker-compose.hostinger.yml` e quaisquer outros ficheiros `docker-compose*.yml` que contenham a string de marca referem "LexCV"
+  3. `mvn -DskipTests package` continua a funcionar sem erros depois da alteração ao `pom.xml`
+**Plans**: TBD
 
 ## Progress
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 124. Catálogo de Permissões em Base de Dados | v2.17 | 2/2 | Complete | 2026-09-20 |
-| 125. Moldes da Plataforma e Provisionamento | v2.17 | 6/6 | Complete | 2026-09-21 |
-| 126. Migração de Papéis Existentes | v2.17 | 5/5 | Complete | 2026-09-21 |
-| 127. Papéis e Permissões do Escritório | v2.17 | 8/8 | Complete | 2026-09-22 |
-| 128. Auditoria de Atribuições de Papéis | v2.17 | 9/9 | Complete | 2026-09-22 |
+| Phase | Plans Complete | Status | Completed |
+|-------|-----------------|--------|-----------|
+| 129. Identidade e Documentação | 0/TBD | Not started | - |
+| 130. Frontend — Marca LexCV | 0/TBD | Not started | - |
+| 131. Backend — Tenant Reservado LexCV | 0/TBD | Not started | - |
+| 132. Configuração | 0/TBD | Not started | - |
 
-Marcos anteriores a v2.17: ver `.planning/milestones/` — um ROADMAP arquivado por marco.
+## Coverage
 
-## Próximo Marco
+- v1 requirements: 9 total
+- Mapped to phases: 9/9 ✓
+- Unmapped: 0
 
-Nenhum marco activo. A numeração de fases continua em **129** — nunca reinicia.
-
-Antes de abrir o próximo marco, há duas dívidas deste que não são código: 9 migrações manuais
-pendentes numa base de dados de cliente (4 novas no v2.17) e 4 listas de verificação ao vivo em
-aberto. Ver `.planning/STATE.md`, secção Deferred Items.
+| Requirement | Phase |
+|-------------|-------|
+| IDENT-01 | 129 |
+| IDENT-02 | 129 |
+| IDENT-03 | 129 |
+| FRONT-01 | 130 |
+| FRONT-02 | 130 |
+| FRONT-03 | 130 |
+| BACK-01 | 131 |
+| BACK-02 | 131 |
+| CONFIG-01 | 132 |
 
 ---
-*Roadmap reorganizado no fecho do marco v2.17, 2026-09-23*
+*Roadmap created: 2026-09-24*

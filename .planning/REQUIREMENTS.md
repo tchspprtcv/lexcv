@@ -45,21 +45,21 @@ Preenchido durante a criação do roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IDENT-01 | — | Pending |
-| IDENT-02 | — | Pending |
-| IDENT-03 | — | Pending |
-| FRONT-01 | — | Pending |
-| FRONT-02 | — | Pending |
-| FRONT-03 | — | Pending |
-| BACK-01 | — | Pending |
-| BACK-02 | — | Pending |
-| CONFIG-01 | — | Pending |
+| IDENT-01 | 129 | Pending |
+| IDENT-02 | 129 | Pending |
+| IDENT-03 | 129 | Pending |
+| FRONT-01 | 130 | Pending |
+| FRONT-02 | 130 | Pending |
+| FRONT-03 | 130 | Pending |
+| BACK-01 | 131 | Pending |
+| BACK-02 | 131 | Pending |
+| CONFIG-01 | 132 | Pending |
 
 **Coverage:**
 - v1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️ (roadmap ainda por criar)
+- Mapped to phases: 9/9 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-09-24*
-*Last updated: 2026-09-24 after initial definition (milestone v2.18)*
+*Last updated: 2026-09-24 after roadmap creation (milestone v2.18) — 4 phases (129-132), 100% coverage*

@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.18
 milestone_name: Rebrand ALCv → LexCV
 status: planning
-stopped_at: Defining requirements
+stopped_at: ROADMAP.md created (Phases 129-132, 9/9 requirements mapped)
 last_updated: "2026-09-24T00:00:00.000Z"
-last_activity: 2026-09-24 — Milestone v2.18 started
+last_activity: 2026-09-24 — ROADMAP.md criado para v2.18 (Phases 129-132, 9/9 requisitos mapeados)
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 129 — Identidade e Documentação (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-09-24 — Milestone v2.18 started
+Status: Roadmap created, awaiting phase breakdown
+Last activity: 2026-09-24 — ROADMAP.md criado para v2.18 (Phases 129-132: 129 Identidade e Documentação, 130 Frontend — Marca LexCV, 131 Backend — Tenant Reservado LexCV, 132 Configuração)
 
 ## Performance Metrics
 
@@ -131,6 +131,8 @@ v2.13 roadmap (10 phases, 101–110, 33 requirements, 100% coverage) and its ful
 v2.16 roadmap (7 phases, 117–123, plus Phase 124 inserted post-audit; 15/15 requirements, 100% coverage) is now archived at `.planning/milestones/v2.16-ROADMAP.md`; condensed accomplishments and outcomes live in `PROJECT.md`'s Validated requirements and Key Decisions; narrative lessons live in `RETROSPECTIVE.md`'s "Milestone: v2.16" section.
 
 v2.17 roadmap (5 phases, 124–128, 24 requirements, 100% coverage) created 2026-09-20 — dependency spine: catálogo de permissões (124) e esquema de papéis do escritório antes de qualquer leitura/escrita; moldes+provisionamento (125) prova o mecanismo de instanciação no caminho de menor risco antes de o reutilizar; migração (126) é a fase mais arriscada do marco, isolada entre o mecanismo provado e o ecrã editável; CRUD+isolamento+guardas de `PLATAFORMA_ADMIN` (127) só se torna editável depois da migração; auditoria (128) fecha o marco.
+
+v2.18 roadmap (4 phases, 129–132, 9 requirements, 100% coverage) created 2026-09-24 — pura renomeação de marca ALCv→LexCV, sem novo research (decisão explícita, marco não introduz features). Fases derivadas por área de ficheiros, não por dependência forte: 129 (documentação/identidade) e 132 (configuração Maven/Compose) são texto puro de baixo risco; 130 (frontend `web/`+`webpage/`+scripts de verificação) agrupa FRONT-01/02/03 por serem todos ficheiros de marca de frontend, independentes entre si; 131 mantém BACK-01 (rename do tenant reservado no código) e BACK-02 (migração SQL correspondente) juntos por tocarem a mesma área, conforme instrução do orquestrador. As 4 fases não têm dependências reais entre si e podem em princípio correr em qualquer ordem — a numeração sequencial 129→132 é apenas a ordem de execução escolhida, não uma cadeia de bloqueio.
 
 ### Decisions
 
@@ -297,10 +299,10 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-09-20T19:30:00.000Z
-Stopped at: ROADMAP.md created for v2.17 (Phases 124-128, 24/24 requirements mapped)
+Last session: 2026-09-24T00:00:00.000Z
+Stopped at: ROADMAP.md created for v2.18 (Phases 129-132, 9/9 requirements mapped)
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review and approve ROADMAP.md, then break down Phase 129 with /gsd:plan-phase 129
