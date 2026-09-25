@@ -15,7 +15,7 @@ Argumentos recebidos: $ARGUMENTS
 
 <process>
 1. **Verificar Parâmetros**: Extrair o nome do projeto e o ID da VM a partir de `$ARGUMENTS`. Se estiverem vazios, assuma `projectName: "lexcv"` e `virtualMachineId: 1709247`.
-2. **Chamar MCP**: Utilize a ferramenta `call_mcp_tool` para o servidor `hostinger-vps` e chame o endpoint `VPS_updateProjectV1`.
-   - Payload de exemplo: `{ "virtualMachineId": 1709247, "projectName": "lexcv" }`
-3. **Feedback Visual**: Quando o MCP retornar a resposta de que o processo foi iniciado (ex: `state: "started"`), apresente uma caixa de sucesso informando o utilizador de que a Hostinger está a executar o comando `docker compose pull && docker compose up -d` na respetiva máquina.
+2. **Obter Configuração Atual**: Chame `VPS_getProjectContentsV1` com `{ "virtualMachineId": 1709247, "projectName": "lexcv" }` para obter o `content` e o `environment` atuais do projeto.
+3. **Reaplicar Stack via MCP**: Chame o endpoint `VPS_createNewProjectV1` com `{ "virtualMachineId": 1709247, "project_name": "lexcv", "content": content, "environment": environment }`. Isto desencadeia a ação `docker_compose_up`, que força o pull das imagens mais recentes (`docker compose pull`) e recria os contentores preservando todos os volumes de dados existentes.
+4. **Feedback Visual**: Apresente a confirmação de que o processo `docker_compose_up` foi disparado e informe o utilizador.
 </process>
