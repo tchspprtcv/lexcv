@@ -28,11 +28,11 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 ### Configuração Fiscal
 
 - [x] **CFG-01**: Administrador do escritório (com `financeiro:manage`) regista e edita os dados fiscais do escritório — NIF, firma, morada e regime de IVA (normal, ou isento com motivo) — em Definições → Faturação, com o NIF validado (9 dígitos, primeiro entre 1 e 9)
-- [ ] **CFG-02**: Administrador do escritório ativa a faturação apenas quando os dados fiscais estão completos; depois do primeiro documento emitido, a faturação não pode ser desligada e o NIF do emitente não pode ser alterado
-- [ ] **CFG-03**: Enquanto a faturação de um escritório estiver desligada, registar um pagamento comporta-se exatamente como hoje (sem documento fiscal)
+- [x] **CFG-02**: Administrador do escritório ativa a faturação apenas quando os dados fiscais estão completos; depois do primeiro documento emitido, a faturação não pode ser desligada e o NIF do emitente não pode ser alterado
+- [x] **CFG-03**: Enquanto a faturação de um escritório estiver desligada, registar um pagamento comporta-se exatamente como hoje (sem documento fiscal)
 - [x] **CFG-04**: A taxa de IVA e a taxa de retenção sugerida são parâmetros com data de vigência (semeados com 15% e 20%), nunca constantes no código
 - [x] **CFG-05**: Cada documento recebe um número sequencial na sua série (emitente, tipo de documento, ano civil), sem lacunas nem duplicados, mesmo com pedidos concorrentes; a numeração reinicia em cada ano
-- [ ] **CFG-06**: Administrador do escritório liga ou desliga o envio automático de faturas por email ao cliente (desligado por omissão), aceitando explicitamente o aviso de que os documentos simulados não têm validade fiscal
+- [x] **CFG-06**: Administrador do escritório liga ou desliga o envio automático de faturas por email ao cliente (desligado por omissão), aceitando explicitamente o aviso de que os documentos simulados não têm validade fiscal
 
 ### Emissão de Fatura-Recibo
 
@@ -137,11 +137,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CFG-01 | Phase 133 | Complete |
-| CFG-02 | Phase 133 | Pending |
-| CFG-03 | Phase 133 | Pending |
+| CFG-02 | Phase 133 | Complete |
+| CFG-03 | Phase 133 | Complete |
 | CFG-04 | Phase 133 | Complete |
 | CFG-05 | Phase 133 | Complete |
-| CFG-06 | Phase 133 | Pending |
+| CFG-06 | Phase 133 | Complete |
 | EMIS-01 | Phase 134 | Pending |
 | EMIS-02 | Phase 134 | Pending |
 | EMIS-03 | Phase 134 | Pending |
@@ -183,6 +183,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPER-04 | Phase 139 | Pending |
 
 **Coverage:**
+
 - v3.0 requirements: 45 total
 - Mapped to phases: 45
 - Unmapped: 0 ✓

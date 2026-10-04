@@ -14,7 +14,7 @@ A sequência segue a cadeia de dependências do próprio dinheiro. Primeiro a fu
 - Fases inteiras (133, 134, ...): trabalho planeado deste marco.
 - Fases decimais (133.1, ...): inserções urgentes pós-planeamento, se necessário.
 
-- [ ] **Phase 133: Fundação Fiscal** - Escritório regista os dados fiscais, ativa a faturação e dispõe de parâmetros com vigência e numeração sequencial sem lacunas
+- [x] **Phase 133: Fundação Fiscal** - Escritório regista os dados fiscais, ativa a faturação e dispõe de parâmetros com vigência e numeração sequencial sem lacunas (completed 2026-10-04)
 - [ ] **Phase 134: Fatura-Recibo Atómica nos Honorários** - Registar um pagamento emite, na mesma operação, uma Fatura-Recibo imutável, com pré-visualização, retenção e listagem
 - [ ] **Phase 135: Nota de Crédito** - Única forma de corrigir uma Fatura-Recibo, com reversão coerente de saldo, honorário, KPI e alerta
 - [ ] **Phase 136: Formato eFatura e Adaptador Simulado** - Cada documento gera XML DFE validado, com IUD, e é comunicado em segundo plano a um adaptador simulado
@@ -49,7 +49,7 @@ Plans:
 - [x] 133-05-PLAN.md — Wave 3: FaturacaoController /api/v1/faturacao (financeiro:manage na classe) + guarda CFG-03 + SpotBugs
 - [x] 133-06-PLAN.md — Wave 1: apiFetch ApiError aditivo (status/code/campo, opt-out de toast), tipos, schema Zod, hooks use-faturacao
 - [x] 133-07-PLAN.md — Wave 2: separador Faturação em Definições, formulário de dados fiscais, séries só de leitura
-- [ ] 133-08-PLAN.md — Wave 4: cartões Ativação e Email, verify:faturacao, verificação humana ponta a ponta
+- [x] 133-08-PLAN.md — Wave 4: cartões Ativação e Email, verify:faturacao, verificação humana ponta a ponta
 
 **UI hint**: yes
 
@@ -199,7 +199,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 133. Fundação Fiscal | 7/8 | In Progress|  |
+| 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 0/TBD | Not started | - |
 | 135. Nota de Crédito | 0/TBD | Not started | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |

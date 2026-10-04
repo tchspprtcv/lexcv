@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-05-PLAN.md
-last_updated: "2026-10-04T14:30:00.000Z"
-last_activity: 2026-10-04 — Completed 133-05 (FaturacaoController /api/v1/faturacao, financeiro:manage class gate, CFG-03 guard)
+stopped_at: Completed 133-08-PLAN.md
+last_updated: "2026-10-04T15:00:00.000Z"
+last_activity: 2026-10-04 — Completed 133-08 (activation + email cards, verify:faturacao, end-to-end checkpoint auto-verified 10/10)
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 
 Phase: 133 of 139 (Fundação Fiscal)
 Plan: 8 of 8
-Status: Executing — 133-01..07 complete, next 133-08
-Last activity: 2026-10-04 — Completed 133-05 (FaturacaoController with 7 endpoints gated by financeiro:manage at class level; proxy-tested 4-role matrix; CFG-03 source guard; 543 unit + 51 ITs + SpotBugs green)
+Status: Phase 133 plans complete (8/8) — awaiting phase verification
+Last activity: 2026-10-04 — Completed 133-08 (Ativação/Email cards, verify:faturacao gate, end-to-end run against real Postgres+backend+web: 10/10 steps PASS; CFG-02/03/06 complete)
 
 ## Performance Metrics
 
@@ -123,6 +123,7 @@ Last activity: 2026-10-04 — Completed 133-05 (FaturacaoController with 7 endpo
 | Phase 133 P06 | 4 min | 2 tasks | 6 files |
 | Phase 133 P02 | 8 min | 2 tasks | 10 files |
 | Phase 133 P05 | 12 min | 2 tasks | 4 files |
+| Phase 133 P08 | 25 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: NIF_JA_REGISTADO (cross-tenant NIF uniqueness) implemented per plan but not in 133-CONTEXT.md -- pending user confirmation
 - [Phase 133]: Faturação tab (FaturacaoTab) holds the useConfiguracaoFiscal result; FaturacaoDadosForm exposes optional onAlteracoesPorGravarChange for 133-08; inline save error only for 400/409/422 (others toasted by apiFetch)
 - [Phase 133]: FaturacaoController (/api/v1/faturacao) has ONLY a class-level @PreAuthorize("hasAuthority('financeiro:manage')"); tenant/author from principal only; FaturacaoDesligadaPagamentoInalteradoTest forbids fiscal symbols in ResourceController/Pagamento until Phase 134 changes it deliberately
+- [Phase 133]: Activation/email cards read only server flags (ativa/completa/podeDesativar/documentosEmitidos); destructive AlertDialog confirm is a plain Button variant="destructive" (AlertDialogAction asChild lets the neutral bg win via tailwind-merge)
 
 ### Pending Todos
 
@@ -180,6 +182,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 
 ### Blockers/Concerns
 
+- (v3.0, Phase 133-08) Two out-of-scope defects found during the end-to-end run, logged in `.planning/phases/LEXCV-133-funda-o-fiscal/deferred-items.md`: (1) `POST /api/v1/setup/initialize` 500s on a fresh install (`Set.of` roles + merge in SetupService, pre-existing); (2) every boot after the first logs a non-fatal DDL error for `t_serie_fiscal.ambiente` (`columnDefinition = "varchar(32) not null"` on a converter column).
 - **(v2.13, 2026-07-17) Three previously-flagged background bugs each have an independent fix session that completed successfully** (per direct transcript review), but none have been merged into this repo's `master` yet — each lives on its own branch/worktree, started by the user outside this GSD orchestration, and merging is the user's call, not auto-applied here:
   - Document upload Hibernate optimistic-lock crash (see below) — fixed via `Persistable<UUID>` on `Documento` (mirroring the existing `ParecerVersao` precedent), plus a new `DocumentoRepositoryIT` regression test. Branch `claude/jovial-lederberg-d017b2`.
   - Pareceres "Prioridade" defaulting to ALTA instead of MEDIA (see below) — fixed via `defaultValue="MEDIA"` on the `NativeSelect`. Branch `claude/mystifying-leavitt-6657b5`.
@@ -322,8 +325,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T14:30:00.000Z
-Stopped at: Completed 133-05-PLAN.md
+Last session: 2026-10-04T15:00:00.000Z
+Stopped at: Completed 133-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
