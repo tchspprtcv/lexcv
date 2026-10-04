@@ -47,7 +47,7 @@ Plans:
 - [ ] 133-03-PLAN.md — Wave 2: NumeracaoService (FOR UPDATE, ON CONFLICT, lock_timeout, MANDATORY, ano em Atlantic/Cape_Verde) + IT de concorrência Testcontainers (CFG-05)
 - [ ] 133-04-PLAN.md — Wave 2: AuditoriaFiscalService + ConfiguracaoFiscalService + DTOs (dados, ativar/desativar, bloqueio do NIF, email com aceitação)
 - [ ] 133-05-PLAN.md — Wave 3: FaturacaoController /api/v1/faturacao (financeiro:manage na classe) + guarda CFG-03 + SpotBugs
-- [ ] 133-06-PLAN.md — Wave 1: apiFetch ApiError aditivo (status/code/campo, opt-out de toast), tipos, schema Zod, hooks use-faturacao
+- [x] 133-06-PLAN.md — Wave 1: apiFetch ApiError aditivo (status/code/campo, opt-out de toast), tipos, schema Zod, hooks use-faturacao
 - [ ] 133-07-PLAN.md — Wave 2: separador Faturação em Definições, formulário de dados fiscais, séries só de leitura
 - [ ] 133-08-PLAN.md — Wave 4: cartões Ativação e Email, verify:faturacao, verificação humana ponta a ponta
 
@@ -199,7 +199,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 133. Fundação Fiscal | 1/8 | In Progress|  |
+| 133. Fundação Fiscal | 2/8 | In Progress|  |
 | 134. Fatura-Recibo Atómica nos Honorários | 0/TBD | Not started | - |
 | 135. Nota de Crédito | 0/TBD | Not started | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
