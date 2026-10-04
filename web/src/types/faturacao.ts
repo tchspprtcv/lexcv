@@ -65,7 +65,6 @@ export interface MotivoIsencao {
 export type CodigoErroFaturacao =
   | "MOTIVO_ISENCAO_INVALIDO"
   | "NIF_BLOQUEADO"
-  | "NIF_JA_REGISTADO"
   | "CONFIGURACAO_FISCAL_INCOMPLETA"
   | "CONFIGURACAO_FISCAL_CONCORRENTE"
   | "FATURACAO_JA_EMITIU"

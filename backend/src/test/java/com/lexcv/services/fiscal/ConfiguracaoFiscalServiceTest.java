@@ -352,16 +352,18 @@ class ConfiguracaoFiscalServiceTest {
         verify(configRepo).saveAndFlush(any());
     }
 
+    /**
+     * WR-05 da revisão (decisão do utilizador): não há unicidade do NIF entre escritórios. Guardar
+     * nunca consulta outros tenants; o repositório deixou de ter um finder cross-tenant.
+     */
     @Test
-    void guardarComNifDeOutroTenantERecusado() {
-        when(configRepo.existsByNifAndTenantIdNot("512345678", tenantId)).thenReturn(true);
+    void guardarNaoConsultaONifDeOutrosEscritorios() {
+        service.guardar(tenantId, autor, pedido());
 
-        RecusaFiscalException ex = recusa(HttpStatus.CONFLICT, "NIF_JA_REGISTADO",
-                () -> service.guardar(tenantId, autor, pedido()));
-        assertEquals("nif", ex.getCampo());
-        assertEquals("Este NIF já está registado noutro escritório.", ex.getMessage());
-        verify(configRepo, never()).saveAndFlush(any());
-        verifyNoInteractions(auditoria);
+        verify(configRepo).saveAndFlush(any());
+        assertTrue(Arrays.stream(ConfiguracaoFiscalRepository.class.getDeclaredMethods())
+                        .allMatch(m -> m.getName().equals("findByTenantId") || m.getName().equals("bloquearPorTenant")),
+                "o repositório só pode ter finders por tenant");
     }
 
     @Test

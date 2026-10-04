@@ -118,10 +118,8 @@ public class ConfiguracaoFiscalService {
             throw new RecusaFiscalException(HttpStatus.CONFLICT, "NIF_BLOQUEADO",
                     "O NIF não pode ser alterado depois de emitido o primeiro documento.", "nif");
         }
-        if (nifMuda && nif != null && configuracaoFiscalRepository.existsByNifAndTenantIdNot(nif, tenantId)) {
-            throw new RecusaFiscalException(HttpStatus.CONFLICT, "NIF_JA_REGISTADO",
-                    "Este NIF já está registado noutro escritório.", "nif");
-        }
+        // Sem verificação de unicidade do NIF entre escritórios (WR-05 da revisão, decisão do
+        // utilizador): cada escritório regista o seu NIF sem consultar os outros tenants.
 
         Set<String> camposAlterados = new LinkedHashSet<>();
         if (existente == null) {

@@ -33,8 +33,4 @@ public interface ConfiguracaoFiscalRepository extends JpaRepository<Configuracao
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from ConfiguracaoFiscal c where c.tenantId = :tenantId")
     Optional<ConfiguracaoFiscal> bloquearPorTenant(@Param("tenantId") UUID tenantId);
-
-    // PITFALLS P-25: o mesmo NIF não pode ser emitente em dois escritórios. Verificação
-    // deliberadamente cross-tenant (devolve só um booleano, nunca dados de outro tenant).
-    boolean existsByNifAndTenantIdNot(String nif, UUID tenantId);
 }
