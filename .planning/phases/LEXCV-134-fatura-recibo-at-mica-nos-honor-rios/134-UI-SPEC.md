@@ -340,3 +340,4 @@ All copy in Portuguese (Cabo Verde), no emojis, sentence case.
 - Surface 2: the "Documento fiscal" column is kept at all widths; the table wrapper scrolls horizontally.
 - Detail page: the "Pendente" badge uses helper text (no tooltip) — no new component needed.
 - List page: the "Ambiente" column is hidden below `md` via view-options defaults; the detail page badge row is always visible.
+- Idempotency key lifecycle (revised after code review CR-02, supersedes earlier wording): the key belongs to the request content, not the dialog. It survives closing/reopening after an ambiguous failure (network, 5xx, 401/403/408/429) and is reused for the same payload; it is discarded only after success, a definitive backend 4xx, or a change in the payload.

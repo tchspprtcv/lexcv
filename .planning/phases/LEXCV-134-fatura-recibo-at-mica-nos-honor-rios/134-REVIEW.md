@@ -91,7 +91,13 @@ findings:
   warning: 5
   info: 5
   total: 12
-status: issues_found
+status: fixed
+fix:
+  fixed_at: 2026-10-04
+  in_scope: 11
+  fixed: 11
+  skipped: 1
+  skipped_ids: [IN-03]
 ---
 
 # Phase 134: Code Review Report
@@ -277,3 +283,32 @@ The window is narrow, but it breaks the "same key → same result" contract in D
 _Reviewed: 2026-10-04_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fix Report
+
+**Fixed:** 2026-10-04 · **Fixer:** Claude (gsd-code-fixer) · **Scope:** CR + WR + IN-01, IN-02, IN-04, IN-05 (IN-03 optional)
+**Result:** 11 of 12 findings fixed in 10 atomic commits. IN-03 was skipped as out of scope (not trivial).
+
+| ID | Status | Commit | Summary |
+|----|--------|--------|---------|
+| CR-01 | fixed | 59609cd | After the processo lock, `registar` re-reads the honorário's processo as a scalar query (`HonorarioRepository.processoIdPorId`, which never reads the persistence-context cache). If the honorário is gone or now belongs to another processo, it refuses with 404 `HONORARIO_NAO_ENCONTRADO`. New ITs: `emissaoEmCursoBloqueiaApagarHonorario` and `emissaoEApagarHonorarioEmSimultaneoSemOrfaos`. The second one fails on the old code. |
+| CR-02 | fixed: requires human verification | dd79836 | The idempotency key now belongs to the request payload, not to the dialog (`tentativaParaPedido` / `marcarPorResolver` / `pedidoCanonico` in `lib/idempotencia.ts`, plus `desfechoDefinitivo` in `lib/erros-emissao.ts`). After a network error, 5xx, 401/403, 408 or 429, the key survives the dialog closing and is reused when the same payload is sent again. It is dropped after a success, after a processed 4xx, or when the payload changes. Vitest covers the key lifecycle. **Deliberate deviation from the UI-SPEC line "regenerated whenever the dialog is closed and reopened"**: that rule caused the bug. |
+| WR-01 | fixed: requires human verification | 1b48dce | `deletePagamento` debits atomically (`UPDATE saldo = saldo - :v`). If no row changes because a concurrent merge moved the processo, it re-reads the processo's current cliente and debits that one. The handler stays non-transactional (P-02). `mergeClientes` reads both contas correntes with `bloquearPorCliente`, after the cliente locks. The GET conta-corrente creates a missing row with `INSERT ... ON CONFLICT` instead of `save()`. New ITs `apagarPagamentoLegadoDuranteEmissaoNaoPerdeOCredito` and `...DuranteFusaoDebitaOClienteQueFica` both fail on the old code. |
+| WR-02 | fixed | 0072301 | `ValidacaoEmissao.validarAdquirente(..., localidade)` refuses a localidade longer than 100 characters with 422 `ADQUIRENTE_INCOMPLETO`, campo `localidade`. The preview and the emission share this check through `ComposicaoFaturaRecibo`. The frontend shows the adquirente banner with `COPY_LOCALIDADE`. |
+| WR-03 | fixed | c884f4c | The page derives an explicit mode with `modoFormularioPagamento`: sem-permissao, a-carregar (legacy form with submit disabled, per UI-SPEC), erro (red message plus "Tentar novamente"), ativa, or desligada. Only "desligada" enables the legacy submit. `GET /faturacao/estado-emissao` now accepts `financeiro:view` OR `financeiro:edit`, so whoever registers payments can learn the mode. The authorization tests were updated. |
+| WR-04 | fixed | c884f4c | The payment card is gated on the exact `financeiro:edit` authority (`podeRegistarPagamentos`), as the backend requires. A 403 now shows the banner "Não tem permissão para registar pagamentos.". This shares a commit with WR-03 because both change the same gate in `page.tsx`. |
+| WR-05 | fixed: requires human verification | fc583cb | `registar` looks up the key under the configuração lock *before* it checks `ativa`. With billing off, `createPagamento` first calls `PagamentoFaturadoService.resultadoGuardado` (same lock, no `ativa` filter). That returns the stored result (200) or 409 `CHAVE_REUTILIZADA`. `registarPagamentoLegado` is untouched, and the CFG-03 SHA guard passes. New IT: `repeticaoDepoisDeDesligarAFaturacaoDevolveOMesmoResultado`. |
+| IN-01 | fixed | cc2c447 | `rotuloMetodoPagamento` maps enum names to their labels and leaves legacy free text as it is. |
+| IN-02 | fixed | 2f8f917 | A 503 that carries a `code` keeps the retryable "rede" outcome but shows the backend message. The preview and the keyed `POST /pagamentos` no longer toast 409/422/5xx (`STATUS_INLINE_EMISSAO`). The unkeyed legacy request keeps its old toasts. |
+| IN-03 | skipped | — | Optional, and it needs a new preview-hash protocol on both sides plus a new 409 code. That is beyond a trivial fix, so it was left for a later phase. |
+| IN-04 | fixed | c0be4df | `criarSeNaoExiste` is now wrapped in `bloquear(...)`, so its lock wait answers 503 `FATURACAO_OCUPADA`. |
+| IN-05 | fixed | 3bf4076 | When the cliente is missing or was deleted while the emission waited for its lock, the emission answers 404 `CLIENTE_NAO_ENCONTRADO`, the same as the preview. The 409 `PROCESSO_ALTERADO` is kept for the processo-moved race. |
+
+**Verification:**
+- Backend: `mvn -Dmaven.compiler.release=21 test` gives 821 tests, 0 failures. The phase-134 ITs ran for real through Testcontainers (`GuardasDocumentoFiscalConcorrenciaIT` 11, `PagamentoFaturadoServiceIT` 10, `PagamentoFaturadoConcorrenciaIT` 4, `DocumentoFiscalRepositoryIT` 13, `MigracaoFiscal134IT` 6), all green. `spotbugs:check` reports 0 bugs.
+- Frontend: `tsc --noEmit` is clean. `pnpm lint` has 0 errors; the 20 warnings were there before these fixes. `pnpm test` gives 189 tests passing. `verify:faturacao` and `verify:documentos-fiscais` pass; the latter was updated on purpose for the CR-02 and IN-02 contracts.
+
+**What is still open:**
+- The CR-02 key lives in component state, so it is lost if the user leaves the page after an ambiguous failure. The refreshed payments list (`onSettled`) is the remaining signal.
+- The legacy `registarPagamentoLegado` still does an unlocked read-modify-write on the conta corrente. Its body is frozen by CFG-03, and it only runs with billing off.
+
