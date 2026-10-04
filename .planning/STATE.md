@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-12-PLAN.md
+stopped_at: Completed 134-13-PLAN.md
 last_updated: "2026-10-04T23:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-12 (web: billing-on payment form + backend preview dialog with idempotent confirmation, Documento fiscal column, inline 409 guards; vitest 157/157, build OK)
+last_activity: 2026-10-04 — Completed 134-13 (web: /financeiro/documentos-fiscais list (URL-synced filters, server pagination via DataTable manualPagination) + read-only detail with snapshot, values, links and simulation mark)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 20
-  percent: 91
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 13 of 14
-Status: Executing Phase 134 — 134-01..134-12 complete
-Last activity: 2026-10-04 — Completed 134-12 (web: billing-on payment form + backend preview dialog with idempotent confirmation, Documento fiscal column, inline 409 guards; vitest 157/157, build OK)
+Plan: 14 of 14
+Status: Executing Phase 134 — 134-01..134-13 complete
+Last activity: 2026-10-04 — Completed 134-13 (web: /financeiro/documentos-fiscais list (URL-synced filters, server pagination via DataTable manualPagination) + read-only detail with snapshot, values, links and simulation mark)
 
 ## Performance Metrics
 
@@ -134,6 +134,7 @@ Last activity: 2026-10-04 — Completed 134-12 (web: billing-on payment form + b
 | Phase 134 P08 | 25 min | 2 tasks | 6 files |
 | Phase 134 P09 | 20 min | 2 tasks | 3 files |
 | Phase 134 P12 | 25 min | 2 tasks | 5 files |
+| Phase 134 P13 | 25 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -181,6 +182,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: CFG-03 guard evolved, not relaxed: ResourceController has exactly one faturacaoAtiva check inside createPagamento; registarPagamentoLegado body is pinned by SHA-256 of the normalized pre-134 createPagamento body (09aa999); ResourceController never names ConfiguracaoFiscal/NumeracaoService/SerieFiscal/DocumentoFiscalRepository/ComunicacaoFiscal
 - [Phase 134]: DocumentoFiscalController (/api/v1) holds the Phase 134 read/preview surface with per-method gates (view: estado-emissao, documentos-fiscais, documentos-fiscais/{id}; edit: pre-visualizacao); listing params parsed by hand (400 on malformed, never 500); non-UUID id -> same 404 as a foreign document
 - [Phase 134]: Honorário page: useEstadoEmissao(canEdit && exact financeiro:view) picks PagamentoFaturadoForm vs the untouched legacy form; idempotency key is generated when the preview dialog opens, cleared on close, reused on network retry; faturado payments render no delete button
+- [Phase 134]: Fiscal document pages and the Financeiro header button use podeLerDocumentosFiscais (exact financeiro:view); list filters/page/size live in URL search params (1-based page in URL) under a Suspense boundary; shared DataTable gained optional manual pagination
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -353,7 +355,7 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 ## Session Continuity
 
 Last session: 2026-10-04T23:00:00.000Z
-Stopped at: Completed 134-12-PLAN.md
+Stopped at: Completed 134-13-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

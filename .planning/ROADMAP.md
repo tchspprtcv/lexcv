@@ -89,7 +89,7 @@ Plans:
 - [x] 134-10-PLAN.md — Wave 6: guardas 409 (pagamento faturado, cliente, processo, honorário), fusão com repontamento, IT de corrida/sem deadlock/sem órfãos
 - [x] 134-11-PLAN.md — Wave 6: web — tipos, schema com método/retenção, chave de idempotência com fallback, interpretação de erros, hooks
 - [x] 134-12-PLAN.md — Wave 7: web — formulário com faturação ativa + diálogo de pré-visualização, coluna "Documento fiscal", 409 inline
-- [ ] 134-13-PLAN.md — Wave 7: web — página Documentos fiscais (filtros, paginação servidor) e detalhe só de leitura
+- [x] 134-13-PLAN.md — Wave 7: web — página Documentos fiscais (filtros, paginação servidor) e detalhe só de leitura
 - [ ] 134-14-PLAN.md — Wave 8: gate verify:documentos-fiscais, suite completa com ITs, VALIDATION assinada, verificação ponta a ponta (checkpoint)
 
 **UI hint**: yes
@@ -218,7 +218,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
-| 134. Fatura-Recibo Atómica nos Honorários | 12/14 | In progress | - |
+| 134. Fatura-Recibo Atómica nos Honorários | 13/14 | In progress | - |
 | 135. Nota de Crédito | 0/TBD | Not started | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
