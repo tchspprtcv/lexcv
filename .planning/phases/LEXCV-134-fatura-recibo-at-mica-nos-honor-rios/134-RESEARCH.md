@@ -493,7 +493,7 @@ Note: SUMMARY.md also mentions `EntregaDocumento` (email) PENDENTE. CONTEXT only
 | A8 | Hibernate `@Immutable` does not block `remove()` | Pattern 4 | None if the narrow repository is enforced |
 | A9 | Setting `hibernate.query.immutable_entity_update_query_handling_mode=exception` breaks nothing | Pattern 4 | Grep JPQL updates before enabling; optional |
 
-## Open Questions
+## Open Questions (RESOLVED — see 134-CONTEXT.md <research_resolutions> R-01..R-05)
 
 1. **Overpayment** (valorPago > restante of the honorário)
    - What we know: the legacy path allows it; FR on an overpayment may be legitimate (an advance).
