@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-08-PLAN.md
-last_updated: "2026-10-04T15:00:00.000Z"
-last_activity: 2026-10-04 — Completed 133-08 (activation + email cards, verify:faturacao, end-to-end checkpoint auto-verified 10/10)
+stopped_at: Completed 134-01-PLAN.md
+last_updated: "2026-10-04T18:00:00.000Z"
+last_activity: 2026-10-04 — Completed 134-01 (immutable DocumentoFiscal/Linha + ComunicacaoFiscal, script 134 + README row 20, MigracaoFiscal134IT 6/6)
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 22
+  completed_plans: 9
+  percent: 41
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 133 — Fundação Fiscal (v3.0 Faturação Eletrónica, eFatura CV)
+**Current focus:** Phase 134 — Fatura-Recibo Atómica nos Honorários (v3.0 Faturação Eletrónica, eFatura CV)
 
 ## Current Position
 
-Phase: 133 of 139 (Fundação Fiscal)
-Plan: 8 of 8
-Status: Phase 133 plans complete (8/8) — awaiting phase verification
-Last activity: 2026-10-04 — Completed 133-08 (Ativação/Email cards, verify:faturacao gate, end-to-end run against real Postgres+backend+web: 10/10 steps PASS; CFG-02/03/06 complete)
+Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
+Plan: 2 of 14
+Status: Executing Phase 134 — 134-01 complete
+Last activity: 2026-10-04 — Completed 134-01 (fiscal document tables: @Immutable DocumentoFiscal/DocumentoFiscalLinha, ComunicacaoFiscal PENDENTE satellite, idempotent script 134 with guarded uk_conta_corrente_cliente, MigracaoFiscal134IT parity proof)
 
 ## Performance Metrics
 
@@ -124,6 +124,7 @@ Last activity: 2026-10-04 — Completed 133-08 (Ativação/Email cards, verify:f
 | Phase 133 P02 | 8 min | 2 tasks | 10 files |
 | Phase 133 P05 | 12 min | 2 tasks | 4 files |
 | Phase 133 P08 | 25 min | 3 tasks | 7 files |
+| Phase 134 P01 | 15 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -156,6 +157,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: Faturação tab (FaturacaoTab) holds the useConfiguracaoFiscal result; FaturacaoDadosForm exposes optional onAlteracoesPorGravarChange for 133-08; inline save error only for 400/409/422 (others toasted by apiFetch)
 - [Phase 133]: FaturacaoController (/api/v1/faturacao) has ONLY a class-level @PreAuthorize("hasAuthority('financeiro:manage')"); tenant/author from principal only; FaturacaoDesligadaPagamentoInalteradoTest forbids fiscal symbols in ResourceController/Pagamento until Phase 134 changes it deliberately
 - [Phase 133]: Activation/email cards read only server flags (ativa/completa/podeDesativar/documentosEmitidos); destructive AlertDialog confirm is a plain Button variant="destructive" (AlertDialogAction asChild lets the neutral bg win via tailwind-merge)
+- [Phase 134]: DocumentoFiscal/DocumentoFiscalLinha are @Immutable with updatable=false on every column and no setters; cliente_id is re-pointed only by a native UPDATE on client merge (D-15); communication status lives in the mutable ComunicacaoFiscal satellite (@Version, born PENDENTE)
+- [Phase 134]: Script 134 adds uk_conta_corrente_cliente only when t_conta_corrente lacks a single-column unique index on cliente_id, aborting (nothing created) on duplicates -- the emission path relies on ON CONFLICT (cliente_id)
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -327,8 +330,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T15:00:00.000Z
-Stopped at: Completed 133-08-PLAN.md
+Last session: 2026-10-04T18:00:00.000Z
+Stopped at: Completed 134-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
