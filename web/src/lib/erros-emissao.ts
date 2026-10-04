@@ -105,6 +105,19 @@ export function interpretarErroEmissao(error: unknown): ErroEmissao | null {
 }
 
 /**
+ * O pedido de emissão teve um desfecho DEFINITIVO no backend (CR-02 da revisão)? Só uma recusa
+ * 4xx processada conta: o backend procura a chave de idempotência antes de qualquer outra recusa,
+ * por isso um 4xx garante que esta chave não tem pagamento associado. Rede em baixo, 5xx (incluindo
+ * o 504 do proxy, com o backend ainda a trabalhar), 401/403 (o pedido nem chegou à emissão), 408 e
+ * 429 deixam o desfecho de uma tentativa anterior por resolver.
+ */
+export function desfechoDefinitivo(error: unknown): boolean {
+  if (!isApiError(error)) return false;
+  const { status } = error;
+  return status >= 400 && status < 500 && status !== 401 && status !== 403 && status !== 408 && status !== 429;
+}
+
+/**
  * Mensagem inline de uma guarda de eliminação (409 PAGAMENTO_FATURADO ou *_COM_DOCUMENTOS_FISCAIS,
  * Surface 5), ou `null` para qualquer outro erro (que segue o tratamento habitual).
  */

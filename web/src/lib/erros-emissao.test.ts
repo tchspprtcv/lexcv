@@ -12,6 +12,7 @@ import {
   COPY_NOME,
   COPY_REDE,
   construirQueryDocumentosFiscais,
+  desfechoDefinitivo,
   interpretarErroEmissao,
   mensagemGuardaFiscal,
 } from "@/lib/erros-emissao";
@@ -193,5 +194,19 @@ describe("podeLerDocumentosFiscais", () => {
     expect(podeLerDocumentosFiscais(["financeiro:manage"])).toBe(false);
     expect(podeLerDocumentosFiscais([])).toBe(false);
     expect(podeLerDocumentosFiscais(undefined)).toBe(false);
+  });
+});
+
+describe("desfechoDefinitivo (CR-02)", () => {
+  it.each([400, 404, 409, 422])("recusa %i processada pelo backend é definitiva", (status) => {
+    expect(desfechoDefinitivo(erro(status, "X"))).toBe(true);
+  });
+
+  it.each([401, 403, 408, 429, 500, 502, 503, 504])("status %i deixa o desfecho por resolver", (status) => {
+    expect(desfechoDefinitivo(erro(status))).toBe(false);
+  });
+
+  it("falha de rede (TypeError do fetch) deixa o desfecho por resolver", () => {
+    expect(desfechoDefinitivo(new TypeError("Failed to fetch"))).toBe(false);
   });
 });

@@ -14,8 +14,8 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { usePreVisualizacaoFaturacao } from "@/hooks/use-faturacao";
 import { useCreatePagamento } from "@/hooks/use-financeiro";
 import { toast } from "@/hooks/use-toast";
-import { interpretarErroEmissao, type ErroEmissao } from "@/lib/erros-emissao";
-import { gerarChaveIdempotencia } from "@/lib/idempotencia";
+import { desfechoDefinitivo, interpretarErroEmissao, type ErroEmissao } from "@/lib/erros-emissao";
+import { marcarPorResolver, tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
 import {
   METODOS_PAGAMENTO,
   pagamentoFaturadoFormSchema,
@@ -30,8 +30,13 @@ import { PagamentoFaturadoDialog } from "./pagamento-faturado-dialog";
 
 // Formulário de pagamento com a faturação ATIVA (134-UI-SPEC Surface 1; D-02, D-03, D-04, D-10).
 // Fluxo: validar -> pré-visualização no backend -> diálogo de confirmação -> POST /pagamentos com
-// a chave de idempotência gerada quando o diálogo abre. Nenhum montante é calculado aqui (D-01):
-// o backend é a autoridade e o diálogo só mostra a resposta da pré-visualização.
+// a chave de idempotência do pedido. Nenhum montante é calculado aqui (D-01): o backend é a
+// autoridade e o diálogo só mostra a resposta da pré-visualização.
+//
+// A chave pertence ao pedido, não ao diálogo (CR-02 da revisão): depois de uma falha ambígua
+// (rede/5xx) sobrevive ao fecho do diálogo, e um novo envio dos MESMOS valores reutiliza-a, para o
+// backend devolver o pagamento já registado em vez de emitir uma segunda Fatura-Recibo. Só é
+// descartada num desfecho definitivo (sucesso ou recusa 4xx processada) ou quando o pedido muda.
 
 type Banner = { mensagem: string; linkCliente: boolean };
 
@@ -76,7 +81,7 @@ export function PagamentoFaturadoForm({
   const [dialogoAberto, setDialogoAberto] = React.useState(false);
   const [preVisualizacao, setPreVisualizacao] = React.useState<PreVisualizacaoFatura | null>(null);
   const [pedido, setPedido] = React.useState<PagamentoCreateRequest | null>(null);
-  const [chave, setChave] = React.useState<string | null>(null);
+  const [tentativa, setTentativa] = React.useState<TentativaEmissao | null>(null);
   const [emitindo, setEmitindo] = React.useState(false);
   const [erroRede, setErroRede] = React.useState<string | null>(null);
   // Guarda síncrona contra duplo clique (o estado só é visível no render seguinte).
@@ -86,9 +91,10 @@ export function PagamentoFaturadoForm({
   const aplicarRetencao = useWatch({ control: form.control, name: "aplicarRetencao" });
   const erros = form.formState.errors;
 
+  // Fechar o diálogo NÃO descarta a tentativa: se o desfecho estiver por resolver, o próximo envio
+  // do mesmo pedido tem de levar a mesma chave.
   const fecharDialogo = () => {
     setDialogoAberto(false);
-    setChave(null);
     setErroRede(null);
   };
 
@@ -115,7 +121,7 @@ export function PagamentoFaturadoForm({
       const resposta = await preVisualizar.mutateAsync(novoPedido);
       setPedido(novoPedido);
       setPreVisualizacao(resposta);
-      setChave(gerarChaveIdempotencia());
+      setTentativa((anterior) => tentativaParaPedido(anterior, novoPedido));
       setErroRede(null);
       setDialogoAberto(true);
     } catch (e) {
@@ -124,12 +130,13 @@ export function PagamentoFaturadoForm({
   };
 
   const emitir = async () => {
-    if (emitindoRef.current || !pedido || !chave) return;
+    if (emitindoRef.current || !pedido || !tentativa) return;
     emitindoRef.current = true;
     setEmitindo(true);
     setErroRede(null);
     try {
-      const pagamento = await createPagamento.mutateAsync({ ...pedido, chaveIdempotencia: chave });
+      const pagamento = await createPagamento.mutateAsync({ ...pedido, chaveIdempotencia: tentativa.chave });
+      setTentativa(null);
       fecharDialogo();
       setPreVisualizacao(null);
       setPedido(null);
@@ -141,6 +148,9 @@ export function PagamentoFaturadoForm({
           : "Pagamento registado com sucesso.",
       );
     } catch (e) {
+      // Recusa 4xx processada pelo backend: esta chave não tem pagamento associado, pode ser
+      // descartada. Qualquer outra falha (rede, 5xx, 401/403) deixa o desfecho por resolver.
+      setTentativa((atual) => (desfechoDefinitivo(e) ? null : marcarPorResolver(atual)));
       const erro = interpretarErroEmissao(e);
       if (erro?.tipo === "rede") {
         // O diálogo fica aberto e a nova tentativa reutiliza a MESMA chave (D-10).

@@ -121,9 +121,13 @@ async function main() {
     "Registar pagamento",
     "Aplicar retenção na fonte",
     "Método de pagamento *",
-    "gerarChaveIdempotencia",
+    // CR-02 da revisao: a chave pertence ao pedido e sobrevive ao fecho do dialogo enquanto o
+    // desfecho de uma tentativa estiver por resolver (lib/idempotencia.ts).
+    "tentativaParaPedido",
+    "marcarPorResolver",
+    "desfechoDefinitivo",
     "usePreVisualizacaoFaturacao",
-    "chaveIdempotencia: chave",
+    "chaveIdempotencia: tentativa.chave",
     "Pagamento registado e fatura-recibo ${numero} emitida.",
   ]) {
     exigeContem("form", texto, token);
@@ -162,6 +166,8 @@ async function main() {
   exigeContem("hooksFinanceiro", texto, "DOCUMENTOS_FISCAIS_KEY");
   exigeNaoContem("hooksFinanceiro", texto, "/api/v1");
   exigeContem("idempotencia", texto, "getRandomValues");
+  exigeContem("idempotencia", texto, "export function tentativaParaPedido");
+  exigeContem("idempotencia", texto, "export function marcarPorResolver");
   exigeContem("erros", texto, "interpretarErroEmissao");
   exigeContem("erros", texto, "mensagemGuardaFiscal");
 
