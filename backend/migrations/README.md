@@ -145,6 +145,11 @@ Everything else in this directory is **skip** on a fresh install:
   already created `t_configuracao_fiscal`, `t_parametro_fiscal` and `t_serie_fiscal`, and every
   statement uses `CREATE TABLE IF NOT EXISTS`, so running it against a fresh database simply
   changes nothing.
+- `134-create-documento-fiscal-tables.sql` — redundant, but it will not error: `ddl-auto`
+  already created `t_documento_fiscal`, `t_documento_fiscal_linha` and `t_comunicacao_fiscal`,
+  and every `CREATE` uses `IF NOT EXISTS`. The `t_conta_corrente` unique-index block is skipped
+  because Hibernate's unique constraint on `ContaCorrente.clienteId` already covers
+  `cliente_id`, so running it against a fresh database simply changes nothing.
 
 ---
 
@@ -175,6 +180,7 @@ database*. Verify per database, not per environment — the environments have dr
 | 17 | `128-add-audit-log-detalhe.sql` | Adds nullable `t_audit_log.detalhe` (Phase 128, auditoria de RBAC); no backfill — existing rows stay `NULL`, only new RBAC audit events populate it. `t_audit_log` itself has **no creation script in this directory** — it was created by `ddl-auto: update` (Phase 87 era) and exists on every install today because every environment currently runs `update`; this script only adds a column to that already-existing table. | **Yes** — `ADD COLUMN IF NOT EXISTS`. |
 | 18 | `131-rename-tenant-reservado-lexcv.sql` | Renames the platform's reserved-tenant row from `"ALCv"` to `"LexCV"` (Phase 131, v2.18 rebrand) in place, preserving its id/plano/ativo. Application code now looks the reserved tenant up as `"LexCV"` — skipping this leaves the old `"ALCv"` row orphaned and lets `seedTenantPlataforma()` insert a second, duplicate reserved-tenant row on next boot. | **Yes** — `UPDATE ... WHERE nome = 'ALCv'` converges to 0 rows matched after the first successful run. |
 | 19 | `133-create-fiscal-foundation-tables.sql` | Creates `t_configuracao_fiscal`, `t_parametro_fiscal`, `t_serie_fiscal` (Phase 133, Fundação Fiscal); no backfill -- `DatabaseSeeder` upserts `t_parametro_fiscal` (IVA_TAXA_NORMAL, RETENCAO_SUGERIDA) on the next boot. | **Yes** -- every statement uses `CREATE TABLE IF NOT EXISTS`. |
+| 20 | `134-create-documento-fiscal-tables.sql` | Creates `t_documento_fiscal`, `t_documento_fiscal_linha`, `t_comunicacao_fiscal` (Phase 134, Fatura-Recibo atómica nos honorários) and, only when missing, the unique index `uk_conta_corrente_cliente` on `t_conta_corrente(cliente_id)` (the emission path relies on `ON CONFLICT (cliente_id)`); aborts with a clear message, creating nothing, if duplicate `cliente_id` values exist. No backfill -- payments recorded before activation are deliberately not invoiced retroactively (EMIS-12). | **Yes** -- every `CREATE` uses `IF NOT EXISTS` and the index block checks the catalogue first. |
 
 ### Verify before running `125`
 
@@ -195,7 +201,7 @@ WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
 
 ## Re-run safety
 
-Only **9 of 19** scripts tolerate being run twice:
+Only **10 of 20** scripts tolerate being run twice:
 
 | Safe to re-run | Why |
 |---|---|
@@ -208,6 +214,7 @@ Only **9 of 19** scripts tolerate being run twice:
 | `128-add-audit-log-detalhe.sql` | the single statement uses `ADD COLUMN IF NOT EXISTS` |
 | `131-rename-tenant-reservado-lexcv.sql` | the `UPDATE ... WHERE nome = 'ALCv'` converges — no rows left matching after the first run |
 | `133-create-fiscal-foundation-tables.sql` | every statement uses `CREATE TABLE IF NOT EXISTS` |
+| `134-create-documento-fiscal-tables.sql` | every `CREATE` uses `IF NOT EXISTS`; the `t_conta_corrente` index block checks `pg_index` first |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -231,7 +238,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **11 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **12 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -246,6 +253,7 @@ As of the last verification, on a client (existing) database, **11 scripts are o
 | `128-add-audit-log-detalhe.sql` | Pending, new in this phase. |
 | `131-rename-tenant-reservado-lexcv.sql` | Pending — new in this phase (v2.18 rebrand). |
 | `133-create-fiscal-foundation-tables.sql` | Pending — new in this phase (v3.0). |
+| `134-create-documento-fiscal-tables.sql` | Pending — new in this phase (v3.0). |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
 is precisely why this checklist exists: **do not treat planning documents as the record of
