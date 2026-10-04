@@ -627,12 +627,25 @@ public class ResourceController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Phase 134 (D-14, R-01): o lock da linha do cliente é a PRIMEIRA leitura dela neste pedido
+     * (OSIV) e serializa a eliminação com uma emissão em curso, que bloqueia o mesmo cliente até
+     * ao commit. Depois do lock, a verificação de existência vê o documento já confirmado (READ
+     * COMMITTED), por isso não há check-then-act nem documento órfão.
+     */
     @PreAuthorize("hasAuthority('clientes:edit')")
+    @Transactional
     @DeleteMapping("/clientes/{id}")
     public ResponseEntity<?> deleteCliente(@PathVariable UUID id) {
-        Cliente cliente = clienteRepository.findById(id).orElse(null);
-        if (cliente == null || !cliente.getTenantId().equals(getTenantId())) {
+        UUID tenantId = getTenantId();
+        Cliente cliente = clienteRepository.bloquearPorIdETenant(id, tenantId).orElse(null);
+        if (cliente == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
+        }
+        if (documentoFiscalService.existeParaCliente(tenantId, id)) {
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Não é possível apagar este cliente porque tem documentos fiscais emitidos.",
+                    "code", "CLIENTE_COM_DOCUMENTOS_FISCAIS")));
         }
 
         // Delete associated Conta Corrente if exists
@@ -856,12 +869,22 @@ public class ResourceController {
         }
 
         UUID tenantId = getTenantId();
-        Cliente primary = clienteRepository.findById(payload.primaryId()).orElse(null);
-        Cliente secondary = clienteRepository.findById(payload.secondaryId()).orElse(null);
-        if (primary == null || !primary.getTenantId().equals(tenantId)) {
+        // Phase 134 (R-01, D-15): os dois clientes são bloqueados (primeira leitura das linhas,
+        // OSIV) por ordem ascendente de UUID. Só a fusão bloqueia dois clientes, e todas usam esta
+        // mesma ordem total, logo duas fusões cruzadas não fazem deadlock. A emissão e as
+        // eliminações bloqueiam um cliente e só depois o processo, tal como aqui (os locks de
+        // cliente antecedem os UPDATE de processo abaixo).
+        boolean primarioPrimeiro = payload.primaryId().compareTo(payload.secondaryId()) < 0;
+        UUID primeiroId = primarioPrimeiro ? payload.primaryId() : payload.secondaryId();
+        UUID segundoId = primarioPrimeiro ? payload.secondaryId() : payload.primaryId();
+        Cliente primeiroBloqueado = clienteRepository.bloquearPorIdETenant(primeiroId, tenantId).orElse(null);
+        Cliente segundoBloqueado = clienteRepository.bloquearPorIdETenant(segundoId, tenantId).orElse(null);
+        Cliente primary = primarioPrimeiro ? primeiroBloqueado : segundoBloqueado;
+        Cliente secondary = primarioPrimeiro ? segundoBloqueado : primeiroBloqueado;
+        if (primary == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente principal não encontrado"));
         }
-        if (secondary == null || !secondary.getTenantId().equals(tenantId)) {
+        if (secondary == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente duplicado não encontrado"));
         }
 
@@ -952,6 +975,12 @@ public class ResourceController {
         pareceresToMove.forEach(ps -> ps.setClienteId(savedPrimary.getId()));
         parecerSolicitacaoRepository.saveAll(pareceresToMove);
 
+        // Phase 134 (D-15): os documentos fiscais do cliente absorvido passam a apontar para o que
+        // fica (UPDATE nativo só de cliente_id; a fotografia do adquirente não muda). Tem de
+        // acontecer antes de apagar o secundário, com os dois clientes já bloqueados.
+        int documentosFiscaisMovidos =
+                documentoFiscalService.repontarCliente(tenantId, payload.secondaryId(), savedPrimary.getId());
+
         clienteRepository.delete(secondary);
 
         return ResponseEntity.ok(Map.of(
@@ -961,7 +990,8 @@ public class ResourceController {
                 "moved_notas", notasToMove.size(),
                 "moved_documentos", docsToMove.size(),
                 "merged_saldo", mergedSaldo.toString(),
-                "moved_pareceres", pareceresToMove.size()
+                "moved_pareceres", pareceresToMove.size(),
+                "moved_documentos_fiscais", documentosFiscaisMovidos
         ));
     }
 
@@ -1256,12 +1286,23 @@ public class ResourceController {
         return ResponseEntity.ok(processoRepository.save(processo));
     }
 
+    /**
+     * Phase 134 (D-14, R-01): como em {@code deleteCliente}, o lock da linha do processo é a
+     * primeira leitura dela e serializa a eliminação com uma emissão em curso no mesmo processo.
+     */
     @PreAuthorize("hasAuthority('processos:edit')")
+    @Transactional
     @DeleteMapping("/processos/{id}")
     public ResponseEntity<?> deleteProcesso(@PathVariable UUID id) {
-        Processo processo = processoRepository.findById(id).orElse(null);
-        if (processo == null || !processo.getTenantId().equals(getTenantId())) {
+        UUID tenantId = getTenantId();
+        Processo processo = processoRepository.bloquearPorIdETenant(id, tenantId).orElse(null);
+        if (processo == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
+        }
+        if (documentoFiscalService.existeParaProcesso(tenantId, id)) {
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Não é possível apagar este processo porque tem documentos fiscais emitidos.",
+                    "code", "PROCESSO_COM_DOCUMENTOS_FISCAIS")));
         }
 
         processoRepository.delete(processo);
@@ -3177,6 +3218,7 @@ public class ResourceController {
     }
 
     @PreAuthorize("hasAuthority('financeiro:manage')")
+    @Transactional
     @DeleteMapping("/honorarios/{id}")
     public ResponseEntity<?> deleteHonorario(@PathVariable Integer id) {
         Honorario hon = honorarioRepository.findById(id).orElse(null);
@@ -3186,6 +3228,19 @@ public class ResourceController {
         Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        // Phase 134 (D-14, R-01): o honorário e o processo já foram lidos sem lock pelas
+        // verificações 404 acima; este lock serve só para serializar. Uma emissão em curso segura o
+        // lock do processo até ao commit; depois dela, a verificação de existência vê o documento
+        // confirmado (READ COMMITTED). Vem antes da guarda antiga dos pagamentos.
+        UUID tenantId = getTenantId();
+        if (processoRepository.bloquearPorIdETenant(processo.getId(), tenantId).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
+        }
+        if (documentoFiscalService.existeParaHonorario(tenantId, id)) {
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Não é possível apagar este honorário porque tem documentos fiscais emitidos.",
+                    "code", "HONORARIO_COM_DOCUMENTOS_FISCAIS")));
         }
         List<Pagamento> pagamentos = pagamentoRepository.findByHonorarioId(id);
         if (!pagamentos.isEmpty()) {
@@ -3209,6 +3264,15 @@ public class ResourceController {
         Processo processo = processoRepository.findById(hon.getProcessoId()).orElse(null);
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo associado não encontrado"));
+        }
+        // Phase 134 (D-14): um pagamento com Fatura-Recibo não pode ser apagado. Este handler fica
+        // SEM @Transactional (P-02): ser faturado fica decidido na criação (pagamento e documento
+        // fazem commit juntos), por isso não há corrida a fechar; e numa transação a falha engolida
+        // da conta corrente abaixo passaria a UnexpectedRollbackException.
+        if (documentoFiscalService.existeParaPagamento(getTenantId(), id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Este pagamento tem uma fatura-recibo emitida e não pode ser apagado.",
+                    "code", "PAGAMENTO_FATURADO"));
         }
         try {
             UUID clienteId = processo.getClienteId();
