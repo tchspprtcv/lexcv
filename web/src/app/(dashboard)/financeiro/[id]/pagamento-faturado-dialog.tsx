@@ -66,7 +66,7 @@ export function PagamentoFaturadoDialog({
     >
       <DialogContent
         closeLabel="Fechar pré-visualização"
-        className="max-h-[85vh] space-y-4 overflow-y-auto"
+        className="max-h-[85vh] overflow-y-auto"
         onOpenAutoFocus={(e) => {
           // Foco no título: o botão de confirmação nunca recebe foco automático (evita um Enter
           // acidental emitir o documento).
