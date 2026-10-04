@@ -3,6 +3,8 @@
 import * as React from "react";
 import {
   type ColumnDef,
+  type OnChangeFn,
+  type PaginationState,
   type SortingState,
   type VisibilityState,
   flexRender,
@@ -27,6 +29,19 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   getRowId?: (row: TData) => string;
+  /**
+   * Paginação no servidor (opcional, Phase 134). Com `manualPagination`, `data` é só a página
+   * atual, `pageCount` vem do servidor e `pagination`/`onPaginationChange` são controlados por
+   * quem chama. Sem estas props o comportamento é exatamente o de sempre (paginação no cliente).
+   */
+  manualPagination?: boolean;
+  pageCount?: number;
+  pagination?: PaginationState;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  /** Visibilidade inicial das colunas (ex.: esconder uma coluna em ecrãs pequenos). */
+  initialColumnVisibility?: VisibilityState;
+  /** Texto da linha vazia; por omissão o texto de sempre. */
+  emptyMessage?: string;
 }
 
 /**
@@ -49,10 +64,16 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   getRowId,
+  manualPagination = false,
+  pageCount,
+  pagination,
+  onPaginationChange,
+  initialColumnVisibility,
+  emptyMessage = "Sem resultados para os filtros aplicados.",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+    React.useState<VisibilityState>(initialColumnVisibility ?? {});
 
   const table = useReactTable({
     data,
@@ -60,7 +81,6 @@ export function DataTable<TData, TValue>({
     getRowId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     initialState: {
@@ -68,10 +88,24 @@ export function DataTable<TData, TValue>({
         pageSize: 10,
       },
     },
-    state: {
-      sorting,
-      columnVisibility,
-    },
+    ...(manualPagination
+      ? {
+          manualPagination: true,
+          pageCount: pageCount ?? -1,
+          onPaginationChange,
+          state: {
+            sorting,
+            columnVisibility,
+            ...(pagination ? { pagination } : {}),
+          },
+        }
+      : {
+          getPaginationRowModel: getPaginationRowModel(),
+          state: {
+            sorting,
+            columnVisibility,
+          },
+        }),
   });
 
   return (
@@ -114,7 +148,7 @@ export function DataTable<TData, TValue>({
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                Sem resultados para os filtros aplicados.
+                {emptyMessage}
               </TableCell>
             </TableRow>
           )}

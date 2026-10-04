@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Download, Plus, X } from "lucide-react";
+import { Download, Plus, Receipt, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
 import { useClientes } from "@/hooks/use-clientes";
+import { podeLerDocumentosFiscais } from "@/hooks/use-faturacao";
 import { useHonorarios } from "@/hooks/use-financeiro";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcessos } from "@/hooks/use-processos";
@@ -102,6 +103,8 @@ export default function FinanceiroPage() {
   const permissions = usePermissions();
   const canViewFinanceiro = permissions.can.view("financeiro");
   const canCreateFinanceiro = permissions.can.create("financeiro");
+  // Phase 134 (D-16): mesma autoridade exata que o backend exige para a lista de documentos.
+  const canVerDocumentosFiscais = podeLerDocumentosFiscais(permissions.permissions);
 
   if (!permissions.isFetched) {
     return null;
@@ -116,15 +119,23 @@ export default function FinanceiroPage() {
     );
   }
 
-  return <FinanceiroContent canCreateFinanceiro={canCreateFinanceiro} canViewFinanceiro={canViewFinanceiro} />;
+  return (
+    <FinanceiroContent
+      canCreateFinanceiro={canCreateFinanceiro}
+      canViewFinanceiro={canViewFinanceiro}
+      canVerDocumentosFiscais={canVerDocumentosFiscais}
+    />
+  );
 }
 
 function FinanceiroContent({
   canCreateFinanceiro,
   canViewFinanceiro,
+  canVerDocumentosFiscais,
 }: {
   canCreateFinanceiro: boolean;
   canViewFinanceiro: boolean;
+  canVerDocumentosFiscais: boolean;
 }) {
   const honorarios = useHonorarios();
   const processos = useProcessos();
@@ -191,6 +202,14 @@ function FinanceiroContent({
               </TooltipTrigger>
               <TooltipContent>Exportar CSV</TooltipContent>
             </Tooltip>
+          ) : null}
+          {canVerDocumentosFiscais ? (
+            <Button asChild variant="outline">
+              <Link href="/financeiro/documentos-fiscais">
+                <Receipt className="h-4 w-4" />
+                Documentos fiscais
+              </Link>
+            </Button>
           ) : null}
           {canCreateFinanceiro ? (
             <Button asChild>
