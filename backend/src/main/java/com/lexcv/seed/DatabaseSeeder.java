@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -39,6 +40,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         private final PagamentoRepository pagamentoRepository;
         private final SystemSettingRepository systemSettingRepository;
         private final PasswordEncoder passwordEncoder;
+        private final ParametroFiscalRepository parametroFiscalRepository;
 
         @Value("${app.seed.enabled}")
         private boolean seedEnabled;
@@ -47,6 +49,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         @Transactional
         public void run(String... args) throws Exception {
                 seedRbac();
+                seedParametrosFiscais();
 
                 // Phase 119 (PROV-01): as tres contagens que protegem o bloco de dados demo tem
                 // de ser lidas AQUI, antes de seedTenantPlataforma() inserir qualquer linha -- a
@@ -85,7 +88,10 @@ public class DatabaseSeeder implements CommandLineRunner {
                 // 3. Tenants
                 Tenant tenant = Tenant.builder()
                                 .nome("Gabinete Jurídico Demonstração")
-                                .nif("000000000")
+                                // Phase 133: 000000000 e recusado pela regra do NIF fiscal (primeiro
+                                // digito 1-9) e pelo IUD (Phase 136); os NIF dos clientes demo
+                                // (123456789/512345678) nao sao reutilizados.
+                                .nif("500000001")
                                 .tipoEntidade("PRIVADO")
                                 .email("contacto@lexcv.cv")
                                 .telefone("+238 200 0000")
@@ -370,8 +376,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                                         "Ver honorários, pagamentos e conta corrente", "Financeiro", 110),
                         new CatalogoEntry("financeiro:edit", "Gerir Financeiro",
                                         "Lançar honorários, pagamentos e gerir conta corrente", "Financeiro", 120),
-                        new CatalogoEntry("financeiro:manage", "Eliminar Lançamentos Financeiros",
-                                        "Eliminar honorários e pagamentos já registados", "Financeiro", 130),
+                        new CatalogoEntry("financeiro:manage", "Gerir Faturação e Eliminar Lançamentos",
+                                        "Gerir os dados fiscais e a ativação da faturação do escritório e eliminar honorários e pagamentos já registados",
+                                        "Financeiro", 130),
                         new CatalogoEntry("pareceres:view", "Visualizar Pareceres",
                                         "Ver lista, detalhe e pesquisa de pareceres jurídicos", "Pareceres", 140),
                         new CatalogoEntry("pareceres:create", "Criar Solicitações",
@@ -485,6 +492,47 @@ public class DatabaseSeeder implements CommandLineRunner {
                 // atribuivel a partir de superficie de escritorio -- continuacao das guardas das
                 // Phases 119 e 121, nao uma reinvencao.
                 upsertRolePermissions("PLATAFORMA_ADMIN", Collections.emptyList(), false);
+        }
+
+        // Phase 133 (CFG-04): as taxas fiscais sao DADOS em t_parametro_fiscal, nunca constantes
+        // no codigo (CONTEXT: taxa em fracao proibida em codigo; ParametrosFiscaisSemConstantesTest
+        // impoe-o e so admite estes valores neste ficheiro). Os valores sao percentagens.
+        // 2000-01-01 e uma data de inicio tecnica: "em vigor para todos os documentos que esta
+        // versao emite". Uma mudanca legal e uma NOVA entrada com vigente_desde posterior, nunca
+        // a edicao de uma linha existente. RETENCAO_SUGERIDA e uma sugestao pendente de
+        // confirmacao pelo contabilista (SUMMARY C5).
+        private record ParametroFiscalSemente(CodigoParametroFiscal codigo, BigDecimal valor,
+                        LocalDate vigenteDesde) {
+        }
+
+        private static final List<ParametroFiscalSemente> PARAMETROS_FISCAIS = List.of(
+                        new ParametroFiscalSemente(CodigoParametroFiscal.IVA_TAXA_NORMAL, new BigDecimal("15"),
+                                        LocalDate.of(2000, 1, 1)),
+                        new ParametroFiscalSemente(CodigoParametroFiscal.RETENCAO_SUGERIDA, new BigDecimal("20"),
+                                        LocalDate.of(2000, 1, 1)));
+
+        /**
+         * Upsert NAO destrutivo dos parametros fiscais, em todos os arranques (dados legais de
+         * referencia, como seedRbac() e a tenant reservada): so insere o par
+         * (codigo, vigente_desde) em falta; nunca atualiza nem apaga uma linha existente, mesmo
+         * que o valor seja diferente. A constraint uk_parametro_fiscal_codigo_vigencia bloqueia
+         * duplicados. Instant.now() e aceitavel aqui: o seeder corre no arranque, fora de fluxos
+         * de pedido.
+         */
+        private void seedParametrosFiscais() {
+                for (ParametroFiscalSemente semente : PARAMETROS_FISCAIS) {
+                        boolean existe = parametroFiscalRepository
+                                        .findByCodigoAndVigenteDesde(semente.codigo().name(), semente.vigenteDesde())
+                                        .isPresent();
+                        if (!existe) {
+                                parametroFiscalRepository.save(ParametroFiscal.builder()
+                                                .codigo(semente.codigo().name())
+                                                .valor(semente.valor())
+                                                .vigenteDesde(semente.vigenteDesde())
+                                                .createdAt(Instant.now())
+                                                .build());
+                        }
+                }
         }
 
         // Phase 125 (MOLD-01): terceiro argumento `instanciavel` faz este upsert convergir a
