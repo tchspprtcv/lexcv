@@ -20,6 +20,8 @@ import com.lexcv.dtos.UserSummaryResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import com.lexcv.services.ResolucaoPapeisService;
+import com.lexcv.dtos.DocumentoFiscalRef;
+import com.lexcv.dtos.PagamentoComDocumentoResponse;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.PagamentoFaturadoService;
@@ -3045,7 +3047,14 @@ public class ResourceController {
         if (processo == null || !processo.getTenantId().equals(getTenantId())) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Honorário não encontrado"));
         }
-        return ResponseEntity.ok(pagamentoRepository.findByHonorarioId(id));
+        // Phase 134 (D-19, EMIS-12): cada pagamento com o número da sua Fatura-Recibo, ou nulo para os
+        // registados sem faturação (nunca se fatura retroativamente). Uma só consulta em lote.
+        List<Pagamento> pagamentos = pagamentoRepository.findByHonorarioId(id);
+        List<Integer> ids = pagamentos.stream().map(Pagamento::getId).toList();
+        Map<Integer, DocumentoFiscalRef> refs = documentoFiscalService.referenciasPorPagamento(getTenantId(), ids);
+        return ResponseEntity.ok(pagamentos.stream()
+                .map(p -> PagamentoComDocumentoResponse.de(p, refs.get(p.getId())))
+                .toList());
     }
 
     /**
