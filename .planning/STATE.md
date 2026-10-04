@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-08-PLAN.md
+stopped_at: Completed 134-09-PLAN.md
 last_updated: "2026-10-04T21:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-08 (POST /pagamentos delegates to PagamentoFaturadoService behind one faturacaoAtiva check; legacy body verbatim in registarPagamentoLegado pinned by SHA-256; payments list with documento fiscal refs; full unit suite 751/751)
+last_activity: 2026-10-04 — Completed 134-09 (DocumentoFiscalController: estado-emissao/list/detail financeiro:view, pre-visualizacao financeiro:edit, manual parsing -> 400, invalid id -> 404; real preAuthorize interceptor proof; full unit suite 783/783)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 16
-  percent: 73
+  completed_plans: 17
+  percent: 77
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 9 of 14
-Status: Executing Phase 134 — 134-01..134-08 complete
-Last activity: 2026-10-04 — Completed 134-08 (POST /pagamentos delegates to PagamentoFaturadoService behind one faturacaoAtiva check; legacy body verbatim in registarPagamentoLegado pinned by SHA-256; payments list with documento fiscal refs; full unit suite 751/751)
+Plan: 10 of 14
+Status: Executing Phase 134 — 134-01..134-09 complete
+Last activity: 2026-10-04 — Completed 134-09 (DocumentoFiscalController: estado-emissao/list/detail financeiro:view, pre-visualizacao financeiro:edit, manual parsing -> 400, invalid id -> 404; real preAuthorize interceptor proof; full unit suite 783/783)
 
 ## Performance Metrics
 
@@ -132,6 +132,7 @@ Last activity: 2026-10-04 — Completed 134-08 (POST /pagamentos delegates to Pa
 | Phase 134 P06 | 30 min | 2 tasks | 6 files |
 | Phase 134 P07 | 25 min | 2 tasks | 3 files |
 | Phase 134 P08 | 25 min | 2 tasks | 6 files |
+| Phase 134 P09 | 20 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: Lock failures in emission map to 503 FATURACAO_OCUPADA; same idempotency key with a different payload → 409 CHAVE_REUTILIZADA; a processo moved by a merge between the scalar read and the lock → 409 PROCESSO_ALTERADO_TENTE_NOVAMENTE
 - [Phase 134]: Emission ITs use a fixed Clock (2026-06-15T13:00Z) for deterministic hoje/series year; FixturaEmissaoFiscal (JDBC) is the shared fixture for later fiscal ITs; @MockitoSpyBean on MANDATORY beans is stubbed on AopTestUtils.getUltimateTargetObject
 - [Phase 134]: CFG-03 guard evolved, not relaxed: ResourceController has exactly one faturacaoAtiva check inside createPagamento; registarPagamentoLegado body is pinned by SHA-256 of the normalized pre-134 createPagamento body (09aa999); ResourceController never names ConfiguracaoFiscal/NumeracaoService/SerieFiscal/DocumentoFiscalRepository/ComunicacaoFiscal
+- [Phase 134]: DocumentoFiscalController (/api/v1) holds the Phase 134 read/preview surface with per-method gates (view: estado-emissao, documentos-fiscais, documentos-fiscais/{id}; edit: pre-visualizacao); listing params parsed by hand (400 on malformed, never 500); non-UUID id -> same 404 as a foreign document
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
