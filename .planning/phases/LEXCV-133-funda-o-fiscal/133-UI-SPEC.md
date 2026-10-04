@@ -87,7 +87,7 @@ Accent reserved for:
 Never use accent for: the "Desativar" button (outline/destructive), table content, badges other than none, helper text.
 
 Status badge (Badge primitive):
-- "Faturação ativa": `variant="secondary"` (primary)
+- "Faturação ativa": `variant="secondary"` (neutral)
 - "Faturação desligada": `variant="outline"`
 - Series environment "Simulado": `variant="outline"` (neutral; the simulated nature is conveyed by text, not alarm color)
 
