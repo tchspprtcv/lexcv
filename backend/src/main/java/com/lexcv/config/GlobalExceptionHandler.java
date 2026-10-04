@@ -1,5 +1,6 @@
 package com.lexcv.config;
 
+import com.lexcv.exceptions.RecusaFiscalException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -93,6 +94,29 @@ public class GlobalExceptionHandler {
         Map<String, String> body = new HashMap<>();
         body.put("message", "Corpo do pedido inválido.");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * Phase 133 (Plan 01): sem este handler, uma {@link RecusaFiscalException} lançada por um
+     * serviço fiscal (recusa esperada de uma regra de negócio, ex.: ativar a faturação com dados
+     * incompletos) cai no catch-all {@link Exception} abaixo, que devolve {@code 500} e ecoa a
+     * mensagem e o nome da classe da exceção. Com este handler, a recusa devolve o estado HTTP
+     * que ela própria transporta (409/422/...) com a forma {@code {"message", "code"}} e
+     * {@code "campo"} apenas quando a recusa diz respeito a um campo -- o frontend usa
+     * {@code code} para escolher o texto inline e {@code campo} para marcar o campo do
+     * formulário. A mensagem é sempre texto do LexCV (ver javadoc da exceção), nunca de uma
+     * biblioteca; o log regista só o código, sem stack trace, por ser uma recusa esperada.
+     */
+    @ExceptionHandler(RecusaFiscalException.class)
+    public ResponseEntity<Map<String, String>> handleRecusaFiscal(RecusaFiscalException ex) {
+        logger.warn("Recusa fiscal: {}", ex.getCodigo());
+        Map<String, String> body = new HashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("code", ex.getCodigo());
+        if (ex.getCampo() != null) {
+            body.put("campo", ex.getCampo());
+        }
+        return ResponseEntity.status(ex.getStatus()).body(body);
     }
 
     @ExceptionHandler(Exception.class)
