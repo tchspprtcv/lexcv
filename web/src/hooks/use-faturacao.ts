@@ -1,15 +1,29 @@
-import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { apiFetch, isApiError } from "@/lib/api";
+import { construirQueryDocumentosFiscais } from "@/lib/erros-emissao";
+import { hasPermission } from "@/lib/permissions";
 
 import type {
   CodigoErroFaturacao,
   ConfiguracaoFiscal,
   ConfiguracaoFiscalPayload,
+  DocumentoFiscalDetalhe,
+  DocumentosFiscaisFiltros,
   EmailAutomaticoPayload,
+  EstadoEmissao,
   MotivoIsencao,
+  PaginaDocumentosFiscais,
+  PreVisualizacaoFatura,
   SerieFiscal,
 } from "@/types/faturacao";
+import type { PagamentoCreateRequest } from "@/types/financeiro";
 
 // Hooks da aba "Faturação" (Phase 133). As queries recebem `enabled` -- quem chama passa
 // `can.manage("financeiro")`, para que um utilizador sem permissão nunca dispare um 403. Isto é
@@ -151,4 +165,75 @@ export function mensagemErroFaturacao(error: unknown): ErroFaturacao {
   if (error.campo) resultado.campo = error.campo;
   if (mensagem) resultado.mensagem = mensagem;
   return resultado;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 134 -- estado de emissão, pré-visualização e documentos fiscais (DocumentoFiscalController).
+// Adições apenas: os hooks e chaves da Phase 133 acima ficam como estavam. Caminhos relativos ao
+// apiFetch (o prefixo da API vem de NEXT_PUBLIC_API_BASE_PATH).
+
+export const ESTADO_EMISSAO_KEY = ["faturacao", "estado-emissao"] as const;
+export const DOCUMENTOS_FISCAIS_KEY = ["documentos-fiscais"] as const;
+
+/** Autoridade exigida pelo backend para ler o estado de emissão e os documentos fiscais. */
+export const PERMISSAO_LEITURA_FISCAL = "financeiro:view";
+
+/**
+ * Gate de leitura fiscal: exige EXATAMENTE `financeiro:view`, tal como o `@PreAuthorize` do
+ * backend. O fallback do frontend (`hasScopedPermission`, edit/manage => view) não serve aqui:
+ * para um papel personalizado com edit sem view o ecrã mostraria dados que o backend recusa com
+ * 403 (ver 134-09-SUMMARY). Quem chama passa o resultado como `enabled` dos hooks abaixo.
+ */
+export function podeLerDocumentosFiscais(permissions: readonly string[] | undefined): boolean {
+  return hasPermission(permissions, PERMISSAO_LEITURA_FISCAL);
+}
+
+/** GET /faturacao/estado-emissao (financeiro:view): se a faturação está ativa e a taxa sugerida. */
+export function useEstadoEmissao(enabled: boolean) {
+  return useQuery({
+    queryKey: ESTADO_EMISSAO_KEY,
+    queryFn: () => apiFetch<EstadoEmissao>("/faturacao/estado-emissao"),
+    enabled: enabled && typeof window !== "undefined",
+    staleTime: 30_000,
+  });
+}
+
+/** POST /faturacao/pre-visualizacao (financeiro:edit): nada é gravado; 409/422 tratados inline. */
+export function usePreVisualizacaoFaturacao() {
+  return useMutation({
+    mutationFn: (payload: PagamentoCreateRequest) =>
+      apiFetch<PreVisualizacaoFatura>(
+        "/faturacao/pre-visualizacao",
+        { method: "POST", body: JSON.stringify(payload) },
+        { semToastParaStatus: [409, 422] },
+      ),
+  });
+}
+
+/** GET /documentos-fiscais com filtros e paginação no servidor (D-17). */
+export function useDocumentosFiscais(filtros: DocumentosFiscaisFiltros, enabled: boolean) {
+  return useQuery({
+    queryKey: [...DOCUMENTOS_FISCAIS_KEY, "list", filtros] as const,
+    queryFn: () =>
+      apiFetch<PaginaDocumentosFiscais>(`/documentos-fiscais?${construirQueryDocumentosFiscais(filtros)}`),
+    enabled: enabled && typeof window !== "undefined",
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+}
+
+/** GET /documentos-fiscais/{id}: o 404 é um estado do ecrã (sem toast, sem novas tentativas). */
+export function useDocumentoFiscal(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...DOCUMENTOS_FISCAIS_KEY, "detail", id] as const,
+    queryFn: () =>
+      apiFetch<DocumentoFiscalDetalhe>(
+        `/documentos-fiscais/${encodeURIComponent(id)}`,
+        {},
+        { semToastParaStatus: [404] },
+      ),
+    enabled: enabled && Boolean(id) && typeof window !== "undefined",
+    retry: (tentativas, error) => !(isApiError(error) && error.status === 404) && tentativas < 3,
+    staleTime: 60_000,
+  });
 }

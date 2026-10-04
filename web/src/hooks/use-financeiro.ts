@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { DOCUMENTOS_FISCAIS_KEY, ESTADO_EMISSAO_KEY } from "@/hooks/use-faturacao";
 import { apiFetch } from "@/lib/api";
 
 import type {
@@ -87,10 +88,13 @@ export function useUpdateHonorario() {
 export function useDeleteHonorario() {
   const queryClient = useQueryClient();
 
+  // Phase 134 (D-14): os 409 (pagamentos registados, HONORARIO_COM_DOCUMENTOS_FISCAIS) são
+  // mostrados inline no diálogo; invalidar em onSettled porque uma recusa também indica dados
+  // desatualizados no ecrã (133 WR-04).
   return useMutation({
     mutationFn: (id: number) =>
-      apiFetch<void>(`/honorarios/${id}`, { method: "DELETE" }),
-    onSuccess: async () => {
+      apiFetch<void>(`/honorarios/${id}`, { method: "DELETE" }, { semToastParaStatus: [409] }),
+    onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: ["honorarios", "list"] });
     },
   });
@@ -99,10 +103,11 @@ export function useDeleteHonorario() {
 export function useDeletePagamento() {
   const queryClient = useQueryClient();
 
+  // Phase 134 (D-14): 409 PAGAMENTO_FATURADO é mostrado inline; invalidação em onSettled.
   return useMutation({
     mutationFn: ({ pagamentoId }: { pagamentoId: number; honorarioId: number }) =>
-      apiFetch<void>(`/pagamentos/${pagamentoId}`, { method: "DELETE" }),
-    onSuccess: async (_void, variables) => {
+      apiFetch<void>(`/pagamentos/${pagamentoId}`, { method: "DELETE" }, { semToastParaStatus: [409] }),
+    onSettled: async (_void, _error, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos", variables.honorarioId] }),
         queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
@@ -114,16 +119,29 @@ export function useDeletePagamento() {
 export function useCreatePagamento() {
   const queryClient = useQueryClient();
 
+  // Phase 134 (D-10, 133 WR-04): com a faturação ativa, os 409/422 da emissão são tratados inline
+  // (interpretarErroEmissao); a invalidação corre em onSettled porque um erro também pode
+  // significar estado desatualizado (faturação desligada entretanto, documento já emitido com a
+  // mesma chave). O payload continua a ser PagamentoCreateRequest: a chamada com a faturação
+  // desligada não muda.
   return useMutation({
     mutationFn: (payload: PagamentoCreateRequest) =>
-      apiFetch<Pagamento>("/pagamentos", {
-        method: "POST",
-        body: JSON.stringify(payload satisfies PagamentoCreateRequest),
-      }),
-    onSuccess: async (_created, variables) => {
+      apiFetch<Pagamento>(
+        "/pagamentos",
+        {
+          method: "POST",
+          body: JSON.stringify(payload satisfies PagamentoCreateRequest),
+        },
+        { semToastParaStatus: [409, 422] },
+      ),
+    onSettled: async (_created, _error, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos", variables.honorarioId] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "detail", variables.honorarioId] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "list"] }),
         queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
+        queryClient.invalidateQueries({ queryKey: DOCUMENTOS_FISCAIS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ESTADO_EMISSAO_KEY }),
       ]);
     },
   });
