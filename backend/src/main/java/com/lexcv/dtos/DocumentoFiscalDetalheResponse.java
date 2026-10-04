@@ -62,6 +62,11 @@ public record DocumentoFiscalDetalheResponse(
         List<Linha> linhas
 ) {
 
+    /** Cópia imutável das linhas (EI_EXPOSE_REP; mesmo idioma de {@code WorkflowResponse}). */
+    public DocumentoFiscalDetalheResponse {
+        linhas = linhas == null ? List.of() : List.copyOf(linhas);
+    }
+
     /** Uma linha do documento (nesta fase há sempre exatamente uma). */
     public record Linha(
             Integer numeroLinha,
