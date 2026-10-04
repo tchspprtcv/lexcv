@@ -67,9 +67,10 @@ public class ConfiguracaoFiscal {
     private String telefoneContacto;
 
     // Sem CHECK na coluna (varchar simples, @Convert em vez de @Enumerated): novos valores de
-    // enum não exigem DROP CONSTRAINT.
+    // enum não exigem DROP CONSTRAINT. length = 32 e nunca columnDefinition (WR-01 da revisão):
+    // com columnDefinition o ddl-auto=update emite ALTER ... SET DATA TYPE em cada boot.
     @Convert(converter = RegimeIvaConverter.class)
-    @Column(name = "regime_iva", columnDefinition = "varchar(32)")
+    @Column(name = "regime_iva", length = 32)
     private RegimeIva regimeIva;
 
     // Código oficial MotivoIsencaoIva.codigo() ("1".."21"); obrigatório quando ISENTO.

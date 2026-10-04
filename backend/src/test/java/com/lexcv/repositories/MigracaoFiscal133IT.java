@@ -3,6 +3,15 @@ package com.lexcv.repositories;
 import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.SerieFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
+import org.hibernate.boot.Metadata;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.tool.schema.TargetType;
+import org.hibernate.tool.schema.internal.ExceptionHandlerHaltImpl;
+import org.hibernate.tool.schema.spi.ContributableMatcher;
+import org.hibernate.tool.schema.spi.SchemaManagementTool;
+import org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator;
+import org.hibernate.tool.schema.spi.ScriptTargetOutput;
+import org.hibernate.tool.schema.spi.TargetDescriptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -21,6 +30,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +44,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,7 +61,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code information_schema}. Mesmo andaime de {@code ParecerVersaoConcorrenciaIT}
  * ({@code @DataJpaTest} + {@code Replace.NONE} + {@code @ServiceConnection}).
  */
-@DataJpaTest
+@DataJpaTest(properties =
+        "spring.jpa.properties.hibernate.integrator_provider=com.lexcv.repositories.CapturaMetadataHibernate")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 class MigracaoFiscal133IT {
@@ -140,6 +154,63 @@ class MigracaoFiscal133IT {
                         + "('public.t_serie_fiscal'::regclass, 'public.t_configuracao_fiscal'::regclass)",
                 Integer.class);
         assertEquals(0, checks);
+    }
+
+    /**
+     * WR-01 da revisão: um segundo arranque em {@code ddl-auto=update} sobre o esquema que o
+     * próprio Hibernate criou não emite DDL nenhum para as tabelas fiscais. Corre o mesmo
+     * {@code SchemaMigrator} do {@code update}, só em modo SCRIPT (nada é executado), e recolhe as
+     * instruções. Antes da correção saía
+     * {@code alter table if exists t_serie_fiscal alter column ambiente set data type varchar(32) not null}
+     * (comprimento mapeado 255 por causa do {@code columnDefinition}, contra 32 na base de dados).
+     */
+    @Test
+    void segundoArranqueEmUpdateNaoEmiteDdlFiscal() {
+        Metadata metadata = CapturaMetadataHibernate.metadata();
+        SessionFactoryImplementor sessionFactory = CapturaMetadataHibernate.sessionFactory();
+        assertNotNull(metadata, "integrator_provider não capturou o Metadata");
+        assertNotNull(sessionFactory, "integrator_provider não capturou a SessionFactory");
+
+        Map<String, Object> settings = new HashMap<>(sessionFactory.getProperties());
+        List<String> ddl = new ArrayList<>();
+        ScriptTargetOutput saida = new ScriptTargetOutput() {
+            @Override
+            public void prepare() {
+                // nada
+            }
+
+            @Override
+            public void accept(String comando) {
+                ddl.add(comando);
+            }
+
+            @Override
+            public void release() {
+                // nada
+            }
+        };
+        TargetDescriptor alvo = new TargetDescriptor() {
+            @Override
+            public EnumSet<TargetType> getTargetTypes() {
+                return EnumSet.of(TargetType.SCRIPT);
+            }
+
+            @Override
+            public ScriptTargetOutput getScriptTargetOutput() {
+                return saida;
+            }
+        };
+
+        sessionFactory.getServiceRegistry().requireService(SchemaManagementTool.class)
+                .getSchemaMigrator(settings)
+                .doMigration(metadata,
+                        SchemaManagementToolCoordinator.buildExecutionOptions(settings, ExceptionHandlerHaltImpl.INSTANCE),
+                        ContributableMatcher.ALL, alvo);
+
+        List<String> fiscais = ddl.stream()
+                .filter(c -> TABELAS.stream().anyMatch(t -> c.toLowerCase().contains(t)))
+                .toList();
+        assertEquals(List.of(), fiscais, "DDL emitido no segundo arranque: " + fiscais);
     }
 
     private void inserirSerie(UUID tenantId) {

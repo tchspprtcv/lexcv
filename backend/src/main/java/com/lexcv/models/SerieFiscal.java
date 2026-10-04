@@ -35,8 +35,10 @@ public class SerieFiscal {
     private UUID tenantId;
 
     // varchar sem CHECK (@Convert em vez de @Enumerated): novos tipos não exigem DROP CONSTRAINT.
+    // length = 32 e NUNCA columnDefinition (WR-01 da revisão): com columnDefinition o comprimento
+    // mapeado fica no default 255, o ddl-auto=update vê 32 != 255 e emite um ALTER em cada boot.
     @Convert(converter = TipoDocumentoFiscalConverter.class)
-    @Column(name = "tipo_documento", nullable = false, columnDefinition = "varchar(32) not null")
+    @Column(name = "tipo_documento", nullable = false, length = 32)
     private TipoDocumentoFiscal tipoDocumento;
 
     @Column(name = "ano", nullable = false)
@@ -45,7 +47,8 @@ public class SerieFiscal {
     // varchar sem CHECK (@Convert em vez de @Enumerated): a Phase 136 acrescenta um ambiente real
     // sem alteração de esquema.
     @Convert(converter = AmbienteFiscalConverter.class)
-    @Column(name = "ambiente", nullable = false, columnDefinition = "varchar(32) not null")
+    // length = 32 e nunca columnDefinition: ver tipoDocumento (WR-01).
+    @Column(name = "ambiente", nullable = false, length = 32)
     private AmbienteFiscal ambiente;
 
     @Column(name = "codigo", nullable = false, length = 20)
