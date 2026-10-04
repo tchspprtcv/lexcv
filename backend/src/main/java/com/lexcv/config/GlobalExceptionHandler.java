@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -119,12 +120,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(body);
     }
 
+    /** Texto fixo do catch-all: nunca a mensagem nem a classe da exceção (WR-06). */
+    static final String MENSAGEM_ERRO_INTERNO = "Erro interno. Tente novamente.";
+
+    /**
+     * Catch-all para exceções não previstas. Phase 133 (WR-06 da revisão): o corpo deixou de
+     * ecoar {@code ex.getMessage()} e o nome da classe da exceção. Uma falha de flush no commit, um
+     * valor de enum desconhecido na base de dados ({@code No enum constant com.lexcv...}) ou a
+     * mensagem de uma {@code IllegalStateException} interna podiam expor nomes de constraints,
+     * SQL, caminhos de classes ou códigos de séries ao cliente. O cliente recebe um texto fixo e
+     * uma {@code referencia} (UUID aleatório); o servidor regista a mesma referência com a
+     * exceção completa, para que um pedido de suporte se cruze com o log.
+     *
+     * <p>As recusas esperadas não chegam aqui: os controllers tratam as suas próprias exceções
+     * de domínio (ex.: {@code SetupController}) e as recusas fiscais têm handler próprio.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex) {
-        logger.error("Unhandled Exception caught by GlobalExceptionHandler", ex);
+        String referencia = UUID.randomUUID().toString();
+        logger.error("Unhandled exception caught by GlobalExceptionHandler [referencia={}]", referencia, ex);
         Map<String, String> body = new HashMap<>();
-        body.put("error", ex.getClass().getSimpleName());
-        body.put("message", ex.getMessage());
+        body.put("message", MENSAGEM_ERRO_INTERNO);
+        body.put("referencia", referencia);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
