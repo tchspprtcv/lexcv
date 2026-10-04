@@ -135,8 +135,12 @@ export function FaturacaoDadosForm({
       }
       // 400/409/422 não são toastados pelo apiFetch (semToastParaStatus) -- renderizados aqui.
       // Os restantes status já foram toastados pelo apiFetch: não duplicar.
+      // Uma recusa sem campo assinalado (ex.: CONFIGURACAO_FISCAL_CONCORRENTE) mostra a mensagem
+      // do backend ("Atualize a página...") em vez de apontar para campos que não existem (IN-05).
       if (isApiError(error) && [400, 409, 422].includes(error.status)) {
-        setErroGuardar(ERRO_GUARDAR);
+        setErroGuardar(
+          !erro.campo && !erro.camposValidacao && erro.mensagem ? erro.mensagem : ERRO_GUARDAR,
+        );
       }
     }
   };
