@@ -82,7 +82,7 @@ Plans:
 - [x] 134-03-PLAN.md — Wave 2: repositórios estreitos (sem delete/update), repontarCliente nativo, locks cliente/processo/CC, ativaPorTenant; DocumentoFiscalImutabilidadeTest + DocumentoFiscalRepositoryIT
 - [x] 134-04-PLAN.md — Wave 3: PagamentoRequest, ComposicaoFaturaRecibo (pura, partilhada), PreVisualizacaoFaturaService readOnly + estado de emissão
 - [x] 134-05-PLAN.md — Wave 3: DocumentoFiscalService (listar, detalhe, referências por pagamento, existePara*, repontarCliente MANDATORY) + DTOs de leitura
-- [ ] 134-06-PLAN.md — Wave 4: PagamentoFaturadoService @Transactional (ordem de locks configuração → cliente → processo → CC → série, idempotência sob o lock), evento de auditoria
+- [x] 134-06-PLAN.md — Wave 4: PagamentoFaturadoService @Transactional (ordem de locks configuração → cliente → processo → CC → série, idempotência sob o lock), evento de auditoria
 - [ ] 134-07-PLAN.md — Wave 5: ITs Testcontainers — atomicidade/rollback, paridade da pré-visualização, snapshot, dois emitentes, concorrência e corrida da mesma chave
 - [ ] 134-08-PLAN.md — Wave 5: delegação em createPagamento (ramo desligado verbatim + hash), guarda CFG-03 evoluída, lista de pagamentos com documento fiscal
 - [ ] 134-09-PLAN.md — Wave 5: DocumentoFiscalController (estado-emissao, pre-visualizacao financeiro:edit, lista/detalhe financeiro:view) + teste de autorização real
@@ -218,7 +218,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
-| 134. Fatura-Recibo Atómica nos Honorários | 5/14 | In progress | - |
+| 134. Fatura-Recibo Atómica nos Honorários | 6/14 | In progress | - |
 | 135. Nota de Crédito | 0/TBD | Not started | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |

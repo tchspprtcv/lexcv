@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-05-PLAN.md
-last_updated: "2026-10-04T20:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-05 (DocumentoFiscalService read side, guards, MANDATORY repontarCliente; read DTOs; full unit suite 677/677)
+stopped_at: Completed 134-06-PLAN.md
+last_updated: "2026-10-04T21:00:00.000Z"
+last_activity: 2026-10-04 — Completed 134-06 (atomic PagamentoFaturadoService: one @Transactional pagamento + CC + numero + FR + linha + PENDENTE + audit; R-01 lock order; idempotency under the config lock; 46 Mockito tests)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 13
-  percent: 59
+  completed_plans: 14
+  percent: 64
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 6 of 14
-Status: Executing Phase 134 — 134-01..134-05 complete (wave 3 done)
-Last activity: 2026-10-04 — Completed 134-05 (fiscal read side test-first: DocumentoFiscalService listar with one batch estado lookup, detalhe 404 for foreign ids, referenciasPorPagamento single query, existePara* guards, repontarCliente MANDATORY; DTOs without idempotency key; PagamentoComDocumentoResponse superset of Pagamento JSON)
+Plan: 7 of 14
+Status: Executing Phase 134 — 134-01..134-06 complete
+Last activity: 2026-10-04 — Completed 134-06 (atomic PagamentoFaturadoService: one @Transactional pagamento + CC + numero + FR + linha + PENDENTE + audit; R-01 lock order; idempotency under the config lock; 46 Mockito tests)
 
 ## Performance Metrics
 
@@ -129,6 +129,7 @@ Last activity: 2026-10-04 — Completed 134-05 (fiscal read side test-first: Doc
 | Phase 134 P03 | 20 min | 2 tasks | 10 files |
 | Phase 134 P04 | 20 min | 2 tasks | 8 files |
 | Phase 134 P05 | 20 min | 2 tasks | 7 files |
+| Phase 134 P06 | 30 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: Preview refuses a foreign-tenant honorário with the same 404 HONORARIO_NAO_ENCONTRADO as a missing one; hoje (Cabo Verde) is computed once and used for validation and the IVA parameter lookup
 - [Phase 134]: DocumentoFiscalService is the only door from ResourceController to fiscal data; every public method takes tenantId first, reads are readOnly, repontarCliente is Propagation.MANDATORY (runs only inside the merge transaction)
 - [Phase 134]: ContaCorrente has no tenant_id -- bloquearPorCliente is keyed by cliente only and must follow the tenant-scoped cliente lock (R-01: configuração → cliente → processo → conta corrente → série)
+- [Phase 134]: PagamentoFaturadoService.registar is the single place fiscal documents are created: steps in order lock_timeout → config lock (re-check ativa) → idempotency lookup → honorário + scalar clienteId → cliente lock → processo lock (re-check clienteId) → hoje/compor → CC create+lock (+TOTAL) → pagamento → proximoNumero (last lock; DATA_EMISSAO_ALTERADA if the day changed) → documento/linha/PENDENTE → audit documento_fiscal_emitir
+- [Phase 134]: Lock failures in emission map to 503 FATURACAO_OCUPADA; same idempotency key with a different payload → 409 CHAVE_REUTILIZADA; a processo moved by a merge between the scalar read and the lock → 409 PROCESSO_ALTERADO_TENTE_NOVAMENTE
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
