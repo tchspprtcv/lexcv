@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-03-PLAN.md
-last_updated: "2026-10-04T13:10:00.000Z"
-last_activity: 2026-10-04 — Completed 133-03 (gapless fiscal numbering, concurrency IT green)
+stopped_at: Completed 133-04-PLAN.md
+last_updated: "2026-10-04T13:40:00.000Z"
+last_activity: 2026-10-04 — Completed 133-04 (fiscal configuration service + fiscal audit writer)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 8
-  completed_plans: 4
-  percent: 50
+  completed_plans: 5
+  percent: 63
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 133 of 139 (Fundação Fiscal)
-Plan: 5 of 8
-Status: Executing — 133-01, 133-02, 133-03, 133-06 complete, next 133-04
-Last activity: 2026-10-04 — Completed 133-03 (NumeracaoService: lock_timeout 5s + INSERT ON CONFLICT + FOR UPDATE in caller tx (MANDATORY), Cabo Verde year; 9/9 Testcontainers concurrency scenarios green)
+Plan: 6 of 8
+Status: Executing — 133-01, 133-02, 133-03, 133-04, 133-06 complete, next 133-05
+Last activity: 2026-10-04 — Completed 133-04 (ConfiguracaoFiscalService: save/activate/deactivate/email switch with NIF lock and irreversibility after first document; AuditoriaFiscalService MANDATORY writer; 521 unit tests green)
 
 ## Performance Metrics
 
@@ -148,6 +148,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: apiFetch throws ApiError (extends Error; status/code/campo/body) with unchanged `API <status>: <msg>` message; optional 3rd param { semToastParaStatus } suppresses the auto toast for inline-handled statuses
 - [Phase 133]: Fiscal rates are percentage rows in t_parametro_fiscal (IVA_TAXA_NORMAL 15, RETENCAO_SUGERIDA 20 @2000-01-01), seeded insert-only every boot; ParametroFiscalService is the single reader (503 PARAMETRO_FISCAL_EM_FALTA); ParametrosFiscaisSemConstantesTest forbids rate literals in src/main/java
 - [Phase 133]: NumeracaoService.proximoNumero is MANDATORY and must be the LAST lock in the caller tx (conta corrente first, series last); year/dataEmissao from Clock in Atlantic/Cape_Verde; lock not obtained in 5s -> 503 SERIE_INDISPONIVEL
+- [Phase 133]: Fiscal audit events (faturacao_*; entidadeTipo configuracao_fiscal) are written only by AuditoriaFiscalService (MANDATORY), separate from AuditoriaRbacService; detalhe holds author name + changed field NAMES only
+- [Phase 133]: ConfiguracaoFiscalService throws every RecusaFiscalException before mutating the entity; 'document issued' = existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L) locks NIF and blocks deactivation
+- [Phase 133]: NIF_JA_REGISTADO (cross-tenant NIF uniqueness) implemented per plan but not in 133-CONTEXT.md -- pending user confirmation
 
 ### Pending Todos
 
@@ -316,8 +319,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T13:10:00.000Z
-Stopped at: Completed 133-03-PLAN.md
+Last session: 2026-10-04T13:40:00.000Z
+Stopped at: Completed 133-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
