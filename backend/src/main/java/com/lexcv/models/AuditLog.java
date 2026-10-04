@@ -39,13 +39,16 @@ public class AuditLog {
     // processo_atribuir | parecer_criar | parecer_atribuir | parecer_aprovar | parecer_entregar |
     // parecer_versao_criar | papel_criar | papel_renomear | papel_apagar | papel_permissoes_alterar |
     // papel_atribuir | papel_retirar (Phase 128, RBAC vocabulary -- entidadeTipo papel_escritorio for
-    // the first four, atribuicao_papel for the last two; see AuditLogRepository.buscarEventosRbac)
+    // the first four, atribuicao_papel for the last two; see AuditLogRepository.buscarEventosRbac) |
+    // faturacao_dados_alterar | faturacao_ativar | faturacao_desativar | faturacao_email_ligar |
+    // faturacao_email_desligar (Phase 133, entidadeTipo configuracao_fiscal; written only by
+    // AuditoriaFiscalService)
     @Column(name = "acao", nullable = false)
     private String acao;
 
     // Values: processo | documento | conflict_check_decisao | parecer_solicitacao | parecer_versao |
     // papel_escritorio (Phase 128: entidadeId = TenantRole.id) | atribuicao_papel (Phase 128:
-    // entidadeId = target User.id)
+    // entidadeId = target User.id) | configuracao_fiscal (Phase 133: entidadeId = ConfiguracaoFiscal.id)
     @Column(name = "entidade_tipo", nullable = false)
     private String entidadeTipo;
 
