@@ -34,7 +34,17 @@ A sequência segue a cadeia de dependências do próprio dinheiro. Primeiro a fu
   4. A taxa de IVA (15%) e a retenção sugerida (20%) existem como parâmetros com data de vigência na base de dados, não como constantes no código
   5. Dois pedidos concorrentes para a mesma série (emitente, tipo, ano civil) recebem números consecutivos sem lacunas nem duplicados, e a numeração reinicia a 1 em cada ano civil
   6. Administrador liga ou desliga o envio automático de faturas por email (desligado por omissão) e só consegue ligá-lo depois de aceitar explicitamente o aviso de que os documentos simulados não têm validade fiscal
-**Plans**: TBD
+**Plans**: 8 plans (4 waves)
+
+Plans:
+- [ ] 133-01-PLAN.md — Wave 1: fiscal enums (21 motivos de isenção, AmbienteFiscal.SIMULADO), RecusaFiscalException + handler, Clock, entidades/repositórios t_configuracao_fiscal/t_parametro_fiscal/t_serie_fiscal, script 133 + README + IT de paridade
+- [ ] 133-02-PLAN.md — Wave 2: ParametroFiscalService (vigência), seed IVA 15 / retenção 20, NIF demo válido, rótulo financeiro:manage, gate sem constantes (CFG-04)
+- [ ] 133-03-PLAN.md — Wave 2: NumeracaoService (FOR UPDATE, ON CONFLICT, lock_timeout, MANDATORY, ano em Atlantic/Cape_Verde) + IT de concorrência Testcontainers (CFG-05)
+- [ ] 133-04-PLAN.md — Wave 2: AuditoriaFiscalService + ConfiguracaoFiscalService + DTOs (dados, ativar/desativar, bloqueio do NIF, email com aceitação)
+- [ ] 133-05-PLAN.md — Wave 3: FaturacaoController /api/v1/faturacao (financeiro:manage na classe) + guarda CFG-03 + SpotBugs
+- [ ] 133-06-PLAN.md — Wave 1: apiFetch ApiError aditivo (status/code/campo, opt-out de toast), tipos, schema Zod, hooks use-faturacao
+- [ ] 133-07-PLAN.md — Wave 2: separador Faturação em Definições, formulário de dados fiscais, séries só de leitura
+- [ ] 133-08-PLAN.md — Wave 4: cartões Ativação e Email, verify:faturacao, verificação humana ponta a ponta
 **UI hint**: yes
 
 Notas da fase:
@@ -158,7 +168,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 133. Fundação Fiscal | 0/TBD | Not started | - |
+| 133. Fundação Fiscal | 0/8 | Not started | - |
 | 134. Fatura-Recibo Atómica nos Honorários | 0/TBD | Not started | - |
 | 135. Nota de Crédito | 0/TBD | Not started | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
