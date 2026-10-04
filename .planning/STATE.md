@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
-status: planning
+status: ready_to_plan
 last_updated: "2026-10-04T10:22:33.629Z"
 last_activity: 2026-10-04
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** v3.0 Faturação Eletrónica (eFatura CV) — a definir requisitos; a primeira fase será a **133**.
+**Current focus:** Phase 133 — Fundação Fiscal (v3.0 Faturação Eletrónica, eFatura CV)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 133 of 139 (Fundação Fiscal)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-10-04 — Milestone v3.0 started
+Status: Ready to plan
+Last activity: 2026-10-04 — Roadmap v3.0 criado (Phases 133-139, 45/45 requisitos)
 
 ## Performance Metrics
 
@@ -132,6 +132,8 @@ v2.16 roadmap (7 phases, 117–123, plus Phase 124 inserted post-audit; 15/15 re
 v2.17 roadmap (5 phases, 124–128, 24 requirements, 100% coverage) created 2026-09-20 — dependency spine: catálogo de permissões (124) e esquema de papéis do escritório antes de qualquer leitura/escrita; moldes+provisionamento (125) prova o mecanismo de instanciação no caminho de menor risco antes de o reutilizar; migração (126) é a fase mais arriscada do marco, isolada entre o mecanismo provado e o ecrã editável; CRUD+isolamento+guardas de `PLATAFORMA_ADMIN` (127) só se torna editável depois da migração; auditoria (128) fecha o marco.
 
 v2.18 roadmap (4 phases, 129–132, 9 requirements, 100% coverage) created 2026-09-24 — pura renomeação de marca ALCv→LexCV, sem novo research (decisão explícita, marco não introduz features). Fases derivadas por área de ficheiros, não por dependência forte: 129 (documentação/identidade) e 132 (configuração Maven/Compose) são texto puro de baixo risco; 130 (frontend `web/`+`webpage/`+scripts de verificação) agrupa FRONT-01/02/03 por serem todos ficheiros de marca de frontend, independentes entre si; 131 mantém BACK-01 (rename do tenant reservado no código) e BACK-02 (migração SQL correspondente) juntos por tocarem a mesma área, conforme instrução do orquestrador. As 4 fases não têm dependências reais entre si e podem em princípio correr em qualquer ordem — a numeração sequencial 129→132 é apenas a ordem de execução escolhida, não uma cadeia de bloqueio.
+
+v3.0 roadmap (7 phases, 133–139, 45 requirements, 100% coverage) created 2026-10-04 — spine: fundação fiscal (133) → Fatura-Recibo atómica (134, maior fase, não dividida: emissão, imutabilidade e guardas de eliminação são facetas do mesmo fluxo) → Nota de Crédito (135) e formato eFatura + adaptador simulado (136) em paralelo possível → PDF/email/CSV (137) → plataforma como emitente (138, primeira leitura cruzada entre tenants, com critério de isolamento) → fecho (139). Gates: contabilista valida regras fiscais antes de planear 134; verificação do Manual Técnico/XSD antes de fechar 136; checkpoint humano antes de SMTP real em 137; dados fiscais reais da LexCV para o UAT de 138. Cada fase que cria tabelas entrega o seu script idempotente em `backend/migrations/` + linha no README (OPER-02 só verifica no fim).
 
 ### Decisions
 
@@ -305,9 +307,9 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 ## Session Continuity
 
 Last session: 2026-09-24T00:00:00.000Z
-Stopped at: ROADMAP.md created for v2.18 (Phases 129-132, 9/9 requirements mapped)
+Stopped at: ROADMAP.md created for v3.0 (Phases 133-139, 45/45 requirements mapped)
 Resume file: None
 
 ## Operator Next Steps
 
-- Review and approve ROADMAP.md, then break down Phase 129 with /gsd:plan-phase 129
+- Review and approve ROADMAP.md, then break down Phase 133 with /gsd:plan-phase 133

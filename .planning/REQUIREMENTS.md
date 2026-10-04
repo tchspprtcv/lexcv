@@ -136,12 +136,57 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| CFG-01 | Phase 133 | Pending |
+| CFG-02 | Phase 133 | Pending |
+| CFG-03 | Phase 133 | Pending |
+| CFG-04 | Phase 133 | Pending |
+| CFG-05 | Phase 133 | Pending |
+| CFG-06 | Phase 133 | Pending |
+| EMIS-01 | Phase 134 | Pending |
+| EMIS-02 | Phase 134 | Pending |
+| EMIS-03 | Phase 134 | Pending |
+| EMIS-04 | Phase 134 | Pending |
+| EMIS-05 | Phase 134 | Pending |
+| EMIS-06 | Phase 134 | Pending |
+| EMIS-07 | Phase 134 | Pending |
+| EMIS-08 | Phase 134 | Pending |
+| EMIS-09 | Phase 134 | Pending |
+| EMIS-10 | Phase 134 | Pending |
+| EMIS-11 | Phase 134 | Pending |
+| EMIS-12 | Phase 134 | Pending |
+| NCRD-01 | Phase 135 | Pending |
+| NCRD-02 | Phase 135 | Pending |
+| NCRD-03 | Phase 135 | Pending |
+| DFE-01 | Phase 136 | Pending |
+| DFE-02 | Phase 136 | Pending |
+| DFE-03 | Phase 136 | Pending |
+| DFE-04 | Phase 136 | Pending |
+| DFE-05 | Phase 136 | Pending |
+| DFE-06 | Phase 136 | Pending |
+| DFE-07 | Phase 136 | Pending |
+| ENTR-01 | Phase 137 | Pending |
+| ENTR-02 | Phase 137 | Pending |
+| ENTR-03 | Phase 137 | Pending |
+| ENTR-04 | Phase 137 | Pending |
+| ENTR-05 | Phase 137 | Pending |
+| ENTR-06 | Phase 137 | Pending |
+| ENTR-07 | Phase 137 | Pending |
+| RELF-01 | Phase 137 | Pending |
+| SUBS-01 | Phase 138 | Pending |
+| SUBS-02 | Phase 138 | Pending |
+| SUBS-03 | Phase 138 | Pending |
+| SUBS-04 | Phase 138 | Pending |
+| SUBS-05 | Phase 138 | Pending |
+| OPER-01 | Phase 139 | Pending |
+| OPER-02 | Phase 139 | Pending |
+| OPER-03 | Phase 139 | Pending |
+| OPER-04 | Phase 139 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45 ⚠️
+- Mapped to phases: 45
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-04*
-*Last updated: 2026-10-04 after initial definition*
+*Last updated: 2026-10-04 after roadmap creation (Phases 133-139)*
