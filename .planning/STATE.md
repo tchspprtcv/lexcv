@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-03-PLAN.md
-last_updated: "2026-10-04T19:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-03 (narrow fiscal repositories, repontarCliente, R-01 lock finders; DocumentoFiscalImutabilidadeTest 10/10, DocumentoFiscalRepositoryIT 13/13)
+stopped_at: Completed 134-04-PLAN.md
+last_updated: "2026-10-04T19:30:00.000Z"
+last_activity: 2026-10-04 — Completed 134-04 (PagamentoRequest, pure ComposicaoFaturaRecibo, readOnly PreVisualizacaoFaturaService + estadoEmissao; TDD)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 11
-  percent: 50
+  completed_plans: 12
+  percent: 55
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 4 of 14
-Status: Executing Phase 134 — 134-01..134-03 complete (waves 1-2 done)
-Last activity: 2026-10-04 — Completed 134-03 (fiscal data access: narrow insert/read-only repositories pinned by reflection, tenant-first paginated buscar with optional filters, native repontarCliente as the only UPDATE, FOR UPDATE finders on cliente/processo/conta corrente, scalar ativaPorTenant/clienteIdPorIdETenant; Testcontainers IT 13/13)
+Plan: 5 of 14
+Status: Executing Phase 134 — 134-01..134-04 complete
+Last activity: 2026-10-04 — Completed 134-04 (preview contract test-first: PagamentoRequest without id/tenant fields, one pure ComposicaoFaturaRecibo.compor shared with emission, side-effect-free readOnly preview with same-404 for foreign honorário, estadoEmissao with RETENCAO_SUGERIDA from parameters)
 
 ## Performance Metrics
 
@@ -127,6 +127,7 @@ Last activity: 2026-10-04 — Completed 134-03 (fiscal data access: narrow inser
 | Phase 134 P01 | 15 min | 2 tasks | 8 files |
 | Phase 134 P02 | 12 min | 2 tasks | 7 files |
 | Phase 134 P03 | 20 min | 2 tasks | 10 files |
+| Phase 134 P04 | 20 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: CalculoFiscal is the single pure calculator for preview and emission (base = total*100/(100+iva) HALF_UP in one division, iva = total - base; ISENTO base = total; retenção on the base HALF_UP); ValidacaoEmissao never reads the clock -- hoje (Cabo Verde) is always passed by the caller
 - [Phase 134]: MetodoPagamento eFatura means codes (10/30/20/48/ZZZ) are [ASSUMED] UNCL4461 until Phase 136 confirms them against PaymentMeansCode_D19B; the code is snapshotted per document
 - [Phase 134]: Fiscal repositories extend only Repository (no delete/update at compile time, method sets pinned by DocumentoFiscalImutabilidadeTest); the only UPDATE on t_documento_fiscal is native repontarCliente (cliente_id only); buscar binds clienteId as String
+- [Phase 134]: ComposicaoFaturaRecibo.compor is the single pure composition for preview and emission (config complete → valor → data → método → retenção → adquirente); it takes only the honorário id, never the entity, and deliberately allows overpayment (R-02)
+- [Phase 134]: Preview refuses a foreign-tenant honorário with the same 404 HONORARIO_NAO_ENCONTRADO as a missing one; hoje (Cabo Verde) is computed once and used for validation and the IVA parameter lookup
 - [Phase 134]: ContaCorrente has no tenant_id -- bloquearPorCliente is keyed by cliente only and must follow the tenant-scoped cliente lock (R-01: configuração → cliente → processo → conta corrente → série)
 
 ### Pending Todos
@@ -336,8 +339,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T19:00:00.000Z
-Stopped at: Completed 134-03-PLAN.md
+Last session: 2026-10-04T19:30:00.000Z
+Stopped at: Completed 134-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
