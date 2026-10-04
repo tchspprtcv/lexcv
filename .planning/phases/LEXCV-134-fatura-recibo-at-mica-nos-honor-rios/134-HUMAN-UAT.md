@@ -51,6 +51,15 @@ updated: 2026-10-04T17:05:00Z
 - At 375px in dark mode, the list, detail and honorário pages have 0px horizontal overflow, and the "Ambiente" column is hidden below md.
 - In the dialog, the vertical gaps between blocks measure 16px after the fix. Without retenção, the retenção row is absent.
 
+## Supplementary live run (EMIS-03 isento, EMIS-10 meio codes)
+
+The main run used regime Normal and checked only the method labels. A second, fresh stack was brought up with the same recipe and workaround, then torn down the same way (0 processes, 0 containers, env files deleted, `git status` clean).
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| EMIS-03 isento | PASS | Configuration saved with regime ISENTO and motivo 5, then activated. Preview for 50 000 / Transferência bancária / retenção 20:<br>• Base tributável 50 000$00;<br>• "IVA" → "Isento" and "Motivo de isenção" → "5 — Outras isenções", with no "IVA (x%)" row;<br>• Retenção na fonte (20%) - 10 000$00, Total 50 000$00, Líquido recebido 40 000$00.<br>Emitted SIM-FR-2026/1. The detail page shows Regime de IVA Isento, the motivo row, the line cell "Isento (5)" and the same values. In the database: `50000.00\|0.00\|0.0000\|ISENTO\|5\|10000.00\|50000.00\|40000.00`. |
+| EMIS-10 meios | PASS | One emission per method: DINHEIRO → `10`, TRANSFERENCIA → `30`, CHEQUE → `20`, CARTAO → `48`, OUTRO → `ZZZ`, each snapshotted in `t_documento_fiscal.meio_pagamento_codigo`. An unknown method ("BITCOIN") and a missing method both return 422 `METODO_PAGAMENTO_INVALIDO`, `campo: metodo`. The codes remain [ASSUMED] UNCL4461 until Phase 136 confirms them (STATE decision). |
+
 ## Defects found and fixed during the run
 
 1. **Doubled vertical spacing in the preview dialog** (~32px; the UI-SPEC says 16px). `DialogContent` is already `grid gap-4`, so the extra `space-y-4` doubled it. Fixed in e6d5e2d and re-measured at 16px.
@@ -63,4 +72,4 @@ updated: 2026-10-04T17:05:00Z
 
 ## Summary
 
-13/13 steps PASS with evidence, auto-verified on a live stack. Two cosmetic defects were found and fixed during the run.
+13/13 steps PASS with evidence, auto-verified on a live stack, plus the supplementary isento and meio-code checks. Two cosmetic defects were found and fixed during the run.

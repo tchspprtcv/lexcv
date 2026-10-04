@@ -36,18 +36,18 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 
 ### Emissão de Fatura-Recibo
 
-- [ ] **EMIS-01**: Com a faturação ativa, registar um pagamento de honorários emite uma Fatura-Recibo na mesma operação — se uma das partes falhar, nem o pagamento, nem o documento, nem a atualização da conta corrente ficam gravados
-- [ ] **EMIS-02**: Antes de confirmar o pagamento, o utilizador vê uma pré-visualização da Fatura-Recibo (adquirente, base, IVA, retenção, total) e só emite depois de confirmar
-- [ ] **EMIS-03**: A Fatura-Recibo decompõe o valor pago (IVA incluído) em base tributável e IVA segundo o regime do escritório; num escritório isento, mostra o motivo de isenção em vez de IVA
-- [ ] **EMIS-04**: O utilizador pode aplicar retenção na fonte a um pagamento (opcional, taxa sugerida editável, sobre a base sem IVA); o documento mostra o valor retido e o valor líquido recebido, e a conta corrente é creditada do total
-- [ ] **EMIS-05**: Com a faturação ativa, um pagamento com data diferente de hoje (hora de Cabo Verde) é recusado com uma mensagem clara; sem data, assume a de hoje
-- [ ] **EMIS-06**: A emissão é recusada, indicando o que falta corrigir, quando o cliente não tem NIF cabo-verdiano válido, nome ou morada (até 100 caracteres)
-- [ ] **EMIS-07**: Submeter o mesmo pagamento duas vezes (duplo clique, repetição de pedido) produz um único pagamento e uma única Fatura-Recibo
-- [ ] **EMIS-08**: A Fatura-Recibo guarda os dados do emitente e do adquirente tal como estavam no momento da emissão; alterar depois o cliente ou o escritório não a muda, e nenhum ecrã ou endpoint permite editá-la ou apagá-la
-- [ ] **EMIS-09**: Um pagamento faturado não pode ser apagado, e apagar o cliente, o processo ou o honorário a que pertence é recusado; fundir clientes preserva a ligação dos documentos ao cliente resultante
-- [ ] **EMIS-10**: O método de pagamento registado é mapeado para o meio de pagamento correspondente do eFatura (dinheiro, transferência, cheque, etc.)
-- [ ] **EMIS-11**: Utilizador com `financeiro:view` lista os documentos fiscais do seu escritório (filtros por cliente, período, tipo e estado) e abre o detalhe de cada um, sem nunca ver documentos de outro escritório
-- [ ] **EMIS-12**: Pagamentos registados antes da ativação não são faturados retroativamente e aparecem identificados como "sem documento fiscal"
+- [x] **EMIS-01**: Com a faturação ativa, registar um pagamento de honorários emite uma Fatura-Recibo na mesma operação — se uma das partes falhar, nem o pagamento, nem o documento, nem a atualização da conta corrente ficam gravados
+- [x] **EMIS-02**: Antes de confirmar o pagamento, o utilizador vê uma pré-visualização da Fatura-Recibo (adquirente, base, IVA, retenção, total) e só emite depois de confirmar
+- [x] **EMIS-03**: A Fatura-Recibo decompõe o valor pago (IVA incluído) em base tributável e IVA segundo o regime do escritório; num escritório isento, mostra o motivo de isenção em vez de IVA
+- [x] **EMIS-04**: O utilizador pode aplicar retenção na fonte a um pagamento (opcional, taxa sugerida editável, sobre a base sem IVA); o documento mostra o valor retido e o valor líquido recebido, e a conta corrente é creditada do total
+- [x] **EMIS-05**: Com a faturação ativa, um pagamento com data diferente de hoje (hora de Cabo Verde) é recusado com uma mensagem clara; sem data, assume a de hoje
+- [x] **EMIS-06**: A emissão é recusada, indicando o que falta corrigir, quando o cliente não tem NIF cabo-verdiano válido, nome ou morada (até 100 caracteres)
+- [x] **EMIS-07**: Submeter o mesmo pagamento duas vezes (duplo clique, repetição de pedido) produz um único pagamento e uma única Fatura-Recibo
+- [x] **EMIS-08**: A Fatura-Recibo guarda os dados do emitente e do adquirente tal como estavam no momento da emissão; alterar depois o cliente ou o escritório não a muda, e nenhum ecrã ou endpoint permite editá-la ou apagá-la
+- [x] **EMIS-09**: Um pagamento faturado não pode ser apagado, e apagar o cliente, o processo ou o honorário a que pertence é recusado; fundir clientes preserva a ligação dos documentos ao cliente resultante
+- [x] **EMIS-10**: O método de pagamento registado é mapeado para o meio de pagamento correspondente do eFatura (dinheiro, transferência, cheque, etc.)
+- [x] **EMIS-11**: Utilizador com `financeiro:view` lista os documentos fiscais do seu escritório (filtros por cliente, período, tipo e estado) e abre o detalhe de cada um, sem nunca ver documentos de outro escritório
+- [x] **EMIS-12**: Pagamentos registados antes da ativação não são faturados retroativamente e aparecem identificados como "sem documento fiscal"
 
 ### Nota de Crédito
 
@@ -142,18 +142,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFG-04 | Phase 133 | Complete |
 | CFG-05 | Phase 133 | Complete |
 | CFG-06 | Phase 133 | Complete |
-| EMIS-01 | Phase 134 | Pending |
-| EMIS-02 | Phase 134 | Pending |
-| EMIS-03 | Phase 134 | Pending |
-| EMIS-04 | Phase 134 | Pending |
-| EMIS-05 | Phase 134 | Pending |
-| EMIS-06 | Phase 134 | Pending |
-| EMIS-07 | Phase 134 | Pending |
-| EMIS-08 | Phase 134 | Pending |
-| EMIS-09 | Phase 134 | Pending |
-| EMIS-10 | Phase 134 | Pending |
-| EMIS-11 | Phase 134 | Pending |
-| EMIS-12 | Phase 134 | Pending |
+| EMIS-01 | Phase 134 | Complete |
+| EMIS-02 | Phase 134 | Complete |
+| EMIS-03 | Phase 134 | Complete |
+| EMIS-04 | Phase 134 | Complete |
+| EMIS-05 | Phase 134 | Complete |
+| EMIS-06 | Phase 134 | Complete |
+| EMIS-07 | Phase 134 | Complete |
+| EMIS-08 | Phase 134 | Complete |
+| EMIS-09 | Phase 134 | Complete |
+| EMIS-10 | Phase 134 | Complete |
+| EMIS-11 | Phase 134 | Complete |
+| EMIS-12 | Phase 134 | Complete |
 | NCRD-01 | Phase 135 | Pending |
 | NCRD-02 | Phase 135 | Pending |
 | NCRD-03 | Phase 135 | Pending |
