@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-06-PLAN.md
+stopped_at: Completed 134-07-PLAN.md
 last_updated: "2026-10-04T21:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-06 (atomic PagamentoFaturadoService: one @Transactional pagamento + CC + numero + FR + linha + PENDENTE + audit; R-01 lock order; idempotency under the config lock; 46 Mockito tests)
+last_activity: 2026-10-04 — Completed 134-07 (Testcontainers proofs: three rollback injections, preview parity, snapshot immutability, two emitters; 8-thread gapless numbering, exact CC sums, same-key race x5; concurrency IT green twice)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 14
-  percent: 64
+  completed_plans: 15
+  percent: 68
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 7 of 14
-Status: Executing Phase 134 — 134-01..134-06 complete
-Last activity: 2026-10-04 — Completed 134-06 (atomic PagamentoFaturadoService: one @Transactional pagamento + CC + numero + FR + linha + PENDENTE + audit; R-01 lock order; idempotency under the config lock; 46 Mockito tests)
+Plan: 8 of 14
+Status: Executing Phase 134 — 134-01..134-07 complete
+Last activity: 2026-10-04 — Completed 134-07 (Testcontainers proofs: three rollback injections, preview parity, snapshot immutability, two emitters; 8-thread gapless numbering, exact CC sums, same-key race x5; concurrency IT green twice)
 
 ## Performance Metrics
 
@@ -130,6 +130,7 @@ Last activity: 2026-10-04 — Completed 134-06 (atomic PagamentoFaturadoService:
 | Phase 134 P04 | 20 min | 2 tasks | 8 files |
 | Phase 134 P05 | 20 min | 2 tasks | 7 files |
 | Phase 134 P06 | 30 min | 2 tasks | 6 files |
+| Phase 134 P07 | 25 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: ContaCorrente has no tenant_id -- bloquearPorCliente is keyed by cliente only and must follow the tenant-scoped cliente lock (R-01: configuração → cliente → processo → conta corrente → série)
 - [Phase 134]: PagamentoFaturadoService.registar is the single place fiscal documents are created: steps in order lock_timeout → config lock (re-check ativa) → idempotency lookup → honorário + scalar clienteId → cliente lock → processo lock (re-check clienteId) → hoje/compor → CC create+lock (+TOTAL) → pagamento → proximoNumero (last lock; DATA_EMISSAO_ALTERADA if the day changed) → documento/linha/PENDENTE → audit documento_fiscal_emitir
 - [Phase 134]: Lock failures in emission map to 503 FATURACAO_OCUPADA; same idempotency key with a different payload → 409 CHAVE_REUTILIZADA; a processo moved by a merge between the scalar read and the lock → 409 PROCESSO_ALTERADO_TENTE_NOVAMENTE
+- [Phase 134]: Emission ITs use a fixed Clock (2026-06-15T13:00Z) for deterministic hoje/series year; FixturaEmissaoFiscal (JDBC) is the shared fixture for later fiscal ITs; @MockitoSpyBean on MANDATORY beans is stubbed on AopTestUtils.getUltimateTargetObject
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
