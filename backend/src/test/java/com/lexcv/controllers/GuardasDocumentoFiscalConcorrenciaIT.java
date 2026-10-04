@@ -90,7 +90,9 @@ import static org.mockito.Mockito.mock;
  * e re-aponta o documento sem mudar a fotografia do adquirente; (e) carga mista sem deadlock
  * (40P01) nem documento órfão; (f) faturação desligada não cria linhas fiscais; (g) uma emissão em
  * curso bloqueia apagar o honorário, que depois recusa com 409; (h) apagar o honorário em curso
- * faz a emissão, que já o tinha lido, falhar sem documento nem pagamento órfão (CR-01 da revisão).
+ * faz a emissão, que já o tinha lido, falhar sem documento nem pagamento órfão (CR-01 da revisão);
+ * (i/j) apagar um pagamento legado durante uma emissão ou uma fusão não perde nenhum movimento da
+ * conta corrente (WR-01 da revisão).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -546,6 +548,73 @@ class GuardasDocumentoFiscalConcorrenciaIT {
         assertEquals(0, contar(SQL_PAGAMENTOS_ORFAOS));
         BigDecimal saldo = fixtura.saldo(c.clienteId());
         assertTrue(saldo == null || saldo.signum() == 0, "a conta corrente não pode ter sido creditada: " + saldo);
+    }
+
+    // ------------------------------------------------------------------ i
+
+    private Integer pagamentoLegado(Integer honorarioId, String valor) {
+        return pagamentoRepository.save(Pagamento.builder().honorarioId(honorarioId)
+                .valorPago(new BigDecimal(valor)).dataPagamento(java.time.LocalDate.of(2026, 6, 1))
+                .metodo("Dinheiro").build()).getId();
+    }
+
+    @Test
+    void apagarPagamentoLegadoDuranteEmissaoNaoPerdeOCredito() throws Exception {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        Cenario c = cenario(tenant, "i");
+        fixtura.criarContaCorrente(c.clienteId(), new BigDecimal("500.00"));
+        Integer legado = pagamentoLegado(c.honorarioId(), "100.00");
+        CountDownLatch emitida = new CountDownLatch(1);
+        CountDownLatch libertar = new CountDownLatch(1);
+
+        // A emissão credita +120 000 e segura o lock da conta corrente até ao latch.
+        Future<ResultadoPagamentoFaturado> a = emissaoSegura(c, emitida, libertar);
+        assertTrue(emitida.await(30, TimeUnit.SECONDS));
+        // deletePagamento não é @Transactional (P-02): chamado sem transação, como em produção.
+        Future<ResponseEntity<?>> b = executor.submit(() -> comoUtilizador(tenant,
+                () -> controller.deletePagamento(legado)));
+        esperarBloqueado(b);
+
+        libertar.countDown();
+        resultado(a);
+        assertEquals(HttpStatus.NO_CONTENT, resultado(b).getStatusCode());
+
+        assertEquals(0, new BigDecimal("120400.00").compareTo(fixtura.saldo(c.clienteId())),
+                "saldo: " + fixtura.saldo(c.clienteId()));
+    }
+
+    // ------------------------------------------------------------------ j
+
+    @Test
+    void apagarPagamentoLegadoDuranteFusaoDebitaOClienteQueFica() throws Exception {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        UUID primario = fixtura.criarCliente(tenant, "212345678", "Primário J", "Avenida J");
+        Cenario secundario = cenario(tenant, "j");
+        fixtura.criarContaCorrente(primario, new BigDecimal("1000.00"));
+        fixtura.criarContaCorrente(secundario.clienteId(), new BigDecimal("500.00"));
+        Integer legado = pagamentoLegado(secundario.honorarioId(), "100.00");
+        CountDownLatch fundida = new CountDownLatch(1);
+        CountDownLatch libertar = new CountDownLatch(1);
+
+        // A fusão bloqueia as duas contas correntes e só faz commit quando o latch abrir.
+        Future<ResponseEntity<?>> fusao = executor.submit(() -> comoUtilizador(tenant, () -> tx.execute(s -> {
+            ResponseEntity<?> r = controller.mergeClientes(new ClienteMergeRequest(primario, secundario.clienteId()));
+            fundida.countDown();
+            aguardar(libertar);
+            return r;
+        })));
+        assertTrue(fundida.await(30, TimeUnit.SECONDS));
+        Future<ResponseEntity<?>> b = executor.submit(() -> comoUtilizador(tenant,
+                () -> controller.deletePagamento(legado)));
+        esperarBloqueado(b);
+
+        libertar.countDown();
+        assertEquals(HttpStatus.OK, resultado(fusao).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, resultado(b).getStatusCode());
+
+        assertNull(fixtura.saldo(secundario.clienteId()));
+        assertEquals(0, new BigDecimal("1400.00").compareTo(fixtura.saldo(primario)),
+                "saldo: " + fixtura.saldo(primario));
     }
 
     // ------------------------------------------------------------------ f

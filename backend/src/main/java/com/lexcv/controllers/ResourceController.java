@@ -663,10 +663,15 @@ public class ResourceController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Cliente não encontrado"));
         }
 
-        ContaCorrente cc = contaCorrenteRepository.findByClienteId(id)
-                .orElseGet(() -> contaCorrenteRepository.save(
-                        ContaCorrente.builder().clienteId(id).saldo(BigDecimal.ZERO).build()
-                ));
+        // Phase 134 (WR-01 da revisão): a conta em falta é criada com INSERT ... ON CONFLICT DO
+        // NOTHING, como na emissão, e nunca com save(): um save concorrente com a emissão da
+        // primeira Fatura-Recibo do cliente violava o UNIQUE de cliente_id e dava 500 neste GET.
+        ContaCorrente cc = contaCorrenteRepository.findByClienteId(id).orElse(null);
+        if (cc == null) {
+            contaCorrenteRepository.criarSeNaoExiste(id);
+            cc = contaCorrenteRepository.findByClienteId(id)
+                    .orElseThrow(() -> new IllegalStateException("Conta corrente inexistente depois do INSERT ON CONFLICT"));
+        }
 
         return ResponseEntity.ok(Map.of(
                 "cliente_id", id.toString(),
@@ -928,15 +933,20 @@ public class ResourceController {
         notasToMove.forEach(n -> n.setClienteId(savedPrimary.getId()));
         clienteNotaRepository.saveAll(notasToMove);
 
+        // Phase 134 (WR-01 da revisão): as duas contas correntes são lidas com lock (FOR UPDATE,
+        // primeira leitura das linhas), já com os dois clientes bloqueados (ordem R-01: cliente →
+        // processo → conta corrente). Sem lock, um débito concorrente (apagar um pagamento) que
+        // fizesse commit entre esta leitura e o commit da fusão perdia-se.
         BigDecimal mergedSaldo = BigDecimal.ZERO;
-        Optional<ContaCorrente> secondaryCcOpt = contaCorrenteRepository.findByClienteId(payload.secondaryId());
+        Optional<ContaCorrente> secondaryCcOpt = contaCorrenteRepository.bloquearPorCliente(payload.secondaryId());
         if (secondaryCcOpt.isPresent()) {
             ContaCorrente secondaryCc = secondaryCcOpt.get();
             mergedSaldo = secondaryCc.getSaldo() != null ? secondaryCc.getSaldo() : BigDecimal.ZERO;
             if (mergedSaldo.compareTo(BigDecimal.ZERO) != 0) {
-                ContaCorrente primaryCc = contaCorrenteRepository.findByClienteId(savedPrimary.getId())
-                        .orElseGet(() -> contaCorrenteRepository.save(
-                                ContaCorrente.builder().clienteId(savedPrimary.getId()).saldo(BigDecimal.ZERO).build()));
+                contaCorrenteRepository.criarSeNaoExiste(savedPrimary.getId());
+                ContaCorrente primaryCc = contaCorrenteRepository.bloquearPorCliente(savedPrimary.getId())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Conta corrente inexistente depois do INSERT ON CONFLICT"));
                 BigDecimal primarySaldo = primaryCc.getSaldo() != null ? primaryCc.getSaldo() : BigDecimal.ZERO;
                 primaryCc.setSaldo(primarySaldo.add(mergedSaldo));
                 contaCorrenteRepository.save(primaryCc);
@@ -3276,12 +3286,19 @@ public class ResourceController {
         }
         try {
             UUID clienteId = processo.getClienteId();
-            ContaCorrente cc = contaCorrenteRepository.findByClienteId(clienteId).orElse(null);
             // WR-05: guard against null valorPago on legacy rows persisted before CR-04's
-            // validation existed, so BigDecimal#subtract can't NPE here.
-            if (cc != null && pag.getValorPago() != null) {
-                cc.setSaldo(cc.getSaldo().subtract(pag.getValorPago()));
-                contaCorrenteRepository.save(cc);
+            // validation existed, so the debit can't NPE here.
+            // Phase 134 (WR-01 da revisão): débito atómico (UPDATE saldo = saldo - v) em vez de ler,
+            // subtrair e gravar o valor absoluto, que podia sobrescrever o crédito de uma emissão
+            // concorrente. Sem conta corrente, não atualiza nada (como antes). Se nenhuma linha
+            // mudou, uma fusão pode ter movido o processo para outro cliente (e apagado a conta do
+            // absorvido) enquanto o UPDATE esperava pelo lock dela: relê o cliente atual do
+            // processo (escalar, já confirmado) e debita esse, uma vez.
+            BigDecimal valor = pag.getValorPago();
+            if (valor != null && contaCorrenteRepository.debitar(clienteId, valor) == 0) {
+                processoRepository.clienteIdPorIdETenant(processo.getId(), getTenantId())
+                        .filter(atual -> !atual.equals(clienteId))
+                        .ifPresent(atual -> contaCorrenteRepository.debitar(atual, valor));
             }
         } catch (DataAccessException ex) {
             // WR-05: narrowed from Exception -- see createPagamento's equivalent catch clause.

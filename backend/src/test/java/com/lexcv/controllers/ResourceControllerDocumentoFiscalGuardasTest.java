@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,7 +126,7 @@ class ResourceControllerDocumentoFiscalGuardasTest {
         when(pagamentoRepository.findById(42)).thenReturn(Optional.of(pag));
         when(honorarioRepository.findById(5)).thenReturn(Optional.of(honorario));
         when(processoRepository.findById(processo.getId())).thenReturn(Optional.of(processo));
-        when(contaCorrenteRepository.findByClienteId(processo.getClienteId())).thenReturn(Optional.of(contaCorrente));
+        when(contaCorrenteRepository.debitar(processo.getClienteId(), new BigDecimal("100.00"))).thenReturn(1);
     }
 
     @Test
@@ -140,6 +141,7 @@ class ResourceControllerDocumentoFiscalGuardasTest {
         assertEquals("PAGAMENTO_FATURADO", corpo(r).get("code"));
         assertEquals(new BigDecimal("500.00"), contaCorrente.getSaldo());
         verify(contaCorrenteRepository, never()).save(any());
+        verify(contaCorrenteRepository, never()).debitar(any(), any());
         verify(pagamentoRepository, never()).deleteById(anyInt());
     }
 
@@ -151,8 +153,39 @@ class ResourceControllerDocumentoFiscalGuardasTest {
         ResponseEntity<?> r = controller.deletePagamento(42);
 
         assertEquals(HttpStatus.NO_CONTENT, r.getStatusCode());
-        assertEquals(new BigDecimal("400.00"), contaCorrente.getSaldo());
-        verify(contaCorrenteRepository).save(contaCorrente);
+        // WR-01 da revisão: débito atómico e relativo, sem ler nem gravar o saldo absoluto.
+        verify(contaCorrenteRepository).debitar(processo.getClienteId(), new BigDecimal("100.00"));
+        verify(contaCorrenteRepository, never()).findByClienteId(any());
+        verify(contaCorrenteRepository, never()).save(any());
+        verify(processoRepository, never()).clienteIdPorIdETenant(any(), any());
+        verify(pagamentoRepository).deleteById(42);
+    }
+
+    @Test
+    void apagarPagamentoDepoisDeUmaFusaoDebitaOClienteAtualDoProcesso() {
+        pagamentoExistente();
+        UUID novoCliente = UUID.randomUUID();
+        when(contaCorrenteRepository.debitar(processo.getClienteId(), new BigDecimal("100.00"))).thenReturn(0);
+        when(processoRepository.clienteIdPorIdETenant(processo.getId(), TENANT_ID)).thenReturn(Optional.of(novoCliente));
+
+        ResponseEntity<?> r = controller.deletePagamento(42);
+
+        assertEquals(HttpStatus.NO_CONTENT, r.getStatusCode());
+        verify(contaCorrenteRepository).debitar(novoCliente, new BigDecimal("100.00"));
+        verify(pagamentoRepository).deleteById(42);
+    }
+
+    @Test
+    void apagarPagamentoDeClienteSemContaCorrenteNaoRepete() {
+        pagamentoExistente();
+        when(contaCorrenteRepository.debitar(processo.getClienteId(), new BigDecimal("100.00"))).thenReturn(0);
+        when(processoRepository.clienteIdPorIdETenant(processo.getId(), TENANT_ID))
+                .thenReturn(Optional.of(processo.getClienteId()));
+
+        ResponseEntity<?> r = controller.deletePagamento(42);
+
+        assertEquals(HttpStatus.NO_CONTENT, r.getStatusCode());
+        verify(contaCorrenteRepository, times(1)).debitar(any(), any());
         verify(pagamentoRepository).deleteById(42);
     }
 
@@ -165,6 +198,25 @@ class ResourceControllerDocumentoFiscalGuardasTest {
 
         assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
         verify(documentoFiscalService, never()).existeParaPagamento(any(), any());
+    }
+
+    // ---------------------------------------------------------------- getClienteContaCorrente
+
+    @Test
+    void contaCorrenteEmFaltaEhCriadaSemCorridaENuncaComSave() {
+        Cliente cliente = Cliente.builder().id(UUID.randomUUID()).tenantId(TENANT_ID).build();
+        ContaCorrente criada = ContaCorrente.builder().id(9).clienteId(cliente.getId()).saldo(BigDecimal.ZERO).build();
+        when(clienteRepository.findById(cliente.getId())).thenReturn(Optional.of(cliente));
+        when(contaCorrenteRepository.findByClienteId(cliente.getId()))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(criada));
+
+        ResponseEntity<?> r = controller.getClienteContaCorrente(cliente.getId());
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals(BigDecimal.ZERO, corpo(r).get("saldo"));
+        verify(contaCorrenteRepository).criarSeNaoExiste(cliente.getId());
+        verify(contaCorrenteRepository, never()).save(any());
     }
 
     // ---------------------------------------------------------------- deleteHonorario
