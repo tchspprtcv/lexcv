@@ -95,7 +95,8 @@ class MigracaoFiscal133IT {
     private Set<String> colunas(String schema) {
         return new HashSet<>(jdbcTemplate.query(
                 "SELECT table_name, column_name, data_type, character_maximum_length, numeric_precision, "
-                        + "numeric_scale, datetime_precision, is_nullable FROM information_schema.columns "
+                        + "numeric_scale, datetime_precision, is_nullable, column_default "
+                        + "FROM information_schema.columns "
                         + "WHERE table_schema = ? AND table_name IN (?, ?, ?)",
                 (rs, i) -> String.join("|",
                         rs.getString("table_name"), rs.getString("column_name"), rs.getString("data_type"),
@@ -103,7 +104,9 @@ class MigracaoFiscal133IT {
                         String.valueOf(rs.getObject("numeric_precision")),
                         String.valueOf(rs.getObject("numeric_scale")),
                         String.valueOf(rs.getObject("datetime_precision")),
-                        rs.getString("is_nullable")),
+                        rs.getString("is_nullable"),
+                        // IN-06 da revisão: os defaults também fazem parte da paridade.
+                        String.valueOf(rs.getString("column_default"))),
                 schema, TABELAS.get(0), TABELAS.get(1), TABELAS.get(2)));
     }
 

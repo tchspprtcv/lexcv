@@ -2,6 +2,7 @@ package com.lexcv.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -57,6 +58,9 @@ public class SerieFiscal {
     @Column(name = "led_codigo")
     private Integer ledCodigo;
 
+    // @ColumnDefault (e não columnDefinition, ver WR-01): o DEFAULT 0 do script manual também
+    // existe nas bases criadas pelo ddl-auto (paridade provada por MigracaoFiscal133IT, IN-06).
+    @ColumnDefault("0")
     @Column(name = "ultimo_numero", nullable = false)
     @Builder.Default
     private Long ultimoNumero = 0L;
