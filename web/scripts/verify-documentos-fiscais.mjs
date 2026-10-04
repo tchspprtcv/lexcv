@@ -162,7 +162,9 @@ async function main() {
   exigeContem("hooksFaturacao", texto, "/documentos-fiscais");
   exigeContem("hooksFaturacao", texto, "semToastParaStatus");
   exigeNaoContem("hooksFaturacao", texto, "/api/v1");
-  exigeContem("hooksFinanceiro", texto, "semToastParaStatus: [409, 422]");
+  // IN-02 da revisao: o pedido faturado (com chave) trata 409/422/5xx inline; o legado fica igual.
+  exigeContem("hooksFinanceiro", texto, "semToastParaStatus: payload.chaveIdempotencia ? STATUS_INLINE_EMISSAO : [409, 422]");
+  exigeContem("erros", texto, "export const STATUS_INLINE_EMISSAO: readonly number[] = [409, 422, 500, 502, 503, 504];");
   exigeContem("hooksFinanceiro", texto, "DOCUMENTOS_FISCAIS_KEY");
   exigeNaoContem("hooksFinanceiro", texto, "/api/v1");
   exigeContem("idempotencia", texto, "getRandomValues");

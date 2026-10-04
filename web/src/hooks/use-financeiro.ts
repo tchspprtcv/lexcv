@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { DOCUMENTOS_FISCAIS_KEY, ESTADO_EMISSAO_KEY } from "@/hooks/use-faturacao";
 import { apiFetch } from "@/lib/api";
+import { STATUS_INLINE_EMISSAO } from "@/lib/erros-emissao";
 
 import type {
   Honorario,
@@ -123,7 +124,8 @@ export function useCreatePagamento() {
   // (interpretarErroEmissao); a invalidação corre em onSettled porque um erro também pode
   // significar estado desatualizado (faturação desligada entretanto, documento já emitido com a
   // mesma chave). O payload continua a ser PagamentoCreateRequest: a chamada com a faturação
-  // desligada não muda.
+  // desligada não muda. IN-02 da revisão: só o pedido faturado (com chave) trata os 5xx inline; o
+  // pedido sem chave (faturação desligada) mantém os toasts de antes.
   return useMutation({
     mutationFn: (payload: PagamentoCreateRequest) =>
       apiFetch<Pagamento>(
@@ -132,7 +134,7 @@ export function useCreatePagamento() {
           method: "POST",
           body: JSON.stringify(payload satisfies PagamentoCreateRequest),
         },
-        { semToastParaStatus: [409, 422] },
+        { semToastParaStatus: payload.chaveIdempotencia ? STATUS_INLINE_EMISSAO : [409, 422] },
       ),
     onSettled: async (_created, _error, variables) => {
       await Promise.all([

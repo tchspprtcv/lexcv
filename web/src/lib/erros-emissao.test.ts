@@ -13,6 +13,7 @@ import {
   COPY_NOME,
   COPY_REDE,
   COPY_SEM_PERMISSAO,
+  STATUS_INLINE_EMISSAO,
   construirQueryDocumentosFiscais,
   desfechoDefinitivo,
   interpretarErroEmissao,
@@ -126,11 +127,31 @@ describe("interpretarErroEmissao", () => {
     expect(interpretarErroEmissao(new TypeError("Failed to fetch"))).toEqual({ tipo: "rede", mensagem: COPY_REDE });
   });
 
-  it.each([500, 502, 503])("ApiError %i -> rede", (status) => {
+  it("503 FATURACAO_OCUPADA do backend -> rede (repetir com a mesma chave) com a mensagem do backend (IN-02)", () => {
+    expect(
+      interpretarErroEmissao(
+        erro(503, "FATURACAO_OCUPADA", undefined, "A faturação está ocupada. Tente novamente dentro de instantes."),
+      ),
+    ).toEqual({ tipo: "rede", mensagem: "A faturação está ocupada. Tente novamente dentro de instantes." });
+  });
+
+  it("os 5xx da emissão são tratados inline, sem toast duplicado (IN-02)", () => {
+    expect(STATUS_INLINE_EMISSAO).toEqual([409, 422, 500, 502, 503, 504]);
+  });
+
+  it.each([500, 502, 504])("ApiError %i -> rede com a copy de rede, mesmo com code", (status) => {
     expect(interpretarErroEmissao(erro(status, "FATURACAO_OCUPADA", undefined, "Ocupado"))).toEqual({
       tipo: "rede",
       mensagem: COPY_REDE,
     });
+  });
+
+  it("503 sem code (proxy) ou sem mensagem -> rede com a copy de rede", () => {
+    expect(interpretarErroEmissao(erro(503, undefined, undefined, "Service Unavailable"))).toEqual({
+      tipo: "rede",
+      mensagem: COPY_REDE,
+    });
+    expect(interpretarErroEmissao(erro(503, "FATURACAO_OCUPADA"))).toEqual({ tipo: "rede", mensagem: COPY_REDE });
   });
 
   it("ApiError 401 -> null (o useMe trata da sessão)", () => {

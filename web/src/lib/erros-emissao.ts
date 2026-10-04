@@ -28,6 +28,13 @@ export const COPY_GUARDA_CLIENTE = "Não é possível apagar este cliente porque
 export const COPY_GUARDA_PROCESSO = "Não é possível apagar este processo porque tem documentos fiscais emitidos.";
 export const COPY_GUARDA_HONORARIO = "Não é possível apagar este honorário porque tem documentos fiscais emitidos.";
 
+/**
+ * Status que os pedidos da emissão (pré-visualização e registo COM chave) tratam inline, sem o
+ * toast automático do `apiFetch` (IN-02 da revisão): 409/422 como antes, e os 5xx, que já
+ * aparecem no diálogo/banner como falha ambígua -- com o toast eram reportados duas vezes.
+ */
+export const STATUS_INLINE_EMISSAO: readonly number[] = [409, 422, 500, 502, 503, 504];
+
 const COPY_GUARDA_POR_CODIGO: Record<string, string> = {
   PAGAMENTO_FATURADO: COPY_GUARDA_PAGAMENTO,
   CLIENTE_COM_DOCUMENTOS_FISCAIS: COPY_GUARDA_CLIENTE,
@@ -88,7 +95,13 @@ export function interpretarErroEmissao(error: unknown): ErroEmissao | null {
   }
   if (error.status === 401) return null;
   if (error.status === 403) return { tipo: "banner", mensagem: COPY_SEM_PERMISSAO };
-  if (error.status >= 500) return { tipo: "rede", mensagem: COPY_REDE };
+  if (error.status >= 500) {
+    // IN-02 da revisão: o 503 com `code` é uma recusa do próprio backend (FATURACAO_OCUPADA,
+    // SERIE_INDISPONIVEL) com mensagem para o utilizador; continua a ser "rede" (repetir com a
+    // mesma chave é o comportamento certo), mas com o texto do backend.
+    const doBackend = error.status === 503 && error.code ? mensagemDoCorpo(error.body) : undefined;
+    return { tipo: "rede", mensagem: doBackend ?? COPY_REDE };
+  }
   if (error.status !== 409 && error.status !== 422) return null;
 
   const mensagem = mensagemDoCorpo(error.body);

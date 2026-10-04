@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiFetch, isApiError } from "@/lib/api";
-import { construirQueryDocumentosFiscais } from "@/lib/erros-emissao";
+import { construirQueryDocumentosFiscais, STATUS_INLINE_EMISSAO } from "@/lib/erros-emissao";
 import { hasPermission } from "@/lib/permissions";
 
 import type {
@@ -231,14 +231,14 @@ export function useEstadoEmissao(enabled: boolean) {
   });
 }
 
-/** POST /faturacao/pre-visualizacao (financeiro:edit): nada é gravado; 409/422 tratados inline. */
+/** POST /faturacao/pre-visualizacao (financeiro:edit): nada é gravado; 409/422/5xx tratados inline. */
 export function usePreVisualizacaoFaturacao() {
   return useMutation({
     mutationFn: (payload: PagamentoCreateRequest) =>
       apiFetch<PreVisualizacaoFatura>(
         "/faturacao/pre-visualizacao",
         { method: "POST", body: JSON.stringify(payload) },
-        { semToastParaStatus: [409, 422] },
+        { semToastParaStatus: STATUS_INLINE_EMISSAO },
       ),
   });
 }
