@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-07-PLAN.md
-last_updated: "2026-10-04T14:10:00.000Z"
-last_activity: 2026-10-04 — Completed 133-07 (Faturação settings tab, fiscal data form, read-only series)
+stopped_at: Completed 133-05-PLAN.md
+last_updated: "2026-10-04T14:30:00.000Z"
+last_activity: 2026-10-04 — Completed 133-05 (FaturacaoController /api/v1/faturacao, financeiro:manage class gate, CFG-03 guard)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 133 of 139 (Fundação Fiscal)
-Plan: 7 of 8
-Status: Executing — 133-01, 133-02, 133-03, 133-04, 133-06, 133-07 complete, next 133-05
-Last activity: 2026-10-04 — Completed 133-07 (Definições > Faturação tab gated by financeiro:manage; FaturacaoDadosForm with NIF lock and server error mapping; read-only FaturacaoSeriesCard)
+Plan: 8 of 8
+Status: Executing — 133-01..07 complete, next 133-08
+Last activity: 2026-10-04 — Completed 133-05 (FaturacaoController with 7 endpoints gated by financeiro:manage at class level; proxy-tested 4-role matrix; CFG-03 source guard; 543 unit + 51 ITs + SpotBugs green)
 
 ## Performance Metrics
 
@@ -122,6 +122,7 @@ Last activity: 2026-10-04 — Completed 133-07 (Definições > Faturação tab g
 | Phase 133 P01 | 10 min | 3 tasks | 22 files |
 | Phase 133 P06 | 4 min | 2 tasks | 6 files |
 | Phase 133 P02 | 8 min | 2 tasks | 10 files |
+| Phase 133 P05 | 12 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -152,6 +153,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: ConfiguracaoFiscalService throws every RecusaFiscalException before mutating the entity; 'document issued' = existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L) locks NIF and blocks deactivation
 - [Phase 133]: NIF_JA_REGISTADO (cross-tenant NIF uniqueness) implemented per plan but not in 133-CONTEXT.md -- pending user confirmation
 - [Phase 133]: Faturação tab (FaturacaoTab) holds the useConfiguracaoFiscal result; FaturacaoDadosForm exposes optional onAlteracoesPorGravarChange for 133-08; inline save error only for 400/409/422 (others toasted by apiFetch)
+- [Phase 133]: FaturacaoController (/api/v1/faturacao) has ONLY a class-level @PreAuthorize("hasAuthority('financeiro:manage')"); tenant/author from principal only; FaturacaoDesligadaPagamentoInalteradoTest forbids fiscal symbols in ResourceController/Pagamento until Phase 134 changes it deliberately
 
 ### Pending Todos
 
@@ -320,8 +322,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T13:40:00.000Z
-Stopped at: Completed 133-04-PLAN.md
+Last session: 2026-10-04T14:30:00.000Z
+Stopped at: Completed 133-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
