@@ -59,6 +59,21 @@ class ConfiguracaoFiscalRequestValidationTest {
                 .collect(Collectors.toSet());
     }
 
+    /** IN-02 da revisão: os limites de comprimento têm mensagem em português (sem locale do HV). */
+    @Test
+    void limitesDeComprimentoTemMensagemEmPortugues() {
+        ConfiguracaoFiscalRequest v = valido();
+        ConfiguracaoFiscalRequest longo = new ConfiguracaoFiscalRequest(v.nif(), "a".repeat(201), v.morada(),
+                "a".repeat(101), "a".repeat(246) + "@silva.cv", "1".repeat(33), v.regimeIva(), null);
+        assertEquals(Set.of("A firma não pode ter mais de 200 caracteres."), mensagens(longo, "firma"));
+        assertEquals(Set.of("A localidade não pode ter mais de 100 caracteres."), mensagens(longo, "localidade"));
+        assertTrue(mensagens(longo, "emailContacto").contains("O email não pode ter mais de 254 caracteres."));
+        assertEquals(Set.of("O telefone não pode ter mais de 32 caracteres."), mensagens(longo, "telefoneContacto"));
+        assertEquals(Set.of("Indique se o envio automático fica ligado ou desligado."),
+                validator.validate(new EmailAutomaticoRequest(null, null)).stream()
+                        .map(ConstraintViolation::getMessage).collect(Collectors.toSet()));
+    }
+
     @Test
     void pedidoValidoNaoTemViolacoes() {
         assertEquals(Set.of(), validator.validate(valido()));

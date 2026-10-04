@@ -55,6 +55,28 @@ describe("configuracaoFiscalSchema", () => {
     },
   );
 
+  it.each([
+    ["firma", 200, "A firma não pode ter mais de 200 caracteres."],
+    ["localidade", 100, "A localidade não pode ter mais de 100 caracteres."],
+    ["telefoneContacto", 32, "O telefone não pode ter mais de 32 caracteres."],
+  ])("limita %s a %i caracteres (espelho do backend)", (campo, max, mensagem) => {
+    expect(configuracaoFiscalSchema.safeParse({ ...valido, [campo]: "a".repeat(max) }).success).toBe(
+      true,
+    );
+    const r = configuracaoFiscalSchema.safeParse({ ...valido, [campo]: "a".repeat(max + 1) });
+    expect(r.success).toBe(false);
+    expect(mensagensDe(r, campo)).toContain(mensagem);
+  });
+
+  it("limita o email a 254 caracteres", () => {
+    const r = configuracaoFiscalSchema.safeParse({
+      ...valido,
+      emailContacto: `${"a".repeat(246)}@silva.cv`,
+    });
+    expect(r.success).toBe(false);
+    expect(mensagensDe(r, "emailContacto")).toContain("O email não pode ter mais de 254 caracteres.");
+  });
+
   it("limita a morada a 100 caracteres", () => {
     expect(configuracaoFiscalSchema.safeParse({ ...valido, morada: "a".repeat(100) }).success).toBe(true);
     const r = configuracaoFiscalSchema.safeParse({ ...valido, morada: "a".repeat(101) });

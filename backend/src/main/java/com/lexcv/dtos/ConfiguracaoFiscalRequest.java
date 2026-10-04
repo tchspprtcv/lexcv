@@ -23,7 +23,7 @@ public record ConfiguracaoFiscalRequest(
         String nif,
 
         @NotBlank(message = "Preencha este campo.")
-        @Size(max = 200)
+        @Size(max = 200, message = "A firma não pode ter mais de 200 caracteres.")
         String firma,
 
         @NotBlank(message = "Preencha este campo.")
@@ -31,16 +31,16 @@ public record ConfiguracaoFiscalRequest(
         String morada,
 
         @NotBlank(message = "Preencha este campo.")
-        @Size(max = 100)
+        @Size(max = 100, message = "A localidade não pode ter mais de 100 caracteres.")
         String localidade,
 
         @NotBlank(message = "Preencha este campo.")
         @Email(message = "Introduza um email válido.")
-        @Size(max = 254)
+        @Size(max = 254, message = "O email não pode ter mais de 254 caracteres.")
         String emailContacto,
 
         @NotBlank(message = "Preencha este campo.")
-        @Size(max = 32)
+        @Size(max = 32, message = "O telefone não pode ter mais de 32 caracteres.")
         String telefoneContacto,
 
         @NotNull(message = "Preencha este campo.")

@@ -8,6 +8,13 @@ export const nifFiscalPattern = /^[1-9]\d{8}$/;
 
 export const MORADA_MAX = 100;
 
+// Comprimentos máximos espelhados de `ConfiguracaoFiscalRequest` (@Size) e das colunas de
+// `t_configuracao_fiscal`, para o limite aparecer inline antes da ida ao servidor.
+export const FIRMA_MAX = 200;
+export const LOCALIDADE_MAX = 100;
+export const EMAIL_MAX = 254;
+export const TELEFONE_MAX = 32;
+
 const OBRIGATORIO = "Preencha este campo.";
 
 const campoObrigatorio = () => z.string().trim().min(1, OBRIGATORIO);
@@ -18,11 +25,19 @@ export const configuracaoFiscalSchema = z
       .string()
       .trim()
       .regex(nifFiscalPattern, "O NIF deve ter 9 dígitos e começar por um algarismo de 1 a 9."),
-    firma: campoObrigatorio(),
+    firma: campoObrigatorio().max(FIRMA_MAX, "A firma não pode ter mais de 200 caracteres."),
     morada: campoObrigatorio().max(MORADA_MAX, "A morada não pode ter mais de 100 caracteres."),
-    localidade: campoObrigatorio(),
-    emailContacto: campoObrigatorio().pipe(z.email("Introduza um email válido.")),
-    telefoneContacto: campoObrigatorio(),
+    localidade: campoObrigatorio().max(
+      LOCALIDADE_MAX,
+      "A localidade não pode ter mais de 100 caracteres.",
+    ),
+    emailContacto: campoObrigatorio()
+      .max(EMAIL_MAX, "O email não pode ter mais de 254 caracteres.")
+      .pipe(z.email("Introduza um email válido.")),
+    telefoneContacto: campoObrigatorio().max(
+      TELEFONE_MAX,
+      "O telefone não pode ter mais de 32 caracteres.",
+    ),
     regimeIva: z.enum(["NORMAL", "ISENTO"], { error: OBRIGATORIO }),
     motivoIsencaoCodigo: z.string().trim().nullable(),
   })

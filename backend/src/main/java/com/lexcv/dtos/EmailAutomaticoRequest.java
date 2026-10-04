@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
  * Ligar exige {@code aceiteDeclaracao = true}; desligar não exige aceitação.
  */
 public record EmailAutomaticoRequest(
-        @NotNull Boolean ligado,
+        @NotNull(message = "Indique se o envio automático fica ligado ou desligado.") Boolean ligado,
         Boolean aceiteDeclaracao
 ) {
 }
