@@ -32,6 +32,11 @@ import java.util.UUID;
  * autor e os NOMES dos campos alterados -- nunca valores de NIF, morada, email ou telefone, nem o
  * endereço de correio do autor.
  *
+ * <p>Phase 134 (EMIS-01, R-03): também grava o evento de emissão de um documento fiscal
+ * ({@code acao = documento_fiscal_emitir}, {@code entidadeTipo = documento_fiscal},
+ * {@code entidadeId = DocumentoFiscal.id}) -- só o nome do autor e o número formatado, nunca
+ * valores, NIFs ou o correio do autor.
+ *
  * <p>Cada {@code registar*} é {@code @Transactional(propagation = MANDATORY)}: o evento grava na
  * mesma transação da mudança que descreve; uma recusa (exceção) faz rollback e não deixa evento.
  */
@@ -41,12 +46,14 @@ import java.util.UUID;
 public class AuditoriaFiscalService {
 
     public static final String ENTIDADE_TIPO = "configuracao_fiscal";
+    public static final String ENTIDADE_TIPO_DOCUMENTO = "documento_fiscal";
 
     public static final String ACAO_DADOS_ALTERAR = "faturacao_dados_alterar";
     public static final String ACAO_ATIVAR = "faturacao_ativar";
     public static final String ACAO_DESATIVAR = "faturacao_desativar";
     public static final String ACAO_EMAIL_LIGAR = "faturacao_email_ligar";
     public static final String ACAO_EMAIL_DESLIGAR = "faturacao_email_desligar";
+    public static final String ACAO_EMITIR = "documento_fiscal_emitir";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -59,14 +66,14 @@ public class AuditoriaFiscalService {
         put(detalhe, "camposAlterados", camposAlterados == null
                 ? List.of()
                 : camposAlterados.stream().sorted().toList());
-        gravar(tenantId, autor, ACAO_DADOS_ALTERAR, configuracaoId, detalhe);
+        gravar(tenantId, autor, ACAO_DADOS_ALTERAR, ENTIDADE_TIPO, idTexto(configuracaoId), detalhe);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void registarAtivacao(UUID tenantId, UserPrincipal autor, UUID configuracaoId) {
         Map<String, Object> detalhe = new LinkedHashMap<>();
         put(detalhe, "autorNome", nomeDoAutor(autor));
-        gravar(tenantId, autor, ACAO_ATIVAR, configuracaoId, detalhe);
+        gravar(tenantId, autor, ACAO_ATIVAR, ENTIDADE_TIPO, idTexto(configuracaoId), detalhe);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -77,7 +84,7 @@ public class AuditoriaFiscalService {
         if (envioEmailDesligado) {
             put(detalhe, "envioEmailDesligado", Boolean.TRUE);
         }
-        gravar(tenantId, autor, ACAO_DESATIVAR, configuracaoId, detalhe);
+        gravar(tenantId, autor, ACAO_DESATIVAR, ENTIDADE_TIPO, idTexto(configuracaoId), detalhe);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -85,14 +92,28 @@ public class AuditoriaFiscalService {
         Map<String, Object> detalhe = new LinkedHashMap<>();
         put(detalhe, "autorNome", nomeDoAutor(autor));
         put(detalhe, "declaracaoAceite", Boolean.TRUE);
-        gravar(tenantId, autor, ACAO_EMAIL_LIGAR, configuracaoId, detalhe);
+        gravar(tenantId, autor, ACAO_EMAIL_LIGAR, ENTIDADE_TIPO, idTexto(configuracaoId), detalhe);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void registarEmailDesligado(UUID tenantId, UserPrincipal autor, UUID configuracaoId) {
         Map<String, Object> detalhe = new LinkedHashMap<>();
         put(detalhe, "autorNome", nomeDoAutor(autor));
-        gravar(tenantId, autor, ACAO_EMAIL_DESLIGAR, configuracaoId, detalhe);
+        gravar(tenantId, autor, ACAO_EMAIL_DESLIGAR, ENTIDADE_TIPO, idTexto(configuracaoId), detalhe);
+    }
+
+    /**
+     * Phase 134 (R-03): evento de emissão, na transação do {@code PagamentoFaturadoService}.
+     * Um rollback da emissão leva também o evento.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarEmissao(UUID tenantId, UserPrincipal autor, UUID documentoId,
+                                String numeroFormatado) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "numeroFormatado", numeroFormatado);
+        gravar(tenantId, autor, ACAO_EMITIR, ENTIDADE_TIPO_DOCUMENTO,
+                documentoId == null ? null : documentoId.toString(), detalhe);
     }
 
     /**
@@ -102,6 +123,10 @@ public class AuditoriaFiscalService {
      */
     private String nomeDoAutor(UserPrincipal autor) {
         return autor == null ? null : autor.getNome();
+    }
+
+    private static String idTexto(UUID id) {
+        return id == null ? null : id.toString();
     }
 
     /** Omite valores nulos e coleções vazias. */
@@ -119,13 +144,13 @@ public class AuditoriaFiscalService {
      * Constrói sempre um {@link AuditLog} novo, sem id (save insere, nunca atualiza).
      * {@code processoId} fica nulo: estes eventos não pertencem a nenhum processo.
      */
-    private void gravar(UUID tenantId, UserPrincipal autor, String acao, UUID configuracaoId,
-                        Map<String, Object> detalheCampos) {
+    private void gravar(UUID tenantId, UserPrincipal autor, String acao, String entidadeTipo,
+                        String entidadeId, Map<String, Object> detalheCampos) {
         AuditLog auditLog = AuditLog.builder()
                 .tenantId(tenantId)
                 .acao(acao)
-                .entidadeTipo(ENTIDADE_TIPO)
-                .entidadeId(configuracaoId == null ? null : configuracaoId.toString())
+                .entidadeTipo(entidadeTipo)
+                .entidadeId(entidadeId)
                 .autorId(autor == null ? null : autor.getUserId())
                 .detalhe(serializarDetalhe(detalheCampos))
                 .build();

@@ -42,13 +42,15 @@ public class AuditLog {
     // the first four, atribuicao_papel for the last two; see AuditLogRepository.buscarEventosRbac) |
     // faturacao_dados_alterar | faturacao_ativar | faturacao_desativar | faturacao_email_ligar |
     // faturacao_email_desligar (Phase 133, entidadeTipo configuracao_fiscal; written only by
-    // AuditoriaFiscalService)
+    // AuditoriaFiscalService) | documento_fiscal_emitir (Phase 134, entidadeTipo documento_fiscal;
+    // written only by AuditoriaFiscalService.registarEmissao)
     @Column(name = "acao", nullable = false)
     private String acao;
 
     // Values: processo | documento | conflict_check_decisao | parecer_solicitacao | parecer_versao |
     // papel_escritorio (Phase 128: entidadeId = TenantRole.id) | atribuicao_papel (Phase 128:
-    // entidadeId = target User.id) | configuracao_fiscal (Phase 133: entidadeId = ConfiguracaoFiscal.id)
+    // entidadeId = target User.id) | configuracao_fiscal (Phase 133: entidadeId = ConfiguracaoFiscal.id) |
+    // documento_fiscal (Phase 134: entidadeId = DocumentoFiscal.id)
     @Column(name = "entidade_tipo", nullable = false)
     private String entidadeTipo;
 
