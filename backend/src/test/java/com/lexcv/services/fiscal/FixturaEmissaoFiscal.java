@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 134 (plano 07, reutilizada no plano 10): dados mínimos para emitir uma Fatura-Recibo em
+ * Phase 134 (plano 07, reutilizada no plano 10 -- pública porque o IT do plano 10 vive em
+ * {@code com.lexcv.controllers}): dados mínimos para emitir uma Fatura-Recibo em
  * PostgreSQL real, inseridos por JDBC e comprometidos de imediato (auto-commit), para que as
  * transações do serviço em teste os vejam.
  *
@@ -20,27 +21,27 @@ import java.util.UUID;
  * emissão). Os parâmetros fiscais são globais: {@link #garantirParametros()} só os insere se
  * ainda não existirem.
  */
-final class FixturaEmissaoFiscal {
+public final class FixturaEmissaoFiscal {
 
-    static final String NIF_EMITENTE = "512345679";
-    static final String FIRMA = "Escritório Silva & Associados";
-    static final String MORADA_EMITENTE = "Rua 5 de Julho, 12";
-    static final String MOTIVO_ISENCAO = "1";
+    public static final String NIF_EMITENTE = "512345679";
+    public static final String FIRMA = "Escritório Silva & Associados";
+    public static final String MORADA_EMITENTE = "Rua 5 de Julho, 12";
+    public static final String MOTIVO_ISENCAO = "1";
     private static final LocalDate VIGENCIA = LocalDate.of(2000, 1, 1);
 
     private final JdbcTemplate jdbc;
 
-    FixturaEmissaoFiscal(JdbcTemplate jdbc) {
+    public FixturaEmissaoFiscal(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
     /** Novo tenant com configuração fiscal completa e ativa; ISENTO usa o motivo "1". */
-    UUID criarTenantComFaturacao(RegimeIva regime) {
+    public UUID criarTenantComFaturacao(RegimeIva regime) {
         return criarTenant(regime, true);
     }
 
     /** Novo tenant com configuração completa, ativa ou não. */
-    UUID criarTenant(RegimeIva regime, boolean ativa) {
+    public UUID criarTenant(RegimeIva regime, boolean ativa) {
         UUID tenantId = UUID.randomUUID();
         jdbc.update("INSERT INTO t_configuracao_fiscal (id, tenant_id, nif, firma, morada, localidade, pais_codigo, "
                         + "email_contacto, telefone_contacto, regime_iva, motivo_isencao_codigo, ativa, "
@@ -53,7 +54,7 @@ final class FixturaEmissaoFiscal {
     }
 
     /** IVA_TAXA_NORMAL 15 e RETENCAO_SUGERIDA 20, vigentes desde 2000-01-01, se ainda não existirem. */
-    void garantirParametros() {
+    public void garantirParametros() {
         inserirParametroSeFaltar("IVA_TAXA_NORMAL", "15");
         inserirParametroSeFaltar("RETENCAO_SUGERIDA", "20");
     }
@@ -64,68 +65,68 @@ final class FixturaEmissaoFiscal {
                 UUID.randomUUID(), codigo, new BigDecimal(valor), VIGENCIA);
     }
 
-    UUID criarCliente(UUID tenantId, String nif, String nome, String morada) {
+    public UUID criarCliente(UUID tenantId, String nif, String nome, String morada) {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO t_cliente (id, tenant_id, nome, nif, morada) VALUES (?, ?, ?, ?, ?)",
                 id, tenantId, nome, nif, morada);
         return id;
     }
 
-    UUID criarProcesso(UUID tenantId, UUID clienteId, String numero) {
+    public UUID criarProcesso(UUID tenantId, UUID clienteId, String numero) {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO t_processo (id, tenant_id, cliente_id, numero_processo, legal_hold) "
                 + "VALUES (?, ?, ?, ?, false)", id, tenantId, clienteId, numero);
         return id;
     }
 
-    Integer criarHonorario(UUID processoId, BigDecimal valorTotal, String descricao) {
+    public Integer criarHonorario(UUID processoId, BigDecimal valorTotal, String descricao) {
         return jdbc.queryForObject("INSERT INTO t_honorario (processo_id, valor_total, descricao) "
                 + "VALUES (?, ?, ?) RETURNING id", Integer.class, processoId, valorTotal, descricao);
     }
 
     /** Conta corrente com um saldo inicial (para provar que um rollback a deixa como estava). */
-    void criarContaCorrente(UUID clienteId, BigDecimal saldo) {
+    public void criarContaCorrente(UUID clienteId, BigDecimal saldo) {
         jdbc.update("INSERT INTO t_conta_corrente (cliente_id, saldo, updated_at) VALUES (?, ?, now())",
                 clienteId, saldo);
     }
 
-    int contarPagamentos(Integer honorarioId) {
+    public int contarPagamentos(Integer honorarioId) {
         return contar("SELECT count(*) FROM t_pagamento WHERE honorario_id = ?", honorarioId);
     }
 
-    int contarDocumentos(UUID tenantId) {
+    public int contarDocumentos(UUID tenantId) {
         return contar("SELECT count(*) FROM t_documento_fiscal WHERE tenant_id = ?", tenantId);
     }
 
-    int contarLinhas(UUID tenantId) {
+    public int contarLinhas(UUID tenantId) {
         return contar("SELECT count(*) FROM t_documento_fiscal_linha WHERE tenant_id = ?", tenantId);
     }
 
-    int contarComunicacoes(UUID tenantId) {
+    public int contarComunicacoes(UUID tenantId) {
         return contar("SELECT count(*) FROM t_comunicacao_fiscal WHERE tenant_id = ?", tenantId);
     }
 
-    int contarEventosEmissao(UUID tenantId) {
+    public int contarEventosEmissao(UUID tenantId) {
         return contar("SELECT count(*) FROM t_audit_log WHERE tenant_id = ? AND acao = 'documento_fiscal_emitir'",
                 tenantId);
     }
 
     /** Saldo da conta corrente, ou {@code null} quando o cliente ainda não tem conta. */
-    BigDecimal saldo(UUID clienteId) {
+    public BigDecimal saldo(UUID clienteId) {
         List<BigDecimal> r = jdbc.queryForList("SELECT saldo FROM t_conta_corrente WHERE cliente_id = ?",
                 BigDecimal.class, clienteId);
         return r.isEmpty() ? null : r.get(0);
     }
 
     /** Último número da série FR SIMULADO do tenant, ou {@code null} sem série. */
-    Long ultimoNumero(UUID tenantId) {
+    public Long ultimoNumero(UUID tenantId) {
         List<Long> r = jdbc.queryForList("SELECT ultimo_numero FROM t_serie_fiscal WHERE tenant_id = ? "
                 + "AND tipo_documento = 'FR' AND ambiente = 'SIMULADO'", Long.class, tenantId);
         return r.isEmpty() ? null : r.get(0);
     }
 
     /** Números atribuídos aos documentos do tenant, por ordem. */
-    List<Long> numerosEmitidos(UUID tenantId) {
+    public List<Long> numerosEmitidos(UUID tenantId) {
         return jdbc.queryForList("SELECT numero FROM t_documento_fiscal WHERE tenant_id = ? ORDER BY numero",
                 Long.class, tenantId);
     }
