@@ -10,6 +10,7 @@ import com.lexcv.repositories.EventoRepository;
 import com.lexcv.repositories.FaseProcessualRepository;
 import com.lexcv.repositories.HonorarioRepository;
 import com.lexcv.repositories.PagamentoRepository;
+import com.lexcv.repositories.ParametroFiscalRepository;
 import com.lexcv.repositories.ParteRepository;
 import com.lexcv.repositories.PermissionRepository;
 import com.lexcv.repositories.ProcessoFaseRepository;
@@ -78,6 +79,7 @@ class DatabaseSeederCatalogoPermissoesTest {
     @Mock private PagamentoRepository pagamentoRepository;
     @Mock private SystemSettingRepository systemSettingRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private ParametroFiscalRepository parametroFiscalRepository;
 
     @InjectMocks
     private DatabaseSeeder seeder;
