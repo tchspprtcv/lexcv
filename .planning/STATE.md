@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-10-PLAN.md
-last_updated: "2026-10-04T21:30:00.000Z"
-last_activity: 2026-10-04 — Completed 134-10 (409 guards on delete pagamento faturado/cliente/processo/honorario with row locks first; merge locks both clientes ascending-UUID and re-points fiscal documents; GuardasDocumentoFiscalConcorrenciaIT 6/6 on PostgreSQL: no deadlock, no orphan, CFG-03 no fiscal rows; surefire 800/800, failsafe 94/94)
+stopped_at: Completed 134-11-PLAN.md
+last_updated: "2026-10-04T22:00:00.000Z"
+last_activity: 2026-10-04 — Completed 134-11 (web foundation: fiscal types, pagamentoFaturadoFormSchema, gerarChaveIdempotencia with getRandomValues fallback, interpretarErroEmissao/mensagemGuardaFiscal, useEstadoEmissao/usePreVisualizacaoFaturacao/useDocumentosFiscais/useDocumentoFiscal, exact financeiro:view read gate; vitest 157/157)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 18
-  percent: 82
+  completed_plans: 19
+  percent: 86
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 11 of 14
-Status: Executing Phase 134 — 134-01..134-10 complete
-Last activity: 2026-10-04 — Completed 134-10 (409 guards on delete pagamento faturado/cliente/processo/honorario with row locks first; merge locks both clientes ascending-UUID and re-points fiscal documents; GuardasDocumentoFiscalConcorrenciaIT 6/6 on PostgreSQL: no deadlock, no orphan, CFG-03 no fiscal rows; surefire 800/800, failsafe 94/94)
+Plan: 12 of 14
+Status: Executing Phase 134 — 134-01..134-11 complete
+Last activity: 2026-10-04 — Completed 134-11 (web foundation: fiscal types, pagamentoFaturadoFormSchema, gerarChaveIdempotencia with getRandomValues fallback, interpretarErroEmissao/mensagemGuardaFiscal, useEstadoEmissao/usePreVisualizacaoFaturacao/useDocumentosFiscais/useDocumentoFiscal, exact financeiro:view read gate; vitest 157/157)
 
 ## Performance Metrics
 
