@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -78,6 +79,7 @@ class ConfiguracaoFiscalServiceTest {
                 Set.of(), Set.of(), Set.of());
 
         when(configRepo.findByTenantId(any())).thenReturn(Optional.empty());
+        when(configRepo.bloquearPorTenant(any())).thenReturn(Optional.empty());
         when(configRepo.saveAndFlush(any(ConfiguracaoFiscal.class))).thenAnswer(inv -> {
             ConfiguracaoFiscal c = inv.getArgument(0);
             if (c.getId() == null) {
@@ -121,6 +123,7 @@ class ConfiguracaoFiscalServiceTest {
                 .createdAt(Instant.parse("2026-01-01T00:00:00Z"))
                 .build();
         when(configRepo.findByTenantId(tenantId)).thenReturn(Optional.of(c));
+        when(configRepo.bloquearPorTenant(tenantId)).thenReturn(Optional.of(c));
         return c;
     }
 
@@ -169,6 +172,42 @@ class ConfiguracaoFiscalServiceTest {
     // -----------------------------------------------------------------------------------------
     // obter (CFG-03)
     // -----------------------------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------------------------
+    // Lock da configuração (CR-01 da revisão)
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * Cada mutação lê a configuração com {@code bloquearPorTenant} (PESSIMISTIC_WRITE) e fá-lo
+     * ANTES de consultar as séries (ordem de locks: configuração -> série). Nunca usa o finder
+     * sem lock. A prova contra PostgreSQL real é {@code ConfiguracaoFiscalConcorrenciaIT}.
+     */
+    @Test
+    void mutacoesBloqueiamAConfiguracaoAntesDasSeries() {
+        List<org.junit.jupiter.api.function.Executable> mutacoes = List.of(
+                () -> service.guardar(tenantId, autor, pedido("512345678", "Avenida Nova, 1", RegimeIva.NORMAL, null)),
+                () -> service.ativar(tenantId, autor),
+                () -> service.desativar(tenantId, autor),
+                () -> service.definirEmailAutomatico(tenantId, autor, new EmailAutomaticoRequest(true, true)));
+        for (org.junit.jupiter.api.function.Executable mutacao : mutacoes) {
+            org.mockito.Mockito.clearInvocations(configRepo, serieRepo);
+            existente(true, false);
+            comDocumentosEmitidos(false);
+            assertDoesNotThrow(mutacao);
+
+            org.mockito.InOrder ordem = org.mockito.Mockito.inOrder(configRepo, serieRepo);
+            ordem.verify(configRepo).bloquearPorTenant(tenantId);
+            ordem.verify(serieRepo).existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L);
+            verify(configRepo, never()).findByTenantId(any());
+        }
+    }
+
+    @Test
+    void obterNaoBloqueia() {
+        existente(true, false);
+        service.obter(tenantId);
+        verify(configRepo, never()).bloquearPorTenant(any());
+    }
 
     @Test
     void obterSemLinhaDevolveDesligadoENaoCriaNada() {

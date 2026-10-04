@@ -43,6 +43,16 @@ import java.util.UUID;
  * entidade -- com open-in-view nada fica sujo para um flush -- e a exceção faz rollback da
  * transação, pelo que uma recusa nunca deixa evento de auditoria.
  *
+ * <p><b>Concorrência (CR-01 da revisão):</b> as quatro mutações ({@code guardar}, {@code ativar},
+ * {@code desativar}, {@code definirEmailAutomatico}) leem a linha com
+ * {@link ConfiguracaoFiscalRepository#bloquearPorTenant} ({@code PESSIMISTIC_WRITE}) como PRIMEIRA
+ * operação, antes de consultar as séries. Duas mutações concorrentes do mesmo escritório
+ * serializam-se: a segunda espera pelo commit da primeira e decide sobre o estado já comprometido,
+ * em vez de reescrever a linha inteira a partir de uma cópia desatualizada. Ordem de locks:
+ * configuração fiscal -> série fiscal ({@code NumeracaoService}); a emissão da Phase 134 tem de
+ * respeitar a mesma ordem. Sem linha (primeiro {@code guardar}) não há nada para bloquear: a
+ * corrida é resolvida por {@code uk_configuracao_fiscal_tenant} ({@code CONFIGURACAO_FISCAL_CONCORRENTE}).
+ *
  * <p>O interruptor de envio automático por email não tem efeito de envio nesta fase (o envio é a
  * Phase 137); aqui só se guarda a escolha, quem aceitou a declaração e quando.
  */
@@ -100,7 +110,7 @@ public class ConfiguracaoFiscalService {
             motivo = null;
         }
 
-        ConfiguracaoFiscal existente = configuracaoFiscalRepository.findByTenantId(tenantId).orElse(null);
+        ConfiguracaoFiscal existente = configuracaoFiscalRepository.bloquearPorTenant(tenantId).orElse(null);
         boolean documentosEmitidos = documentosEmitidos(tenantId);
         boolean nifMuda = existente == null || !Objects.equals(existente.getNif(), nif);
 
@@ -172,7 +182,7 @@ public class ConfiguracaoFiscalService {
 
     @Transactional
     public ConfiguracaoFiscalResponse ativar(UUID tenantId, UserPrincipal autor) {
-        ConfiguracaoFiscal config = configuracaoFiscalRepository.findByTenantId(tenantId).orElse(null);
+        ConfiguracaoFiscal config = configuracaoFiscalRepository.bloquearPorTenant(tenantId).orElse(null);
         if (config == null || !config.completa()) {
             throw new RecusaFiscalException(HttpStatus.UNPROCESSABLE_ENTITY, "CONFIGURACAO_FISCAL_INCOMPLETA",
                     "Não foi possível ativar a faturação: os dados fiscais estão incompletos. "
@@ -191,7 +201,7 @@ public class ConfiguracaoFiscalService {
 
     @Transactional
     public ConfiguracaoFiscalResponse desativar(UUID tenantId, UserPrincipal autor) {
-        ConfiguracaoFiscal config = configuracaoFiscalRepository.findByTenantId(tenantId).orElse(null);
+        ConfiguracaoFiscal config = configuracaoFiscalRepository.bloquearPorTenant(tenantId).orElse(null);
         boolean documentosEmitidos = documentosEmitidos(tenantId);
         if (config == null || !Boolean.TRUE.equals(config.getAtiva())) {
             return toResponse(tenantId, config, documentosEmitidos);
@@ -217,7 +227,7 @@ public class ConfiguracaoFiscalService {
     @Transactional
     public ConfiguracaoFiscalResponse definirEmailAutomatico(UUID tenantId, UserPrincipal autor,
                                                              EmailAutomaticoRequest req) {
-        ConfiguracaoFiscal config = configuracaoFiscalRepository.findByTenantId(tenantId).orElse(null);
+        ConfiguracaoFiscal config = configuracaoFiscalRepository.bloquearPorTenant(tenantId).orElse(null);
         boolean documentosEmitidos = documentosEmitidos(tenantId);
         boolean ligado = Boolean.TRUE.equals(config == null ? null : config.getEnvioEmailAutomatico());
 
