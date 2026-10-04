@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-06-PLAN.md
-last_updated: "2026-10-04T12:45:00.000Z"
-last_activity: 2026-10-04 — Completed 133-06 (frontend fiscal foundation)
+stopped_at: Completed 133-02-PLAN.md
+last_updated: "2026-10-04T13:00:00.000Z"
+last_activity: 2026-10-04 — Completed 133-02 (fiscal parameters with vigência)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 8
-  completed_plans: 2
-  percent: 25
+  completed_plans: 3
+  percent: 38
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 133 of 139 (Fundação Fiscal)
-Plan: 3 of 8
-Status: Executing — 133-01, 133-06 complete, next 133-02
-Last activity: 2026-10-04 — Completed 133-06 (apiFetch ApiError + toast opt-out, fiscal types/schema/hooks)
+Plan: 4 of 8
+Status: Executing — 133-01, 133-02, 133-06 complete, next 133-03
+Last activity: 2026-10-04 — Completed 133-02 (ParametroFiscalService vigência, seeded IVA 15 / retenção 20, no-constant gate, demo NIF, financeiro:manage label)
 
 ## Performance Metrics
 
@@ -121,6 +121,7 @@ Last activity: 2026-10-04 — Completed 133-06 (apiFetch ApiError + toast opt-ou
 | Phase 123 P02 | 24min | 3 tasks | 2 files |
 | Phase 133 P01 | 10 min | 3 tasks | 22 files |
 | Phase 133 P06 | 4 min | 2 tasks | 6 files |
+| Phase 133 P02 | 8 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: Fiscal enum columns use @Convert(AttributeConverter), not @Enumerated -- Hibernate 6.6 generates enum CHECK constraints (proven by MigracaoFiscal133IT)
 - [Phase 133]: ITs on Docker >= 29 need ~/.docker-java.properties api.version=1.44 (Testcontainers 1.20.4 defaults to API 1.32); environment-only, not committed
 - [Phase 133]: apiFetch throws ApiError (extends Error; status/code/campo/body) with unchanged `API <status>: <msg>` message; optional 3rd param { semToastParaStatus } suppresses the auto toast for inline-handled statuses
+- [Phase 133]: Fiscal rates are percentage rows in t_parametro_fiscal (IVA_TAXA_NORMAL 15, RETENCAO_SUGERIDA 20 @2000-01-01), seeded insert-only every boot; ParametroFiscalService is the single reader (503 PARAMETRO_FISCAL_EM_FALTA); ParametrosFiscaisSemConstantesTest forbids rate literals in src/main/java
 
 ### Pending Todos
 
