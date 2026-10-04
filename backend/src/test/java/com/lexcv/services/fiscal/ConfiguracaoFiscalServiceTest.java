@@ -361,8 +361,10 @@ class ConfiguracaoFiscalServiceTest {
         service.guardar(tenantId, autor, pedido());
 
         verify(configRepo).saveAndFlush(any());
+        // Phase 134 (plano 03): ativaPorTenant é um escalar também por tenant.
         assertTrue(Arrays.stream(ConfiguracaoFiscalRepository.class.getDeclaredMethods())
-                        .allMatch(m -> m.getName().equals("findByTenantId") || m.getName().equals("bloquearPorTenant")),
+                        .allMatch(m -> Set.of("findByTenantId", "bloquearPorTenant", "ativaPorTenant")
+                                .contains(m.getName())),
                 "o repositório só pode ter finders por tenant");
     }
 
