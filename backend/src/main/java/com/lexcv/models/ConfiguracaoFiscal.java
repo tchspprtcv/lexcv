@@ -66,8 +66,9 @@ public class ConfiguracaoFiscal {
     @Column(name = "telefone_contacto", length = 32)
     private String telefoneContacto;
 
-    // Sem CHECK na coluna (varchar simples): novos valores de enum não exigem DROP CONSTRAINT.
-    @Enumerated(EnumType.STRING)
+    // Sem CHECK na coluna (varchar simples, @Convert em vez de @Enumerated): novos valores de
+    // enum não exigem DROP CONSTRAINT.
+    @Convert(converter = RegimeIvaConverter.class)
     @Column(name = "regime_iva", columnDefinition = "varchar(32)")
     private RegimeIva regimeIva;
 

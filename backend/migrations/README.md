@@ -141,6 +141,10 @@ Everything else in this directory is **skip** on a fresh install:
 - `131-rename-tenant-reservado-lexcv.sql` — harmless on a fresh install: `DatabaseSeeder`
   seeds the reserved tenant as `"LexCV"` directly (Phase 131 rebrand), so there is no
   `"ALCv"` row for the `UPDATE` to match.
+- `133-create-fiscal-foundation-tables.sql` — redundant, but it will not error: `ddl-auto`
+  already created `t_configuracao_fiscal`, `t_parametro_fiscal` and `t_serie_fiscal`, and every
+  statement uses `CREATE TABLE IF NOT EXISTS`, so running it against a fresh database simply
+  changes nothing.
 
 ---
 
@@ -170,6 +174,7 @@ database*. Verify per database, not per environment — the environments have dr
 | 16 | `127-add-user-tenant-role-table.sql` | Creates `t_user_tenant_role` (Phase 126, migração de papéis existentes); no backfill — the conversion of existing users to office roles runs in Java on the next boot. `t_user_role` is not touched. | **Yes** — `CREATE TABLE IF NOT EXISTS`. |
 | 17 | `128-add-audit-log-detalhe.sql` | Adds nullable `t_audit_log.detalhe` (Phase 128, auditoria de RBAC); no backfill — existing rows stay `NULL`, only new RBAC audit events populate it. `t_audit_log` itself has **no creation script in this directory** — it was created by `ddl-auto: update` (Phase 87 era) and exists on every install today because every environment currently runs `update`; this script only adds a column to that already-existing table. | **Yes** — `ADD COLUMN IF NOT EXISTS`. |
 | 18 | `131-rename-tenant-reservado-lexcv.sql` | Renames the platform's reserved-tenant row from `"ALCv"` to `"LexCV"` (Phase 131, v2.18 rebrand) in place, preserving its id/plano/ativo. Application code now looks the reserved tenant up as `"LexCV"` — skipping this leaves the old `"ALCv"` row orphaned and lets `seedTenantPlataforma()` insert a second, duplicate reserved-tenant row on next boot. | **Yes** — `UPDATE ... WHERE nome = 'ALCv'` converges to 0 rows matched after the first successful run. |
+| 19 | `133-create-fiscal-foundation-tables.sql` | Creates `t_configuracao_fiscal`, `t_parametro_fiscal`, `t_serie_fiscal` (Phase 133, Fundação Fiscal); no backfill -- `DatabaseSeeder` upserts `t_parametro_fiscal` (IVA_TAXA_NORMAL, RETENCAO_SUGERIDA) on the next boot. | **Yes** -- every statement uses `CREATE TABLE IF NOT EXISTS`. |
 
 ### Verify before running `125`
 
@@ -190,7 +195,7 @@ WHERE table_name = 't_tenant' AND column_name = 'logo_data_url';
 
 ## Re-run safety
 
-Only **8 of 18** scripts tolerate being run twice:
+Only **9 of 19** scripts tolerate being run twice:
 
 | Safe to re-run | Why |
 |---|---|
@@ -202,6 +207,7 @@ Only **8 of 18** scripts tolerate being run twice:
 | `127-add-user-tenant-role-table.sql` | the single statement uses `CREATE TABLE IF NOT EXISTS` |
 | `128-add-audit-log-detalhe.sql` | the single statement uses `ADD COLUMN IF NOT EXISTS` |
 | `131-rename-tenant-reservado-lexcv.sql` | the `UPDATE ... WHERE nome = 'ALCv'` converges — no rows left matching after the first run |
+| `133-create-fiscal-foundation-tables.sql` | every statement uses `CREATE TABLE IF NOT EXISTS` |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -225,7 +231,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **10 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **11 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -239,6 +245,7 @@ As of the last verification, on a client (existing) database, **10 scripts are o
 | `127-add-user-tenant-role-table.sql` | Pending — new in this phase. |
 | `128-add-audit-log-detalhe.sql` | Pending, new in this phase. |
 | `131-rename-tenant-reservado-lexcv.sql` | Pending — new in this phase (v2.18 rebrand). |
+| `133-create-fiscal-foundation-tables.sql` | Pending — new in this phase (v3.0). |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
 is precisely why this checklist exists: **do not treat planning documents as the record of

@@ -34,16 +34,17 @@ public class SerieFiscal {
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
-    // varchar sem CHECK: novos tipos não exigem DROP CONSTRAINT.
-    @Enumerated(EnumType.STRING)
+    // varchar sem CHECK (@Convert em vez de @Enumerated): novos tipos não exigem DROP CONSTRAINT.
+    @Convert(converter = TipoDocumentoFiscalConverter.class)
     @Column(name = "tipo_documento", nullable = false, columnDefinition = "varchar(32) not null")
     private TipoDocumentoFiscal tipoDocumento;
 
     @Column(name = "ano", nullable = false)
     private Integer ano;
 
-    // varchar sem CHECK: a Phase 136 acrescenta um ambiente real sem alteração de esquema.
-    @Enumerated(EnumType.STRING)
+    // varchar sem CHECK (@Convert em vez de @Enumerated): a Phase 136 acrescenta um ambiente real
+    // sem alteração de esquema.
+    @Convert(converter = AmbienteFiscalConverter.class)
     @Column(name = "ambiente", nullable = false, columnDefinition = "varchar(32) not null")
     private AmbienteFiscal ambiente;
 
