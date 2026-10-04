@@ -91,7 +91,7 @@ class AuditoriaFiscalServiceTest {
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> m.getName().startsWith("registar"))
                 .toList();
-        assertEquals(5, registar.size(), "esperados 5 métodos registar*: " + registar);
+        assertEquals(6, registar.size(), "esperados 6 métodos registar*: " + registar);
         for (Method m : registar) {
             Transactional tx = m.getAnnotation(Transactional.class);
             assertNotNull(tx, m.getName() + " sem @Transactional");
@@ -185,6 +185,65 @@ class AuditoriaFiscalServiceTest {
                 StandardCharsets.UTF_8);
         String proibido = "get" + "Email";
         assertFalse(fonte.contains(proibido), "AuditoriaFiscalService não pode ler o email do autor");
+    }
+
+    @Test
+    void registarEmissao_gravaEventoDoDocumentoFiscal() throws Exception {
+        UUID documentoId = UUID.randomUUID();
+
+        service.registarEmissao(tenantId, autor, documentoId, "SIM-FR-2026/7");
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_emitir", log.getAcao());
+        assertEquals("documento_fiscal_emitir", AuditoriaFiscalService.ACAO_EMITIR);
+        assertEquals("documento_fiscal", log.getEntidadeTipo());
+        assertEquals("documento_fiscal", AuditoriaFiscalService.ENTIDADE_TIPO_DOCUMENTO);
+        assertEquals(documentoId.toString(), log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        JsonNode d = detalhe(log);
+        assertEquals(2, d.size(), log.getDetalhe());
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("SIM-FR-2026/7", d.get("numeroFormatado").asText());
+    }
+
+    @Test
+    void registarEmissao_detalheSemValoresNifsNemEmail() throws Exception {
+        service.registarEmissao(tenantId, autor, UUID.randomUUID(), "SIM-FR-2026/1");
+
+        AuditLog log = unicoGravado();
+        assertFalse(log.getDetalhe().contains(EMAIL_DISTINTIVO), log.getDetalhe());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "numeroFormatado"), chaves);
+    }
+
+    @Test
+    void registarEmissao_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarEmissao",
+                UUID.class, UserPrincipal.class, UUID.class, String.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
+    }
+
+    @Test
+    void eventosDaConfiguracaoMantemEntidadeConfiguracaoFiscal() {
+        service.registarDadosAlterados(tenantId, autor, configId, Set.of("nif"));
+        service.registarAtivacao(tenantId, autor, configId);
+        service.registarDesativacao(tenantId, autor, configId, false);
+        service.registarEmailLigado(tenantId, autor, configId);
+        service.registarEmailDesligado(tenantId, autor, configId);
+
+        ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(auditLogRepository, times(5)).save(captor.capture());
+        for (AuditLog log : captor.getAllValues()) {
+            assertEquals("configuracao_fiscal", log.getEntidadeTipo());
+            assertEquals(configId.toString(), log.getEntidadeId());
+        }
     }
 
     @Test
