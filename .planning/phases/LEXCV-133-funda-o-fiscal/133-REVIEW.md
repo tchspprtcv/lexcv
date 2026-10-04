@@ -75,7 +75,16 @@ findings:
   warning: 7
   info: 7
   total: 15
-status: issues_found
+status: fixed
+fix:
+  fixed_at: 2026-10-04T14:10:00Z
+  iteration: 1
+  scope: "critical + warning, plus IN-02, IN-05, IN-06, IN-07"
+  findings_in_scope: 12
+  fixed: 11
+  accepted_by_decision: 1
+  skipped_out_of_scope: 3
+  status: all_fixed
 ---
 
 # Phase 133: Code Review Report
@@ -271,3 +280,78 @@ Also consider disabling the email switch and the deactivate button while `dadosP
 _Reviewed: 2026-10-04T13:34:03Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fix Report
+
+**Fixed at:** 2026-10-04T14:10:00Z
+**Fixer:** Claude (gsd-code-fixer), iteration 1
+**Scope:** all Critical and Warning findings, plus IN-02, IN-05, IN-06 and IN-07. IN-01, IN-03 and IN-04 were left out by request.
+**Branch:** `claude/laughing-babbage-ny2z3n` (fast-forwarded, not pushed)
+
+| Finding | Result | Commit(s) |
+|---|---|---|
+| CR-01 | fixed: requires human verification (concurrency logic) | `03b8126` |
+| WR-01 | fixed | `b9c1707` |
+| WR-02 | fixed: requires human verification (concurrency logic) | `6d7baaf`, `9c2f78d` |
+| WR-03 | fixed | `e59dd9e` |
+| WR-04 | fixed | `db7bb21` |
+| WR-05 | fixed (rule removed, per user decision) | `d9e0c91` |
+| WR-06 | fixed | `5425e7d` |
+| WR-07 | accepted by decision, no change | none |
+| IN-02 | fixed | `7b6f1af` |
+| IN-05 | fixed | `cb50fef` |
+| IN-06 | fixed | `cfb0c0d` |
+| IN-07 | fixed | `a9e3422` |
+| IN-01, IN-03, IN-04 | skipped: out of scope for this round | none |
+
+### CR-01: lost updates on `t_configuracao_fiscal`
+- New `ConfiguracaoFiscalRepository.bloquearPorTenant` (`@Lock(PESSIMISTIC_WRITE)` JPQL). `guardar`, `ativar`, `desativar` and `definirEmailAutomatico` use it as their first DB operation, before the series check. `obter` keeps the unlocked `findByTenantId`.
+- Lock order is documented in the repository, the service and `NumeracaoService`: **configuração fiscal → (conta corrente) → série**. Phase 134 emission must take the configuration lock first.
+- When no row exists yet (first `guardar`) there is nothing to lock. `uk_configuracao_fiscal_tenant` still turns that race into `CONFIGURACAO_FISCAL_CONCORRENTE`.
+- Tests:
+  - Unit test `mutacoesBloqueiamAConfiguracaoAntesDasSeries` checks that each mutator locks before the series check and never uses the unlocked finder.
+  - New Testcontainers IT `ConfiguracaoFiscalConcorrenciaIT` covers interleaving 2 (desativar vs. email on → `FATURACAO_DESLIGADA`, row stays off, no `faturacao_email_ligar` event) and interleaving 1 (ativar vs. guardar → activation not lost).
+  - Both IT cases were run against a real PostgreSQL 16 (see "Verification"). They pass with the lock and both fail when the service is switched back to `findByTenantId`.
+
+### WR-01: ALTER on every boot
+- Removed `columnDefinition` from `SerieFiscal.tipoDocumento` and `ambiente` (now `nullable = false, length = 32`) and from `ConfiguracaoFiscal.regimeIva` (`length = 32`). The migration script is unchanged and the parity test still holds.
+- New test `MigracaoFiscal133IT.segundoArranqueEmUpdateNaoEmiteDdlFiscal`. It captures the boot `Metadata` through a test-only `IntegratorProvider` (`CapturaMetadataHibernate`), runs Hibernate's `update` SchemaMigrator in SCRIPT mode against the schema Hibernate just created, and asserts that no DDL touches the fiscal tables.
+- Against the pre-fix entities this test reproduces exactly the reviewer's diagnosis: three ALTERs, `regime_iva set data type varchar(32)`, `ambiente ... varchar(32) not null` and `tipo_documento ... varchar(32) not null`. That confirms the silent `regime_iva` ALTER as well.
+- A real double boot with `ddl-auto=update` and `org.hibernate.SQL=DEBUG` on one database gave: boot 1 created the tables; boot 2 emitted 0 fiscal ALTERs and 0 "Error executing DDL". `deferred-items.md` item 2 is annotated as resolved.
+
+### WR-02: duplicate number with a series that is already managed
+- After `bloquear` (FOR UPDATE), `NumeracaoService` calls `serieFiscalRepository.refrescar(serie)`, a new Spring Data fragment (`SerieFiscalRepositoryCustom`/`Impl`, `@PersistenceContext` EntityManager) that re-reads the locked row before the increment.
+- The first version (`6d7baaf`) injected `EntityManager` through the constructor, which SpotBugs flagged as EI_EXPOSE_REP2. `9c2f78d` moved the refresh into the fragment, so the `NumeracaoService(repo, clock)` constructor is back to its original form.
+- Tests: a unit test checks that the refresh happens after the lock, and the new IT case `serieJaCarregadaNoPersistenceContextNaoDuplicaNumero` preloads the series. Without the refresh that case returns the duplicate `2` instead of `3`, which reproduces the bug.
+
+### WR-03: unsaved edits discarded
+- The form reset now uses `{ keepDirtyValues: true, keepErrors: true }`. When `nifBloqueado` is set, the `nif` field is reset to the server value.
+- Not done: the reviewer's optional suggestion to disable the email switch and the deactivate button while `dadosPorGravar`. The form no longer loses edits, so the main defect is gone.
+
+### WR-04: stale UI after a 409/422
+- All four mutations invalidate in `onSettled` through a shared `invalidarFaturacao` helper.
+
+### WR-05: cross-tenant NIF uniqueness
+- Removed by user decision. The `NIF_JA_REGISTADO` check in `guardar`, `existsByNifAndTenantIdNot`, its unit test and the frontend `CodigoErroFaturacao` entry are all gone. A replacement test asserts that `guardar` never queries other tenants and that the repository only has tenant-scoped finders.
+
+### WR-06: catch-all leaks exception details
+- `GlobalExceptionHandler.handleAllExceptions` now returns `{"message": "Erro interno. Tente novamente.", "referencia": <UUID>}` and logs the same `referencia` at ERROR level with the full exception. The `error` key (class name) and `ex.getMessage()` are no longer sent to the client.
+- No existing test asserted the old body. Controllers catch their own expected exceptions (for example `SetupController`), so no user-facing message depended on the catch-all.
+- New test `GlobalExceptionHandlerCatchAllTest`. `saveAndFlush` inside the fiscal try blocks was not added, per the decision to keep the fix minimal.
+
+### WR-07: `financeiro:manage` reuse
+- Accepted by decision. Reusing `financeiro:manage` is a locked milestone decision (REQUIREMENTS "Decisões de âmbito"), so RBAC is unchanged.
+
+### IN-02 / IN-05 / IN-06 / IN-07
+- **IN-02:** `@Size` on firma, localidade, emailContacto and telefoneContacto, and `@NotNull` on `ligado`, now have Portuguese messages. The Zod schema mirrors the limits with `.max(200/100/254/32)`. Tests added on both sides.
+- **IN-05:** a field-less 400/409/422 shows the backend message instead of the generic "Verifique os campos assinalados".
+- **IN-06:** the parity IT now compares `column_default`. `SerieFiscal.ultimoNumero` has `@ColumnDefault("0")` (not `columnDefinition`, so WR-01 is unaffected) to match the script's `DEFAULT 0`. The stricter parity check fails if that annotation is removed.
+- **IN-07:** the javadoc path is corrected to `PUT /api/v1/faturacao/email-automatico`.
+
+### Verification
+- Backend: `mvn -Dmaven.compiler.release=21 test` gives 550 tests, 0 failures. `mvn spotbugs:check` passes with 0 bugs.
+- **Failsafe ITs did not run under Testcontainers.** The Docker daemon was not running in this session (stale `/run/docker.pid`), and restarting it was not permitted, so the failsafe run fails with "Could not find a valid Docker environment".
+- As a substitute, untracked scratch copies of `MigracaoFiscal133IT`, `ConfiguracaoFiscalConcorrenciaIT`, `NumeracaoServiceConcorrenciaIT` and `ParametroFiscalRepositoryIT` (identical test bodies, datasource pointed at a throwaway local PostgreSQL 16 instead of a container) all passed: 8 + 2 + 10 + 2 cases. The scratch copies were deleted and never committed.
+- **Re-run `mvn verify` with Docker available before closing the phase.**
+- Frontend: `npx tsc --noEmit` is clean. `pnpm lint` reports 0 errors and the same 20 warnings as before these changes. `pnpm test` passes 90/90. `pnpm verify:faturacao` passes.
+
