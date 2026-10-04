@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente } from "@/hooks/use-clientes";
+import { podeLerDocumentosFiscais, useEstadoEmissao } from "@/hooks/use-faturacao";
 import {
   useCreatePagamento,
   useDeleteHonorario,
@@ -51,6 +52,8 @@ import {
   type PagamentoFormValues,
 } from "@/schemas/financeiro";
 import type { HonorarioUpdateRequest, PagamentoCreateRequest } from "@/types/financeiro";
+
+import { PagamentoFaturadoForm } from "./pagamento-faturado-form";
 
 type PageProps = {
   params: { id: string };
@@ -141,6 +144,11 @@ function HonorarioDetailContent({
   const deleteHonorario = useDeleteHonorario();
   const deletePagamento = useDeletePagamento();
   const permissions = usePermissions();
+  // Phase 134 (D-02): o estado de emissão decide qual dos formulários de pagamento aparece. Gate
+  // exato `financeiro:view` (o mesmo do backend), e só para quem pode registar pagamentos.
+  const estadoEmissao = useEstadoEmissao(
+    canEditFinanceiro && podeLerDocumentosFiscais(permissions.permissions),
+  );
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -463,7 +471,14 @@ function HonorarioDetailContent({
               <CardTitle>Adicionar pagamento</CardTitle>
             </CardHeader>
             <CardContent>
-              {canEditFinanceiro ? (
+              {canEditFinanceiro && estadoEmissao.data?.ativa ? (
+                <PagamentoFaturadoForm
+                  honorarioId={honorarioId}
+                  clienteId={clienteId}
+                  taxaRetencaoSugerida={estadoEmissao.data.taxaRetencaoSugerida}
+                  canViewClientes={canViewClientes}
+                />
+              ) : canEditFinanceiro ? (
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmitPagamento)}>
                   <div className="space-y-2">
                     <Label htmlFor="valorPago">Valor pago</Label>
@@ -502,7 +517,7 @@ function HonorarioDetailContent({
 
                   <Button
                     type="submit"
-                    disabled={form.formState.isSubmitting || createPagamento.isPending || permissions.isLoading || !canEditFinanceiro}
+                    disabled={form.formState.isSubmitting || createPagamento.isPending || permissions.isLoading || !canEditFinanceiro || estadoEmissao.isLoading}
                   >
                     <Plus className="h-4 w-4" />
                     {form.formState.isSubmitting || createPagamento.isPending ? "A guardar..." : "Adicionar"}
