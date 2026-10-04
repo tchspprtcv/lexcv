@@ -186,15 +186,17 @@ export function FaturacaoAtivacaoCard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={desativar.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Button
-                variant="destructive"
-                onClick={confirmarDesativar}
-                disabled={desativar.isPending}
-              >
-                {desativar.isPending ? "A desativar..." : "Desativar faturação"}
-              </Button>
-            </AlertDialogAction>
+            {/* Button simples (não AlertDialogAction asChild): o Slot juntaria as classes do
+                Action às do Button e o tailwind-merge faria o fundo neutro ganhar ao vermelho.
+                O fecho é controlado pelo estado `desativarAberto`. */}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmarDesativar}
+              disabled={desativar.isPending}
+            >
+              {desativar.isPending ? "A desativar..." : "Desativar faturação"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
