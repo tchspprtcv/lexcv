@@ -92,11 +92,16 @@ export function FaturacaoDadosForm({
 
   const { errors, isDirty, isSubmitting } = form.formState;
 
-  // A resposta gravada (ou um refetch com dados novos) passa a ser o novo estado pristino. A
-  // partilha estrutural do TanStack Query mantém a mesma referência quando os dados não mudam,
-  // por isso um refetch idêntico não apaga edições em curso.
+  // A resposta gravada (ou um refetch com dados novos) passa a ser o novo estado pristino, mas
+  // SEM apagar edições em curso (WR-03 da revisão): outra mutação (email, desativar) ou um
+  // refetch ao focar a janela muda a referência de `data`, e um reset simples deitaria fora o
+  // que o utilizador ainda não gravou. `keepDirtyValues` só atualiza os campos não editados.
+  // Exceção: com o NIF bloqueado o campo deixa de ser editável, por isso passa a mostrar sempre o
+  // valor do servidor (nunca um NIF editado que o backend recusaria com NIF_BLOQUEADO).
   React.useEffect(() => {
-    if (data) form.reset(valoresIniciais(data));
+    if (!data) return;
+    form.reset(valoresIniciais(data), { keepDirtyValues: true });
+    if (data.nifBloqueado) form.resetField("nif", { defaultValue: data.nif ?? "" });
   }, [data, form]);
 
   React.useEffect(() => {
