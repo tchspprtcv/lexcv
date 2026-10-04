@@ -5,7 +5,6 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.SerieFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.repositories.SerieFiscalRepository;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
 import lombok.extern.slf4j.Slf4j;
@@ -57,12 +56,10 @@ public class NumeracaoService {
     private static final ZoneId FUSO_CABO_VERDE = ZoneId.of("Atlantic/Cape_Verde");
 
     private final SerieFiscalRepository serieFiscalRepository;
-    private final EntityManager entityManager;
     private final Clock clock;
 
-    public NumeracaoService(SerieFiscalRepository serieFiscalRepository, EntityManager entityManager, Clock clock) {
+    public NumeracaoService(SerieFiscalRepository serieFiscalRepository, Clock clock) {
         this.serieFiscalRepository = serieFiscalRepository;
-        this.entityManager = entityManager;
         this.clock = clock;
     }
 
@@ -98,7 +95,7 @@ public class NumeracaoService {
 
         // WR-02: a linha já está bloqueada; o refresh lê o valor comprometido mesmo que a
         // instância já estivesse gerida (e desatualizada) no persistence context do chamador.
-        entityManager.refresh(serie);
+        serieFiscalRepository.refrescar(serie);
         long numero = serie.getUltimoNumero() + 1;
         serie.setUltimoNumero(numero);
         return new NumeroFiscalAtribuido(serie.getId(), serie.getCodigo(), ano, numero, dataEmissao);

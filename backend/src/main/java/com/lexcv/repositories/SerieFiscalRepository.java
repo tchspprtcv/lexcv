@@ -24,6 +24,8 @@ import java.util.UUID;
  *   <li>{@link #bloquear} tem de ser chamado dentro da transação do chamador: o lock
  *       {@code PESSIMISTIC_WRITE} ({@code SELECT ... FOR UPDATE}) dura até ao commit/rollback
  *       (idioma de {@code ParecerSolicitacaoRepository.findByIdForUpdate}).</li>
+ *   <li>{@link #refrescar} (fragmento {@link SerieFiscalRepositoryCustom}) logo a seguir a
+ *       {@link #bloquear}: relê a linha bloqueada para a instância gerida (WR-02).</li>
  *   <li>{@link #definirLockTimeoutLocal} equivale a {@code SET LOCAL lock_timeout = '5s'}: o hint
  *       JPA de lock timeout não é fiável no PostgreSQL (ARCHITECTURE §4.2).</li>
  *   <li>{@code existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L)} é o substituto, na
@@ -32,7 +34,7 @@ import java.util.UUID;
  * </ul>
  */
 @Repository
-public interface SerieFiscalRepository extends JpaRepository<SerieFiscal, UUID> {
+public interface SerieFiscalRepository extends JpaRepository<SerieFiscal, UUID>, SerieFiscalRepositoryCustom {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from SerieFiscal s where s.tenantId = :tenantId and s.tipoDocumento = :tipo "

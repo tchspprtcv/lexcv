@@ -5,7 +5,6 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.models.SerieFiscal;
 import com.lexcv.repositories.SerieFiscalRepository;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -90,9 +89,6 @@ class NumeracaoServiceConcorrenciaIT {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private EntityManager entityManager;
 
     // -----------------------------------------------------------------------------------------
     // Auxiliares
@@ -293,9 +289,9 @@ class NumeracaoServiceConcorrenciaIT {
     void reinicioAnual() {
         UUID tenantId = UUID.randomUUID();
         // Instâncias manuais sem proxy MANDATORY: chamadas na mesma dentro de uma transação.
-        NumeracaoService em2026 = new NumeracaoService(serieFiscalRepository, entityManager,
+        NumeracaoService em2026 = new NumeracaoService(serieFiscalRepository,
                 Clock.fixed(Instant.parse("2026-12-31T12:00:00Z"), ZoneOffset.UTC));
-        NumeracaoService em2027 = new NumeracaoService(serieFiscalRepository, entityManager,
+        NumeracaoService em2027 = new NumeracaoService(serieFiscalRepository,
                 Clock.fixed(Instant.parse("2027-01-01T12:00:00Z"), ZoneOffset.UTC));
 
         assertEquals(1L, alocar(em2026, tenantId));
@@ -317,9 +313,9 @@ class NumeracaoServiceConcorrenciaIT {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void fronteiraDeAnoEmCaboVerde() {
         UUID tenantId = UUID.randomUUID();
-        NumeracaoService antesDaMeiaNoite = new NumeracaoService(serieFiscalRepository, entityManager,
+        NumeracaoService antesDaMeiaNoite = new NumeracaoService(serieFiscalRepository,
                 Clock.fixed(Instant.parse("2027-01-01T00:30:00Z"), ZoneOffset.UTC));
-        NumeracaoService depoisDaMeiaNoite = new NumeracaoService(serieFiscalRepository, entityManager,
+        NumeracaoService depoisDaMeiaNoite = new NumeracaoService(serieFiscalRepository,
                 Clock.fixed(Instant.parse("2027-01-01T01:30:00Z"), ZoneOffset.UTC));
 
         NumeroFiscalAtribuido antes = tx().execute(status ->
