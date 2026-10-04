@@ -132,7 +132,7 @@ public class PagamentoFaturadoService {
      *
      * @throws RecusaFiscalException 422 CHAVE_IDEMPOTENCIA_OBRIGATORIA / HONORARIO_OBRIGATORIO / os
      *                               422 de {@link ComposicaoFaturaRecibo#compor}; 404
-     *                               HONORARIO_NAO_ENCONTRADO; 409 FATURACAO_DESLIGADA /
+     *                               HONORARIO_NAO_ENCONTRADO / CLIENTE_NAO_ENCONTRADO; 409 FATURACAO_DESLIGADA /
      *                               CHAVE_REUTILIZADA / PROCESSO_ALTERADO_TENTE_NOVAMENTE /
      *                               DATA_EMISSAO_ALTERADA; 503 FATURACAO_OCUPADA / SERIE_INDISPONIVEL
      */
@@ -174,9 +174,12 @@ public class PagamentoFaturadoService {
         UUID clienteId = processoRepository.clienteIdPorIdETenant(honorario.getProcessoId(), tenantId)
                 .orElseThrow(PagamentoFaturadoService::honorarioNaoEncontrado);
 
-        // 6. Lock do cliente (primeira leitura da linha).
+        // 6. Lock do cliente (primeira leitura da linha). Cliente inexistente (ou apagado enquanto
+        //    se esperava pelo lock): 404 CLIENTE_NAO_ENCONTRADO, o mesmo código da pré-visualização
+        //    para o mesmo estado (IN-05 da revisão). O 409 PROCESSO_ALTERADO fica para a corrida
+        //    que um novo pedido resolve (o processo mudou de cliente, passo 7).
         Cliente cliente = bloquear(() -> clienteRepository.bloquearPorIdETenant(clienteId, tenantId))
-                .orElseThrow(PagamentoFaturadoService::processoAlterado);
+                .orElseThrow(PagamentoFaturadoService::clienteNaoEncontrado);
 
         // 7. Lock do processo; uma fusão pode tê-lo movido para outro cliente entretanto.
         Processo processo = bloquear(() -> processoRepository.bloquearPorIdETenant(honorario.getProcessoId(), tenantId))
@@ -397,6 +400,11 @@ public class PagamentoFaturadoService {
     private static RecusaFiscalException honorarioNaoEncontrado() {
         return new RecusaFiscalException(HttpStatus.NOT_FOUND, "HONORARIO_NAO_ENCONTRADO",
                 PreVisualizacaoFaturaService.MSG_HONORARIO_NAO_ENCONTRADO);
+    }
+
+    private static RecusaFiscalException clienteNaoEncontrado() {
+        return new RecusaFiscalException(HttpStatus.NOT_FOUND, "CLIENTE_NAO_ENCONTRADO",
+                PreVisualizacaoFaturaService.MSG_CLIENTE_NAO_ENCONTRADO);
     }
 
     private static RecusaFiscalException processoAlterado() {

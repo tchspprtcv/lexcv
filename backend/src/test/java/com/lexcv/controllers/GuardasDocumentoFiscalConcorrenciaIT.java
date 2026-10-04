@@ -354,11 +354,10 @@ class GuardasDocumentoFiscalConcorrenciaIT {
         ExecutionException erro = org.junit.jupiter.api.Assertions.assertThrows(ExecutionException.class,
                 () -> a.get(30, TimeUnit.SECONDS));
         RecusaFiscalException recusa = assertInstanceOf(RecusaFiscalException.class, erro.getCause());
-        assertTrue(recusa.getStatus() == HttpStatus.CONFLICT || recusa.getStatus() == HttpStatus.NOT_FOUND,
-                "status inesperado: " + recusa.getStatus() + " " + recusa.getCodigo());
-        if (recusa.getStatus() == HttpStatus.CONFLICT) {
-            assertEquals("PROCESSO_ALTERADO_TENTE_NOVAMENTE", recusa.getCodigo());
-        }
+        // IN-05 da revisão: o cliente desapareceu enquanto a emissão esperava pelo lock dele -- o
+        // mesmo 404 CLIENTE_NAO_ENCONTRADO que a pré-visualização dá para este estado.
+        assertEquals(HttpStatus.NOT_FOUND, recusa.getStatus(), recusa.getCodigo());
+        assertEquals("CLIENTE_NAO_ENCONTRADO", recusa.getCodigo());
 
         assertFalse(clienteExiste(c.clienteId()));
         assertEquals(0, fixtura.contarPagamentos(c.honorarioId()));

@@ -625,15 +625,24 @@ class PagamentoFaturadoServiceTest {
     }
 
     @Test
-    void clienteDesaparecidoAntesDoLockRecusa409() {
+    void clienteDesaparecidoAntesDoLockRecusa404ComoAPreVisualizacao() {
+        // IN-05 da revisão: o mesmo código que a pré-visualização dá para o mesmo estado.
         tudoPresente(cfg(RegimeIva.NORMAL, true));
         when(clienteRepo.bloquearPorIdETenant(cliente.getId(), tenant)).thenReturn(Optional.empty());
 
         RecusaFiscalException e = recusa(req());
 
-        assertRecusa(e, HttpStatus.CONFLICT, "PROCESSO_ALTERADO_TENTE_NOVAMENTE");
-        assertEquals("O processo ou o cliente foi alterado entretanto. Tente novamente.", e.getMessage());
+        assertRecusa(e, HttpStatus.NOT_FOUND, "CLIENTE_NAO_ENCONTRADO");
+        assertEquals("Cliente não encontrado.", e.getMessage());
         assertNadaEscrito();
+    }
+
+    @Test
+    void processoAlteradoMantemAMensagemDeCorrida() {
+        tudoPresente(cfg(RegimeIva.NORMAL, true));
+        when(processoRepo.bloquearPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.empty());
+
+        assertEquals("O processo ou o cliente foi alterado entretanto. Tente novamente.", recusa(req()).getMessage());
     }
 
     @Test
