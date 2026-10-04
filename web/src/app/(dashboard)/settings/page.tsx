@@ -20,7 +20,8 @@ import {
   Bell,
   AlertCircle,
   RotateCcw,
-  History
+  History,
+  Receipt
 } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
@@ -79,11 +80,12 @@ import {
 import { CriarPapelPanel } from "./criar-papel-panel";
 import { PapelAcoesMenu } from "./papel-acoes-menu";
 import { AuditoriaTab } from "./auditoria-tab";
+import { FaturacaoTab } from "./faturacao-tab";
 import type { AdminUser, AdminUserSavePayload } from "@/types/admin-users";
 import type { OfficePapel, OfficeRbac, PapelCreateRequest } from "@/types/office-rbac";
 import type { NotificacaoCategoria } from "@/types/notificacoes";
 
-type TabId = "profile" | "security" | "users" | "rbac" | "auditoria" | "notificacoes";
+type TabId = "profile" | "security" | "users" | "rbac" | "auditoria" | "faturacao" | "notificacoes";
 
 export default function SettingsPage() {
   const { data: me, can } = usePermissions();
@@ -99,6 +101,7 @@ export default function SettingsPage() {
   // fase aplica em ParecerController/OfficeRolesController/AdminController.
   const hasUsersManage = can.manage("users");
   const hasRbacManage = can.manage("rbac");
+  const hasFinanceiroManage = can.manage("financeiro");
 
   // Render tabs
   return (
@@ -175,6 +178,19 @@ export default function SettingsPage() {
           </button>
         )}
 
+        {hasFinanceiroManage && (
+          <button
+            onClick={() => setActiveTab("faturacao")}
+            className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-sm font-medium transition-all ${activeTab === "faturacao"
+                ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+          >
+            <Receipt className="h-4 w-4" />
+            Faturação
+          </button>
+        )}
+
         {can.view("notificacoes") && (
           <button
             onClick={() => setActiveTab("notificacoes")}
@@ -218,6 +234,12 @@ export default function SettingsPage() {
         {activeTab === "auditoria" && hasRbacManage && (
           <div className="animate-in fade-in duration-200">
             <AuditoriaTab />
+          </div>
+        )}
+
+        {activeTab === "faturacao" && hasFinanceiroManage && (
+          <div className="animate-in fade-in duration-200">
+            <FaturacaoTab />
           </div>
         )}
 
