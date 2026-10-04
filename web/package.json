@@ -15,7 +15,8 @@
     "verify:relatorio-utilizacao": "node scripts/verify-relatorio-utilizacao.mjs",
     "verify:consola-moldes": "node scripts/verify-consola-moldes.mjs",
     "verify:auditoria-rbac": "node scripts/verify-auditoria-rbac.mjs",
-    "verify:faturacao": "node scripts/verify-faturacao.mjs"
+    "verify:faturacao": "node scripts/verify-faturacao.mjs",
+    "verify:documentos-fiscais": "node scripts/verify-documentos-fiscais.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
