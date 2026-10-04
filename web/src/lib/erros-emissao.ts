@@ -13,6 +13,8 @@ export const COPY_NIF =
 export const COPY_NOME = "O nome do cliente deve ter entre 3 e 150 caracteres. Corrija o cliente e tente de novo.";
 export const COPY_MORADA =
   "A morada do cliente é obrigatória e não pode ter mais de 100 caracteres. Corrija o cliente e tente de novo.";
+export const COPY_LOCALIDADE =
+  "A localidade do cliente não pode ter mais de 100 caracteres. Corrija o cliente e tente de novo.";
 export const COPY_CHAVE_REUTILIZADA =
   "Este pedido já foi usado com valores diferentes. Reveja os dados e registe o pagamento de novo.";
 export const COPY_REDE = "Não foi possível emitir a fatura-recibo. Verifique a ligação e tente novamente.";
@@ -34,7 +36,7 @@ const COPY_GUARDA_POR_CODIGO: Record<string, string> = {
 
 export type CampoFormularioEmissao = "dataPagamento" | "metodo" | "retencaoPercentagem" | "valorPago";
 
-export type CampoAdquirente = "nif" | "nome" | "morada";
+export type CampoAdquirente = "nif" | "nome" | "morada" | "localidade";
 
 export type ErroEmissao =
   | { tipo: "campo"; campo: CampoFormularioEmissao; mensagem: string }
@@ -47,6 +49,7 @@ const COPY_ADQUIRENTE: Record<CampoAdquirente, string> = {
   nif: COPY_NIF,
   nome: COPY_NOME,
   morada: COPY_MORADA,
+  localidade: COPY_LOCALIDADE,
 };
 
 const CAMPOS_FORMULARIO: readonly CampoFormularioEmissao[] = [
@@ -63,7 +66,7 @@ function mensagemDoCorpo(body: unknown): string | undefined {
 }
 
 function eCampoAdquirente(campo: string | undefined): campo is CampoAdquirente {
-  return campo === "nif" || campo === "nome" || campo === "morada";
+  return campo === "nif" || campo === "nome" || campo === "morada" || campo === "localidade";
 }
 
 function eCampoFormulario(campo: string | undefined): campo is CampoFormularioEmissao {

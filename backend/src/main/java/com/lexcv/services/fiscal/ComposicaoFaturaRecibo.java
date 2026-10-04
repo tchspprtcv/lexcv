@@ -54,7 +54,8 @@ public final class ComposicaoFaturaRecibo {
         LocalDate data = ValidacaoEmissao.validarData(req.dataPagamento(), hoje);
         MetodoPagamento metodo = ValidacaoEmissao.validarMetodo(req.metodo());
         BigDecimal retencao = ValidacaoEmissao.validarRetencao(req.retencaoPercentagem());
-        ValidacaoEmissao.validarAdquirente(cliente.getNif(), cliente.getNome(), cliente.getMorada());
+        ValidacaoEmissao.validarAdquirente(cliente.getNif(), cliente.getNome(), cliente.getMorada(),
+                cliente.getLocalidade());
 
         RegimeIva regime = cfg.getRegimeIva();
         CalculoFiscal.ResultadoCalculo calculo = CalculoFiscal.calcular(valor, regime, taxaIvaOuNull, retencao);

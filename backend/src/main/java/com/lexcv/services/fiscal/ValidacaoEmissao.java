@@ -44,6 +44,10 @@ public final class ValidacaoEmissao {
             + "Corrija o cliente e tente de novo.";
     static final String MSG_MORADA = "A morada do cliente é obrigatória e não pode ter mais de 100 caracteres. "
             + "Corrija o cliente e tente de novo.";
+    static final String MSG_LOCALIDADE = "A localidade do cliente não pode ter mais de 100 caracteres. "
+            + "Corrija o cliente e tente de novo.";
+    /** Igual a {@code t_documento_fiscal.adquirente_localidade VARCHAR(100)} (migração 134). */
+    public static final int LOCALIDADE_MAX = 100;
     static final String MSG_CHAVE = "Pedido sem chave de idempotência. Reabra a confirmação e tente de novo.";
 
     private ValidacaoEmissao() {
@@ -107,6 +111,16 @@ public final class ValidacaoEmissao {
      * primeira falha ganha). Nome e morada são avaliados sem os espaços à volta.
      */
     public static void validarAdquirente(String nif, String nome, String morada) {
+        validarAdquirente(nif, nome, morada, null);
+    }
+
+    /**
+     * Como {@link #validarAdquirente(String, String, String)} e, por fim, a localidade (WR-02 da
+     * revisão): opcional, mas, quando preenchida, não pode exceder a coluna do snapshot
+     * ({@value #LOCALIDADE_MAX}); sem esta recusa 422, uma localidade longa passava a
+     * pré-visualização e falhava no INSERT com um 500 que o cliente repetia para sempre.
+     */
+    public static void validarAdquirente(String nif, String nome, String morada, String localidade) {
         if (nif == null || !NIF_FISCAL.matcher(nif).matches()) {
             throw recusa("ADQUIRENTE_INCOMPLETO", MSG_NIF, "nif");
         }
@@ -117,6 +131,9 @@ public final class ValidacaoEmissao {
         String moradaLimpa = morada == null ? "" : morada.trim();
         if (moradaLimpa.isEmpty() || moradaLimpa.length() > ConfiguracaoFiscal.MORADA_MAX) {
             throw recusa("ADQUIRENTE_INCOMPLETO", MSG_MORADA, "morada");
+        }
+        if (localidade != null && localidade.trim().length() > LOCALIDADE_MAX) {
+            throw recusa("ADQUIRENTE_INCOMPLETO", MSG_LOCALIDADE, "localidade");
         }
     }
 

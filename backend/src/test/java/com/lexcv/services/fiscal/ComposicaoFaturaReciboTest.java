@@ -203,6 +203,19 @@ class ComposicaoFaturaReciboTest {
     }
 
     @Test
+    void localidadeComMaisDe100CaracteresRecusada422AntesDoInsert() {
+        // WR-02 da revisão: a coluna adquirente_localidade é VARCHAR(100).
+        Cliente c = cliente().localidade("L".repeat(101)).build();
+        RecusaFiscalException e = assertThrows(RecusaFiscalException.class, () -> ComposicaoFaturaRecibo.compor(
+                cfgNormal().build(), c, processo(c.getId()), 7, req("100", null, "DINHEIRO", null), HOJE, IVA));
+        assertRecusa(e, HttpStatus.UNPROCESSABLE_ENTITY, "ADQUIRENTE_INCOMPLETO", "localidade");
+
+        Cliente limite = cliente().localidade(" " + "L".repeat(100) + " ").build();
+        assertEquals("L".repeat(100), ComposicaoFaturaRecibo.compor(cfgNormal().build(), limite,
+                processo(limite.getId()), 7, req("100", null, "DINHEIRO", null), HOJE, IVA).adquirenteLocalidade());
+    }
+
+    @Test
     void localidadeEmBrancoFicaNula() {
         Cliente c = cliente().localidade("   ").build();
         assertNull(ComposicaoFaturaRecibo.compor(cfgNormal().build(), c, processo(c.getId()), 7,

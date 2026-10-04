@@ -196,9 +196,28 @@ class ValidacaoEmissaoTest {
         }
 
         @Test
+        void localidadeOpcionalAte100CaracteresPassa() {
+            ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, MORADA_VALIDA, null);
+            ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, MORADA_VALIDA, "   ");
+            ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, MORADA_VALIDA, "L".repeat(100));
+            ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, MORADA_VALIDA, "  " + "L".repeat(100) + "  ");
+        }
+
+        @Test
+        void localidadeComMaisDe100CaracteresERecusada() {
+            RecusaFiscalException e = recusa(
+                    () -> ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, MORADA_VALIDA, "L".repeat(101)),
+                    "ADQUIRENTE_INCOMPLETO", "localidade");
+            assertEquals("A localidade do cliente não pode ter mais de 100 caracteres. "
+                    + "Corrija o cliente e tente de novo.", e.getMessage());
+        }
+
+        @Test
         void aPrimeiraFalhaGanhaPorOrdemNifNomeMorada() {
             recusa(() -> ValidacaoEmissao.validarAdquirente(null, null, null), "ADQUIRENTE_INCOMPLETO", "nif");
             recusa(() -> ValidacaoEmissao.validarAdquirente(NIF_VALIDO, "x", null), "ADQUIRENTE_INCOMPLETO", "nome");
+            recusa(() -> ValidacaoEmissao.validarAdquirente(NIF_VALIDO, NOME_VALIDO, null, "L".repeat(101)),
+                    "ADQUIRENTE_INCOMPLETO", "morada");
         }
     }
 

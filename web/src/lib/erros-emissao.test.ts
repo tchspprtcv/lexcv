@@ -6,6 +6,7 @@ import {
   COPY_DATA_PAGAMENTO,
   COPY_FALLBACK_CAMPO,
   COPY_GUARDA_CLIENTE,
+  COPY_LOCALIDADE,
   COPY_GUARDA_PAGAMENTO,
   COPY_MORADA,
   COPY_NIF,
@@ -38,6 +39,9 @@ describe("copy do UI-SPEC", () => {
     expect(COPY_MORADA).toBe(
       "A morada do cliente é obrigatória e não pode ter mais de 100 caracteres. Corrija o cliente e tente de novo.",
     );
+    expect(COPY_LOCALIDADE).toBe(
+      "A localidade do cliente não pode ter mais de 100 caracteres. Corrija o cliente e tente de novo.",
+    );
     expect(COPY_CHAVE_REUTILIZADA).toBe(
       "Este pedido já foi usado com valores diferentes. Reveja os dados e registe o pagamento de novo.",
     );
@@ -59,6 +63,7 @@ describe("interpretarErroEmissao", () => {
     ["nif", COPY_NIF],
     ["nome", COPY_NOME],
     ["morada", COPY_MORADA],
+    ["localidade", COPY_LOCALIDADE],
   ] as const)("422 ADQUIRENTE_INCOMPLETO campo %s -> banner do adquirente", (campo, copy) => {
     expect(interpretarErroEmissao(erro(422, "ADQUIRENTE_INCOMPLETO", campo, "backend"))).toEqual({
       tipo: "adquirente",
