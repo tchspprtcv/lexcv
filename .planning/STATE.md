@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-01-PLAN.md
-last_updated: "2026-10-04T18:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-01 (immutable DocumentoFiscal/Linha + ComunicacaoFiscal, script 134 + README row 20, MigracaoFiscal134IT 6/6)
+stopped_at: Completed 134-02-PLAN.md
+last_updated: "2026-10-04T18:30:00.000Z"
+last_activity: 2026-10-04 — Completed 134-02 (pure fiscal rules: CalculoFiscal, ValidacaoEmissao, MetodoPagamento, TextoDocumentoFiscal; TDD)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 22
-  completed_plans: 9
-  percent: 41
+  completed_plans: 10
+  percent: 45
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 2 of 14
-Status: Executing Phase 134 — 134-01 complete
-Last activity: 2026-10-04 — Completed 134-01 (fiscal document tables: @Immutable DocumentoFiscal/DocumentoFiscalLinha, ComunicacaoFiscal PENDENTE satellite, idempotent script 134 with guarded uk_conta_corrente_cliente, MigracaoFiscal134IT parity proof)
+Plan: 3 of 14
+Status: Executing Phase 134 — 134-01, 134-02 complete (wave 1 done)
+Last activity: 2026-10-04 — Completed 134-02 (pure fiscal rules test-first: CalculoFiscal reproduces 12 research vectors + 200 000-total property; ValidacaoEmissao 422 with code+campo and UI-SPEC copy; MetodoPagamento → eFatura means code; controlled line text)
 
 ## Performance Metrics
 
@@ -125,6 +125,7 @@ Last activity: 2026-10-04 — Completed 134-01 (fiscal document tables: @Immutab
 | Phase 133 P05 | 12 min | 2 tasks | 4 files |
 | Phase 133 P08 | 25 min | 3 tasks | 7 files |
 | Phase 134 P01 | 15 min | 2 tasks | 8 files |
+| Phase 134 P02 | 12 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: Activation/email cards read only server flags (ativa/completa/podeDesativar/documentosEmitidos); destructive AlertDialog confirm is a plain Button variant="destructive" (AlertDialogAction asChild lets the neutral bg win via tailwind-merge)
 - [Phase 134]: DocumentoFiscal/DocumentoFiscalLinha are @Immutable with updatable=false on every column and no setters; cliente_id is re-pointed only by a native UPDATE on client merge (D-15); communication status lives in the mutable ComunicacaoFiscal satellite (@Version, born PENDENTE)
 - [Phase 134]: Script 134 adds uk_conta_corrente_cliente only when t_conta_corrente lacks a single-column unique index on cliente_id, aborting (nothing created) on duplicates -- the emission path relies on ON CONFLICT (cliente_id)
+- [Phase 134]: CalculoFiscal is the single pure calculator for preview and emission (base = total*100/(100+iva) HALF_UP in one division, iva = total - base; ISENTO base = total; retenção on the base HALF_UP); ValidacaoEmissao never reads the clock -- hoje (Cabo Verde) is always passed by the caller
+- [Phase 134]: MetodoPagamento eFatura means codes (10/30/20/48/ZZZ) are [ASSUMED] UNCL4461 until Phase 136 confirms them against PaymentMeansCode_D19B; the code is snapshotted per document
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -330,8 +333,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T18:00:00.000Z
-Stopped at: Completed 134-01-PLAN.md
+Last session: 2026-10-04T18:30:00.000Z
+Stopped at: Completed 134-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
