@@ -5,6 +5,7 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.SerieFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.repositories.SerieFiscalRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -40,11 +41,13 @@ class NumeracaoServiceTest {
     private static final Clock MEIO_DE_2026 = Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneOffset.UTC);
 
     private SerieFiscalRepository repository;
+    private EntityManager entityManager;
     private UUID tenantId;
 
     @BeforeEach
     void setUp() {
         repository = mock(SerieFiscalRepository.class);
+        entityManager = mock(EntityManager.class);
         tenantId = UUID.randomUUID();
     }
 
@@ -74,7 +77,7 @@ class NumeracaoServiceTest {
         SerieFiscal serie = serie(2026, 4L);
         when(repository.bloquear(tenantId, TipoDocumentoFiscal.FR, 2026, AmbienteFiscal.SIMULADO))
                 .thenReturn(Optional.of(serie));
-        NumeracaoService service = new NumeracaoService(repository, MEIO_DE_2026);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
 
         NumeroFiscalAtribuido r = service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO);
 
@@ -92,11 +95,35 @@ class NumeracaoServiceTest {
         ordem.verify(repository).bloquear(tenantId, TipoDocumentoFiscal.FR, 2026, AmbienteFiscal.SIMULADO);
     }
 
+    /**
+     * WR-02 da revisão: depois do FOR UPDATE a entidade é refrescada da linha bloqueada antes do
+     * incremento, para que uma instância já gerida e desatualizada não produza um número
+     * duplicado. Aqui o refresh simula outra transação que comprometeu 7 entretanto.
+     */
+    @Test
+    void proximoNumero_refrescaASerieBloqueadaAntesDeIncrementar() {
+        SerieFiscal serie = serie(2026, 4L);
+        when(repository.bloquear(tenantId, TipoDocumentoFiscal.FR, 2026, AmbienteFiscal.SIMULADO))
+                .thenReturn(Optional.of(serie));
+        org.mockito.Mockito.doAnswer(inv -> {
+            ((SerieFiscal) inv.getArgument(0)).setUltimoNumero(7L);
+            return null;
+        }).when(entityManager).refresh(serie);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
+
+        NumeroFiscalAtribuido r = service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO);
+
+        assertEquals(8L, r.numero());
+        InOrder ordem = inOrder(repository, entityManager);
+        ordem.verify(repository).bloquear(tenantId, TipoDocumentoFiscal.FR, 2026, AmbienteFiscal.SIMULADO);
+        ordem.verify(entityManager).refresh(serie);
+    }
+
     @Test
     void proximoNumero_0030UtcDe1DeJaneiroPertenceAoAnoAnteriorEmCaboVerde() {
         when(repository.bloquear(tenantId, TipoDocumentoFiscal.FR, 2025, AmbienteFiscal.SIMULADO))
                 .thenReturn(Optional.of(serie(2025, 0L)));
-        NumeracaoService service = new NumeracaoService(repository,
+        NumeracaoService service = new NumeracaoService(repository, entityManager,
                 Clock.fixed(Instant.parse("2026-01-01T00:30:00Z"), ZoneOffset.UTC));
 
         NumeroFiscalAtribuido r = service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO);
@@ -112,7 +139,7 @@ class NumeracaoServiceTest {
     void proximoNumero_0130UtcDe1DeJaneiroJaEAnoNovo() {
         when(repository.bloquear(tenantId, TipoDocumentoFiscal.FR, 2026, AmbienteFiscal.SIMULADO))
                 .thenReturn(Optional.of(serie(2026, 0L)));
-        NumeracaoService service = new NumeracaoService(repository,
+        NumeracaoService service = new NumeracaoService(repository, entityManager,
                 Clock.fixed(Instant.parse("2026-01-01T01:30:00Z"), ZoneOffset.UTC));
 
         NumeroFiscalAtribuido r = service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO);
@@ -125,7 +152,7 @@ class NumeracaoServiceTest {
     void proximoNumero_lockNaoObtidoNoBloquear_recusaSerieIndisponivel() {
         when(repository.bloquear(any(), any(), any(), any()))
                 .thenThrow(new CannotAcquireLockException("lock timeout"));
-        NumeracaoService service = new NumeracaoService(repository, MEIO_DE_2026);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
 
         RecusaFiscalException e = assertThrows(RecusaFiscalException.class,
                 () -> service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO));
@@ -137,7 +164,7 @@ class NumeracaoServiceTest {
     void proximoNumero_lockNaoObtidoNoInsert_recusaSerieIndisponivel() {
         when(repository.criarSeNaoExiste(any(), any(), anyString(), anyInt(), anyString(), anyString()))
                 .thenThrow(new CannotAcquireLockException("lock timeout"));
-        NumeracaoService service = new NumeracaoService(repository, MEIO_DE_2026);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
 
         RecusaFiscalException e = assertThrows(RecusaFiscalException.class,
                 () -> service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO));
@@ -147,7 +174,7 @@ class NumeracaoServiceTest {
 
     @Test
     void proximoNumero_argumentosNulos_falhamAntesDoRepositorio() {
-        NumeracaoService service = new NumeracaoService(repository, MEIO_DE_2026);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
         assertThrows(NullPointerException.class,
                 () -> service.proximoNumero(null, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO));
         assertThrows(NullPointerException.class,
@@ -160,7 +187,7 @@ class NumeracaoServiceTest {
     @Test
     void proximoNumero_serieInexistenteDepoisDoInsert_violacaoDeInvariante() {
         when(repository.bloquear(any(), any(), any(), any())).thenReturn(Optional.empty());
-        NumeracaoService service = new NumeracaoService(repository, MEIO_DE_2026);
+        NumeracaoService service = new NumeracaoService(repository, entityManager, MEIO_DE_2026);
 
         assertThrows(IllegalStateException.class,
                 () -> service.proximoNumero(tenantId, TipoDocumentoFiscal.FR, AmbienteFiscal.SIMULADO));

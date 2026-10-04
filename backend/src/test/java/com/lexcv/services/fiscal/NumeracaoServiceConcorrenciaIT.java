@@ -3,7 +3,9 @@ package com.lexcv.services.fiscal;
 import com.lexcv.exceptions.RecusaFiscalException;
 import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
+import com.lexcv.models.SerieFiscal;
 import com.lexcv.repositories.SerieFiscalRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -89,6 +91,9 @@ class NumeracaoServiceConcorrenciaIT {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private EntityManager entityManager;
+
     // -----------------------------------------------------------------------------------------
     // Auxiliares
     // -----------------------------------------------------------------------------------------
@@ -173,6 +178,50 @@ class NumeracaoServiceConcorrenciaIT {
         assertEquals(8L, ultimoNumero(tenantId, 2026));
     }
 
+    /**
+     * (1b) WR-02 da revisão: o chamador já tem a série no persistence context (lida sem lock),
+     * outra transação compromete um número entretanto, e só depois o chamador pede o próximo.
+     * O FOR UPDATE devolveria a instância gerida desatualizada; o refresh garante o número certo
+     * em vez de um duplicado.
+     */
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void serieJaCarregadaNoPersistenceContextNaoDuplicaNumero() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        assertEquals(1L, alocar(numeracaoService, tenantId));
+
+        CountDownLatch carregada = new CountDownLatch(1);
+        CountDownLatch outraComprometeu = new CountDownLatch(1);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<Long> chamador = executor.submit(() -> tx().execute(status -> {
+                List<SerieFiscal> lidas = serieFiscalRepository.findByTenantIdOrderByAnoDescTipoDocumentoAsc(tenantId);
+                assertEquals(1L, lidas.get(0).getUltimoNumero());
+                carregada.countDown();
+                try {
+                    if (!outraComprometeu.await(30, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("a outra transação não comprometeu");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+                return numeracaoService.proximoNumero(tenantId, FR, SIMULADO).numero();
+            }));
+
+            assertTrue(carregada.await(20, TimeUnit.SECONDS), "o chamador não carregou a série");
+            assertEquals(2L, alocar(numeracaoService, tenantId));
+            outraComprometeu.countDown();
+
+            assertEquals(3L, chamador.get(30, TimeUnit.SECONDS));
+        } finally {
+            outraComprometeu.countDown();
+            executor.shutdownNow();
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+        }
+        assertEquals(3L, ultimoNumero(tenantId, 2026));
+    }
+
     /** (2) Primeiro uso concorrente: ON CONFLICT DO NOTHING cria uma única série. */
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -244,9 +293,9 @@ class NumeracaoServiceConcorrenciaIT {
     void reinicioAnual() {
         UUID tenantId = UUID.randomUUID();
         // Instâncias manuais sem proxy MANDATORY: chamadas na mesma dentro de uma transação.
-        NumeracaoService em2026 = new NumeracaoService(serieFiscalRepository,
+        NumeracaoService em2026 = new NumeracaoService(serieFiscalRepository, entityManager,
                 Clock.fixed(Instant.parse("2026-12-31T12:00:00Z"), ZoneOffset.UTC));
-        NumeracaoService em2027 = new NumeracaoService(serieFiscalRepository,
+        NumeracaoService em2027 = new NumeracaoService(serieFiscalRepository, entityManager,
                 Clock.fixed(Instant.parse("2027-01-01T12:00:00Z"), ZoneOffset.UTC));
 
         assertEquals(1L, alocar(em2026, tenantId));
@@ -268,9 +317,9 @@ class NumeracaoServiceConcorrenciaIT {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void fronteiraDeAnoEmCaboVerde() {
         UUID tenantId = UUID.randomUUID();
-        NumeracaoService antesDaMeiaNoite = new NumeracaoService(serieFiscalRepository,
+        NumeracaoService antesDaMeiaNoite = new NumeracaoService(serieFiscalRepository, entityManager,
                 Clock.fixed(Instant.parse("2027-01-01T00:30:00Z"), ZoneOffset.UTC));
-        NumeracaoService depoisDaMeiaNoite = new NumeracaoService(serieFiscalRepository,
+        NumeracaoService depoisDaMeiaNoite = new NumeracaoService(serieFiscalRepository, entityManager,
                 Clock.fixed(Instant.parse("2027-01-01T01:30:00Z"), ZoneOffset.UTC));
 
         NumeroFiscalAtribuido antes = tx().execute(status ->

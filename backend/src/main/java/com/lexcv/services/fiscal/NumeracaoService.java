@@ -5,6 +5,7 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.SerieFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.repositories.SerieFiscalRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +26,11 @@ import java.util.UUID;
  * (tenant, tipo de documento, ano civil, ambiente).
  *
  * <p><b>Como:</b> {@code lock_timeout} local à transação (5s) -> {@code INSERT ... ON CONFLICT DO
- * NOTHING} da série -> {@code SELECT ... FOR UPDATE} da linha -> incremento de
- * {@code ultimo_numero} (dirty checking; o flush acontece no commit do chamador). Nunca usar uma
+ * NOTHING} da série -> {@code SELECT ... FOR UPDATE} da linha -> {@code refresh} da entidade ->
+ * incremento de {@code ultimo_numero} (dirty checking; o flush acontece no commit do chamador).
+ * O {@code refresh} (WR-02 da revisão) é obrigatório: se o chamador já tinha a série no
+ * persistence context (lida sem lock antes), o {@code FOR UPDATE} devolve essa instância sem a
+ * reidratar, e o incremento partiria de um valor desatualizado (número duplicado). Nunca usar uma
  * SEQUENCE (perde números em rollback), MAX()+1 (duplica sob concorrência), um monitor da JVM
  * (não protege várias instâncias) nem uma transação própria (o número faria commit sem o
  * documento) -- PITFALLS P-01.
@@ -35,8 +39,9 @@ import java.util.UUID;
  * uma transação lança {@link org.springframework.transaction.IllegalTransactionStateException}
  * (mesmo racional de {@code AuditoriaRbacService}).
  *
- * <p><b>Ordem de locks (Phase 134+):</b> conta corrente primeiro, série por último
- * (ARCHITECTURE §4.2). O lock da série tem de ser o ÚLTIMO lock tomado na transação, para ser
+ * <p><b>Ordem de locks (Phase 134+):</b> configuração fiscal primeiro
+ * ({@code ConfiguracaoFiscalRepository.bloquearPorTenant}, CR-01 da revisão), depois conta
+ * corrente, série por último (ARCHITECTURE §4.2). O lock da série tem de ser o ÚLTIMO lock tomado na transação, para ser
  * mantido o menor tempo possível e nunca participar num deadlock.
  *
  * <p><b>Rede de segurança:</b> {@code UNIQUE(tenant_id, serie_id, numero)} na tabela de documentos
@@ -52,10 +57,12 @@ public class NumeracaoService {
     private static final ZoneId FUSO_CABO_VERDE = ZoneId.of("Atlantic/Cape_Verde");
 
     private final SerieFiscalRepository serieFiscalRepository;
+    private final EntityManager entityManager;
     private final Clock clock;
 
-    public NumeracaoService(SerieFiscalRepository serieFiscalRepository, Clock clock) {
+    public NumeracaoService(SerieFiscalRepository serieFiscalRepository, EntityManager entityManager, Clock clock) {
         this.serieFiscalRepository = serieFiscalRepository;
+        this.entityManager = entityManager;
         this.clock = clock;
     }
 
@@ -89,6 +96,9 @@ public class NumeracaoService {
                     "A série de numeração está ocupada. Tente novamente dentro de instantes.");
         }
 
+        // WR-02: a linha já está bloqueada; o refresh lê o valor comprometido mesmo que a
+        // instância já estivesse gerida (e desatualizada) no persistence context do chamador.
+        entityManager.refresh(serie);
         long numero = serie.getUltimoNumero() + 1;
         serie.setUltimoNumero(numero);
         return new NumeroFiscalAtribuido(serie.getId(), serie.getCodigo(), ano, numero, dataEmissao);
