@@ -63,6 +63,16 @@ export const METODOS_PAGAMENTO = [
   { valor: "OUTRO", rotulo: "Outro" },
 ] as const satisfies readonly { valor: MetodoPagamento; rotulo: string }[];
 
+/**
+ * Rótulo do método de um pagamento (IN-01 da revisão): com a faturação ativa o backend grava o
+ * nome do enum (`TRANSFERENCIA`, `CARTAO`...); os pagamentos legados guardam texto livre, que é
+ * mostrado tal como está.
+ */
+export function rotuloMetodoPagamento(metodo: string | null | undefined): string {
+  if (!metodo) return "—";
+  return METODOS_PAGAMENTO.find((m) => m.valor === metodo)?.rotulo ?? metodo;
+}
+
 const VALORES_METODO = ["DINHEIRO", "TRANSFERENCIA", "CHEQUE", "CARTAO", "OUTRO"] as const satisfies readonly MetodoPagamento[];
 
 const MSG_METODO_OBRIGATORIO = "Escolha o método de pagamento.";

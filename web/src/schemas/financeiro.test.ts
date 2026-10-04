@@ -5,6 +5,7 @@ import {
   pagamentoFaturadoFormSchema,
   pagamentoFormSchema,
   paraPedidoPagamentoFaturado,
+  rotuloMetodoPagamento,
 } from "@/schemas/financeiro";
 
 const MSG_METODO = "Escolha o método de pagamento.";
@@ -136,5 +137,20 @@ describe("paraPedidoPagamentoFaturado", () => {
   it("nunca define a chave de idempotência (é do diálogo)", () => {
     const pedido = paraPedidoPagamentoFaturado(valores({ aplicarRetencao: true, retencaoPercentagem: "10" }), 1);
     expect(pedido).not.toHaveProperty("chaveIdempotencia");
+  });
+});
+
+describe("rotuloMetodoPagamento (IN-01)", () => {
+  it("nomes do enum gravados com a faturação ativa -> rótulo", () => {
+    expect(rotuloMetodoPagamento("TRANSFERENCIA")).toBe("Transferência bancária");
+    expect(rotuloMetodoPagamento("CARTAO")).toBe("Cartão / Multibanco");
+    for (const m of METODOS_PAGAMENTO) expect(rotuloMetodoPagamento(m.valor)).toBe(m.rotulo);
+  });
+
+  it("texto livre dos pagamentos legados fica como está; vazio -> travessão", () => {
+    expect(rotuloMetodoPagamento("Transferência")).toBe("Transferência");
+    expect(rotuloMetodoPagamento(undefined)).toBe("—");
+    expect(rotuloMetodoPagamento(null)).toBe("—");
+    expect(rotuloMetodoPagamento("")).toBe("—");
   });
 });

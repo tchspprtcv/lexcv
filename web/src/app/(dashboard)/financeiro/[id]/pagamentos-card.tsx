@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDeletePagamento } from "@/hooks/use-financeiro";
 import { toast } from "@/hooks/use-toast";
 import { mensagemGuardaFiscal } from "@/lib/erros-emissao";
+import { rotuloMetodoPagamento } from "@/schemas/financeiro";
 import type { Pagamento } from "@/types/financeiro";
 
 // Card "Pagamentos" do honorário (134-UI-SPEC Surface 2 e Surface 5). Coluna "Documento fiscal"
@@ -143,7 +144,7 @@ export function PagamentosCard({
                   >
                     <td className="py-2 pr-4">{formatDate(p.dataPagamento)}</td>
                     <td className="py-2 pr-4 tabular-nums">{formatMoneyCVE(p.valorPago)}</td>
-                    <td className="py-2 pr-4">{p.metodo ?? "—"}</td>
+                    <td className="py-2 pr-4">{rotuloMetodoPagamento(p.metodo)}</td>
                     <td className="py-2 pr-4">#{p.id}</td>
                     <td className="py-2 pr-4 whitespace-nowrap">
                       {p.documentoFiscal ? (
