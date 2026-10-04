@@ -1,0 +1,45 @@
+import { z } from "zod";
+
+// Regra de NIF FISCAL do escritório: 9 dígitos, o primeiro de 1 a 9. É de propósito mais estrita
+// do que a regra de NIF de cliente em `schemas/clientes.ts` (`/^\d{9}$/`) -- CONTEXT D "Dados
+// fiscais" -- e espelha `ConfiguracaoFiscal.NIF_FISCAL_REGEX` no backend. Este schema é um
+// espelho de UX; a fronteira de autoridade é a validação do backend.
+export const nifFiscalPattern = /^[1-9]\d{8}$/;
+
+export const MORADA_MAX = 100;
+
+const OBRIGATORIO = "Preencha este campo.";
+
+const campoObrigatorio = () => z.string().trim().min(1, OBRIGATORIO);
+
+export const configuracaoFiscalSchema = z
+  .object({
+    nif: z
+      .string()
+      .trim()
+      .regex(nifFiscalPattern, "O NIF deve ter 9 dígitos e começar por um algarismo de 1 a 9."),
+    firma: campoObrigatorio(),
+    morada: campoObrigatorio().max(MORADA_MAX, "A morada não pode ter mais de 100 caracteres."),
+    localidade: campoObrigatorio(),
+    emailContacto: campoObrigatorio().pipe(z.email("Introduza um email válido.")),
+    telefoneContacto: campoObrigatorio(),
+    regimeIva: z.enum(["NORMAL", "ISENTO"], { error: OBRIGATORIO }),
+    motivoIsencaoCodigo: z.string().trim().nullable(),
+  })
+  .superRefine((valores, ctx) => {
+    if (valores.regimeIva === "ISENTO" && !valores.motivoIsencaoCodigo) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["motivoIsencaoCodigo"],
+        message: "Escolha o motivo de isenção.",
+      });
+    }
+  })
+  .transform((valores) => ({
+    ...valores,
+    motivoIsencaoCodigo: valores.regimeIva === "NORMAL" ? null : valores.motivoIsencaoCodigo,
+  }));
+
+export type ConfiguracaoFiscalFormInput = z.input<typeof configuracaoFiscalSchema>;
+
+export type ConfiguracaoFiscalFormValues = z.output<typeof configuracaoFiscalSchema>;
