@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useConfiguracaoFiscal } from "@/hooks/use-faturacao";
 import { usePermissions } from "@/hooks/use-permissions";
 
+import { FaturacaoDadosForm } from "./faturacao-dados-form";
 import { FaturacaoSeriesCard } from "./faturacao-series-card";
 
 // Aba "Faturação" em Definições (133-UI-SPEC "Screen Structure", CFG-01/02/05). A visibilidade
@@ -62,6 +63,8 @@ export function FaturacaoTab() {
           emitir as suas faturas válidas no software de faturação homologado.
         </p>
       </div>
+
+      <FaturacaoDadosForm configuracao={configuracao} />
 
       <FaturacaoSeriesCard habilitado={podeGerir} />
     </div>
