@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Info } from "lucide-react";
 
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
@@ -7,14 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { useConfiguracaoFiscal } from "@/hooks/use-faturacao";
 import { usePermissions } from "@/hooks/use-permissions";
 
+import { FaturacaoAtivacaoCard } from "./faturacao-ativacao-card";
 import { FaturacaoDadosForm } from "./faturacao-dados-form";
+import { FaturacaoEmailCard } from "./faturacao-email-card";
 import { FaturacaoSeriesCard } from "./faturacao-series-card";
 
 // Aba "Faturação" em Definições (133-UI-SPEC "Screen Structure", CFG-01/02/05). A visibilidade
 // por `can.manage("financeiro")` é apenas UX -- a autoridade é o `@PreAuthorize` de classe do
 // controller de faturação no backend (hasAuthority('financeiro:manage')).
-// Ordem fixa dos blocos: cabeçalho, aviso de simulação, dados fiscais, ativação e email
-// (Plan 08), séries de numeração.
+// Ordem fixa dos blocos: cabeçalho, aviso de simulação, dados fiscais, ativação (Block 4),
+// envio automático por email (Block 5), séries de numeração.
 
 export function FaturacaoTab() {
   // Regra dos Hooks: todos os hooks abaixo tem de ser chamados incondicionalmente. Os returns
@@ -23,6 +26,7 @@ export function FaturacaoTab() {
   const { isFetched, can } = usePermissions();
   const podeGerir = can.manage("financeiro");
   const configuracao = useConfiguracaoFiscal(podeGerir);
+  const [dadosPorGravar, setDadosPorGravar] = React.useState(false);
 
   if (!isFetched) {
     return <div className="text-sm text-slate-500 dark:text-slate-400">A carregar...</div>;
@@ -64,7 +68,14 @@ export function FaturacaoTab() {
         </p>
       </div>
 
-      <FaturacaoDadosForm configuracao={configuracao} />
+      <FaturacaoDadosForm
+        configuracao={configuracao}
+        onAlteracoesPorGravarChange={setDadosPorGravar}
+      />
+
+      <FaturacaoAtivacaoCard configuracao={configuracao.data} dadosPorGravar={dadosPorGravar} />
+
+      <FaturacaoEmailCard configuracao={configuracao.data} />
 
       <FaturacaoSeriesCard habilitado={podeGerir} />
     </div>
