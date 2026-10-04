@@ -73,7 +73,25 @@ Notas da fase:
   5. A Fatura-Recibo guarda emitente e adquirente tal como no momento da emissão e nenhum ecrã ou endpoint a edita ou apaga; um pagamento faturado não pode ser apagado, apagar o cliente, o processo ou o honorário a que pertence é recusado e fundir clientes preserva a ligação dos documentos
   6. Utilizador com `financeiro:view` lista os documentos fiscais do seu escritório (filtros por cliente, período, tipo, estado) e abre o detalhe, sem nunca ver os de outro escritório; pagamentos anteriores à ativação aparecem como "sem documento fiscal" e não são faturados retroativamente
 
-**Plans**: TBD
+**Plans**: 14 plans (8 waves)
+
+Plans:
+
+- [ ] 134-01-PLAN.md — Wave 1: entidades @Immutable DocumentoFiscal/DocumentoFiscalLinha + ComunicacaoFiscal (PENDENTE), script 134 + README linha 20 (+ índice único guardado em t_conta_corrente.cliente_id), MigracaoFiscal134IT
+- [ ] 134-02-PLAN.md — Wave 1 (TDD): CalculoFiscal (vetores HALF_UP + propriedade), ValidacaoEmissao (422 com campo), MetodoPagamento → meio eFatura, textos controlados
+- [ ] 134-03-PLAN.md — Wave 2: repositórios estreitos (sem delete/update), repontarCliente nativo, locks cliente/processo/CC, ativaPorTenant; DocumentoFiscalImutabilidadeTest + DocumentoFiscalRepositoryIT
+- [ ] 134-04-PLAN.md — Wave 3: PagamentoRequest, ComposicaoFaturaRecibo (pura, partilhada), PreVisualizacaoFaturaService readOnly + estado de emissão
+- [ ] 134-05-PLAN.md — Wave 3: DocumentoFiscalService (listar, detalhe, referências por pagamento, existePara*, repontarCliente MANDATORY) + DTOs de leitura
+- [ ] 134-06-PLAN.md — Wave 4: PagamentoFaturadoService @Transactional (ordem de locks configuração → cliente → processo → CC → série, idempotência sob o lock), evento de auditoria
+- [ ] 134-07-PLAN.md — Wave 5: ITs Testcontainers — atomicidade/rollback, paridade da pré-visualização, snapshot, dois emitentes, concorrência e corrida da mesma chave
+- [ ] 134-08-PLAN.md — Wave 5: delegação em createPagamento (ramo desligado verbatim + hash), guarda CFG-03 evoluída, lista de pagamentos com documento fiscal
+- [ ] 134-09-PLAN.md — Wave 5: DocumentoFiscalController (estado-emissao, pre-visualizacao financeiro:edit, lista/detalhe financeiro:view) + teste de autorização real
+- [ ] 134-10-PLAN.md — Wave 6: guardas 409 (pagamento faturado, cliente, processo, honorário), fusão com repontamento, IT de corrida/sem deadlock/sem órfãos
+- [ ] 134-11-PLAN.md — Wave 6: web — tipos, schema com método/retenção, chave de idempotência com fallback, interpretação de erros, hooks
+- [ ] 134-12-PLAN.md — Wave 7: web — formulário com faturação ativa + diálogo de pré-visualização, coluna "Documento fiscal", 409 inline
+- [ ] 134-13-PLAN.md — Wave 7: web — página Documentos fiscais (filtros, paginação servidor) e detalhe só de leitura
+- [ ] 134-14-PLAN.md — Wave 8: gate verify:documentos-fiscais, suite completa com ITs, VALIDATION assinada, verificação ponta a ponta (checkpoint)
+
 **UI hint**: yes
 
 Notas da fase:
