@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-04-PLAN.md
-last_updated: "2026-10-04T13:40:00.000Z"
-last_activity: 2026-10-04 — Completed 133-04 (fiscal configuration service + fiscal audit writer)
+stopped_at: Completed 133-07-PLAN.md
+last_updated: "2026-10-04T14:10:00.000Z"
+last_activity: 2026-10-04 — Completed 133-07 (Faturação settings tab, fiscal data form, read-only series)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 8
-  completed_plans: 5
-  percent: 63
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 133 of 139 (Fundação Fiscal)
-Plan: 6 of 8
-Status: Executing — 133-01, 133-02, 133-03, 133-04, 133-06 complete, next 133-05
-Last activity: 2026-10-04 — Completed 133-04 (ConfiguracaoFiscalService: save/activate/deactivate/email switch with NIF lock and irreversibility after first document; AuditoriaFiscalService MANDATORY writer; 521 unit tests green)
+Plan: 7 of 8
+Status: Executing — 133-01, 133-02, 133-03, 133-04, 133-06, 133-07 complete, next 133-05
+Last activity: 2026-10-04 — Completed 133-07 (Definições > Faturação tab gated by financeiro:manage; FaturacaoDadosForm with NIF lock and server error mapping; read-only FaturacaoSeriesCard)
 
 ## Performance Metrics
 
@@ -151,6 +151,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: Fiscal audit events (faturacao_*; entidadeTipo configuracao_fiscal) are written only by AuditoriaFiscalService (MANDATORY), separate from AuditoriaRbacService; detalhe holds author name + changed field NAMES only
 - [Phase 133]: ConfiguracaoFiscalService throws every RecusaFiscalException before mutating the entity; 'document issued' = existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L) locks NIF and blocks deactivation
 - [Phase 133]: NIF_JA_REGISTADO (cross-tenant NIF uniqueness) implemented per plan but not in 133-CONTEXT.md -- pending user confirmation
+- [Phase 133]: Faturação tab (FaturacaoTab) holds the useConfiguracaoFiscal result; FaturacaoDadosForm exposes optional onAlteracoesPorGravarChange for 133-08; inline save error only for 400/409/422 (others toasted by apiFetch)
 
 ### Pending Todos
 
