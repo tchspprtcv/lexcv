@@ -45,8 +45,11 @@ import java.util.UUID;
  * {@code financeiro:manage} e os seus testes fixam-no em 7 handlers; estes endpoints servem quem
  * regista pagamentos e consulta documentos, não só quem administra a faturação.
  *
- * <p><b>RBAC nas duas camadas:</b> estado, lista e detalhe exigem {@code financeiro:view}; a
- * pré-visualização exige {@code financeiro:edit}, o mesmo gate de registar um pagamento. O
+ * <p><b>RBAC nas duas camadas:</b> lista e detalhe exigem {@code financeiro:view}; a
+ * pré-visualização exige {@code financeiro:edit}, o mesmo gate de registar um pagamento. O estado
+ * de emissão aceita {@code financeiro:view} OU {@code financeiro:edit} (WR-03 da revisão): quem
+ * regista pagamentos tem de saber em que modo o formulário está, e o estado (ativa, ambiente, taxa
+ * sugerida) não expõe dados de clientes nem documentos. O
  * frontend usa {@code hasScopedPermission(perms, "financeiro", "view"|"edit")}. O backend verifica
  * a autoridade exata (sem cadeia de equivalências), e os papéis semeados detêm sempre
  * {@code view} quando detêm {@code edit}, por isso as duas camadas concordam na prática.
@@ -90,7 +93,7 @@ public class DocumentoFiscalController {
         return getPrincipal().getTenantId();
     }
 
-    @PreAuthorize("hasAuthority('financeiro:view')")
+    @PreAuthorize("hasAnyAuthority('financeiro:view', 'financeiro:edit')")
     @GetMapping("/faturacao/estado-emissao")
     public ResponseEntity<?> estadoEmissao() {
         return ResponseEntity.ok(preVisualizacaoFaturaService.estadoEmissao(getTenantId()));

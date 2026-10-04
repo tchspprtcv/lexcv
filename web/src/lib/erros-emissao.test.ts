@@ -12,12 +12,13 @@ import {
   COPY_NIF,
   COPY_NOME,
   COPY_REDE,
+  COPY_SEM_PERMISSAO,
   construirQueryDocumentosFiscais,
   desfechoDefinitivo,
   interpretarErroEmissao,
   mensagemGuardaFiscal,
 } from "@/lib/erros-emissao";
-import { podeLerDocumentosFiscais } from "@/hooks/use-faturacao";
+import { modoFormularioPagamento, podeLerDocumentosFiscais, podeRegistarPagamentos } from "@/hooks/use-faturacao";
 
 function erro(status: number, code?: string, campo?: string, message?: string) {
   const body: Record<string, string> = {};
@@ -132,8 +133,16 @@ describe("interpretarErroEmissao", () => {
     });
   });
 
-  it.each([401, 403])("ApiError %i -> null (o apiFetch já tratou)", (status) => {
-    expect(interpretarErroEmissao(erro(status))).toBeNull();
+  it("ApiError 401 -> null (o useMe trata da sessão)", () => {
+    expect(interpretarErroEmissao(erro(401))).toBeNull();
+  });
+
+  it("ApiError 403 -> banner de permissão (o apiFetch não mostra toast para 403)", () => {
+    expect(interpretarErroEmissao(erro(403, undefined, undefined, "Forbidden"))).toEqual({
+      tipo: "banner",
+      mensagem: COPY_SEM_PERMISSAO,
+    });
+    expect(COPY_SEM_PERMISSAO).toBe("Não tem permissão para registar pagamentos.");
   });
 
   it("outros status (400/404) -> null: o toast do apiFetch já os mostrou", () => {
@@ -213,5 +222,36 @@ describe("desfechoDefinitivo (CR-02)", () => {
 
   it("falha de rede (TypeError do fetch) deixa o desfecho por resolver", () => {
     expect(desfechoDefinitivo(new TypeError("Failed to fetch"))).toBe(false);
+  });
+});
+
+describe("podeRegistarPagamentos / modoFormularioPagamento (WR-03, WR-04)", () => {
+  const EDIT = ["financeiro:view", "financeiro:edit"];
+
+  it("exige EXATAMENTE financeiro:edit (manage sem edit não chega, como no backend)", () => {
+    expect(podeRegistarPagamentos(["financeiro:edit"])).toBe(true);
+    expect(podeRegistarPagamentos(["financeiro:manage", "financeiro:view"])).toBe(false);
+    expect(podeRegistarPagamentos(["financeiro:view"])).toBe(false);
+    expect(podeRegistarPagamentos(undefined)).toBe(false);
+  });
+
+  it("sem financeiro:edit exato -> sem-permissao, seja qual for o estado", () => {
+    expect(modoFormularioPagamento(["financeiro:manage"], { isError: false, data: { ativa: false } })).toBe(
+      "sem-permissao",
+    );
+  });
+
+  it("estado conhecido -> ativa / desligada", () => {
+    expect(modoFormularioPagamento(EDIT, { isError: false, data: { ativa: true } })).toBe("ativa");
+    expect(modoFormularioPagamento(EDIT, { isError: false, data: { ativa: false } })).toBe("desligada");
+  });
+
+  it("estado desconhecido nunca é desligada: a carregar ou erro", () => {
+    expect(modoFormularioPagamento(EDIT, { isError: false, data: undefined })).toBe("a-carregar");
+    expect(modoFormularioPagamento(EDIT, { isError: true, data: undefined })).toBe("erro");
+  });
+
+  it("com dados em cache, uma nova leitura falhada mantém o modo conhecido", () => {
+    expect(modoFormularioPagamento(EDIT, { isError: true, data: { ativa: true } })).toBe("ativa");
   });
 });

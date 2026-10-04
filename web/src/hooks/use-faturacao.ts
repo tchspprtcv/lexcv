@@ -188,7 +188,40 @@ export function podeLerDocumentosFiscais(permissions: readonly string[] | undefi
   return hasPermission(permissions, PERMISSAO_LEITURA_FISCAL);
 }
 
-/** GET /faturacao/estado-emissao (financeiro:view): se a faturação está ativa e a taxa sugerida. */
+/** Autoridade EXATA exigida pelo backend para registar um pagamento (e pré-visualizar a FR). */
+export const PERMISSAO_REGISTO_PAGAMENTO = "financeiro:edit";
+
+/**
+ * Gate do registo de pagamentos (WR-04 da revisão): exige EXATAMENTE `financeiro:edit`, como o
+ * `@PreAuthorize` de `POST /pagamentos` e de `POST /faturacao/pre-visualizacao`. O fallback do
+ * frontend (manage => edit) mostraria um formulário que o backend recusa sempre com 403.
+ */
+export function podeRegistarPagamentos(permissions: readonly string[] | undefined): boolean {
+  return hasPermission(permissions, PERMISSAO_REGISTO_PAGAMENTO);
+}
+
+/** Modo do cartão "Adicionar pagamento" (WR-03 da revisão). */
+export type ModoFormularioPagamento = "sem-permissao" | "a-carregar" | "erro" | "ativa" | "desligada";
+
+/**
+ * Decide que formulário de pagamento mostrar. "Desconhecido" nunca cai no formulário antigo: só
+ * `desligada` o mostra com o botão ativo; `a-carregar` mostra-o com o botão desativado
+ * (134-UI-SPEC); `erro` mostra um estado de erro com "Tentar novamente". Com dados em cache, uma
+ * nova leitura falhada não esconde o formulário (o backend volta a verificar ao registar).
+ */
+export function modoFormularioPagamento(
+  permissions: readonly string[] | undefined,
+  estado: { isError: boolean; data?: Pick<EstadoEmissao, "ativa"> | undefined },
+): ModoFormularioPagamento {
+  if (!podeRegistarPagamentos(permissions)) return "sem-permissao";
+  if (estado.data) return estado.data.ativa ? "ativa" : "desligada";
+  return estado.isError ? "erro" : "a-carregar";
+}
+
+/**
+ * GET /faturacao/estado-emissao (financeiro:view OU financeiro:edit, WR-03 da revisão): se a
+ * faturação está ativa e a taxa sugerida.
+ */
 export function useEstadoEmissao(enabled: boolean) {
   return useQuery({
     queryKey: ESTADO_EMISSAO_KEY,

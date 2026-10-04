@@ -297,7 +297,8 @@ class DocumentoFiscalControllerTest {
     @Test
     void gatesPorMetodoSemGateDeClasse() {
         assertNull(DocumentoFiscalController.class.getAnnotation(PreAuthorize.class));
-        assertEquals("hasAuthority('financeiro:view')", handler("estadoEmissao").getAnnotation(PreAuthorize.class).value());
+        assertEquals("hasAnyAuthority('financeiro:view', 'financeiro:edit')",
+                handler("estadoEmissao").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:view')", handler("listar").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:view')", handler("detalhe").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:edit')", handler("preVisualizar").getAnnotation(PreAuthorize.class).value());

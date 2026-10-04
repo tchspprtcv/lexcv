@@ -19,6 +19,7 @@ export const COPY_CHAVE_REUTILIZADA =
   "Este pedido já foi usado com valores diferentes. Reveja os dados e registe o pagamento de novo.";
 export const COPY_REDE = "Não foi possível emitir a fatura-recibo. Verifique a ligação e tente novamente.";
 export const COPY_FALLBACK_CAMPO = "Verifique os campos assinalados.";
+export const COPY_SEM_PERMISSAO = "Não tem permissão para registar pagamentos.";
 
 // Surface 5 (guardas 409): o backend devolve exatamente esta copy; estas constantes só servem de
 // recurso se o corpo vier sem `message`.
@@ -75,15 +76,18 @@ function eCampoFormulario(campo: string | undefined): campo is CampoFormularioEm
 
 /**
  * Converte o erro da pré-visualização ou do registo de um pagamento faturado no que o formulário
- * deve mostrar. Devolve `null` quando não há nada a mostrar inline: 401/403 e os status fora de
- * `semToastParaStatus` (o `apiFetch` já mostrou o toast).
+ * deve mostrar. Devolve `null` quando não há nada a mostrar inline: 401 (o `useMe` trata da
+ * sessão) e os status fora de `semToastParaStatus` (o `apiFetch` já mostrou o toast). O 403 é um
+ * banner (WR-04 da revisão): o `apiFetch` NÃO mostra toast para 401/403, por isso sem ele o clique
+ * em "Registar pagamento" não dava nenhum sinal.
  */
 export function interpretarErroEmissao(error: unknown): ErroEmissao | null {
   if (!isApiError(error)) {
     // fetch() rejeita com TypeError quando o pedido não chega ao servidor.
     return { tipo: "rede", mensagem: COPY_REDE };
   }
-  if (error.status === 401 || error.status === 403) return null;
+  if (error.status === 401) return null;
+  if (error.status === 403) return { tipo: "banner", mensagem: COPY_SEM_PERMISSAO };
   if (error.status >= 500) return { tipo: "rede", mensagem: COPY_REDE };
   if (error.status !== 409 && error.status !== 422) return null;
 

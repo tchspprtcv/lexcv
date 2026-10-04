@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { useCliente } from "@/hooks/use-clientes";
-import { podeLerDocumentosFiscais, useEstadoEmissao } from "@/hooks/use-faturacao";
+import { modoFormularioPagamento, podeRegistarPagamentos, useEstadoEmissao } from "@/hooks/use-faturacao";
 import {
   useCreatePagamento,
   useDeleteHonorario,
@@ -145,11 +145,12 @@ function HonorarioDetailContent({
   const updateHonorario = useUpdateHonorario();
   const deleteHonorario = useDeleteHonorario();
   const permissions = usePermissions();
-  // Phase 134 (D-02): o estado de emissão decide qual dos formulários de pagamento aparece. Gate
-  // exato `financeiro:view` (o mesmo do backend), e só para quem pode registar pagamentos.
-  const estadoEmissao = useEstadoEmissao(
-    canEditFinanceiro && podeLerDocumentosFiscais(permissions.permissions),
-  );
+  // Phase 134 (D-02): o estado de emissão decide qual dos formulários de pagamento aparece. Só
+  // para quem pode registar pagamentos, com o gate EXATO `financeiro:edit` do backend (WR-04 da
+  // revisão); o backend aceita esse gate também no estado de emissão (WR-03). Um estado
+  // desconhecido (a carregar, erro) nunca ativa o formulário antigo.
+  const estadoEmissao = useEstadoEmissao(podeRegistarPagamentos(permissions.permissions));
+  const modoPagamento = modoFormularioPagamento(permissions.permissions, estadoEmissao);
 
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -492,14 +493,28 @@ function HonorarioDetailContent({
               <CardTitle>Adicionar pagamento</CardTitle>
             </CardHeader>
             <CardContent>
-              {canEditFinanceiro && estadoEmissao.data?.ativa ? (
+              {modoPagamento === "ativa" && estadoEmissao.data ? (
                 <PagamentoFaturadoForm
                   honorarioId={honorarioId}
                   clienteId={clienteId}
                   taxaRetencaoSugerida={estadoEmissao.data.taxaRetencaoSugerida}
                   canViewClientes={canViewClientes}
                 />
-              ) : canEditFinanceiro ? (
+              ) : modoPagamento === "erro" ? (
+                <div role="alert" className="space-y-3">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Não foi possível confirmar se a faturação está ativa. Tente novamente.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={estadoEmissao.isFetching}
+                    onClick={() => void estadoEmissao.refetch()}
+                  >
+                    Tentar novamente
+                  </Button>
+                </div>
+              ) : modoPagamento === "desligada" || modoPagamento === "a-carregar" ? (
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmitPagamento)}>
                   <div className="space-y-2">
                     <Label htmlFor="valorPago">Valor pago</Label>
@@ -538,7 +553,7 @@ function HonorarioDetailContent({
 
                   <Button
                     type="submit"
-                    disabled={form.formState.isSubmitting || createPagamento.isPending || permissions.isLoading || !canEditFinanceiro || estadoEmissao.isLoading}
+                    disabled={form.formState.isSubmitting || createPagamento.isPending || permissions.isLoading || !canEditFinanceiro || modoPagamento !== "desligada"}
                   >
                     <Plus className="h-4 w-4" />
                     {form.formState.isSubmitting || createPagamento.isPending ? "A guardar..." : "Adicionar"}

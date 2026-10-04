@@ -36,15 +36,16 @@ import static org.mockito.Mockito.when;
 /**
  * Phase 134 (D-16, R-05, T-134-38): prova, pelo interceptor REAL de method security
  * ({@link AuthorizationManagerBeforeMethodInterceptor#preAuthorize()}), dos gates por método de
- * {@link DocumentoFiscalController}: {@code financeiro:view} para estado, lista e detalhe;
- * {@code financeiro:edit} para a pré-visualização (o mesmo gate de registar um pagamento). Mesmo
+ * {@link DocumentoFiscalController}: {@code financeiro:view} para lista e detalhe;
+ * {@code financeiro:edit} para a pré-visualização (o mesmo gate de registar um pagamento);
+ * {@code financeiro:view} ou {@code financeiro:edit} para o estado de emissão (WR-03 da revisão). Mesmo
  * andaime de {@link FaturacaoControllerAutorizacaoTest}.
  *
  * <p><b>Duas camadas, regras diferentes:</b> o backend verifica a autoridade EXATA; o frontend
  * ({@code web/src/lib/permissions.ts}) aceita uma cadeia de equivalências ({@code view} é
  * satisfeito por view/create/edit/manage; {@code edit} por edit/manage). Um papel personalizado
  * só com {@code financeiro:edit} veria a página na UI mas receberia 403 na lista -- é o que o caso
- * {@link #soEditPreVisualizaMasNaoLe()} documenta. Na prática as camadas concordam porque os papéis
+ * {@link #soEditPreVisualizaELeOEstadoMasNaoOsDocumentos()} documenta. Na prática as camadas concordam porque os papéis
  * semeados ({@code DatabaseSeeder}/{@code UserPrincipal.create}) detêm sempre {@code view} quando
  * detêm {@code edit}: ADMIN tem view+edit+manage; ADVOGADO e TECNICO têm só view (leem, não
  * pré-visualizam -- também não registam pagamentos); ASSISTENTE não tem nenhuma autoridade
@@ -145,15 +146,23 @@ class DocumentoFiscalControllerAutorizacaoTest {
     }
 
     @Test
-    void soEditPreVisualizaMasNaoLe() {
-        autenticarComAuthorities("financeiro:edit");
+    void soEditPreVisualizaELeOEstadoMasNaoOsDocumentos() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:edit");
         DocumentoFiscalController proxy = novoProxyComMethodSecurity();
 
         assertDoesNotThrow(preVisualizar(proxy));
-        for (Executable h : leitura(proxy)) {
-            assertThrows(AccessDeniedException.class, h);
-        }
+        // WR-03 da revisão: quem regista pagamentos sabe se a faturação está ativa.
+        assertDoesNotThrow(estado(proxy));
+        verify(preVisualizacao).estadoEmissao(principal.getTenantId());
+        assertThrows(AccessDeniedException.class, listar(proxy));
+        assertThrows(AccessDeniedException.class, detalhe(proxy, UUID.randomUUID()));
         verifyNoInteractions(documentos);
+    }
+
+    @Test
+    void soManageNaoLeOEstado() {
+        autenticarComAuthorities("financeiro:manage");
+        assertTodosRecusados();
     }
 
     @Test
