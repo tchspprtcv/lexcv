@@ -1,7 +1,8 @@
 ---
 phase: 135
 slug: nota-de-credito
-status: draft
+status: approved
+reviewed_at: 2026-10-04
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, lucide) -- existing, not changed by this phase
 created: 2026-10-04
@@ -308,3 +309,9 @@ All copy in Portuguese (Cabo Verde), no emojis, sentence case (except the produc
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+
+## Checker clarifications (2026-10-04, applied by orchestrator)
+
+- Step-1 dismiss label: "Fechar sem emitir" (contextual) instead of "Cancelar".
+- Surface 3: if the payments table has no "Descrição / origem" column, put "Estorno (NC n.º …)" in the existing "Documento fiscal" cell only (no duplicate link, no new column).
+- Surface 1 404 copy: reuse 134 Surface 4 not-found copy ("Documento fiscal não encontrado").
