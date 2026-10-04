@@ -1,10 +1,13 @@
 package com.lexcv.repositories;
 
 import com.lexcv.models.Processo;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProcessoRepository extends JpaRepository<Processo, UUID> {
@@ -46,4 +49,22 @@ public interface ProcessoRepository extends JpaRepository<Processo, UUID> {
             nativeQuery = true)
     List<Processo> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termo") String termo,
                                     @Param("termoEscapado") String termoEscapado, @Param("limit") int limit);
+
+    /**
+     * Phase 134 (R-01): {@code SELECT ... FOR UPDATE} do processo, filtrado por tenant.
+     *
+     * <p><b>Ordem global de locks:</b> configuração → cliente → processo → conta corrente →
+     * série. Tem de ser a PRIMEIRA leitura desta linha na transação (regra OSIV da instância
+     * desatualizada); para saber o cliente antes de bloquear, usar {@link #clienteIdPorIdETenant}.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Processo p where p.id = :id and p.tenantId = :tenantId")
+    Optional<Processo> bloquearPorIdETenant(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
+
+    /**
+     * Phase 134 (Pitfall 2): só o {@code cliente_id} do processo, como escalar -- a emissão fica a
+     * saber que cliente bloquear sem carregar a entidade Processo antes do seu lock.
+     */
+    @Query("select p.clienteId from Processo p where p.id = :id and p.tenantId = :tenantId")
+    Optional<UUID> clienteIdPorIdETenant(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 }

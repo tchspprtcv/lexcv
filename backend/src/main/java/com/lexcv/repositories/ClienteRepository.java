@@ -1,7 +1,9 @@
 package com.lexcv.repositories;
 
 import com.lexcv.models.Cliente;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -56,4 +58,16 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
             nativeQuery = true)
     List<Cliente> pesquisarGlobal(@Param("tenantId") UUID tenantId, @Param("termo") String termo,
                                    @Param("termoEscapado") String termoEscapado, @Param("limit") int limit);
+
+    /**
+     * Phase 134 (R-01): {@code SELECT ... FOR UPDATE} do cliente, filtrado por tenant (um id de
+     * outro escritório devolve vazio).
+     *
+     * <p><b>Ordem global de locks:</b> configuração → cliente → processo → conta corrente →
+     * série. Tem de ser a PRIMEIRA leitura desta linha na transação: com OSIV, uma instância
+     * carregada antes sem lock ficaria desatualizada no contexto de persistência.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Cliente c where c.id = :id and c.tenantId = :tenantId")
+    Optional<Cliente> bloquearPorIdETenant(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 }

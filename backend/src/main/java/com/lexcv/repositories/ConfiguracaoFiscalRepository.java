@@ -33,4 +33,14 @@ public interface ConfiguracaoFiscalRepository extends JpaRepository<Configuracao
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from ConfiguracaoFiscal c where c.tenantId = :tenantId")
     Optional<ConfiguracaoFiscal> bloquearPorTenant(@Param("tenantId") UUID tenantId);
+
+    /**
+     * Phase 134 (WR-02): só o valor de {@code ativa}, como escalar. O controlador decide se
+     * delega na emissão fiscal sem pôr uma instância de ConfiguracaoFiscal no contexto de
+     * persistência (OSIV) antes de {@link #bloquearPorTenant}, que tem de continuar a ser a
+     * primeira leitura da linha (ordem R-01: configuração → cliente → processo → conta corrente
+     * → série). Vazio quando o tenant não tem configuração.
+     */
+    @Query("select c.ativa from ConfiguracaoFiscal c where c.tenantId = :tenantId")
+    Optional<Boolean> ativaPorTenant(@Param("tenantId") UUID tenantId);
 }
