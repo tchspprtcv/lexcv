@@ -73,3 +73,10 @@ The main run used regime Normal and checked only the method labels. A second, fr
 ## Summary
 
 13/13 steps PASS with evidence, auto-verified on a live stack, plus the supplementary isento and meio-code checks. Two cosmetic defects were found and fixed during the run.
+
+## Post-review human items (from 134-VERIFICATION.md, 2026-10-04) — pending
+
+1. [pending] CR-02 — ambiguous failure (abort/5xx) → "Voltar e editar" → resubmit same values: same idempotency key sent, exactly 1 payment and 1 FR. (Supersedes step 7c above, which recorded the old "new key after reopening" behaviour.)
+2. [pending] WR-03/WR-04 — payment card modes: estado-emissao error → message + "Tentar novamente"; loading → legacy form with submit disabled; role without exact financeiro:edit → no form; 403 → "Não tem permissão para registar pagamentos."
+3. [pending] IN-02/IN-01 — 503/5xx shows backend message inline without a second toast; Método column shows label (e.g. "Transferência bancária").
+4. [pending] WR-05 — replay POST with original key after turning billing off → 200 with original payment and FR, no new payment, no extra credit.
