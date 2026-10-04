@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiFetch, isApiError } from "@/lib/api";
 
@@ -47,6 +47,19 @@ export function useMotivosIsencao(enabled: boolean) {
   });
 }
 
+/**
+ * Invalida a configuração e as séries depois de QUALQUER desfecho da mutação (`onSettled`, WR-04 da
+ * revisão): um 409/422 (FATURACAO_JA_EMITIU, NIF_BLOQUEADO, FATURACAO_DESLIGADA,
+ * CONFIGURACAO_FISCAL_CONCORRENTE) significa que o ecrã está desatualizado, e só invalidar no
+ * sucesso deixava os cards a mostrar o estado que causou a recusa.
+ */
+function invalidarFaturacao(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: FATURACAO_CONFIG_KEY }),
+    queryClient.invalidateQueries({ queryKey: FATURACAO_SERIES_KEY }),
+  ]);
+}
+
 export function useGuardarConfiguracaoFiscal() {
   const queryClient = useQueryClient();
 
@@ -57,12 +70,7 @@ export function useGuardarConfiguracaoFiscal() {
         { method: "PUT", body: JSON.stringify(payload) },
         { semToastParaStatus: [400, 409, 422] },
       ),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: FATURACAO_CONFIG_KEY }),
-        queryClient.invalidateQueries({ queryKey: FATURACAO_SERIES_KEY }),
-      ]);
-    },
+    onSettled: () => invalidarFaturacao(queryClient),
   });
 }
 
@@ -76,12 +84,7 @@ export function useAtivarFaturacao() {
         { method: "POST" },
         { semToastParaStatus: [409, 422] },
       ),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: FATURACAO_CONFIG_KEY }),
-        queryClient.invalidateQueries({ queryKey: FATURACAO_SERIES_KEY }),
-      ]);
-    },
+    onSettled: () => invalidarFaturacao(queryClient),
   });
 }
 
@@ -95,12 +98,7 @@ export function useDesativarFaturacao() {
         { method: "POST" },
         { semToastParaStatus: [409] },
       ),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: FATURACAO_CONFIG_KEY }),
-        queryClient.invalidateQueries({ queryKey: FATURACAO_SERIES_KEY }),
-      ]);
-    },
+    onSettled: () => invalidarFaturacao(queryClient),
   });
 }
 
@@ -114,12 +112,7 @@ export function useEmailAutomatico() {
         { method: "PUT", body: JSON.stringify(payload) },
         { semToastParaStatus: [409, 422] },
       ),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: FATURACAO_CONFIG_KEY }),
-        queryClient.invalidateQueries({ queryKey: FATURACAO_SERIES_KEY }),
-      ]);
-    },
+    onSettled: () => invalidarFaturacao(queryClient),
   });
 }
 

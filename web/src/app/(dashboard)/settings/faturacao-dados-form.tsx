@@ -100,7 +100,9 @@ export function FaturacaoDadosForm({
   // valor do servidor (nunca um NIF editado que o backend recusaria com NIF_BLOQUEADO).
   React.useEffect(() => {
     if (!data) return;
-    form.reset(valoresIniciais(data), { keepDirtyValues: true });
+    // keepErrors: as mutações invalidam também depois de uma recusa (onSettled, WR-04), e o
+    // refetch não pode apagar os erros inline que o servidor acabou de assinalar.
+    form.reset(valoresIniciais(data), { keepDirtyValues: true, keepErrors: true });
     if (data.nifBloqueado) form.resetField("nif", { defaultValue: data.nif ?? "" });
   }, [data, form]);
 
