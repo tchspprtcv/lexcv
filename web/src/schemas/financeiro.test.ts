@@ -84,8 +84,9 @@ describe("pagamentoFaturadoFormSchema", () => {
   );
 
   it("com retenção e taxa ausente é recusada", () => {
-    const { retencaoPercentagem: _omitida, ...semTaxa } = base;
-    expect(mensagensDe({ ...semTaxa, aplicarRetencao: true }, "retencaoPercentagem")).toEqual([MSG_TAXA]);
+    const semTaxa: Partial<typeof base> = { ...base, aplicarRetencao: true };
+    delete semTaxa.retencaoPercentagem;
+    expect(mensagensDe(semTaxa, "retencaoPercentagem")).toEqual([MSG_TAXA]);
   });
 
   it.each(["20", "12,5", "0.01", "100", " 7,25 "])("com retenção, a taxa %j é válida", (taxa) => {

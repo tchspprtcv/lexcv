@@ -8,7 +8,7 @@ const cryptoReal = globalThis.crypto;
 
 function semRandomUUID() {
   vi.stubGlobal("crypto", {
-    getRandomValues: <T extends ArrayBufferView | null>(a: T) => cryptoReal.getRandomValues(a as Uint8Array) as T,
+    getRandomValues: (a: Uint8Array) => cryptoReal.getRandomValues(a),
   });
 }
 

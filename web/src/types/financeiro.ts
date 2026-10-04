@@ -1,3 +1,5 @@
+import type { DocumentoFiscalRef } from "@/types/faturacao";
+
 export interface Honorario {
   id: number;
   processoId: string;
@@ -26,6 +28,8 @@ export interface Pagamento {
   valorPago: number;
   dataPagamento: string;
   metodo?: string;
+  /** Phase 134 (D-19): Fatura-Recibo do pagamento; null/ausente num pagamento sem documento. */
+  documentoFiscal?: DocumentoFiscalRef | null;
 }
 
 export interface PagamentoCreateRequest {
@@ -33,4 +37,7 @@ export interface PagamentoCreateRequest {
   valorPago: number;
   dataPagamento?: string;
   metodo?: string;
+  /** Phase 134: só com a faturação ativa (opcionais, para o pedido legado ficar igual). */
+  retencaoPercentagem?: number;
+  chaveIdempotencia?: string;
 }
