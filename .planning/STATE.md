@@ -1,34 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.18
-milestone_name: Rebrand ALCv → LexCV
-status: Awaiting next milestone
-stopped_at: Milestone v2.18 completed and archived
-last_updated: "2026-09-24T05:00:00.000Z"
-last_activity: 2026-09-24 — Milestone v2.18 completed and archived
+milestone: v3.0
+milestone_name: Faturação Eletrónica (eFatura CV)
+status: planning
+last_updated: "2026-10-04T10:22:33.629Z"
+last_activity: 2026-10-04
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-24)
+See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Nenhum marco activo. v2.18 enviado a 2026-09-24; próxima fase é a **133**. Abrir o próximo marco com `/gsd:new-milestone`.
+**Current focus:** v3.0 Faturação Eletrónica (eFatura CV) — a definir requisitos; a primeira fase será a **133**.
 
 ## Current Position
 
-Phase: Milestone v2.18 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-09-24 — Milestone v2.18 completed and archived
+Status: Defining requirements
+Last activity: 2026-10-04 — Milestone v3.0 started
 
 ## Performance Metrics
 
@@ -177,8 +176,10 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
   `kpis.isLoading` estava lá igual ao master) — era um checkout desactualizado da era v2.13.
 
   Verifiquei os dois primeiros bugs contra o master de hoje e **ambos continuam presentes**:
+
   - `Documento` **nao** implementa `Persistable<UUID>` (so `ParecerVersao` implementa). O crash de
     upload de documento descrito abaixo continua exactamente como estava.
+
   - `pareceres/nova/page.tsx` registra o `NativeSelect` de prioridade **sem `defaultValue`**, pelo
     que uma submissao nao editada continua a gravar ALTA em vez de MEDIA.
 
@@ -188,6 +189,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
   O unico trabalho que ainda existia fora do master em qualquer worktree era um commit do
   `claude/gracious-mclaren-878652` (guard `isFetched` a falhar em aberto em 25 paginas do dashboard);
   esse foi publicado antes da remocao — ver `def17c5a`.
+
 - **(v2.13, Phase 108, 2026-07-17) Pareceres "Advogado" picker permanently unpopulated for non-ADMIN users; spurious 500 error toast on every Pareceres page load.** `useAdminUsers()` is called unconditionally (no `enabled` guard) in all 3 Pareceres files (`page.tsx:61`, `nova/page.tsx:71`, `[id]/page.tsx:143`), but the backend endpoint it calls (`GET /api/v1/admin/users`) is gated `hasRole('ADMIN')`. For any non-ADMIN role this returns `500` (should be `403`) and surfaces an "Erro 500: Access Denied" toast on every load; functionally, the "Advogado" `NativeSelect` on `/pareceres/nova` can never show any options for a non-ADMIN user, so a non-admin can never assign a specific advogado when creating a parecer. Confirmed pre-existing (present at the pre-Phase-108 base commit `88343be`), unrelated to Phase 108's Select/NativeSelect/Tooltip/Accordion migration. A working alternative already exists (`useTenantUsers()`, gated only by `processos:view`, already used elsewhere for non-admin "assign to" pickers). See `.planning/milestones/v2.13-phases/LEXCV-108-m-dulo-pareceres/deferred-items.md` for full detail.
 - **(v2.13, Phase 107, 2026-07-17) Document upload is completely broken — every NEW upload crashes 100% of the time.** `ResourceController.uploadDocumento`'s create-new branch (`backend/.../ResourceController.java`, `replaceId == null` path) explicitly sets a non-null `@Version` field (`.versao(1)`) on a never-persisted `Documento` builder result, which makes Spring Data JPA treat the entity as pre-existing and route `save()` through `merge()` instead of `persist()` — Hibernate then throws `StaleObjectStateException` since no matching row exists. Affects all 3 upload call sites (`/documentos/novo`, Processo ficha's Documentos tab, Cliente ficha's Documentos Entregues tab — all share one endpoint). Confirmed pre-existing (git log: `ResourceController.java` last touched by Phase 97's `f0c62ff`, 2026-07-14) and unrelated to Phase 107's frontend-only changes. Flagged as a dedicated background task (see `.planning/milestones/v2.13-phases/LEXCV-107-m-dulos-documentos-financeiro/deferred-items.md` for full root-cause detail and a suggested fix) — high priority, blocks a core product feature app-wide, recommend fixing before this milestone's remaining phases rely on any document-upload live testing.
 - ~~`MINIO_ENDPOINT` environmental blocker (recurring across v2.8/v2.9/v2.10 sessions, prevents full Spring context startup for live UAT)~~ — **RESOLVED (2026-07-14, v2.11 Phase 97 AUD-04):** `backend/.env` (gitignored, not committed) now supplies a real `MINIO_ENDPOINT=http://localhost:9000` plus working credentials against a running `lexcv_minio` Docker container the user started deliberately for this session. The Spring context now boots fully — `MinioConfig.s3Client()` no longer throws the "Illegal character ... `${MINIO_ENDPOINT}`" `IllegalArgumentException` that previously blocked every controller from becoming reachable. `backend/.env.example` already documents all required `MINIO_*` vars (`MINIO_ENDPOINT`, `MINIO_PUBLIC_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET_NAME`) for any future environment. This is an environment/config resolution, not a code fix — no source files were modified to close this blocker; it was never a code defect (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md`).
@@ -218,14 +220,16 @@ executores registaram-nos como PENDENTE em vez de os simular.
   `127-add-user-tenant-role-table.sql`, `128-add-audit-log-detalhe.sql`). O inventário autoritativo é
   `backend/migrations/README.md` — e ele próprio avisa para não tratar documentos de planeamento como
   registo do que já correu.
+
 - **IN-02 aceite, não corrigido:** `GlobalExceptionHandler` devolve `ex.getMessage()` ao cliente.
   Mudá-lo afecta todo o backend e é decisão maior do que uma correcção de fase.
+
 - **Dois ITs de Testcontainers** compilam mas não correm localmente (npipe do Docker); esperados em CI.
 - **Pergunta de produto em aberto:** um papel criado de raiz pelo escritório (`moldeId` nulo) deve
   poder ter responsáveis de processo? Hoje não pode, preservado deliberadamente da Phase 126.
+
 - **Lacuna do projecto, não deste marco:** `workflow.nyquist_validation` está activo mas nenhuma fase
   produziu um `VALIDATION.md` em toda a história do repositório.
-
 
 Items acknowledged and deferred at milestone v2.10 close on 2026-07-10 (see `.planning/milestones/v2.10-MILESTONE-AUDIT.md` for full detail — 0 cross-phase integration gaps found; only 2 non-blocking WARNINGs, neither requiring a fix before close). Most are now in-scope for v2.11 (see Pending Todos above for explicit requirement ownership):
 

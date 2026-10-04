@@ -8,24 +8,45 @@ LexCV é uma plataforma institucional de gestão jurídica para Cabo Verde, alin
 
 Permitir que uma instituição gerencie o ciclo completo de processos jurídicos (cliente → processo → prazos → documentos → financeiro) num único painel, com isolamento rigoroso por tenant.
 
-## Current Milestone: nenhum activo
+## Current Milestone: v3.0 Faturação Eletrónica (eFatura CV)
 
-O marco **v2.18 Rebrand ALCv → LexCV** foi enviado a 2026-09-24 (Phases 129–132, 4 planos, 9/9
-requisitos). Detalhe em `.planning/MILESTONES.md` e `.planning/milestones/v2.18-*`.
+**Goal:** Cada pagamento registado no LexCV — honorários que um escritório recebe de um cliente, ou
+a subscrição que um escritório paga à plataforma — emite uma Fatura-Recibo eletrónica conforme o
+eFatura de Cabo Verde, com o sistema pronto a ligar-se ao eFatura da DNRE quando houver credenciais.
 
-A próxima fase é a **133** — a numeração nunca reinicia. Abrir o próximo marco com
-`/gsd:new-milestone`.
+**Target features:**
+- Fatura-Recibo emitida na mesma operação que regista o pagamento — imutável, numerada
+  sequencialmente por série e por emitente
+- Nota de Crédito como única forma de corrigir/anular (total ou parcial), revertendo o saldo da
+  conta corrente; um pagamento já faturado deixa de poder ser apagado
+- Dois emitentes: cada escritório (tenant) fatura os seus clientes; a plataforma LexCV fatura os
+  escritórios — cada um com dados fiscais próprios (NIF, morada, regime de IVA)
+- Pagamento de subscrição registado manualmente pelo `PLATAFORMA_ADMIN` em `/plataforma`, emitindo
+  a Fatura-Recibo da LexCV para o NIF do escritório
+- Adaptador eFatura atrás de uma interface: geração do documento no formato exigido, implementação
+  simulada, estado de comunicação por documento — a ligação real fica para quando houver
+  credenciais/certificado
+- PDF da fatura com os elementos legais + envio por email ao cliente (primeiro canal SMTP do
+  projeto)
+- Regras fiscais aplicáveis a serviços jurídicos (IVA, isenções, retenção na fonte) definidas pela
+  pesquisa do marco, não assumidas
 
-**Uma dívida do v2.18 que não é código e sobrevive ao fecho:**
-- 10ª migração manual pendente numa base de dados de cliente (`131-rename-tenant-reservado-lexcv.sql`,
-  junta-se às 9 já pendentes desde o v2.17). O inventário autoritativo é
-  `backend/migrations/README.md`, não documentos de planeamento.
+**Key context:**
+- Fora deste marco: ligação real ao eFatura (credenciais, certificado, homologação) e pagamento
+  online (Vinti4/SISP)
+- O email é exclusivo para documentos fiscais; as notificações continuam in-app — revisão parcial,
+  explícita, da exclusão "Notificações push / email externas"
+- Pagamentos já existentes não são faturados retroativamente
+- Séries, numeração e documentos isolados por tenant (a fronteira de isolamento de sempre)
 
-**Duas dívidas do v2.17 que não são código e sobrevivem ao fecho:**
-- 9 migrações manuais pendentes numa base de dados de cliente, 4 delas novas nesse marco (124, 126,
-  127, 128). O inventário autoritativo é `backend/migrations/README.md`, não documentos de
-  planeamento.
-- 4 listas de verificação ao vivo em aberto (fases 124, 125, 127, 128). Nenhuma indica defeito.
+A numeração de fases continua na **133** — nunca reinicia.
+
+**Dívidas operacionais herdadas (não são código, sobrevivem à abertura deste marco):**
+- 10 migrações manuais pendentes numa base de dados de cliente (9 do v2.17 + `131-rename-tenant-
+  reservado-lexcv.sql` do v2.18). O inventário autoritativo é `backend/migrations/README.md`, não
+  documentos de planeamento.
+- 4 listas de verificação ao vivo em aberto do v2.17 (fases 124, 125, 127, 128). Nenhuma indica
+  defeito.
 
 ## Requirements
 
@@ -132,7 +153,15 @@ A próxima fase é a **133** — a numeração nunca reinicia. Abrir o próximo 
 
 ### Active
 
-Nenhum requisito activo. O próximo marco define os seus com `/gsd:new-milestone`.
+<!-- v3.0 — detalhe com REQ-IDs em .planning/REQUIREMENTS.md -->
+
+- [ ] Fatura-Recibo eletrónica emitida atomicamente com cada pagamento de honorários (escritório → cliente)
+- [ ] Fatura-Recibo eletrónica emitida com cada pagamento de subscrição (LexCV → escritório), registado em `/plataforma`
+- [ ] Nota de Crédito para anular/corrigir documentos emitidos; documentos fiscais imutáveis
+- [ ] Séries e numeração sequencial por emitente, isoladas por tenant
+- [ ] Dados fiscais do emitente (NIF, morada, regime de IVA) por escritório e para a plataforma
+- [ ] Adaptador eFatura (interface + implementação simulada) com estado de comunicação por documento
+- [ ] PDF da fatura com elementos legais e envio por email ao cliente
 
 Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais a um marco futuro:
 - Tecto de permissões por plano de subscrição (`TenantPlano` × catálogo) — TECT-01/TECT-02
@@ -146,9 +175,10 @@ Reconhecidos e fora do v2.17 por decisão explícita, candidatos naturais a um m
 - Integração técnica real com o SIJ (API, troca de dados, autenticação) — a v2.15 corrigiu apenas o posicionamento/copy institucional (ALCv descreve-se como alinhado ao ecossistema do SIJ); nenhuma integração técnica com o sistema judicial foi construída ou está planeada
 - Integração real com Keycloak — adiar até existir backend de autenticação institucional
 - Regras de negócio avançadas (cálculo de honorários, prazos jurídicos, workflows) — responsabilidade do backend
-- Contabilidade completa/ERP — fora do MVP
+- Contabilidade completa/ERP — fora do MVP (a v3.0 emite documentos fiscais, não faz contabilidade)
+- Pagamento online (Vinti4/SISP ou outro gateway) — v3.0 regista pagamentos recebidos fora do sistema; cobrar online é um marco próprio
 - Mobile app nativo — Web/PWA primeiro; desktop via Tauri numa fase posterior
-- Notificações push / email externas — mantém-se in-app apenas (decisão confirmada na v2.10, reconfirmada na v2.11)
+- Notificações push / email externas — mantém-se in-app apenas (decisão confirmada na v2.10, reconfirmada na v2.11) — revista parcialmente na v3.0: o email passa a existir só para enviar documentos fiscais (faturas/notas de crédito) ao cliente; as notificações continuam in-app
 - Recorrência infinita (sem data de fim) — requer paginação especial, adiado
 - Editar todas as instâncias futuras de uma série — apenas "esta instância" ou "toda a série"
 - Novo campo de data de vencimento em `Honorario` — alerta de prazo de honorário usa dias sem pagamento total desde `dataAcordo` em vez de uma data explícita
@@ -351,7 +381,7 @@ Ver `.planning/MILESTONES.md` para histórico completo desde v1.0.
 
 </details>
 
-**Current focus:** Nenhum — v2.16 fechado. Próxima milestone por definir via `/gsd:new-milestone`.
+**Current focus:** v3.0 Faturação Eletrónica (eFatura CV) — a definir requisitos.
 
 ## Evolution
 
@@ -371,4 +401,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-24 after v2.18 milestone*
+*Last updated: 2026-10-04 after v3.0 milestone start*
