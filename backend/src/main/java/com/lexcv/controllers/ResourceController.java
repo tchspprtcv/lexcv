@@ -20,6 +20,10 @@ import com.lexcv.dtos.UserSummaryResponse;
 import com.lexcv.models.*;
 import com.lexcv.repositories.*;
 import com.lexcv.services.ResolucaoPapeisService;
+import com.lexcv.dtos.PagamentoRequest;
+import com.lexcv.services.fiscal.DocumentoFiscalService;
+import com.lexcv.services.fiscal.PagamentoFaturadoService;
+import com.lexcv.services.fiscal.ResultadoPagamentoFaturado;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -83,6 +87,9 @@ public class ResourceController {
     // secondary client before it is deleted -- see the migration loop there for context.
     private final ParecerSolicitacaoRepository parecerSolicitacaoRepository;
     private final ResolucaoPapeisService resolucaoPapeisService;
+    // Phase 134: as duas únicas portas para dados fiscais (emissão e leitura de documentos).
+    private final PagamentoFaturadoService pagamentoFaturadoService;
+    private final DocumentoFiscalService documentoFiscalService;
 
     // ==========================================
     // INTAKE & CONFLICT CHECK — campos mínimos por tipo_processo
@@ -139,6 +146,11 @@ public class ResourceController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
         return principal.getTenantId();
+    }
+
+    private UserPrincipal principalAtual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (UserPrincipal) auth.getPrincipal();
     }
 
     /**
@@ -3036,9 +3048,30 @@ public class ResourceController {
         return ResponseEntity.ok(pagamentoRepository.findByHonorarioId(id));
     }
 
+    /**
+     * Phase 134 (D-11, CFG-03): com a faturação ativa no escritório, o registo do pagamento delega
+     * no {@code PagamentoFaturadoService}, que emite a Fatura-Recibo na mesma transação (201 numa
+     * emissão nova, 200 numa chave de idempotência repetida). Com a faturação desligada, segue o
+     * caminho de sempre, {@link #registarPagamentoLegado}, sem nenhuma alteração. Este método NÃO é
+     * {@code @Transactional} (P-02): o serviço é dono da sua transação e o ramo legado engole a falha
+     * da conta corrente, que numa transação partilhada a tornaria rollback-only.
+     */
     @PreAuthorize("hasAuthority('financeiro:edit')")
     @PostMapping("/pagamentos")
-    public ResponseEntity<?> createPagamento(@RequestBody Pagamento pag) {
+    public ResponseEntity<?> createPagamento(@RequestBody PagamentoRequest req) {
+        UUID tenantId = getTenantId();
+        if (pagamentoFaturadoService.faturacaoAtiva(tenantId)) {
+            ResultadoPagamentoFaturado r = pagamentoFaturadoService.registar(tenantId, principalAtual(), req);
+            return ResponseEntity.status(r.novo() ? HttpStatus.CREATED : HttpStatus.OK).body(r.resposta());
+        }
+        return registarPagamentoLegado(req.paraPagamentoLegado());
+    }
+
+    /**
+     * Registo de pagamento com a faturação desligada: o corpo do antigo {@code createPagamento},
+     * movido palavra por palavra (o SHA-256 do texto está fixado pelo teste-guarda CFG-03).
+     */
+    private ResponseEntity<?> registarPagamentoLegado(Pagamento pag) {
         if (pag.getHonorarioId() == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "honorarioId é obrigatório"));
         }

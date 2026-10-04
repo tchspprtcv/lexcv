@@ -154,7 +154,9 @@ class ResourceControllerUploadDocumentoTest {
                 pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
                 auditLogRepository, storageService, riscoPrazoService, notificacaoService,
                 clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
-                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService);
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService,
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.PagamentoFaturadoService.class),
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.DocumentoFiscalService.class));
 
         ResponseEntity<?> response = controller.uploadDocumento(file, PROCESSO_ID, null, null, null, null);
 
@@ -225,7 +227,9 @@ class ResourceControllerUploadDocumentoTest {
                 pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
                 auditLogRepository, storageService, riscoPrazoService, notificacaoService,
                 clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
-                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService);
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService,
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.PagamentoFaturadoService.class),
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.DocumentoFiscalService.class));
 
         ResponseEntity<?> response = controller.uploadDocumento(file, null, CLIENTE_ID, null, null, null);
 

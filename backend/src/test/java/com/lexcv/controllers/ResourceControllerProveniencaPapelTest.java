@@ -112,7 +112,9 @@ class ResourceControllerProveniencaPapelTest {
                 pagamentoRepository, conflictCheckDecisaoRepository, prazoRepository, userRepository,
                 auditLogRepository, storageService, riscoPrazoService, notificacaoService,
                 clienteAdvogadoRepository, clienteAdministrativoRepository, decisaoRepository,
-                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService);
+                testemunhaRepository, factoRepository, parecerSolicitacaoRepository, resolucaoPapeisService,
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.PagamentoFaturadoService.class),
+                org.mockito.Mockito.mock(com.lexcv.services.fiscal.DocumentoFiscalService.class));
     }
 
     private void mockarClienteDoTenant() {
