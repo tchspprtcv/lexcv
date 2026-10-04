@@ -37,12 +37,13 @@ import { podeLerDocumentosFiscais, useEstadoEmissao } from "@/hooks/use-faturaca
 import {
   useCreatePagamento,
   useDeleteHonorario,
-  useDeletePagamento,
   useHonorario,
   useHonorarioPagamentos,
   useUpdateHonorario,
 } from "@/hooks/use-financeiro";
 import { toast } from "@/hooks/use-toast";
+import { isApiError } from "@/lib/api";
+import { mensagemGuardaFiscal } from "@/lib/erros-emissao";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useProcesso } from "@/hooks/use-processos";
 import {
@@ -54,6 +55,7 @@ import {
 import type { HonorarioUpdateRequest, PagamentoCreateRequest } from "@/types/financeiro";
 
 import { PagamentoFaturadoForm } from "./pagamento-faturado-form";
+import { PagamentosCard } from "./pagamentos-card";
 
 type PageProps = {
   params: { id: string };
@@ -142,7 +144,6 @@ function HonorarioDetailContent({
   const createPagamento = useCreatePagamento();
   const updateHonorario = useUpdateHonorario();
   const deleteHonorario = useDeleteHonorario();
-  const deletePagamento = useDeletePagamento();
   const permissions = usePermissions();
   // Phase 134 (D-02): o estado de emissão decide qual dos formulários de pagamento aparece. Gate
   // exato `financeiro:view` (o mesmo do backend), e só para quem pode registar pagamentos.
@@ -153,6 +154,9 @@ function HonorarioDetailContent({
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [deleteHonorarioError, setDeleteHonorarioError] = React.useState<string | null>(null);
+  const [deleteHonorarioOpen, setDeleteHonorarioOpen] = React.useState(false);
+  // 409 (guarda fiscal ou honorário com pagamentos): mostrado DENTRO do diálogo, sem toast.
+  const [deleteHonorarioGuarda, setDeleteHonorarioGuarda] = React.useState<string | null>(null);
 
   const form = useForm<PagamentoFormValues>({
     resolver: zodResolver(pagamentoFormSchema),
@@ -218,27 +222,29 @@ function HonorarioDetailContent({
     }
   };
 
-  const onDeleteHonorario = async () => {
+  const onDeleteHonorario = async (ev: React.MouseEvent) => {
+    ev.preventDefault();
     setDeleteHonorarioError(null);
+    setDeleteHonorarioGuarda(null);
     try {
       await deleteHonorario.mutateAsync(honorarioId);
+      setDeleteHonorarioOpen(false);
       toast.success("Honorário apagado com sucesso.");
       router.push("/financeiro");
     } catch (e) {
+      const guarda =
+        mensagemGuardaFiscal(e) ?? (isApiError(e) && e.status === 409 ? e.message : null);
+      if (guarda) {
+        setDeleteHonorarioGuarda(guarda);
+        return;
+      }
+      setDeleteHonorarioOpen(false);
       const msg = e instanceof Error ? e.message : "Erro ao apagar honorário";
       setDeleteHonorarioError(msg);
       toast.error(msg);
     }
   };
-  
-  const handleDeletePagamento = async (pagamentoId: number, honorarioId: number) => {
-    try {
-      await deletePagamento.mutateAsync({ pagamentoId, honorarioId });
-      toast.success("Pagamento apagado com sucesso.");
-    } catch {
-      toast.error("Erro ao apagar pagamento.");
-    }
-  };
+
 
   const isLoading =
     honorario.isLoading || processo.isLoading || cliente.isLoading || pagamentos.isLoading;
@@ -362,7 +368,14 @@ function HonorarioDetailContent({
 
           {canManageFinanceiro && honorario.data ? (
             <>
-              <AlertDialog>
+              <AlertDialog
+                open={deleteHonorarioOpen}
+                onOpenChange={(aberto) => {
+                  if (deleteHonorario.isPending) return;
+                  setDeleteHonorarioOpen(aberto);
+                  if (!aberto) setDeleteHonorarioGuarda(null);
+                }}
+              >
                 <AlertDialogTrigger asChild>
                   <Button className="bg-red-600 hover:bg-red-700 text-white">
                     <Trash2 className="h-4 w-4" />
@@ -375,12 +388,20 @@ function HonorarioDetailContent({
                     <AlertDialogDescription>
                       Esta ação é irreversível. Se o honorário tiver pagamentos registados, a operação será rejeitada.
                     </AlertDialogDescription>
+                    {deleteHonorarioGuarda ? (
+                      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                        {deleteHonorarioGuarda}
+                      </p>
+                    ) : null}
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel disabled={deleteHonorario.isPending}>
+                      {deleteHonorarioGuarda ? "Fechar" : "Cancelar"}
+                    </AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-red-600 hover:bg-red-700 text-white"
                       onClick={onDeleteHonorario}
+                      disabled={deleteHonorario.isPending}
                     >
                       {deleteHonorario.isPending ? "A apagar..." : "Apagar"}
                     </AlertDialogAction>
@@ -531,72 +552,11 @@ function HonorarioDetailContent({
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Pagamentos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!pagamentos.data?.length ? (
-                <div className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum pagamento registado.</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-left text-neutral-500 dark:text-neutral-400">
-                      <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                        <th className="py-2 pr-4 font-medium">Data</th>
-                        <th className="py-2 pr-4 font-medium">Valor</th>
-                        <th className="py-2 pr-4 font-medium">Método</th>
-                        <th className="py-2 pr-4 font-medium">ID</th>
-                        <th className="py-2 font-medium"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(pagamentos.data ?? []).map((p) => (
-                        <tr
-                          key={p.id}
-                          className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
-                        >
-                          <td className="py-2 pr-4">{formatDate(p.dataPagamento)}</td>
-                          <td className="py-2 pr-4">{formatMoneyCVE(p.valorPago)}</td>
-                          <td className="py-2 pr-4">{p.metodo ?? "—"}</td>
-                          <td className="py-2 pr-4">#{p.id}</td>
-                          <td className="py-2 pl-4">
-                            {canManageFinanceiro ? (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                    <Trash2 className="h-4 w-4" />
-                                    Apagar
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Apagar pagamento?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      O valor pago será revertido na conta-corrente do cliente.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      className="bg-red-600 hover:bg-red-700 text-white"
-                                      onClick={() => handleDeletePagamento(p.id, honorarioId)}
-                                    >
-                                      Apagar
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PagamentosCard
+            pagamentos={pagamentos.data}
+            honorarioId={honorarioId}
+            canManageFinanceiro={canManageFinanceiro}
+          />
         </div>
       )}
     </div>
