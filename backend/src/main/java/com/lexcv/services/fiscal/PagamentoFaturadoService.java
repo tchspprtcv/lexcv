@@ -206,7 +206,9 @@ public class PagamentoFaturadoService {
         CalculoFiscal.ResultadoCalculo calculo = projeto.calculo();
 
         // 9. Conta corrente: criar sem corrida, lock como primeira leitura, crédito do TOTAL (D-09).
-        contaCorrenteRepository.criarSeNaoExiste(clienteId);
+        //    O INSERT ... ON CONFLICT pode esperar por um INSERT concorrente ainda sem commit: com o
+        //    lock_timeout, essa espera também é 503 FATURACAO_OCUPADA, não 500 (IN-04 da revisão).
+        bloquear(() -> contaCorrenteRepository.criarSeNaoExiste(clienteId));
         ContaCorrente cc = bloquear(() -> contaCorrenteRepository.bloquearPorCliente(clienteId))
                 .orElseThrow(() -> new IllegalStateException("Conta corrente inexistente depois do INSERT ON CONFLICT"));
         BigDecimal saldo = cc.getSaldo() == null ? BigDecimal.ZERO : cc.getSaldo();

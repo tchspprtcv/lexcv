@@ -799,6 +799,20 @@ class PagamentoFaturadoServiceTest {
         verify(documentoRepo, never()).save(any());
     }
 
+    @ParameterizedTest
+    @MethodSource("falhasDeLock")
+    void esperaNoInsertDaContaCorrenteDevolve503(RuntimeException falha) {
+        // IN-04 da revisão: o INSERT ... ON CONFLICT espera por um INSERT concorrente sem commit.
+        tudoPresente(cfg(RegimeIva.NORMAL, true));
+        when(ccRepo.criarSeNaoExiste(cliente.getId())).thenThrow(falha);
+
+        assertRecusa(recusa(req()), HttpStatus.SERVICE_UNAVAILABLE, "FATURACAO_OCUPADA");
+        verify(ccRepo, never()).bloquearPorCliente(any());
+        verify(pagamentoRepo, never()).save(any());
+        verify(numeracao, never()).proximoNumero(any(), any(), any());
+        verify(documentoRepo, never()).save(any());
+    }
+
     @Test
     void serieIndisponivelPropagaSemAlteracao() {
         tudoPresente(cfg(RegimeIva.NORMAL, true));
