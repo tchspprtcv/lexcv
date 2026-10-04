@@ -1,7 +1,8 @@
 ---
 phase: 134
 slug: fatura-recibo-atomica-nos-honorarios
-status: draft
+status: approved
+reviewed_at: 2026-10-04
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, lucide) -- existing, not changed by this phase
 created: 2026-10-04
@@ -332,3 +333,10 @@ All copy in Portuguese (Cabo Verde), no emojis, sentence case.
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+
+## Checker clarifications (2026-10-04, applied by orchestrator)
+
+- Surface 2: for a faturado payment the delete button is HIDDEN (not rendered) and replaced by the explanatory text line; there is no disabled button.
+- Surface 2: the "Documento fiscal" column is kept at all widths; the table wrapper scrolls horizontally.
+- Detail page: the "Pendente" badge uses helper text (no tooltip) — no new component needed.
+- List page: the "Ambiente" column is hidden below `md` via view-options defaults; the detail page badge row is always visible.
