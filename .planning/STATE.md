@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 133-02-PLAN.md
-last_updated: "2026-10-04T13:00:00.000Z"
-last_activity: 2026-10-04 — Completed 133-02 (fiscal parameters with vigência)
+stopped_at: Completed 133-03-PLAN.md
+last_updated: "2026-10-04T13:10:00.000Z"
+last_activity: 2026-10-04 — Completed 133-03 (gapless fiscal numbering, concurrency IT green)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 8
-  completed_plans: 3
-  percent: 38
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 133 of 139 (Fundação Fiscal)
-Plan: 4 of 8
-Status: Executing — 133-01, 133-02, 133-06 complete, next 133-03
-Last activity: 2026-10-04 — Completed 133-02 (ParametroFiscalService vigência, seeded IVA 15 / retenção 20, no-constant gate, demo NIF, financeiro:manage label)
+Plan: 5 of 8
+Status: Executing — 133-01, 133-02, 133-03, 133-06 complete, next 133-04
+Last activity: 2026-10-04 — Completed 133-03 (NumeracaoService: lock_timeout 5s + INSERT ON CONFLICT + FOR UPDATE in caller tx (MANDATORY), Cabo Verde year; 9/9 Testcontainers concurrency scenarios green)
 
 ## Performance Metrics
 
@@ -147,6 +147,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 133]: ITs on Docker >= 29 need ~/.docker-java.properties api.version=1.44 (Testcontainers 1.20.4 defaults to API 1.32); environment-only, not committed
 - [Phase 133]: apiFetch throws ApiError (extends Error; status/code/campo/body) with unchanged `API <status>: <msg>` message; optional 3rd param { semToastParaStatus } suppresses the auto toast for inline-handled statuses
 - [Phase 133]: Fiscal rates are percentage rows in t_parametro_fiscal (IVA_TAXA_NORMAL 15, RETENCAO_SUGERIDA 20 @2000-01-01), seeded insert-only every boot; ParametroFiscalService is the single reader (503 PARAMETRO_FISCAL_EM_FALTA); ParametrosFiscaisSemConstantesTest forbids rate literals in src/main/java
+- [Phase 133]: NumeracaoService.proximoNumero is MANDATORY and must be the LAST lock in the caller tx (conta corrente first, series last); year/dataEmissao from Clock in Atlantic/Cape_Verde; lock not obtained in 5s -> 503 SERIE_INDISPONIVEL
 
 ### Pending Todos
 
@@ -315,8 +316,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T12:39:16.153Z
-Stopped at: Completed 133-01-PLAN.md
+Last session: 2026-10-04T13:10:00.000Z
+Stopped at: Completed 133-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
