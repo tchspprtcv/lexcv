@@ -3111,8 +3111,9 @@ public class ResourceController {
     /**
      * Phase 134 (D-11, CFG-03): com a faturação ativa no escritório, o registo do pagamento delega
      * no {@code PagamentoFaturadoService}, que emite a Fatura-Recibo na mesma transação (201 numa
-     * emissão nova, 200 numa chave de idempotência repetida). Com a faturação desligada, segue o
-     * caminho de sempre, {@link #registarPagamentoLegado}, sem nenhuma alteração. Este método NÃO é
+     * emissão nova, 200 numa chave de idempotência repetida). Com a faturação desligada, uma chave
+     * que já tenha documento devolve-o (200, WR-05 da revisão); caso contrário segue o caminho de
+     * sempre, {@link #registarPagamentoLegado}, sem nenhuma alteração. Este método NÃO é
      * {@code @Transactional} (P-02): o serviço é dono da sua transação e o ramo legado engole a falha
      * da conta corrente, que numa transação partilhada a tornaria rollback-only.
      */
@@ -3123,6 +3124,13 @@ public class ResourceController {
         if (pagamentoFaturadoService.faturacaoAtiva(tenantId)) {
             ResultadoPagamentoFaturado r = pagamentoFaturadoService.registar(tenantId, principalAtual(), req);
             return ResponseEntity.status(r.novo() ? HttpStatus.CREATED : HttpStatus.OK).body(r.resposta());
+        }
+        // WR-05 da revisão: com a faturação desligada, uma chave de idempotência que já tem
+        // Fatura-Recibo (emitida antes de desligar) devolve o resultado guardado em vez de criar
+        // um segundo pagamento sem documento. Corre ANTES do ramo legado, que fica intocado.
+        Optional<ResultadoPagamentoFaturado> repetido = pagamentoFaturadoService.resultadoGuardado(tenantId, req);
+        if (repetido.isPresent()) {
+            return ResponseEntity.ok(repetido.get().resposta());
         }
         return registarPagamentoLegado(req.paraPagamentoLegado());
     }

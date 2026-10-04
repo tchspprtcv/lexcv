@@ -257,6 +257,40 @@ class ResourceControllerPagamentoTest {
         verifyNoInteractions(contaCorrenteRepository);
     }
 
+    @Test
+    void desligadaComChaveJaEmitidaDevolveOResultadoGuardadoSemCaminhoLegado() {
+        // WR-05 da revisão: a FR foi emitida antes de a faturação ser desligada; a repetição do
+        // pedido devolve-a em vez de registar um segundo pagamento sem documento.
+        when(pagamentoFaturadoService.faturacaoAtiva(TENANT_ID)).thenReturn(false);
+        PagamentoComDocumentoResponse guardada = resposta();
+        PagamentoRequest req = new PagamentoRequest(1, new BigDecimal("100.00"), null, "DINHEIRO", null,
+                UUID.randomUUID());
+        when(pagamentoFaturadoService.resultadoGuardado(TENANT_ID, req))
+                .thenReturn(Optional.of(ResultadoPagamentoFaturado.repetido(guardada)));
+
+        ResponseEntity<?> r = controller.createPagamento(req);
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertSame(guardada, r.getBody());
+        verify(pagamentoFaturadoService, never()).registar(any(), any(), any());
+        verifyNoInteractions(pagamentoRepository, contaCorrenteRepository, honorarioRepository, processoRepository);
+    }
+
+    @Test
+    void desligadaComChaveSemDocumentoSegueOCaminhoLegado() {
+        desligada();
+        contaCorrenteComSaldo("50.00");
+        PagamentoRequest req = new PagamentoRequest(1, new BigDecimal("100.00"), null, "DINHEIRO", null,
+                UUID.randomUUID());
+        when(pagamentoFaturadoService.resultadoGuardado(TENANT_ID, req)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> r = controller.createPagamento(req);
+
+        assertEquals(HttpStatus.CREATED, r.getStatusCode());
+        verify(pagamentoFaturadoService).resultadoGuardado(TENANT_ID, req);
+        verify(pagamentoRepository).save(any(Pagamento.class));
+    }
+
     // ------------------------------------------------------------------ faturação ativa
 
     private PagamentoComDocumentoResponse resposta() {

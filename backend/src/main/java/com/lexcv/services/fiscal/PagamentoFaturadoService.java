@@ -72,7 +72,8 @@ import java.util.function.Supplier;
  * {@code findByClienteId} neste caminho); o controlador decide a delegação pelo escalar
  * {@link #faturacaoAtiva}.
  *
- * <p><b>Idempotência (D-10):</b> a procura pela chave corre DEPOIS do lock da configuração. Esse
+ * <p><b>Idempotência (D-10):</b> a procura pela chave corre DEPOIS do lock da configuração e
+ * ANTES da verificação da ativação (WR-05 da revisão; ver também {@link #resultadoGuardado}). Esse
  * lock serializa todas as emissões do escritório: um pedido repetido espera que o primeiro faça
  * commit e, em READ COMMITTED, cada instrução vê um snapshot novo, por isso a procura encontra o
  * documento já gravado. Mesma chave e mesmo pedido → o mesmo resultado; mesma chave com valores
@@ -146,25 +147,21 @@ public class PagamentoFaturadoService {
         // 2. lock_timeout local à transação: limita TODOS os locks abaixo (Pitfall 3).
         serieFiscalRepository.definirLockTimeoutLocal();
 
-        // 3. Lock da configuração (primeiro lock, CR-01). A ativação pode ter mudado entre a
-        //    verificação escalar do controlador e este lock.
+        // 3. Lock da configuração (primeiro lock, CR-01). Sem configuração não há documentos.
         ConfiguracaoFiscal cfg = bloquear(() -> configuracaoFiscalRepository.bloquearPorTenant(tenantId))
-                .filter(c -> Boolean.TRUE.equals(c.getAtiva()))
-                .orElseThrow(() -> new RecusaFiscalException(HttpStatus.CONFLICT, "FATURACAO_DESLIGADA",
-                        PreVisualizacaoFaturaService.MSG_FATURACAO_DESLIGADA));
+                .orElseThrow(PagamentoFaturadoService::faturacaoDesligada);
 
-        // 4. Idempotência sob o lock da configuração (D-10).
-        Optional<DocumentoFiscal> existente = documentoFiscalRepository.findByTenantIdAndChaveIdempotencia(
-                tenantId, chave);
-        if (existente.isPresent()) {
-            DocumentoFiscal doc = existente.get();
-            if (!mesmoPedido(doc, req)) {
-                throw new RecusaFiscalException(HttpStatus.CONFLICT, "CHAVE_REUTILIZADA", MSG_CHAVE_REUTILIZADA);
-            }
-            Pagamento guardado = pagamentoRepository.findById(doc.getPagamentoId())
-                    .orElseThrow(() -> new IllegalStateException("Documento fiscal sem pagamento: " + doc.getId()));
-            return ResultadoPagamentoFaturado.repetido(
-                    PagamentoComDocumentoResponse.de(guardado, DocumentoFiscalRef.de(doc)));
+        // 4. Idempotência sob o lock da configuração (D-10), ANTES de olhar para a ativação
+        //    (WR-05 da revisão): um pedido repetido de uma FR já emitida devolve o resultado
+        //    guardado mesmo que a faturação tenha sido desligada entretanto.
+        Optional<ResultadoPagamentoFaturado> repetido = repetirSeJaEmitido(tenantId, chave, req);
+        if (repetido.isPresent()) {
+            return repetido.get();
+        }
+
+        // 4b. A ativação pode ter mudado entre a verificação escalar do controlador e o lock.
+        if (!Boolean.TRUE.equals(cfg.getAtiva())) {
+            throw faturacaoDesligada();
         }
 
         // 5. Honorário → cliente do processo (escalar, tenant-scoped; nada fica no contexto).
@@ -310,6 +307,47 @@ public class PagamentoFaturadoService {
     }
 
     /**
+     * WR-05 da revisão: com a faturação DESLIGADA, um pedido que traz uma chave de idempotência
+     * pode ser a repetição de uma Fatura-Recibo emitida antes de a faturação ser desligada (o
+     * cliente não recebeu a resposta). O controlador chama isto antes do caminho legado: se a chave
+     * já tiver documento, devolve o resultado guardado (ou 409 CHAVE_REUTILIZADA com valores
+     * diferentes) em vez de registar um segundo pagamento sem documento. Sem chave, ou sem
+     * documento para ela, devolve vazio e o caminho legado segue inalterado.
+     *
+     * <p>Toma o mesmo lock da configuração que {@link #registar} (sem filtrar pela ativação), por
+     * isso espera pelo commit de uma emissão em curso com a mesma chave e encontra-a.
+     */
+    @Transactional
+    public Optional<ResultadoPagamentoFaturado> resultadoGuardado(UUID tenantId, PagamentoRequest req) {
+        Objects.requireNonNull(tenantId, "tenantId");
+        if (req == null || req.chaveIdempotencia() == null) {
+            return Optional.empty();
+        }
+        serieFiscalRepository.definirLockTimeoutLocal();
+        if (bloquear(() -> configuracaoFiscalRepository.bloquearPorTenant(tenantId)).isEmpty()) {
+            return Optional.empty();
+        }
+        return repetirSeJaEmitido(tenantId, req.chaveIdempotencia(), req);
+    }
+
+    /** Resultado guardado para a chave, 409 CHAVE_REUTILIZADA se o pedido difere, ou vazio. */
+    private Optional<ResultadoPagamentoFaturado> repetirSeJaEmitido(UUID tenantId, UUID chave, PagamentoRequest req) {
+        Optional<DocumentoFiscal> existente = documentoFiscalRepository.findByTenantIdAndChaveIdempotencia(
+                tenantId, chave);
+        if (existente.isEmpty()) {
+            return Optional.empty();
+        }
+        DocumentoFiscal doc = existente.get();
+        if (!mesmoPedido(doc, req)) {
+            throw new RecusaFiscalException(HttpStatus.CONFLICT, "CHAVE_REUTILIZADA", MSG_CHAVE_REUTILIZADA);
+        }
+        Pagamento guardado = pagamentoRepository.findById(doc.getPagamentoId())
+                .orElseThrow(() -> new IllegalStateException("Documento fiscal sem pagamento: " + doc.getId()));
+        return Optional.of(ResultadoPagamentoFaturado.repetido(
+                PagamentoComDocumentoResponse.de(guardado, DocumentoFiscalRef.de(doc))));
+    }
+
+    /**
      * O pedido repetido é o mesmo que gerou {@code doc}? Compara honorário, valor (por
      * {@code compareTo}), método (sem espaços, sem distinguir maiúsculas), retenção (null-safe) e,
      * quando enviada, a data. Nunca lança: um valor malformado conta como diferente.
@@ -347,6 +385,11 @@ public class PagamentoFaturadoService {
             log.warn("Lock da emissão fiscal não obtido: {}", e.getClass().getSimpleName());
             throw new RecusaFiscalException(HttpStatus.SERVICE_UNAVAILABLE, "FATURACAO_OCUPADA", MSG_FATURACAO_OCUPADA);
         }
+    }
+
+    private static RecusaFiscalException faturacaoDesligada() {
+        return new RecusaFiscalException(HttpStatus.CONFLICT, "FATURACAO_DESLIGADA",
+                PreVisualizacaoFaturaService.MSG_FATURACAO_DESLIGADA);
     }
 
     private static RecusaFiscalException honorarioNaoEncontrado() {

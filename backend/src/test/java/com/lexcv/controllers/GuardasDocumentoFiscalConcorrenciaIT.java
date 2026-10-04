@@ -92,7 +92,8 @@ import static org.mockito.Mockito.mock;
  * curso bloqueia apagar o honorário, que depois recusa com 409; (h) apagar o honorário em curso
  * faz a emissão, que já o tinha lido, falhar sem documento nem pagamento órfão (CR-01 da revisão);
  * (i/j) apagar um pagamento legado durante uma emissão ou uma fusão não perde nenhum movimento da
- * conta corrente (WR-01 da revisão).
+ * conta corrente (WR-01 da revisão); (k) repetir o pedido de uma FR já emitida depois de a
+ * faturação ser desligada devolve o mesmo resultado, sem segundo pagamento (WR-05 da revisão).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -615,6 +616,43 @@ class GuardasDocumentoFiscalConcorrenciaIT {
         assertNull(fixtura.saldo(secundario.clienteId()));
         assertEquals(0, new BigDecimal("1400.00").compareTo(fixtura.saldo(primario)),
                 "saldo: " + fixtura.saldo(primario));
+    }
+
+    // ------------------------------------------------------------------ k
+
+    @Test
+    void repeticaoDepoisDeDesligarAFaturacaoDevolveOMesmoResultado() {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        Cenario c = cenario(tenant, "k");
+        PagamentoRequest req = pedido(c.honorarioId());
+
+        ResponseEntity<?> primeira = comoUtilizador(tenant, () -> controller.createPagamento(req));
+        assertEquals(HttpStatus.CREATED, primeira.getStatusCode());
+        BigDecimal saldoDepoisDaEmissao = fixtura.saldo(c.clienteId());
+
+        // O administrador desliga a faturação antes de o cliente repetir o pedido (sem resposta).
+        jdbc.update("UPDATE t_configuracao_fiscal SET ativa = false WHERE tenant_id = ?", tenant);
+
+        ResponseEntity<?> repetida = comoUtilizador(tenant, () -> controller.createPagamento(req));
+
+        assertEquals(HttpStatus.OK, repetida.getStatusCode());
+        com.lexcv.dtos.PagamentoComDocumentoResponse a =
+                assertInstanceOf(com.lexcv.dtos.PagamentoComDocumentoResponse.class, primeira.getBody());
+        com.lexcv.dtos.PagamentoComDocumentoResponse b =
+                assertInstanceOf(com.lexcv.dtos.PagamentoComDocumentoResponse.class, repetida.getBody());
+        assertEquals(a.id(), b.id());
+        assertEquals(a.documentoFiscal().id(), b.documentoFiscal().id());
+        assertEquals(1, fixtura.contarPagamentos(c.honorarioId()));
+        assertEquals(1, fixtura.contarDocumentos(tenant));
+        assertEquals(0, saldoDepoisDaEmissao.compareTo(fixtura.saldo(c.clienteId())));
+
+        // Mesma chave com outro valor: 409, e continua sem segundo pagamento.
+        PagamentoRequest diferente = new PagamentoRequest(c.honorarioId(), new BigDecimal("1.00"), null, "DINHEIRO",
+                null, req.chaveIdempotencia());
+        RecusaFiscalException recusa = org.junit.jupiter.api.Assertions.assertThrows(RecusaFiscalException.class,
+                () -> comoUtilizador(tenant, () -> controller.createPagamento(diferente)));
+        assertEquals("CHAVE_REUTILIZADA", recusa.getCodigo());
+        assertEquals(1, fixtura.contarPagamentos(c.honorarioId()));
     }
 
     // ------------------------------------------------------------------ f

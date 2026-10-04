@@ -527,6 +527,72 @@ class PagamentoFaturadoServiceTest {
     }
 
     @Test
+    void configuracaoDesativadaEntretantoComChaveJaEmitidaDevolveOResultadoGuardado() {
+        // WR-05 da revisão: a idempotência é verificada antes da ativação.
+        comExistente(existente(new BigDecimal("20.00")));
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(RegimeIva.NORMAL, false)));
+
+        ResultadoPagamentoFaturado r = servico(RELOGIO).registar(tenant, autor, req());
+
+        assertFalse(r.novo());
+        assertEquals(55, r.resposta().id());
+        assertNadaMaisDepoisDaChave();
+    }
+
+    @Test
+    void resultadoGuardadoSemChaveNaoTocaEmNada() {
+        PagamentoRequest semChave = new PagamentoRequest(7, new BigDecimal("1"), null, "DINHEIRO", null, null);
+
+        assertTrue(servico(RELOGIO).resultadoGuardado(tenant, semChave).isEmpty());
+        verifyNoInteractions(configuracaoRepo, serieRepo, documentoRepo, pagamentoRepo);
+    }
+
+    @Test
+    void resultadoGuardadoSemConfiguracaoDevolveVazio() {
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.empty());
+
+        assertTrue(servico(RELOGIO).resultadoGuardado(tenant, req()).isEmpty());
+        verify(documentoRepo, never()).findByTenantIdAndChaveIdempotencia(any(), any());
+    }
+
+    @Test
+    void resultadoGuardadoComFaturacaoDesligadaDevolveODocumentoJaEmitido() {
+        comExistente(existente(new BigDecimal("20.00")));
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(RegimeIva.NORMAL, false)));
+
+        Optional<ResultadoPagamentoFaturado> r = servico(RELOGIO).resultadoGuardado(tenant, req());
+
+        assertTrue(r.isPresent());
+        assertFalse(r.get().novo());
+        assertEquals(documentoId, r.get().resposta().documentoFiscal().id());
+        InOrder ordem = inOrder(serieRepo, configuracaoRepo, documentoRepo);
+        ordem.verify(serieRepo).definirLockTimeoutLocal();
+        ordem.verify(configuracaoRepo).bloquearPorTenant(tenant);
+        ordem.verify(documentoRepo).findByTenantIdAndChaveIdempotencia(tenant, chave);
+        assertNadaEscrito();
+    }
+
+    @Test
+    void resultadoGuardadoComValoresDiferentesRecusaChaveReutilizada() {
+        comExistente(existente(new BigDecimal("20.00")));
+        PagamentoRequest outro = new PagamentoRequest(7, new BigDecimal("1.00"), null, "TRANSFERENCIA",
+                new BigDecimal("20"), chave);
+
+        RecusaFiscalException e = assertThrows(RecusaFiscalException.class,
+                () -> servico(RELOGIO).resultadoGuardado(tenant, outro));
+        assertRecusa(e, HttpStatus.CONFLICT, "CHAVE_REUTILIZADA");
+    }
+
+    @Test
+    void resultadoGuardadoSemDocumentoParaAChaveDevolveVazio() {
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(RegimeIva.NORMAL, false)));
+        when(documentoRepo.findByTenantIdAndChaveIdempotencia(tenant, chave)).thenReturn(Optional.empty());
+
+        assertTrue(servico(RELOGIO).resultadoGuardado(tenant, req()).isEmpty());
+        assertNadaEscrito();
+    }
+
+    @Test
     void semHonorarioRecusa422() {
         tudoPresente(cfg(RegimeIva.NORMAL, true));
         PagamentoRequest pedido = new PagamentoRequest(null, new BigDecimal("1"), null, "DINHEIRO", null, chave);
