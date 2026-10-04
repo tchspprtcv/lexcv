@@ -175,6 +175,7 @@ class PagamentoFaturadoServiceTest {
         when(processoRepo.clienteIdPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(cliente.getId()));
         when(clienteRepo.bloquearPorIdETenant(cliente.getId(), tenant)).thenReturn(Optional.of(cliente));
         when(processoRepo.bloquearPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(processo));
+        when(honorarioRepo.processoIdPorId(7)).thenReturn(Optional.of(processo.getId()));
         when(parametros.valorVigente(CodigoParametroFiscal.IVA_TAXA_NORMAL, dataNumero)).thenReturn(TAXA_IVA);
         when(ccRepo.criarSeNaoExiste(cliente.getId())).thenReturn(1);
         when(ccRepo.bloquearPorCliente(cliente.getId())).thenReturn(Optional.of(cc));
@@ -243,6 +244,7 @@ class PagamentoFaturadoServiceTest {
         ordem.verify(processoRepo).clienteIdPorIdETenant(processo.getId(), tenant);
         ordem.verify(clienteRepo).bloquearPorIdETenant(cliente.getId(), tenant);
         ordem.verify(processoRepo).bloquearPorIdETenant(processo.getId(), tenant);
+        ordem.verify(honorarioRepo).processoIdPorId(7);
         ordem.verify(parametros).valorVigente(CodigoParametroFiscal.IVA_TAXA_NORMAL, HOJE);
         ordem.verify(ccRepo).criarSeNaoExiste(cliente.getId());
         ordem.verify(ccRepo).bloquearPorCliente(cliente.getId());
@@ -585,6 +587,26 @@ class PagamentoFaturadoServiceTest {
         when(processoRepo.bloquearPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(movido));
 
         assertRecusa(recusa(req()), HttpStatus.CONFLICT, "PROCESSO_ALTERADO_TENTE_NOVAMENTE");
+        assertNadaEscrito();
+    }
+
+    @Test
+    void honorarioApagadoEnquantoEsperavaOLockDoProcessoRecusa404() {
+        // CR-01 da revisão: o honorário foi lido no passo 5, mas uma eliminação concorrente fez
+        // commit antes de o lock do processo ser concedido.
+        tudoPresente(cfg(RegimeIva.NORMAL, true));
+        when(honorarioRepo.processoIdPorId(7)).thenReturn(Optional.empty());
+
+        assertRecusa(recusa(req()), HttpStatus.NOT_FOUND, "HONORARIO_NAO_ENCONTRADO");
+        assertNadaEscrito();
+    }
+
+    @Test
+    void honorarioDeOutroProcessoDepoisDoLockRecusa404() {
+        tudoPresente(cfg(RegimeIva.NORMAL, true));
+        when(honorarioRepo.processoIdPorId(7)).thenReturn(Optional.of(UUID.randomUUID()));
+
+        assertRecusa(recusa(req()), HttpStatus.NOT_FOUND, "HONORARIO_NAO_ENCONTRADO");
         assertNadaEscrito();
     }
 

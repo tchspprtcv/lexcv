@@ -187,6 +187,16 @@ public class PagamentoFaturadoService {
         if (!cliente.getId().equals(processo.getClienteId())) {
             throw processoAlterado();
         }
+        // 7b. O honorário ainda existe neste processo (CR-01 da revisão)? Foi lido no passo 5 sem
+        //     lock; deleteHonorario serializa-se pelo lock do processo, por isso, com o lock já
+        //     concedido, uma eliminação concorrente já fez commit e este SELECT (escalar, nunca
+        //     a cache do contexto) vê-a. Sem esta verificação ficaria uma FR imutável e um
+        //     pagamento a apontar para um honorário inexistente (as colunas não têm FK).
+        if (!honorarioRepository.processoIdPorId(honorario.getId())
+                .map(processo.getId()::equals)
+                .orElse(false)) {
+            throw honorarioNaoEncontrado();
+        }
 
         // 8. "Hoje" (Cabo Verde) calculado UMA vez; taxa vigente nesse dia; composição partilhada
         //    com a pré-visualização (as recusas 422 acontecem aqui, antes de qualquer escrita).

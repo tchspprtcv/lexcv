@@ -88,7 +88,9 @@ import static org.mockito.Mockito.mock;
  * <p>Prova: (a/c) uma emissão em curso bloqueia apagar o cliente/processo, que depois recusa com
  * 409; (b) apagar o cliente em curso faz a emissão falhar sem órfãos; (d) a fusão espera a emissão
  * e re-aponta o documento sem mudar a fotografia do adquirente; (e) carga mista sem deadlock
- * (40P01) nem documento órfão; (f) faturação desligada não cria linhas fiscais.
+ * (40P01) nem documento órfão; (f) faturação desligada não cria linhas fiscais; (g) uma emissão em
+ * curso bloqueia apagar o honorário, que depois recusa com 409; (h) apagar o honorário em curso
+ * faz a emissão, que já o tinha lido, falhar sem documento nem pagamento órfão (CR-01 da revisão).
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -121,6 +123,12 @@ class GuardasDocumentoFiscalConcorrenciaIT {
 
     private static final String SQL_ORFAOS = "SELECT count(*) FROM t_documento_fiscal d "
             + "WHERE NOT EXISTS (SELECT 1 FROM t_cliente c WHERE c.id = d.cliente_id)";
+
+    private static final String SQL_ORFAOS_HONORARIO = "SELECT count(*) FROM t_documento_fiscal d "
+            + "WHERE NOT EXISTS (SELECT 1 FROM t_honorario h WHERE h.id = d.honorario_id)";
+
+    private static final String SQL_PAGAMENTOS_ORFAOS = "SELECT count(*) FROM t_pagamento p "
+            + "WHERE NOT EXISTS (SELECT 1 FROM t_honorario h WHERE h.id = p.honorario_id)";
 
     @Autowired private JdbcTemplate jdbc;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -469,6 +477,75 @@ class GuardasDocumentoFiscalConcorrenciaIT {
         assertEquals(0, contar(SQL_ORFAOS));
         assertTrue(falhas.stream().noneMatch(GuardasDocumentoFiscalConcorrenciaIT::eDeadlock),
                 "nenhuma falha pode ser " + SQLSTATE_DEADLOCK);
+    }
+
+    // ------------------------------------------------------------------ g
+
+    @Test
+    void emissaoEmCursoBloqueiaApagarHonorario() throws Exception {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        Cenario c = cenario(tenant, "g");
+        CountDownLatch emitida = new CountDownLatch(1);
+        CountDownLatch libertar = new CountDownLatch(1);
+
+        Future<ResultadoPagamentoFaturado> a = emissaoSegura(c, emitida, libertar);
+        assertTrue(emitida.await(30, TimeUnit.SECONDS));
+        Future<ResponseEntity<?>> b = handler(tenant, () -> controller.deleteHonorario(c.honorarioId()));
+        esperarBloqueado(b);
+
+        libertar.countDown();
+        resultado(a);
+        ResponseEntity<?> resposta = resultado(b);
+
+        assertEquals(HttpStatus.CONFLICT, resposta.getStatusCode());
+        assertEquals("HONORARIO_COM_DOCUMENTOS_FISCAIS", corpo(resposta).get("code"));
+        assertEquals(1, contar("SELECT count(*) FROM t_honorario WHERE id = ?", c.honorarioId()));
+        assertEquals(1, fixtura.contarDocumentos(tenant));
+        assertEquals(0, contar(SQL_ORFAOS_HONORARIO));
+    }
+
+    // ------------------------------------------------------------------ h
+
+    @Test
+    void emissaoEApagarHonorarioEmSimultaneoSemOrfaos() throws Exception {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        Cenario c = cenario(tenant, "h");
+        Long serieAntes = fixtura.ultimoNumero(tenant);
+        CountDownLatch apagado = new CountDownLatch(1);
+        CountDownLatch libertar = new CountDownLatch(1);
+
+        // A eliminação segura o lock do processo (e a linha do honorário apagada) até ao latch.
+        Future<ResponseEntity<?>> b = executor.submit(() -> comoUtilizador(tenant, () -> tx.execute(s -> {
+            ResponseEntity<?> r = controller.deleteHonorario(c.honorarioId());
+            apagado.countDown();
+            aguardar(libertar);
+            return r;
+        })));
+        assertTrue(apagado.await(30, TimeUnit.SECONDS));
+        // A emissão lê o honorário (ainda visível: a eliminação não fez commit), bloqueia o cliente
+        // e fica à espera do lock do processo.
+        Future<ResultadoPagamentoFaturado> a = executor.submit(() ->
+                pagamentoFaturadoService.registar(tenant, principal(tenant), pedido(c.honorarioId())));
+        esperarBloqueado(a);
+        libertar.countDown();
+
+        assertEquals(HttpStatus.NO_CONTENT, resultado(b).getStatusCode());
+        ExecutionException erro = org.junit.jupiter.api.Assertions.assertThrows(ExecutionException.class,
+                () -> a.get(30, TimeUnit.SECONDS));
+        RecusaFiscalException recusa = assertInstanceOf(RecusaFiscalException.class, erro.getCause());
+        assertEquals(HttpStatus.NOT_FOUND, recusa.getStatus());
+        assertEquals("HONORARIO_NAO_ENCONTRADO", recusa.getCodigo());
+
+        assertEquals(0, contar("SELECT count(*) FROM t_honorario WHERE id = ?", c.honorarioId()));
+        assertEquals(0, fixtura.contarPagamentos(c.honorarioId()));
+        assertEquals(0, fixtura.contarDocumentos(tenant));
+        assertEquals(0, fixtura.contarLinhas(tenant));
+        assertEquals(0, fixtura.contarComunicacoes(tenant));
+        assertEquals(serieAntes, fixtura.ultimoNumero(tenant));
+        assertEquals(0, contar(SQL_ORFAOS_HONORARIO));
+        assertEquals(0, contar(SQL_PAGAMENTOS_ORFAOS));
+        BigDecimal saldo = fixtura.saldo(c.clienteId());
+        assertTrue(saldo == null || saldo.signum() == 0, "a conta corrente não pode ter sido creditada: " + saldo);
     }
 
     // ------------------------------------------------------------------ f
