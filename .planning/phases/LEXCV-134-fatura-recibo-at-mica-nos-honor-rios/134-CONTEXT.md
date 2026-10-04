@@ -88,3 +88,13 @@ com o contabilista depois (registado em STATE.md Pending Todos) — antes de ati
 - Despesas/provisões fora da base de IVA — futuro (DOCX-03)
 
 </deferred>
+
+<research_resolutions>
+## Resolutions of 134-RESEARCH.md open questions (orchestrator, 2026-10-04, research recommendations adopted)
+
+1. Lock order extended to: configuração → cliente → processo → conta corrente → série; merge and the cliente/processo/pagamento deletes lock cliente/processo first. An IT must prove no deadlock and no orphan document.
+2. Overpayment beyond the honorário total keeps current behaviour (allowed); flagged for the accountant validation already pending in STATE.md.
+3. Emission writes an `AuditLog` event (fiscal audit, same pattern as AuditoriaFiscalService).
+4. Adquirente `localidade` snapshotted as a nullable column.
+5. Pré-visualização gated by `financeiro:edit` (same as registering a payment).
+</research_resolutions>
