@@ -726,7 +726,7 @@ Without these, SpotBugs reports 391 findings (221 `EI_EXPOSE_REP` and others in 
 | A12 | Art.º 65 n.º 2 CIVA covers annulment/reduction of taxable value | Gate G6 | See A4 |
 | A13 | All three JAXB packages are legitimate (slopcheck could not reach the registry) | Package audit | Very low (BOM-managed) |
 
-## Open Questions
+## Open Questions (RESOLVED — Q1 firma 150, Q2 episode dedup, Q3 not silenceable: see 136-CONTEXT.md research_resolutions; Q4 → gate table G6/G11-G13 in plan 16; Q5 modoComunicacao on estado-emissao, plans 04/07/11/14)
 
 1. **Firma > 150 characters (Q1)**
    - What we know: snapshot allows 200; the XSD `Name` allows 150.
