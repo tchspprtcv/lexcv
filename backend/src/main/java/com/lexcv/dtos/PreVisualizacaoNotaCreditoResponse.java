@@ -19,7 +19,8 @@ import java.util.UUID;
  * <p>Todos os montantes são magnitudes POSITIVAS (o sinal negativo vive só no {@code Pagamento} de
  * estorno). O adquirente e o motivo de isenção vêm do SNAPSHOT da Fatura-Recibo de origem, nunca do
  * cliente atual: o adquirente da NC é o da FR. A chave de idempotência nunca é exposta.
- * Nesta fase o tipo é sempre "NC" e o ambiente "SIMULADO".
+ * O tipo é sempre "NC"; o ambiente é o da FR de origem (IN-02 da revisão; nesta fase só existe
+ * "SIMULADO").
  */
 public record PreVisualizacaoNotaCreditoResponse(
         String tipo,
@@ -59,7 +60,7 @@ public record PreVisualizacaoNotaCreditoResponse(
         return new PreVisualizacaoNotaCreditoResponse(
                 TipoDocumentoFiscal.NC.name(),
                 TipoDocumentoFiscal.NC.rotulo(),
-                AmbienteFiscal.SIMULADO.name(),
+                (origem.getAmbiente() == null ? AmbienteFiscal.SIMULADO : origem.getAmbiente()).name(),
                 p.documentoOrigemId(),
                 p.documentoOrigemNumero(),
                 origem.getAdquirenteNome(),

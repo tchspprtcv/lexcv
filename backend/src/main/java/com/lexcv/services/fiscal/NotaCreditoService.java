@@ -55,7 +55,7 @@ import java.util.function.Supplier;
  *
  * <p><b>Tudo ou nada ({@link #emitir}):</b> numa única transação, o estorno (um {@link Pagamento}
  * NEGATIVO no mesmo honorário), o débito da conta corrente pelo total da NC, o próximo número da
- * série própria da NC (tipo NC, ambiente SIMULADO), o documento imutável, a linha, a comunicação
+ * série própria da NC (tipo NC, ambiente da FR de origem), o documento imutável, a linha, a comunicação
  * {@code PENDENTE} e o evento de auditoria fazem commit juntos ou nenhum. Qualquer
  * {@link RuntimeException} faz rollback de tudo, incluindo o incremento da série.
  *
@@ -237,8 +237,10 @@ public class NotaCreditoService {
                 .build());
 
         // 12. Número da série da NC: SEMPRE o último lock. Se a data mudou entretanto, rollback.
+        //     IN-02 da revisão: o ambiente é o da FR de origem (uma NC nunca muda de ambiente).
+        AmbienteFiscal ambiente = origem.getAmbiente();
         NumeroFiscalAtribuido numero =
-                numeracaoService.proximoNumero(tenantId, TipoDocumentoFiscal.NC, AmbienteFiscal.SIMULADO);
+                numeracaoService.proximoNumero(tenantId, TipoDocumentoFiscal.NC, ambiente);
         if (!hoje.equals(numero.dataEmissao())) {
             throw new RecusaFiscalException(HttpStatus.CONFLICT, "DATA_EMISSAO_ALTERADA",
                     PagamentoFaturadoService.MSG_DATA_EMISSAO_ALTERADA);
@@ -249,7 +251,7 @@ public class NotaCreditoService {
         DocumentoFiscal documento = documentoFiscalRepository.save(DocumentoFiscal.builder()
                 .tenantId(tenantId)
                 .tipo(TipoDocumentoFiscal.NC)
-                .ambiente(AmbienteFiscal.SIMULADO)
+                .ambiente(ambiente)
                 .serieId(numero.serieId())
                 .serieCodigo(numero.serieCodigo())
                 .ano(numero.ano())
@@ -310,7 +312,7 @@ public class NotaCreditoService {
         comunicacaoFiscalRepository.save(ComunicacaoFiscal.builder()
                 .tenantId(tenantId)
                 .documentoFiscalId(documento.getId())
-                .ambiente(AmbienteFiscal.SIMULADO)
+                .ambiente(ambiente)
                 .estado(EstadoComunicacaoFiscal.PENDENTE)
                 .tentativas(0)
                 .createdAt(agora)
