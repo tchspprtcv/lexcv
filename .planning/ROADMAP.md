@@ -152,7 +152,7 @@ Notas da fase:
 **Plans**: 16 plans
 
 Plans:
-- [ ] 136-01-PLAN.md — Vendor the 22 XSD (Kowts 2024-05-27) + provenance README + SHA-256 integrity test; JAXB deps/plugin with .xjb; SpotBugs exclusions for generated code only
+- [x] 136-01-PLAN.md — Vendor the 22 XSD (Kowts 2024-05-27) + provenance README + SHA-256 integrity test; JAXB deps/plugin with .xjb; SpotBugs exclusions for generated code only
 - [ ] 136-02-PLAN.md — Schema: new states, outbox columns, CHECK AUTORIZADO⇒PRODUCAO, insert-only t_documento_fiscal_xml; migration 136 + README; parity ITs 134/135/136
 - [ ] 136-03-PLAN.md — COMUNICACAO_FISCAL_FALHOU (non-silenceable) + NotificacaoComunicacaoFiscal (effective financeiro:manage, per-episode dedup)
 - [ ] 136-04-PLAN.md — Web contracts: types, exact financeiro:edit gate, reprocess mutation, PENDENTE-only polling, lib/comunicacao-fiscal, notification maps, firma 150
@@ -253,7 +253,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
 | 135. Nota de Crédito | 13/13 | In progress | - |
-| 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
+| 136. Formato eFatura e Adaptador Simulado | 1/16 | In progress | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |
 | 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |
