@@ -4,13 +4,18 @@ import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.DocumentoFiscalDetalheResponse;
 import com.lexcv.dtos.DocumentoFiscalResumoResponse;
 import com.lexcv.dtos.EstadoEmissaoResponse;
+import com.lexcv.dtos.NotaCreditoRequest;
+import com.lexcv.dtos.NotaCreditoResponse;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.dtos.PreVisualizacaoFaturaResponse;
+import com.lexcv.dtos.PreVisualizacaoNotaCreditoResponse;
 import com.lexcv.exceptions.RecusaFiscalException;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
+import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,23 +66,30 @@ import static org.mockito.Mockito.when;
  * Phase 134 (D-01, D-16, D-17, D-18, R-05, EMIS-02, EMIS-11, EMIS-12): comportamento de
  * {@link DocumentoFiscalController} -- tenant só do principal, parâmetros da listagem analisados à
  * mão (400 com mensagem fixa, nunca 500), id inválido no detalhe → 404 sem oráculo, e pinos de
- * reflexão: 4 handlers, gates por método, sem rotas que alterem documentos, sem emissão para
- * pagamentos existentes.
+ * reflexão: gates por método, sem rotas que alterem documentos, sem emissão para pagamentos
+ * existentes.
+ *
+ * <p>Phase 135 (NCRD-01, NCRD-02): mais dois handlers -- pré-visualização e emissão da Nota de
+ * Crédito sobre uma FR ({@code financeiro:manage} exato), 201 para uma NC nova e 200 para a
+ * repetição pela chave, e o mesmo 404 sem oráculo para um id inválido. Passam a ser 6 handlers.
  */
 class DocumentoFiscalControllerTest {
 
     private PreVisualizacaoFaturaService preVisualizacao;
     private DocumentoFiscalService documentos;
+    private NotaCreditoService notasCredito;
     private DocumentoFiscalController controller;
+    private UserPrincipal principal;
     private UUID tenant;
 
     @BeforeEach
     void preparar() {
         preVisualizacao = mock(PreVisualizacaoFaturaService.class);
         documentos = mock(DocumentoFiscalService.class);
-        controller = new DocumentoFiscalController(preVisualizacao, documentos);
+        notasCredito = mock(NotaCreditoService.class);
+        controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito);
         tenant = UUID.randomUUID();
-        UserPrincipal principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
+        principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
                 Set.of(), Set.of("financeiro:view", "financeiro:edit"), Set.of());
         SecurityContextHolder.getContext()
                 .setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
@@ -263,6 +275,84 @@ class DocumentoFiscalControllerTest {
         assertSame(nao, assertThrows(RecusaFiscalException.class, () -> controller.detalhe(id.toString())));
     }
 
+    // ------------------------------------------------------------------ nota de crédito (Phase 135)
+
+    private static final Map<String, String> CORPO_404 =
+            Map.of("message", "Documento fiscal não encontrado.", "code", "DOCUMENTO_FISCAL_NAO_ENCONTRADO");
+
+    private static NotaCreditoRequest pedidoNc() {
+        return new NotaCreditoRequest("PARCIAL", new BigDecimal("1000.00"), "CORRECAO_VALOR", "Acerto",
+                UUID.randomUUID());
+    }
+
+    private static NotaCreditoResponse respostaNc() {
+        return new NotaCreditoResponse(UUID.randomUUID(), "SIM-NC-2026/1", "NC", UUID.randomUUID(),
+                "SIM-FR-2026/1", LocalDate.of(2026, 6, 15), new BigDecimal("1000.00"), null,
+                new BigDecimal("119000.00"));
+    }
+
+    @Test
+    void emissaoDeNcNovaDevolve201ComOTenantEOAutorDoPrincipal() {
+        UUID origem = UUID.randomUUID();
+        NotaCreditoRequest req = pedidoNc();
+        NotaCreditoResponse resposta = respostaNc();
+        when(notasCredito.emitir(tenant, principal, origem, req)).thenReturn(ResultadoNotaCredito.novo(resposta));
+
+        ResponseEntity<?> r = controller.emitirNotaCredito(" " + origem + " ", req);
+
+        assertEquals(HttpStatus.CREATED, r.getStatusCode());
+        assertSame(resposta, r.getBody());
+        verify(notasCredito).emitir(tenant, principal, origem, req);
+    }
+
+    @Test
+    void repeticaoDaNcPelaChaveDevolve200() {
+        UUID origem = UUID.randomUUID();
+        NotaCreditoRequest req = pedidoNc();
+        NotaCreditoResponse resposta = respostaNc();
+        when(notasCredito.emitir(tenant, principal, origem, req)).thenReturn(ResultadoNotaCredito.repetido(resposta));
+
+        ResponseEntity<?> r = controller.emitirNotaCredito(origem.toString(), req);
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertSame(resposta, r.getBody());
+    }
+
+    @Test
+    void preVisualizacaoDaNcDelegaComOTenantDoPrincipal() {
+        UUID origem = UUID.randomUUID();
+        NotaCreditoRequest req = pedidoNc();
+        PreVisualizacaoNotaCreditoResponse p = mock(PreVisualizacaoNotaCreditoResponse.class);
+        when(notasCredito.preVisualizar(tenant, origem, req)).thenReturn(p);
+
+        ResponseEntity<?> r = controller.preVisualizarNotaCredito(origem.toString(), req);
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertSame(p, r.getBody());
+    }
+
+    @Test
+    void idQueNaoEhUuidDevolveOMesmo404NosHandlersDaNc() {
+        assertEquals(HttpStatus.NOT_FOUND, controller.emitirNotaCredito("abc", pedidoNc()).getStatusCode());
+        assertEquals(CORPO_404, controller.emitirNotaCredito("abc", pedidoNc()).getBody());
+        assertEquals(HttpStatus.NOT_FOUND, controller.preVisualizarNotaCredito("abc", pedidoNc()).getStatusCode());
+        assertEquals(CORPO_404, controller.preVisualizarNotaCredito("abc", pedidoNc()).getBody());
+        assertEquals(CORPO_404, controller.detalhe("abc").getBody());
+        verifyNoInteractions(notasCredito);
+        verifyNoInteractions(documentos);
+    }
+
+    @Test
+    void recusaDaNcDeOutroEscritorioPropaga() {
+        UUID origem = UUID.randomUUID();
+        RecusaFiscalException nao = new RecusaFiscalException(HttpStatus.NOT_FOUND, "DOCUMENTO_FISCAL_NAO_ENCONTRADO",
+                "Documento fiscal não encontrado.");
+        when(notasCredito.emitir(any(), any(), any(), any())).thenThrow(nao);
+
+        assertSame(nao, assertThrows(RecusaFiscalException.class,
+                () -> controller.emitirNotaCredito(origem.toString(), pedidoNc())));
+    }
+
     // ------------------------------------------------------------------ reflexão
 
     private static List<Method> handlers() {
@@ -278,9 +368,9 @@ class DocumentoFiscalControllerTest {
     }
 
     @Test
-    void exatamenteQuatroHandlersSemRotasQueAlterem() {
+    void exatamenteSeisHandlersSemRotasQueAlterem() {
         List<Method> hs = handlers();
-        assertEquals(4, hs.size(), hs.toString());
+        assertEquals(6, hs.size(), hs.toString());
         for (Method m : hs) {
             assertFalse(m.isAnnotationPresent(PutMapping.class), m.getName());
             assertFalse(m.isAnnotationPresent(PatchMapping.class), m.getName());
@@ -291,6 +381,10 @@ class DocumentoFiscalControllerTest {
         assertEquals("/faturacao/pre-visualizacao", handler("preVisualizar").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/documentos-fiscais", handler("listar").getAnnotation(GetMapping.class).value()[0]);
         assertEquals("/documentos-fiscais/{id}", handler("detalhe").getAnnotation(GetMapping.class).value()[0]);
+        assertEquals("/documentos-fiscais/{id}/notas-credito/pre-visualizacao",
+                handler("preVisualizarNotaCredito").getAnnotation(PostMapping.class).value()[0]);
+        assertEquals("/documentos-fiscais/{id}/notas-credito",
+                handler("emitirNotaCredito").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/api/v1", DocumentoFiscalController.class.getAnnotation(RequestMapping.class).value()[0]);
     }
 
@@ -302,6 +396,10 @@ class DocumentoFiscalControllerTest {
         assertEquals("hasAuthority('financeiro:view')", handler("listar").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:view')", handler("detalhe").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:edit')", handler("preVisualizar").getAnnotation(PreAuthorize.class).value());
+        assertEquals("hasAuthority('financeiro:manage')",
+                handler("preVisualizarNotaCredito").getAnnotation(PreAuthorize.class).value());
+        assertEquals("hasAuthority('financeiro:manage')",
+                handler("emitirNotaCredito").getAnnotation(PreAuthorize.class).value());
     }
 
     private static String nomeDoParametro(Parameter p) {
@@ -328,11 +426,14 @@ class DocumentoFiscalControllerTest {
                 assertFalse(nome.contains("tenant"), m.getName() + " recebe " + nome);
                 assertFalse(nome.contains("pagamentoid"), m.getName() + " recebe " + nome + " (EMIS-12)");
                 if (p.isAnnotationPresent(RequestBody.class)) {
-                    assertEquals(PagamentoRequest.class, p.getType(), "o único corpo é o PagamentoRequest");
+                    assertTrue(Set.of(PagamentoRequest.class, NotaCreditoRequest.class).contains(p.getType()),
+                            "os únicos corpos são o PagamentoRequest e o NotaCreditoRequest: " + p.getType());
                 }
             }
         }
         assertTrue(Arrays.stream(PagamentoRequest.class.getRecordComponents())
+                .noneMatch(c -> c.getName().toLowerCase().contains("tenant")));
+        assertTrue(Arrays.stream(NotaCreditoRequest.class.getRecordComponents())
                 .noneMatch(c -> c.getName().toLowerCase().contains("tenant")));
     }
 
