@@ -127,7 +127,7 @@ Plans:
 - [x] 135-10-PLAN.md — Web contracts: types, exact-manage helper, NC hooks, error mapping, NC form schema (vitest)
 - [x] 135-11-PLAN.md — "Emitir Nota de Crédito" two-step dialog + FR/NC detail surfaces + source gate
 - [x] 135-12-PLAN.md — Estorno row in payments list, Tipo FR/NC filter and NC rows in documents list + source gate
-- [ ] 135-13-PLAN.md — Full phase gate + live end-to-end UAT (checkpoint)
+- [x] 135-13-PLAN.md — Full phase gate + live end-to-end UAT (checkpoint)
 **UI hint**: yes
 
 Notas da fase:
@@ -234,7 +234,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
-| 135. Nota de Crédito | 12/13 | In progress | - |
+| 135. Nota de Crédito | 13/13 | In progress | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |

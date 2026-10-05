@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 135-12-PLAN.md
-last_updated: "2026-10-05T12:00:00.000Z"
-last_activity: 2026-10-05 — Completed 135-07, 135-09, 135-11, 135-12 (NC real-DB ITs: atomicity, four-reader coherence, cap/same-key/NC-FR concurrency; NC HTTP routes gated exact financeiro:manage with 201/200/404; Emitir Nota de Crédito dialog + FR/NC detail surfaces; estorno row + FR/NC documents filter; surefire 1007 green, vitest 244 green)
+stopped_at: Completed 135-13-PLAN.md
+last_updated: "2026-10-05T10:15:00.000Z"
+last_activity: 2026-10-05 — Completed 135-13 (phase gate: surefire 1007, failsafe 122 with all 9 fiscal ITs executed, SpotBugs, vitest 244, build green; live E2E 12/12 PASS: partial+total NC SIM-NC-2026/1-2, saldo/total pago/KPI reversed, refusals 422/409/403/404 verified; NCRD-01..03 complete)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 35
-  completed_plans: 34
-  percent: 97
+  completed_plans: 35
+  percent: 100
 ---
 
 # Project State
@@ -26,15 +26,15 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 135 of 139 (Nota de Crédito)
-Plan: 12 of 13
-Status: Executing Phase 135 — plans 01-12 complete; next 135-13 (full phase gate + live end-to-end UAT checkpoint)
-Last activity: 2026-10-05 — Completed 135-07, 135-09, 135-11, 135-12 (NC real-DB ITs: atomicity, four-reader coherence, cap/same-key/NC-FR concurrency; NC HTTP routes gated exact financeiro:manage with 201/200/404; Emitir Nota de Crédito dialog + FR/NC detail surfaces; estorno row + FR/NC documents filter; surefire 1007 green, vitest 244 green)
+Plan: 13 of 13
+Status: Phase 135 plans complete (13/13) — ready for phase verification
+Last activity: 2026-10-05 — Completed 135-13 (phase gate: surefire 1007, failsafe 122 with all 9 fiscal ITs executed, SpotBugs, vitest 244, build green; live E2E 12/12 PASS: partial+total NC SIM-NC-2026/1-2, saldo/total pago/KPI reversed, refusals 422/409/403/404 verified; NCRD-01..03 complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 152 (118 até v2.16 + 34 no v2.17)
+- Total plans completed: 153 (118 até v2.16 + 35 no v2.17)
 - Average duration: —
 - Total execution time: —
 
@@ -202,6 +202,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 135]: NC routes live on DocumentoFiscalController (POST /documentos-fiscais/{id}/notas-credito[/pre-visualizacao]) with exact hasAuthority('financeiro:manage'); malformed id -> same 404 body as detalhe via shared idDocumento helper; controller pinned at 6 handlers
 - [Phase 135]: NC dialog keeps all NC mutations (detail page stays mutation-free for verify:documentos-fiscais); key = { documentoOrigemId: documento.id, ...pedido } (CR-02); error routing in pure reagirAErroNotaCredito (vitest); definitive banners return to step 1 where dismiss reads "Fechar"
 - [Phase 135]: Estorno rows render the backend negative amount in red with no delete control; documents list tipo URL param whitelisted to FR/NC; NC rows show "Corrige {FR}" from documentoOrigemNumero
+- [Phase 135]: 135-13 live UAT auto-verified 12/12; AlertasDiariosJob is cron-only (no trigger endpoint), so step 8 is verified by DB eligibility + NotaCreditoServiceIT; NC routes check FATURACAO_DESLIGADA before lookup (same 409 for any id, no oracle), so cross-tenant 404 needs the caller tenant billing active
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).

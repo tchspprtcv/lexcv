@@ -51,9 +51,9 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 
 ### Nota de Crédito
 
-- [ ] **NCRD-01**: Utilizador com `financeiro:manage` emite uma Nota de Crédito total ou parcial sobre uma Fatura-Recibo, com motivo obrigatório e referência à fatura original, numerada na sua própria série
-- [ ] **NCRD-02**: A soma das Notas de Crédito de uma fatura nunca excede o valor original, e não é possível creditar uma Nota de Crédito nem um documento de outro emitente
-- [ ] **NCRD-03**: A Nota de Crédito reverte o valor de forma coerente no saldo da conta corrente, no total pago do honorário, no KPI mensal do dashboard e no alerta de honorário em atraso — o honorário pode voltar a contar como por pagar
+- [x] **NCRD-01**: Utilizador com `financeiro:manage` emite uma Nota de Crédito total ou parcial sobre uma Fatura-Recibo, com motivo obrigatório e referência à fatura original, numerada na sua própria série
+- [x] **NCRD-02**: A soma das Notas de Crédito de uma fatura nunca excede o valor original, e não é possível creditar uma Nota de Crédito nem um documento de outro emitente
+- [x] **NCRD-03**: A Nota de Crédito reverte o valor de forma coerente no saldo da conta corrente, no total pago do honorário, no KPI mensal do dashboard e no alerta de honorário em atraso — o honorário pode voltar a contar como por pagar
 
 ### Formato eFatura e Comunicação
 
@@ -154,9 +154,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EMIS-10 | Phase 134 | Complete |
 | EMIS-11 | Phase 134 | Complete |
 | EMIS-12 | Phase 134 | Complete |
-| NCRD-01 | Phase 135 | Pending |
-| NCRD-02 | Phase 135 | Pending |
-| NCRD-03 | Phase 135 | Pending |
+| NCRD-01 | Phase 135 | Complete |
+| NCRD-02 | Phase 135 | Complete |
+| NCRD-03 | Phase 135 | Complete |
 | DFE-01 | Phase 136 | Pending |
 | DFE-02 | Phase 136 | Pending |
 | DFE-03 | Phase 136 | Pending |
