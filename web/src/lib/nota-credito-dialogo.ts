@@ -6,7 +6,13 @@
 // para ser testada com vitest (o componente só liga isto ao React).
 
 import { desfechoDefinitivo, type CampoNotaCredito, type ErroNotaCredito } from "@/lib/erros-emissao";
-import { gerarChaveIdempotencia, marcarPorResolver, type TentativaEmissao } from "@/lib/idempotencia";
+import {
+  gerarChaveIdempotencia,
+  marcarPorResolver,
+  pedidoCanonico,
+  tentativaParaPedido,
+  type TentativaEmissao,
+} from "@/lib/idempotencia";
 
 export type PassoNotaCredito = "formulario" | "pre-visualizacao";
 
@@ -70,4 +76,100 @@ export function tentativaDepoisDeFalhaNc(
     return { pedido: atual.pedido, chave: gerar(), porResolver: false };
   }
   return marcarPorResolver(atual) ?? atual;
+}
+
+// ---------------------------------------------------------------------------------------------
+// WR-03 da revisão: tentativas por resolver FORA do componente.
+//
+// O `NotaCreditoDialog` só é montado enquanto a FR tem valor creditável e a faturação não está
+// desligada, e as duas condições mudam com a invalidação que segue cada tentativa de emissão. Uma
+// chave por resolver guardada só no estado do componente perdia-se nesse desmontar (e também numa
+// navegação ou recarregamento): o mesmo pedido levava uma chave nova e uma PARCIAL que tivesse
+// feito commit podia ser emitida duas vezes. As tentativas por resolver ficam aqui, por FR de
+// origem e por conteúdo do pedido, em memória e no `sessionStorage` (sobrevive a navegações e
+// recarregamentos no mesmo separador; falhas do armazenamento nunca chegam à UI).
+
+const CHAVE_ARMAZENAMENTO = "lexcv:nota-credito:tentativas-por-resolver";
+/** Limite por FR: as mais antigas saem primeiro. */
+const MAXIMO_POR_DOCUMENTO = 10;
+
+type TentativasPorDocumento = Record<string, TentativaEmissao[]>;
+
+let memoria: TentativasPorDocumento | null = null;
+
+function eTentativa(v: unknown): v is TentativaEmissao {
+  if (!v || typeof v !== "object") return false;
+  const t = v as Record<string, unknown>;
+  return typeof t.pedido === "string" && typeof t.chave === "string" && t.porResolver === true;
+}
+
+function armazenamento(): Storage | null {
+  try {
+    return typeof window !== "undefined" && window.sessionStorage ? window.sessionStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+function carregar(): TentativasPorDocumento {
+  if (memoria) return memoria;
+  const resultado: TentativasPorDocumento = {};
+  try {
+    const bruto = armazenamento()?.getItem(CHAVE_ARMAZENAMENTO);
+    const lido: unknown = bruto ? JSON.parse(bruto) : null;
+    if (lido && typeof lido === "object" && !Array.isArray(lido)) {
+      for (const [doc, lista] of Object.entries(lido as Record<string, unknown>)) {
+        if (Array.isArray(lista)) {
+          const validas = lista.filter(eTentativa);
+          if (validas.length > 0) resultado[doc] = validas;
+        }
+      }
+    }
+  } catch {
+    // Armazenamento corrompido ou inacessível: começa vazio.
+  }
+  memoria = resultado;
+  return resultado;
+}
+
+function gravar(tentativas: TentativasPorDocumento) {
+  memoria = tentativas;
+  try {
+    armazenamento()?.setItem(CHAVE_ARMAZENAMENTO, JSON.stringify(tentativas));
+  } catch {
+    // Quota/serialização: a cópia em memória continua a servir neste separador.
+  }
+}
+
+/** Tentativa para `pedido` sobre a FR: reutiliza a chave por resolver guardada para este conteúdo. */
+export function tentativaParaPedidoNc(
+  documentoOrigemId: string,
+  pedido: unknown,
+  atual: TentativaEmissao | null,
+  gerar: () => string = gerarChaveIdempotencia,
+): TentativaEmissao {
+  const canonico = pedidoCanonico(pedido);
+  const guardada = (carregar()[documentoOrigemId] ?? []).find((t) => t.pedido === canonico);
+  return tentativaParaPedido(guardada ?? atual, pedido, gerar);
+}
+
+/**
+ * Regista o estado de uma tentativa depois de uma resposta: por resolver fica guardada (sobrevive
+ * ao desmontar do diálogo); resolvida (sucesso ou recusa definitiva) sai do armazenamento.
+ */
+export function lembrarTentativaNc(documentoOrigemId: string, tentativa: TentativaEmissao, resolvida = false) {
+  const todas = { ...carregar() };
+  const outras = (todas[documentoOrigemId] ?? []).filter((t) => t.pedido !== tentativa.pedido);
+  const lista = tentativa.porResolver && !resolvida ? [...outras, tentativa].slice(-MAXIMO_POR_DOCUMENTO) : outras;
+  if (lista.length > 0) {
+    todas[documentoOrigemId] = lista;
+  } else {
+    delete todas[documentoOrigemId];
+  }
+  gravar(todas);
+}
+
+/** Só para testes: esquece a cópia em memória (o `sessionStorage` é relido na próxima leitura). */
+export function reiniciarTentativasNcParaTestes() {
+  memoria = null;
 }

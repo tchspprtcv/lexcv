@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api";
 import { interpretarErroNotaCredito, type ErroNotaCredito } from "@/lib/erros-emissao";
 import { tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
 import {
+  lembrarTentativaNc,
   reagirAErroNotaCredito,
+  reiniciarTentativasNcParaTestes,
   tentativaDepoisDeFalhaNc,
+  tentativaParaPedidoNc,
 } from "@/lib/nota-credito-dialogo";
 
 function erro(status: number, code?: string, message?: string) {
@@ -158,5 +161,94 @@ describe("tentativaDepoisDeFalhaNc (CR-02: o botão de emissão nunca fica mudo)
     if (ficaNoPasso2 && reacao.acao === "banner") {
       expect(reacao.mensagem).toBeTruthy();
     }
+  });
+});
+
+describe("tentativas por resolver fora do componente (WR-03)", () => {
+  class ArmazenamentoFalso {
+    dados = new Map<string, string>();
+    getItem(k: string) {
+      return this.dados.get(k) ?? null;
+    }
+    setItem(k: string, v: string) {
+      this.dados.set(k, v);
+    }
+  }
+  let armazenamento: ArmazenamentoFalso;
+
+  beforeEach(() => {
+    armazenamento = new ArmazenamentoFalso();
+    vi.stubGlobal("window", { sessionStorage: armazenamento });
+    reiniciarTentativasNcParaTestes();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    reiniciarTentativasNcParaTestes();
+  });
+
+  const conteudo = (documentoOrigemId: string, valor = 20000) => ({ documentoOrigemId, ...PEDIDO, valor });
+
+  it("uma chave por resolver sobrevive ao desmontar do diálogo (estado do componente perdido)", () => {
+    // Primeira montagem: pré-visualização, emissão, falha ambígua (504).
+    const t1 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1");
+    const depois = tentativaDepoisDeFalhaNc(t1, erro(504), () => "nunca");
+    lembrarTentativaNc("fr-1", depois);
+
+    // O diálogo desmonta (estado `null`) e volta a montar; o mesmo conteúdo reutiliza a chave.
+    const t2 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-2");
+    expect(t2.chave).toBe("chave-1");
+    expect(t2.porResolver).toBe(true);
+  });
+
+  it("sobrevive a um recarregamento (só o sessionStorage fica)", () => {
+    const t1 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1");
+    lembrarTentativaNc("fr-1", tentativaDepoisDeFalhaNc(t1, new TypeError("Failed to fetch")));
+    reiniciarTentativasNcParaTestes();
+
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-2").chave).toBe("chave-1");
+  });
+
+  it("outro conteúdo ou outra FR gera chave nova, sem apagar a guardada", () => {
+    const t1 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1");
+    lembrarTentativaNc("fr-1", tentativaDepoisDeFalhaNc(t1, erro(500)));
+
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1", 100), null, () => "chave-2").chave).toBe("chave-2");
+    expect(tentativaParaPedidoNc("fr-2", conteudo("fr-2"), null, () => "chave-3").chave).toBe("chave-3");
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-4").chave).toBe("chave-1");
+  });
+
+  it("o sucesso esquece a chave do conteúdo", () => {
+    const t1 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1");
+    const porResolver = tentativaDepoisDeFalhaNc(t1, erro(500));
+    lembrarTentativaNc("fr-1", porResolver);
+    lembrarTentativaNc("fr-1", porResolver, true);
+
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-2").chave).toBe("chave-2");
+  });
+
+  it("uma recusa definitiva esquece a chave por resolver do conteúdo", () => {
+    const t1 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1");
+    lembrarTentativaNc("fr-1", tentativaDepoisDeFalhaNc(t1, erro(500)));
+    const t2 = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "nunca");
+    lembrarTentativaNc("fr-1", tentativaDepoisDeFalhaNc(t2, erro(409, "DATA_EMISSAO_ALTERADA"), () => "chave-3"));
+
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-4").chave).toBe("chave-4");
+  });
+
+  it("armazenamento corrompido ou indisponível nunca lança", () => {
+    armazenamento.setItem("lexcv:nota-credito:tentativas-por-resolver", "{nao é json");
+    reiniciarTentativasNcParaTestes();
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-1").chave).toBe("chave-1");
+
+    vi.stubGlobal("window", {
+      get sessionStorage(): Storage {
+        throw new Error("SecurityError");
+      },
+    });
+    reiniciarTentativasNcParaTestes();
+    const t = tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-2");
+    expect(() => lembrarTentativaNc("fr-1", { ...t, porResolver: true })).not.toThrow();
+    expect(tentativaParaPedidoNc("fr-1", conteudo("fr-1"), null, () => "chave-3").chave).toBe("chave-2");
   });
 });

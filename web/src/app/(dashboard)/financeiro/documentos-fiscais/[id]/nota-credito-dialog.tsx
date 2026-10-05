@@ -24,10 +24,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEmitirNotaCredito, usePreVisualizacaoNotaCredito } from "@/hooks/use-faturacao";
 import { toast } from "@/hooks/use-toast";
 import { interpretarErroNotaCredito } from "@/lib/erros-emissao";
-import { tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
+import type { TentativaEmissao } from "@/lib/idempotencia";
 import {
+  lembrarTentativaNc,
   reagirAErroNotaCredito,
   tentativaDepoisDeFalhaNc,
+  tentativaParaPedidoNc,
   type PassoNotaCredito,
   type ReacaoErroNotaCredito,
 } from "@/lib/nota-credito-dialogo";
@@ -49,7 +51,9 @@ import type { DocumentoFiscalDetalhe, NotaCreditoRequest, PreVisualizacaoNotaCre
 // A chave de idempotência pertence ao CONTEÚDO do pedido (FR de origem + tipo + valor + motivo +
 // descrição), não ao diálogo (CR-02 da 134): depois de uma falha ambígua (rede/5xx/401/403)
 // sobrevive ao fecho do diálogo e o mesmo pedido reutiliza-a; só é descartada depois de um desfecho
-// definitivo (sucesso ou recusa 4xx processada) ou quando o pedido muda.
+// definitivo (sucesso ou recusa 4xx processada) ou quando o pedido muda. As chaves por resolver
+// vivem fora do componente (`lembrarTentativaNc`, WR-03 da revisão da 135): o diálogo pode ser
+// desmontado pela invalidação que segue a emissão, por uma navegação ou por um recarregamento.
 
 type Banner = { mensagem: string; definitivo: boolean };
 
@@ -157,9 +161,11 @@ export function NotaCreditoDialog({
       const resposta = await preVisualizar.mutateAsync(novoPedido);
       setPedido(novoPedido);
       setPreVisualizacao(resposta);
-      // A chave pertence ao conteúdo, incluindo a FR de origem.
+      // A chave pertence ao conteúdo, incluindo a FR de origem. WR-03: uma chave por resolver deste
+      // conteúdo vem do armazenamento fora do componente (sobrevive ao desmontar do diálogo); a
+      // decisão continua a ser a de `tentativaParaPedido`.
       const pedidoChave = { documentoOrigemId: documento.id, ...novoPedido };
-      setTentativa((anterior) => tentativaParaPedido(anterior, pedidoChave));
+      setTentativa((anterior) => tentativaParaPedidoNc(documento.id, pedidoChave, anterior));
       setPasso("pre-visualizacao");
     } catch (e) {
       aplicar(reagirAErroNotaCredito(interpretarErroNotaCredito(e, "pre-visualizacao"), "formulario"));
@@ -173,12 +179,14 @@ export function NotaCreditoDialog({
     setBanner(null);
     try {
       // WR-01: os valores confirmados seguem no corpo, mas FORA da chave (que é do conteúdo `pedido`).
+      const enviada = tentativa;
       const nc = await emitirNc.mutateAsync({
         ...pedido,
         chaveIdempotencia: tentativa.chave,
         totalEsperado: preVisualizacao.total,
         valorCreditavelEsperado: preVisualizacao.valorCreditavelAntes,
       });
+      lembrarTentativaNc(documento.id, enviada, true);
       setTentativa(null);
       setPreVisualizacao(null);
       setPedido(null);
@@ -192,7 +200,11 @@ export function NotaCreditoDialog({
       // CR-02 da revisão: a tentativa nunca fica nula no passo 2. Recusa 4xx processada
       // (`desfechoDefinitivo`): chave nova para o mesmo conteúdo. Qualquer outra falha (rede, 5xx,
       // 401/403/408/429; `marcarPorResolver`): mantém a chave, com o desfecho por resolver.
-      setTentativa((atual) => (atual ? tentativaDepoisDeFalhaNc(atual, e) : atual));
+      // WR-03: o novo estado também vai para o armazenamento fora do componente, porque a
+      // invalidação que se segue pode desmontar o diálogo.
+      const seguinte = tentativaDepoisDeFalhaNc(tentativa, e);
+      lembrarTentativaNc(documento.id, seguinte);
+      setTentativa(seguinte);
       aplicar(reagirAErroNotaCredito(interpretarErroNotaCredito(e, "emissao"), "pre-visualizacao"));
     } finally {
       emitindoRef.current = false;

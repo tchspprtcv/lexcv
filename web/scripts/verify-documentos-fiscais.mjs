@@ -203,6 +203,9 @@ async function main() {
     // lib/nota-credito-dialogo.ts, testada com vitest) e o botao nunca fica ativo sem ela.
     "tentativaDepoisDeFalhaNc",
     "disabled={emitindo || !tentativa || !pedido}",
+    // WR-03 da revisao 135: as chaves por resolver vivem fora do componente.
+    "tentativaParaPedidoNc(documento.id, pedidoChave, anterior)",
+    "lembrarTentativaNc(documento.id, seguinte)",
     "emitindoRef",
     "useEmitirNotaCredito",
     "usePreVisualizacaoNotaCredito",
@@ -221,7 +224,15 @@ async function main() {
   ]) {
     exigeContem("detalhe", texto, token);
   }
-  for (const token of ["marcarPorResolver", "desfechoDefinitivo", "export function tentativaDepoisDeFalhaNc"]) {
+  for (const token of [
+    "marcarPorResolver",
+    "desfechoDefinitivo",
+    "tentativaParaPedido(",
+    "sessionStorage",
+    "export function tentativaDepoisDeFalhaNc",
+    "export function tentativaParaPedidoNc",
+    "export function lembrarTentativaNc",
+  ]) {
     exigeContem("notaCreditoDialogo", texto, token);
   }
   for (const nome of ["detalhe", "notaCreditoDialog"]) {
