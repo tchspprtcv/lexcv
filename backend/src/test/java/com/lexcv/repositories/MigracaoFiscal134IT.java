@@ -70,6 +70,9 @@ class MigracaoFiscal134IT {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private static final String SCRIPT = "migrations/134-create-documento-fiscal-tables.sql";
+    // Phase 135: as colunas da Nota de Crédito chegam pelo script seguinte; "scripts == Hibernate"
+    // passa a significar 134 + 135 aplicados por ordem.
+    private static final String SCRIPT_135 = "migrations/135-add-nota-credito-documento-fiscal.sql";
     private static final String SCHEMA_SCRIPT = "migracao_134";
     private static final List<String> TABELAS =
             List.of("t_documento_fiscal", "t_documento_fiscal_linha", "t_comunicacao_fiscal");
@@ -81,17 +84,23 @@ class MigracaoFiscal134IT {
     private PlatformTransactionManager transactionManager;
 
     private static String lerScript() {
+        return lerScript(SCRIPT);
+    }
+
+    private static String lerScript(String caminho) {
         try {
-            return Files.readString(Path.of(SCRIPT));
+            return Files.readString(Path.of(caminho));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
+    /** Aplica 134 e depois 135 (Phase 135) no schema de rascunho. */
     private void aplicarScript() {
         jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS " + SCHEMA_SCRIPT);
-        // Uma única chamada: SET + script + reset correm na mesma ligação.
-        jdbcTemplate.execute("SET search_path TO " + SCHEMA_SCRIPT + ";\n" + lerScript() + "\nSET search_path TO public;");
+        // Uma única chamada: SET + scripts + reset correm na mesma ligação.
+        jdbcTemplate.execute("SET search_path TO " + SCHEMA_SCRIPT + ";\n" + lerScript() + "\n"
+                + lerScript(SCRIPT_135) + "\nSET search_path TO public;");
     }
 
     /**
@@ -159,7 +168,8 @@ class MigracaoFiscal134IT {
         aplicarScript();
 
         Set<String> hibernate = colunas("public");
-        assertEquals(40 + 14 + 10, hibernate.size(), "colunas Hibernate: " + hibernate);
+        // Phase 135: +3 colunas em t_documento_fiscal (documento_origem_id, motivo_codigo, motivo_texto).
+        assertEquals(43 + 14 + 10, hibernate.size(), "colunas Hibernate: " + hibernate);
         assertEquals(hibernate, colunas(SCHEMA_SCRIPT));
 
         Map<String, Set<String>> unicasHibernate = unicas("public");
@@ -177,7 +187,8 @@ class MigracaoFiscal134IT {
         Set<String> indicesHibernate = indices("public");
         assertTrue(nomesIndices("public", "t_documento_fiscal").containsAll(Set.of(
                 "idx_documento_fiscal_tenant_data", "idx_documento_fiscal_tenant_cliente",
-                "idx_documento_fiscal_tenant_processo", "idx_documento_fiscal_tenant_honorario")),
+                "idx_documento_fiscal_tenant_processo", "idx_documento_fiscal_tenant_honorario",
+                "idx_documento_fiscal_tenant_origem")),
                 "índices Hibernate: " + indicesHibernate);
         assertTrue(nomesIndices("public", "t_comunicacao_fiscal").contains("idx_comunicacao_fiscal_tenant_estado"));
         assertEquals(indicesHibernate, indices(SCHEMA_SCRIPT));
