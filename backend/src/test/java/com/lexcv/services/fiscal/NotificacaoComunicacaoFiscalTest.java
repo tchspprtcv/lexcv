@@ -166,6 +166,27 @@ class NotificacaoComunicacaoFiscalTest {
     }
 
     @Test
+    void falhaAResolverPermissoesDeUmUtilizadorNaoImpedeOsOutros() {
+        User a = utilizador(true, Set.of("financeiro:manage"));
+        User b = utilizador(true, Set.of("financeiro:manage"));
+        when(resolucaoPapeisService.resolverPermissoesEfectivas(a)).thenThrow(new IllegalStateException("lazy"));
+        when(userRepository.findByTenantId(tenant)).thenReturn(List.of(a, b));
+
+        assertEquals(1, servico.notificarFalhaPersistente(tenant, documento, NUMERO, 0));
+        verify(notificacaoService).criar(eq(tenant), eq(b.getId()), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void falhaALerUtilizadoresDevolveZeroSemLancar() {
+        when(userRepository.findByTenantId(tenant)).thenThrow(new IllegalStateException("base de dados"));
+
+        int[] criadas = {-1};
+        assertDoesNotThrow(() -> criadas[0] = servico.notificarFalhaPersistente(tenant, documento, NUMERO, 0));
+        assertEquals(0, criadas[0]);
+    }
+
+    @Test
     void procuraUtilizadoresSoNoTenantDado() {
         when(userRepository.findByTenantId(tenant)).thenReturn(List.of());
 
