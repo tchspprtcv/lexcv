@@ -37,6 +37,11 @@ import java.util.UUID;
  * {@code entidadeId = DocumentoFiscal.id}) -- só o nome do autor e o número formatado, nunca
  * valores, NIFs ou o correio do autor.
  *
+ * <p>Phase 135 (NCRD-01): também grava o evento de emissão de uma Nota de Crédito
+ * ({@code acao = documento_fiscal_emitir_nc}, {@code entidadeId} = id da NC) -- só o nome do
+ * autor, o número da NC e o número da FR de origem. O texto livre do motivo nunca é passado a este
+ * serviço (pode conter dados do cliente).
+ *
  * <p>Cada {@code registar*} é {@code @Transactional(propagation = MANDATORY)}: o evento grava na
  * mesma transação da mudança que descreve; uma recusa (exceção) faz rollback e não deixa evento.
  */
@@ -54,6 +59,7 @@ public class AuditoriaFiscalService {
     public static final String ACAO_EMAIL_LIGAR = "faturacao_email_ligar";
     public static final String ACAO_EMAIL_DESLIGAR = "faturacao_email_desligar";
     public static final String ACAO_EMITIR = "documento_fiscal_emitir";
+    public static final String ACAO_EMITIR_NC = "documento_fiscal_emitir_nc";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -114,6 +120,21 @@ public class AuditoriaFiscalService {
         put(detalhe, "numeroFormatado", numeroFormatado);
         gravar(tenantId, autor, ACAO_EMITIR, ENTIDADE_TIPO_DOCUMENTO,
                 documentoId == null ? null : documentoId.toString(), detalhe);
+    }
+
+    /**
+     * Phase 135 (NCRD-01, T-135-16/17): evento de emissão de uma Nota de Crédito, na transação do
+     * {@code NotaCreditoService}. Grava apenas o nome do autor, o número formatado da NC e o número
+     * da Fatura-Recibo de origem; o texto livre do motivo nunca chega aqui.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarEmissaoNotaCredito(UUID tenantId, UserPrincipal autor, UUID documentoId,
+                                           String numeroFormatado, String numeroOrigem) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "numeroFormatado", numeroFormatado);
+        put(detalhe, "documentoOrigem", numeroOrigem);
+        gravar(tenantId, autor, ACAO_EMITIR_NC, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
     }
 
     /**

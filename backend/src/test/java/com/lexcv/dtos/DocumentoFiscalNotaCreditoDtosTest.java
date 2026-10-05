@@ -5,6 +5,10 @@ import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.MotivoNotaCredito;
 import com.lexcv.models.Pagamento;
+import com.lexcv.models.RegimeIva;
+import com.lexcv.services.fiscal.CalculoFiscal;
+import com.lexcv.services.fiscal.ProjetoNotaCredito;
+import com.lexcv.services.fiscal.TipoCredito;
 import com.lexcv.models.TipoDocumentoFiscal;
 import org.junit.jupiter.api.Test;
 
@@ -142,5 +146,71 @@ class DocumentoFiscalNotaCreditoDtosTest {
         PagamentoComDocumentoResponse estorno = PagamentoComDocumentoResponse.de(p, null, nc);
         assertNull(estorno.documentoFiscal());
         assertEquals(nc, estorno.estorno());
+    }
+
+    private static ProjetoNotaCredito projeto(DocumentoFiscal fr, RegimeIva regime, String taxaIva) {
+        CalculoFiscal.ResultadoCalculo c = new CalculoFiscal.ResultadoCalculo(
+                new BigDecimal("17391.30"), new BigDecimal("2608.70"), new BigDecimal(taxaIva),
+                new BigDecimal("3478.26"), new BigDecimal("20.0000"),
+                new BigDecimal("20000.00"), new BigDecimal("16521.74"));
+        return new ProjetoNotaCredito(fr.getId(), fr.getNumeroFormatado(), TipoCredito.PARCIAL,
+                MotivoNotaCredito.CORRECAO_VALOR, "Valor faturado a mais", LocalDate.of(2026, 10, 5),
+                "Crédito sobre SIM-FR-2026/7", regime, c, new BigDecimal("120000.00"),
+                new BigDecimal("0.00"), new BigDecimal("120000.00"), new BigDecimal("100000.00"));
+    }
+
+    @Test
+    void preVisualizacaoNcMapeiaProjetoEUsaSnapshotDaFr() {
+        DocumentoFiscal fr = doc(TipoDocumentoFiscal.FR, "SIM-FR-2026/7", "120000.00")
+                .adquirenteNome("Cliente Snapshot").adquirenteNif("123456789")
+                .adquirenteMorada("Rua Snapshot").adquirenteLocalidade("Praia")
+                .emitenteMotivoIsencaoCodigo(null).emitenteMotivoIsencaoDescricao(null)
+                .build();
+
+        PreVisualizacaoNotaCreditoResponse r = PreVisualizacaoNotaCreditoResponse.de(fr,
+                projeto(fr, RegimeIva.NORMAL, "15.0000"));
+
+        assertEquals("NC", r.tipo());
+        assertEquals("Nota de Crédito", r.tipoRotulo());
+        assertEquals("SIMULADO", r.ambiente());
+        assertEquals(fr.getId(), r.documentoOrigemId());
+        assertEquals("SIM-FR-2026/7", r.documentoOrigemNumero());
+        assertEquals("Cliente Snapshot", r.adquirenteNome());
+        assertEquals("123456789", r.adquirenteNif());
+        assertEquals("Rua Snapshot", r.adquirenteMorada());
+        assertEquals("Praia", r.adquirenteLocalidade());
+        assertEquals("Crédito sobre SIM-FR-2026/7", r.descricaoLinha());
+        assertEquals("NORMAL", r.regimeIva());
+        assertEquals(new BigDecimal("15.0000"), r.taxaIva());
+        assertEquals(new BigDecimal("17391.30"), r.base());
+        assertEquals(new BigDecimal("2608.70"), r.iva());
+        assertEquals(new BigDecimal("20.0000"), r.taxaRetencao());
+        assertEquals(new BigDecimal("3478.26"), r.retencao());
+        assertEquals(new BigDecimal("20000.00"), r.total());
+        assertEquals(new BigDecimal("16521.74"), r.liquido());
+        assertEquals("PARCIAL", r.tipoCredito());
+        assertEquals("CORRECAO_VALOR", r.motivoCodigo());
+        assertEquals("Correção de valor", r.motivoRotulo());
+        assertEquals("Valor faturado a mais", r.motivoTexto());
+        assertEquals(new BigDecimal("120000.00"), r.totalOrigem());
+        assertEquals(new BigDecimal("120000.00"), r.valorCreditavelAntes());
+        assertEquals(new BigDecimal("100000.00"), r.valorCreditavelDepois());
+        assertEquals(LocalDate.of(2026, 10, 5), r.dataEmissao());
+        assertNull(r.motivoIsencaoCodigo());
+    }
+
+    @Test
+    void preVisualizacaoNcIsentaNaoTemTaxaECopiaMotivoIsencaoDaFr() {
+        DocumentoFiscal fr = doc(TipoDocumentoFiscal.FR, "SIM-FR-2026/8", "120000.00")
+                .emitenteMotivoIsencaoCodigo("M1").emitenteMotivoIsencaoDescricao("Isento art. 9")
+                .build();
+
+        PreVisualizacaoNotaCreditoResponse r = PreVisualizacaoNotaCreditoResponse.de(fr,
+                projeto(fr, RegimeIva.ISENTO, "0"));
+
+        assertEquals("ISENTO", r.regimeIva());
+        assertNull(r.taxaIva());
+        assertEquals("M1", r.motivoIsencaoCodigo());
+        assertEquals("Isento art. 9", r.motivoIsencaoDescricao());
     }
 }
