@@ -471,4 +471,59 @@ class AlertasDiariosJobTest {
         verify(notificacaoService, times(1)).criar(eq(tenantAtivoId), eq(responsavelId), eq("PRAZO_PROXIMO"),
                 anyString(), anyString(), eq("prazo"), eq(prazoId.toString()), anyString());
     }
+    // ---------------------------------------------------------------- Phase 135 (NCRD-03)
+    // Depois de uma Nota de Crédito parcial o estorno (Pagamento negativo) baixa o totalPago (a
+    // @Formula soma o ledger t_pagamento), por isso o honorário volta a "por pagar" e a condição do
+    // alerta reabre. A deduplicação vitalícia da migração 88 mantém-se (decisão do utilizador,
+    // 2026-10-05): só dispara se nunca tinha disparado para esse honorário/destinatário.
+
+    private void umTenantComHonorario(Honorario honorario) {
+        Tenant tenant = Tenant.builder().id(TENANT_ID).nome("Tenant A").build();
+        when(tenantRepository.findAll()).thenReturn(List.of(tenant));
+        Processo processo = Processo.builder().id(PROCESSO_ID).tenantId(TENANT_ID)
+                .responsavelId(RESPONSAVEL_ID).numeroProcesso("PROC-0001").build();
+        when(processoRepository.findByTenantId(TENANT_ID)).thenReturn(List.of(processo));
+        semPrazos(TENANT_ID);
+        semEventos(TENANT_ID);
+        when(honorarioRepository.findByProcessoIdIn(any())).thenReturn(List.of(honorario));
+        when(userRepository.findByTenantIdAndRoleName(TENANT_ID, "ADMIN")).thenReturn(List.of());
+    }
+
+    private static Honorario honorarioDe120000ComPago(String totalPago) {
+        return Honorario.builder().id(9).processoId(PROCESSO_ID)
+                .valorTotal(new BigDecimal("120000.00")).dataAcordo(HOJE.minusDays(40))
+                .totalPago(new BigDecimal(totalPago)).build();
+    }
+
+    @Test
+    void executar_honorarioReabertoPorNotaDeCreditoParcial_voltaADispararHonorarioAtrasado() {
+        // 120 000 pagos e depois uma NC parcial de 20 000: totalPago = 100 000 < valorTotal.
+        umTenantComHonorario(honorarioDe120000ComPago("100000.00"));
+        nuncaAntesNotificado();
+
+        buildJob().executar(HOJE);
+
+        verify(notificacaoService, times(1)).criar(eq(TENANT_ID), eq(RESPONSAVEL_ID), eq("HONORARIO_ATRASADO"),
+                anyString(), anyString(), eq("honorario"), eq("9"), anyString());
+    }
+
+    @Test
+    void executar_honorarioPagoNaTotalidadeSemNotaDeCredito_naoDispara() {
+        umTenantComHonorario(honorarioDe120000ComPago("120000.00"));
+
+        buildJob().executar(HOJE);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void executar_honorarioReabertoJaNotificadoAntes_deduplicacaoVitaliciaNaoRepete() {
+        umTenantComHonorario(honorarioDe120000ComPago("100000.00"));
+        when(notificacaoRepository.existsByTenantIdAndDestinatarioIdAndEntidadeTipoAndEntidadeIdAndCategoria(
+                TENANT_ID, RESPONSAVEL_ID, "honorario", "9", "HONORARIO_ATRASADO")).thenReturn(true);
+
+        buildJob().executar(HOJE);
+
+        verify(notificacaoService, never()).criar(any(), any(), any(), any(), any(), any(), any(), any());
+    }
 }

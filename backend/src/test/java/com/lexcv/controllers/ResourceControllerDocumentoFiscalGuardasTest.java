@@ -145,6 +145,65 @@ class ResourceControllerDocumentoFiscalGuardasTest {
         verify(pagamentoRepository, never()).deleteById(anyInt());
     }
 
+    static final String MSG_ESTORNO = "Este estorno pertence a uma nota de crédito emitida e não pode ser apagado.";
+
+    @Test
+    void apagarEstornoDeNotaDeCreditoDevolve409PagamentoEstornoSemTocarNaContaCorrente() {
+        pagamentoExistente();
+        when(documentoFiscalService.eEstornoDeNotaCredito(TENANT_ID, 42)).thenReturn(true);
+        // O estorno também é "faturado" (a NC tem pagamento_id = estorno): a guarda própria vem antes.
+        when(documentoFiscalService.existeParaPagamento(TENANT_ID, 42)).thenReturn(true);
+
+        ResponseEntity<?> r = controller.deletePagamento(42);
+
+        assertEquals(HttpStatus.CONFLICT, r.getStatusCode());
+        assertEquals(MSG_ESTORNO, corpo(r).get("message"));
+        assertEquals("PAGAMENTO_ESTORNO", corpo(r).get("code"));
+        assertEquals(new BigDecimal("500.00"), contaCorrente.getSaldo());
+        verify(contaCorrenteRepository, never()).save(any());
+        verify(contaCorrenteRepository, never()).debitar(any(), any());
+        verify(pagamentoRepository, never()).deleteById(anyInt());
+        verify(documentoFiscalService, never()).existeParaPagamento(any(), any());
+    }
+
+    @Test
+    void apagarPagamentoFaturadoQueNaoEhEstornoMantem409PagamentoFaturado() {
+        pagamentoExistente();
+        when(documentoFiscalService.eEstornoDeNotaCredito(TENANT_ID, 42)).thenReturn(false);
+        when(documentoFiscalService.existeParaPagamento(TENANT_ID, 42)).thenReturn(true);
+
+        ResponseEntity<?> r = controller.deletePagamento(42);
+
+        assertEquals(HttpStatus.CONFLICT, r.getStatusCode());
+        assertEquals("PAGAMENTO_FATURADO", corpo(r).get("code"));
+        verify(contaCorrenteRepository, never()).debitar(any(), any());
+    }
+
+    @Test
+    void apagarEstornoDeOutroTenantNaoConsultaAGuardaDoEstorno() {
+        pagamentoExistente();
+        processo.setTenantId(UUID.randomUUID());
+
+        ResponseEntity<?> r = controller.deletePagamento(42);
+
+        assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+        verify(documentoFiscalService, never()).eEstornoDeNotaCredito(any(), any());
+    }
+
+    @Test
+    void postPagamentoComValorNegativoEFaturacaoDesligadaEhRecusado() {
+        // CONTEXT: o estorno só é criado pelo NotaCreditoService, nunca por POST /pagamentos.
+        when(honorarioRepository.findById(5)).thenReturn(Optional.of(honorario));
+        when(processoRepository.findById(processo.getId())).thenReturn(Optional.of(processo));
+
+        ResponseEntity<?> r = controller.createPagamento(new com.lexcv.dtos.PagamentoRequest(5,
+                new BigDecimal("-100.00"), java.time.LocalDate.of(2026, 10, 5), "DINHEIRO", null, null));
+
+        assertEquals(HttpStatus.BAD_REQUEST, r.getStatusCode());
+        verify(pagamentoRepository, never()).save(any());
+        verify(contaCorrenteRepository, never()).debitar(any(), any());
+    }
+
     @Test
     void apagarPagamentoSemDocumentoMantemComportamento() {
         pagamentoExistente();

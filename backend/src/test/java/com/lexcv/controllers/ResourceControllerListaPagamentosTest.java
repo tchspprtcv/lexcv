@@ -213,4 +213,52 @@ class ResourceControllerListaPagamentosTest {
         }
         assertEquals(List.of(), ofensores);
     }
+    // ---------------------------------------------------------------- Phase 135 (NCRD-03)
+
+    @Test
+    void estornoApareceComAReferenciaDaNotaDeCreditoESemDocumentoFiscal() {
+        Pagamento estorno = Pagamento.builder().id(4).honorarioId(5).valorPago(new BigDecimal("-20000.00"))
+                .dataPagamento(LocalDate.of(2026, 10, 5)).metodo("DINHEIRO").build();
+        when(pagamentoRepository.findByHonorarioId(5)).thenReturn(List.of(pagamento(1), pagamento(2), estorno));
+        DocumentoFiscalRef fr = new DocumentoFiscalRef(UUID.randomUUID(), "SIM-FR-2026/4");
+        DocumentoFiscalRef nc = new DocumentoFiscalRef(UUID.randomUUID(), "SIM-NC-2026/1");
+        when(documentoFiscalService.referenciasPorPagamento(eq(TENANT_ID), any())).thenReturn(Map.of(2, fr));
+        when(documentoFiscalService.estornosPorPagamento(eq(TENANT_ID), any())).thenReturn(Map.of(4, nc));
+
+        List<PagamentoComDocumentoResponse> l = lista(controller.listHonorarioPagamentos(5));
+
+        assertEquals(3, l.size());
+        assertNull(l.get(0).documentoFiscal(), "legado: sem documento");
+        assertNull(l.get(0).estorno(), "legado: sem estorno");
+        assertEquals(fr, l.get(1).documentoFiscal());
+        assertNull(l.get(1).estorno(), "pagamento com FR não é estorno");
+        assertNull(l.get(2).documentoFiscal(), "um estorno nunca aparece como Fatura-Recibo");
+        assertEquals(nc, l.get(2).estorno());
+        assertEquals("SIM-NC-2026/1", l.get(2).estorno().numeroFormatado());
+        assertEquals(new BigDecimal("-20000.00"), l.get(2).valorPago());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void estornosLidosNumaSoConsultaComOTenantDoPrincipal() {
+        when(pagamentoRepository.findByHonorarioId(5)).thenReturn(List.of(pagamento(1), pagamento(2)));
+        when(documentoFiscalService.referenciasPorPagamento(any(), any())).thenReturn(Map.of());
+        when(documentoFiscalService.estornosPorPagamento(any(), any())).thenReturn(Map.of());
+
+        controller.listHonorarioPagamentos(5);
+
+        ArgumentCaptor<Collection<Integer>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(documentoFiscalService, times(1)).estornosPorPagamento(eq(TENANT_ID), ids.capture());
+        assertEquals(Set.of(1, 2), new HashSet<>(ids.getValue()));
+    }
+
+    @Test
+    void honorarioDeOutroTenantNaoLeEstornos() {
+        processo.setTenantId(UUID.randomUUID());
+
+        ResponseEntity<?> r = controller.listHonorarioPagamentos(5);
+
+        assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+        verify(documentoFiscalService, org.mockito.Mockito.never()).estornosPorPagamento(any(), any());
+    }
 }
