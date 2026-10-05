@@ -20,15 +20,29 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
-import { podeLerDocumentosFiscais, useDocumentoFiscal } from "@/hooks/use-faturacao";
+import {
+  podeEmitirNotaCredito,
+  podeLerDocumentosFiscais,
+  useDocumentoFiscal,
+  useEstadoEmissao,
+} from "@/hooks/use-faturacao";
 import { usePermissions } from "@/hooks/use-permissions";
 import { isApiError } from "@/lib/api";
 import type { DocumentoFiscalDetalhe } from "@/types/faturacao";
+
+import { NotaCreditoDialog } from "./nota-credito-dialog";
 
 // Detalhe de um documento fiscal (134-UI-SPEC Surface 4; D-18, EMIS-08, EMIS-11). Só de leitura:
 // mostra o snapshot gravado na emissão e os valores calculados pelo backend. Este ecrã não tem
 // nenhuma ação que altere o documento. Um id de outro escritório devolve o mesmo 404 do que um
 // id inexistente.
+//
+// Phase 135 (135-UI-SPEC Surface 2; NCRD-01, NCRD-02): numa Fatura-Recibo mostra as notas de
+// crédito emitidas, o total creditado e o valor ainda creditável (todos vindos do backend) e, para
+// quem tem EXATAMENTE financeiro:manage, o botão "Emitir Nota de Crédito". A NC é um documento
+// NOVO, emitido pelo diálogo (nota-credito-dialog.tsx, que concentra os pedidos); a FR nunca é
+// alterada. Numa Nota de Crédito mostra o documento original, o motivo e as ligações ao
+// honorário e ao estorno.
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -65,6 +79,9 @@ export default function DocumentoFiscalPage(props: PageProps) {
   const podeLer = podeLerDocumentosFiscais(permissions.permissions);
   const canViewClientes = permissions.can.view("clientes");
   const documento = useDocumentoFiscal(id, podeLer);
+  const estadoEmissao = useEstadoEmissao(podeLer);
+  const podeEmitirNc = podeEmitirNotaCredito(permissions.permissions);
+  const faturacaoDesligada = estadoEmissao.data?.ativa === false;
 
   if (!permissions.isFetched) {
     return null;
@@ -135,7 +152,12 @@ export default function DocumentoFiscalPage(props: PageProps) {
       ) : !documento.data ? (
         <CarregandoDocumento />
       ) : (
-        <DetalheDocumento documento={documento.data} canViewClientes={canViewClientes} />
+        <DetalheDocumento
+          documento={documento.data}
+          canViewClientes={canViewClientes}
+          podeEmitirNc={podeEmitirNc}
+          faturacaoDesligada={faturacaoDesligada}
+        />
       )}
     </div>
   );
@@ -171,33 +193,81 @@ function CarregandoDocumento() {
 function DetalheDocumento({
   documento: d,
   canViewClientes,
+  podeEmitirNc,
+  faturacaoDesligada,
 }: {
   documento: DocumentoFiscalDetalhe;
   canViewClientes: boolean;
+  podeEmitirNc: boolean;
+  faturacaoDesligada: boolean;
 }) {
   const isento = d.emitenteRegimeIva === "ISENTO";
+  const isFr = d.tipo === "FR";
+  const isNc = d.tipo === "NC";
+  const tituloRef = React.useRef<HTMLHeadingElement>(null);
+  // Gate exato (financeiro:manage) + FR com valor ainda creditável (do backend) + faturação não
+  // desligada. Sem estas condições o botão não é renderizado (nem desativado).
+  const mostrarEmissaoNc = isFr && podeEmitirNc && (d.valorCreditavelRestante ?? 0) > 0 && !faturacaoDesligada;
+  const totalmenteCreditada = isFr && podeEmitirNc && d.valorCreditavelRestante === 0;
+  const hrefHonorario = `/financeiro/${encodeURIComponent(String(d.honorarioId))}`;
 
   return (
     <>
-      <div className="space-y-2">
-        <h1 className="font-mono text-2xl font-semibold">{d.numeroFormatado}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{d.tipoRotulo}</Badge>
-          {d.estadoComunicacao === "PENDENTE" ? <Badge variant="outline">Pendente</Badge> : null}
-          <Badge variant="outline" className="gap-1">
-            <Info className="h-3 w-3" aria-hidden="true" />
-            Simulação — sem validade fiscal
-          </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 ref={tituloRef} tabIndex={-1} className="font-mono text-2xl font-semibold outline-none">
+            {d.numeroFormatado}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{d.tipoRotulo}</Badge>
+            {d.estadoComunicacao === "PENDENTE" ? <Badge variant="outline">Pendente</Badge> : null}
+            <Badge variant="outline" className="gap-1">
+              <Info className="h-3 w-3" aria-hidden="true" />
+              Simulação — sem validade fiscal
+            </Badge>
+          </div>
+          {d.estadoComunicacao === "PENDENTE" ? (
+            <p className={AJUDA}>Comunicação à administração fiscal ainda não efetuada.</p>
+          ) : null}
         </div>
-        {d.estadoComunicacao === "PENDENTE" ? (
-          <p className={AJUDA}>Comunicação à administração fiscal ainda não efetuada.</p>
+        {mostrarEmissaoNc ? (
+          <NotaCreditoDialog documento={d} tituloPaginaRef={tituloRef} />
+        ) : totalmenteCreditada ? (
+          <p className={AJUDA}>Esta fatura-recibo já foi totalmente creditada.</p>
         ) : null}
       </div>
 
       <div className={NOTICE_CLASSES}>
-        Este documento é simulado e não tem validade fiscal. Fica registado como pendente de comunicação; a
-        comunicação à administração fiscal chega numa versão futura.
+        {isNc
+          ? "Esta nota de crédito é simulada e não tem validade fiscal. Fica registada como pendente de comunicação; a comunicação à administração fiscal chega numa versão futura."
+          : "Este documento é simulado e não tem validade fiscal. Fica registado como pendente de comunicação; a comunicação à administração fiscal chega numa versão futura."}
       </div>
+
+      {isNc && d.documentoOrigem ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">Documento original</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              <span>Corrige a fatura-recibo</span>
+              <span className="font-mono">{d.documentoOrigem.numeroFormatado}</span>
+            </p>
+            <Link
+              href={`/financeiro/documentos-fiscais/${encodeURIComponent(d.documentoOrigem.id)}`}
+              className={`${LINK_CLASSES} font-mono`}
+            >
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              Ver fatura-recibo original
+            </Link>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+              <Campo rotulo="Motivo">{d.motivoRotulo ?? "—"}</Campo>
+              <dt className="text-sm font-semibold">Descrição do motivo</dt>
+              <dd className="text-sm break-words">{d.motivoTexto ?? "—"}</dd>
+            </dl>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -303,12 +373,14 @@ function DetalheDocumento({
           </dl>
           <Separator />
           <dl className="grid grid-cols-[1fr_auto] gap-2 text-sm font-semibold">
-            <dt>Total</dt>
+            <dt>{isNc ? "Total creditado" : "Total"}</dt>
             <dd className="text-right tabular-nums">{formatarCVE(d.totalDocumento)}</dd>
             <dt>Líquido recebido</dt>
             <dd className="text-right tabular-nums">{formatarCVE(d.valorLiquido)}</dd>
           </dl>
-          <p className={AJUDA}>Conta corrente creditada do total.</p>
+          <p className={AJUDA}>
+            {isNc ? "Conta corrente debitada do total creditado." : "Conta corrente creditada do total."}
+          </p>
           <Separator />
           <dl className="grid grid-cols-[1fr_auto] gap-2 text-sm">
             <dt>Método de pagamento</dt>
@@ -319,27 +391,37 @@ function DetalheDocumento({
         </CardContent>
       </Card>
 
+      {isFr ? <NotasCreditoCard documento={d} /> : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Ligações</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+            {isNc ? null : (
+              <li>
+                <Link href={`${hrefHonorario}#pagamento-${d.pagamentoId}`} className={LINK_CLASSES}>
+                  Ver pagamento
+                  <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </li>
+            )}
             <li>
-              <Link
-                href={`/financeiro/${encodeURIComponent(String(d.honorarioId))}#pagamento-${d.pagamentoId}`}
-                className={LINK_CLASSES}
-              >
-                Ver pagamento
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </li>
-            <li>
-              <Link href={`/financeiro/${encodeURIComponent(String(d.honorarioId))}`} className={LINK_CLASSES}>
+              <Link href={hrefHonorario} className={LINK_CLASSES}>
                 Ver honorário
                 <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </li>
+            {isNc ? (
+              <li>
+                {/* Numa NC, pagamentoId é o id do estorno (pagamento negativo). */}
+                <Link href={`${hrefHonorario}#pagamento-${d.pagamentoId}`} className={LINK_CLASSES}>
+                  Ver estorno
+                  <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </li>
+            ) : null}
             {canViewClientes ? (
               <li>
                 <Link href={`/clientes/${encodeURIComponent(d.clienteId)}`} className={LINK_CLASSES}>
@@ -354,5 +436,62 @@ function DetalheDocumento({
 
       <p className={AJUDA}>Documento imutável: não pode ser alterado nem apagado.</p>
     </>
+  );
+}
+
+/** FR: notas de crédito emitidas, total creditado e valor ainda creditável (valores do backend). */
+function NotasCreditoCard({ documento: d }: { documento: DocumentoFiscalDetalhe }) {
+  const notas = d.notasCredito ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold">Notas de crédito</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <dl className="grid grid-cols-[1fr_auto] gap-2 text-sm">
+          <dt>Total creditado</dt>
+          <dd className="text-right tabular-nums">{formatarCVE(d.totalCreditado ?? 0)}</dd>
+          <dt className="font-semibold">Valor ainda creditável</dt>
+          <dd className="text-right font-semibold tabular-nums">{formatarCVE(d.valorCreditavelRestante ?? 0)}</dd>
+        </dl>
+        {notas.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Ainda não foram emitidas notas de crédito para esta fatura-recibo.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {notas.map((nc) => (
+                  <TableRow key={nc.id}>
+                    <TableCell>
+                      <Link
+                        href={`/financeiro/documentos-fiscais/${encodeURIComponent(nc.id)}`}
+                        className={`${LINK_CLASSES} font-mono`}
+                      >
+                        {nc.numeroFormatado}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{formatarData(nc.dataEmissao)}</TableCell>
+                    <TableCell>{nc.motivoRotulo}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatarCVE(nc.totalDocumento)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        <p className={AJUDA}>A soma das notas de crédito nunca pode exceder o total da fatura-recibo.</p>
+      </CardContent>
+    </Card>
   );
 }

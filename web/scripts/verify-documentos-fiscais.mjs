@@ -7,6 +7,12 @@
 // dos ficheiros (sem remover comentarios): ate um comentario com um token proibido faz o gate
 // falhar.
 //
+// Phase 135 (Nota de Credito, 135-UI-SPEC Surfaces 1-2): o dialogo "Emitir Nota de Credito"
+// (nota-credito-dialog.tsx) concentra os pedidos da NC via hooks, por isso o detalhe continua sem
+// mutacoes; o gate fixa a copy vinculativa do dialogo, o ciclo de vida da chave (CR-02), o gate
+// EXATO financeiro:manage, a ausencia de contas de dinheiro e de dangerouslySetInnerHTML (o texto
+// livre do motivo e renderizado so como texto React).
+//
 // O QUE ESTE GATE NAO CONSEGUE PROVAR (fica para a verificacao ponta a ponta, 134-HUMAN-UAT.md):
 //   1. Que os ecras renderizam com o backend real e que o dialogo emite uma unica vez.
 //   2. Que o backend recusa 403/404 a quem nao tem permissao ou e de outro escritorio.
@@ -30,6 +36,7 @@ const FICHEIROS = {
   lista: path.join(DOCUMENTOS, "page.tsx"),
   columns: path.join(DOCUMENTOS, "columns.tsx"),
   detalhe: path.join(DOCUMENTOS, "[id]", "page.tsx"),
+  notaCreditoDialog: path.join(DOCUMENTOS, "[id]", "nota-credito-dialog.tsx"),
   financeiroPage: path.join(FINANCEIRO, "page.tsx"),
   hooksFaturacao: path.join(SRC, "hooks", "use-faturacao.ts"),
   hooksFinanceiro: path.join(SRC, "hooks", "use-financeiro.ts"),
@@ -151,7 +158,7 @@ async function main() {
     [/\*\s*0\./, "multiplicacao por fracao"],
     [/\/\s*100\b/, "divisao por 100"],
   ];
-  for (const nome of ["form", "dialog", "columns", "detalhe", "lista", "pagamentosCard"]) {
+  for (const nome of ["form", "dialog", "columns", "detalhe", "lista", "pagamentosCard", "notaCreditoDialog"]) {
     for (const [regex, descricao] of padroes) exigeSemPadrao(nome, texto, regex, descricao);
   }
   exigeSemPadrao("schema", texto, /\b0\.(15|20)\b/, "constante de taxa");
@@ -173,13 +180,57 @@ async function main() {
   exigeContem("erros", texto, "interpretarErroEmissao");
   exigeContem("erros", texto, "mensagemGuardaFiscal");
 
+  // (f) Phase 135 -- Nota de Credito (135-UI-SPEC Surfaces 1-2).
+  for (const token of [
+    "Emitir Nota de Crédito",
+    "Pré-visualizar nota de crédito",
+    "Emitir nota de crédito",
+    "Voltar e editar",
+    "Fechar sem emitir",
+    "Valor ainda creditável",
+    "Valor creditável restante",
+    "Total a creditar",
+    "Depois de emitida, a nota de crédito não pode ser alterada nem apagada.",
+    "Nota de crédito ${nc.numeroFormatado} emitida.",
+    // CR-02: a chave pertence ao conteudo do pedido, incluindo a FR de origem.
+    "tentativaParaPedido",
+    "documentoOrigemId: documento.id",
+    "chaveIdempotencia: tentativa.chave",
+    "marcarPorResolver",
+    "desfechoDefinitivo",
+    "emitindoRef",
+    "useEmitirNotaCredito",
+    "usePreVisualizacaoNotaCredito",
+  ]) {
+    exigeContem("notaCreditoDialog", texto, token);
+  }
+  for (const token of [
+    "Notas de crédito",
+    "Valor ainda creditável",
+    "Ainda não foram emitidas notas de crédito para esta fatura-recibo.",
+    "Ver fatura-recibo original",
+    "Esta fatura-recibo já foi totalmente creditada.",
+    "Ver estorno",
+    "podeEmitirNotaCredito(permissions.permissions)",
+    "<NotaCreditoDialog",
+  ]) {
+    exigeContem("detalhe", texto, token);
+  }
+  for (const nome of ["detalhe", "notaCreditoDialog"]) {
+    exigeNaoContem(nome, texto, "dangerouslySetInnerHTML");
+  }
+  exigeNaoContem("notaCreditoDialog", texto, "/api/v1");
+  exigeContem("hooksFaturacao", texto, 'PERMISSAO_EMISSAO_NOTA_CREDITO = "financeiro:manage"');
+  exigeContem("hooksFaturacao", texto, "hasPermission(permissions, PERMISSAO_EMISSAO_NOTA_CREDITO)");
+  exigeContem("hooksFaturacao", texto, "notas-credito");
+
   if (falhas.length > 0) {
     console.error(`verify:documentos-fiscais FALHOU (${falhas.length}):`);
     for (const f of falhas) console.error(`  - ${f}`);
     process.exit(1);
   }
   console.log(
-    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente e hooks.",
+    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente, hooks e Nota de Crédito (financeiro:manage).",
   );
 }
 
