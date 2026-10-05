@@ -74,8 +74,8 @@ import java.util.UUID;
  * <p><b>Imutabilidade:</b> não há rotas para editar, anular ou apagar um documento fiscal, nem
  * para emitir um documento para um pagamento já registado (EMIS-12). A Nota de Crédito é um
  * documento NOVO que referencia a FR; a FR nunca é alterada. Um id que não é UUID devolve, nas
- * rotas da NC, o mesmo 404 do detalhe. Sem {@code @Transactional}
- * aqui: os serviços são donos das suas transações (só de leitura).
+ * rotas da NC, o mesmo 404 do detalhe. Sem anotação transacional aqui: os serviços são donos
+ * das suas transações (leitura, ou a emissão atómica da NC em {@code NotaCreditoService}).
  */
 @RestController
 @RequestMapping("/api/v1")

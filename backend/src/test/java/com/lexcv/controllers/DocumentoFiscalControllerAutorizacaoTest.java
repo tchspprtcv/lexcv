@@ -1,14 +1,19 @@
 package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
+import com.lexcv.dtos.NotaCreditoRequest;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,6 +57,11 @@ import static org.mockito.Mockito.when;
  * detêm {@code edit}: ADMIN tem view+edit+manage; ADVOGADO e TECNICO têm só view (leem, não
  * pré-visualizam -- também não registam pagamentos); ASSISTENTE não tem nenhuma autoridade
  * financeiro (recusado em tudo, como na UI).
+ *
+ * <p>Phase 135 (NCRD-01, T-135-31): as duas rotas da Nota de Crédito exigem a autoridade EXATA
+ * {@code financeiro:manage}. No servidor não há equivalência {@code manage <= edit}: quem só tem
+ * {@code financeiro:edit}, {@code financeiro:view}, os dois, ou nenhuma autoridade financeiro é
+ * recusado nas duas e o serviço nunca é chamado.
  */
 class DocumentoFiscalControllerAutorizacaoTest {
 
@@ -127,6 +138,78 @@ class DocumentoFiscalControllerAutorizacaoTest {
         assertThrows(AccessDeniedException.class, preVisualizar(proxy));
         verifyNoInteractions(preVisualizacao, documentos);
     }
+
+    // ------------------------------------------------------------------ nota de crédito (Phase 135)
+
+    private static NotaCreditoRequest pedidoNc() {
+        return new NotaCreditoRequest("TOTAL", null, "ANULACAO_TOTAL", "Serviço não prestado", UUID.randomUUID());
+    }
+
+    private static Executable preVisualizarNc(DocumentoFiscalController p, UUID origem) {
+        return () -> p.preVisualizarNotaCredito(origem.toString(), pedidoNc());
+    }
+
+    private static Executable emitirNc(DocumentoFiscalController p, UUID origem) {
+        return () -> p.emitirNotaCredito(origem.toString(), pedidoNc());
+    }
+
+    @Test
+    void manageExatoPreVisualizaEEmiteNotaCreditoComOTenantEOAutorDoPrincipal() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:manage");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        UUID origem = UUID.randomUUID();
+        when(notasCredito.emitir(any(), any(), any(), any())).thenReturn(
+                ResultadoNotaCredito.novo(null));
+
+        assertDoesNotThrow(preVisualizarNc(proxy, origem));
+        assertDoesNotThrow(emitirNc(proxy, origem));
+
+        verify(notasCredito).preVisualizar(eq(principal.getTenantId()), eq(origem), any(NotaCreditoRequest.class));
+        verify(notasCredito).emitir(eq(principal.getTenantId()), eq(principal), eq(origem),
+                any(NotaCreditoRequest.class));
+    }
+
+    static Stream<Arguments> semManage() {
+        return Stream.of(
+                Arguments.of((Object) new String[]{"financeiro:edit"}),
+                Arguments.of((Object) new String[]{"financeiro:view"}),
+                Arguments.of((Object) new String[]{"financeiro:view", "financeiro:edit"}),
+                Arguments.of((Object) new String[]{"financeiro:view", "financeiro:create", "financeiro:edit"}),
+                Arguments.of((Object) new String[]{"ROLE_financeiro:manage"}),
+                Arguments.of((Object) new String[]{}));
+    }
+
+    @ParameterizedTest
+    @MethodSource("semManage")
+    void semManageExatoAPreVisualizacaoDaNcERecusada(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, preVisualizarNc(proxy, UUID.randomUUID()));
+        verifyNoInteractions(notasCredito);
+    }
+
+    @ParameterizedTest
+    @MethodSource("semManage")
+    void semManageExatoAEmissaoDaNcERecusada(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, emitirNc(proxy, UUID.randomUUID()));
+        verifyNoInteractions(notasCredito);
+    }
+
+    @Test
+    void advogadoPorOmissaoNaoEmiteNotaCredito() {
+        autenticarComAuthorities("ROLE_ADVOGADO", "financeiro:view", "processos:manage");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, preVisualizarNc(proxy, UUID.randomUUID()));
+        assertThrows(AccessDeniedException.class, emitirNc(proxy, UUID.randomUUID()));
+        verifyNoInteractions(notasCredito);
+    }
+
+    // ------------------------------------------------------------------ matriz existente
 
     @Test
     void semAutoridadeFinanceiroTudoRecusado() {
