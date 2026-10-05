@@ -14,9 +14,20 @@ import {
   COPY_REDE,
   COPY_SEM_PERMISSAO,
   STATUS_INLINE_EMISSAO,
+  COPY_GUARDA_ESTORNO,
+  COPY_NC_CHAVE_REUTILIZADA,
+  COPY_NC_DATA,
+  COPY_NC_DESLIGADA,
+  COPY_NC_EXCEDE,
+  COPY_NC_INDISPONIVEL,
+  COPY_NC_REDE_EMISSAO,
+  COPY_NC_REDE_PRE_VISUALIZACAO,
+  COPY_NC_SEM_PERMISSAO,
+  COPY_NC_SOBRE_NC,
   construirQueryDocumentosFiscais,
   desfechoDefinitivo,
   interpretarErroEmissao,
+  interpretarErroNotaCredito,
   mensagemGuardaFiscal,
 } from "@/lib/erros-emissao";
 import {
@@ -300,5 +311,149 @@ describe("podeEmitirNotaCredito (Phase 135, gate exato financeiro:manage)", () =
     for (const perms of [["financeiro:manage"], ["financeiro:edit"], ["financeiro:view"], []]) {
       expect(podeEmitirNotaCredito(perms)).toBe(hasScopedPermission(perms, "financeiro", "manage"));
     }
+  });
+});
+
+describe("interpretarErroNotaCredito (Phase 135, UI-SPEC Surface 1)", () => {
+  it("copy exata do UI-SPEC", () => {
+    expect(COPY_NC_EXCEDE).toBe(
+      "O valor indicado excede o que ainda pode ser creditado nesta fatura-recibo. Reduza o valor ou escolha crédito total.",
+    );
+    expect(COPY_NC_SOBRE_NC).toBe(
+      "Não é possível creditar uma nota de crédito. Emita a nota de crédito sobre a fatura-recibo original.",
+    );
+    expect(COPY_NC_DESLIGADA).toBe(
+      "A faturação está desligada. Ative a faturação nas definições para emitir notas de crédito.",
+    );
+    expect(COPY_NC_DATA).toBe(
+      "A nota de crédito só pode ser emitida com a data de hoje. Atualize a página e tente de novo.",
+    );
+    expect(COPY_NC_CHAVE_REUTILIZADA).toBe(
+      "Este pedido já foi usado com valores diferentes. Reveja os dados e emita a nota de crédito de novo.",
+    );
+    expect(COPY_NC_INDISPONIVEL).toBe(
+      "O serviço de faturação está temporariamente indisponível. Aguarde um momento e tente novamente.",
+    );
+    expect(COPY_NC_SEM_PERMISSAO).toBe("Não tem permissão para emitir notas de crédito.");
+  });
+
+  it("falha de rede usa a copy da fase", () => {
+    expect(interpretarErroNotaCredito(new TypeError("Failed to fetch"), "pre-visualizacao")).toEqual({
+      tipo: "rede",
+      mensagem: "Não foi possível calcular a nota de crédito. Verifique a ligação e tente novamente.",
+    });
+    expect(interpretarErroNotaCredito(new TypeError("Failed to fetch"), "emissao")).toEqual({
+      tipo: "rede",
+      mensagem: "Não foi possível emitir a nota de crédito. Verifique a ligação e tente novamente.",
+    });
+    expect(COPY_NC_REDE_PRE_VISUALIZACAO).not.toBe(COPY_NC_REDE_EMISSAO);
+  });
+
+  it("503 (com ou sem code) é serviço indisponível; outros 5xx são rede da fase", () => {
+    for (const e of [erro(503, "FATURACAO_OCUPADA", undefined, "ocupada"), erro(503, "SERIE_INDISPONIVEL"), erro(503)]) {
+      expect(interpretarErroNotaCredito(e, "emissao")).toEqual({ tipo: "rede", mensagem: COPY_NC_INDISPONIVEL });
+    }
+    expect(interpretarErroNotaCredito(erro(500), "emissao")).toEqual({ tipo: "rede", mensagem: COPY_NC_REDE_EMISSAO });
+    expect(interpretarErroNotaCredito(erro(504), "pre-visualizacao")).toEqual({
+      tipo: "rede",
+      mensagem: COPY_NC_REDE_PRE_VISUALIZACAO,
+    });
+  });
+
+  it("409 NC_EXCEDE_ORIGINAL é 'excede' com a copy do UI-SPEC", () => {
+    const e = erro(409, "NC_EXCEDE_ORIGINAL", "valor", "Esta fatura-recibo já foi totalmente creditada.");
+    expect(interpretarErroNotaCredito(e, "emissao")).toEqual({ tipo: "excede", mensagem: COPY_NC_EXCEDE });
+  });
+
+  it("NC_SOBRE_NC e FATURACAO_DESLIGADA são banners definitivos", () => {
+    expect(interpretarErroNotaCredito(erro(422, "NC_SOBRE_NC", undefined, "x"), "pre-visualizacao")).toEqual({
+      tipo: "banner",
+      codigo: "NC_SOBRE_NC",
+      mensagem: COPY_NC_SOBRE_NC,
+      definitivo: true,
+    });
+    expect(interpretarErroNotaCredito(erro(409, "FATURACAO_DESLIGADA", undefined, "x"), "emissao")).toEqual({
+      tipo: "banner",
+      codigo: "FATURACAO_DESLIGADA",
+      mensagem: COPY_NC_DESLIGADA,
+      definitivo: true,
+    });
+  });
+
+  it("409 DATA_EMISSAO_ALTERADA é banner com a copy da data", () => {
+    expect(interpretarErroNotaCredito(erro(409, "DATA_EMISSAO_ALTERADA", undefined, "x"), "emissao")).toEqual({
+      tipo: "banner",
+      codigo: "DATA_EMISSAO_ALTERADA",
+      mensagem: "A nota de crédito só pode ser emitida com a data de hoje. Atualize a página e tente de novo.",
+      definitivo: false,
+    });
+  });
+
+  it("409 CHAVE_REUTILIZADA usa a copy da NC (não a do pagamento)", () => {
+    const r = interpretarErroNotaCredito(erro(409, "CHAVE_REUTILIZADA", undefined, "x"), "emissao");
+    expect(r).toEqual({
+      tipo: "chave-reutilizada",
+      mensagem: "Este pedido já foi usado com valores diferentes. Reveja os dados e emita a nota de crédito de novo.",
+    });
+  });
+
+  it.each(["tipo", "valor", "motivoCodigo", "motivoTexto"] as const)("422 com campo %s vai para o campo", (campo) => {
+    expect(interpretarErroNotaCredito(erro(422, "X", campo, "Mensagem do backend."), "pre-visualizacao")).toEqual({
+      tipo: "campo",
+      campo,
+      mensagem: "Mensagem do backend.",
+    });
+    expect(interpretarErroNotaCredito(erro(422, "X", campo), "pre-visualizacao")).toEqual({
+      tipo: "campo",
+      campo,
+      mensagem: "Verifique os campos assinalados.",
+    });
+  });
+
+  it("422 com campo desconhecido é banner não definitivo com a mensagem do backend", () => {
+    expect(interpretarErroNotaCredito(erro(422, "CHAVE_IDEMPOTENCIA_OBRIGATORIA", "chaveIdempotencia", "m"), "emissao")).toEqual({
+      tipo: "banner",
+      codigo: "CHAVE_IDEMPOTENCIA_OBRIGATORIA",
+      mensagem: "m",
+      definitivo: false,
+    });
+  });
+
+  it("404 é nao-encontrado; 403 é banner sem permissão; 401 é nulo", () => {
+    expect(interpretarErroNotaCredito(erro(404, "DOCUMENTO_FISCAL_NAO_ENCONTRADO"), "emissao")).toEqual({
+      tipo: "nao-encontrado",
+    });
+    expect(interpretarErroNotaCredito(erro(403), "emissao")).toEqual({
+      tipo: "banner",
+      mensagem: "Não tem permissão para emitir notas de crédito.",
+      definitivo: false,
+    });
+    expect(interpretarErroNotaCredito(erro(401), "emissao")).toBeNull();
+  });
+
+  it("status fora dos inline (ex. 400) devolve nulo: o apiFetch já mostrou o toast", () => {
+    expect(interpretarErroNotaCredito(erro(400, undefined, undefined, "x"), "emissao")).toBeNull();
+  });
+
+  it("interpretarErroEmissao continua com a copy da fatura-recibo", () => {
+    expect(interpretarErroEmissao(erro(409, "CHAVE_REUTILIZADA"))).toEqual({
+      tipo: "chave-reutilizada",
+      mensagem: COPY_CHAVE_REUTILIZADA,
+    });
+    expect(interpretarErroEmissao(new TypeError("x"))).toEqual({ tipo: "rede", mensagem: COPY_REDE });
+  });
+});
+
+describe("mensagemGuardaFiscal: estorno (Phase 135)", () => {
+  it("409 PAGAMENTO_ESTORNO tem copy própria", () => {
+    expect(COPY_GUARDA_ESTORNO).toBe("Este estorno pertence a uma nota de crédito emitida e não pode ser apagado.");
+    expect(mensagemGuardaFiscal(erro(409, "PAGAMENTO_ESTORNO"))).toBe(
+      "Este estorno pertence a uma nota de crédito emitida e não pode ser apagado.",
+    );
+    expect(mensagemGuardaFiscal(erro(409, "PAGAMENTO_ESTORNO", undefined, "Do backend."))).toBe("Do backend.");
+  });
+
+  it("a guarda da FR fica igual", () => {
+    expect(mensagemGuardaFiscal(erro(409, "PAGAMENTO_FATURADO"))).toBe(COPY_GUARDA_PAGAMENTO);
   });
 });
