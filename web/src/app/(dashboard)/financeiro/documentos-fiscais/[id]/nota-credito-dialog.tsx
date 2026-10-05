@@ -23,10 +23,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useEmitirNotaCredito, usePreVisualizacaoNotaCredito } from "@/hooks/use-faturacao";
 import { toast } from "@/hooks/use-toast";
-import { desfechoDefinitivo, interpretarErroNotaCredito } from "@/lib/erros-emissao";
-import { marcarPorResolver, tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
+import { interpretarErroNotaCredito } from "@/lib/erros-emissao";
+import { tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
 import {
   reagirAErroNotaCredito,
+  tentativaDepoisDeFalhaNc,
   type PassoNotaCredito,
   type ReacaoErroNotaCredito,
 } from "@/lib/nota-credito-dialogo";
@@ -188,9 +189,10 @@ export function NotaCreditoDialog({
       setAberto(false);
       toast.success(`Nota de crédito ${nc.numeroFormatado} emitida.`);
     } catch (e) {
-      // Recusa 4xx processada: a chave não tem NC associada e pode ser descartada. Qualquer outra
-      // falha (rede, 5xx, 401/403/408/429) deixa o desfecho por resolver e mantém a chave.
-      setTentativa((atual) => (desfechoDefinitivo(e) ? null : marcarPorResolver(atual)));
+      // CR-02 da revisão: a tentativa nunca fica nula no passo 2. Recusa 4xx processada
+      // (`desfechoDefinitivo`): chave nova para o mesmo conteúdo. Qualquer outra falha (rede, 5xx,
+      // 401/403/408/429; `marcarPorResolver`): mantém a chave, com o desfecho por resolver.
+      setTentativa((atual) => (atual ? tentativaDepoisDeFalhaNc(atual, e) : atual));
       aplicar(reagirAErroNotaCredito(interpretarErroNotaCredito(e, "emissao"), "pre-visualizacao"));
     } finally {
       emitindoRef.current = false;
@@ -346,7 +348,7 @@ export function NotaCreditoDialog({
                 >
                   Voltar e editar
                 </Button>
-                <Button type="button" onClick={emitir} disabled={emitindo}>
+                <Button type="button" onClick={emitir} disabled={emitindo || !tentativa || !pedido}>
                   {emitindo ? "A emitir..." : "Emitir nota de crédito"}
                 </Button>
               </DialogFooter>

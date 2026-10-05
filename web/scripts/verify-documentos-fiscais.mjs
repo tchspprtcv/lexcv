@@ -39,6 +39,7 @@ const FICHEIROS = {
   columns: path.join(DOCUMENTOS, "columns.tsx"),
   detalhe: path.join(DOCUMENTOS, "[id]", "page.tsx"),
   notaCreditoDialog: path.join(DOCUMENTOS, "[id]", "nota-credito-dialog.tsx"),
+  notaCreditoDialogo: path.join(SRC, "lib", "nota-credito-dialogo.ts"),
   financeiroPage: path.join(FINANCEIRO, "page.tsx"),
   hooksFaturacao: path.join(SRC, "hooks", "use-faturacao.ts"),
   hooksFinanceiro: path.join(SRC, "hooks", "use-financeiro.ts"),
@@ -198,8 +199,10 @@ async function main() {
     "tentativaParaPedido",
     "documentoOrigemId: documento.id",
     "chaveIdempotencia: tentativa.chave",
-    "marcarPorResolver",
-    "desfechoDefinitivo",
+    // CR-02 da revisao 135: depois de uma falha a tentativa nunca fica nula (logica pura em
+    // lib/nota-credito-dialogo.ts, testada com vitest) e o botao nunca fica ativo sem ela.
+    "tentativaDepoisDeFalhaNc",
+    "disabled={emitindo || !tentativa || !pedido}",
     "emitindoRef",
     "useEmitirNotaCredito",
     "usePreVisualizacaoNotaCredito",
@@ -217,6 +220,9 @@ async function main() {
     "<NotaCreditoDialog",
   ]) {
     exigeContem("detalhe", texto, token);
+  }
+  for (const token of ["marcarPorResolver", "desfechoDefinitivo", "export function tentativaDepoisDeFalhaNc"]) {
+    exigeContem("notaCreditoDialogo", texto, token);
   }
   for (const nome of ["detalhe", "notaCreditoDialog"]) {
     exigeNaoContem(nome, texto, "dangerouslySetInnerHTML");

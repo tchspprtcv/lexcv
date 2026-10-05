@@ -5,7 +5,8 @@
 // padrão da 134 (`desfechoDefinitivo` ? descartar : `marcarPorResolver`). Fica fora do componente
 // para ser testada com vitest (o componente só liga isto ao React).
 
-import type { CampoNotaCredito, ErroNotaCredito } from "@/lib/erros-emissao";
+import { desfechoDefinitivo, type CampoNotaCredito, type ErroNotaCredito } from "@/lib/erros-emissao";
+import { gerarChaveIdempotencia, marcarPorResolver, type TentativaEmissao } from "@/lib/idempotencia";
 
 export type PassoNotaCredito = "formulario" | "pre-visualizacao";
 
@@ -48,4 +49,25 @@ export function reagirAErroNotaCredito(
     case "nao-encontrado":
       return { acao: "fechar" };
   }
+}
+
+/**
+ * Tentativa a usar depois de uma falha na emissão (CR-02 da revisão). NUNCA devolve `null`: o botão
+ * "Emitir nota de crédito" continua no passo 2 depois de várias recusas não definitivas
+ * (DATA_EMISSAO_ALTERADA, PROCESSO_ALTERADO_TENTE_NOVAMENTE, 409/422 sem campo) e, com a tentativa
+ * nula, o clique não fazia nada.
+ * - Recusa 4xx processada (`desfechoDefinitivo`): o backend procura a chave antes de qualquer
+ *   recusa, por isso esta chave não tem NC associada. Gera-se uma chave NOVA para o MESMO conteúdo:
+ *   a nova tentativa é um pedido novo, nunca a repetição de uma recusa.
+ * - Falha ambígua (rede, 5xx, 401/403/408/429): mantém a chave e marca-a por resolver.
+ */
+export function tentativaDepoisDeFalhaNc(
+  atual: TentativaEmissao,
+  erro: unknown,
+  gerar: () => string = gerarChaveIdempotencia,
+): TentativaEmissao {
+  if (desfechoDefinitivo(erro)) {
+    return { pedido: atual.pedido, chave: gerar(), porResolver: false };
+  }
+  return marcarPorResolver(atual) ?? atual;
 }

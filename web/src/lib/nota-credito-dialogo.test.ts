@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import type { ErroNotaCredito } from "@/lib/erros-emissao";
-import { tentativaParaPedido } from "@/lib/idempotencia";
+import { ApiError } from "@/lib/api";
+import { interpretarErroNotaCredito, type ErroNotaCredito } from "@/lib/erros-emissao";
+import { tentativaParaPedido, type TentativaEmissao } from "@/lib/idempotencia";
 import {
   reagirAErroNotaCredito,
+  tentativaDepoisDeFalhaNc,
 } from "@/lib/nota-credito-dialogo";
+
+function erro(status: number, code?: string, message?: string) {
+  const body: Record<string, string> = {};
+  if (message !== undefined) body.message = message;
+  if (code) body.code = code;
+  return new ApiError(`API ${status}: ${message ?? ""}`, { status, code, body });
+}
 
 const PEDIDO = {
   tipo: "PARCIAL" as const,
@@ -89,5 +98,65 @@ describe("reagirAErroNotaCredito", () => {
 
   it.each(casos)("%s", (_nome, erro, passo, esperado) => {
     expect(reagirAErroNotaCredito(erro, passo)).toEqual(esperado);
+  });
+});
+
+describe("tentativaDepoisDeFalhaNc (CR-02: o botão de emissão nunca fica mudo)", () => {
+  const base: TentativaEmissao = { pedido: '{"documentoOrigemId":"fr-1"}', chave: "chave-1", porResolver: false };
+
+  it.each([
+    ["409 DATA_EMISSAO_ALTERADA", erro(409, "DATA_EMISSAO_ALTERADA", "m")],
+    ["409 PROCESSO_ALTERADO_TENTE_NOVAMENTE", erro(409, "PROCESSO_ALTERADO_TENTE_NOVAMENTE", "m")],
+    ["409 sem código conhecido", erro(409, "OUTRO_CODIGO", "m")],
+    ["422 sem campo", erro(422, "CHAVE_IDEMPOTENCIA_OBRIGATORIA", "m")],
+  ])("%s: recusa definitiva gera chave nova para o mesmo conteúdo", (_nome, e) => {
+    const t = tentativaDepoisDeFalhaNc(base, e, () => "chave-2");
+    expect(t).toEqual({ pedido: base.pedido, chave: "chave-2", porResolver: false });
+  });
+
+  it.each([
+    ["rede", new TypeError("Failed to fetch")],
+    ["500", erro(500)],
+    ["503 FATURACAO_OCUPADA", erro(503, "FATURACAO_OCUPADA")],
+    ["504 do proxy", erro(504)],
+    ["401", erro(401)],
+    ["403", erro(403)],
+    ["408", erro(408)],
+    ["429", erro(429)],
+  ])("%s: falha ambígua mantém a chave e marca-a por resolver", (_nome, e) => {
+    const t = tentativaDepoisDeFalhaNc(base, e, () => "nunca");
+    expect(t).toEqual({ ...base, porResolver: true });
+  });
+
+  it("uma chave por resolver continua por resolver depois de outra falha ambígua", () => {
+    const porResolver = { ...base, porResolver: true };
+    expect(tentativaDepoisDeFalhaNc(porResolver, erro(502), () => "nunca")).toEqual(porResolver);
+  });
+
+  // O defeito: depois de uma recusa que fica no passo 2, o botão continuava ativo e o clique não
+  // fazia nada porque a tentativa ficava nula. Para qualquer falha da emissão, ou o diálogo sai do
+  // passo 2, ou há uma tentativa válida para o próximo clique.
+  it.each([
+    erro(409, "DATA_EMISSAO_ALTERADA", "m"),
+    erro(409, "PROCESSO_ALTERADO_TENTE_NOVAMENTE", "m"),
+    erro(409, "OUTRO_CODIGO"),
+    erro(422, "X", "m"),
+    erro(409, "NC_EXCEDE_ORIGINAL", "m"),
+    erro(409, "NC_VALORES_ALTERADOS", "m"),
+    erro(409, "CHAVE_REUTILIZADA", "m"),
+    erro(409, "FATURACAO_DESLIGADA", "m"),
+    erro(403),
+    erro(503),
+    new TypeError("Failed to fetch"),
+  ])("depois de %s o próximo clique em Emitir envia um pedido", (e) => {
+    const reacao = reagirAErroNotaCredito(interpretarErroNotaCredito(e, "emissao"), "pre-visualizacao");
+    const t = tentativaDepoisDeFalhaNc(base, e, () => "chave-nova");
+    const ficaNoPasso2 = reacao.acao === "ignorar" || (reacao.acao === "banner" && reacao.passo === "pre-visualizacao");
+    // A tentativa é sempre do mesmo conteúdo e tem chave, por isso `emitir` nunca sai cedo.
+    expect(t.pedido).toBe(base.pedido);
+    expect(t.chave).toBeTruthy();
+    if (ficaNoPasso2 && reacao.acao === "banner") {
+      expect(reacao.mensagem).toBeTruthy();
+    }
   });
 });
