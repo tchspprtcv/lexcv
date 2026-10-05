@@ -91,3 +91,10 @@ None. No product code was changed during the run.
 ## Summary
 
 The gate is green with every IT executed. The live run gave 12/12 steps PASS. Step 8 is a PASS on eligibility evidence, because the cron job cannot be triggered on demand. NCRD-01, NCRD-02 and NCRD-03 were each observed end to end on a live stack.
+
+## Post-review human items (from 135-VERIFICATION.md, 2026-10-05) — pending
+
+1. [pending] Re-run the NC dialog live (one Parcial, one Total); request body carries `totalEsperado` and `valorCreditavelEsperado`.
+2. [pending] WR-01 stale preview: preview in session A, emit another NC on the same FR in session B, confirm in A → 409 `NC_VALORES_ALTERADOS`, back to form, no NC written.
+3. [pending] CR-02 retry after a retryable 409 → second click sends a new request with a fresh key (never a silent no-op).
+4. [pending] Business-logic sign-off: CR-01 (FR's cliente debited; processo cliente change blocked with documents), WR-01, WR-04 (withholding on clamped base).
