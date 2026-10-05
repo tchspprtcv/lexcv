@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { MetodoPagamento } from "@/types/faturacao";
+import type { MetodoPagamento, MotivoNotaCredito, NotaCreditoRequest, TipoCredito } from "@/types/faturacao";
 import type { PagamentoCreateRequest } from "@/types/financeiro";
 
 const optionalTrimmedString = z
@@ -124,5 +124,71 @@ export function paraPedidoPagamentoFaturado(
     retencaoPercentagem: valores.aplicarRetencao
       ? taxaRetencaoComoNumero(valores.retencaoPercentagem)
       : undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 135 (NCRD-01, 135-UI-SPEC Surface 1): formulário da Nota de Crédito. Só verificações de
+// UX (valor > 0 quando Parcial, motivo escolhido, descrição 1..200); o teto cumulativo e todos os
+// montantes são do backend -- nunca se compara o valor com o valor creditável aqui.
+
+/** Motivos pela ordem do UI-SPEC; os rótulos são os de `MotivoNotaCredito.rotulo()`. */
+export const MOTIVOS_NOTA_CREDITO = [
+  { valor: "ANULACAO_TOTAL", rotulo: "Anulação total" },
+  { valor: "CORRECAO_VALOR", rotulo: "Correção de valor" },
+  { valor: "ERRO_DADOS_CLIENTE", rotulo: "Erro nos dados do cliente" },
+  { valor: "OUTRO", rotulo: "Outro" },
+] as const satisfies readonly { valor: MotivoNotaCredito; rotulo: string }[];
+
+export const TIPOS_CREDITO = [
+  { valor: "TOTAL", rotulo: "Total" },
+  { valor: "PARCIAL", rotulo: "Parcial" },
+] as const satisfies readonly { valor: TipoCredito; rotulo: string }[];
+
+/** Igual a `ValidacaoNotaCredito.MOTIVO_TEXTO_MAX` / `motivo_texto VARCHAR(200)`. */
+export const MOTIVO_TEXTO_MAX = 200;
+
+const VALORES_MOTIVO_NC = [
+  "ANULACAO_TOTAL",
+  "CORRECAO_VALOR",
+  "ERRO_DADOS_CLIENTE",
+  "OUTRO",
+] as const satisfies readonly MotivoNotaCredito[];
+const VALORES_TIPO_CREDITO = ["TOTAL", "PARCIAL"] as const satisfies readonly TipoCredito[];
+
+const MSG_VALOR_CREDITO = "Indique um valor superior a 0.";
+const MSG_MOTIVO_NC = "Escolha o motivo da nota de crédito.";
+const MSG_MOTIVO_TEXTO_NC = "Descreva o motivo da nota de crédito.";
+const MSG_MOTIVO_TEXTO_LONGO = `Descreva o motivo da nota de crédito (no máximo ${MOTIVO_TEXTO_MAX} caracteres).`;
+
+export const notaCreditoFormSchema = z
+  .object({
+    tipo: z.enum(VALORES_TIPO_CREDITO).default("TOTAL"),
+    valor: z.string().optional(),
+    motivoCodigo: z.enum(VALORES_MOTIVO_NC, { error: MSG_MOTIVO_NC }),
+    motivoTexto: z.string().trim().min(1, MSG_MOTIVO_TEXTO_NC).max(MOTIVO_TEXTO_MAX, MSG_MOTIVO_TEXTO_LONGO),
+  })
+  .superRefine((valores, ctx) => {
+    if (valores.tipo !== "PARCIAL") return;
+    // A mesma regra de formato do `valorPago` da FR (moneyString), com a copy da NC.
+    if (!moneyString.safeParse(valores.valor ?? "").success) {
+      ctx.addIssue({ code: "custom", path: ["valor"], message: MSG_VALOR_CREDITO });
+    }
+  });
+
+export type NotaCreditoFormInput = z.input<typeof notaCreditoFormSchema>;
+
+export type NotaCreditoFormValues = z.output<typeof notaCreditoFormSchema>;
+
+/**
+ * Corpo da pré-visualização e da emissão a partir do formulário validado. Não define
+ * `chaveIdempotencia`: a chave pertence ao conteúdo do pedido (`lib/idempotencia.ts`, CR-02).
+ */
+export function paraPedidoNotaCredito(valores: NotaCreditoFormValues): NotaCreditoRequest {
+  return {
+    tipo: valores.tipo,
+    valor: valores.tipo === "PARCIAL" ? Number((valores.valor ?? "").trim()) : null,
+    motivoCodigo: valores.motivoCodigo,
+    motivoTexto: valores.motivoTexto.trim(),
   };
 }

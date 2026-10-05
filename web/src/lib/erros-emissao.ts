@@ -35,8 +35,12 @@ export const COPY_GUARDA_HONORARIO = "Não é possível apagar este honorário p
  */
 export const STATUS_INLINE_EMISSAO: readonly number[] = [409, 422, 500, 502, 503, 504];
 
+// Phase 135 (Surface 3): guarda do estorno de uma Nota de Crédito.
+export const COPY_GUARDA_ESTORNO = "Este estorno pertence a uma nota de crédito emitida e não pode ser apagado.";
+
 const COPY_GUARDA_POR_CODIGO: Record<string, string> = {
   PAGAMENTO_FATURADO: COPY_GUARDA_PAGAMENTO,
+  PAGAMENTO_ESTORNO: COPY_GUARDA_ESTORNO,
   CLIENTE_COM_DOCUMENTOS_FISCAIS: COPY_GUARDA_CLIENTE,
   PROCESSO_COM_DOCUMENTOS_FISCAIS: COPY_GUARDA_PROCESSO,
   HONORARIO_COM_DOCUMENTOS_FISCAIS: COPY_GUARDA_HONORARIO,
@@ -138,14 +142,99 @@ export function desfechoDefinitivo(error: unknown): boolean {
 }
 
 /**
- * Mensagem inline de uma guarda de eliminação (409 PAGAMENTO_FATURADO ou *_COM_DOCUMENTOS_FISCAIS,
- * Surface 5), ou `null` para qualquer outro erro (que segue o tratamento habitual).
+ * Mensagem inline de uma guarda de eliminação (409 PAGAMENTO_FATURADO, PAGAMENTO_ESTORNO ou
+ * *_COM_DOCUMENTOS_FISCAIS, Surface 5), ou `null` para qualquer outro erro (que segue o tratamento habitual).
  */
 export function mensagemGuardaFiscal(error: unknown): string | null {
   if (!isApiError(error) || error.status !== 409 || !error.code) return null;
   const copy = COPY_GUARDA_POR_CODIGO[error.code];
   if (!copy && !error.code.endsWith("_COM_DOCUMENTOS_FISCAIS")) return null;
   return mensagemDoCorpo(error.body) ?? copy ?? COPY_FALLBACK_CAMPO;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 135 -- erros da pré-visualização e da emissão da Nota de Crédito (135-UI-SPEC Surface 1).
+// `interpretarErroEmissao` e `STATUS_INLINE_EMISSAO` acima ficam como estavam.
+
+export const COPY_NC_EXCEDE =
+  "O valor indicado excede o que ainda pode ser creditado nesta fatura-recibo. Reduza o valor ou escolha crédito total.";
+export const COPY_NC_SOBRE_NC =
+  "Não é possível creditar uma nota de crédito. Emita a nota de crédito sobre a fatura-recibo original.";
+export const COPY_NC_DESLIGADA =
+  "A faturação está desligada. Ative a faturação nas definições para emitir notas de crédito.";
+export const COPY_NC_DATA =
+  "A nota de crédito só pode ser emitida com a data de hoje. Atualize a página e tente de novo.";
+export const COPY_NC_CHAVE_REUTILIZADA =
+  "Este pedido já foi usado com valores diferentes. Reveja os dados e emita a nota de crédito de novo.";
+export const COPY_NC_INDISPONIVEL =
+  "O serviço de faturação está temporariamente indisponível. Aguarde um momento e tente novamente.";
+export const COPY_NC_REDE_EMISSAO =
+  "Não foi possível emitir a nota de crédito. Verifique a ligação e tente novamente.";
+export const COPY_NC_REDE_PRE_VISUALIZACAO =
+  "Não foi possível calcular a nota de crédito. Verifique a ligação e tente novamente.";
+export const COPY_NC_SEM_PERMISSAO = "Não tem permissão para emitir notas de crédito.";
+
+export type FaseNotaCredito = "pre-visualizacao" | "emissao";
+
+export type CampoNotaCredito = "tipo" | "valor" | "motivoCodigo" | "motivoTexto";
+
+export type ErroNotaCredito =
+  | { tipo: "campo"; campo: CampoNotaCredito; mensagem: string }
+  | { tipo: "excede"; mensagem: string }
+  | { tipo: "chave-reutilizada"; mensagem: string }
+  | { tipo: "banner"; codigo?: string; mensagem: string; definitivo: boolean }
+  | { tipo: "rede"; mensagem: string }
+  | { tipo: "nao-encontrado" };
+
+const CAMPOS_NOTA_CREDITO: readonly CampoNotaCredito[] = ["tipo", "valor", "motivoCodigo", "motivoTexto"];
+
+function eCampoNotaCredito(campo: string | undefined): campo is CampoNotaCredito {
+  return campo !== undefined && (CAMPOS_NOTA_CREDITO as readonly string[]).includes(campo);
+}
+
+/** Recusas que nenhuma nova tentativa resolve: o diálogo troca "Cancelar" por "Fechar". */
+const BANNERS_DEFINITIVOS_NC: Record<string, string> = {
+  NC_SOBRE_NC: COPY_NC_SOBRE_NC,
+  FATURACAO_DESLIGADA: COPY_NC_DESLIGADA,
+};
+
+/**
+ * Converte o erro da pré-visualização ou da emissão de uma Nota de Crédito no que o diálogo deve
+ * mostrar. Devolve `null` para 401 (o `useMe` trata da sessão) e para os status fora de
+ * `semToastParaStatus` (o `apiFetch` já mostrou o toast). O 404 (documento inexistente ou de outro
+ * escritório, indistinguíveis) fecha o diálogo e mostra o estado "não encontrado" da página.
+ * Só se mostra a `message` do backend ou copy fixa, nunca o corpo bruto.
+ */
+export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito): ErroNotaCredito | null {
+  const copyRede = fase === "emissao" ? COPY_NC_REDE_EMISSAO : COPY_NC_REDE_PRE_VISUALIZACAO;
+  if (!isApiError(error)) {
+    // fetch() rejeita com TypeError quando o pedido não chega ao servidor.
+    return { tipo: "rede", mensagem: copyRede };
+  }
+  if (error.status === 401) return null;
+  if (error.status === 403) return { tipo: "banner", mensagem: COPY_NC_SEM_PERMISSAO, definitivo: false };
+  if (error.status === 404) return { tipo: "nao-encontrado" };
+  if (error.status === 503) return { tipo: "rede", mensagem: COPY_NC_INDISPONIVEL };
+  if (error.status >= 500) return { tipo: "rede", mensagem: copyRede };
+  if (error.status !== 409 && error.status !== 422) return null;
+
+  const code = error.code;
+  if (code === "NC_EXCEDE_ORIGINAL") return { tipo: "excede", mensagem: COPY_NC_EXCEDE };
+  if (code && BANNERS_DEFINITIVOS_NC[code]) {
+    return { tipo: "banner", codigo: code, mensagem: BANNERS_DEFINITIVOS_NC[code], definitivo: true };
+  }
+  if (code === "DATA_EMISSAO_ALTERADA") {
+    return { tipo: "banner", codigo: code, mensagem: COPY_NC_DATA, definitivo: false };
+  }
+  if (code === "CHAVE_REUTILIZADA") return { tipo: "chave-reutilizada", mensagem: COPY_NC_CHAVE_REUTILIZADA };
+
+  const mensagem = mensagemDoCorpo(error.body);
+  if (error.status === 422 && eCampoNotaCredito(error.campo)) {
+    return { tipo: "campo", campo: error.campo, mensagem: mensagem ?? COPY_FALLBACK_CAMPO };
+  }
+  const banner: ErroNotaCredito = { tipo: "banner", mensagem: mensagem ?? COPY_FALLBACK_CAMPO, definitivo: false };
+  if (code) banner.codigo = code;
+  return banner;
 }
 
 const ORDEM_FILTROS = ["clienteId", "de", "ate", "tipo", "estado"] as const;
