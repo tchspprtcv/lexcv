@@ -258,6 +258,41 @@ class NotaCreditoServiceIT {
         assertEquals(antes, contadores(c));
     }
 
+    // ------------------------------------------------------------------------------- CR-01 (revisão)
+
+    /**
+     * Processo reatribuído a outro cliente depois da FR (como o fazia o {@code PUT /processos/{id}}
+     * antes da guarda PROCESSO_COM_DOCUMENTOS_FISCAIS): a NC devolve o saldo ao cliente que a FR
+     * creditou e regista esse cliente; o cliente atual do processo fica intacto.
+     */
+    @Test
+    void processoReatribuidoDepoisDaFrDebitaOClienteDaFr() {
+        UUID tenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
+        UUID clienteA = fixtura.criarCliente(tenant, "234567891", "Maria Lopes", "Rua da Praia 5");
+        UUID clienteB = fixtura.criarCliente(tenant, "345678912", "João Tavares", "Rua do Sol 9");
+        fixtura.criarContaCorrente(clienteA, new BigDecimal("500.00"));
+        fixtura.criarContaCorrente(clienteB, new BigDecimal("700.00"));
+        UUID processo = fixtura.criarProcesso(tenant, clienteA, "P-2026/18");
+        Integer honorario = fixtura.criarHonorario(processo, VALOR_FR, "Defesa no caso Y");
+        ResultadoPagamentoFaturado fr = pagamentoFaturado.registar(tenant, autor(tenant),
+                new PagamentoRequest(honorario, VALOR_FR, null, "TRANSFERENCIA", new BigDecimal("20"),
+                        UUID.randomUUID()));
+        assertDecimal("120500.00", fixtura.saldo(clienteA));
+        jdbc.update("UPDATE t_processo SET cliente_id = ? WHERE id = ?", clienteB, processo);
+
+        ResultadoNotaCredito r = service.emitir(tenant, autor(tenant), fr.resposta().documentoFiscal().id(),
+                total(UUID.randomUUID()));
+
+        assertTrue(r.novo());
+        assertDecimal("120000.00", r.resposta().totalDocumento());
+        assertDecimal("500.00", fixtura.saldo(clienteA));
+        assertDecimal("700.00", fixtura.saldo(clienteB));
+        Map<String, Object> nc = documento(r.resposta().id());
+        assertEquals(clienteA, nc.get("cliente_id"));
+        assertEquals(processo, nc.get("processo_id"));
+        assertEquals("234567891", nc.get("adquirente_nif"));
+    }
+
     // ------------------------------------------------------------------------------- atomicidade
 
     @Test

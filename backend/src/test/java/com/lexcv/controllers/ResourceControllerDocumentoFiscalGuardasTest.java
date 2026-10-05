@@ -431,6 +431,72 @@ class ResourceControllerDocumentoFiscalGuardasTest {
         verify(processoRepository, never()).findById(any());
     }
 
+    // ---------------------------------------------------------------- updateProcesso (CR-01 da 135)
+
+    static final String MSG_PROCESSO_MUDAR_CLIENTE =
+            "Não é possível mudar o cliente deste processo porque tem documentos fiscais emitidos.";
+
+    private Processo pedidoProcesso(UUID clienteId) {
+        Cliente destino = Cliente.builder().id(clienteId).tenantId(TENANT_ID).nome("Destino").build();
+        when(clienteRepository.findById(clienteId)).thenReturn(Optional.of(destino));
+        return Processo.builder().clienteId(clienteId).numeroProcesso("P-2").build();
+    }
+
+    @Test
+    void mudarClienteDeProcessoComDocumentosFiscaisDevolve409SemAlterar() {
+        UUID clienteOriginal = processo.getClienteId();
+        when(processoRepository.bloquearPorIdETenant(processo.getId(), TENANT_ID)).thenReturn(Optional.of(processo));
+        when(documentoFiscalService.existeParaProcesso(TENANT_ID, processo.getId())).thenReturn(true);
+
+        ResponseEntity<?> r = controller.updateProcesso(processo.getId(), pedidoProcesso(UUID.randomUUID()));
+
+        assertEquals(HttpStatus.CONFLICT, r.getStatusCode());
+        assertEquals(MSG_PROCESSO_MUDAR_CLIENTE, corpo(r).get("message"));
+        assertEquals("PROCESSO_COM_DOCUMENTOS_FISCAIS", corpo(r).get("code"));
+        assertEquals(clienteOriginal, processo.getClienteId());
+        verify(processoRepository, never()).save(any());
+        verify(processoRepository, never()).findById(any());
+    }
+
+    @Test
+    void editarProcessoComDocumentosFiscaisSemMudarClienteGrava() {
+        when(processoRepository.bloquearPorIdETenant(processo.getId(), TENANT_ID)).thenReturn(Optional.of(processo));
+        when(processoRepository.save(any(Processo.class))).thenAnswer(i -> i.getArgument(0));
+        when(documentoFiscalService.existeParaProcesso(TENANT_ID, processo.getId())).thenReturn(true);
+
+        ResponseEntity<?> r = controller.updateProcesso(processo.getId(), pedidoProcesso(processo.getClienteId()));
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals("P-2", processo.getNumeroProcesso());
+        verify(documentoFiscalService, never()).existeParaProcesso(any(), any());
+    }
+
+    @Test
+    void mudarClienteDeProcessoSemDocumentosFiscaisBloqueiaPrimeiroEGrava() {
+        UUID novoCliente = UUID.randomUUID();
+        when(processoRepository.bloquearPorIdETenant(processo.getId(), TENANT_ID)).thenReturn(Optional.of(processo));
+        when(processoRepository.save(any(Processo.class))).thenAnswer(i -> i.getArgument(0));
+
+        ResponseEntity<?> r = controller.updateProcesso(processo.getId(), pedidoProcesso(novoCliente));
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals(novoCliente, processo.getClienteId());
+        InOrder ordem = inOrder(processoRepository, documentoFiscalService);
+        ordem.verify(processoRepository).bloquearPorIdETenant(processo.getId(), TENANT_ID);
+        ordem.verify(documentoFiscalService).existeParaProcesso(TENANT_ID, processo.getId());
+        ordem.verify(processoRepository).save(processo);
+    }
+
+    @Test
+    void atualizarProcessoInexistenteDevolve404PeloLock() {
+        when(processoRepository.bloquearPorIdETenant(processo.getId(), TENANT_ID)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> r = controller.updateProcesso(processo.getId(), pedidoProcesso(UUID.randomUUID()));
+
+        assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+        verify(processoRepository, never()).save(any());
+    }
+
     // ---------------------------------------------------------------- mergeClientes
 
     private static final UUID MENOR = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -504,7 +570,8 @@ class ResourceControllerDocumentoFiscalGuardasTest {
 
     @Test
     void fronteirasTransacionaisEGatesInalterados() {
-        for (String nome : List.of("deleteCliente", "deleteProcesso", "deleteHonorario", "mergeClientes")) {
+        for (String nome : List.of("deleteCliente", "deleteProcesso", "deleteHonorario", "mergeClientes",
+                "updateProcesso")) {
             assertNotNull(metodo(nome).getAnnotation(Transactional.class), nome + " tem de ser @Transactional");
         }
         // P-02: estes dois engolem a falha da conta corrente e não podem partilhar uma transação.

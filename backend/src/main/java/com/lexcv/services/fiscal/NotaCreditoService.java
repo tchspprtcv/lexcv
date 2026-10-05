@@ -70,10 +70,11 @@ import java.util.function.Supplier;
  * novo, por isso a soma inclui qualquer NC que tenha feito commit antes. Não é preciso bloquear a
  * linha da FR: é imutável e todo o escritor de NC toma primeiro o lock da configuração.
  *
- * <p><b>Regra OSIV:</b> cada lock é a PRIMEIRA leitura da sua linha nesta transação: o cliente do
- * processo é lido como escalar ({@code clienteIdPorIdETenant}; uma fusão pode ter movido o processo,
- * por isso nunca se confia em {@code origem.getClienteId()}), o honorário como escalar
- * ({@code processoIdPorId}) e a conta corrente só com lock depois do {@code INSERT ... ON CONFLICT}.
+ * <p><b>Regra OSIV:</b> cada lock é a PRIMEIRA leitura da sua linha nesta transação. O cliente
+ * debitado é o da FR ({@code origem.getClienteId()}): a fusão re-aponta os documentos fiscais, e o
+ * cliente ATUAL do processo pode não ser o que a FR creditou (CR-01 da revisão). O honorário é lido
+ * como escalar ({@code processoIdPorId}) e a conta corrente só com lock depois do
+ * {@code INSERT ... ON CONFLICT}.
  *
  * <p><b>Modelo do estorno:</b> a NC guarda em {@code pagamento_id} o id do SEU estorno (negativo);
  * {@code documento_origem_id} aponta a FR. As quatro leituras de "pago" ({@code Honorario.totalPago},
@@ -142,8 +143,8 @@ public class NotaCreditoService {
      * Emite a Nota de Crédito, tudo ou nada.
      *
      * @throws RecusaFiscalException 422 CHAVE_IDEMPOTENCIA_OBRIGATORIA / NC_SOBRE_NC / recusas do
-     *                               pedido; 404 DOCUMENTO_FISCAL_NAO_ENCONTRADO / CLIENTE_NAO_ENCONTRADO
-     *                               / HONORARIO_NAO_ENCONTRADO; 409 FATURACAO_DESLIGADA /
+     *                               pedido; 404 DOCUMENTO_FISCAL_NAO_ENCONTRADO /
+     *                               HONORARIO_NAO_ENCONTRADO; 409 FATURACAO_DESLIGADA /
      *                               CHAVE_REUTILIZADA / NC_EXCEDE_ORIGINAL /
      *                               PROCESSO_ALTERADO_TENTE_NOVAMENTE / DATA_EMISSAO_ALTERADA; 503
      *                               FATURACAO_OCUPADA / SERIE_INDISPONIVEL
@@ -182,20 +183,22 @@ public class NotaCreditoService {
                 .orElseThrow(NotaCreditoService::documentoNaoEncontrado);
         ValidacaoNotaCredito.exigirFaturaRecibo(origem);
 
-        // 6. Cliente ATUAL do processo (escalar, tenant-scoped): uma fusão pode ter movido o processo.
-        UUID clienteId = processoRepository.clienteIdPorIdETenant(origem.getProcessoId(), tenantId)
+        // 6. Cliente da FR (CR-01 da revisão): é a conta corrente creditada pela FR que tem de ser
+        //    debitada, e o cliente que a NC regista. Uma fusão re-aponta t_documento_fiscal.cliente_id
+        //    (repontarCliente) com os dois clientes bloqueados, por isso este valor segue as fusões; a
+        //    mudança de cliente de um processo com documentos fiscais é recusada (PUT /processos/{id}),
+        //    e um processo reatribuído antes dessa guarda não desvia o débito para o cliente novo.
+        UUID clienteId = origem.getClienteId();
+
+        // 7. Lock do cliente (primeira leitura da linha). Vazio = uma fusão absorveu e apagou o
+        //    cliente entre a leitura da FR e o lock (WR-02): 409 que se pode repetir, nunca 404.
+        Cliente cliente = bloquear(() -> clienteRepository.bloquearPorIdETenant(clienteId, tenantId))
                 .orElseThrow(NotaCreditoService::processoAlterado);
 
-        // 7. Lock do cliente (primeira leitura da linha).
-        Cliente cliente = bloquear(() -> clienteRepository.bloquearPorIdETenant(clienteId, tenantId))
-                .orElseThrow(NotaCreditoService::clienteNaoEncontrado);
-
-        // 8. Lock do processo; tem de continuar a pertencer ao cliente bloqueado.
+        // 8. Lock do processo (mesma ordem de locks da FR). Não se exige que o processo ainda
+        //    pertença ao cliente da FR: a NC credita sempre quem a FR creditou.
         Processo processo = bloquear(() -> processoRepository.bloquearPorIdETenant(origem.getProcessoId(), tenantId))
                 .orElseThrow(NotaCreditoService::processoAlterado);
-        if (!cliente.getId().equals(processo.getClienteId())) {
-            throw processoAlterado();
-        }
         // 8b. O honorário da FR ainda pertence a este processo (escalar, nunca a cache; CR-01).
         if (!honorarioRepository.processoIdPorId(origem.getHonorarioId())
                 .map(processo.getId()::equals)
@@ -443,11 +446,6 @@ public class NotaCreditoService {
     private static RecusaFiscalException honorarioNaoEncontrado() {
         return new RecusaFiscalException(HttpStatus.NOT_FOUND, "HONORARIO_NAO_ENCONTRADO",
                 PreVisualizacaoFaturaService.MSG_HONORARIO_NAO_ENCONTRADO);
-    }
-
-    private static RecusaFiscalException clienteNaoEncontrado() {
-        return new RecusaFiscalException(HttpStatus.NOT_FOUND, "CLIENTE_NAO_ENCONTRADO",
-                PreVisualizacaoFaturaService.MSG_CLIENTE_NAO_ENCONTRADO);
     }
 
     private static RecusaFiscalException processoAlterado() {

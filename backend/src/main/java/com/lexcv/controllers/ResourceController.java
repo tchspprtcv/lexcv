@@ -1264,12 +1264,21 @@ public class ResourceController {
         return ResponseEntity.ok(processo);
     }
 
+    /**
+     * Phase 135 (CR-01 da revisão): um processo com documentos fiscais não pode mudar de cliente.
+     * A conta corrente e os documentos fiscais ficam com o cliente que a fatura-recibo creditou;
+     * mudar o cliente do processo deixaria o ledger e a Nota de Crédito em clientes diferentes.
+     * Como em {@code deleteProcesso}, o lock da linha do processo é a primeira leitura dela e
+     * serializa a mudança com uma emissão em curso no mesmo processo; só a fusão de clientes move
+     * processos com documentos fiscais (e re-aponta os documentos).
+     */
     @PreAuthorize("hasAuthority('processos:edit')")
+    @Transactional
     @PutMapping("/processos/{id}")
     public ResponseEntity<?> updateProcesso(@PathVariable UUID id, @RequestBody Processo payload) {
         UUID tenantId = getTenantId();
-        Processo processo = processoRepository.findById(id).orElse(null);
-        if (processo == null || !processo.getTenantId().equals(tenantId)) {
+        Processo processo = processoRepository.bloquearPorIdETenant(id, tenantId).orElse(null);
+        if (processo == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Processo não encontrado"));
         }
 
@@ -1280,6 +1289,12 @@ public class ResourceController {
         if (cliente == null || !tenantId.equals(cliente.getTenantId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "clienteId não pertence a este tenant"));
+        }
+        if (!payload.getClienteId().equals(processo.getClienteId())
+                && documentoFiscalService.existeParaProcesso(tenantId, id)) {
+            return RecusaTransacional.recusar(ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Não é possível mudar o cliente deste processo porque tem documentos fiscais emitidos.",
+                    "code", "PROCESSO_COM_DOCUMENTOS_FISCAIS")));
         }
         processo.setClienteId(payload.getClienteId());
         processo.setNumeroProcesso(payload.getNumeroProcesso());

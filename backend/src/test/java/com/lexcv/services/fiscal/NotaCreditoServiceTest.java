@@ -146,7 +146,7 @@ class NotaCreditoServiceTest {
                 .emitenteLocalidade("Praia").emitenteRegimeIva(RegimeIva.NORMAL)
                 .adquirenteNif("234567891").adquirenteNome("Maria Lopes").adquirenteMorada("Rua da Praia 5")
                 .adquirenteLocalidade(null)
-                .clienteId(UUID.randomUUID()).processoId(processo.getId()).honorarioId(7).pagamentoId(55)
+                .clienteId(cliente.getId()).processoId(processo.getId()).honorarioId(7).pagamentoId(55)
                 .metodoPagamento("TRANSFERENCIA").meioPagamentoCodigo("TB").moeda("CVE")
                 .taxaIva(new BigDecimal("15.0000")).taxaRetencao(new BigDecimal("20.0000"))
                 .totalBase(new BigDecimal("104347.83")).totalIva(new BigDecimal("15652.17"))
@@ -211,7 +211,6 @@ class NotaCreditoServiceTest {
         when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(ativa)));
         when(documentoRepo.findByTenantIdAndChaveIdempotencia(tenant, chave)).thenReturn(Optional.empty());
         when(documentoRepo.findByIdAndTenantId(fr.getId(), tenant)).thenReturn(Optional.of(fr));
-        when(processoRepo.clienteIdPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(cliente.getId()));
         when(clienteRepo.bloquearPorIdETenant(cliente.getId(), tenant)).thenReturn(Optional.of(cliente));
         when(processoRepo.bloquearPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(processo));
         when(honorarioRepo.processoIdPorId(7)).thenReturn(Optional.of(processo.getId()));
@@ -288,7 +287,6 @@ class NotaCreditoServiceTest {
         ordem.verify(configuracaoRepo).bloquearPorTenant(tenant);
         ordem.verify(documentoRepo).findByTenantIdAndChaveIdempotencia(tenant, chave);
         ordem.verify(documentoRepo).findByIdAndTenantId(fr.getId(), tenant);
-        ordem.verify(processoRepo).clienteIdPorIdETenant(processo.getId(), tenant);
         ordem.verify(clienteRepo).bloquearPorIdETenant(cliente.getId(), tenant);
         ordem.verify(processoRepo).bloquearPorIdETenant(processo.getId(), tenant);
         ordem.verify(honorarioRepo).processoIdPorId(7);
@@ -550,22 +548,22 @@ class NotaCreditoServiceTest {
     }
 
     @Test
-    void processoSemClienteNoTenantRecusaProcessoAlterado() {
-        tudoPresente();
-        when(processoRepo.clienteIdPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.empty());
-
-        assertRecusa(recusa(total()), HttpStatus.CONFLICT, "PROCESSO_ALTERADO_TENTE_NOVAMENTE");
-        assertNadaEscrito();
-    }
-
-    @Test
-    void processoMovidoParaOutroClienteDepoisDaLeituraRecusaProcessoAlterado() {
+    void processoReatribuidoDebitaEGravaOClienteDaFr() {
+        // CR-01 da revisão: o processo mudou de cliente depois da FR (antes da guarda do PUT).
+        // A NC debita e regista o cliente que a FR creditou, nunca o cliente atual do processo.
         tudoPresente();
         Processo movido = Processo.builder().id(processo.getId()).tenantId(tenant).clienteId(UUID.randomUUID()).build();
         when(processoRepo.bloquearPorIdETenant(processo.getId(), tenant)).thenReturn(Optional.of(movido));
 
-        assertRecusa(recusa(total()), HttpStatus.CONFLICT, "PROCESSO_ALTERADO_TENTE_NOVAMENTE");
-        assertNadaEscrito();
+        ResultadoNotaCredito r = servico().emitir(tenant, autor, fr.getId(), total());
+
+        assertTrue(r.novo());
+        verify(clienteRepo).bloquearPorIdETenant(fr.getClienteId(), tenant);
+        verify(clienteRepo, never()).bloquearPorIdETenant(movido.getClienteId(), tenant);
+        verify(ccRepo).bloquearPorCliente(fr.getClienteId());
+        verify(ccRepo, never()).bloquearPorCliente(movido.getClienteId());
+        verify(processoRepo, never()).clienteIdPorIdETenant(any(), any());
+        assertEquals(fr.getClienteId(), documentoGravado().getClienteId());
     }
 
     @Test
@@ -578,11 +576,13 @@ class NotaCreditoServiceTest {
     }
 
     @Test
-    void clienteDesaparecidoNoLockRecusa404() {
+    void clienteDaFrApagadoPorFusaoNoLockRecusaProcessoAlterado() {
+        // WR-02 da revisão: uma fusão absorveu e apagou o cliente entre a leitura da FR e o lock.
+        // A FR continua a existir; é uma corrida que se pode repetir (409), nunca um 404.
         tudoPresente();
         when(clienteRepo.bloquearPorIdETenant(cliente.getId(), tenant)).thenReturn(Optional.empty());
 
-        assertRecusa(recusa(total()), HttpStatus.NOT_FOUND, "CLIENTE_NAO_ENCONTRADO");
+        assertRecusa(recusa(total()), HttpStatus.CONFLICT, "PROCESSO_ALTERADO_TENTE_NOVAMENTE");
         assertNadaEscrito();
     }
 
