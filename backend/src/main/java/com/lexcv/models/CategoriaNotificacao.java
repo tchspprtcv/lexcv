@@ -2,12 +2,18 @@ package com.lexcv.models;
 
 import java.util.Optional;
 
-// NOTF-24: canonical enum of the 9 notification categories and the single
+// NOTF-24: canonical enum of the 10 notification categories and the single
 // source of truth for "silenciabilidade" (whether a category can be muted)
 // on the backend. This enum exists ONLY to validate preference toggles --
-// it deliberately does NOT retrofit the 9 existing hardcoded String call
+// it deliberately does NOT retrofit the existing hardcoded String call
 // sites elsewhere in the codebase (e.g. Notificacao.categoria), which stay
 // as-is per 93-CONTEXT.md.
+//
+// Two categories are NOT silenciable: PRAZO_VENCIDO and (Phase 136, DFE-07)
+// COMUNICACAO_FISCAL_FALHOU -- a persistent eFatura communication failure is
+// a fiscal obligation the office must act on, so it can never be muted.
+// Keep in sync with NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS in
+// web/src/lib/notificacao-categoria.ts.
 public enum CategoriaNotificacao {
 
     FASE_ENTRADA(true),
@@ -18,7 +24,8 @@ public enum CategoriaNotificacao {
     PRAZO_VENCIDO(false),
     EVENTO_PROXIMO(true),
     EVENTO_VENCIDO(true),
-    HONORARIO_ATRASADO(true);
+    HONORARIO_ATRASADO(true),
+    COMUNICACAO_FISCAL_FALHOU(false);
 
     private final boolean silenciavel;
 
@@ -45,7 +52,8 @@ public enum CategoriaNotificacao {
         return Optional.empty();
     }
 
-    // Returns false for unknown categories AND for PRAZO_VENCIDO. This is
+    // Returns false for unknown categories AND for the non-silenciable ones
+    // (PRAZO_VENCIDO, COMUNICACAO_FISCAL_FALHOU). This is
     // the single method the criar() mute guard (Plan 93-02) and the
     // preferences endpoint validation (Plan 93-03) consume.
     public static boolean isSilenciavelCategoria(String valor) {
