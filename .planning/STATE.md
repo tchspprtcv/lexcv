@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 134-14-PLAN.md
-last_updated: "2026-10-04T23:00:00.000Z"
-last_activity: 2026-10-04 — Completed 134-14 (verify:documentos-fiscais gate, full suite green (surefire 800, failsafe 94 incl. 5 Phase 134 ITs, spotbugs), VALIDATION signed off, live E2E 13/13 PASS + isento/meio checks; EMIS-01..12 complete)
+stopped_at: Completed 135-04-PLAN.md
+last_updated: "2026-10-05T09:30:00.000Z"
+last_activity: 2026-10-05 — Completed 135-04 (Phase 135 wave 1-2 backend foundation: MotivoNotaCredito + NC columns/finders, migration 135 + ITs (scripts == Hibernate, 43+14+10), pure ComposicaoNotaCredito (TDD, P-13 clamps), NC read side + estorno probes; surefire 896 green)
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_plans: 35
+  completed_plans: 26
+  percent: 74
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 134 — Fatura-Recibo Atómica nos Honorários (v3.0 Faturação Eletrónica, eFatura CV)
+**Current focus:** Phase 135 — Nota de Crédito (v3.0 Faturação Eletrónica, eFatura CV)
 
 ## Current Position
 
-Phase: 134 of 139 (Fatura-Recibo Atómica nos Honorários)
-Plan: 14 of 14
-Status: Phase 134 — all 14 plans complete; ready for /gsd:verify-work 134
-Last activity: 2026-10-04 — Completed 134-14 (verify:documentos-fiscais gate, full suite green (surefire 800, failsafe 94 incl. 5 Phase 134 ITs, spotbugs), VALIDATION signed off, live E2E 13/13 PASS + isento/meio checks; EMIS-01..12 complete)
+Phase: 135 of 139 (Nota de Crédito)
+Plan: 4 of 13
+Status: Executing Phase 135 — plans 01-04 complete; next 135-05
+Last activity: 2026-10-05 — Completed 135-04 (Phase 135 wave 1-2 backend foundation: MotivoNotaCredito + NC columns/finders, migration 135 + ITs (scripts == Hibernate, 43+14+10), pure ComposicaoNotaCredito (TDD, P-13 clamps), NC read side + estorno probes; surefire 896 green)
 
 ## Performance Metrics
 
@@ -185,6 +185,10 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 134]: Honorário page: useEstadoEmissao(canEdit && exact financeiro:view) picks PagamentoFaturadoForm vs the untouched legacy form; idempotency key is generated when the preview dialog opens, cleared on close, reused on network retry; faturado payments render no delete button
 - [Phase 134]: Fiscal document pages and the Financeiro header button use podeLerDocumentosFiscais (exact financeiro:view); list filters/page/size live in URL search params (1-based page in URL) under a Suspense boundary; shared DataTable gained optional manual pagination
 - [Phase 134]: Phase 134 closed on a live Playwright/curl/psql run against a real stack (134-HUMAN-UAT.md); verify:documentos-fiscais pins the exact financeiro:view gate, immutable detail, copy and no client money math
+- [Phase 135]: No pagamento_estorno_id column: an NC's pagamento_id is its own negative estorno Pagamento (NOT NULL + UNIQUE kept, estorno never re-invoiced); documento_origem_id -> FR; motivo_codigo varchar via MotivoNotaCreditoConverter (no CHECK)
+- [Phase 135]: Migration 135 is additive only (3 nullable columns + idx_documento_fiscal_tenant_origem); MigracaoFiscal134IT now applies 134+135 and asserts 43+14+10 columns (recounted from Hibernate)
+- [Phase 135]: ComposicaoNotaCredito.compor is the single pure NC money function: partial via CalculoFiscal with FR snapshot rates, total/equal-to-remainder credits exact per-column remainders, base/IVA/retention clamped (P-13); NC_SOBRE_NC (422) checked first, NC_EXCEDE_ORIGINAL (409, campo valor)
+- [Phase 135]: Read side: referenciasPorPagamento returns only FR, estornosPorPagamento only NC (two batched queries); FR detail carries notasCredito/totalCreditado/valorCreditavelRestante; NC amounts are positive magnitudes
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -356,8 +360,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-04T23:00:00.000Z
-Stopped at: Completed 134-14-PLAN.md
+Last session: 2026-10-05T09:30:00.000Z
+Stopped at: Completed 135-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

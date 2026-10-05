@@ -115,10 +115,10 @@ Notas da fase:
 **Plans**: 13 plans
 
 Plans:
-- [ ] 135-01-PLAN.md — MotivoNotaCredito enum, NC columns on DocumentoFiscal (pagamento_id = estorno id), tenant-scoped NC finders
-- [ ] 135-02-PLAN.md — Idempotent migration 135 + README rows + MigracaoFiscal134IT/135IT (scripts == Hibernate)
-- [ ] 135-03-PLAN.md — TDD pure NC composition (validation, cap, partial/total split with FR snapshot rates and clamps)
-- [ ] 135-04-PLAN.md — Read side: FR detail with NC list/creditable, NC origem+motivo, list origem number, estorno refs/probe
+- [x] 135-01-PLAN.md — MotivoNotaCredito enum, NC columns on DocumentoFiscal (pagamento_id = estorno id), tenant-scoped NC finders
+- [x] 135-02-PLAN.md — Idempotent migration 135 + README rows + MigracaoFiscal134IT/135IT (scripts == Hibernate)
+- [x] 135-03-PLAN.md — TDD pure NC composition (validation, cap, partial/total split with FR snapshot rates and clamps)
+- [x] 135-04-PLAN.md — Read side: FR detail with NC list/creditable, NC origem+motivo, list origem number, estorno refs/probe
 - [ ] 135-05-PLAN.md — NC response DTOs, NC audit event, FR replay refuses NC keys (409 CHAVE_REUTILIZADA)
 - [ ] 135-06-PLAN.md — NotaCreditoService: preview + atomic, lock-ordered, idempotent emission with negative estorno
 - [ ] 135-07-PLAN.md — ITs on real PostgreSQL: atomicity, four-reader coherence, numbering, cap/same-key concurrency
@@ -234,7 +234,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
-| 135. Nota de Crédito | 0/13 | Planned | - |
+| 135. Nota de Crédito | 4/13 | In progress | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |
