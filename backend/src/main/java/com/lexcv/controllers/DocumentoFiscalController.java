@@ -2,11 +2,14 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.DocumentoFiscalResumoResponse;
+import com.lexcv.dtos.NotaCreditoRequest;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
+import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -39,6 +43,10 @@ import java.util.UUID;
  *       nada).</li>
  *   <li>{@code GET /api/v1/documentos-fiscais}: listagem paginada no servidor, com filtros.</li>
  *   <li>{@code GET /api/v1/documentos-fiscais/{id}}: detalhe só de leitura.</li>
+ *   <li>Phase 135 (NCRD-01, NCRD-02): {@code POST /api/v1/documentos-fiscais/{id}/notas-credito/pre-visualizacao}
+ *       (a Nota de Crédito que a emissão vai produzir, SEM efeitos) e
+ *       {@code POST /api/v1/documentos-fiscais/{id}/notas-credito} (emite a NC sobre a FR
+ *       {@code id}: 201 para uma NC nova, 200 para a repetição pela chave de idempotência).</li>
  * </ul>
  *
  * <p><b>Porque um controlador novo:</b> {@link FaturacaoController} tem um gate de CLASSE
@@ -52,7 +60,10 @@ import java.util.UUID;
  * sugerida) não expõe dados de clientes nem documentos. O
  * frontend usa {@code hasScopedPermission(perms, "financeiro", "view"|"edit")}. O backend verifica
  * a autoridade exata (sem cadeia de equivalências), e os papéis semeados detêm sempre
- * {@code view} quando detêm {@code edit}, por isso as duas camadas concordam na prática.
+ * {@code view} quando detêm {@code edit}, por isso as duas camadas concordam na prática. As duas
+ * rotas da Nota de Crédito exigem a autoridade EXATA {@code financeiro:manage} (CONTEXT "Só
+ * financeiro:manage"); o frontend usa {@code hasPermission(perms, "financeiro:manage")}, também
+ * sem equivalências, para as duas camadas concordarem.
  *
  * <p><b>Tenant só do principal autenticado</b>, nunca do caminho, da query ou do corpo
  * ({@link PagamentoRequest} não tem tenant). Os parâmetros da listagem chegam como texto e são
@@ -61,7 +72,9 @@ import java.util.UUID;
  * inexistente ou de outro escritório (sem oráculo).
  *
  * <p><b>Imutabilidade:</b> não há rotas para editar, anular ou apagar um documento fiscal, nem
- * para emitir um documento para um pagamento já registado (EMIS-12). Sem {@code @Transactional}
+ * para emitir um documento para um pagamento já registado (EMIS-12). A Nota de Crédito é um
+ * documento NOVO que referencia a FR; a FR nunca é alterada. Um id que não é UUID devolve, nas
+ * rotas da NC, o mesmo 404 do detalhe. Sem {@code @Transactional}
  * aqui: os serviços são donos das suas transações (só de leitura).
  */
 @RestController
@@ -83,6 +96,7 @@ public class DocumentoFiscalController {
 
     private final PreVisualizacaoFaturaService preVisualizacaoFaturaService;
     private final DocumentoFiscalService documentoFiscalService;
+    private final NotaCreditoService notaCreditoService;
 
     private UserPrincipal getPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -172,14 +186,49 @@ public class DocumentoFiscalController {
     @PreAuthorize("hasAuthority('financeiro:view')")
     @GetMapping("/documentos-fiscais/{id}")
     public ResponseEntity<?> detalhe(@PathVariable String id) {
-        UUID documentoId;
-        try {
-            documentoId = UUID.fromString(id.trim());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", MSG_NAO_ENCONTRADO, "code", CODIGO_NAO_ENCONTRADO));
+        Optional<UUID> documentoId = idDocumento(id);
+        if (documentoId.isEmpty()) {
+            return naoEncontrado();
         }
-        return ResponseEntity.ok(documentoFiscalService.detalhe(getTenantId(), documentoId));
+        return ResponseEntity.ok(documentoFiscalService.detalhe(getTenantId(), documentoId.get()));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:manage')")
+    @PostMapping("/documentos-fiscais/{id}/notas-credito/pre-visualizacao")
+    public ResponseEntity<?> preVisualizarNotaCredito(@PathVariable String id, @RequestBody NotaCreditoRequest req) {
+        Optional<UUID> origemId = idDocumento(id);
+        if (origemId.isEmpty()) {
+            return naoEncontrado();
+        }
+        return ResponseEntity.ok(notaCreditoService.preVisualizar(getTenantId(), origemId.get(), req));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:manage')")
+    @PostMapping("/documentos-fiscais/{id}/notas-credito")
+    public ResponseEntity<?> emitirNotaCredito(@PathVariable String id, @RequestBody NotaCreditoRequest req) {
+        Optional<UUID> origemId = idDocumento(id);
+        if (origemId.isEmpty()) {
+            return naoEncontrado();
+        }
+        ResultadoNotaCredito r = notaCreditoService.emitir(getTenantId(), getPrincipal(), origemId.get(), req);
+        return ResponseEntity.status(r.novo() ? HttpStatus.CREATED : HttpStatus.OK).body(r.resposta());
+    }
+
+    /** Id do caminho como UUID, ou vazio quando não é um UUID (o chamador devolve 404 sem oráculo). */
+    private static Optional<UUID> idDocumento(String id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(id.trim()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static ResponseEntity<Map<String, String>> naoEncontrado() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", MSG_NAO_ENCONTRADO, "code", CODIGO_NAO_ENCONTRADO));
     }
 
     private static boolean vazio(String valor) {

@@ -3,6 +3,7 @@ package com.lexcv.controllers;
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
+import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,11 +56,13 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
     private PreVisualizacaoFaturaService preVisualizacao;
     private DocumentoFiscalService documentos;
+    private NotaCreditoService notasCredito;
 
     @BeforeEach
     void preparar() {
         preVisualizacao = mock(PreVisualizacaoFaturaService.class);
         documentos = mock(DocumentoFiscalService.class);
+        notasCredito = mock(NotaCreditoService.class);
         when(documentos.listar(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
     }
@@ -70,7 +73,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
     }
 
     private DocumentoFiscalController novoProxyComMethodSecurity() {
-        ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos));
+        ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito));
         factory.setProxyTargetClass(true);
         factory.addAdvisor(AuthorizationManagerBeforeMethodInterceptor.preAuthorize());
         return (DocumentoFiscalController) factory.getProxy();
