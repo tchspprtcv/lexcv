@@ -8,6 +8,7 @@ import com.lexcv.models.TipoDocumentoFiscal;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -33,8 +34,9 @@ import java.util.List;
  *       arredondamento HALF_UP.</li>
  *   <li>Clamp (P-13): os arredondamentos de vários créditos parciais podem somar mais do que a FR
  *       numa coluna. A base é limitada ao remanescente da base (o excedente passa para o IVA), o IVA
- *       ao remanescente do IVA (o excedente volta para a base) e a retenção ao remanescente da
- *       retenção. Como {@code valor <= remBase + remIva}, as duas primeiras limitações nunca entram
+ *       ao remanescente do IVA (o excedente volta para a base). A retenção é recalculada sobre a
+ *       base já limitada ({@code round(base * taxaRetencao / 100, HALF_UP)}) e limitada ao
+ *       remanescente da retenção. Como {@code valor <= remBase + remIva}, as duas primeiras limitações nunca entram
  *       em conflito; nenhuma coluna acumulada passa a da FR.</li>
  * </ul>
  * Os montantes da NC são magnitudes positivas; o sinal negativo vive só no estorno.
@@ -44,6 +46,8 @@ public final class ComposicaoNotaCredito {
     static final String MSG_EXCEDE = "O valor indicado excede o que ainda pode ser creditado nesta fatura-recibo. "
             + "Reduza o valor ou escolha crédito total.";
     static final String MSG_TOTALMENTE_CREDITADA = "Esta fatura-recibo já foi totalmente creditada.";
+
+    private static final BigDecimal CEM = new BigDecimal("100");
 
     private ComposicaoNotaCredito() {
     }
@@ -108,7 +112,12 @@ public final class ComposicaoNotaCredito {
                 iva = remIva;
                 base = valor.subtract(iva);
             }
-            BigDecimal retencao = c.retencao().min(remRetencao);
+            // WR-04 da revisão: a retenção é proporcional à base DESTA NC, por isso é recalculada
+            // sobre a base já limitada (a mesma regra HALF_UP do CalculoFiscal) e só depois limitada
+            // ao remanescente da retenção.
+            BigDecimal retencao = c.taxaRetencao() == null
+                    ? BigDecimal.ZERO.setScale(2)
+                    : base.multiply(c.taxaRetencao()).divide(CEM, 2, RoundingMode.HALF_UP).min(remRetencao);
             calculo = new CalculoFiscal.ResultadoCalculo(base, iva, c.taxaIva(), retencao, c.taxaRetencao(),
                     valor, valor.subtract(retencao));
         }

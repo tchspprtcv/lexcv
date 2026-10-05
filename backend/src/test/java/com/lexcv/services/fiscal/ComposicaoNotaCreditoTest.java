@@ -351,6 +351,38 @@ class ComposicaoNotaCreditoTest {
     }
 
     @Test
+    void retencaoDaParcialEhCalculadaSobreABaseLimitada() {
+        // WR-04 da revisão. FR 1,00 a 15%, retenção 50%: base 0,87 / IVA 0,13 / retenção 0,44. Uma NC
+        // anterior (artificial) consumiu 0,80 de base e nada de IVA nem de retenção: remanescentes
+        // base 0,07 / IVA 0,13 / retenção 0,44. Uma parcial de 0,10 calcula base 0,09, limitada a
+        // 0,07; a retenção tem de ser round(0,07 * 50%) = 0,04, não round(0,09 * 50%) = 0,05.
+        DocumentoFiscal fr = fr("1.00", "15", "50");
+        igual("0.87", fr.getTotalBase());
+        igual("0.44", fr.getTotalRetencao());
+        CalculoFiscal.ResultadoCalculo anterior = new CalculoFiscal.ResultadoCalculo(bd("0.80"), bd("0.00"),
+                bd("15"), bd("0.00"), bd("50"), bd("0.80"), bd("0.80"));
+        DocumentoFiscal nc = documento(TipoDocumentoFiscal.NC, RegimeIva.NORMAL, anterior, fr.getId()).build();
+
+        ProjetoNotaCredito p = ComposicaoNotaCredito.compor(fr, List.of(nc), parcial("0.10"), HOJE);
+
+        igual("0.07", p.calculo().base());
+        igual("0.03", p.calculo().iva());
+        igual("0.04", p.calculo().retencao());
+        igual("0.06", p.calculo().liquidoRecebido());
+        igual("0.10", p.calculo().total());
+    }
+
+    @Test
+    void parcialSemRetencaoNaFrTemRetencaoZero() {
+        DocumentoFiscal fr = fr("1000.00", "15", null);
+
+        ProjetoNotaCredito p = ComposicaoNotaCredito.compor(fr, List.of(), parcial("100.00"), HOJE);
+
+        igual("0.00", p.calculo().retencao());
+        igual("100.00", p.calculo().liquidoRecebido());
+    }
+
+    @Test
     void propriedadeParciaisAleatoriasMaisTotalFechamSempreAFr() {
         Random r = new Random(135L);
         String[] taxas = {"15", "8", "12.5"};
