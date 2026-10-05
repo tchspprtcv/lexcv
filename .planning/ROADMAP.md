@@ -121,12 +121,12 @@ Plans:
 - [x] 135-04-PLAN.md — Read side: FR detail with NC list/creditable, NC origem+motivo, list origem number, estorno refs/probe
 - [x] 135-05-PLAN.md — NC response DTOs, NC audit event, FR replay refuses NC keys (409 CHAVE_REUTILIZADA)
 - [x] 135-06-PLAN.md — NotaCreditoService: preview + atomic, lock-ordered, idempotent emission with negative estorno
-- [ ] 135-07-PLAN.md — ITs on real PostgreSQL: atomicity, four-reader coherence, numbering, cap/same-key concurrency
+- [x] 135-07-PLAN.md — ITs on real PostgreSQL: atomicity, four-reader coherence, numbering, cap/same-key concurrency
 - [x] 135-08-PLAN.md — KPI fix (RecebidoNoMes, year+month CV), estorno in payments list, 409 PAGAMENTO_ESTORNO, alert re-eligibility
-- [ ] 135-09-PLAN.md — DocumentoFiscalController NC routes gated financeiro:manage (201/200/404) + structure/auth tests
+- [x] 135-09-PLAN.md — DocumentoFiscalController NC routes gated financeiro:manage (201/200/404) + structure/auth tests
 - [x] 135-10-PLAN.md — Web contracts: types, exact-manage helper, NC hooks, error mapping, NC form schema (vitest)
-- [ ] 135-11-PLAN.md — "Emitir Nota de Crédito" two-step dialog + FR/NC detail surfaces + source gate
-- [ ] 135-12-PLAN.md — Estorno row in payments list, Tipo FR/NC filter and NC rows in documents list + source gate
+- [x] 135-11-PLAN.md — "Emitir Nota de Crédito" two-step dialog + FR/NC detail surfaces + source gate
+- [x] 135-12-PLAN.md — Estorno row in payments list, Tipo FR/NC filter and NC rows in documents list + source gate
 - [ ] 135-13-PLAN.md — Full phase gate + live end-to-end UAT (checkpoint)
 **UI hint**: yes
 
@@ -234,7 +234,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
-| 135. Nota de Crédito | 8/13 | In progress | - |
+| 135. Nota de Crédito | 12/13 | In progress | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |
