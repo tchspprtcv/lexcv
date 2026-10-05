@@ -403,7 +403,8 @@ class PagamentoFaturadoServiceTest {
     // ------------------------------------------------------------------ idempotência
 
     private DocumentoFiscal existente(BigDecimal taxaRetencao) {
-        return DocumentoFiscal.builder().id(documentoId).tenantId(tenant).honorarioId(7).pagamentoId(55)
+        return DocumentoFiscal.builder().id(documentoId).tenantId(tenant).tipo(TipoDocumentoFiscal.FR)
+                .honorarioId(7).pagamentoId(55)
                 .totalDocumento(new BigDecimal("120000.00")).metodoPagamento("TRANSFERENCIA")
                 .taxaRetencao(taxaRetencao).dataEmissao(HOJE).numeroFormatado("SIM-FR-2026/7")
                 .chaveIdempotencia(chave).build();
@@ -496,6 +497,49 @@ class PagamentoFaturadoServiceTest {
     }
 
     // ------------------------------------------------------------------ recusas antes de escrever
+
+    // Phase 135 (T-135-15): o espaço de chaves por tenant é partilhado por FR e NC. Uma chave já
+    // usada por uma Nota de Crédito nunca é a repetição de um pedido de Fatura-Recibo, mesmo que o
+    // honorário, o valor e o método coincidam por acaso com os do estorno.
+    private DocumentoFiscal ncComAChave() {
+        return DocumentoFiscal.builder().id(UUID.randomUUID()).tenantId(tenant).tipo(TipoDocumentoFiscal.NC)
+                .honorarioId(7).pagamentoId(56)
+                .totalDocumento(new BigDecimal("120000.00")).metodoPagamento("TRANSFERENCIA")
+                .taxaRetencao(new BigDecimal("20.00")).dataEmissao(HOJE).numeroFormatado("SIM-NC-2026/1")
+                .documentoOrigemId(documentoId).chaveIdempotencia(chave).build();
+    }
+
+    @Test
+    void chaveDeUmaNotaDeCreditoRecusaChaveReutilizadaSemEscrever() {
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(RegimeIva.NORMAL, true)));
+        when(documentoRepo.findByTenantIdAndChaveIdempotencia(tenant, chave)).thenReturn(Optional.of(ncComAChave()));
+
+        RecusaFiscalException e = recusa(req());
+
+        assertRecusa(e, HttpStatus.CONFLICT, "CHAVE_REUTILIZADA");
+        verify(pagamentoRepo, never()).findById(any());
+        verifyNoInteractions(numeracao);
+        assertNadaMaisDepoisDaChave();
+    }
+
+    @Test
+    void resultadoGuardadoComChaveDeUmaNotaDeCreditoRecusaChaveReutilizada() {
+        when(configuracaoRepo.bloquearPorTenant(tenant)).thenReturn(Optional.of(cfg(RegimeIva.NORMAL, false)));
+        when(documentoRepo.findByTenantIdAndChaveIdempotencia(tenant, chave)).thenReturn(Optional.of(ncComAChave()));
+
+        RecusaFiscalException e = assertThrows(RecusaFiscalException.class,
+                () -> servico(RELOGIO).resultadoGuardado(tenant, req()));
+
+        assertRecusa(e, HttpStatus.CONFLICT, "CHAVE_REUTILIZADA");
+        verify(pagamentoRepo, never()).findById(any());
+        assertNadaEscrito();
+    }
+
+    @Test
+    void mesmoPedidoEhSempreFalsoParaUmaNotaDeCredito() {
+        assertTrue(PagamentoFaturadoService.mesmoPedido(existente(new BigDecimal("20.00")), req()));
+        assertFalse(PagamentoFaturadoService.mesmoPedido(ncComAChave(), req()));
+    }
 
     @Test
     void semChaveRecusa422AntesDeQualquerRepositorio() {
