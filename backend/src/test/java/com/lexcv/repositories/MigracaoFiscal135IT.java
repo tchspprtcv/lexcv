@@ -58,6 +58,8 @@ class MigracaoFiscal135IT {
 
     private static final String SCRIPT_134 = "migrations/134-create-documento-fiscal-tables.sql";
     private static final String SCRIPT_135 = "migrations/135-add-nota-credito-documento-fiscal.sql";
+    // Phase 136: toda a comparação com o esquema do Hibernate aplica também o 136 depois do 135.
+    private static final String SCRIPT_136 = "migrations/136-efatura-comunicacao.sql";
     private static final List<String> TABELAS =
             List.of("t_documento_fiscal", "t_documento_fiscal_linha", "t_comunicacao_fiscal");
     private static final List<String> COLUNAS_NC = List.of("documento_origem_id", "motivo_codigo", "motivo_texto");
@@ -174,6 +176,7 @@ class MigracaoFiscal135IT {
         try {
             aplicar(schema, SCRIPT_134);
             aplicar(schema, SCRIPT_135);
+            aplicar(schema, SCRIPT_136);
             Set<String> primeira = colunas(schema);
             Set<String> indicesPrimeira = indices(schema);
             assertDoesNotThrow(() -> aplicar(schema, SCRIPT_135));

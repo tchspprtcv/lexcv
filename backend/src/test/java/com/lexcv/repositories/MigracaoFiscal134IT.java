@@ -73,6 +73,9 @@ class MigracaoFiscal134IT {
     // Phase 135: as colunas da Nota de Crédito chegam pelo script seguinte; "scripts == Hibernate"
     // passa a significar 134 + 135 aplicados por ordem.
     private static final String SCRIPT_135 = "migrations/135-add-nota-credito-documento-fiscal.sql";
+    // Phase 136: colunas da fila de comunicação + CHECK AUTORIZADO⇒PRODUCAO (e a tabela XML, fora
+    // destas três tabelas); "scripts == Hibernate" passa a significar 134 + 135 + 136.
+    private static final String SCRIPT_136 = "migrations/136-efatura-comunicacao.sql";
     private static final String SCHEMA_SCRIPT = "migracao_134";
     private static final List<String> TABELAS =
             List.of("t_documento_fiscal", "t_documento_fiscal_linha", "t_comunicacao_fiscal");
@@ -95,12 +98,12 @@ class MigracaoFiscal134IT {
         }
     }
 
-    /** Aplica 134 e depois 135 (Phase 135) no schema de rascunho. */
+    /** Aplica 134, 135 (Phase 135) e 136 (Phase 136) por ordem no schema de rascunho. */
     private void aplicarScript() {
         jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS " + SCHEMA_SCRIPT);
         // Uma única chamada: SET + scripts + reset correm na mesma ligação.
         jdbcTemplate.execute("SET search_path TO " + SCHEMA_SCRIPT + ";\n" + lerScript() + "\n"
-                + lerScript(SCRIPT_135) + "\nSET search_path TO public;");
+                + lerScript(SCRIPT_135) + "\n" + lerScript(SCRIPT_136) + "\nSET search_path TO public;");
     }
 
     /**
@@ -169,7 +172,9 @@ class MigracaoFiscal134IT {
 
         Set<String> hibernate = colunas("public");
         // Phase 135: +3 colunas em t_documento_fiscal (documento_origem_id, motivo_codigo, motivo_texto).
-        assertEquals(43 + 14 + 10, hibernate.size(), "colunas Hibernate: " + hibernate);
+        // Phase 136: +6 colunas em t_comunicacao_fiscal (lease_ate, ultima_tentativa_em, ultimo_erro,
+        // ultimo_erro_codigo, concluido_em, reprocessamentos) -> 43 + 14 + 16.
+        assertEquals(43 + 14 + 16, hibernate.size(), "colunas Hibernate: " + hibernate);
         assertEquals(hibernate, colunas(SCHEMA_SCRIPT));
 
         Map<String, Set<String>> unicasHibernate = unicas("public");
@@ -190,7 +195,8 @@ class MigracaoFiscal134IT {
                 "idx_documento_fiscal_tenant_processo", "idx_documento_fiscal_tenant_honorario",
                 "idx_documento_fiscal_tenant_origem")),
                 "índices Hibernate: " + indicesHibernate);
-        assertTrue(nomesIndices("public", "t_comunicacao_fiscal").contains("idx_comunicacao_fiscal_tenant_estado"));
+        assertTrue(nomesIndices("public", "t_comunicacao_fiscal").containsAll(Set.of(
+                "idx_comunicacao_fiscal_tenant_estado", "idx_comunicacao_fiscal_estado_proxima")));
         assertEquals(indicesHibernate, indices(SCHEMA_SCRIPT));
     }
 
@@ -205,14 +211,23 @@ class MigracaoFiscal134IT {
         assertEquals(colunas("public"), colunas(SCHEMA_SCRIPT));
     }
 
+    /**
+     * As colunas de enum continuam sem CHECK (converter, PITFALLS P-15). Phase 136: o ÚNICO CHECK
+     * nas três tabelas é o {@code ck_comunicacao_fiscal_autorizado_producao} explícito
+     * ({@code @Check}) em {@code t_comunicacao_fiscal}, igual no esquema do script.
+     */
     @Test
-    void hibernateNaoGeraCheckNasColunasDeEnum() {
-        Integer checks = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM pg_constraint WHERE contype = 'c' AND conrelid IN "
-                        + "('public.t_documento_fiscal'::regclass, 'public.t_documento_fiscal_linha'::regclass, "
-                        + "'public.t_comunicacao_fiscal'::regclass)",
-                Integer.class);
-        assertEquals(0, checks);
+    void unicoCheckEOAutorizadoProducaoSemCheckNasColunasDeEnum() {
+        aplicarScript();
+        for (String schema : List.of("public", SCHEMA_SCRIPT)) {
+            List<String> checks = jdbcTemplate.query(
+                    "SELECT c.relname || '|' || con.conname FROM pg_constraint con "
+                            + "JOIN pg_class c ON c.oid = con.conrelid JOIN pg_namespace n ON n.oid = c.relnamespace "
+                            + "WHERE con.contype = 'c' AND n.nspname = ? AND c.relname IN (?, ?, ?)",
+                    (rs, i) -> rs.getString(1), schema, TABELAS.get(0), TABELAS.get(1), TABELAS.get(2));
+            assertEquals(List.of("t_comunicacao_fiscal|ck_comunicacao_fiscal_autorizado_producao"), checks,
+                    "CHECKs em " + schema);
+        }
     }
 
     /**
