@@ -1,7 +1,10 @@
 package com.lexcv.repositories;
 
+import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
+import com.lexcv.models.DocumentoFiscalXml;
+import com.lexcv.models.EstadoComunicacaoFiscal;
 import org.hibernate.annotations.Immutable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -58,7 +61,11 @@ class DocumentoFiscalImutabilidadeTest {
             DocumentoFiscalRepository.class,
             DocumentoFiscalLinhaRepository.class,
             DocumentoFiscalLigacaoClienteRepository.class,
-            ComunicacaoFiscalRepository.class);
+            ComunicacaoFiscalRepository.class,
+            // Phase 136 (DFE-02): satélite XML insert-only -- acrescentado deliberadamente.
+            DocumentoFiscalXmlRepository.class);
+
+    private static final String SQL_INSERIR_XML_PREFIXO = "INSERT INTO t_documento_fiscal_xml";
 
     private static final String SQL_REPONTAR =
             "UPDATE t_documento_fiscal SET cliente_id = :novo WHERE tenant_id = :tenantId AND cliente_id = :antigo";
@@ -129,6 +136,46 @@ class DocumentoFiscalImutabilidadeTest {
                 nomes(ComunicacaoFiscalRepository.class));
     }
 
+    // ---- Teste 5b (Phase 136): XML -- só o INSERT ... ON CONFLICT DO NOTHING e um finder por tenant ----
+    @Test
+    void documentoFiscalXmlRepositoryEInsertOnly() {
+        assertEquals(Set.of("inserirSeAusente", "findByTenantIdAndDocumentoFiscalId"),
+                nomes(DocumentoFiscalXmlRepository.class));
+        Method inserir = Arrays.stream(DocumentoFiscalXmlRepository.class.getMethods())
+                .filter(m -> m.getName().equals("inserirSeAusente"))
+                .findFirst().orElseThrow();
+        Query q = inserir.getAnnotation(Query.class);
+        assertNotNull(q, "inserirSeAusente deve ter @Query");
+        assertTrue(q.nativeQuery(), "inserirSeAusente deve ser nativo");
+        assertTrue(inserir.isAnnotationPresent(Modifying.class), "inserirSeAusente deve ser @Modifying");
+        String sql = q.value().strip();
+        assertTrue(sql.startsWith(SQL_INSERIR_XML_PREFIXO), "inserirSeAusente deve ser um INSERT: " + sql);
+        assertTrue(sql.endsWith("ON CONFLICT DO NOTHING"),
+                "inserirSeAusente deve terminar em ON CONFLICT DO NOTHING (sem alvo: cobre documento e IUD)");
+        String minusculas = sql.toLowerCase(Locale.ROOT);
+        assertFalse(minusculas.contains("do update"), "inserirSeAusente nunca atualiza uma linha existente");
+        assertFalse(minusculas.contains("delete"), "inserirSeAusente nunca apaga");
+    }
+
+    // ---- Teste 5c (Phase 136): estados finais do v3.0 -- AUTORIZADO só existe como proibição na BD ----
+    @Test
+    void estadosDeComunicacaoSaoExatamenteOsDoV30() {
+        assertEquals(List.of(EstadoComunicacaoFiscal.PENDENTE, EstadoComunicacaoFiscal.ACEITE_SIMULADO,
+                        EstadoComunicacaoFiscal.REJEITADO, EstadoComunicacaoFiscal.ERRO),
+                List.of(EstadoComunicacaoFiscal.values()));
+        assertEquals(List.of(AmbienteFiscal.SIMULADO), List.of(AmbienteFiscal.values()),
+                "Nenhum ambiente real neste build");
+        Set<EstadoComunicacaoFiscal> reprocessaveis = Arrays.stream(EstadoComunicacaoFiscal.values())
+                .filter(EstadoComunicacaoFiscal::reprocessavel)
+                .collect(Collectors.toSet());
+        assertEquals(Set.of(EstadoComunicacaoFiscal.REJEITADO, EstadoComunicacaoFiscal.ERRO), reprocessaveis);
+        Set<EstadoComunicacaoFiscal> terminais = Arrays.stream(EstadoComunicacaoFiscal.values())
+                .filter(EstadoComunicacaoFiscal::terminal)
+                .collect(Collectors.toSet());
+        assertEquals(Set.of(EstadoComunicacaoFiscal.ACEITE_SIMULADO, EstadoComunicacaoFiscal.REJEITADO,
+                EstadoComunicacaoFiscal.ERRO), terminais);
+    }
+
     // ---- Teste 6: nenhum nome delete/remove/update ----
     @Test
     void nenhumMetodoTemNomeDeApagarOuAtualizar() {
@@ -147,7 +194,8 @@ class DocumentoFiscalImutabilidadeTest {
     // ---- Teste 7: entidades @Immutable sem setters públicos ----
     @Test
     void entidadesSaoImutaveisESemSetters() {
-        for (Class<?> entidade : List.of(DocumentoFiscal.class, DocumentoFiscalLinha.class)) {
+        for (Class<?> entidade : List.of(DocumentoFiscal.class, DocumentoFiscalLinha.class,
+                DocumentoFiscalXml.class)) {
             assertTrue(entidade.isAnnotationPresent(Immutable.class), entidade.getSimpleName() + " sem @Immutable");
             List<String> setters = Arrays.stream(entidade.getDeclaredMethods())
                     .filter(m -> Modifier.isPublic(m.getModifiers()) && m.getName().startsWith("set"))
@@ -161,7 +209,7 @@ class DocumentoFiscalImutabilidadeTest {
     @Test
     void todoFinderRecebeTenantId() {
         for (Class<?> repo : List.of(DocumentoFiscalRepository.class, DocumentoFiscalLinhaRepository.class,
-                ComunicacaoFiscalRepository.class)) {
+                ComunicacaoFiscalRepository.class, DocumentoFiscalXmlRepository.class)) {
             for (Method m : repo.getDeclaredMethods()) {
                 if (m.getName().equals("save") || m.isSynthetic()) {
                     continue;
