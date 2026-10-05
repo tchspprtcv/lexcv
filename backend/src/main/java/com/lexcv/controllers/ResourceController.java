@@ -3102,11 +3102,14 @@ public class ResourceController {
         }
         // Phase 134 (D-19, EMIS-12): cada pagamento com o número da sua Fatura-Recibo, ou nulo para os
         // registados sem faturação (nunca se fatura retroativamente). Uma só consulta em lote.
+        // Phase 135 (NCRD-03): o estorno de uma Nota de Crédito traz a referência da NC em
+        // "estorno" (a UI mostra "Estorno (NC n.º …)"), também numa só consulta em lote.
         List<Pagamento> pagamentos = pagamentoRepository.findByHonorarioId(id);
         List<Integer> ids = pagamentos.stream().map(Pagamento::getId).toList();
         Map<Integer, DocumentoFiscalRef> refs = documentoFiscalService.referenciasPorPagamento(getTenantId(), ids);
+        Map<Integer, DocumentoFiscalRef> estornos = documentoFiscalService.estornosPorPagamento(getTenantId(), ids);
         return ResponseEntity.ok(pagamentos.stream()
-                .map(p -> PagamentoComDocumentoResponse.de(p, refs.get(p.getId())))
+                .map(p -> PagamentoComDocumentoResponse.de(p, refs.get(p.getId()), estornos.get(p.getId())))
                 .toList());
     }
 
@@ -3289,6 +3292,13 @@ public class ResourceController {
         // SEM @Transactional (P-02): ser faturado fica decidido na criação (pagamento e documento
         // fazem commit juntos), por isso não há corrida a fechar; e numa transação a falha engolida
         // da conta corrente abaixo passaria a UnexpectedRollbackException.
+        // Phase 135 (NCRD-03): o estorno de uma Nota de Crédito nunca é apagável. Também é
+        // "faturado" (a NC tem pagamento_id = estorno), mas responde com a sua própria mensagem.
+        if (documentoFiscalService.eEstornoDeNotaCredito(getTenantId(), id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Este estorno pertence a uma nota de crédito emitida e não pode ser apagado.",
+                    "code", "PAGAMENTO_ESTORNO"));
+        }
         if (documentoFiscalService.existeParaPagamento(getTenantId(), id)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                     "message", "Este pagamento tem uma fatura-recibo emitida e não pode ser apagado.",
