@@ -351,6 +351,23 @@ class ComposicaoNotaCreditoTest {
     }
 
     @Test
+    void definicaoUnicaDoCreditadoEDoCreditavel() {
+        // IN-03 da revisão: documentos de outro tipo e totais nulos são ignorados; sem clamp.
+        DocumentoFiscal fr = fr("1000.00", "15", null);
+        CalculoFiscal.ResultadoCalculo c = CalculoFiscal.calcular(bd("300.00"), RegimeIva.NORMAL, bd("15"), null);
+        DocumentoFiscal nc = documento(TipoDocumentoFiscal.NC, RegimeIva.NORMAL, c, fr.getId()).build();
+        DocumentoFiscal semTotal = documento(TipoDocumentoFiscal.NC, RegimeIva.NORMAL, c, fr.getId())
+                .totalDocumento(null).build();
+        DocumentoFiscal outroTipo = fr("50.00", "15", null);
+
+        igual("300.00", ComposicaoNotaCredito.totalCreditado(List.of(nc, semTotal, outroTipo)));
+        igual("700.00", ComposicaoNotaCredito.valorCreditavelRestante(fr, List.of(nc, semTotal, outroTipo)));
+        igual("0.00", ComposicaoNotaCredito.totalCreditado(List.of()));
+        igual("-200.00", ComposicaoNotaCredito.valorCreditavelRestante(fr, List.of(nc, nc, nc, nc)));
+        assertEquals(2, ComposicaoNotaCredito.valorCreditavelRestante(fr, List.of()).scale());
+    }
+
+    @Test
     void retencaoDaParcialEhCalculadaSobreABaseLimitada() {
         // WR-04 da revisão. FR 1,00 a 15%, retenção 50%: base 0,87 / IVA 0,13 / retenção 0,44. Uma NC
         // anterior (artificial) consumiu 0,80 de base e nada de IVA nem de retenção: remanescentes

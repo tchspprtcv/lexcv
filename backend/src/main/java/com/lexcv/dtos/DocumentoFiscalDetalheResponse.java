@@ -5,6 +5,7 @@ import com.lexcv.models.DocumentoFiscalLinha;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.MetodoPagamento;
 import com.lexcv.models.TipoDocumentoFiscal;
+import com.lexcv.services.fiscal.ComposicaoNotaCredito;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -143,10 +144,9 @@ public record DocumentoFiscalDetalheResponse(
         BigDecimal totalCreditado = null;
         BigDecimal restante = null;
         if (fr) {
-            totalCreditado = ncs.stream().map(DocumentoFiscal::getTotalDocumento)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2);
-            // Sem clamp silencioso: um valor negativo tornaria visível um problema de dados.
-            restante = d.getTotalDocumento().subtract(totalCreditado);
+            // IN-03 da revisão: a mesma definição que a composição e a emissão da NC usam.
+            totalCreditado = ComposicaoNotaCredito.totalCreditado(ncs);
+            restante = ComposicaoNotaCredito.valorCreditavelRestante(d, ncs);
         }
         return new DocumentoFiscalDetalheResponse(
                 d.getId(),

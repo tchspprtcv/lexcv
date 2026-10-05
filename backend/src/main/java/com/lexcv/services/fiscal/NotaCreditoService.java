@@ -347,7 +347,7 @@ public class NotaCreditoService {
         DocumentoFiscal origem = documentoFiscalRepository.findByIdAndTenantId(documentoOrigemId, tenantId)
                 .orElseThrow(() -> new IllegalStateException("Nota de crédito sem documento de origem: " + nc.getId()));
         List<DocumentoFiscal> notas = notasDe(tenantId, origem.getId());
-        BigDecimal restante = restante(origem, notas);
+        BigDecimal restante = ComposicaoNotaCredito.valorCreditavelRestante(origem, notas);
         if (!mesmoTipoEValor(nc, req, notas, restante)) {
             throw chaveReutilizada();
         }
@@ -414,17 +414,6 @@ public class NotaCreditoService {
     private List<DocumentoFiscal> notasDe(UUID tenantId, UUID origemId) {
         return documentoFiscalRepository.findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(
                 tenantId, origemId);
-    }
-
-    /** Total da FR menos o total das NC emitidas sobre ela (positivo, ou zero quando esgotada). */
-    private static BigDecimal restante(DocumentoFiscal origem, List<DocumentoFiscal> notas) {
-        BigDecimal creditado = BigDecimal.ZERO;
-        for (DocumentoFiscal n : notas) {
-            if (n.getTipo() == TipoDocumentoFiscal.NC && n.getTotalDocumento() != null) {
-                creditado = creditado.add(n.getTotalDocumento());
-            }
-        }
-        return origem.getTotalDocumento().subtract(creditado);
     }
 
     private static NotaCreditoResponse resposta(DocumentoFiscal nc, DocumentoFiscal origem, Pagamento estorno,

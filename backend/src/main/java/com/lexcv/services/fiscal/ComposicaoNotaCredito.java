@@ -77,7 +77,6 @@ public final class ComposicaoNotaCredito {
         BigDecimal creditadoBase = BigDecimal.ZERO;
         BigDecimal creditadoIva = BigDecimal.ZERO;
         BigDecimal creditadoRetencao = BigDecimal.ZERO;
-        BigDecimal creditadoTotal = BigDecimal.ZERO;
         for (DocumentoFiscal nc : notasAnteriores) {
             if (nc.getTipo() != TipoDocumentoFiscal.NC) {
                 continue;
@@ -85,12 +84,12 @@ public final class ComposicaoNotaCredito {
             creditadoBase = creditadoBase.add(nc.getTotalBase());
             creditadoIva = creditadoIva.add(nc.getTotalIva());
             creditadoRetencao = creditadoRetencao.add(nc.getTotalRetencao());
-            creditadoTotal = creditadoTotal.add(nc.getTotalDocumento());
         }
+        BigDecimal creditadoTotal = totalCreditado(notasAnteriores);
         BigDecimal remBase = origem.getTotalBase().subtract(creditadoBase).setScale(2);
         BigDecimal remIva = origem.getTotalIva().subtract(creditadoIva).setScale(2);
         BigDecimal remRetencao = origem.getTotalRetencao().subtract(creditadoRetencao).setScale(2);
-        BigDecimal remTotal = origem.getTotalDocumento().subtract(creditadoTotal).setScale(2);
+        BigDecimal remTotal = valorCreditavelRestante(origem, notasAnteriores);
 
         if (remTotal.signum() <= 0) {
             throw excede(MSG_TOTALMENTE_CREDITADA);
@@ -136,6 +135,31 @@ public final class ComposicaoNotaCredito {
                 creditadoTotal,
                 remTotal,
                 remTotal.subtract(calculo.total()));
+    }
+
+    /**
+     * IN-03 da revisão: a ÚNICA definição de "total já creditado" de uma FR -- soma dos totais das
+     * NC (documentos de outro tipo e totais nulos são ignorados), escala 2. Usada pela composição,
+     * pela repetição da emissão e pelo detalhe da FR.
+     */
+    public static BigDecimal totalCreditado(List<DocumentoFiscal> notas) {
+        BigDecimal creditado = BigDecimal.ZERO;
+        if (notas != null) {
+            for (DocumentoFiscal n : notas) {
+                if (n.getTipo() == TipoDocumentoFiscal.NC && n.getTotalDocumento() != null) {
+                    creditado = creditado.add(n.getTotalDocumento());
+                }
+            }
+        }
+        return creditado.setScale(2, RoundingMode.UNNECESSARY);
+    }
+
+    /**
+     * IN-03 da revisão: a ÚNICA definição de "valor ainda creditável" -- total da FR menos
+     * {@link #totalCreditado}. Sem clamp silencioso: um valor negativo torna visível um problema de dados.
+     */
+    public static BigDecimal valorCreditavelRestante(DocumentoFiscal origem, List<DocumentoFiscal> notas) {
+        return origem.getTotalDocumento().subtract(totalCreditado(notas)).setScale(2, RoundingMode.UNNECESSARY);
     }
 
     private static RecusaFiscalException excede(String mensagem) {
