@@ -925,4 +925,13 @@ class PagamentoFaturadoServiceTest {
         assertFalse(fonte.contains("getDescricao"));
         assertFalse(fonte.contains("catch (DataIntegrityViolationException"));
     }
+
+    @Test
+    void mesCorrenteVemDoRelogioInjetadoNoFusoDeCaboVerde() {
+        // IN-04 da revisão: 00:30 UTC de 1 de julho ainda é 30 de junho em Cabo Verde (UTC-1).
+        Clock viragem = Clock.fixed(Instant.parse("2026-07-01T00:30:00Z"), ZoneOffset.UTC);
+        assertEquals(java.time.YearMonth.of(2026, 6), servico(viragem).mesCorrente());
+        assertEquals(java.time.YearMonth.of(2026, 10), servico(RELOGIO).mesCorrente());
+        assertEquals(com.lexcv.services.RecebidoNoMes.FUSO_CABO_VERDE, PagamentoFaturadoService.FUSO_CABO_VERDE);
+    }
 }

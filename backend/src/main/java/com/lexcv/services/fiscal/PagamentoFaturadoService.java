@@ -30,6 +30,7 @@ import com.lexcv.repositories.HonorarioRepository;
 import com.lexcv.repositories.PagamentoRepository;
 import com.lexcv.repositories.ProcessoRepository;
 import com.lexcv.repositories.SerieFiscalRepository;
+import com.lexcv.services.RecebidoNoMes;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Optional;
@@ -93,7 +95,8 @@ import java.util.function.Supplier;
 @Slf4j
 public class PagamentoFaturadoService {
 
-    static final ZoneId FUSO_CABO_VERDE = ZoneId.of("Atlantic/Cape_Verde");
+    /** IN-04 da revisão: o mesmo fuso que o KPI mensal usa (uma só definição, em {@link RecebidoNoMes}). */
+    static final ZoneId FUSO_CABO_VERDE = RecebidoNoMes.FUSO_CABO_VERDE;
 
     static final String MOEDA = "CVE";
 
@@ -117,6 +120,15 @@ public class PagamentoFaturadoService {
     private final ParametroFiscalService parametroFiscalService;
     private final AuditoriaFiscalService auditoriaFiscalService;
     private final Clock clock;
+
+    /**
+     * IN-04 da revisão: mês civil corrente em Cabo Verde segundo o {@link Clock} injetado -- o mesmo
+     * relógio que data o estorno de uma Nota de Crédito, por isso o KPI mensal e o estorno nunca
+     * discordam do mês e os testes podem fixá-lo.
+     */
+    public YearMonth mesCorrente() {
+        return YearMonth.now(clock.withZone(FUSO_CABO_VERDE));
+    }
 
     /**
      * O escritório tem a faturação ativa? Lê só o escalar {@code ativa}, sem pôr a configuração no

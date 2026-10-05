@@ -21,7 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -43,15 +43,22 @@ class ResourceControllerDashboardKpiTest {
     private HonorarioRepository honorarioRepository;
     private ProcessoRepository processoRepository;
     private PagamentoRepository pagamentoRepository;
+    private PagamentoFaturadoService pagamentoFaturadoService;
     private ResourceController controller;
+
+    /** IN-04 da revisão: o mês vem do Clock injetado (via o serviço), por isso fica fixo no teste. */
+    private static final YearMonth MES = YearMonth.of(2026, 6);
+    private static final LocalDate HOJE = LocalDate.of(2026, 6, 15);
 
     @BeforeEach
     void preparar() {
         honorarioRepository = mock(HonorarioRepository.class);
         processoRepository = mock(ProcessoRepository.class);
         pagamentoRepository = mock(PagamentoRepository.class);
+        pagamentoFaturadoService = mock(PagamentoFaturadoService.class);
+        when(pagamentoFaturadoService.mesCorrente()).thenReturn(MES);
         controller = ResourceControllerPagamentoTest.novoController(honorarioRepository, processoRepository,
-                pagamentoRepository, mock(ContaCorrenteRepository.class), mock(PagamentoFaturadoService.class),
+                pagamentoRepository, mock(ContaCorrenteRepository.class), pagamentoFaturadoService,
                 mock(DocumentoFiscalService.class));
 
         UserPrincipal principal = UserPrincipal.create(UUID.randomUUID(), TENANT_ID, "Ana", "ana@example.cv",
@@ -90,19 +97,18 @@ class ResourceControllerDashboardKpiTest {
 
     @Test
     void contaSoOAnoEMesCorrentesDeCaboVerdeESubtraiOEstorno() {
-        LocalDate hoje = LocalDate.now(ZoneId.of("Atlantic/Cape_Verde"));
         umHonorarioCom(List.of(
-                pag(1, hoje, "500"),
-                pag(2, hoje.minusYears(1), "900"),   // mesmo mês do ano passado: não conta
-                pag(3, hoje, "-200")));               // estorno de uma NC emitida hoje
+                pag(1, HOJE, "500"),
+                pag(2, HOJE.minusYears(1), "900"),   // mesmo mês do ano passado: não conta
+                pag(3, HOJE, "-200"),                 // estorno de uma NC emitida hoje
+                pag(4, HOJE.plusMonths(1), "70")));   // mês seguinte: não conta
 
         assertEquals(0, new BigDecimal("300").compareTo(recebidoNoMes()));
     }
 
     @Test
     void valorOuDataNulosNaoRebentamOKpi() {
-        LocalDate hoje = LocalDate.now(ZoneId.of("Atlantic/Cape_Verde"));
-        umHonorarioCom(List.of(pag(1, hoje, "500"), pag(2, hoje, null), pag(3, null, "40")));
+        umHonorarioCom(List.of(pag(1, HOJE, "500"), pag(2, HOJE, null), pag(3, null, "40")));
 
         assertEquals(0, new BigDecimal("500").compareTo(recebidoNoMes()));
     }

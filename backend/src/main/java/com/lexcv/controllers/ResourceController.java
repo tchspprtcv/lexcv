@@ -47,7 +47,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -3412,7 +3411,9 @@ public class ResourceController {
                 pagamentos.addAll(pagamentoRepository.findByHonorarioId(h.getId()));
             }
         }
-        return RecebidoNoMes.somar(pagamentos, YearMonth.now(RecebidoNoMes.FUSO_CABO_VERDE));
+        // IN-04 da revisão: o mês vem do Clock injetado (via o serviço de pagamentos), o mesmo que
+        // data o estorno; o relógio do sistema não pode ser fixado nos testes.
+        return RecebidoNoMes.somar(pagamentos, pagamentoFaturadoService.mesCorrente());
     }
 
     @GetMapping("/processos/dashboard")
