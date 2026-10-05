@@ -83,3 +83,14 @@ Requisitos DFE-01..07.
 - Assinatura XAdES, OAuth2/credenciais, certificados ICP-CV, modo real por emitente, contingência — marco de ligação real (EFAT-01..06)
 
 </deferred>
+
+<research_resolutions>
+## Resolutions after 136-RESEARCH.md (user decisions 2026-10-05)
+
+- Correction: the two public XSD copies are NOT identical — only `Kowts/efatura-cv-php` has 2024-05-27 (22 XSD files); `kriolos` is 2021-12-19. Vendor the 22 Kowts files with SHA-256 and a provenance/licence README (user approved); replace with official files from efatura.cv in the real-connection milestone.
+- Emitente firma max length tightened to 150 characters (XSD `Name`), backend + frontend validation (changes Phase 133 validation for new edits).
+- Notification category for persistent communication failure is NOT silenciável (like PRAZO_VENCIDO) — supersedes the UI-SPEC "silenciável" default.
+- One notification per failure episode: a re-failure after a reprocess notifies again (dedup key must include the episode, e.g. the reprocess counter/attempt cycle).
+- Maven packages (jakarta.xml.bind-api, org.glassfish.jaxb:jaxb-runtime — both managed by the Spring Boot 3.4.1 BOM — and build-only org.jvnet.jaxb:jaxb-maven-plugin 4.0.16) are well-known and confirmed on Maven Central by the research; the orchestrator approves them — no human checkpoint needed before the pom change.
+- Gate items G1–G15 remain for the end-of-phase decision.
+</research_resolutions>
