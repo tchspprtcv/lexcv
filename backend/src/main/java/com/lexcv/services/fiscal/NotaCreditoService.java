@@ -100,6 +100,9 @@ public class NotaCreditoService {
     static final String MSG_CHAVE_REUTILIZADA =
             "Este pedido já foi usado com valores diferentes. Reveja os dados e emita a nota de crédito de novo.";
 
+    static final String MSG_VALORES_ALTERADOS =
+            "Os valores desta fatura-recibo mudaram desde a pré-visualização. Calcule a nota de crédito de novo.";
+
     private final ConfiguracaoFiscalRepository configuracaoFiscalRepository;
     private final SerieFiscalRepository serieFiscalRepository;
     private final HonorarioRepository honorarioRepository;
@@ -145,7 +148,7 @@ public class NotaCreditoService {
      * @throws RecusaFiscalException 422 CHAVE_IDEMPOTENCIA_OBRIGATORIA / NC_SOBRE_NC / recusas do
      *                               pedido; 404 DOCUMENTO_FISCAL_NAO_ENCONTRADO /
      *                               HONORARIO_NAO_ENCONTRADO; 409 FATURACAO_DESLIGADA /
-     *                               CHAVE_REUTILIZADA / NC_EXCEDE_ORIGINAL /
+     *                               CHAVE_REUTILIZADA / NC_EXCEDE_ORIGINAL / NC_VALORES_ALTERADOS /
      *                               PROCESSO_ALTERADO_TENTE_NOVAMENTE / DATA_EMISSAO_ALTERADA; 503
      *                               FATURACAO_OCUPADA / SERIE_INDISPONIVEL
      */
@@ -212,6 +215,10 @@ public class NotaCreditoService {
         List<DocumentoFiscal> notas = notasDe(tenantId, origem.getId());
         ProjetoNotaCredito projeto = ComposicaoNotaCredito.compor(origem, notas, req, hoje);
         CalculoFiscal.ResultadoCalculo calculo = projeto.calculo();
+        // 9b. WR-01 da revisão: o documento imutável tem de ser o que o utilizador confirmou. Se outra
+        //     NC foi emitida entre a pré-visualização e a confirmação, os valores mudaram: 409 e nova
+        //     pré-visualização (nada foi escrito).
+        exigirValoresConfirmados(req, projeto);
 
         // 10. Conta corrente: criar sem corrida, lock como primeira leitura, débito do total da NC.
         bloquear(() -> contaCorrenteRepository.criarSeNaoExiste(clienteId));
@@ -345,6 +352,20 @@ public class NotaCreditoService {
         Pagamento estorno = pagamentoRepository.findById(nc.getPagamentoId())
                 .orElseThrow(() -> new IllegalStateException("Nota de crédito sem estorno: " + nc.getId()));
         return Optional.of(ResultadoNotaCredito.repetido(resposta(nc, origem, estorno, restante)));
+    }
+
+    /**
+     * WR-01 da revisão: compara o total e o valor creditável confirmados na pré-visualização com a
+     * composição feita sob o lock da configuração. Valores ausentes não são verificados.
+     */
+    static void exigirValoresConfirmados(NotaCreditoRequest req, ProjetoNotaCredito projeto) {
+        boolean totalDiferente = req.totalEsperado() != null
+                && req.totalEsperado().compareTo(projeto.calculo().total()) != 0;
+        boolean creditavelDiferente = req.valorCreditavelEsperado() != null
+                && req.valorCreditavelEsperado().compareTo(projeto.valorCreditavelAntes()) != 0;
+        if (totalDiferente || creditavelDiferente) {
+            throw new RecusaFiscalException(HttpStatus.CONFLICT, "NC_VALORES_ALTERADOS", MSG_VALORES_ALTERADOS);
+        }
     }
 
     /** Mesmo motivo (pelo nome) e mesmo texto (sem espaços à volta). Nunca lança. */

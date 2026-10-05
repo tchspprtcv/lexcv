@@ -49,6 +49,12 @@ describe("reagirAErroNotaCredito", () => {
       { acao: "banner", mensagem: "m", passo: "formulario", definitivo: false },
     ],
     [
+      "valores alterados (WR-01) volta ao passo 1 para uma nova pré-visualização",
+      { tipo: "valores-alterados", mensagem: "m" },
+      "pre-visualizacao",
+      { acao: "banner", mensagem: "m", passo: "formulario", definitivo: false },
+    ],
+    [
       "chave reutilizada volta ao passo 1 com banner",
       { tipo: "chave-reutilizada", mensagem: "m" },
       "pre-visualizacao",

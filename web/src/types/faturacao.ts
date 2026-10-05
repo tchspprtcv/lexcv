@@ -280,6 +280,13 @@ export interface NotaCreditoRequest {
   motivoCodigo: MotivoNotaCredito;
   motivoTexto: string;
   chaveIdempotencia?: string;
+  /**
+   * WR-01 da revisão: "Total a creditar" e valor creditável vistos na pré-visualização. Só na
+   * emissão e FORA da chave de idempotência; o backend recusa com 409 NC_VALORES_ALTERADOS se
+   * mudaram entretanto.
+   */
+  totalEsperado?: number;
+  valorCreditavelEsperado?: number;
 }
 
 /** POST /documentos-fiscais/{id}/notas-credito/pre-visualizacao -- nada é gravado. */

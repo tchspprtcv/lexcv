@@ -547,6 +547,42 @@ class NotaCreditoServiceTest {
         assertNadaEscrito();
     }
 
+    // ------------------------------------------------------------------ WR-01 (valores confirmados)
+
+    private NotaCreditoRequest totalConfirmado(String total, String creditavel) {
+        return new NotaCreditoRequest("TOTAL", null, "ANULACAO_TOTAL", "Anulação do serviço", chave,
+                new BigDecimal(total), new BigDecimal(creditavel));
+    }
+
+    @Test
+    void totalConfirmadoDiferenteDoRemanescenteRecusaValoresAlteradosSemEscrever() {
+        // Outra NC de 20 000 foi emitida depois da pré-visualização: o TOTAL creditaria 100 000.
+        tudoPresente(true, List.of(ncParcial20000(UUID.randomUUID(), UUID.randomUUID())), HOJE);
+
+        assertRecusa(recusa(totalConfirmado("120000.00", "120000.00")), HttpStatus.CONFLICT, "NC_VALORES_ALTERADOS");
+        assertNadaEscrito();
+    }
+
+    @Test
+    void parcialComCreditavelConfirmadoDiferenteRecusaValoresAlterados() {
+        tudoPresente(true, List.of(ncParcial20000(UUID.randomUUID(), UUID.randomUUID())), HOJE);
+        NotaCreditoRequest pedido = new NotaCreditoRequest("PARCIAL", new BigDecimal("1000.00"), "CORRECAO_VALOR",
+                "Valor faturado a mais", chave, new BigDecimal("1000.00"), new BigDecimal("120000.00"));
+
+        assertRecusa(recusa(pedido), HttpStatus.CONFLICT, "NC_VALORES_ALTERADOS");
+        assertNadaEscrito();
+    }
+
+    @Test
+    void valoresConfirmadosIguaisEmitem() {
+        tudoPresente(true, List.of(ncParcial20000(UUID.randomUUID(), UUID.randomUUID())), HOJE);
+
+        ResultadoNotaCredito r = servico().emitir(tenant, autor, fr.getId(), totalConfirmado("100000", "100000.00"));
+
+        assertTrue(r.novo());
+        assertEquals(0, new BigDecimal("100000.00").compareTo(documentoGravado().getTotalDocumento()));
+    }
+
     @Test
     void processoReatribuidoDebitaEGravaOClienteDaFr() {
         // CR-01 da revisão: o processo mudou de cliente depois da FR (antes da guarda do PUT).

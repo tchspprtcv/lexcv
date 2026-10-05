@@ -173,6 +173,8 @@ export const COPY_NC_REDE_EMISSAO =
 export const COPY_NC_REDE_PRE_VISUALIZACAO =
   "Não foi possível calcular a nota de crédito. Verifique a ligação e tente novamente.";
 export const COPY_NC_SEM_PERMISSAO = "Não tem permissão para emitir notas de crédito.";
+export const COPY_NC_VALORES_ALTERADOS =
+  "Os valores desta fatura-recibo mudaram desde a pré-visualização. Calcule a nota de crédito de novo.";
 
 export type FaseNotaCredito = "pre-visualizacao" | "emissao";
 
@@ -181,6 +183,7 @@ export type CampoNotaCredito = "tipo" | "valor" | "motivoCodigo" | "motivoTexto"
 export type ErroNotaCredito =
   | { tipo: "campo"; campo: CampoNotaCredito; mensagem: string }
   | { tipo: "excede"; mensagem: string }
+  | { tipo: "valores-alterados"; mensagem: string }
   | { tipo: "chave-reutilizada"; mensagem: string }
   | { tipo: "banner"; codigo?: string; mensagem: string; definitivo: boolean }
   | { tipo: "rede"; mensagem: string }
@@ -227,6 +230,10 @@ export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito
     return { tipo: "banner", codigo: code, mensagem: COPY_NC_DATA, definitivo: false };
   }
   if (code === "CHAVE_REUTILIZADA") return { tipo: "chave-reutilizada", mensagem: COPY_NC_CHAVE_REUTILIZADA };
+  // WR-01 da revisão: outra NC mudou os valores depois da pré-visualização; é preciso calcular de novo.
+  if (code === "NC_VALORES_ALTERADOS") {
+    return { tipo: "valores-alterados", mensagem: mensagemDoCorpo(error.body) ?? COPY_NC_VALORES_ALTERADOS };
+  }
 
   const mensagem = mensagemDoCorpo(error.body);
   if (error.status === 422 && eCampoNotaCredito(error.campo)) {

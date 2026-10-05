@@ -18,8 +18,9 @@ export type ReacaoErroNotaCredito =
 /**
  * O que o diálogo faz com um erro já interpretado (`interpretarErroNotaCredito`):
  * - campo: volta ao passo 1 com o erro no campo;
- * - excede / chave reutilizada / banner definitivo: volta ao passo 1 com o banner (o bloco de
- *   contexto é atualizado pela invalidação do detalhe);
+ * - excede / valores alterados / chave reutilizada / banner definitivo: volta ao passo 1 com o
+ *   banner (o bloco de contexto é atualizado pela invalidação do detalhe; uma nova pré-visualização
+ *   mostra os valores atuais);
  * - rede e banners não definitivos: ficam no passo atual (nova tentativa com a mesma chave);
  * - não encontrado: fecha (a página mostra o estado "não encontrado").
  */
@@ -32,6 +33,7 @@ export function reagirAErroNotaCredito(
     case "campo":
       return { acao: "campo", campo: erro.campo, mensagem: erro.mensagem, passo: "formulario" };
     case "excede":
+    case "valores-alterados":
     case "chave-reutilizada":
       return { acao: "banner", mensagem: erro.mensagem, passo: "formulario", definitivo: false };
     case "banner":

@@ -23,6 +23,7 @@ import {
   COPY_NC_REDE_EMISSAO,
   COPY_NC_REDE_PRE_VISUALIZACAO,
   COPY_NC_SEM_PERMISSAO,
+  COPY_NC_VALORES_ALTERADOS,
   COPY_NC_SOBRE_NC,
   construirQueryDocumentosFiscais,
   desfechoDefinitivo,
@@ -386,6 +387,17 @@ describe("interpretarErroNotaCredito (Phase 135, UI-SPEC Surface 1)", () => {
       codigo: "DATA_EMISSAO_ALTERADA",
       mensagem: "A nota de crédito só pode ser emitida com a data de hoje. Atualize a página e tente de novo.",
       definitivo: false,
+    });
+  });
+
+  it("409 NC_VALORES_ALTERADOS (WR-01) pede nova pré-visualização com a mensagem do backend ou a copy fixa", () => {
+    expect(interpretarErroNotaCredito(erro(409, "NC_VALORES_ALTERADOS", undefined, "m"), "emissao")).toEqual({
+      tipo: "valores-alterados",
+      mensagem: "m",
+    });
+    expect(interpretarErroNotaCredito(erro(409, "NC_VALORES_ALTERADOS"), "emissao")).toEqual({
+      tipo: "valores-alterados",
+      mensagem: COPY_NC_VALORES_ALTERADOS,
     });
   });
 

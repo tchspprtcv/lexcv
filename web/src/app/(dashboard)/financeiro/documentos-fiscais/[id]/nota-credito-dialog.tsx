@@ -166,12 +166,18 @@ export function NotaCreditoDialog({
   };
 
   const emitir = async () => {
-    if (emitindoRef.current || !pedido || !tentativa) return;
+    if (emitindoRef.current || !pedido || !tentativa || !preVisualizacao) return;
     emitindoRef.current = true;
     setEmitindo(true);
     setBanner(null);
     try {
-      const nc = await emitirNc.mutateAsync({ ...pedido, chaveIdempotencia: tentativa.chave });
+      // WR-01: os valores confirmados seguem no corpo, mas FORA da chave (que é do conteúdo `pedido`).
+      const nc = await emitirNc.mutateAsync({
+        ...pedido,
+        chaveIdempotencia: tentativa.chave,
+        totalEsperado: preVisualizacao.total,
+        valorCreditavelEsperado: preVisualizacao.valorCreditavelAntes,
+      });
       setTentativa(null);
       setPreVisualizacao(null);
       setPedido(null);

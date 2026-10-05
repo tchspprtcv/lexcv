@@ -213,4 +213,23 @@ class DocumentoFiscalNotaCreditoDtosTest {
         assertEquals("M1", r.motivoIsencaoCodigo());
         assertEquals("Isento art. 9", r.motivoIsencaoDescricao());
     }
+
+    @Test
+    void pedidoDeNotaCreditoLeOsValoresConfirmadosDoJson() throws Exception {
+        // WR-01 da revisão: os dois campos novos chegam do JSON; sem eles o pedido continua válido.
+        com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+        UUID chave = UUID.randomUUID();
+        NotaCreditoRequest com = om.readValue("{\"tipo\":\"TOTAL\",\"valor\":null,\"motivoCodigo\":\"ANULACAO_TOTAL\","
+                + "\"motivoTexto\":\"x\",\"chaveIdempotencia\":\"" + chave + "\",\"totalEsperado\":120000.00,"
+                + "\"valorCreditavelEsperado\":120000}", NotaCreditoRequest.class);
+        assertEquals(0, new BigDecimal("120000.00").compareTo(com.totalEsperado()));
+        assertEquals(0, new BigDecimal("120000").compareTo(com.valorCreditavelEsperado()));
+        assertEquals(chave, com.chaveIdempotencia());
+
+        NotaCreditoRequest sem = om.readValue("{\"tipo\":\"PARCIAL\",\"valor\":10,\"motivoCodigo\":\"OUTRO\","
+                + "\"motivoTexto\":\"x\"}", NotaCreditoRequest.class);
+        assertNull(sem.totalEsperado());
+        assertNull(sem.valorCreditavelEsperado());
+        assertEquals(0, BigDecimal.TEN.compareTo(sem.valor()));
+    }
 }
