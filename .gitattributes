@@ -1,0 +1,4 @@
+# Vendored eFatura XSD package and its official fixtures are pinned byte-for-byte by
+# XsdEfaturaIntegridadeTest (SHA-256). Never let git rewrite their line endings.
+backend/src/main/resources/xsd/efatura/** -text
+backend/src/test/resources/efatura/** -text
