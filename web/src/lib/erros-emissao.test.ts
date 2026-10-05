@@ -24,6 +24,7 @@ import {
   COPY_NC_REDE_PRE_VISUALIZACAO,
   COPY_NC_SEM_PERMISSAO,
   COPY_NC_VALORES_ALTERADOS,
+  COPY_NC_DADOS_EM_FALTA,
   COPY_NC_SOBRE_NC,
   construirQueryDocumentosFiscais,
   desfechoDefinitivo,
@@ -441,6 +442,22 @@ describe("interpretarErroNotaCredito (Phase 135, UI-SPEC Surface 1)", () => {
       definitivo: false,
     });
     expect(interpretarErroNotaCredito(erro(401), "emissao")).toBeNull();
+  });
+
+  it("404 sem código também fecha; outros 404 (WR-02) são banner definitivo com mensagem", () => {
+    expect(interpretarErroNotaCredito(erro(404), "emissao")).toEqual({ tipo: "nao-encontrado" });
+    expect(interpretarErroNotaCredito(erro(404, "HONORARIO_NAO_ENCONTRADO", undefined, "m"), "emissao")).toEqual({
+      tipo: "banner",
+      codigo: "HONORARIO_NAO_ENCONTRADO",
+      mensagem: "m",
+      definitivo: true,
+    });
+    expect(interpretarErroNotaCredito(erro(404, "CLIENTE_NAO_ENCONTRADO"), "pre-visualizacao")).toEqual({
+      tipo: "banner",
+      codigo: "CLIENTE_NAO_ENCONTRADO",
+      mensagem: COPY_NC_DADOS_EM_FALTA,
+      definitivo: true,
+    });
   });
 
   it("status fora dos inline (ex. 400) devolve nulo: o apiFetch já mostrou o toast", () => {

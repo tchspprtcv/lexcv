@@ -173,6 +173,8 @@ export const COPY_NC_REDE_EMISSAO =
 export const COPY_NC_REDE_PRE_VISUALIZACAO =
   "Não foi possível calcular a nota de crédito. Verifique a ligação e tente novamente.";
 export const COPY_NC_SEM_PERMISSAO = "Não tem permissão para emitir notas de crédito.";
+export const COPY_NC_DADOS_EM_FALTA =
+  "Não é possível emitir a nota de crédito: um dos dados ligados a esta fatura-recibo já não existe. Atualize a página.";
 export const COPY_NC_VALORES_ALTERADOS =
   "Os valores desta fatura-recibo mudaram desde a pré-visualização. Calcule a nota de crédito de novo.";
 
@@ -204,8 +206,9 @@ const BANNERS_DEFINITIVOS_NC: Record<string, string> = {
 /**
  * Converte o erro da pré-visualização ou da emissão de uma Nota de Crédito no que o diálogo deve
  * mostrar. Devolve `null` para 401 (o `useMe` trata da sessão) e para os status fora de
- * `semToastParaStatus` (o `apiFetch` já mostrou o toast). O 404 (documento inexistente ou de outro
- * escritório, indistinguíveis) fecha o diálogo e mostra o estado "não encontrado" da página.
+ * `semToastParaStatus` (o `apiFetch` já mostrou o toast). O 404 da FR (documento inexistente ou de
+ * outro escritório, indistinguíveis) fecha o diálogo e mostra o estado "não encontrado" da página;
+ * os outros 404 são um banner definitivo com a mensagem do backend.
  * Só se mostra a `message` do backend ou copy fixa, nunca o corpo bruto.
  */
 export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito): ErroNotaCredito | null {
@@ -216,7 +219,18 @@ export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito
   }
   if (error.status === 401) return null;
   if (error.status === 403) return { tipo: "banner", mensagem: COPY_NC_SEM_PERMISSAO, definitivo: false };
-  if (error.status === 404) return { tipo: "nao-encontrado" };
+  if (error.status === 404) {
+    // WR-02 da revisão: só a FR em falta fecha o diálogo (a página mostra "não encontrado"). Outros
+    // 404 (ex. HONORARIO_NAO_ENCONTRADO) chegam com a FR ainda existente: fechar sem mensagem
+    // deixava o utilizador sem saber o que aconteceu. Nenhuma nova tentativa os resolve.
+    if (!error.code || error.code === "DOCUMENTO_FISCAL_NAO_ENCONTRADO") return { tipo: "nao-encontrado" };
+    return {
+      tipo: "banner",
+      codigo: error.code,
+      mensagem: mensagemDoCorpo(error.body) ?? COPY_NC_DADOS_EM_FALTA,
+      definitivo: true,
+    };
+  }
   if (error.status === 503) return { tipo: "rede", mensagem: COPY_NC_INDISPONIVEL };
   if (error.status >= 500) return { tipo: "rede", mensagem: copyRede };
   if (error.status !== 409 && error.status !== 422) return null;
