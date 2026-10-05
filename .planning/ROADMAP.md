@@ -149,7 +149,25 @@ Notas da fase:
   4. Nenhum documento simulado aparece como autorizado pela DNRE: estado, série, IUD e ecrãs marcam-no inequivocamente como "simulação, sem validade fiscal" (PDF e email herdam esta marca na Phase 137)
   5. Uma falha persistente de comunicação gera uma notificação in-app para os responsáveis do escritório
 
-**Plans**: TBD
+**Plans**: 16 plans
+
+Plans:
+- [ ] 136-01-PLAN.md — Vendor the 22 XSD (Kowts 2024-05-27) + provenance README + SHA-256 integrity test; JAXB deps/plugin with .xjb; SpotBugs exclusions for generated code only
+- [ ] 136-02-PLAN.md — Schema: new states, outbox columns, CHECK AUTORIZADO⇒PRODUCAO, insert-only t_documento_fiscal_xml; migration 136 + README; parity ITs 134/135/136
+- [ ] 136-03-PLAN.md — COMUNICACAO_FISCAL_FALHOU (non-silenceable) + NotificacaoComunicacaoFiscal (effective financeiro:manage, per-episode dedup)
+- [ ] 136-04-PLAN.md — Web contracts: types, exact financeiro:edit gate, reprocess mutation, PENDENTE-only polling, lib/comunicacao-fiscal, notification maps, firma 150
+- [ ] 136-05-PLAN.md — TDD hardened DfeValidador + whitelist classpath resolver (XXE), DfeMarshaller, IudGerador (Luhn official vector)
+- [ ] 136-06-PLAN.md — Outbox DB side: FilaComunicacaoFiscal (SKIP LOCKED, lease, versao guard), ComunicacaoFiscalTransacoes, FilaComunicacaoFiscalIT
+- [ ] 136-07-PLAN.md — Read side: comunicacao summary (estado, IUD, tentativas, último erro) on the document detail
+- [ ] 136-08-PLAN.md — Web components: neutral state badge, "Modo simulado" banner, "Comunicação fiscal" card, reprocess dialog component
+- [ ] 136-09-PLAN.md — MapeamentoEfatura constant table, DocumentoComunicavel, DfeXmlBuilder (FR + NC, XSD-validated), firma ≤ 150 backend
+- [ ] 136-10-PLAN.md — EfaturaGateway port + sealed result + SimuladoEfaturaGateway (fault injection), single state mapper, backoff table
+- [ ] 136-11-PLAN.md — Wire list/detail/honorário pages (column, filter, card, banner) + verify:documentos-fiscais Phase 136 gate
+- [ ] 136-12-PLAN.md — EFATURA_MODE fail-fast config, transmission properties, scheduler pool 3; .env.example, three compose files, deploy.yml
+- [ ] 136-13-PLAN.md — ProcessadorComunicacaoFiscal: snapshot → IUD → XML → validate → persist → gateway → state → notify on ERRO
+- [ ] 136-14-PLAN.md — Reprocessar route (exact financeiro:edit, 409/404, audit) + modoComunicacao on estado-emissao + ReprocessarComunicacaoIT
+- [ ] 136-15-PLAN.md — FiscalOutboxJob (@Scheduled ≈30 s) + FiscalOutboxJobIT end to end on PostgreSQL
+- [ ] 136-16-PLAN.md — Full phase gate + live UAT from the jar + G1–G15 primary-source gate decision (checkpoint)
 **UI hint**: yes
 
 Notas da fase:
