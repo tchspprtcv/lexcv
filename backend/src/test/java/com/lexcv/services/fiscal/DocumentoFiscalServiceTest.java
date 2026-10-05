@@ -9,6 +9,7 @@ import com.lexcv.models.ComunicacaoFiscal;
 import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
 import com.lexcv.models.EstadoComunicacaoFiscal;
+import com.lexcv.models.MotivoNotaCredito;
 import com.lexcv.models.RegimeIva;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.repositories.ComunicacaoFiscalRepository;
@@ -49,12 +50,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** Phase 134 (EMIS-09, EMIS-11, EMIS-12, D-14..D-19): leitura, guardas e fusão dos documentos fiscais. */
+/**
+ * Phase 134 (EMIS-09, EMIS-11, EMIS-12, D-14..D-19): leitura, guardas e fusão dos documentos fiscais.
+ * Phase 135 (NCRD-01..03): NC no detalhe e na listagem, FR vs. estorno nos pagamentos, sonda do estorno.
+ */
 class DocumentoFiscalServiceTest {
 
     private final UUID tenant = UUID.randomUUID();
@@ -87,6 +92,24 @@ class DocumentoFiscalServiceTest {
                 .totalRetencao(new BigDecimal("0.00")).totalDocumento(new BigDecimal("115.00"))
                 .valorLiquido(new BigDecimal("115.00")).chaveIdempotencia(UUID.randomUUID())
                 .emitidoPorId(UUID.randomUUID()).emitidoPorNome("Ana")
+                .build();
+    }
+
+    /** Phase 135: NC sobre {@code origem}, com o seu próprio pagamento de estorno. */
+    private DocumentoFiscal nc(long numero, Integer pagamentoEstornoId, UUID origem, String total) {
+        return DocumentoFiscal.builder()
+                .id(UUID.randomUUID()).tenantId(tenant).tipo(TipoDocumentoFiscal.NC).ambiente(AmbienteFiscal.SIMULADO)
+                .serieId(UUID.randomUUID()).serieCodigo("SIM-NC-2026").ano(2026).numero(numero)
+                .numeroFormatado("SIM-NC-2026/" + numero).dataEmissao(LocalDate.of(2026, 10, 5))
+                .emitidoEm(Instant.parse("2026-10-05T12:00:00Z"))
+                .emitenteNif("123456789").emitenteFirma("Silva").emitenteMorada("Av. 1").emitenteRegimeIva(RegimeIva.NORMAL)
+                .adquirenteNif("234567891").adquirenteNome("Maria").adquirenteMorada("Rua 2")
+                .clienteId(UUID.randomUUID()).processoId(UUID.randomUUID()).honorarioId(3).pagamentoId(pagamentoEstornoId)
+                .metodoPagamento("TRANSFERENCIA").meioPagamentoCodigo("30").moeda("CVE")
+                .taxaIva(new BigDecimal("15")).totalBase(new BigDecimal("10.00")).totalIva(new BigDecimal("1.50"))
+                .totalRetencao(new BigDecimal("0.00")).totalDocumento(new BigDecimal(total))
+                .valorLiquido(new BigDecimal(total)).chaveIdempotencia(UUID.randomUUID())
+                .documentoOrigemId(origem).motivoCodigo(MotivoNotaCredito.CORRECAO_VALOR).motivoTexto("Valor a mais")
                 .build();
     }
 
@@ -146,6 +169,42 @@ class DocumentoFiscalServiceTest {
     }
 
     @Test
+    void listarSemNcNaoConsultaOrigens() {
+        DocumentoFiscal d1 = doc(1, 10);
+        when(documentoRepo.buscar(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(d1)));
+        Page<DocumentoFiscalResumoResponse> r = servico.listar(tenant, null, null, null, null, null, 0, 10);
+        verify(documentoRepo, never()).findByTenantIdAndIdIn(any(), any());
+        assertNull(r.getContent().get(0).documentoOrigemNumero());
+        assertNull(r.getContent().get(0).documentoOrigemId());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listarCarregaOsNumerosDeOrigemDasNcNumaSoChamada() {
+        DocumentoFiscal fr1 = doc(1, 10);
+        DocumentoFiscal fr2 = doc(2, 20);
+        DocumentoFiscal ncA = nc(1, 11, fr1.getId(), "5.00");
+        DocumentoFiscal ncB = nc(2, 12, fr1.getId(), "5.00");
+        DocumentoFiscal ncC = nc(3, 21, fr2.getId(), "5.00");
+        when(documentoRepo.buscar(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(ncC, ncB, ncA, fr1)));
+        when(documentoRepo.findByTenantIdAndIdIn(eq(tenant), any())).thenReturn(List.of(fr1, fr2));
+
+        Page<DocumentoFiscalResumoResponse> r = servico.listar(tenant, null, null, null, null, null, 0, 10);
+
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(documentoRepo, times(1)).findByTenantIdAndIdIn(eq(tenant), ids.capture());
+        assertEquals(Set.of(fr1.getId(), fr2.getId()), Set.copyOf(ids.getValue()));
+        assertEquals(2, ids.getValue().size(), "ids de origem distintos");
+        assertEquals("SIM-FR-2026/2", r.getContent().get(0).documentoOrigemNumero());
+        assertEquals(fr2.getId(), r.getContent().get(0).documentoOrigemId());
+        assertEquals("SIM-FR-2026/1", r.getContent().get(1).documentoOrigemNumero());
+        assertEquals("SIM-FR-2026/1", r.getContent().get(2).documentoOrigemNumero());
+        assertNull(r.getContent().get(3).documentoOrigemNumero(), "uma FR não tem origem");
+    }
+
+    @Test
     void listarPaginaVaziaNaoConsultaEstados() {
         when(documentoRepo.buscar(any(), any(), any(), any(), any(), any(), any())).thenReturn(Page.empty());
         assertTrue(servico.listar(tenant, null, null, null, null, null, 0, 10).isEmpty());
@@ -197,6 +256,57 @@ class DocumentoFiscalServiceTest {
     }
 
     @Test
+    void detalheDaFrTrazAsNcEOValorCreditavel() {
+        DocumentoFiscal fr = doc(7, 70);
+        DocumentoFiscal nc2 = nc(2, 72, fr.getId(), "15.00");
+        DocumentoFiscal nc1 = nc(1, 71, fr.getId(), "20.00");
+        when(documentoRepo.findByIdAndTenantId(fr.getId(), tenant)).thenReturn(Optional.of(fr));
+        when(documentoRepo.findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(tenant, fr.getId()))
+                .thenReturn(List.of(nc2, nc1));
+
+        DocumentoFiscalDetalheResponse r = servico.detalhe(tenant, fr.getId());
+
+        assertEquals(List.of("SIM-NC-2026/2", "SIM-NC-2026/1"),
+                r.notasCredito().stream().map(DocumentoFiscalDetalheResponse.NotaCreditoResumo::numeroFormatado).toList());
+        assertEquals(new BigDecimal("35.00"), r.totalCreditado());
+        assertEquals(new BigDecimal("80.00"), r.valorCreditavelRestante());
+        assertNull(r.documentoOrigem());
+        // Nunca procura uma origem para uma FR.
+        verify(documentoRepo, times(1)).findByIdAndTenantId(any(), any());
+    }
+
+    @Test
+    void detalheDaNcTrazAOrigemDoMesmoTenantENaoProcuraNcs() {
+        DocumentoFiscal fr = doc(7, 70);
+        DocumentoFiscal n = nc(1, 71, fr.getId(), "20.00");
+        when(documentoRepo.findByIdAndTenantId(n.getId(), tenant)).thenReturn(Optional.of(n));
+        when(documentoRepo.findByIdAndTenantId(fr.getId(), tenant)).thenReturn(Optional.of(fr));
+
+        DocumentoFiscalDetalheResponse r = servico.detalhe(tenant, n.getId());
+
+        assertEquals(new DocumentoFiscalRef(fr.getId(), "SIM-FR-2026/7"), r.documentoOrigem());
+        assertEquals("CORRECAO_VALOR", r.motivoCodigo());
+        assertEquals("Correção de valor", r.motivoRotulo());
+        assertEquals("Valor a mais", r.motivoTexto());
+        assertNull(r.totalCreditado());
+        assertNull(r.valorCreditavelRestante());
+        assertTrue(r.notasCredito().isEmpty());
+        verify(documentoRepo).findByIdAndTenantId(fr.getId(), tenant);
+        verify(documentoRepo, never()).findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(any(), any());
+    }
+
+    @Test
+    void detalheDaNcComOrigemForaDoTenantNaoExpoeOrigem() {
+        UUID origemDeOutro = UUID.randomUUID();
+        DocumentoFiscal n = nc(1, 71, origemDeOutro, "20.00");
+        when(documentoRepo.findByIdAndTenantId(n.getId(), tenant)).thenReturn(Optional.of(n));
+        when(documentoRepo.findByIdAndTenantId(origemDeOutro, tenant)).thenReturn(Optional.empty());
+
+        assertNull(servico.detalhe(tenant, n.getId()).documentoOrigem());
+        verify(documentoRepo).findByIdAndTenantId(origemDeOutro, tenant);
+    }
+
+    @Test
     void detalheNaoExpoeAChaveNemOIdDeQuemEmitiu() {
         Set<String> componentes = java.util.Arrays.stream(DocumentoFiscalDetalheResponse.class.getRecordComponents())
                 .map(java.lang.reflect.RecordComponent::getName).collect(java.util.stream.Collectors.toSet());
@@ -227,6 +337,52 @@ class DocumentoFiscalServiceTest {
         verify(documentoRepo, times(1)).findByTenantIdAndPagamentoIdIn(eq(tenant), any());
         assertEquals(Map.of(50, new DocumentoFiscalRef(d.getId(), "SIM-FR-2026/5")), r);
         assertNull(r.get(51), "pagamento sem faturação fica sem documento");
+    }
+
+    @Test
+    void referenciasDevolvemSoFaturasRecibo() {
+        DocumentoFiscal fr = doc(5, 50);
+        DocumentoFiscal estorno = nc(1, 51, fr.getId(), "10.00");
+        when(documentoRepo.findByTenantIdAndPagamentoIdIn(eq(tenant), any())).thenReturn(List.of(fr, estorno));
+
+        Map<Integer, DocumentoFiscalRef> r = servico.referenciasPorPagamento(tenant, List.of(50, 51));
+
+        assertEquals(Map.of(50, DocumentoFiscalRef.de(fr)), r);
+    }
+
+    @Test
+    void estornosDevolvemSoNotasDeCreditoPeloPagamentoDeEstorno() {
+        DocumentoFiscal fr = doc(5, 50);
+        DocumentoFiscal estorno = nc(1, 51, fr.getId(), "10.00");
+        when(documentoRepo.findByTenantIdAndPagamentoIdIn(eq(tenant), any())).thenReturn(List.of(fr, estorno));
+
+        Map<Integer, DocumentoFiscalRef> r = servico.estornosPorPagamento(tenant, List.of(50, 51));
+
+        verify(documentoRepo, times(1)).findByTenantIdAndPagamentoIdIn(eq(tenant), any());
+        assertEquals(Map.of(51, new DocumentoFiscalRef(estorno.getId(), "SIM-NC-2026/1")), r);
+    }
+
+    @Test
+    void estornosSemIdsNaoConsultam() {
+        assertTrue(servico.estornosPorPagamento(tenant, List.of()).isEmpty());
+        assertTrue(servico.estornosPorPagamento(tenant, null).isEmpty());
+        verifyNoInteractions(documentoRepo);
+    }
+
+    @Test
+    void eEstornoDeNotaCreditoDelegaComTipoNc() {
+        when(documentoRepo.existsByTenantIdAndPagamentoIdAndTipo(tenant, 51, TipoDocumentoFiscal.NC)).thenReturn(true);
+        assertTrue(servico.eEstornoDeNotaCredito(tenant, 51));
+        assertFalse(servico.eEstornoDeNotaCredito(tenant, 50));
+        verify(documentoRepo).existsByTenantIdAndPagamentoIdAndTipo(tenant, 50, TipoDocumentoFiscal.NC);
+    }
+
+    @Test
+    void existeParaPagamentoContinuaVerdadeiroParaUmEstorno() {
+        // Uma NC tem documento no seu pagamento de estorno: a guarda D-14 já o bloqueia.
+        when(documentoRepo.existsByTenantIdAndPagamentoId(tenant, 51)).thenReturn(true);
+        assertTrue(servico.existeParaPagamento(tenant, 51));
+        verify(documentoRepo, never()).existsByTenantIdAndPagamentoIdAndTipo(any(), any(), any());
     }
 
     // ------------------------------------------------------------------ guardas e fusão
