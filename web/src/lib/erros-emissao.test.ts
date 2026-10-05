@@ -362,9 +362,16 @@ describe("interpretarErroNotaCredito (Phase 135, UI-SPEC Surface 1)", () => {
     });
   });
 
-  it("409 NC_EXCEDE_ORIGINAL é 'excede' com a copy do UI-SPEC", () => {
+  it("409 NC_EXCEDE_ORIGINAL é 'excede' com a mensagem do backend (IN-01) ou a copy do UI-SPEC", () => {
     const e = erro(409, "NC_EXCEDE_ORIGINAL", "valor", "Esta fatura-recibo já foi totalmente creditada.");
-    expect(interpretarErroNotaCredito(e, "emissao")).toEqual({ tipo: "excede", mensagem: COPY_NC_EXCEDE });
+    expect(interpretarErroNotaCredito(e, "emissao")).toEqual({
+      tipo: "excede",
+      mensagem: "Esta fatura-recibo já foi totalmente creditada.",
+    });
+    expect(interpretarErroNotaCredito(erro(409, "NC_EXCEDE_ORIGINAL", "valor"), "emissao")).toEqual({
+      tipo: "excede",
+      mensagem: COPY_NC_EXCEDE,
+    });
   });
 
   it("NC_SOBRE_NC e FATURACAO_DESLIGADA são banners definitivos", () => {

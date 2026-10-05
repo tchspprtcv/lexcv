@@ -236,7 +236,11 @@ export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito
   if (error.status !== 409 && error.status !== 422) return null;
 
   const code = error.code;
-  if (code === "NC_EXCEDE_ORIGINAL") return { tipo: "excede", mensagem: COPY_NC_EXCEDE };
+  // IN-01 da revisão: o backend distingue "excede" de "já totalmente creditada" pela mensagem; a
+  // copy fixa (que sugere "escolha crédito total") só serve de recurso.
+  if (code === "NC_EXCEDE_ORIGINAL") {
+    return { tipo: "excede", mensagem: mensagemDoCorpo(error.body) ?? COPY_NC_EXCEDE };
+  }
   if (code && BANNERS_DEFINITIVOS_NC[code]) {
     return { tipo: "banner", codigo: code, mensagem: BANNERS_DEFINITIVOS_NC[code], definitivo: true };
   }
