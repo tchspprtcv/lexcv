@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 135-04-PLAN.md
-last_updated: "2026-10-05T09:30:00.000Z"
-last_activity: 2026-10-05 — Completed 135-04 (Phase 135 wave 1-2 backend foundation: MotivoNotaCredito + NC columns/finders, migration 135 + ITs (scripts == Hibernate, 43+14+10), pure ComposicaoNotaCredito (TDD, P-13 clamps), NC read side + estorno probes; surefire 896 green)
+stopped_at: Completed 135-10-PLAN.md
+last_updated: "2026-10-05T10:30:00.000Z"
+last_activity: 2026-10-05 — Completed 135-05, 135-08, 135-06, 135-10 (NC DTOs + audit event + FR replay refuses NC keys; KPI fix via RecebidoNoMes + estorno in payments list + 409 PAGAMENTO_ESTORNO + alert re-eligibility tests; NotaCreditoService preview + atomic lock-ordered idempotent emission; web NC types/hooks/errors/schema; surefire 988 green, vitest 233 green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 35
-  completed_plans: 26
-  percent: 74
+  completed_plans: 30
+  percent: 86
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 135 of 139 (Nota de Crédito)
-Plan: 4 of 13
-Status: Executing Phase 135 — plans 01-04 complete; next 135-05
-Last activity: 2026-10-05 — Completed 135-04 (Phase 135 wave 1-2 backend foundation: MotivoNotaCredito + NC columns/finders, migration 135 + ITs (scripts == Hibernate, 43+14+10), pure ComposicaoNotaCredito (TDD, P-13 clamps), NC read side + estorno probes; surefire 896 green)
+Plan: 8 of 13
+Status: Executing Phase 135 — plans 01-06, 08, 10 complete; next 135-07 / 135-09 (then 135-11, 135-12, 135-13)
+Last activity: 2026-10-05 — Completed 135-05, 135-08, 135-06, 135-10 (NC DTOs + audit event + FR replay refuses NC keys; KPI fix via RecebidoNoMes + estorno in payments list + 409 PAGAMENTO_ESTORNO + alert re-eligibility tests; NotaCreditoService preview + atomic lock-ordered idempotent emission; web NC types/hooks/errors/schema; surefire 988 green, vitest 233 green)
 
 ## Performance Metrics
 
@@ -189,6 +189,11 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 135]: Migration 135 is additive only (3 nullable columns + idx_documento_fiscal_tenant_origem); MigracaoFiscal134IT now applies 134+135 and asserts 43+14+10 columns (recounted from Hibernate)
 - [Phase 135]: ComposicaoNotaCredito.compor is the single pure NC money function: partial via CalculoFiscal with FR snapshot rates, total/equal-to-remainder credits exact per-column remainders, base/IVA/retention clamped (P-13); NC_SOBRE_NC (422) checked first, NC_EXCEDE_ORIGINAL (409, campo valor)
 - [Phase 135]: Read side: referenciasPorPagamento returns only FR, estornosPorPagamento only NC (two batched queries); FR detail carries notasCredito/totalCreditado/valorCreditavelRestante; NC amounts are positive magnitudes
+- [Phase 135]: FR and NC share the per-tenant idempotency key space: PagamentoFaturadoService refuses a key stored on a non-FR document (409 CHAVE_REUTILIZADA), NotaCreditoService refuses a key stored on a non-NC document; NC audit event documento_fiscal_emitir_nc carries only autorNome/numeroFormatado/documentoOrigem (never the motivo text)
+- [Phase 135]: NotaCreditoService.emitir mirrors the FR path (lock_timeout → config lock → key lookup before ativa → origem 404 / NC_SOBRE_NC → scalar clienteId → cliente → processo → honorário scalar → compor → CC debit → negative estorno → proximoNumero(NC, SIMULADO) → FR-snapshot document/linha/PENDENTE → audit); no ParametroFiscalService (FR snapshot rates)
+- [Phase 135]: NC TOTAL replay = valor null AND FR exhausted AND stored NC is the latest NC of the FR (no tipo_credito column); a PARCIAL equal to the exact remainder stays indistinguishable from TOTAL (identical documents), pinned by a unit test
+- [Phase 135]: Monthly KPI sum lives in the pure RecebidoNoMes.somar (year+month in Atlantic/Cape_Verde, null-safe, estorno subtracts in the NC month); deletePagamento checks eEstornoDeNotaCredito (409 PAGAMENTO_ESTORNO) before the FR guard; CFG-03 guard untouched
+- [Phase 135]: Web NC gate podeEmitirNotaCredito = exact financeiro:manage; NC mutations handle STATUS_INLINE_EMISSAO + 404 inline and invalidate documents/honorarios/conta-corrente/dashboard KPIs onSettled; interpretarErroNotaCredito is phase-aware (pre-visualizacao vs emissao network copy)
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -360,8 +365,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-05T09:30:00.000Z
-Stopped at: Completed 135-04-PLAN.md
+Last session: 2026-10-05T10:30:00.000Z
+Stopped at: Completed 135-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
