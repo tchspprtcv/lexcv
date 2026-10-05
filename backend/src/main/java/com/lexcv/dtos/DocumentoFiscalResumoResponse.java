@@ -12,6 +12,10 @@ import java.util.UUID;
  * {@code ambiente} e {@code estadoComunicacao} são o {@code name()} do enum
  * ({@code estadoComunicacao} nulo quando o documento ainda não tem linha de comunicação).
  * A chave de idempotência e o id de quem emitiu nunca são expostos.
+ *
+ * <p>Phase 135 (NCRD-01): numa Nota de Crédito, {@code documentoOrigemId} e
+ * {@code documentoOrigemNumero} identificam a Fatura-Recibo corrigida (nulos numa FR). O total de
+ * uma NC é uma magnitude positiva.
  */
 public record DocumentoFiscalResumoResponse(
         UUID id,
@@ -24,10 +28,18 @@ public record DocumentoFiscalResumoResponse(
         String adquirenteNome,
         String adquirenteNif,
         BigDecimal totalDocumento,
-        String estadoComunicacao
+        String estadoComunicacao,
+        UUID documentoOrigemId,
+        String documentoOrigemNumero
 ) {
 
     public static DocumentoFiscalResumoResponse de(DocumentoFiscal d, EstadoComunicacaoFiscal estadoOuNulo) {
+        return de(d, estadoOuNulo, null);
+    }
+
+    /** Phase 135: {@code origemNumeroOuNulo} é o número da FR de origem de uma NC. */
+    public static DocumentoFiscalResumoResponse de(DocumentoFiscal d, EstadoComunicacaoFiscal estadoOuNulo,
+                                                   String origemNumeroOuNulo) {
         return new DocumentoFiscalResumoResponse(
                 d.getId(),
                 d.getNumeroFormatado(),
@@ -39,6 +51,8 @@ public record DocumentoFiscalResumoResponse(
                 d.getAdquirenteNome(),
                 d.getAdquirenteNif(),
                 d.getTotalDocumento(),
-                estadoOuNulo == null ? null : estadoOuNulo.name());
+                estadoOuNulo == null ? null : estadoOuNulo.name(),
+                d.getDocumentoOrigemId(),
+                origemNumeroOuNulo);
     }
 }

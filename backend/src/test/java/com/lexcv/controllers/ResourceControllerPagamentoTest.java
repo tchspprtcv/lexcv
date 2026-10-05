@@ -295,7 +295,7 @@ class ResourceControllerPagamentoTest {
 
     private PagamentoComDocumentoResponse resposta() {
         return new PagamentoComDocumentoResponse(55, 1, new BigDecimal("100.00"), LocalDate.of(2026, 10, 4),
-                "DINHEIRO", new DocumentoFiscalRef(UUID.randomUUID(), "SIM-FR-2026/1"));
+                "DINHEIRO", new DocumentoFiscalRef(UUID.randomUUID(), "SIM-FR-2026/1"), null);
     }
 
     @Test

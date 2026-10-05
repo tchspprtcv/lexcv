@@ -4,6 +4,7 @@ import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.MetodoPagamento;
+import com.lexcv.models.TipoDocumentoFiscal;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,6 +19,14 @@ import java.util.UUID;
  *
  * <p>Exclui deliberadamente a chave de idempotência (interna; a UI-SPEC proíbe mostrá-la) e o id
  * do utilizador que emitiu (minimização de dados, ASVS V8): só o nome fotografado é devolvido.
+ *
+ * <p>Phase 135 (NCRD-01..03): numa Nota de Crédito, {@code documentoOrigem} referencia a
+ * Fatura-Recibo corrigida e {@code motivoCodigo}/{@code motivoRotulo}/{@code motivoTexto} trazem o
+ * motivo; numa Fatura-Recibo, {@code notasCredito} lista as NC emitidas (mais recentes primeiro),
+ * {@code totalCreditado} é a soma dos seus totais e {@code valorCreditavelRestante} o total da FR
+ * menos essa soma -- calculados aqui, no backend, nunca na UI. Os montantes das NC são magnitudes
+ * positivas (o sinal negativo vive só no pagamento de estorno). Campos que não se aplicam ao tipo
+ * do documento são nulos ({@code notasCredito} é uma lista vazia).
  */
 public record DocumentoFiscalDetalheResponse(
         UUID id,
@@ -59,12 +68,37 @@ public record DocumentoFiscalDetalheResponse(
         BigDecimal valorLiquido,
         String estadoComunicacao,
         String emitidoPorNome,
-        List<Linha> linhas
+        List<Linha> linhas,
+        DocumentoFiscalRef documentoOrigem,
+        String motivoCodigo,
+        String motivoRotulo,
+        String motivoTexto,
+        BigDecimal totalCreditado,
+        BigDecimal valorCreditavelRestante,
+        List<NotaCreditoResumo> notasCredito
 ) {
 
-    /** Cópia imutável das linhas (EI_EXPOSE_REP; mesmo idioma de {@code WorkflowResponse}). */
+    /** Cópias imutáveis das listas (EI_EXPOSE_REP; mesmo idioma de {@code WorkflowResponse}). */
     public DocumentoFiscalDetalheResponse {
         linhas = linhas == null ? List.of() : List.copyOf(linhas);
+        notasCredito = notasCredito == null ? List.of() : List.copyOf(notasCredito);
+    }
+
+    /** Phase 135: uma NC emitida sobre a FR em detalhe (total positivo). */
+    public record NotaCreditoResumo(
+            UUID id,
+            String numeroFormatado,
+            LocalDate dataEmissao,
+            String motivoCodigo,
+            String motivoRotulo,
+            BigDecimal totalDocumento
+    ) {
+        public static NotaCreditoResumo de(DocumentoFiscal nc) {
+            return new NotaCreditoResumo(nc.getId(), nc.getNumeroFormatado(), nc.getDataEmissao(),
+                    nc.getMotivoCodigo() == null ? null : nc.getMotivoCodigo().name(),
+                    nc.getMotivoCodigo() == null ? null : nc.getMotivoCodigo().rotulo(),
+                    nc.getTotalDocumento());
+        }
     }
 
     /** Uma linha do documento (nesta fase há sempre exatamente uma). */
@@ -88,8 +122,32 @@ public record DocumentoFiscalDetalheResponse(
         }
     }
 
+    /** Sem dados de Nota de Crédito (origem nula, lista de NC vazia). */
     public static DocumentoFiscalDetalheResponse de(DocumentoFiscal d, List<DocumentoFiscalLinha> linhas,
                                                     EstadoComunicacaoFiscal estadoOuNulo) {
+        return de(d, linhas, estadoOuNulo, null, List.of());
+    }
+
+    /**
+     * Phase 135.
+     *
+     * @param origemOuNulo FR de origem quando {@code d} é uma NC, senão {@code null}
+     * @param notasCredito NC emitidas sobre {@code d} quando é uma FR (pela ordem a mostrar), senão vazia
+     */
+    public static DocumentoFiscalDetalheResponse de(DocumentoFiscal d, List<DocumentoFiscalLinha> linhas,
+                                                    EstadoComunicacaoFiscal estadoOuNulo,
+                                                    DocumentoFiscalRef origemOuNulo,
+                                                    List<DocumentoFiscal> notasCredito) {
+        List<DocumentoFiscal> ncs = notasCredito == null ? List.of() : notasCredito;
+        boolean fr = d.getTipo() == TipoDocumentoFiscal.FR;
+        BigDecimal totalCreditado = null;
+        BigDecimal restante = null;
+        if (fr) {
+            totalCreditado = ncs.stream().map(DocumentoFiscal::getTotalDocumento)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2);
+            // Sem clamp silencioso: um valor negativo tornaria visível um problema de dados.
+            restante = d.getTotalDocumento().subtract(totalCreditado);
+        }
         return new DocumentoFiscalDetalheResponse(
                 d.getId(),
                 d.getNumeroFormatado(),
@@ -131,6 +189,13 @@ public record DocumentoFiscalDetalheResponse(
                 d.getValorLiquido(),
                 estadoOuNulo == null ? null : estadoOuNulo.name(),
                 d.getEmitidoPorNome(),
-                linhas.stream().map(Linha::de).toList());
+                linhas.stream().map(Linha::de).toList(),
+                origemOuNulo,
+                d.getMotivoCodigo() == null ? null : d.getMotivoCodigo().name(),
+                d.getMotivoCodigo() == null ? null : d.getMotivoCodigo().rotulo(),
+                d.getMotivoTexto(),
+                totalCreditado,
+                restante,
+                fr ? ncs.stream().map(NotaCreditoResumo::de).toList() : List.of());
     }
 }
