@@ -1,7 +1,8 @@
 ---
 phase: 136
 slug: formato-efatura-e-adaptador-simulado
-status: draft
+status: approved
+reviewed_at: 2026-10-05
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, lucide) -- existing, not changed by this phase
 created: 2026-10-05
@@ -299,3 +300,9 @@ Rule: "Aceite (simulação)" must never be paraphrased as "Autorizado", "Aprovad
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+
+## Checker clarifications (2026-10-05, applied by orchestrator — SUPERSEDE conflicting text above)
+
+- Reprocess gate: EXACT authority `financeiro:edit` via a dedicated helper `podeReprocessarComunicacao(permissions)` built on exact-match `hasPermission(perms, "financeiro:edit")` (same as 134 `podeRegistarPagamentos`). NEVER `hasScopedPermission` (fallback chain). A user with only `financeiro:manage` does NOT see the button. Backend keeps `@PreAuthorize("hasAuthority('financeiro:edit')")`. The "Without financeiro:edit" copy variants key off the same exact check. Add a unit test mirroring 134's.
+- "Última tentativa"/"Próxima tentativa" values render at 14px (row value), not text-xs.
+- Helpers on `bg-slate-50` use `text-slate-600 dark:text-slate-400` for contrast.
