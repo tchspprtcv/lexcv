@@ -6,6 +6,7 @@ import com.lexcv.exceptions.StorageUnavailableException;
 import com.lexcv.services.StorageService;
 import com.lexcv.services.RiscoPrazoService;
 import com.lexcv.services.NotificacaoService;
+import com.lexcv.services.RecebidoNoMes;
 import com.lexcv.dtos.ConflictCheckDecisaoRequest;
 import com.lexcv.dtos.ConflictCheckResponse;
 import com.lexcv.dtos.TimelineItemDto;
@@ -46,6 +47,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -3376,23 +3378,16 @@ public class ResourceController {
     }
 
     private BigDecimal calculateMensalReceived(UUID tenantId) {
-        List<Processo> procs = processoRepository.findByTenantId(tenantId);
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (Processo p : procs) {
-            List<Honorario> hList = honorarioRepository.findByProcessoId(p.getId());
-            for (Honorario h : hList) {
-                List<Pagamento> pagList = pagamentoRepository.findByHonorarioId(h.getId());
-                for (Pagamento pag : pagList) {
-                    // Check if payment was made in current month
-                    if (pag.getDataPagamento() != null && pag.getDataPagamento().getMonthValue() == LocalDate.now().getMonthValue()) {
-                        total = total.add(pag.getValorPago());
-                    }
-                }
+        // Phase 135 (NCRD-03, P-14): ano E mês correntes em Cabo Verde, valores nulos ignorados; o
+        // estorno (negativo) de uma Nota de Crédito subtrai no mês da sua emissão. A soma vive numa
+        // função pura partilhada (RecebidoNoMes) com o teste de coerência.
+        List<Pagamento> pagamentos = new ArrayList<>();
+        for (Processo p : processoRepository.findByTenantId(tenantId)) {
+            for (Honorario h : honorarioRepository.findByProcessoId(p.getId())) {
+                pagamentos.addAll(pagamentoRepository.findByHonorarioId(h.getId()));
             }
         }
-
-        return total;
+        return RecebidoNoMes.somar(pagamentos, YearMonth.now(RecebidoNoMes.FUSO_CABO_VERDE));
     }
 
     @GetMapping("/processos/dashboard")
