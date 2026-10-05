@@ -1,6 +1,7 @@
 package com.lexcv.repositories;
 
 import com.lexcv.models.DocumentoFiscal;
+import com.lexcv.models.TipoDocumentoFiscal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -26,6 +27,10 @@ import java.util.UUID;
  * <p>Todos os finders recebem {@code tenantId} como primeiro argumento (isolamento entre
  * escritórios). O conjunto de métodos está fixado por {@code DocumentoFiscalImutabilidadeTest}:
  * acrescentar um método exige atualizar esse teste deliberadamente.
+ *
+ * <p>Phase 135 (NCRD-01..03): finders das Notas de Crédito -- as NC de uma FR (por
+ * {@code documento_origem_id}), documentos por lote de ids (números de origem na listagem) e a
+ * sonda "este pagamento é o estorno de uma NC" ({@code pagamento_id} + {@code tipo}).
  */
 public interface DocumentoFiscalRepository extends Repository<DocumentoFiscal, UUID> {
 
@@ -44,6 +49,16 @@ public interface DocumentoFiscalRepository extends Repository<DocumentoFiscal, U
     boolean existsByTenantIdAndProcessoId(UUID tenantId, UUID processoId);
 
     boolean existsByTenantIdAndHonorarioId(UUID tenantId, Integer honorarioId);
+
+    /** Phase 135: NC emitidas sobre uma FR, mais recentes primeiro. */
+    List<DocumentoFiscal> findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(UUID tenantId,
+                                                                                            UUID documentoOrigemId);
+
+    /** Phase 135: documentos do tenant entre os ids indicados (números de origem na listagem). */
+    List<DocumentoFiscal> findByTenantIdAndIdIn(UUID tenantId, Collection<UUID> ids);
+
+    /** Phase 135: existe documento do tipo indicado para o pagamento (estorno de NC com {@code NC}). */
+    boolean existsByTenantIdAndPagamentoIdAndTipo(UUID tenantId, Integer pagamentoId, TipoDocumentoFiscal tipo);
 
     /**
      * Listagem filtrada e paginada no servidor (D-17). {@code tenant_id} é o primeiro predicado,

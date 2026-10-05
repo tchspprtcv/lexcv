@@ -7,6 +7,7 @@ import com.lexcv.models.ConfiguracaoFiscal;
 import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
 import com.lexcv.models.EstadoComunicacaoFiscal;
+import com.lexcv.models.MotivoNotaCredito;
 import com.lexcv.models.Processo;
 import com.lexcv.models.RegimeIva;
 import com.lexcv.models.TipoDocumentoFiscal;
@@ -116,6 +117,20 @@ class DocumentoFiscalRepositoryIT {
 
     private DocumentoFiscal guardar(UUID tenantId, UUID clienteId, LocalDate data) {
         return documentoRepo.save(doc(tenantId, clienteId, data).build());
+    }
+
+    /**
+     * Phase 135: NC sobre uma FR -- o mesmo construtor {@link #doc}, com tipo NC, a referência à FR,
+     * o motivo e um {@code pagamento_id} próprio (o do estorno).
+     */
+    private DocumentoFiscal.DocumentoFiscalBuilder nc(UUID tenantId, DocumentoFiscal origem, LocalDate data,
+                                                      MotivoNotaCredito motivo) {
+        return doc(tenantId, origem.getClienteId(), data)
+                .tipo(TipoDocumentoFiscal.NC)
+                .serieCodigo("SIM-NC-" + data.getYear())
+                .documentoOrigemId(origem.getId())
+                .motivoCodigo(motivo)
+                .motivoTexto("Motivo de teste");
     }
 
     private void comunicacao(DocumentoFiscal d) {
@@ -377,6 +392,110 @@ class DocumentoFiscalRepositoryIT {
         assertTrue(configuracaoRepo.ativaPorTenant(semConfig).isEmpty());
         assertEquals(Boolean.FALSE, configuracaoRepo.ativaPorTenant(inativa).orElseThrow());
         assertEquals(Boolean.TRUE, configuracaoRepo.ativaPorTenant(ativa).orElseThrow());
+    }
+
+    // ------------------------------------------------------------------ notas de crédito (Phase 135)
+
+    @Test
+    void notasDeCreditoPorOrigemSoDoTenantMaisRecentesPrimeiro() {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        DocumentoFiscal fr = guardar(a, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal outraFr = guardar(a, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal nc1 = documentoRepo.save(nc(a, fr, LocalDate.of(2026, 3, 2), MotivoNotaCredito.CORRECAO_VALOR).build());
+        DocumentoFiscal nc2 = documentoRepo.save(nc(a, fr, LocalDate.of(2026, 3, 5), MotivoNotaCredito.OUTRO).build());
+        DocumentoFiscal nc3 = documentoRepo.save(nc(a, fr, LocalDate.of(2026, 3, 5), MotivoNotaCredito.OUTRO).build());
+        documentoRepo.save(nc(a, outraFr, LocalDate.of(2026, 3, 6), MotivoNotaCredito.OUTRO).build());
+        // NC de outro tenant com o mesmo documento_origem_id: nunca devolvida.
+        documentoRepo.save(nc(b, fr, LocalDate.of(2026, 3, 9), MotivoNotaCredito.OUTRO).build());
+
+        assertEquals(List.of(nc3.getId(), nc2.getId(), nc1.getId()),
+                documentoRepo.findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(a, fr.getId())
+                        .stream().map(DocumentoFiscal::getId).toList());
+        assertTrue(documentoRepo.findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(
+                UUID.randomUUID(), fr.getId()).isEmpty());
+        assertTrue(documentoRepo.findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc(
+                a, nc1.getId()).isEmpty());
+    }
+
+    @Test
+    void documentosPorIdsSoDoTenant() {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        DocumentoFiscal a1 = guardar(a, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal a2 = guardar(a, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal deB = guardar(b, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+
+        assertEquals(Set.of(a1.getId(), a2.getId()), documentoRepo
+                .findByTenantIdAndIdIn(a, List.of(a1.getId(), a2.getId(), deB.getId())).stream()
+                .map(DocumentoFiscal::getId).collect(Collectors.toSet()));
+        assertTrue(documentoRepo.findByTenantIdAndIdIn(b, List.of(a1.getId())).isEmpty());
+    }
+
+    @Test
+    void sondaDeEstornoDistingueTipoETenant() {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        DocumentoFiscal fr = guardar(a, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal notaCredito = documentoRepo.save(
+                nc(a, fr, LocalDate.of(2026, 3, 2), MotivoNotaCredito.ANULACAO_TOTAL).build());
+
+        assertTrue(documentoRepo.existsByTenantIdAndPagamentoIdAndTipo(a, notaCredito.getPagamentoId(),
+                TipoDocumentoFiscal.NC));
+        assertFalse(documentoRepo.existsByTenantIdAndPagamentoIdAndTipo(a, fr.getPagamentoId(),
+                TipoDocumentoFiscal.NC));
+        assertTrue(documentoRepo.existsByTenantIdAndPagamentoIdAndTipo(a, fr.getPagamentoId(),
+                TipoDocumentoFiscal.FR));
+        assertFalse(documentoRepo.existsByTenantIdAndPagamentoIdAndTipo(b, notaCredito.getPagamentoId(),
+                TipoDocumentoFiscal.NC));
+        // O estorno conta como "faturado" para a guarda de eliminação existente.
+        assertTrue(documentoRepo.existsByTenantIdAndPagamentoId(a, notaCredito.getPagamentoId()));
+    }
+
+    @Test
+    void motivoGravadoComoNomeELidoComoEnum() {
+        UUID t = UUID.randomUUID();
+        DocumentoFiscal fr = guardar(t, UUID.randomUUID(), LocalDate.of(2026, 3, 1));
+        DocumentoFiscal notaCredito = documentoRepo.save(
+                nc(t, fr, LocalDate.of(2026, 3, 2), MotivoNotaCredito.ERRO_DADOS_CLIENTE).build());
+        em.flush();
+        em.clear();
+
+        Map<String, Object> linha = jdbc.queryForMap("SELECT motivo_codigo, motivo_texto, documento_origem_id "
+                + "FROM t_documento_fiscal WHERE id = ?", notaCredito.getId());
+        assertEquals("ERRO_DADOS_CLIENTE", linha.get("motivo_codigo"));
+        assertEquals("Motivo de teste", linha.get("motivo_texto"));
+        assertEquals(fr.getId(), linha.get("documento_origem_id"));
+
+        DocumentoFiscal lido = documentoRepo.findByIdAndTenantId(notaCredito.getId(), t).orElseThrow();
+        assertEquals(MotivoNotaCredito.ERRO_DADOS_CLIENTE, lido.getMotivoCodigo());
+        assertEquals(TipoDocumentoFiscal.NC, lido.getTipo());
+        DocumentoFiscal frLida = documentoRepo.findByIdAndTenantId(fr.getId(), t).orElseThrow();
+        assertEquals(null, frLida.getDocumentoOrigemId());
+        assertEquals(null, frLida.getMotivoCodigo());
+        assertEquals(null, frLida.getMotivoTexto());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void estornoNaoPodeReceberSegundoDocumento() {
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        UUID t = UUID.randomUUID();
+        DocumentoFiscal fr = tx.execute(s -> guardar(t, UUID.randomUUID(), LocalDate.of(2026, 3, 1)));
+        DocumentoFiscal notaCredito = tx.execute(s ->
+                documentoRepo.save(nc(t, fr, LocalDate.of(2026, 3, 2), MotivoNotaCredito.CORRECAO_VALOR).build()));
+
+        // Uma FR (ou outra NC) para o mesmo pagamento de estorno falha em uk_documento_fiscal_pagamento.
+        DataIntegrityViolationException e = assertThrows(DataIntegrityViolationException.class,
+                () -> tx.executeWithoutResult(s -> documentoRepo.save(doc(t, UUID.randomUUID(),
+                        LocalDate.of(2026, 3, 3)).pagamentoId(notaCredito.getPagamentoId()).build())));
+        assertTrue(String.valueOf(e.getMostSpecificCause().getMessage()).contains("uk_documento_fiscal_pagamento"),
+                e.getMostSpecificCause().getMessage());
+        assertThrows(DataIntegrityViolationException.class, () -> tx.executeWithoutResult(s ->
+                documentoRepo.save(nc(t, fr, LocalDate.of(2026, 3, 3), MotivoNotaCredito.OUTRO)
+                        .pagamentoId(notaCredito.getPagamentoId()).build())));
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM t_documento_fiscal WHERE tenant_id = ?",
+                Integer.class, t));
     }
 
     // ------------------------------------------------------------------ unicidade (commit real)

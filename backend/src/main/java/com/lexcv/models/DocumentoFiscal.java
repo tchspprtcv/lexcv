@@ -10,7 +10,16 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Phase 134 (EMIS-01, EMIS-08, D-07): documento fiscal emitido (nesta fase só a Fatura-Recibo).
+ * Phase 134 (EMIS-01, EMIS-08, D-07) + Phase 135 (NCRD-01..03): documento fiscal emitido --
+ * Fatura-Recibo ({@code tipo = FR}) ou Nota de Crédito ({@code tipo = NC}).
+ *
+ * <p><b>Nota de Crédito.</b> Uma NC referencia a FR que corrige por {@code documento_origem_id},
+ * guarda o motivo fechado ({@code motivo_codigo}) e o texto livre obrigatório
+ * ({@code motivo_texto}), e copia emitente/adquirente da fotografia da FR. O seu
+ * {@code pagamento_id} é o id do SEU PRÓPRIO {@code Pagamento} de estorno (negativo): assim
+ * {@code pagamento_id} continua {@code NOT NULL} + {@code UNIQUE} e um estorno nunca pode receber
+ * um segundo documento ({@code uk_documento_fiscal_pagamento}). Os montantes da NC são magnitudes
+ * positivas; só o {@code valor_pago} do estorno é negativo.
  *
  * <p><b>Fotografia (snapshot).</b> Os dados do emitente e do adquirente são colunas planas
  * copiadas no momento da emissão -- NUNCA referências às linhas vivas de
@@ -26,7 +35,8 @@ import java.util.UUID;
  * <p>{@code chave_idempotencia} é interna (deduplicação de pedidos repetidos) e nunca é mostrada
  * ao utilizador. {@code emitidoEm} e {@code dataEmissao} são definidos pelo serviço a partir do
  * {@code Clock} injetado (sem {@code @PrePersist}). Esquema manual equivalente:
- * {@code backend/migrations/134-create-documento-fiscal-tables.sql}.
+ * {@code backend/migrations/134-create-documento-fiscal-tables.sql} seguido de
+ * {@code backend/migrations/135-add-nota-credito-documento-fiscal.sql}.
  */
 @Immutable
 @Entity
@@ -43,7 +53,8 @@ import java.util.UUID;
                @Index(name = "idx_documento_fiscal_tenant_data", columnList = "tenant_id, data_emissao"),
                @Index(name = "idx_documento_fiscal_tenant_cliente", columnList = "tenant_id, cliente_id"),
                @Index(name = "idx_documento_fiscal_tenant_processo", columnList = "tenant_id, processo_id"),
-               @Index(name = "idx_documento_fiscal_tenant_honorario", columnList = "tenant_id, honorario_id")
+               @Index(name = "idx_documento_fiscal_tenant_honorario", columnList = "tenant_id, honorario_id"),
+               @Index(name = "idx_documento_fiscal_tenant_origem", columnList = "tenant_id, documento_origem_id")
        })
 @Getter
 @Builder
@@ -145,8 +156,27 @@ public class DocumentoFiscal {
     @Column(name = "honorario_id", nullable = false, updatable = false)
     private Integer honorarioId;
 
+    /**
+     * FR: o pagamento faturado. NC (Phase 135): o id do próprio {@code Pagamento} de estorno
+     * (negativo) da NC -- por isso continua {@code NOT NULL} + {@code UNIQUE}.
+     */
     @Column(name = "pagamento_id", nullable = false, updatable = false)
     private Integer pagamentoId;
+
+    // ---- Nota de crédito (Phase 135) ----
+
+    /** NC: a Fatura-Recibo corrigida. Nulo numa FR. */
+    @Column(name = "documento_origem_id", updatable = false)
+    private UUID documentoOrigemId;
+
+    // varchar(32) sem CHECK via @Convert (P-15). Nulo numa FR.
+    @Convert(converter = MotivoNotaCreditoConverter.class)
+    @Column(name = "motivo_codigo", length = 32, updatable = false)
+    private MotivoNotaCredito motivoCodigo;
+
+    // Texto livre obrigatório da NC (máximo 200, UI-SPEC). Nulo numa FR.
+    @Column(name = "motivo_texto", length = 200, updatable = false)
+    private String motivoTexto;
 
     // ---- Pagamento ----
 

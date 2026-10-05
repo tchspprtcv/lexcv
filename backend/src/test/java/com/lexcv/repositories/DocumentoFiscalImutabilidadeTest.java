@@ -89,7 +89,10 @@ class DocumentoFiscalImutabilidadeTest {
         assertEquals(Set.of("save", "findByIdAndTenantId", "findByTenantIdAndChaveIdempotencia",
                         "findByTenantIdAndPagamentoIdIn", "existsByTenantIdAndPagamentoId",
                         "existsByTenantIdAndClienteId", "existsByTenantIdAndProcessoId",
-                        "existsByTenantIdAndHonorarioId", "buscar"),
+                        "existsByTenantIdAndHonorarioId", "buscar",
+                        // Phase 135 (NCRD-01..03): finders das Notas de Crédito -- atualização deliberada.
+                        "findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc",
+                        "findByTenantIdAndIdIn", "existsByTenantIdAndPagamentoIdAndTipo"),
                 nomes(DocumentoFiscalRepository.class));
         for (Method m : DocumentoFiscalRepository.class.getMethods()) {
             assertFalse(m.isAnnotationPresent(Modifying.class), "@Modifying proibido: " + m.getName());
