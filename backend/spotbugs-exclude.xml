@@ -79,4 +79,27 @@
         </Or>
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>
+
+    <!--
+      Categorical exclusions of JAXB-generated code (Phase 136). These packages are produced at
+      build time by jaxb-maven-plugin from the vendored eFatura XSD package
+      (src/main/resources/xsd/efatura, byte-pinned by XsdEfaturaIntegridadeTest) into
+      target/generated-sources/xjc. They contain no hand-written code: without these entries
+      SpotBugs reports ~390 findings in generated getters/setters (mostly EI_EXPOSE_REP), none of
+      which can be fixed without editing generated sources. The eFatura package is matched by
+      exact name so hand-written code in com.lexcv.fiscal.efatura (validator, builder, gateway)
+      stays fully analysed. Never widen these to own code.
+    -->
+    <Match>
+        <Package name="com.lexcv.fiscal.efatura.xsd"/>
+    </Match>
+    <Match>
+        <Package name="~org\.etsi\.uri\._01903\..*"/>
+    </Match>
+    <Match>
+        <Package name="org.w3._2000._09.xmldsig_"/>
+    </Match>
+    <Match>
+        <Package name="~un\.unece\.uncefact\..*"/>
+    </Match>
 </FindBugsFilter>

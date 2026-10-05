@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  JAXB bindings for the vendored eFatura DFE XSD package (../efatura, version 2024-05-27).
+  Maps only the eFatura namespace (declared by EnvelopedSignature.xsd) to a LexCV package.
+  The imported XAdES, XMLDSig and UN/ECE namespaces keep the package names JAXB derives, so
+  XAdES 1.3.2 and 1.4.1 stay in separate packages. Kept outside xsd/efatura on purpose: the
+  classpath schema resolver only ever serves .xsd files from that folder.
+-->
+<jaxb:bindings version="3.0"
+               xmlns:jaxb="https://jakarta.ee/xml/ns/jaxb"
+               xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <jaxb:bindings schemaLocation="../efatura/EnvelopedSignature.xsd" node="/xs:schema">
+        <jaxb:schemaBindings>
+            <jaxb:package name="com.lexcv.fiscal.efatura.xsd"/>
+        </jaxb:schemaBindings>
+    </jaxb:bindings>
+</jaxb:bindings>
