@@ -69,7 +69,9 @@ function DocumentosFiscaisConteudo() {
   const clienteId = searchParams.get("clienteId") ?? "";
   const de = lerData(searchParams.get("de"));
   const ate = lerData(searchParams.get("ate"));
-  const tipo: TipoDocumentoFiscal | "" = searchParams.get("tipo") === "FR" ? "FR" : "";
+  // Phase 135: só "FR" ou "NC" (lista branca); qualquer outro valor do URL conta como "Todos".
+  const tipoParam = searchParams.get("tipo");
+  const tipo: TipoDocumentoFiscal | "" = tipoParam === "FR" || tipoParam === "NC" ? tipoParam : "";
   const estado: EstadoComunicacaoFiscal | "" = searchParams.get("estado") === "PENDENTE" ? "PENDENTE" : "";
   const pagina = Math.max(lerInteiro(searchParams.get("page"), 1), 1) - 1;
   const tamanhoLido = lerInteiro(searchParams.get("size"), 10);
@@ -152,7 +154,7 @@ function DocumentosFiscaisConteudo() {
             </BreadcrumbList>
           </Breadcrumb>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Faturas-recibo emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal.
+            Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -203,6 +205,7 @@ function DocumentosFiscaisConteudo() {
           >
             <NativeSelectOption value="">Todos</NativeSelectOption>
             <NativeSelectOption value="FR">Fatura-Recibo</NativeSelectOption>
+            <NativeSelectOption value="NC">Nota de Crédito</NativeSelectOption>
           </NativeSelect>
         </div>
 

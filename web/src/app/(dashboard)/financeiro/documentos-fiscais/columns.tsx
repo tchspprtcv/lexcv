@@ -10,6 +10,10 @@ import type { DocumentoFiscalResumo } from "@/types/faturacao";
 // Colunas da lista "Documentos fiscais" (134-UI-SPEC Surface 3). A ordem vem do servidor (data de
 // emissão desc), por isso nenhuma coluna é ordenável no cliente: ordenar só a página atual daria
 // uma ordem enganadora. O link do número é a única navegação (acessível por teclado).
+//
+// Phase 135 (135-UI-SPEC Surface 4): numa Nota de Crédito, por baixo do número, "Corrige {número
+// da FR}" vindo do backend (documentoOrigemNumero, nunca construído aqui). O total é mostrado como
+// devolvido, sem cor (o vermelho fica só para o estorno na lista de pagamentos).
 
 function formatarData(valor: string) {
   const d = new Date(valor.includes("T") ? valor : `${valor}T00:00:00`);
@@ -30,12 +34,19 @@ export const columns: ColumnDef<DocumentoFiscalResumo>[] = [
     meta: { label: "Número" },
     header: ({ column }) => <DataTableColumnHeader column={column} title="Número" />,
     cell: ({ row }) => (
-      <Link
-        href={`/financeiro/documentos-fiscais/${encodeURIComponent(row.original.id)}`}
-        className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400"
-      >
-        {row.original.numeroFormatado}
-      </Link>
+      <div className="space-y-1">
+        <Link
+          href={`/financeiro/documentos-fiscais/${encodeURIComponent(row.original.id)}`}
+          className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {row.original.numeroFormatado}
+        </Link>
+        {row.original.documentoOrigemNumero ? (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Corrige {row.original.documentoOrigemNumero}
+          </p>
+        ) : null}
+      </div>
     ),
   },
   {

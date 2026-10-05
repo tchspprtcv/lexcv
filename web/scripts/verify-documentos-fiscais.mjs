@@ -7,11 +7,13 @@
 // dos ficheiros (sem remover comentarios): ate um comentario com um token proibido faz o gate
 // falhar.
 //
-// Phase 135 (Nota de Credito, 135-UI-SPEC Surfaces 1-2): o dialogo "Emitir Nota de Credito"
+// Phase 135 (Nota de Credito, 135-UI-SPEC Surfaces 1-4): o dialogo "Emitir Nota de Credito"
 // (nota-credito-dialog.tsx) concentra os pedidos da NC via hooks, por isso o detalhe continua sem
 // mutacoes; o gate fixa a copy vinculativa do dialogo, o ciclo de vida da chave (CR-02), o gate
 // EXATO financeiro:manage, a ausencia de contas de dinheiro e de dangerouslySetInnerHTML (o texto
-// livre do motivo e renderizado so como texto React).
+// livre do motivo e renderizado so como texto React). Na lista de pagamentos o estorno aparece
+// como "Estorno (NC n.º …)" sem botao de apagar; a lista de documentos filtra FR/NC e mostra
+// "Corrige …" com o numero da FR vindo do backend.
 //
 // O QUE ESTE GATE NAO CONSEGUE PROVAR (fica para a verificacao ponta a ponta, 134-HUMAN-UAT.md):
 //   1. Que os ecras renderizam com o backend real e que o dialogo emite uma unica vez.
@@ -224,13 +226,30 @@ async function main() {
   exigeContem("hooksFaturacao", texto, "hasPermission(permissions, PERMISSAO_EMISSAO_NOTA_CREDITO)");
   exigeContem("hooksFaturacao", texto, "notas-credito");
 
+  // (g) Phase 135 -- estorno nos pagamentos e NC na lista (135-UI-SPEC Surfaces 3-4).
+  exigeContem("pagamentosCard", texto, "Estorno: não pode ser apagado.");
+  exigeContem("pagamentosCard", texto, "Estorno (NC n.º");
+  exigeContem("pagamentosCard", texto, "p.estorno");
+  exigeSemPadrao("pagamentosCard", texto, /-\s*p\.valorPago|valorPago\s*\*\s*-1/, "negacao do valor no cliente");
+  exigeContem("erros", texto, "PAGAMENTO_ESTORNO");
+  exigeContem("lista", texto, '<NativeSelectOption value="NC">Nota de Crédito</NativeSelectOption>');
+  exigeContem("lista", texto, 'tipoParam === "FR" || tipoParam === "NC"');
+  exigeContem(
+    "lista",
+    texto,
+    "Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal.",
+  );
+  exigeContem("columns", texto, "documentoOrigemNumero");
+  exigeContem("columns", texto, "Corrige ");
+  exigeNaoContem("columns", texto, "text-red-600");
+
   if (falhas.length > 0) {
     console.error(`verify:documentos-fiscais FALHOU (${falhas.length}):`);
     for (const f of falhas) console.error(`  - ${f}`);
     process.exit(1);
   }
   console.log(
-    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente, hooks e Nota de Crédito (financeiro:manage).",
+    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente, hooks, notas de crédito (financeiro:manage), estornos e filtro FR/NC.",
   );
 }
 
