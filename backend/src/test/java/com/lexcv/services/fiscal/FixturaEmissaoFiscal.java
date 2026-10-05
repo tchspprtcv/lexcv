@@ -131,6 +131,41 @@ public final class FixturaEmissaoFiscal {
                 Long.class, tenantId);
     }
 
+    /** Phase 135: Notas de Crédito emitidas pelo tenant. */
+    public int contarNotasCredito(UUID tenantId) {
+        return contar("SELECT count(*) FROM t_documento_fiscal WHERE tenant_id = ? AND tipo = 'NC'", tenantId);
+    }
+
+    /** Phase 135: estornos (pagamentos negativos) do honorário. */
+    public int contarEstornos(Integer honorarioId) {
+        return contar("SELECT count(*) FROM t_pagamento WHERE honorario_id = ? AND valor_pago < 0", honorarioId);
+    }
+
+    /** Phase 135: soma de {@code valor_pago} do honorário por JDBC (cruza com o {@code @Formula totalPago}). */
+    public BigDecimal totalPagoHonorario(Integer honorarioId) {
+        return jdbc.queryForObject("SELECT COALESCE(SUM(valor_pago), 0) FROM t_pagamento WHERE honorario_id = ?",
+                BigDecimal.class, honorarioId);
+    }
+
+    /** Phase 135: números das NC do tenant, por ordem (série própria da NC). */
+    public List<Long> numerosNotasCredito(UUID tenantId) {
+        return jdbc.queryForList("SELECT numero FROM t_documento_fiscal WHERE tenant_id = ? AND tipo = 'NC' "
+                + "ORDER BY numero", Long.class, tenantId);
+    }
+
+    /** Phase 135: números das FR do tenant, por ordem. */
+    public List<Long> numerosFaturasRecibo(UUID tenantId) {
+        return jdbc.queryForList("SELECT numero FROM t_documento_fiscal WHERE tenant_id = ? AND tipo = 'FR' "
+                + "ORDER BY numero", Long.class, tenantId);
+    }
+
+    /** Phase 135: último número da série NC SIMULADO do tenant, ou {@code null} sem série. */
+    public Long ultimoNumeroNotaCredito(UUID tenantId) {
+        List<Long> r = jdbc.queryForList("SELECT ultimo_numero FROM t_serie_fiscal WHERE tenant_id = ? "
+                + "AND tipo_documento = 'NC' AND ambiente = 'SIMULADO'", Long.class, tenantId);
+        return r.isEmpty() ? null : r.get(0);
+    }
+
     private int contar(String sql, Object... args) {
         Integer n = jdbc.queryForObject(sql, Integer.class, args);
         return n == null ? 0 : n;

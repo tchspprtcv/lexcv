@@ -2,6 +2,7 @@ package com.lexcv.services.fiscal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lexcv.config.UserPrincipal;
+import com.lexcv.dtos.NotaCreditoRequest;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.dtos.PreVisualizacaoFaturaResponse;
 import com.lexcv.exceptions.RecusaFiscalException;
@@ -73,7 +74,8 @@ import static org.mockito.Mockito.doThrow;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @Import({PagamentoFaturadoService.class, PreVisualizacaoFaturaService.class, NumeracaoService.class,
-        ParametroFiscalService.class, AuditoriaFiscalService.class, PagamentoFaturadoServiceIT.Apoio.class})
+        ParametroFiscalService.class, AuditoriaFiscalService.class, NotaCreditoService.class,
+        PagamentoFaturadoServiceIT.Apoio.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class PagamentoFaturadoServiceIT {
 
@@ -105,6 +107,9 @@ class PagamentoFaturadoServiceIT {
 
     @Autowired
     private PreVisualizacaoFaturaService preVisualizacao;
+
+    @Autowired
+    private NotaCreditoService notaCredito;
 
     @Autowired
     private DocumentoFiscalRepository documentoFiscalRepository;
@@ -492,5 +497,25 @@ class PagamentoFaturadoServiceIT {
         assertTrue(service.faturacaoAtiva(fixtura.criarTenantComFaturacao(RegimeIva.NORMAL)));
         Contadores depois = contadores(c);
         assertEquals(new Contadores(0, 0, 0, 0, 0, null, null), depois);
+    }
+
+    // ------------------------------------------------------------------------------- k (Phase 135)
+
+    @Test
+    void frComAChaveDeUmaNcRecusaChaveReutilizada() {
+        Cenario c = cenario(RegimeIva.NORMAL);
+        ResultadoPagamentoFaturado fr = emitir(c, pedido(c.honorarioId(), VALOR, UUID.randomUUID()));
+        UUID chaveNc = UUID.randomUUID();
+        notaCredito.emitir(c.tenantId(), autor(c.tenantId()), fr.resposta().documentoFiscal().id(),
+                new NotaCreditoRequest("PARCIAL", new BigDecimal("1000.00"), "CORRECAO_VALOR", "Acerto", chaveNc));
+        Contadores antes = contadores(c);
+        assertEquals(2, antes.pagamentos(), "a FR e o estorno da NC");
+
+        RecusaFiscalException e = assertThrows(RecusaFiscalException.class,
+                () -> emitir(c, pedido(c.honorarioId(), new BigDecimal("1000.00"), chaveNc)));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatus());
+        assertEquals("CHAVE_REUTILIZADA", e.getCodigo());
+        assertEquals(antes, contadores(c), "nenhum pagamento nem documento novo");
     }
 }
