@@ -91,7 +91,7 @@ class AuditoriaFiscalServiceTest {
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> m.getName().startsWith("registar"))
                 .toList();
-        assertEquals(6, registar.size(), "esperados 6 métodos registar*: " + registar);
+        assertEquals(7, registar.size(), "esperados 7 métodos registar*: " + registar);
         for (Method m : registar) {
             Transactional tx = m.getAnnotation(Transactional.class);
             assertNotNull(tx, m.getName() + " sem @Transactional");
@@ -225,6 +225,59 @@ class AuditoriaFiscalServiceTest {
     void registarEmissao_ehMandatory() throws Exception {
         Method m = AuditoriaFiscalService.class.getMethod("registarEmissao",
                 UUID.class, UserPrincipal.class, UUID.class, String.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
+    }
+
+    @Test
+    void registarEmissaoNotaCredito_gravaEventoDaNc() throws Exception {
+        UUID ncId = UUID.randomUUID();
+
+        service.registarEmissaoNotaCredito(tenantId, autor, ncId, "SIM-NC-2026/3", "SIM-FR-2026/7");
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_emitir_nc", log.getAcao());
+        assertEquals("documento_fiscal_emitir_nc", AuditoriaFiscalService.ACAO_EMITIR_NC);
+        assertEquals("documento_fiscal", log.getEntidadeTipo());
+        assertEquals(ncId.toString(), log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "numeroFormatado", "documentoOrigem"), chaves);
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("SIM-NC-2026/3", d.get("numeroFormatado").asText());
+        assertEquals("SIM-FR-2026/7", d.get("documentoOrigem").asText());
+    }
+
+    @Test
+    void registarEmissaoNotaCredito_detalheSemMotivoNifMoradaNemEmail() throws Exception {
+        // O método nem recebe o texto livre do motivo (pode conter dados do cliente): um texto
+        // distintivo usado no pedido nunca pode aparecer no detalhe gravado.
+        String motivoDistintivo = "MOTIVO-PRIVADO-XYZ morada Rua 5 NIF 123456789";
+
+        service.registarEmissaoNotaCredito(tenantId, autor, UUID.randomUUID(), "SIM-NC-2026/1", "SIM-FR-2026/1");
+
+        AuditLog log = unicoGravado();
+        assertFalse(log.getDetalhe().contains(motivoDistintivo), log.getDetalhe());
+        assertFalse(log.getDetalhe().contains("MOTIVO-PRIVADO"), log.getDetalhe());
+        assertFalse(log.getDetalhe().contains("123456789"), log.getDetalhe());
+        assertFalse(log.getDetalhe().contains(EMAIL_DISTINTIVO), log.getDetalhe());
+        assertFalse(log.getDetalhe().toLowerCase().contains("motivo"), log.getDetalhe());
+        boolean temParametroTexto = java.util.Arrays.stream(AuditoriaFiscalService.class.getMethods())
+                .filter(m -> m.getName().equals("registarEmissaoNotaCredito"))
+                .allMatch(m -> m.getParameterCount() == 5);
+        assertTrue(temParametroTexto, "registarEmissaoNotaCredito recebe apenas 5 parâmetros");
+    }
+
+    @Test
+    void registarEmissaoNotaCredito_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarEmissaoNotaCredito",
+                UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
         Transactional tx = m.getAnnotation(Transactional.class);
         assertNotNull(tx);
         assertEquals(Propagation.MANDATORY, tx.propagation());
