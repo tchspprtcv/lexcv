@@ -30,6 +30,11 @@ export interface Pagamento {
   metodo?: string;
   /** Phase 134 (D-19): Fatura-Recibo do pagamento; null/ausente num pagamento sem documento. */
   documentoFiscal?: DocumentoFiscalRef | null;
+  /**
+   * Phase 135 (NCRD-03): quando este pagamento é o estorno (negativo) de uma Nota de Crédito, a
+   * referência dessa NC; `documentoFiscal` é então null. A UI mostra "Estorno (NC n.º …)".
+   */
+  estorno?: DocumentoFiscalRef | null;
 }
 
 export interface PagamentoCreateRequest {

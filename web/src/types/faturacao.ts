@@ -1,3 +1,5 @@
+import type { Pagamento } from "@/types/financeiro";
+
 // Tipos do domínio de faturação (aba "Faturação" em /settings, Phase 133). Espelham os DTOs do
 // backend em /api/v1/faturacao (configuração fiscal, séries, motivos de isenção, envio
 // automático de email). Campos como `completa`, `nifBloqueado` e `podeDesativar` são computados
@@ -86,7 +88,15 @@ export type CodigoErroFaturacao =
   | "CLIENTE_COM_DOCUMENTOS_FISCAIS"
   | "PROCESSO_COM_DOCUMENTOS_FISCAIS"
   | "HONORARIO_COM_DOCUMENTOS_FISCAIS"
-  | "DOCUMENTO_FISCAL_NAO_ENCONTRADO";
+  | "DOCUMENTO_FISCAL_NAO_ENCONTRADO"
+  // Phase 135 -- Nota de Crédito (emissão e guarda do estorno).
+  | "NC_EXCEDE_ORIGINAL"
+  | "NC_SOBRE_NC"
+  | "TIPO_CREDITO_INVALIDO"
+  | "MOTIVO_NC_INVALIDO"
+  | "MOTIVO_NC_OBRIGATORIO"
+  | "VALOR_CREDITO_INVALIDO"
+  | "PAGAMENTO_ESTORNO";
 
 // ---------------------------------------------------------------------------------------------
 // Phase 134 -- Fatura-Recibo nos honorários. Espelham os DTOs de DocumentoFiscalController e da
@@ -151,6 +161,9 @@ export interface DocumentoFiscalResumo {
   adquirenteNif: string;
   totalDocumento: number;
   estadoComunicacao: EstadoComunicacaoFiscal | null;
+  /** Phase 135: numa NC, a FR que corrige; null numa FR. */
+  documentoOrigemId: string | null;
+  documentoOrigemNumero: string | null;
 }
 
 export interface DocumentoFiscalLinha {
@@ -209,6 +222,15 @@ export interface DocumentoFiscalDetalhe {
   estadoComunicacao: EstadoComunicacaoFiscal | null;
   emitidoPorNome: string | null;
   linhas: DocumentoFiscalLinha[];
+  // Phase 135 -- numa NC: origem e motivo (null numa FR). Numa NC, `pagamentoId` é o id do estorno.
+  documentoOrigem: DocumentoFiscalRef | null;
+  motivoCodigo: MotivoNotaCredito | null;
+  motivoRotulo: string | null;
+  motivoTexto: string | null;
+  // Numa FR: total creditado, valor ainda creditável e NC emitidas (calculados no backend).
+  totalCreditado: number | null;
+  valorCreditavelRestante: number | null;
+  notasCredito: NotaCreditoResumo[];
 }
 
 /** GET /documentos-fiscais -- paginação no servidor (D-17). */
@@ -229,4 +251,79 @@ export interface DocumentosFiscaisFiltros {
   estado?: EstadoComunicacaoFiscal | "";
   page: number;
   size: number;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 135 -- Nota de Crédito. Espelham os DTOs do backend (NotaCreditoRequest,
+// PreVisualizacaoNotaCreditoResponse, NotaCreditoResponse, NotaCreditoResumo). Todos os montantes
+// são magnitudes POSITIVAS calculadas no backend; só o `valorPago` do estorno é negativo.
+
+/** Nomes do enum `MotivoNotaCredito` do backend (o rótulo vem em `MOTIVOS_NOTA_CREDITO`). */
+export type MotivoNotaCredito = "ANULACAO_TOTAL" | "CORRECAO_VALOR" | "ERRO_DADOS_CLIENTE" | "OUTRO";
+
+export type TipoCredito = "TOTAL" | "PARCIAL";
+
+/** Linha da tabela "Notas de crédito" no detalhe de uma FR. */
+export interface NotaCreditoResumo {
+  id: string;
+  numeroFormatado: string;
+  dataEmissao: string;
+  motivoCodigo: MotivoNotaCredito;
+  motivoRotulo: string;
+  totalDocumento: number;
+}
+
+/** Corpo da pré-visualização e da emissão; `valor` só num crédito PARCIAL (IVA incluído). */
+export interface NotaCreditoRequest {
+  tipo: TipoCredito;
+  valor: number | null;
+  motivoCodigo: MotivoNotaCredito;
+  motivoTexto: string;
+  chaveIdempotencia?: string;
+}
+
+/** POST /documentos-fiscais/{id}/notas-credito/pre-visualizacao -- nada é gravado. */
+export interface PreVisualizacaoNotaCredito {
+  tipo: "NC";
+  tipoRotulo: string;
+  ambiente: AmbienteFiscal;
+  documentoOrigemId: string;
+  documentoOrigemNumero: string;
+  adquirenteNome: string;
+  adquirenteNif: string;
+  adquirenteMorada: string;
+  adquirenteLocalidade: string | null;
+  descricaoLinha: string;
+  regimeIva: RegimeIva;
+  taxaIva: number | null;
+  motivoIsencaoCodigo: string | null;
+  motivoIsencaoDescricao: string | null;
+  base: number;
+  iva: number;
+  taxaRetencao: number | null;
+  retencao: number;
+  total: number;
+  liquido: number;
+  tipoCredito: TipoCredito;
+  motivoCodigo: MotivoNotaCredito;
+  motivoRotulo: string;
+  motivoTexto: string;
+  totalOrigem: number;
+  valorCreditavelAntes: number;
+  valorCreditavelDepois: number;
+  dataEmissao: string;
+}
+
+/** POST /documentos-fiscais/{id}/notas-credito -- 201 nova, 200 repetição da mesma chave. */
+export interface NotaCreditoResposta {
+  id: string;
+  numeroFormatado: string;
+  tipo: "NC";
+  documentoOrigemId: string;
+  documentoOrigemNumero: string;
+  dataEmissao: string;
+  totalDocumento: number;
+  /** O estorno: `valorPago` negativo, `estorno` = esta NC, `documentoFiscal` null. */
+  estorno: Pagamento;
+  valorCreditavelRestante: number;
 }

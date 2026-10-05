@@ -19,8 +19,11 @@ import type {
   EmailAutomaticoPayload,
   EstadoEmissao,
   MotivoIsencao,
+  NotaCreditoRequest,
+  NotaCreditoResposta,
   PaginaDocumentosFiscais,
   PreVisualizacaoFatura,
+  PreVisualizacaoNotaCredito,
   SerieFiscal,
 } from "@/types/faturacao";
 import type { PagamentoCreateRequest } from "@/types/financeiro";
@@ -268,5 +271,70 @@ export function useDocumentoFiscal(id: string, enabled: boolean) {
     enabled: enabled && Boolean(id) && typeof window !== "undefined",
     retry: (tentativas, error) => !(isApiError(error) && error.status === 404) && tentativas < 3,
     staleTime: 60_000,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 135 -- Nota de Crédito: gate exato, pré-visualização e emissão. Caminhos relativos ao
+// apiFetch. Os valores vêm sempre do backend ("frontend burro", 135-UI-SPEC).
+
+/** Autoridade EXATA exigida pelo backend para pré-visualizar e emitir uma Nota de Crédito. */
+export const PERMISSAO_EMISSAO_NOTA_CREDITO = "financeiro:manage";
+
+/**
+ * Gate do botão "Emitir Nota de Crédito": exige EXATAMENTE `financeiro:manage`, a autoridade do
+ * `@PreAuthorize` dos endpoints de NC (CONTEXT "frontend hasScopedPermission exato"). É igual a
+ * `hasScopedPermission(perms, "financeiro", "manage")`, porque não há ação mais forte do que
+ * `manage` na cadeia de fallback; usar `hasPermission` deixa-o explícito, como os gates da 134.
+ */
+export function podeEmitirNotaCredito(permissions: readonly string[] | undefined): boolean {
+  return hasPermission(permissions, PERMISSAO_EMISSAO_NOTA_CREDITO);
+}
+
+function caminhoNotasCredito(documentoId: string): string {
+  return `/documentos-fiscais/${encodeURIComponent(documentoId)}/notas-credito`;
+}
+
+/** Status tratados inline no diálogo da NC: os da emissão e o 404 (documento inexistente). */
+const STATUS_INLINE_NOTA_CREDITO: readonly number[] = [...STATUS_INLINE_EMISSAO, 404];
+
+/** POST .../notas-credito/pre-visualizacao (financeiro:manage): nada é gravado. */
+export function usePreVisualizacaoNotaCredito(documentoId: string) {
+  return useMutation({
+    mutationFn: (payload: NotaCreditoRequest) =>
+      apiFetch<PreVisualizacaoNotaCredito>(
+        `${caminhoNotasCredito(documentoId)}/pre-visualizacao`,
+        { method: "POST", body: JSON.stringify(payload) },
+        { semToastParaStatus: STATUS_INLINE_NOTA_CREDITO },
+      ),
+  });
+}
+
+/**
+ * POST .../notas-credito (financeiro:manage). Invalida em `onSettled` (não só no sucesso): um erro
+ * também pode significar estado desatualizado (NC já emitida com a mesma chave, valor creditável
+ * alterado por outra NC, faturação desligada). O estorno muda o total pago do honorário, a conta
+ * corrente e o KPI mensal, por isso essas caches também são invalidadas.
+ */
+export function useEmitirNotaCredito(documentoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: NotaCreditoRequest) =>
+      apiFetch<NotaCreditoResposta>(
+        caminhoNotasCredito(documentoId),
+        { method: "POST", body: JSON.stringify(payload) },
+        { semToastParaStatus: STATUS_INLINE_NOTA_CREDITO },
+      ),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: DOCUMENTOS_FISCAIS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "pagamentos"] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["honorarios", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] }),
+      ]);
+    },
   });
 }

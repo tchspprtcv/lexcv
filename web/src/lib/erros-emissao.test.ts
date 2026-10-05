@@ -19,7 +19,14 @@ import {
   interpretarErroEmissao,
   mensagemGuardaFiscal,
 } from "@/lib/erros-emissao";
-import { modoFormularioPagamento, podeLerDocumentosFiscais, podeRegistarPagamentos } from "@/hooks/use-faturacao";
+import {
+  modoFormularioPagamento,
+  PERMISSAO_EMISSAO_NOTA_CREDITO,
+  podeEmitirNotaCredito,
+  podeLerDocumentosFiscais,
+  podeRegistarPagamentos,
+} from "@/hooks/use-faturacao";
+import { hasScopedPermission } from "@/lib/permissions";
 
 function erro(status: number, code?: string, campo?: string, message?: string) {
   const body: Record<string, string> = {};
@@ -274,5 +281,24 @@ describe("podeRegistarPagamentos / modoFormularioPagamento (WR-03, WR-04)", () =
 
   it("com dados em cache, uma nova leitura falhada mantém o modo conhecido", () => {
     expect(modoFormularioPagamento(EDIT, { isError: true, data: { ativa: true } })).toBe("ativa");
+  });
+});
+
+describe("podeEmitirNotaCredito (Phase 135, gate exato financeiro:manage)", () => {
+  it("é a autoridade exata do backend", () => {
+    expect(PERMISSAO_EMISSAO_NOTA_CREDITO).toBe("financeiro:manage");
+  });
+
+  it("só financeiro:manage abre o botão", () => {
+    expect(podeEmitirNotaCredito(["financeiro:manage"])).toBe(true);
+    expect(podeEmitirNotaCredito(["financeiro:view", "financeiro:edit", "financeiro:create"])).toBe(false);
+    expect(podeEmitirNotaCredito([])).toBe(false);
+    expect(podeEmitirNotaCredito(undefined)).toBe(false);
+  });
+
+  it("coincide com hasScopedPermission(financeiro, manage)", () => {
+    for (const perms of [["financeiro:manage"], ["financeiro:edit"], ["financeiro:view"], []]) {
+      expect(podeEmitirNotaCredito(perms)).toBe(hasScopedPermission(perms, "financeiro", "manage"));
+    }
   });
 });
