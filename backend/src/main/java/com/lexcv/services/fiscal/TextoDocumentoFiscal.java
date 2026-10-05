@@ -16,6 +16,8 @@ public final class TextoDocumentoFiscal {
 
     private static final String PREFIXO_PROCESSO = DESCRICAO_HONORARIOS + " — Processo n.º ";
 
+    private static final String PREFIXO_NOTA_CREDITO = "Crédito sobre a fatura-recibo ";
+
     private TextoDocumentoFiscal() {
     }
 
@@ -29,6 +31,17 @@ public final class TextoDocumentoFiscal {
             return DESCRICAO_HONORARIOS;
         }
         String texto = PREFIXO_PROCESSO + numeroProcesso.trim();
+        return texto.length() <= DESCRICAO_MAX ? texto : texto.substring(0, DESCRICAO_MAX);
+    }
+
+    /**
+     * Phase 135 (NCRD-01): descrição da linha de uma Nota de Crédito,
+     * {@code "Crédito sobre a fatura-recibo {numeroOrigem}"}; nunca passa de
+     * {@value #DESCRICAO_MAX} caracteres. Também é texto controlado: o motivo livre da NC nunca
+     * entra na linha.
+     */
+    public static String descricaoLinhaNotaCredito(String numeroOrigem) {
+        String texto = PREFIXO_NOTA_CREDITO + (numeroOrigem == null ? "" : numeroOrigem.trim());
         return texto.length() <= DESCRICAO_MAX ? texto : texto.substring(0, DESCRICAO_MAX);
     }
 
