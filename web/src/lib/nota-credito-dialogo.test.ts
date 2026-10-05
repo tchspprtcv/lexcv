@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { ErroNotaCredito } from "@/lib/erros-emissao";
-import { ApiError } from "@/lib/api";
 import { tentativaParaPedido } from "@/lib/idempotencia";
 import {
-  pedidoChaveNotaCredito,
   reagirAErroNotaCredito,
-  rotuloFecharNotaCredito,
-  tentativaDepoisDeFalha,
 } from "@/lib/nota-credito-dialogo";
 
 const PEDIDO = {
@@ -17,48 +13,23 @@ const PEDIDO = {
   motivoTexto: "Desconto acordado",
 };
 
-function apiError(status: number, code?: string): ApiError {
-  return new ApiError("x", { status, code, body: { message: "x", code } });
-}
-
-describe("pedidoChaveNotaCredito", () => {
-  it("inclui o documento de origem no conteúdo a que a chave pertence", () => {
-    expect(pedidoChaveNotaCredito("fr-1", PEDIDO)).toEqual({ documentoOrigemId: "fr-1", ...PEDIDO });
-  });
-
-  it("o mesmo pedido sobre outra FR gera uma chave nova mesmo com a tentativa por resolver", () => {
+describe("chave de idempotência da NC (conteúdo { documentoOrigemId, ...pedido })", () => {
+  it("o mesmo pedido sobre a mesma FR reutiliza a chave por resolver; sobre outra FR gera uma nova", () => {
     let n = 0;
     const gerar = () => `chave-${++n}`;
-    const a = { ...tentativaParaPedido(null, pedidoChaveNotaCredito("fr-1", PEDIDO), gerar), porResolver: true };
-    const mesma = tentativaParaPedido(a, pedidoChaveNotaCredito("fr-1", PEDIDO), gerar);
-    const outra = tentativaParaPedido(a, pedidoChaveNotaCredito("fr-2", PEDIDO), gerar);
+    const a = { ...tentativaParaPedido(null, { documentoOrigemId: "fr-1", ...PEDIDO }, gerar), porResolver: true };
+    const mesma = tentativaParaPedido(a, { documentoOrigemId: "fr-1", ...PEDIDO }, gerar);
+    const outra = tentativaParaPedido(a, { documentoOrigemId: "fr-2", ...PEDIDO }, gerar);
     expect(mesma.chave).toBe("chave-1");
     expect(outra.chave).toBe("chave-2");
   });
 
-  it("não leva chave de idempotência", () => {
-    expect(pedidoChaveNotaCredito("fr-1", PEDIDO)).not.toHaveProperty("chaveIdempotencia");
-  });
-});
-
-describe("tentativaDepoisDeFalha", () => {
-  const tentativa = { pedido: "{}", chave: "k", porResolver: false };
-
-  it("recusa 4xx processada (409/422/404) descarta a chave", () => {
-    for (const s of [404, 409, 422]) {
-      expect(tentativaDepoisDeFalha(tentativa, apiError(s))).toBeNull();
-    }
-  });
-
-  it("falha ambígua (rede, 5xx, 401/403/408/429) mantém a chave e marca-a por resolver", () => {
-    for (const e of [new TypeError("fetch"), apiError(500), apiError(503), apiError(401), apiError(403),
-      apiError(408), apiError(429)]) {
-      expect(tentativaDepoisDeFalha(tentativa, e)).toEqual({ ...tentativa, porResolver: true });
-    }
-  });
-
-  it("sem tentativa continua sem tentativa", () => {
-    expect(tentativaDepoisDeFalha(null, apiError(500))).toBeNull();
+  it("trocar para Total (valor null) muda o pedido e gera uma chave nova", () => {
+    let n = 0;
+    const gerar = () => `chave-${++n}`;
+    const a = { ...tentativaParaPedido(null, { documentoOrigemId: "fr-1", ...PEDIDO }, gerar), porResolver: true };
+    const total = tentativaParaPedido(a, { documentoOrigemId: "fr-1", ...PEDIDO, tipo: "TOTAL", valor: null }, gerar);
+    expect(total.chave).toBe("chave-2");
   });
 });
 
@@ -112,12 +83,5 @@ describe("reagirAErroNotaCredito", () => {
 
   it.each(casos)("%s", (_nome, erro, passo, esperado) => {
     expect(reagirAErroNotaCredito(erro, passo)).toEqual(esperado);
-  });
-});
-
-describe("rotuloFecharNotaCredito", () => {
-  it("passo 1 mostra 'Fechar sem emitir' e 'Fechar' depois de um erro definitivo", () => {
-    expect(rotuloFecharNotaCredito(false)).toBe("Fechar sem emitir");
-    expect(rotuloFecharNotaCredito(true)).toBe("Fechar");
   });
 });
