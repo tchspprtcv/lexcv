@@ -17,6 +17,7 @@ const CATEGORIA_LABEL_MAP: Record<NotificacaoCategoria, string> = {
   EVENTO_PROXIMO: "Evento a aproximar-se",
   EVENTO_VENCIDO: "Evento em atraso",
   HONORARIO_ATRASADO: "Honorário em atraso",
+  COMUNICACAO_FISCAL_FALHOU: "Falha de comunicação fiscal",
 };
 
 export function categoriaToLabel(categoria: NotificacaoCategoria): string {
@@ -39,6 +40,7 @@ export function categoriaToBadgeVariant(
     PRAZO_VENCIDO: "red",
     EVENTO_VENCIDO: "red",
     HONORARIO_ATRASADO: "red",
+    COMUNICACAO_FISCAL_FALHOU: "red",
   };
   return map[categoria] ?? "blue";
 }
@@ -59,7 +61,9 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
  * Categorias que o utilizador NAO pode silenciar (NOTF-24).
  *
  * MANTER EM SINCRONIA com `CategoriaNotificacao.java` no backend --
- * `PRAZO_VENCIDO` e a unica categoria marcada como `silenciavel(false)` la.
+ * `PRAZO_VENCIDO` e `COMUNICACAO_FISCAL_FALHOU` (Phase 136, falha persistente
+ * da comunicacao eFatura: obrigacao fiscal) sao as duas categorias marcadas
+ * como `silenciavel(false)` la.
  * O backend continua a ser a fonte de verdade e a validar/rejeitar (400) no
  * PUT /notificacoes/preferencias/{categoria}; esta constante existe apenas
  * para centralizar a duplicacao inevitavel do lado do frontend (a
@@ -69,6 +73,7 @@ export const NOTIFICACAO_CATEGORIA_OPTIONS: { value: NotificacaoCategoria; label
  */
 export const NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS: readonly NotificacaoCategoria[] = [
   "PRAZO_VENCIDO",
+  "COMUNICACAO_FISCAL_FALHOU",
 ];
 
 /**

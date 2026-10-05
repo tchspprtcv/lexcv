@@ -96,7 +96,10 @@ export type CodigoErroFaturacao =
   | "MOTIVO_NC_INVALIDO"
   | "MOTIVO_NC_OBRIGATORIO"
   | "VALOR_CREDITO_INVALIDO"
-  | "PAGAMENTO_ESTORNO";
+  | "PAGAMENTO_ESTORNO"
+  // Phase 136 -- reprocessamento da comunicação eFatura.
+  | "COMUNICACAO_ESTADO_INVALIDO"
+  | "MODO_NAO_SUPORTADO";
 
 // ---------------------------------------------------------------------------------------------
 // Phase 134 -- Fatura-Recibo nos honorários. Espelham os DTOs de DocumentoFiscalController e da
@@ -106,7 +109,32 @@ export type CodigoErroFaturacao =
 /** Nomes do enum `MetodoPagamento` do backend (o rótulo vem em `METODOS_PAGAMENTO`). */
 export type MetodoPagamento = "DINHEIRO" | "TRANSFERENCIA" | "CHEQUE" | "CARTAO" | "OUTRO";
 
-export type EstadoComunicacaoFiscal = "PENDENTE";
+/**
+ * Phase 136: estados finais da comunicação eFatura no v3.0. "Aceite (simulação)" é o resultado do
+ * adaptador simulado e nunca significa autorização da administração fiscal; não existe estado de
+ * autorização neste build (a base de dados proíbe-o fora de produção). Apresentação em
+ * `lib/comunicacao-fiscal.ts`.
+ */
+export type EstadoComunicacaoFiscal = "PENDENTE" | "ACEITE_SIMULADO" | "REJEITADO" | "ERRO";
+
+/** Phase 136: resumo da comunicação no detalhe do documento (null se ainda não foi registada). */
+export interface ComunicacaoFiscal {
+  estado: EstadoComunicacaoFiscal;
+  ambiente: AmbienteFiscal;
+  /** IUD de 45 caracteres; null enquanto está a ser gerado. */
+  iud: string | null;
+  tentativas: number;
+  ultimaTentativaEm: string | null;
+  /** Resumo curto já sanitizado pelo backend; mostrado só como texto. */
+  ultimoErro: string | null;
+  proximaTentativaEm: string | null;
+}
+
+/** POST /documentos-fiscais/{id}/comunicacao/reprocessar (financeiro:edit exato). */
+export interface ReprocessarComunicacaoResposta {
+  estado: EstadoComunicacaoFiscal;
+  tentativas: number;
+}
 
 /** GET /faturacao/estado-emissao (financeiro:view). */
 export interface EstadoEmissao {
@@ -114,6 +142,8 @@ export interface EstadoEmissao {
   ambiente: AmbienteFiscal | null;
   /** RETENCAO_SUGERIDA vigente, em percentagem; null quando não há parâmetro. */
   taxaRetencaoSugerida: number | null;
+  /** Phase 136: modo de comunicação do deployment ("SIMULADO" neste build, também com a faturação desligada). */
+  modoComunicacao: string | null;
 }
 
 /** POST /faturacao/pre-visualizacao (financeiro:edit) -- nada é gravado. */
@@ -220,6 +250,8 @@ export interface DocumentoFiscalDetalhe {
   totalDocumento: number;
   valorLiquido: number;
   estadoComunicacao: EstadoComunicacaoFiscal | null;
+  /** Phase 136: estado, IUD, tentativas e último erro da comunicação. */
+  comunicacao: ComunicacaoFiscal | null;
   emitidoPorNome: string | null;
   linhas: DocumentoFiscalLinha[];
   // Phase 135 -- numa NC: origem e motivo (null numa FR). Numa NC, `pagamentoId` é o id do estorno.

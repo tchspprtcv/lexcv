@@ -7,7 +7,8 @@ export type NotificacaoCategoria =
   | "PRAZO_VENCIDO"
   | "EVENTO_PROXIMO"
   | "EVENTO_VENCIDO"
-  | "HONORARIO_ATRASADO";
+  | "HONORARIO_ATRASADO"
+  | "COMUNICACAO_FISCAL_FALHOU";
 
 export interface Notificacao {
   id: string;
