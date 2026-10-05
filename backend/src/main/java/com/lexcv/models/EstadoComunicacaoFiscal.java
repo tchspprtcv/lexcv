@@ -1,16 +1,25 @@
 package com.lexcv.models;
 
 /**
- * Phase 134 (D-08): estado da comunicação de um documento fiscal à plataforma eFatura,
- * guardado no satélite mutável {@code t_comunicacao_fiscal}.
+ * Estado da comunicação de um documento fiscal à plataforma eFatura, guardado no satélite mutável
+ * {@code t_comunicacao_fiscal}.
  *
- * <p>{@link #PENDENTE} é o ÚNICO valor nesta fase: todo o documento nasce pendente e nada o
- * comunica ainda. A Phase 136 acrescenta os restantes estados (enviado, aceite, rejeitado, ...)
- * sem alteração de esquema, porque a coluna {@code estado} é {@code varchar(32)} sem
- * {@code CHECK} (ver {@link EstadoComunicacaoFiscalConverter}).
+ * <p>Phase 134 (D-08) criou {@link #PENDENTE}; a Phase 136 fixa os estados finais do v3.0:
+ * {@code PENDENTE -> ACEITE_SIMULADO | REJEITADO | ERRO}. {@link #ACEITE_SIMULADO} é o resultado
+ * do adaptador simulado e nunca significa autorização da DNRE. {@link #ERRO} só chega quando as
+ * tentativas automáticas se esgotam.
+ *
+ * <p>Não existe constante "autorizado" neste build (nem ambiente de produção em
+ * {@link AmbienteFiscal}): AUTORIZADO só existe como proibição na base de dados, pelo
+ * {@code CHECK ck_comunicacao_fiscal_autorizado_producao} ({@code estado <> 'AUTORIZADO' OR
+ * ambiente = 'PRODUCAO'}). A coluna continua {@code varchar(32)} gravada por
+ * {@link EstadoComunicacaoFiscalConverter} (sem {@code CHECK} de enum).
  */
 public enum EstadoComunicacaoFiscal {
-    PENDENTE("Pendente");
+    PENDENTE("Pendente"),
+    ACEITE_SIMULADO("Aceite (simulação)"),
+    REJEITADO("Rejeitado"),
+    ERRO("Erro");
 
     private final String rotulo;
 
@@ -20,5 +29,15 @@ public enum EstadoComunicacaoFiscal {
 
     public String rotulo() {
         return rotulo;
+    }
+
+    /** {@code true} para os estados em que o "Reprocessar comunicação" é permitido. */
+    public boolean reprocessavel() {
+        return this == REJEITADO || this == ERRO;
+    }
+
+    /** {@code true} quando o job de comunicação já não volta a pegar na linha sozinho. */
+    public boolean terminal() {
+        return this == ACEITE_SIMULADO || this == REJEITADO || this == ERRO;
     }
 }
