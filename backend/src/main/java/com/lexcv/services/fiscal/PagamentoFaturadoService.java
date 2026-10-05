@@ -343,6 +343,11 @@ public class PagamentoFaturadoService {
             return Optional.empty();
         }
         DocumentoFiscal doc = existente.get();
+        // Phase 135 (T-135-15): o espaço de chaves por tenant é partilhado por FR e NC
+        // (UNIQUE(tenant_id, chave_idempotencia)); a chave de uma NC nunca é a repetição de uma FR.
+        if (doc.getTipo() != TipoDocumentoFiscal.FR) {
+            throw new RecusaFiscalException(HttpStatus.CONFLICT, "CHAVE_REUTILIZADA", MSG_CHAVE_REUTILIZADA);
+        }
         if (!mesmoPedido(doc, req)) {
             throw new RecusaFiscalException(HttpStatus.CONFLICT, "CHAVE_REUTILIZADA", MSG_CHAVE_REUTILIZADA);
         }
@@ -355,9 +360,13 @@ public class PagamentoFaturadoService {
     /**
      * O pedido repetido é o mesmo que gerou {@code doc}? Compara honorário, valor (por
      * {@code compareTo}), método (sem espaços, sem distinguir maiúsculas), retenção (null-safe) e,
-     * quando enviada, a data. Nunca lança: um valor malformado conta como diferente.
+     * quando enviada, a data. Nunca lança: um valor malformado conta como diferente. Um documento
+     * que não seja FR (Phase 135: uma NC com a mesma chave) nunca é o mesmo pedido.
      */
     static boolean mesmoPedido(DocumentoFiscal doc, PagamentoRequest req) {
+        if (doc.getTipo() != TipoDocumentoFiscal.FR) {
+            return false; // Phase 135: defesa em profundidade, uma NC nunca é o mesmo pedido de uma FR
+        }
         if (!Objects.equals(doc.getHonorarioId(), req.honorarioId())) {
             return false;
         }
