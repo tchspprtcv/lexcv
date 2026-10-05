@@ -26,6 +26,12 @@ import type { Pagamento } from "@/types/financeiro";
 // Card "Pagamentos" do honorário (134-UI-SPEC Surface 2 e Surface 5). Coluna "Documento fiscal"
 // (D-19, EMIS-12); um pagamento faturado não mostra o botão de apagar (a guarda real é o 409
 // PAGAMENTO_FATURADO do backend, mostrado inline no diálogo se alguma vez chegar).
+//
+// Phase 135 (135-UI-SPEC Surface 3; NCRD-03): o estorno de uma Nota de Crédito (pagamento negativo
+// com `estorno` preenchido pelo backend) aparece na mesma tabela, com o valor negativo devolvido
+// pelo backend (vermelho, com o sinal do formatador; nunca negado aqui), "—" como método,
+// "Estorno (NC n.º …)" com ligação à NC na coluna "Documento fiscal" e SEM botão de apagar. A
+// guarda real é o 409 PAGAMENTO_ESTORNO do backend (mensagemGuardaFiscal).
 
 function formatMoneyCVE(v: number | null | undefined) {
   if (v == null) return "A confirmar";
@@ -143,11 +149,36 @@ export function PagamentosCard({
                     className="scroll-mt-24 border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
                   >
                     <td className="py-2 pr-4">{formatDate(p.dataPagamento)}</td>
-                    <td className="py-2 pr-4 tabular-nums">{formatMoneyCVE(p.valorPago)}</td>
-                    <td className="py-2 pr-4">{rotuloMetodoPagamento(p.metodo)}</td>
+                    <td
+                      className={
+                        p.estorno
+                          ? "py-2 pr-4 tabular-nums text-red-600 dark:text-red-400"
+                          : "py-2 pr-4 tabular-nums"
+                      }
+                    >
+                      {formatMoneyCVE(p.valorPago)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {p.estorno ? (
+                        <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
+                      ) : (
+                        rotuloMetodoPagamento(p.metodo)
+                      )}
+                    </td>
                     <td className="py-2 pr-4">#{p.id}</td>
                     <td className="py-2 pr-4 whitespace-nowrap">
-                      {p.documentoFiscal ? (
+                      {p.estorno ? (
+                        <span className="text-sm">
+                          Estorno (NC n.º{" "}
+                          <Link
+                            href={`/financeiro/documentos-fiscais/${encodeURIComponent(p.estorno.id)}`}
+                            className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            {p.estorno.numeroFormatado}
+                          </Link>
+                          )
+                        </span>
+                      ) : p.documentoFiscal ? (
                         <Link
                           href={`/financeiro/documentos-fiscais/${encodeURIComponent(p.documentoFiscal.id)}`}
                           className="font-mono text-sm text-blue-600 hover:underline dark:text-blue-400"
@@ -159,7 +190,11 @@ export function PagamentosCard({
                       )}
                     </td>
                     <td className="py-2 pl-4">
-                      {!canManageFinanceiro ? null : p.documentoFiscal ? (
+                      {!canManageFinanceiro ? null : p.estorno ? (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Estorno: não pode ser apagado.
+                        </span>
+                      ) : p.documentoFiscal ? (
                         <span className="text-xs text-slate-500 dark:text-slate-400">
                           Pagamento faturado: não pode ser apagado.
                         </span>
