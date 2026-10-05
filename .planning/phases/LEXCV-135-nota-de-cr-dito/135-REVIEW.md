@@ -73,7 +73,15 @@ findings:
   warning: 4
   info: 6
   total: 12
-status: issues_found
+status: fixed
+fix:
+  fixed_at: 2026-10-05T10:30:00Z
+  iteration: 1
+  scope: critical + warning + IN-01..IN-04
+  findings_in_scope: 10
+  fixed: 10
+  skipped: 0
+  out_of_scope: [IN-05, IN-06]
 ---
 
 # Phase 135: Code Review Report
@@ -230,3 +238,30 @@ In both cases the FR still exists, the refetched page renders normally, and the 
 _Reviewed: 2026-10-05T12:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fix Report
+
+**Fixed at:** 2026-10-05 · **Scope:** CR-01, CR-02, WR-01..WR-04, IN-01..IN-04 (10 in scope, 10 fixed, 0 skipped). IN-05 and IN-06 were out of scope and are still open.
+
+| Finding | Result | Commit | What changed |
+|---|---|---|---|
+| CR-01 | fixed (needs human check of the logic) | `029297f` | `NotaCreditoService.emitir` now locks, debits and records `origem.getClienteId()`. That is the FR's cliente, which merges repoint through `repontarCliente`. The processo's current cliente is no longer used, and the `processo.clienteId == cliente` check is gone. An empty cliente lock now returns the retryable 409 `PROCESSO_ALTERADO_TENTE_NOVAMENTE`. `PUT /processos/{id}` is now `@Transactional`: it locks the processo first and refuses with 409 `PROCESSO_COM_DOCUMENTOS_FISCAIS` when the cliente changes and `existeParaProcesso` is true. CFG-03 still holds: one `faturacao` token, no forbidden tokens, no new constructor dependencies, and `registarPagamentoLegado` untouched. New tests: an IT `processoReatribuidoDepoisDaFrDebitaOClienteDaFr` (A's saldo goes back to its pre-FR value, B's is unchanged, the NC has `cliente_id = A`), plus unit tests for the guard and the service. |
+| CR-02 | fixed | `12f6721` | `tentativaDepoisDeFalhaNc` (in `lib/nota-credito-dialogo.ts`) never returns null. After a definitive 4xx it creates a fresh key for the same content; after an ambiguous failure it keeps the key and marks it unresolved. The emit button is disabled when there is no attempt. Vitest covers each error class and checks that the next click always sends a request. `verify:documentos-fiscais` now looks for the helpers in their new location. |
+| WR-01 | fixed (needs human check of the logic) | `6c112a7` | `NotaCreditoRequest` gains optional `totalEsperado` and `valorCreditavelEsperado`. Emission compares them with the composition made under the configuration lock. If they differ it refuses with 409 `NC_VALORES_ALTERADOS` before writing anything. Replays are unaffected. The dialog sends the previewed values outside the idempotency-key content, and the 409 sends the user back to the form for a new preview. |
+| WR-02 | fixed | `da5ada7` (backend part in `029297f`) | A 404 closes the dialog only for `DOCUMENTO_FISCAL_NAO_ENCONTRADO` or a 404 with no code. Other 404s show a definitive banner with the backend message. The merge race now returns 409, not 404 (see CR-01). |
+| WR-03 | fixed | `aef69bb` | Unresolved attempts are now stored outside the component, keyed by FR and request content, in memory and in `sessionStorage` (best effort). The dialog reads them back on preview and records every outcome. Vitest covers unmount, reload, success, definitive refusal and broken storage. |
+| WR-04 | fixed (needs human check of the logic) | `fb9f2ad` | The partial-NC withholding is now `round(base × taxa / 100, HALF_UP)` on the clamped base, then capped at the remaining withholding. A new vector fires the clamp: the result is 0.04, not 0.05. |
+| IN-01 | fixed | `4e9c5f9` | `NC_EXCEDE_ORIGINAL` shows the backend message ("já foi totalmente creditada"). `COPY_NC_EXCEDE` is now only the fallback. |
+| IN-02 | fixed | `6e3fc70` | The NC's series, document, comunicação and preview take their `ambiente` from the FR. |
+| IN-03 | fixed | `7786e8a` | `ComposicaoNotaCredito.totalCreditado` and `valorCreditavelRestante` are now the only implementations. The composition, the emission replay and `DocumentoFiscalDetalheResponse.de` all call them. |
+| IN-04 | fixed | `e50c081` | The KPI month now comes from `PagamentoFaturadoService.mesCorrente()`, which uses the injected Clock; that service is already a ResourceController dependency, so no new one was added. `PagamentoFaturadoService.FUSO_CABO_VERDE` now points to `RecebidoNoMes.FUSO_CABO_VERDE`, so the zone is defined once. The KPI test now fixes the month. |
+| IN-05 | not attempted (out of scope) | — | Still open. |
+| IN-06 | not attempted (out of scope) | — | Still open. |
+
+**Gate after the fixes:**
+- backend `mvn -Dmaven.compiler.release=21 verify`: surefire 1018 and failsafe 123, all passing, against real PostgreSQL in Testcontainers;
+- `mvn spotbugs:check`: clean;
+- web: `tsc --noEmit` clean; `pnpm lint` 0 errors (the same 20 warnings as before); `pnpm test` 277 passing; `verify:faturacao` and `verify:documentos-fiscais` OK.
+
+_Fixer: Claude (gsd-code-fixer), iteration 1_
+
