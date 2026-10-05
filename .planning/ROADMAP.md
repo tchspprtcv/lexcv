@@ -112,7 +112,22 @@ Notas da fase:
   2. A soma das Notas de Crédito de uma fatura nunca excede o valor original, e o sistema recusa creditar uma Nota de Crédito ou um documento de outro emitente
   3. Após a Nota de Crédito, o saldo da conta corrente, o total pago do honorário, o KPI mensal do dashboard e o alerta de honorário em atraso refletem a reversão de forma coerente, e o honorário pode voltar a contar como por pagar
 
-**Plans**: TBD
+**Plans**: 13 plans
+
+Plans:
+- [ ] 135-01-PLAN.md — MotivoNotaCredito enum, NC columns on DocumentoFiscal (pagamento_id = estorno id), tenant-scoped NC finders
+- [ ] 135-02-PLAN.md — Idempotent migration 135 + README rows + MigracaoFiscal134IT/135IT (scripts == Hibernate)
+- [ ] 135-03-PLAN.md — TDD pure NC composition (validation, cap, partial/total split with FR snapshot rates and clamps)
+- [ ] 135-04-PLAN.md — Read side: FR detail with NC list/creditable, NC origem+motivo, list origem number, estorno refs/probe
+- [ ] 135-05-PLAN.md — NC response DTOs, NC audit event, FR replay refuses NC keys (409 CHAVE_REUTILIZADA)
+- [ ] 135-06-PLAN.md — NotaCreditoService: preview + atomic, lock-ordered, idempotent emission with negative estorno
+- [ ] 135-07-PLAN.md — ITs on real PostgreSQL: atomicity, four-reader coherence, numbering, cap/same-key concurrency
+- [ ] 135-08-PLAN.md — KPI fix (RecebidoNoMes, year+month CV), estorno in payments list, 409 PAGAMENTO_ESTORNO, alert re-eligibility
+- [ ] 135-09-PLAN.md — DocumentoFiscalController NC routes gated financeiro:manage (201/200/404) + structure/auth tests
+- [ ] 135-10-PLAN.md — Web contracts: types, exact-manage helper, NC hooks, error mapping, NC form schema (vitest)
+- [ ] 135-11-PLAN.md — "Emitir Nota de Crédito" two-step dialog + FR/NC detail surfaces + source gate
+- [ ] 135-12-PLAN.md — Estorno row in payments list, Tipo FR/NC filter and NC rows in documents list + source gate
+- [ ] 135-13-PLAN.md — Full phase gate + live end-to-end UAT (checkpoint)
 **UI hint**: yes
 
 Notas da fase:
@@ -219,7 +234,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
-| 135. Nota de Crédito | 0/TBD | Not started | - |
+| 135. Nota de Crédito | 0/13 | Planned | - |
 | 136. Formato eFatura e Adaptador Simulado | 0/TBD | Not started | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |

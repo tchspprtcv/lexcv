@@ -46,6 +46,13 @@ Requisitos NCRD-01..03.
 - Lista de pagamentos do honorário: o estorno aparece como "Estorno (NC n.º …)", sem botão de apagar
 - Lista de documentos fiscais mostra NC (filtro tipo passa a ter FR e NC)
 
+### Resolução de planeamento (2026-10-04, gsd-planner)
+- **Sem coluna `pagamento_estorno_id`.** `t_documento_fiscal.pagamento_id` é `NOT NULL` + `UNIQUE` e o `ddl-auto=update` nunca relaxa `NOT NULL` em instalações existentes. Por isso a NC usa `pagamento_id` = id do SEU próprio `Pagamento` de estorno (negativo); `documento_origem_id` aponta a FR e `tipo = NC` distingue-a. Onde acima se lê `pagamento_estorno_id`, ler "documento NC cujo `pagamento_id` é o estorno".
+- A intenção da decisão mantém-se: o estorno é identificável (documento `tipo = NC` com `pagamento_id = estorno.id`), nunca é refaturado (`uk_documento_fiscal_pagamento` já impede um segundo documento para esse pagamento), e é "faturado", por isso a guarda de eliminação existente já o bloqueia; acresce uma guarda própria 409 `PAGAMENTO_ESTORNO` com o texto da UI-SPEC.
+- O espaço de chaves de idempotência é partilhado por FR e NC (`UNIQUE(tenant_id, chave_idempotencia)`): um pedido de FR com a chave de uma NC (e vice-versa) responde 409 `CHAVE_REUTILIZADA`.
+- Montantes do documento NC guardados como magnitudes positivas; só o `valor_pago` do estorno é negativo.
+- Alerta `HONORARIO_ATRASADO`: a condição reabre (o honorário volta a "por pagar"); a deduplicação vitalícia da migração 88 mantém-se, por isso dispara se ainda não houver alerta anterior para esse honorário/destinatário.
+
 ### Claude's Discretion
 - Nomes de DTOs/endpoints (ex.: `POST /api/v1/documentos-fiscais/{id}/notas-credito/pre-visualizacao` e `POST /api/v1/documentos-fiscais/{id}/notas-credito`), divisão em planos
 
@@ -84,3 +91,11 @@ Requisitos NCRD-01..03.
 - Prazo máximo de emissão de NC — aguarda contabilista/Manual Técnico
 
 </deferred>
+
+<user_decision_alerta>
+## Alerta HONORARIO_ATRASADO após NC (decisão do utilizador, 2026-10-05)
+
+Aceite tal como planeado: após uma NC o honorário volta a contar como por pagar em todas as leituras,
+mas o alerta só dispara se nunca tinha disparado para esse honorário (a deduplicação vitalícia da
+migração 88 mantém-se). Não se altera o sistema de notificações nesta fase.
+</user_decision_alerta>
