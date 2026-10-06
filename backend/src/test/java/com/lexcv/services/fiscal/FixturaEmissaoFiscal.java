@@ -8,6 +8,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -164,6 +166,63 @@ public final class FixturaEmissaoFiscal {
         List<Long> r = jdbc.queryForList("SELECT ultimo_numero FROM t_serie_fiscal WHERE tenant_id = ? "
                 + "AND tipo_documento = 'NC' AND ambiente = 'SIMULADO'", Long.class, tenantId);
         return r.isEmpty() ? null : r.get(0);
+    }
+
+    // ------------------------------------------------------------------ Phase 136 (comunicação)
+
+    /** Phase 136: estado da comunicação do documento. */
+    public String estadoComunicacao(UUID documentoId) {
+        return jdbc.queryForObject("SELECT estado FROM t_comunicacao_fiscal WHERE documento_fiscal_id = ?",
+                String.class, documentoId);
+    }
+
+    /** Phase 136: a linha de comunicação do documento (todas as colunas). */
+    public Map<String, Object> linhaComunicacao(UUID documentoId) {
+        return jdbc.queryForMap("SELECT * FROM t_comunicacao_fiscal WHERE documento_fiscal_id = ?", documentoId);
+    }
+
+    /** Phase 136: a linha XML do documento (todas as colunas), ou vazio sem XML. */
+    public Optional<Map<String, Object>> linhaXml(UUID documentoId) {
+        List<Map<String, Object>> r = jdbc.queryForList(
+                "SELECT * FROM t_documento_fiscal_xml WHERE documento_fiscal_id = ?", documentoId);
+        return r.isEmpty() ? Optional.empty() : Optional.of(r.get(0));
+    }
+
+    /** Phase 136: notificações do tenant numa categoria. */
+    public int contarNotificacoes(UUID tenantId, String categoria) {
+        return contar("SELECT count(*) FROM t_notificacao WHERE tenant_id = ? AND categoria = ?", tenantId, categoria);
+    }
+
+    /** Phase 136: notificações de um destinatário numa categoria. */
+    public int contarNotificacoesDe(UUID destinatarioId, String categoria) {
+        return contar("SELECT count(*) FROM t_notificacao WHERE destinatario_id = ? AND categoria = ?",
+                destinatarioId, categoria);
+    }
+
+    /** Phase 136: marca o escritório como suspenso ({@code t_tenant.ativo = false}), criando a linha se faltar. */
+    public void suspenderTenant(UUID tenantId) {
+        jdbc.update("INSERT INTO t_tenant (id, nome, plano, ativo, created_at) VALUES (?, 'Escritório suspenso', "
+                + "'STARTER', false, now()) ON CONFLICT (id) DO UPDATE SET ativo = false", tenantId);
+    }
+
+    /** Phase 136: força o contador de tentativas da comunicação do documento. */
+    public void forcarTentativas(UUID documentoId, int tentativas) {
+        jdbc.update("UPDATE t_comunicacao_fiscal SET tentativas = ? WHERE documento_fiscal_id = ?",
+                tentativas, documentoId);
+    }
+
+    /** Phase 136: adia a próxima tentativa da comunicação do documento (fica fora da próxima reclamação). */
+    public void adiarComunicacao(UUID documentoId, Instant ate) {
+        jdbc.update("UPDATE t_comunicacao_fiscal SET proxima_tentativa_em = ? WHERE documento_fiscal_id = ?",
+                Timestamp.from(ate), documentoId);
+    }
+
+    /** Phase 136: utilizador do escritório (as permissões efetivas vêm do teste). */
+    public UUID criarUtilizador(UUID tenantId, String email, boolean ativo) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO t_user (id, tenant_id, nome, email, password_hash, ativo, created_at) "
+                + "VALUES (?, ?, ?, ?, 'x', ?, now())", id, tenantId, "Utilizador " + email, email, ativo);
+        return id;
     }
 
     private int contar(String sql, Object... args) {
