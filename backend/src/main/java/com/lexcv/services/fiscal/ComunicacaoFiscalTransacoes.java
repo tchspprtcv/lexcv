@@ -121,6 +121,18 @@ public class ComunicacaoFiscalTransacoes {
     }
 
     /**
+     * WR-02: tx curta imediatamente antes do envio ao gateway. Renova o lease do item por mais
+     * {@code lease} a partir de agora, para que o lease cubra o envio deste item (e não só o momento da
+     * reclamação do lote). Devolve {@code false} se o worker já não é o dono da linha: nesse caso o
+     * item NÃO pode ser enviado.
+     */
+    @Transactional
+    public boolean renovarLease(ComunicacaoReclamada item, Duration lease) {
+        Instant agora = clock.instant();
+        return fila.renovarLease(item.id(), item.tenantId(), item.versao(), agora, agora.plus(lease)) == 1;
+    }
+
+    /**
      * Tx 3: regista o resultado da tentativa, guardado pela versão reclamada e pelo tenant.
      * {@code concluido_em} só é preenchido num estado terminal. Devolve as linhas atualizadas
      * (0 = lease perdido).

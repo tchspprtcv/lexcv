@@ -5,6 +5,7 @@ import com.lexcv.fiscal.efatura.DfeValidador;
 import com.lexcv.fiscal.efatura.DfeXmlBuilder;
 import com.lexcv.fiscal.efatura.DocumentoComunicavel;
 import com.lexcv.fiscal.efatura.EfaturaGateway;
+import com.lexcv.fiscal.efatura.EfaturaProperties;
 import com.lexcv.fiscal.efatura.IudGerador;
 import com.lexcv.fiscal.efatura.MapeamentoEfatura;
 import com.lexcv.fiscal.efatura.PedidoComunicacao;
@@ -19,12 +20,14 @@ import com.lexcv.models.DocumentoFiscalXml;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Optional;
@@ -70,11 +73,22 @@ public class ProcessadorComunicacaoFiscal {
     private final TransmissaoEfatura transmissao;
     private final NotificacaoComunicacaoFiscal notificacao;
     private final Clock clock;
+    private final Duration lease;
 
+    @Autowired
     public ProcessadorComunicacaoFiscal(ComunicacaoFiscalTransacoes transacoes, DfeXmlBuilder builder,
                                         DfeMarshaller marshaller, DfeValidador validador, IudGerador iudGerador,
                                         EfaturaGateway gateway, TransmissaoEfatura transmissao,
-                                        NotificacaoComunicacaoFiscal notificacao, Clock clock) {
+                                        NotificacaoComunicacaoFiscal notificacao, Clock clock,
+                                        EfaturaProperties propriedades) {
+        this(transacoes, builder, marshaller, validador, iudGerador, gateway, transmissao, notificacao, clock,
+                propriedades.outbox().lease());
+    }
+
+    ProcessadorComunicacaoFiscal(ComunicacaoFiscalTransacoes transacoes, DfeXmlBuilder builder,
+                                 DfeMarshaller marshaller, DfeValidador validador, IudGerador iudGerador,
+                                 EfaturaGateway gateway, TransmissaoEfatura transmissao,
+                                 NotificacaoComunicacaoFiscal notificacao, Clock clock, Duration lease) {
         this.transacoes = transacoes;
         this.builder = builder;
         this.marshaller = marshaller;
@@ -84,6 +98,7 @@ public class ProcessadorComunicacaoFiscal {
         this.transmissao = transmissao;
         this.notificacao = notificacao;
         this.clock = clock;
+        this.lease = lease;
     }
 
     /** Processa um item. Nunca lança. */
@@ -92,6 +107,10 @@ public class ProcessadorComunicacaoFiscal {
         ResultadoComunicacao resultado;
         try {
             resultado = comunicar(item, numeroFormatado);
+        } catch (LeasePerdido perdido) {
+            log.warn("Lease perdido antes do envio do documento fiscal {}: não enviado, fica para quem o reclamou",
+                    item.documentoFiscalId());
+            return;
         } catch (Throwable e) {
             log.error("Falha interna ao comunicar o documento fiscal {} (tentativa {})",
                     item.documentoFiscalId(), item.tentativas(), e);
@@ -177,6 +196,11 @@ public class ProcessadorComunicacaoFiscal {
             linhaXml = gravada.get();
         }
 
+        // WR-02: o lease do lote foi dado na reclamação; renova-o para ESTE item antes do envio. Se
+        // outro worker já reclamou a linha, este não envia (nunca dois envios do mesmo documento).
+        if (!transacoes.renovarLease(item, lease)) {
+            throw new LeasePerdido();
+        }
         return gateway.comunicar(new PedidoComunicacao(item.tenantId(), item.documentoFiscalId(), item.ambiente(),
                 linhaXml.getIud(), linhaXml.getXml()));
     }
@@ -194,6 +218,15 @@ public class ProcessadorComunicacaoFiscal {
         } catch (Throwable e) {
             log.error("Notificação da falha de comunicação do documento fiscal {} não criada",
                     item.documentoFiscalId(), e);
+        }
+    }
+
+    /** O worker deixou de ser o dono da linha antes do envio (WR-02). Só circula dentro desta classe. */
+    private static final class LeasePerdido extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        LeasePerdido() {
+            super(null, null, false, false);
         }
     }
 

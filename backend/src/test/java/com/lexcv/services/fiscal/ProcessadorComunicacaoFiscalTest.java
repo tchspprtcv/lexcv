@@ -61,6 +61,7 @@ class ProcessadorComunicacaoFiscalTest {
     private static final Instant AGORA = Instant.parse("2026-06-15T12:00:00Z");
     private static final String NIF = "512345679";
     private static final LocalDate DATA = LocalDate.of(2026, 6, 15);
+    private static final Duration LEASE = Duration.ofMinutes(2);
 
     private final ComunicacaoFiscalTransacoes transacoes = mock(ComunicacaoFiscalTransacoes.class);
     private final DfeXmlBuilder builder = mock(DfeXmlBuilder.class);
@@ -82,8 +83,9 @@ class ProcessadorComunicacaoFiscalTest {
     @BeforeEach
     void setUp() {
         processador = new ProcessadorComunicacaoFiscal(transacoes, builder, marshaller, validador, iudGerador,
-                gateway, transmissao, notificacao, clock);
+                gateway, transmissao, notificacao, clock, LEASE);
         when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenReturn(1);
+        when(transacoes.renovarLease(any(), any())).thenReturn(true);
         when(iudGerador.gerar(anyInt(), any(), anyString(), anyInt(), anyInt(), anyLong())).thenReturn("CV3-GERADO");
         when(builder.construir(any(), anyString(), any())).thenReturn(dfe);
         when(marshaller.marshal(dfe)).thenReturn(xmlGerado);
@@ -215,6 +217,30 @@ class ProcessadorComunicacaoFiscalTest {
         verificarGravarNunca();
         verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.PENDENTE, "ORIGEM_SEM_IUD",
                 "A fatura-recibo de origem ainda não foi comunicada.", AGORA.plus(Duration.ofSeconds(30)));
+    }
+
+    @Test
+    void renovaOLeaseDoItemAntesDoEnvio() {
+        snapshot(fr(), Optional.of(linhaXml("CV3-E", "<e/>")), Optional.empty(), Optional.empty());
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        org.mockito.InOrder ordem = org.mockito.Mockito.inOrder(transacoes, gateway);
+        ordem.verify(transacoes).renovarLease(item, LEASE);
+        ordem.verify(gateway).comunicar(any());
+        ordem.verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.ACEITE_SIMULADO, null, null, null);
+    }
+
+    @Test
+    void leasePerdidoAntesDoEnvio_naoEnviaNemRegista() {
+        snapshot(fr(), Optional.of(linhaXml("CV3-E", "<e/>")), Optional.empty(), Optional.empty());
+        when(transacoes.renovarLease(any(), any())).thenReturn(false);
+
+        processador.processar(item(8));
+
+        verifyNoInteractions(gateway, notificacao);
+        verify(transacoes, never()).registarResultado(any(), any(), any(), any(), any());
     }
 
     @Test

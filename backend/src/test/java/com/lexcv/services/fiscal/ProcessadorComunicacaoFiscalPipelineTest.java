@@ -70,6 +70,7 @@ class ProcessadorComunicacaoFiscalPipelineTest {
     @BeforeEach
     void setUp() {
         when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenReturn(1);
+        when(transacoes.renovarLease(any(), any())).thenReturn(true);
         when(transacoes.gravarXml(any(), any(), any(), any(), anyInt(), anyInt(), any(), any(), any()))
                 .thenAnswer(inv -> {
                     DocumentoFiscalXml row = mock(DocumentoFiscalXml.class);
@@ -84,7 +85,7 @@ class ProcessadorComunicacaoFiscalPipelineTest {
     private ProcessadorComunicacaoFiscal processador(InjetorFalhas injetor) {
         return new ProcessadorComunicacaoFiscal(transacoes, new DfeXmlBuilder(), new DfeMarshaller(), validador,
                 new IudGerador(), new SimuladoEfaturaGateway(validador, injetor), transmissao, notificacao,
-                Clock.fixed(AGORA, ZoneOffset.UTC));
+                Clock.fixed(AGORA, ZoneOffset.UTC), java.time.Duration.ofMinutes(2));
     }
 
     // ---- fixtures ----

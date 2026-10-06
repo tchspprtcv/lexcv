@@ -308,6 +308,33 @@ class FilaComunicacaoFiscalIT {
     }
 
     @Test
+    void renovarLeaseSoParaODonoEProtegeOEnvioDeOutraReclamacao() {
+        UUID t = UUID.randomUUID();
+        UUID id = pendente(t, T0.minusSeconds(10));
+        ComunicacaoReclamada item = transacoes.reclamar(10, LEASE).get(0);
+
+        // O item é processado tarde (lote lento): renova antes de enviar e fica com lease novo.
+        RELOGIO.definir(T0.plus(LEASE).minusSeconds(5));
+        assertTrue(transacoes.renovarLease(item, LEASE));
+        assertEquals(T0.plus(LEASE).minusSeconds(5).plus(LEASE), instante(linha(id).get("lease_ate")));
+        assertEquals(item.versao(), ((Number) linha(id).get("versao")).longValue(), "a versão não muda");
+        RELOGIO.definir(T0.plus(LEASE).plusSeconds(1));
+        assertTrue(transacoes.reclamar(10, LEASE).isEmpty(), "lease renovado: ninguém mais a reclama");
+
+        // Lease expirado E reclamado por outro worker: o antigo dono já não pode renovar (nem enviar).
+        RELOGIO.definir(T0.plus(LEASE.multipliedBy(3)));
+        ComunicacaoReclamada outra = transacoes.reclamar(10, LEASE).get(0);
+        assertEquals(id, outra.id());
+        assertEquals(false, transacoes.renovarLease(item, LEASE));
+        assertTrue(transacoes.renovarLease(outra, LEASE));
+
+        ComunicacaoReclamada outroTenant = new ComunicacaoReclamada(outra.id(), UUID.randomUUID(),
+                outra.documentoFiscalId(), outra.ambiente(), outra.tentativas(), outra.versao(),
+                outra.reprocessamentos());
+        assertEquals(false, transacoes.renovarLease(outroTenant, LEASE));
+    }
+
+    @Test
     void resultadoComTenantErradoNaoAtualizaNada() {
         UUID t = UUID.randomUUID();
         UUID id = pendente(t, T0.minusSeconds(10));

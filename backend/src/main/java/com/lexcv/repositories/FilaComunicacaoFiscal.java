@@ -119,6 +119,21 @@ public class FilaComunicacaoFiscal {
             """;
 
     /**
+     * WR-02: renova o lease de UMA linha imediatamente antes do envio ao gateway. Só renova se a
+     * linha ainda tiver a versão reclamada e ainda estiver PENDENTE (ninguém a reclamou depois de o
+     * lease expirar): 0 linhas = o worker já não é o dono e NÃO pode enviar. Não muda a versão, para
+     * que o resultado continue a ser gravado com a versão reclamada. Se outro worker reclamar a linha
+     * entretanto, o bloqueio de linha serializa as duas instruções: ou a reclamação ganha (versão nova,
+     * renovação = 0) ou a renovação ganha (lease no futuro, a reclamação reavalia e salta a linha).
+     */
+    private static final String SQL_RENOVAR_LEASE = """
+            UPDATE t_comunicacao_fiscal
+               SET lease_ate = :leaseAte,
+                   updated_at = :agora
+             WHERE id = :id AND tenant_id = :tenantId AND versao = :versao AND estado = 'PENDENTE'
+            """;
+
+    /**
      * Phase 136-14 (DFE-05): reprocessamento manual. Só uma comunicação em ERRO ou REJEITADO do
      * tenant indicado volta a PENDENTE, devida já, com as tentativas a zero, o erro limpo e o
      * contador de reprocessamentos + 1 (novo episódio de falha). Qualquer outro estado -> 0 linhas.
@@ -211,6 +226,22 @@ public class FilaComunicacaoFiscal {
                 .setParameter("codigo", truncar(codigo, MAX_CODIGO), StandardBasicTypes.STRING)
                 .setParameter("proxima", proxima, StandardBasicTypes.INSTANT)
                 .setParameter("concluido", concluido, StandardBasicTypes.INSTANT)
+                .setParameter("agora", agora, StandardBasicTypes.INSTANT)
+                .setParameter("id", id, StandardBasicTypes.UUID)
+                .setParameter("tenantId", tenantId, StandardBasicTypes.UUID)
+                .setParameter("versao", versao, StandardBasicTypes.LONG)
+                .executeUpdate();
+    }
+
+    /**
+     * WR-02: renova o lease de uma linha reclamada até {@code leaseAte}. Devolve 1 se o worker ainda é
+     * o dono (versão e tenant certos, ainda PENDENTE), 0 caso contrário.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int renovarLease(UUID id, UUID tenantId, long versao, Instant agora, Instant leaseAte) {
+        return entityManager.createNativeQuery(SQL_RENOVAR_LEASE)
+                .unwrap(NativeQuery.class)
+                .setParameter("leaseAte", leaseAte, StandardBasicTypes.INSTANT)
                 .setParameter("agora", agora, StandardBasicTypes.INSTANT)
                 .setParameter("id", id, StandardBasicTypes.UUID)
                 .setParameter("tenantId", tenantId, StandardBasicTypes.UUID)
