@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiFetch, isApiError } from "@/lib/api";
+import { INTERVALO_ATUALIZACAO_MS, intervaloAtualizacaoComunicacao } from "@/lib/comunicacao-fiscal";
 import { construirQueryDocumentosFiscais, STATUS_INLINE_EMISSAO } from "@/lib/erros-emissao";
 import { hasPermission } from "@/lib/permissions";
 
@@ -24,6 +25,7 @@ import type {
   PaginaDocumentosFiscais,
   PreVisualizacaoFatura,
   PreVisualizacaoNotaCredito,
+  ReprocessarComunicacaoResposta,
   SerieFiscal,
 } from "@/types/faturacao";
 import type { PagamentoCreateRequest } from "@/types/financeiro";
@@ -255,6 +257,12 @@ export function useDocumentosFiscais(filtros: DocumentosFiscaisFiltros, enabled:
     enabled: enabled && typeof window !== "undefined",
     placeholderData: keepPreviousData,
     staleTime: 15_000,
+    // Phase 136: atualiza a cada 15 s só enquanto alguma linha visível está PENDENTE.
+    refetchInterval: (query) =>
+      query.state.data?.content?.some((linha) => linha.estadoComunicacao === "PENDENTE")
+        ? INTERVALO_ATUALIZACAO_MS
+        : false,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -271,6 +279,50 @@ export function useDocumentoFiscal(id: string, enabled: boolean) {
     enabled: enabled && Boolean(id) && typeof window !== "undefined",
     retry: (tentativas, error) => !(isApiError(error) && error.status === 404) && tentativas < 3,
     staleTime: 60_000,
+    // Phase 136: atualiza a cada 15 s só enquanto a comunicação está PENDENTE.
+    refetchInterval: (query) => intervaloAtualizacaoComunicacao(query.state.data?.comunicacao?.estado),
+    refetchIntervalInBackground: false,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 136 -- Comunicação fiscal: gate exato e reprocessamento manual.
+
+/** Autoridade EXATA exigida pelo backend para reprocessar a comunicação de um documento fiscal. */
+export const PERMISSAO_REPROCESSAR_COMUNICACAO = "financeiro:edit";
+
+/**
+ * Gate do botão "Reprocessar comunicação": exige EXATAMENTE `financeiro:edit`, como o
+ * `@PreAuthorize` do endpoint de reprocessamento (136-UI-SPEC checker
+ * clarification). O fallback do frontend (manage => edit) mostraria um botão que o backend recusa.
+ */
+export function podeReprocessarComunicacao(permissions: readonly string[] | undefined): boolean {
+  return hasPermission(permissions, PERMISSAO_REPROCESSAR_COMUNICACAO);
+}
+
+/** Status tratados inline no diálogo de reprocessamento (401/403 mantêm o comportamento do apiFetch). */
+const STATUS_INLINE_REPROCESSAR: readonly number[] = [404, 409, 422, 500, 502, 503, 504];
+
+/**
+ * POST do reprocessamento da comunicação (financeiro:edit). Invalida em `onSettled`: um 409 significa
+ * estado desatualizado, e o reprocessamento pode resolver uma notificação de falha.
+ */
+export function useReprocessarComunicacao(documentoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<ReprocessarComunicacaoResposta>(
+        `/documentos-fiscais/${encodeURIComponent(documentoId)}/comunicacao/reprocessar`,
+        { method: "POST" },
+        { semToastParaStatus: STATUS_INLINE_REPROCESSAR },
+      ),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: DOCUMENTOS_FISCAIS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
+      ]);
+    },
   });
 }
 

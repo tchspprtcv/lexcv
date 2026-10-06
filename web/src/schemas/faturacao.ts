@@ -10,7 +10,7 @@ export const MORADA_MAX = 100;
 
 // Comprimentos máximos espelhados de `ConfiguracaoFiscalRequest` (@Size) e das colunas de
 // `t_configuracao_fiscal`, para o limite aparecer inline antes da ida ao servidor.
-export const FIRMA_MAX = 200;
+export const FIRMA_MAX = 150;
 export const LOCALIDADE_MAX = 100;
 export const EMAIL_MAX = 254;
 export const TELEFONE_MAX = 32;
@@ -25,7 +25,7 @@ export const configuracaoFiscalSchema = z
       .string()
       .trim()
       .regex(nifFiscalPattern, "O NIF deve ter 9 dígitos e começar por um algarismo de 1 a 9."),
-    firma: campoObrigatorio().max(FIRMA_MAX, "A firma não pode ter mais de 200 caracteres."),
+    firma: campoObrigatorio().max(FIRMA_MAX, "A firma não pode ter mais de 150 caracteres."),
     morada: campoObrigatorio().max(MORADA_MAX, "A morada não pode ter mais de 100 caracteres."),
     localidade: campoObrigatorio().max(
       LOCALIDADE_MAX,
