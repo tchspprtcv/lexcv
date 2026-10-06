@@ -195,12 +195,14 @@ public class ProcessadorComunicacaoFiscal {
                 // IN-01: toda a recusa do builder é definitiva. A falta do IUD de origem (o único caso
                 // transitório) é tratada acima, antes de projetar o snapshot.
                 return new ResultadoComunicacao.Rejeitado(recusa.codigo(), recusa.mensagem());
-            } catch (IllegalArgumentException | NullPointerException invalido) {
-                // WR-03: o snapshot é imutável, por isso um dado que a projeção, o IUD ou o builder
-                // recusam nunca passa numa nova tentativa: REJEITADO de imediato, código fixo. As
-                // mensagens destas exceções são textos fixos do nosso código (sem valores do documento).
-                log.warn("Snapshot do documento fiscal {} não exprimível em eFatura: {}", item.documentoFiscalId(),
-                        invalido.getMessage());
+            } catch (RuntimeException invalido) {
+                // WR-03: o snapshot é imutável e a projeção, o IUD e o builder são funções puras sobre
+                // ele (sem I/O), por isso o que recusam (IllegalArgumentException, o NPE de um
+                // requireNonNull, ...) nunca passa numa nova tentativa: REJEITADO de imediato, código
+                // fixo. Apanha-se RuntimeException e não NullPointerException em concreto (SpotBugs
+                // DCN_NULLPOINTER_EXCEPTION); no log vai só a classe, nunca a mensagem.
+                log.warn("Snapshot do documento fiscal {} não exprimível em eFatura ({})", item.documentoFiscalId(),
+                        invalido.getClass().getSimpleName());
                 RecusaFormatoEfatura.Codigo codigo = RecusaFormatoEfatura.Codigo.DADOS_INVALIDOS;
                 return new ResultadoComunicacao.Rejeitado(codigo.name(), codigo.mensagem());
             }
