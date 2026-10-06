@@ -56,7 +56,8 @@ describe("configuracaoFiscalSchema", () => {
   );
 
   it.each([
-    ["firma", 200, "A firma não pode ter mais de 200 caracteres."],
+    // Phase 136 (research_resolutions): firma limitada a 150 caracteres (XSD eFatura `Name`).
+    ["firma", 150, "A firma não pode ter mais de 150 caracteres."],
     ["localidade", 100, "A localidade não pode ter mais de 100 caracteres."],
     ["telefoneContacto", 32, "O telefone não pode ter mais de 32 caracteres."],
   ])("limita %s a %i caracteres (espelho do backend)", (campo, max, mensagem) => {

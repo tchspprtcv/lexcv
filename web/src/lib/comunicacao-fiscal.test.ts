@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { PERMISSAO_REPROCESSAR_COMUNICACAO, podeReprocessarComunicacao } from "@/hooks/use-faturacao";
 import { ApiError } from "@/lib/api";
+import { hasScopedPermission } from "@/lib/permissions";
 import {
   COPY_IUD_TESTE,
   COPY_MODO_SIMULADO_LEAD,
@@ -228,5 +230,22 @@ describe("copy do 136-UI-SPEC", () => {
     expect(COPY_TENTATIVAS_AJUDA).toBe("A comunicação é retentada automaticamente até 8 vezes.");
     expect(COPY_REPROCESSAR).toBe("Reprocessar comunicação");
     expect(COPY_REPROCESSAR_SUCESSO).toBe("Comunicação reposta como pendente.");
+  });
+});
+
+describe("podeReprocessarComunicacao (gate EXATO financeiro:edit, checker clarification)", () => {
+  it("exige exatamente financeiro:edit, como o @PreAuthorize do backend", () => {
+    expect(PERMISSAO_REPROCESSAR_COMUNICACAO).toBe("financeiro:edit");
+    expect(podeReprocessarComunicacao(["financeiro:edit"])).toBe(true);
+    expect(podeReprocessarComunicacao(["financeiro:view", "financeiro:edit"])).toBe(true);
+    expect(podeReprocessarComunicacao(["financeiro:manage"])).toBe(false);
+    expect(podeReprocessarComunicacao(["financeiro:view"])).toBe(false);
+    expect(podeReprocessarComunicacao([])).toBe(false);
+    expect(podeReprocessarComunicacao(undefined)).toBe(false);
+  });
+
+  it("o fallback do frontend diria o contrário para manage -- por isso existe o gate exato", () => {
+    expect(hasScopedPermission(["financeiro:manage"], "financeiro", "edit")).toBe(true);
+    expect(podeReprocessarComunicacao(["financeiro:manage"])).toBe(false);
   });
 });
