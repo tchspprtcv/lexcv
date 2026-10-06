@@ -53,11 +53,25 @@ public class ComunicacaoFiscalTransacoes {
         this.clock = clock;
     }
 
-    /** Tx 1: reclama até {@code lote} linhas devidas com um lease de {@code lease}. */
+    /**
+     * Tx 1: reclama até {@code lote} linhas devidas com um lease de {@code lease}. Linhas que já
+     * gastaram {@link EstadoComunicacaoMapper#MAX_TENTATIVAS} reclamações ficam de fora (WR-01).
+     */
     @Transactional
     public List<ComunicacaoReclamada> reclamar(int lote, Duration lease) {
         Instant agora = clock.instant();
-        return fila.reclamar(agora, agora.plus(lease), lote);
+        return fila.reclamar(agora, agora.plus(lease), lote, EstadoComunicacaoMapper.MAX_TENTATIVAS);
+    }
+
+    /**
+     * WR-01: fecha em {@code ERRO} ({@code FALHA_INTERNA}, mensagem fixa) as linhas que gastaram
+     * todas as reclamações sem nunca registarem um resultado (worker morto, gateway pendurado para
+     * lá do lease, registo do resultado sempre a falhar) e devolve-as para a notificação.
+     */
+    @Transactional
+    public List<ComunicacaoReclamada> encerrarEsgotadas() {
+        return fila.encerrarEsgotadas(clock.instant(), EstadoComunicacaoMapper.MAX_TENTATIVAS,
+                ProcessadorComunicacaoFiscal.FALHA_INTERNA, ProcessadorComunicacaoFiscal.MSG_FALHA_INTERNA);
     }
 
     /**

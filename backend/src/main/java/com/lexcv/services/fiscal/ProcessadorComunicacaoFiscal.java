@@ -120,6 +120,14 @@ public class ProcessadorComunicacaoFiscal {
         }
     }
 
+    /**
+     * WR-01: notifica uma linha que o job fechou em {@code ERRO} por ter esgotado as reclamações sem
+     * resultado (ver {@link ComunicacaoFiscalTransacoes#encerrarEsgotadas}). Nunca lança.
+     */
+    public void notificarEsgotada(ComunicacaoReclamada item) {
+        notificar(item, null);
+    }
+
     private ResultadoComunicacao comunicar(ComunicacaoReclamada item, String[] numeroFormatado) {
         Optional<SnapshotComunicacao> carregado =
                 transacoes.carregarSnapshot(item.tenantId(), item.documentoFiscalId());

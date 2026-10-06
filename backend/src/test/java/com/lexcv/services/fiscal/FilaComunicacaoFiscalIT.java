@@ -367,6 +367,51 @@ class FilaComunicacaoFiscalIT {
     }
 
     @Test
+    void linhaQueNuncaRegistaResultadoDeixaDeSerReclamadaEFechaEmErro() {
+        UUID t = UUID.randomUUID();
+        UUID id = pendente(t, T0.minusSeconds(10));
+        Instant agora = T0;
+        // Cada reclamação "morre" sem registar resultado: o lease expira e a linha volta à fila.
+        for (int i = 1; i <= EstadoComunicacaoMapper.MAX_TENTATIVAS; i++) {
+            RELOGIO.definir(agora);
+            assertTrue(transacoes.encerrarEsgotadas().isEmpty(), "ainda há tentativas na reclamação " + i);
+            List<ComunicacaoReclamada> r = transacoes.reclamar(10, LEASE);
+            assertEquals(Set.of(id), ids(r));
+            assertEquals(i, r.get(0).tentativas());
+            agora = agora.plus(LEASE).plusSeconds(1);
+        }
+        RELOGIO.definir(agora);
+
+        assertTrue(transacoes.reclamar(10, LEASE).isEmpty(), "esgotada: nunca mais é reclamada");
+        List<ComunicacaoReclamada> fechadas = transacoes.encerrarEsgotadas();
+
+        assertEquals(Set.of(id), ids(fechadas));
+        assertEquals(t, fechadas.get(0).tenantId());
+        Map<String, Object> l = linha(id);
+        assertEquals("ERRO", l.get("estado"));
+        assertEquals("FALHA_INTERNA", l.get("ultimo_erro_codigo"));
+        assertEquals("Falha interna ao comunicar o documento.", l.get("ultimo_erro"));
+        assertNull(l.get("lease_ate"));
+        assertEquals(agora, instante(l.get("concluido_em")));
+        assertTrue(transacoes.encerrarEsgotadas().isEmpty(), "só fecha uma vez");
+    }
+
+    @Test
+    void esgotadaComLeaseAtivoNaoEFechada() {
+        UUID t = UUID.randomUUID();
+        UUID id = pendente(t, T0.minusSeconds(10));
+        jdbc.update("UPDATE t_comunicacao_fiscal SET tentativas = ? WHERE id = ?",
+                EstadoComunicacaoMapper.MAX_TENTATIVAS - 1, id);
+        ComunicacaoReclamada ultima = transacoes.reclamar(10, LEASE).get(0);
+        assertEquals(EstadoComunicacaoMapper.MAX_TENTATIVAS, ultima.tentativas());
+
+        assertTrue(transacoes.encerrarEsgotadas().isEmpty(), "o worker ainda tem o lease");
+        assertEquals("PENDENTE", linha(id).get("estado"));
+        assertEquals(1, transacoes.registarResultado(ultima, EstadoComunicacaoFiscal.ACEITE_SIMULADO,
+                null, null, null), "o dono do lease grava o resultado");
+    }
+
+    @Test
     void suspensoNaoESaltadoLinhaDoTenantEReclamadaComoQualquerOutra() {
         UUID suspenso = UUID.randomUUID();
         jdbc.update("INSERT INTO t_tenant (id, nome, plano, ativo, created_at) VALUES (?, 'Suspenso', 'STARTER', "

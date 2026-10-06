@@ -45,11 +45,17 @@ public class FilaComunicacaoFiscal {
      * {@code NULL} conta como devida (as linhas criadas pelas Phases 134/135 nascem assim). Um lease
      * expirado volta a ser reclamável (recuperação de crash). A tentativa é contada na reclamação,
      * por isso um crash a meio também a consome (T-136-23).
+     *
+     * <p>WR-01: uma linha que já gastou {@code :maxTentativas} reclamações nunca volta a ser
+     * reclamada. Se o worker que a tinha morreu (ou o registo do resultado falhou), ela fica para
+     * {@link #SQL_ENCERRAR_ESGOTADAS}, que a fecha em {@code ERRO} -- assim uma linha "venenosa"
+     * não é reclamada para sempre nem ocupa lugar no lote.
      */
     private static final String SQL_RECLAMAR = """
             WITH devidas AS (
                 SELECT id FROM t_comunicacao_fiscal
                  WHERE estado = 'PENDENTE'
+                   AND tentativas < :maxTentativas
                    AND (proxima_tentativa_em IS NULL OR proxima_tentativa_em <= :agora)
                    AND (lease_ate IS NULL OR lease_ate < :agora)
                  ORDER BY created_at, id
@@ -64,6 +70,36 @@ public class FilaComunicacaoFiscal {
                    updated_at = :agora
               FROM devidas
              WHERE c.id = devidas.id
+            RETURNING c.id, c.tenant_id, c.documento_fiscal_id, c.ambiente, c.tentativas, c.versao,
+                      c.reprocessamentos, c.created_at
+            """;
+
+    /**
+     * WR-01: fecha em {@code ERRO} as linhas {@code PENDENTE} que já gastaram todas as reclamações e
+     * cujo lease expirou (o worker morreu, ficou pendurado para lá do lease, ou não conseguiu registar
+     * o resultado). Código e mensagem fixos (vêm de quem chama). {@code versao + 1}: um worker atrasado
+     * que ainda tenha a linha já não grava por cima. Devolve as linhas fechadas para notificação.
+     */
+    private static final String SQL_ENCERRAR_ESGOTADAS = """
+            WITH esgotadas AS (
+                SELECT id FROM t_comunicacao_fiscal
+                 WHERE estado = 'PENDENTE'
+                   AND tentativas >= :maxTentativas
+                   AND (lease_ate IS NULL OR lease_ate < :agora)
+                 ORDER BY created_at, id
+                 FOR UPDATE SKIP LOCKED
+            )
+            UPDATE t_comunicacao_fiscal c
+               SET estado = 'ERRO',
+                   ultimo_erro = :mensagem,
+                   ultimo_erro_codigo = :codigo,
+                   proxima_tentativa_em = NULL,
+                   lease_ate = NULL,
+                   concluido_em = :agora,
+                   versao = c.versao + 1,
+                   updated_at = :agora
+              FROM esgotadas
+             WHERE c.id = esgotadas.id
             RETURNING c.id, c.tenant_id, c.documento_fiscal_id, c.ambiente, c.tentativas, c.versao,
                       c.reprocessamentos, c.created_at
             """;
@@ -109,10 +145,11 @@ public class FilaComunicacaoFiscal {
     /**
      * Reclama até {@code lote} comunicações devidas com bloqueio de linha que salta as já bloqueadas: dois
      * workers concorrentes nunca recebem a mesma linha. Cada linha reclamada fica com o lease até
-     * {@code leaseAte}, {@code tentativas + 1} e {@code versao + 1}.
+     * {@code leaseAte}, {@code tentativas + 1} e {@code versao + 1}. Linhas com
+     * {@code tentativas >= maxTentativas} não são reclamadas (WR-01).
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public List<ComunicacaoReclamada> reclamar(Instant agora, Instant leaseAte, int lote) {
+    public List<ComunicacaoReclamada> reclamar(Instant agora, Instant leaseAte, int lote, int maxTentativas) {
         if (lote <= 0) {
             return List.of();
         }
@@ -122,8 +159,30 @@ public class FilaComunicacaoFiscal {
                 .setParameter("agora", agora, StandardBasicTypes.INSTANT)
                 .setParameter("leaseAte", leaseAte, StandardBasicTypes.INSTANT)
                 .setParameter("lote", lote, StandardBasicTypes.INTEGER)
+                .setParameter("maxTentativas", maxTentativas, StandardBasicTypes.INTEGER)
                 .getResultList();
+        return mapear(linhas);
+    }
 
+    /**
+     * WR-01: fecha em {@code ERRO} as linhas que esgotaram as reclamações sem resultado registado e
+     * devolve-as (para a notificação). Código e mensagem são gravados truncados às colunas.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<ComunicacaoReclamada> encerrarEsgotadas(Instant agora, int maxTentativas, String codigo,
+                                                        String mensagem) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> linhas = entityManager.createNativeQuery(SQL_ENCERRAR_ESGOTADAS)
+                .unwrap(NativeQuery.class)
+                .setParameter("agora", agora, StandardBasicTypes.INSTANT)
+                .setParameter("maxTentativas", maxTentativas, StandardBasicTypes.INTEGER)
+                .setParameter("codigo", truncar(codigo, MAX_CODIGO), StandardBasicTypes.STRING)
+                .setParameter("mensagem", truncar(mensagem, MAX_MENSAGEM), StandardBasicTypes.STRING)
+                .getResultList();
+        return mapear(linhas);
+    }
+
+    private static List<ComunicacaoReclamada> mapear(List<Object[]> linhas) {
         List<Object[]> ordenadas = new ArrayList<>(linhas);
         ordenadas.sort(Comparator.<Object[], Instant>comparing(l -> instante(l[7]))
                 .thenComparing(l -> uuid(l[0])));

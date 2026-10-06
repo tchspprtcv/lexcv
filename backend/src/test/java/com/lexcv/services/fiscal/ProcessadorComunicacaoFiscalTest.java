@@ -360,6 +360,16 @@ class ProcessadorComunicacaoFiscalTest {
     }
 
     @Test
+    void notificarEsgotada_carregaONumeroENotificaComOEpisodio() {
+        snapshot(fr(), Optional.empty(), Optional.empty(), Optional.empty());
+
+        processador.notificarEsgotada(item(8));
+
+        verify(notificacao).notificarFalhaPersistente(tenantId, documentoId, "SIM-FR-2026/7", 2);
+        verifyNoInteractions(gateway, builder, iudGerador);
+    }
+
+    @Test
     void semTransacoesNoProcessador() {
         assertThat(ProcessadorComunicacaoFiscal.class.isAnnotationPresent(
                 org.springframework.transaction.annotation.Transactional.class)).isFalse();

@@ -58,8 +58,12 @@ public class FiscalOutboxJob {
         }
     }
 
-    /** Uma passagem: reclama um lote e processa cada item. Devolve o número de itens reclamados. */
+    /**
+     * Uma passagem: fecha as linhas esgotadas (WR-01), reclama um lote e processa cada item. Devolve o
+     * número de itens reclamados.
+     */
     int executarUmaVez() {
+        encerrarEsgotadas();
         EfaturaProperties.Outbox outbox = propriedades.outbox();
         List<ComunicacaoReclamada> itens = transacoes.reclamar(outbox.lote(), outbox.lease());
         for (ComunicacaoReclamada item : itens) {
@@ -71,5 +75,30 @@ public class FiscalOutboxJob {
             }
         }
         return itens.size();
+    }
+
+    /**
+     * WR-01: uma linha cujo processamento nunca chega a registar um resultado (o worker morre, o
+     * gateway fica pendurado para lá do lease, o registo falha sempre) deixa de ser reclamada ao fim
+     * de {@code MAX_TENTATIVAS} reclamações; aqui é fechada em {@code ERRO} e notificada. Uma falha
+     * desta varredura nunca impede a reclamação do lote.
+     */
+    private void encerrarEsgotadas() {
+        List<ComunicacaoReclamada> esgotadas;
+        try {
+            esgotadas = transacoes.encerrarEsgotadas();
+        } catch (Throwable e) {
+            log.error("Falha ao encerrar as comunicações fiscais esgotadas", e);
+            return;
+        }
+        for (ComunicacaoReclamada item : esgotadas) {
+            log.warn("Comunicação fiscal {} (documento {}) esgotou as tentativas sem resultado: ERRO",
+                    item.id(), item.documentoFiscalId());
+            try {
+                processador.notificarEsgotada(item);
+            } catch (Throwable e) {
+                log.error("Notificação da comunicação fiscal esgotada {} não criada", item.id(), e);
+            }
+        }
     }
 }

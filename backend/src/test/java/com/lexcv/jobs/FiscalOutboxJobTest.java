@@ -89,6 +89,32 @@ class FiscalOutboxJobTest {
     }
 
     @Test
+    void encerraEsgotadasENotificaAntesDeReclamar() {
+        ComunicacaoReclamada esgotada = item();
+        ComunicacaoReclamada a = item();
+        when(transacoes.encerrarEsgotadas()).thenReturn(List.of(esgotada));
+        when(transacoes.reclamar(anyInt(), any())).thenReturn(List.of(a));
+
+        assertThat(job.executarUmaVez()).isEqualTo(1);
+
+        InOrder ordem = inOrder(transacoes, processador);
+        ordem.verify(transacoes).encerrarEsgotadas();
+        ordem.verify(processador).notificarEsgotada(esgotada);
+        ordem.verify(transacoes).reclamar(20, Duration.ofMinutes(2));
+        ordem.verify(processador).processar(a);
+    }
+
+    @Test
+    void falhaAEncerrarEsgotadasNaoImpedeAReclamacao() {
+        ComunicacaoReclamada a = item();
+        when(transacoes.encerrarEsgotadas()).thenThrow(new RuntimeException("db down"));
+        when(transacoes.reclamar(anyInt(), any())).thenReturn(List.of(a));
+
+        assertThat(job.executarUmaVez()).isEqualTo(1);
+        verify(processador).processar(a);
+    }
+
+    @Test
     void reclamarQueLancaNaoPropagaDoExecutar() {
         when(transacoes.reclamar(anyInt(), any())).thenThrow(new RuntimeException("db down"));
 
