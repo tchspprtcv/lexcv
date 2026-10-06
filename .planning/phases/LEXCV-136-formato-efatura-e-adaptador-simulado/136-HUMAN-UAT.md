@@ -134,3 +134,14 @@ Close Phase 136 with the primary-source gate (G1–G15) still pending, or keep i
 | adjust-items | Applies the contabilista's or user's answers now (e.g. G6 IssueReasonCode per motivo, G11 PaymentAmount, G15 IsSpecimen) | Needs a small follow-up plan touching `MapeamentoEfatura`/`DfeXmlBuilder` and their tests |
 
 **User decision (2026-10-06):** close-pending — fechar a fase com o portão G1–G15 pendente; os itens ficam registados para confirmação contra as fontes primárias (efatura.cv) e o contabilista (G6, G11, G15) no marco de ligação real (EFAT-01..06).
+
+## Post-review items (from 136-VERIFICATION.md, status human_needed)
+
+The live UAT (12/12) ran before the 13 code-review fixes. Re-check from the packaged jar:
+
+1. Live smoke: an FR and an NC reach "Aceite (simulação)" with a 45-character CV3 IUD; the stored XML passes xmllint.
+2. WR-04: a firma over 150 characters returns 422 `FIRMA_EXCEDE_150`; the REJEITADO copy no longer promises that reprocessing fixes it.
+3. WR-03 / WR-05: an NC on a rejected FR, or a document with a fixed data defect, goes straight to REJEITADO with a clear message.
+4. WR-07 / IN-06: the "Modo simulado" banner stays visible while the page loads or errors; focus lands on the card title after a reprocess.
+
+Open product decisions (review IN-02 / IN-03): a lost notification is never retried; a REJEITADO document sends no notification.

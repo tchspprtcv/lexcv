@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: 136-16-PLAN.md Task 3 checkpoint (G1–G15 gate decision)
+stopped_at: Phase 136 complete (verification human_needed); Phase 137 discuss
 last_updated: "2026-10-06T18:27:00.000Z"
-last_activity: 2026-10-06 — 136-16 Tasks 1–2 done (gate green: surefire 1207, failsafe 159, 13 fiscal ITs; live E2E from the packaged jar 12/12 PASS); awaiting user decision on G1–G15 primary-source gate
+last_activity: 2026-10-06 — Phase 136 complete: code review fixed (13), verification human_needed 5/5 SC; G1–G15 closed pending
 progress:
   total_phases: 7
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-04)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 136 — Formato eFatura e Adaptador Simulado (v3.0 Faturação Eletrónica, eFatura CV)
+**Current focus:** Phase 137 — PDF, Armazenamento, Email e Relatório (v3.0 Faturação Eletrónica, eFatura CV)
 
 ## Current Position
 
-Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
+Phase: 137 of 139 (PDF, Armazenamento, Email e Relatório)
 Plan: 16 of 16
-Status: Checkpoint — 136-16 awaiting G1–G15 gate decision (close-pending / keep-open / adjust-items)
-Last activity: 2026-10-06 — 136-16 Tasks 1–2 done (gate green: surefire 1207, failsafe 159, 13 fiscal ITs; live E2E from the packaged jar 12/12 PASS); awaiting user decision on G1–G15 primary-source gate
+Status: Discussing — Phase 137 context
+Last activity: 2026-10-06 — Phase 136 complete: code review fixed (13), verification human_needed 5/5 SC; G1–G15 closed pending
 
 ## Performance Metrics
 

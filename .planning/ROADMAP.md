@@ -17,7 +17,7 @@ A sequência segue a cadeia de dependências do próprio dinheiro. Primeiro a fu
 - [x] **Phase 133: Fundação Fiscal** - Escritório regista os dados fiscais, ativa a faturação e dispõe de parâmetros com vigência e numeração sequencial sem lacunas (completed 2026-10-04)
 - [ ] **Phase 134: Fatura-Recibo Atómica nos Honorários** - Registar um pagamento emite, na mesma operação, uma Fatura-Recibo imutável, com pré-visualização, retenção e listagem
 - [ ] **Phase 135: Nota de Crédito** - Única forma de corrigir uma Fatura-Recibo, com reversão coerente de saldo, honorário, KPI e alerta
-- [ ] **Phase 136: Formato eFatura e Adaptador Simulado** - Cada documento gera XML DFE validado, com IUD, e é comunicado em segundo plano a um adaptador simulado
+- [x] **Phase 136: Formato eFatura e Adaptador Simulado** - Cada documento gera XML DFE validado, com IUD, e é comunicado em segundo plano a um adaptador simulado
 - [ ] **Phase 137: PDF, Armazenamento, Email e Relatório** - Documentos têm PDF e XML descarregáveis, são enviados por email ao cliente e exportados em CSV mensal
 - [ ] **Phase 138: Plataforma como Emitente** - A LexCV fatura as subscrições dos escritórios e cada escritório consulta as suas faturas em modo só de leitura
 - [ ] **Phase 139: Fecho — Isolamento, Segurança, Migrações e UAT** - Auditoria final de isolamento por tenant, credenciais, SAST, migrações em ambos os modos e UAT
