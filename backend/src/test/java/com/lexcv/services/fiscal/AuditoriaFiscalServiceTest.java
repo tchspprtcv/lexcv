@@ -91,7 +91,7 @@ class AuditoriaFiscalServiceTest {
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> m.getName().startsWith("registar"))
                 .toList();
-        assertEquals(7, registar.size(), "esperados 7 métodos registar*: " + registar);
+        assertEquals(8, registar.size(), "esperados 8 métodos registar*: " + registar);
         for (Method m : registar) {
             Transactional tx = m.getAnnotation(Transactional.class);
             assertNotNull(tx, m.getName() + " sem @Transactional");
@@ -307,5 +307,39 @@ class AuditoriaFiscalServiceTest {
 
         assertThrows(IllegalStateException.class, () -> comFalha.registarAtivacao(tenantId, autor, configId));
         verify(auditLogRepository, never()).save(any());
+    }
+
+    @Test
+    void registarReprocessamentoComunicacao_gravaSoAutorNumeroEEstadoAnterior() throws Exception {
+        UUID documentoId = UUID.randomUUID();
+
+        service.registarReprocessamentoComunicacao(tenantId, autor, documentoId, "SIM-FR-2026/7", "ERRO");
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_reprocessar_comunicacao", log.getAcao());
+        assertEquals("documento_fiscal_reprocessar_comunicacao", AuditoriaFiscalService.ACAO_REPROCESSAR_COMUNICACAO);
+        assertEquals("documento_fiscal", log.getEntidadeTipo());
+        assertEquals(documentoId.toString(), log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        assertFalse(log.getDetalhe().contains(EMAIL_DISTINTIVO), log.getDetalhe());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "numeroFormatado", "estadoAnterior"), chaves);
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("SIM-FR-2026/7", d.get("numeroFormatado").asText());
+        assertEquals("ERRO", d.get("estadoAnterior").asText());
+    }
+
+    @Test
+    void registarReprocessamentoComunicacao_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarReprocessamentoComunicacao",
+                UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
     }
 }
