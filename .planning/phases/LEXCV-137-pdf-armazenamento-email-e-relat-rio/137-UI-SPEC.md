@@ -1,7 +1,8 @@
 ---
 phase: 137
 slug: pdf-armazenamento-email-e-relat-rio
-status: draft
+status: approved
+reviewed_at: 2026-10-06
 shadcn_initialized: true
 preset: radix-vega (baseColor neutral, lucide) -- existing, not changed by this phase
 created: 2026-10-06
@@ -184,7 +185,7 @@ Trigger: `Button variant="outline"`, lucide `Send` 16px `aria-hidden`. Label via
 - Title: "Reenviar email" (or "Enviar email" for SEM_EMAIL).
 - Description (`text-sm text-slate-500`): "O documento será enviado ao cliente com o PDF e o XML em anexo. O envio é feito em segundo plano e o documento não é alterado."
 - Context block (`bg-slate-50 dark:bg-slate-900 rounded-md p-4`, `dl`): "Documento" número (`font-mono`), "Destinatário" (`entregaEmail.destinatario`, `break-all`; for SEM_EMAIL the backend returns the client's CURRENT record email in `entregaEmail.emailDestinatario` and the row shows it, or `text-sm text-slate-600 dark:text-slate-400` "O cliente não tem email na ficha" when absent), "Estado atual" `EntregaEmailBadge`, "Tentativas" count.
-- Helpers (`text-xs text-slate-600 dark:text-slate-400`): "O contador de tentativas volta a zero." For ENVIADO add: "Este documento já foi enviado. O cliente vai receber um novo email." For SEM_EMAIL add: "Será usado o email registado agora na ficha do cliente."
+- Helpers (`text-xs text-slate-600 dark:text-slate-400`): "O contador de tentativas volta a zero." For ENVIADO add: "Este documento já foi enviado. O cliente vai receber um novo email." For SEM_EMAIL add: "Será usado o email registado agora na ficha do cliente." (SEM_EMAIL is only `reenviavel` when `emailDestinatario` is present — the backend sets `reenviavel = false` while the client still has no email, so this dialog never opens in that state)
 - Error banner area `role="alert"`, `text-sm text-red-600 dark:text-red-400`.
 - Footer: "Fechar sem reenviar" (outline; becomes "Fechar" after a definitive inline error) + primary "Reenviar email"/"Enviar email". Pending: "A reenviar..." / "A enviar...", both buttons disabled, Esc/overlay blocked. Close X `sr-only`: "Fechar reenvio do email". On open focus goes to the dialog title (confirm not auto-focused).
 - Success: close, invalidate document + list + client-tab queries, toast "Email colocado na fila de envio.", focus returns to the Card "Entrega por email" heading (keep the 136 IN-06 fix: dialog state lifted so the component does not unmount mid-close).
@@ -421,11 +422,11 @@ Rules: "Enviado" is never paraphrased as "Entregue", "Recebido" or "Lido". The 1
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
