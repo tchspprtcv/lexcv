@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-04-PLAN.md
-last_updated: "2026-10-06T16:43:40.000Z"
-last_activity: 2026-10-06 — Completed 136-04 (web contracts: four communication states, lib/comunicacao-fiscal, exact financeiro:edit reprocess gate + mutation, PENDENTE-only 15 s polling, COMUNICACAO_FISCAL_FALHOU non-silenceable, firma 150; vitest 318 green)
+stopped_at: Completed 136-05-PLAN.md
+last_updated: "2026-10-06T16:52:58.000Z"
+last_activity: 2026-10-06 — Completed 136-05 (hardened DfeValidador over a 22-file whitelist ClasspathXsdResolver (XXE refused, code+position only), DfeMarshaller UTF-8 bytes, IudGerador 45-char IUD with official Luhn vector; surefire 1070 green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 39
-  percent: 76
+  completed_plans: 40
+  percent: 78
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 4 of 16
-Status: In progress — 136-04 complete
-Last activity: 2026-10-06 — Completed 136-04 (web contracts: four communication states, lib/comunicacao-fiscal, exact financeiro:edit reprocess gate + mutation, PENDENTE-only 15 s polling, COMUNICACAO_FISCAL_FALHOU non-silenceable, firma 150; vitest 318 green)
+Plan: 5 of 16
+Status: In progress — 136-05 complete
+Last activity: 2026-10-06 — Completed 136-05 (hardened DfeValidador over a 22-file whitelist ClasspathXsdResolver (XXE refused, code+position only), DfeMarshaller UTF-8 bytes, IudGerador 45-char IUD with official Luhn vector; surefire 1070 green)
 
 ## Performance Metrics
 
@@ -211,6 +211,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: t_documento_fiscal_xml is insert-only: DocumentoFiscalXmlRepository has exactly inserirSeAusente (native INSERT ... ON CONFLICT DO NOTHING without target, returns 1/0) and findByTenantIdAndDocumentoFiscalId; the row id is assigned by the caller
 - [Phase 136]: Persistent eFatura failure notification (COMUNICACAO_FISCAL_FALHOU, not silenceable) goes to active users of the tenant whose permissions, composed exactly as JwtAuthenticationFilter does (UserPrincipal.create over resolverNomesPapeis + resolverPermissoesEfectivas, so ADMIN counts), include financeiro:manage; entidadeTipo documento_fiscal, entidadeId documentoId:episodio (reprocessamentos counter); call only after the ERRO commit
 - [Phase 136]: Web reprocess gate podeReprocessarComunicacao = exact hasPermission(financeiro:edit) (manage-only hidden); detail/list poll 15 s only while PENDENTE (refetchIntervalInBackground false); lib/comunicacao-fiscal is the single estado -> label/variant/icon-key/description source with neutral 'Estado desconhecido' fallback; FIRMA_MAX 150 on the web
+- [Phase 136]: DfeValidador builds the eFatura Schema once (fail-fast) through ClasspathXsdResolver (22-file whitelist, URI.resolve, no filesystem API); validar returns ResultadoValidacao(valido, codigo XSD_INVALIDO|XML_PROIBIDO|XML_ILEGIVEL, linha, coluna) and never parser text; valid factory is sucesso()
+- [Phase 136]: IudGerador.gerar(repositorio, dataEmissao, nif, led, tipo, numero): CV + repo + AAMMDD + NIF + LED(5) + tipo(2) + numero(9) + SecureRandom(10) + Luhn DV, Locale.ROOT; DfeMarshaller emits UTF-8 with its own declaration (no standalone, no formatting)
 
 
 ### Pending Todos
@@ -383,8 +385,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T16:43:40.000Z
-Stopped at: Completed 136-04-PLAN.md
+Last session: 2026-10-06T16:52:58.000Z
+Stopped at: Completed 136-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

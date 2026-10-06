@@ -156,7 +156,7 @@ Plans:
 - [x] 136-02-PLAN.md — Schema: new states, outbox columns, CHECK AUTORIZADO⇒PRODUCAO, insert-only t_documento_fiscal_xml; migration 136 + README; parity ITs 134/135/136
 - [x] 136-03-PLAN.md — COMUNICACAO_FISCAL_FALHOU (non-silenceable) + NotificacaoComunicacaoFiscal (effective financeiro:manage, per-episode dedup)
 - [x] 136-04-PLAN.md — Web contracts: types, exact financeiro:edit gate, reprocess mutation, PENDENTE-only polling, lib/comunicacao-fiscal, notification maps, firma 150
-- [ ] 136-05-PLAN.md — TDD hardened DfeValidador + whitelist classpath resolver (XXE), DfeMarshaller, IudGerador (Luhn official vector)
+- [x] 136-05-PLAN.md — TDD hardened DfeValidador + whitelist classpath resolver (XXE), DfeMarshaller, IudGerador (Luhn official vector)
 - [ ] 136-06-PLAN.md — Outbox DB side: FilaComunicacaoFiscal (SKIP LOCKED, lease, versao guard), ComunicacaoFiscalTransacoes, FilaComunicacaoFiscalIT
 - [ ] 136-07-PLAN.md — Read side: comunicacao summary (estado, IUD, tentativas, último erro) on the document detail
 - [ ] 136-08-PLAN.md — Web components: neutral state badge, "Modo simulado" banner, "Comunicação fiscal" card, reprocess dialog component
@@ -253,7 +253,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
 | 135. Nota de Crédito | 13/13 | In progress | - |
-| 136. Formato eFatura e Adaptador Simulado | 4/16 | In progress | - |
+| 136. Formato eFatura e Adaptador Simulado | 5/16 | In progress | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |
 | 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |
