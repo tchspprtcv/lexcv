@@ -2,10 +2,14 @@ package com.lexcv.controllers;
 
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.NotaCreditoRequest;
+import com.lexcv.dtos.EstadoEmissaoResponse;
 import com.lexcv.dtos.PagamentoRequest;
+import com.lexcv.fiscal.efatura.EfaturaGateway;
+import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,18 +66,29 @@ import static org.mockito.Mockito.when;
  * {@code financeiro:manage}. No servidor não há equivalência {@code manage <= edit}: quem só tem
  * {@code financeiro:edit}, {@code financeiro:view}, os dois, ou nenhuma autoridade financeiro é
  * recusado nas duas e o serviço nunca é chamado.
+ *
+ * <p>Phase 136 (DFE-05, T-136-53): reprocessar a comunicação exige a autoridade EXATA
+ * {@code financeiro:edit} (o frontend usa {@code podeReprocessarComunicacao}, a mesma regra exata).
+ * {@code financeiro:manage} sozinho, {@code view}, {@code view + manage}, a autoridade com prefixo
+ * {@code ROLE_} e nenhuma autoridade são recusados -- no servidor não há cadeia de equivalências.
  */
 class DocumentoFiscalControllerAutorizacaoTest {
 
     private PreVisualizacaoFaturaService preVisualizacao;
     private DocumentoFiscalService documentos;
     private NotaCreditoService notasCredito;
+    private ReprocessamentoComunicacaoService reprocessamento;
+    private EfaturaGateway gateway;
 
     @BeforeEach
     void preparar() {
         preVisualizacao = mock(PreVisualizacaoFaturaService.class);
         documentos = mock(DocumentoFiscalService.class);
         notasCredito = mock(NotaCreditoService.class);
+        reprocessamento = mock(ReprocessamentoComunicacaoService.class);
+        gateway = mock(EfaturaGateway.class);
+        when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
+        when(preVisualizacao.estadoEmissao(any())).thenReturn(EstadoEmissaoResponse.desligada());
         when(documentos.listar(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
     }
@@ -84,7 +99,8 @@ class DocumentoFiscalControllerAutorizacaoTest {
     }
 
     private DocumentoFiscalController novoProxyComMethodSecurity() {
-        ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito));
+        ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito,
+                reprocessamento, gateway));
         factory.setProxyTargetClass(true);
         factory.addAdvisor(AuthorizationManagerBeforeMethodInterceptor.preAuthorize());
         return (DocumentoFiscalController) factory.getProxy();
@@ -197,6 +213,42 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
         assertThrows(AccessDeniedException.class, emitirNc(proxy, UUID.randomUUID()));
         verifyNoInteractions(notasCredito);
+    }
+
+    // ------------------------------------------------------------------ reprocessar comunicação (Phase 136)
+
+    private static Executable reprocessar(DocumentoFiscalController p, UUID id) {
+        return () -> p.reprocessarComunicacao(id.toString());
+    }
+
+    @Test
+    void editExatoReprocessaComOTenantEOAutorDoPrincipal() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:edit");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        UUID id = UUID.randomUUID();
+
+        assertDoesNotThrow(reprocessar(proxy, id));
+
+        verify(reprocessamento).reprocessar(principal.getTenantId(), principal, id);
+    }
+
+    static Stream<Arguments> semEditExato() {
+        return Stream.of(
+                Arguments.of((Object) new String[]{"financeiro:manage"}),
+                Arguments.of((Object) new String[]{"financeiro:view"}),
+                Arguments.of((Object) new String[]{"financeiro:view", "financeiro:manage"}),
+                Arguments.of((Object) new String[]{"ROLE_financeiro:edit"}),
+                Arguments.of((Object) new String[]{}));
+    }
+
+    @ParameterizedTest
+    @MethodSource("semEditExato")
+    void semEditExatoOReprocessamentoERecusado(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, reprocessar(proxy, UUID.randomUUID()));
+        verifyNoInteractions(reprocessamento);
     }
 
     @Test

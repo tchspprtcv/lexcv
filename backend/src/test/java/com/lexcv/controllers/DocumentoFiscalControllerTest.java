@@ -9,12 +9,16 @@ import com.lexcv.dtos.NotaCreditoResponse;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.dtos.PreVisualizacaoFaturaResponse;
 import com.lexcv.dtos.PreVisualizacaoNotaCreditoResponse;
+import com.lexcv.dtos.ReprocessarComunicacaoResponse;
 import com.lexcv.exceptions.RecusaFiscalException;
+import com.lexcv.fiscal.efatura.EfaturaGateway;
+import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,12 +76,18 @@ import static org.mockito.Mockito.when;
  * <p>Phase 135 (NCRD-01, NCRD-02): mais dois handlers -- pré-visualização e emissão da Nota de
  * Crédito sobre uma FR ({@code financeiro:manage} exato), 201 para uma NC nova e 200 para a
  * repetição pela chave, e o mesmo 404 sem oráculo para um id inválido. Passam a ser 6 handlers.
+ *
+ * <p>Phase 136 (DFE-05, DFE-06): mais um handler -- reprocessar a comunicação de um documento
+ * ({@code financeiro:edit} exato), com o mesmo 404 sem oráculo -- e o estado de emissão passa a
+ * levar {@code modoComunicacao} do gateway em execução. Passam a ser 7 handlers.
  */
 class DocumentoFiscalControllerTest {
 
     private PreVisualizacaoFaturaService preVisualizacao;
     private DocumentoFiscalService documentos;
     private NotaCreditoService notasCredito;
+    private ReprocessamentoComunicacaoService reprocessamento;
+    private EfaturaGateway gateway;
     private DocumentoFiscalController controller;
     private UserPrincipal principal;
     private UUID tenant;
@@ -87,7 +97,11 @@ class DocumentoFiscalControllerTest {
         preVisualizacao = mock(PreVisualizacaoFaturaService.class);
         documentos = mock(DocumentoFiscalService.class);
         notasCredito = mock(NotaCreditoService.class);
-        controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito);
+        reprocessamento = mock(ReprocessamentoComunicacaoService.class);
+        gateway = mock(EfaturaGateway.class);
+        when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
+        controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito, reprocessamento,
+                gateway);
         tenant = UUID.randomUUID();
         principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
                 Set.of(), Set.of("financeiro:view", "financeiro:edit"), Set.of());
@@ -129,7 +143,54 @@ class DocumentoFiscalControllerTest {
         ResponseEntity<?> r = controller.estadoEmissao();
 
         assertEquals(HttpStatus.OK, r.getStatusCode());
-        assertSame(estado, r.getBody());
+        assertEquals(new EstadoEmissaoResponse(true, "SIMULADO", new BigDecimal("20"), "SIMULADO"), r.getBody());
+    }
+
+    @Test
+    void estadoEmissaoDesligadaTambemLevaOModoDoGateway() {
+        when(preVisualizacao.estadoEmissao(tenant)).thenReturn(EstadoEmissaoResponse.desligada());
+
+        EstadoEmissaoResponse corpo = (EstadoEmissaoResponse) controller.estadoEmissao().getBody();
+
+        assertNotNull(corpo);
+        assertFalse(corpo.ativa());
+        assertNull(corpo.ambiente());
+        assertNull(corpo.taxaRetencaoSugerida());
+        assertEquals("SIMULADO", corpo.modoComunicacao());
+    }
+
+    // ------------------------------------------------------------------ reprocessar comunicação
+
+    @Test
+    void reprocessarComunicacaoDelegaComOTenantEOPrincipal() {
+        UUID id = UUID.randomUUID();
+        ReprocessarComunicacaoResponse resposta = new ReprocessarComunicacaoResponse("PENDENTE", 0);
+        when(reprocessamento.reprocessar(tenant, principal, id)).thenReturn(resposta);
+
+        ResponseEntity<?> r = controller.reprocessarComunicacao(id.toString());
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertSame(resposta, r.getBody());
+        verify(reprocessamento).reprocessar(tenant, principal, id);
+    }
+
+    @Test
+    void reprocessarComunicacaoComIdInvalidoDa404SemChamarOServico() {
+        ResponseEntity<?> r = controller.reprocessarComunicacao("nao-e-um-uuid");
+
+        assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+        assertEquals(controller.detalhe("abc").getBody(), r.getBody());
+        verifyNoInteractions(reprocessamento);
+    }
+
+    @Test
+    void recusaDoReprocessamentoPropaga() {
+        RecusaFiscalException conflito = new RecusaFiscalException(HttpStatus.CONFLICT,
+                "COMUNICACAO_ESTADO_INVALIDO", "Só é possível reprocessar comunicações em erro ou rejeitadas.");
+        when(reprocessamento.reprocessar(any(), any(), any())).thenThrow(conflito);
+
+        assertSame(conflito, assertThrows(RecusaFiscalException.class,
+                () -> controller.reprocessarComunicacao(UUID.randomUUID().toString())));
     }
 
     @Test
@@ -368,9 +429,9 @@ class DocumentoFiscalControllerTest {
     }
 
     @Test
-    void exatamenteSeisHandlersSemRotasQueAlterem() {
+    void exatamenteSeteHandlersSemRotasQueAlterem() {
         List<Method> hs = handlers();
-        assertEquals(6, hs.size(), hs.toString());
+        assertEquals(7, hs.size(), hs.toString());
         for (Method m : hs) {
             assertFalse(m.isAnnotationPresent(PutMapping.class), m.getName());
             assertFalse(m.isAnnotationPresent(PatchMapping.class), m.getName());
@@ -385,6 +446,8 @@ class DocumentoFiscalControllerTest {
                 handler("preVisualizarNotaCredito").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/documentos-fiscais/{id}/notas-credito",
                 handler("emitirNotaCredito").getAnnotation(PostMapping.class).value()[0]);
+        assertEquals("/documentos-fiscais/{id}/comunicacao/reprocessar",
+                handler("reprocessarComunicacao").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/api/v1", DocumentoFiscalController.class.getAnnotation(RequestMapping.class).value()[0]);
     }
 
@@ -400,6 +463,8 @@ class DocumentoFiscalControllerTest {
                 handler("preVisualizarNotaCredito").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:manage')",
                 handler("emitirNotaCredito").getAnnotation(PreAuthorize.class).value());
+        assertEquals("hasAuthority('financeiro:edit')",
+                handler("reprocessarComunicacao").getAnnotation(PreAuthorize.class).value());
     }
 
     private static String nomeDoParametro(Parameter p) {
