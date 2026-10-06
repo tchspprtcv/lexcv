@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-15-PLAN.md
-last_updated: "2026-10-06T17:57:08.000Z"
-last_activity: 2026-10-06 — Completed 136-15 (FiscalOutboxJob (@Scheduled fixedDelay PT30S, initial PT20S, lote 20, lease PT2M, catch Throwable top + per item, no tx); FiscalOutboxJobIT 6 + FalhasForcadasIT 1 on PostgreSQL with real FR/NC emission: ACEITE_SIMULADO with XSD-valid XML + CV3 IUD, FR->NC order, suspended office, ERRO + per-episode manage-only notification; DFE-03/04/05/07 complete; 1207 unit tests green)
+stopped_at: 136-16-PLAN.md Task 3 checkpoint (G1–G15 gate decision)
+last_updated: "2026-10-06T18:27:00.000Z"
+last_activity: 2026-10-06 — 136-16 Tasks 1–2 done (gate green: surefire 1207, failsafe 159, 13 fiscal ITs; live E2E from the packaged jar 12/12 PASS); awaiting user decision on G1–G15 primary-source gate
 progress:
   total_phases: 7
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 15 of 16
-Status: In progress — 136-15 complete
-Last activity: 2026-10-06 — Completed 136-15 (FiscalOutboxJob (@Scheduled fixedDelay PT30S, initial PT20S, lote 20, lease PT2M, catch Throwable top + per item, no tx); FiscalOutboxJobIT 6 + FalhasForcadasIT 1 on PostgreSQL with real FR/NC emission: ACEITE_SIMULADO with XSD-valid XML + CV3 IUD, FR->NC order, suspended office, ERRO + per-episode manage-only notification; DFE-03/04/05/07 complete; 1207 unit tests green)
+Plan: 16 of 16
+Status: Checkpoint — 136-16 awaiting G1–G15 gate decision (close-pending / keep-open / adjust-items)
+Last activity: 2026-10-06 — 136-16 Tasks 1–2 done (gate green: surefire 1207, failsafe 159, 13 fiscal ITs; live E2E from the packaged jar 12/12 PASS); awaiting user decision on G1–G15 primary-source gate
 
 ## Performance Metrics
 
@@ -261,6 +261,9 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - (v2.13, Phase 106) **Real data-correctness bug found live, not yet fixed:** every `Evento` created or edited via `/agenda/novo` or `/agenda/{id}/editar` has its `dataInicio`/`dataFim` silently stored 1 hour later than what the user selected, for any tenant running in a negative-UTC-offset timezone (this app's actual Cabo Verde market, UTC-01:00). Root cause: `new Date(values.dataInicio).toISOString().slice(0, 19)` in both forms' `onSubmit` (and the same pattern in `agenda/page.tsx`'s drag-and-drop reschedule + `use-eventos.ts`) parses the naive local datetime as local time then serializes it via UTC `toISOString()`, keeping the UTC-shifted clock value while dropping the `Z` marker. Confirmed pre-existing (present in the pre-Phase-106 base commit `ba896e3`), NOT introduced by Phase 106's Calendar/Select migration. See `.planning/milestones/v2.13-phases/LEXCV-106-m-dulo-agenda/deferred-items.md` for full file:line detail and a suggested one-line-per-site fix. Recommend a dedicated fix phase/task — this silently corrupts real production Agenda data every time it's exercised.
 
 ### Blockers/Concerns
+
+- (v3.0, Phase 136-16) **Awaiting user decision on the G1–G15 primary-source gate** (table in `.planning/phases/LEXCV-136-formato-efatura-e-adaptador-simulado/136-HUMAN-UAT.md`): efatura.cv still unreachable (egress CONNECT 403). The format rests on the vendored 2024-05-27 package. The real-connection milestone (EFAT-01..06) must re-check the 22 XSD hashes and every gate item.
+- (v3.0, Phase 136-16) Pre-existing, out of scope: once an office role that has users is customised via `/admin/rbac`, the next backend boot aborts in the role-drift check (`MigracaoPapeisEscritorioService` → `VerificacaoDerivaPapeisService`). Logged in `.planning/phases/LEXCV-136-formato-efatura-e-adaptador-simulado/deferred-items.md` #1.
 
 - (v3.0, Phase 133-08) Two out-of-scope defects found during the end-to-end run, logged in `.planning/phases/LEXCV-133-funda-o-fiscal/deferred-items.md`: (1) `POST /api/v1/setup/initialize` 500s on a fresh install (`Set.of` roles + merge in SetupService, pre-existing); (2) every boot after the first logs a non-fatal DDL error for `t_serie_fiscal.ambiente` (`columnDefinition = "varchar(32) not null"` on a converter column).
 - **(v2.13, 2026-07-17) Three previously-flagged background bugs each have an independent fix session that completed successfully** (per direct transcript review), but none have been merged into this repo's `master` yet — each lives on its own branch/worktree, started by the user outside this GSD orchestration, and merging is the user's call, not auto-applied here:

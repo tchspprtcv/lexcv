@@ -1,9 +1,9 @@
 ---
-status: in-progress
+status: awaiting-decision
 phase: 136-formato-efatura-e-adaptador-simulado
 source: [136-16-PLAN.md Task 1, Task 2, Task 3]
 started: 2026-10-06T17:58:00Z
-updated: 2026-10-06T18:03:00Z
+updated: 2026-10-06T18:25:00Z
 ---
 
 # Phase 136: Gate, live end-to-end verification and primary-source gate record
@@ -94,3 +94,43 @@ None in Phase 136 scope. No product code changed during the run.
 - **Pre-existing, unchanged:** the setup wizard / tenant provisioning `Set.of` 500 (133 deferred-items #1).
 - **Times:** the UI shows times in Atlantic/Cape_Verde (UTC−1), e.g. "Última tentativa 17:05" for 18:05 UTC, consistent with the XML `IssueTime`.
 - **Notification episode:** `entidadeId` = `<documentoId>:0`. This is the per-episode dedup from research Q2. The link is `linkUrl`, not part of `entidadeId`.
+
+## Portão das fontes primárias (G1–G15) — Task 3, decision pending
+
+**Step 11 retry result (2026-10-06):** `https://efatura.cv/docs/xsd`, `https://efatura.cv` and `https://pe.efatura.cv` all fail with `CONNECT tunnel failed, response 403` (egress proxy). The WebFetch tool was not available to the executor. **No item could be checked against the primary source.** The status of every row below is the same as in research. The format rests on the Kowts copy of the 2024-05-27 package: 22 XSDs, SHA-256 pinned in `XsdEfaturaIntegridadeTest`, consistent with the older kriolos copy and the package changelog.
+
+**Columns:**
+- "Fixed by package" = what the vendored XSD/package settles.
+- "Assumed" = what remains unverified.
+- "v3.0 handling / where" = the exact file and constant.
+- "Live 136-16" = what the live run showed.
+
+| # | Topic | Fixed by package | Assumed | v3.0 handling / where | If wrong | Live 136-16 | Recommendation |
+|---|-------|------------------|---------|------------------------|----------|-------------|----------------|
+| G1 | Package currency | 2024-05-27 content (HIGH) | Still the version in force, and the manual is v11 | `MapeamentoEfatura.VERSAO_FORMATO = "2024-05-27"`, stored per row in `t_documento_fiscal_xml.versao_formato`. Provenance + 22 hashes in `backend/src/main/resources/xsd/efatura/README.md`; integrity in `XsdEfaturaIntegridadeTest` | Rebuild the XML from the immutable snapshot (cheap: the XML is derived) | versao_formato 2024-05-27 on all 3 rows | Accept; re-check the 22 hashes in the real-connection milestone (EFAT) |
+| G2 | IUD layout | Regex `CV(\d)(\d{2})(MM)(DD)([1-9]\d{8})\d{27}`, length 45 (HIGH) | Split of the trailing 27 digits: LED(5) + tipo(2) + número(9) + aleatório(10) + DV(1) | `IudGerador` (`TAMANHO = 45`, `gerar`); type digits from `MapeamentoEfatura.codigoTipoIud` | Real platform rejects the IUD; no effect in SIMULADO | 3 IUDs, 45 chars, `CV3…`, all accepted by the XSD `Id` pattern | Accept; confirm with official test vectors in EFAT |
+| G3 | Luhn check digit | Sample IUD DV = Luhn over 42 digits | No official test vectors | `IudGerador.luhn(payload)` (Kowts parity) | Same as G2 | — | Accept; same as G2 |
+| G4 | LED in SIMULADO | `stLedCode` 1–99999 | Whether any value is reserved for tests | `MapeamentoEfatura.LED_SIMULADO = 99999` via `ledPara(AmbienteFiscal)` (SIMULADO only) | None in SIMULADO | led_codigo 99999 on every row | Accept |
+| G5 | PaymentMeansCode | UN/ECE D19B list; 10, 20, 30, 48, ZZZ present (HIGH) | Semantic fit (`CARTAO`→48 vs 54/55); whether DNRE restricts the list | `MetodoPagamento` enum codes (`CARTAO("…","48")`, `OUTRO("…","ZZZ")`, …), snapshotted in `meio_pagamento_codigo` (Phase 134); written by `DfeXmlBuilder` (`setPaymentMeansCode`) | Semantics only; new snapshot value for future documents | TRANSFERENCIA → 30 in FR1 XML | Accept; contabilista may confirm CARTAO |
+| G6 | IssueReasonCode (NC) | NCE accepts 2, 3, 6, 7, 8, 9, IN, DRP | Which Art.º 65 CIVA paragraph applies to each `MotivoNotaCredito` (LOW) | `MapeamentoEfatura.issueReasonCode(MotivoNotaCredito)`: all four motivos → `"2"` | NC rejected or misclassified in real mode | NC1 XML `IssueReasonCode` 2 | **Contabilista to confirm** (candidate for `adjust-items`) |
+| G7 | References on NC | XSD optional; Fields Map required on NCE | — | `DfeXmlBuilder` `nc.setReferences(referencias(doc.iudOrigem()))`: `Reference/FiscalDocument` = FR IUD, no `IsOldDocument` | — | NC1 references FR1's IUD exactly | Accept |
+| G8 | Line Tax on NC | Fields Map: Line `Tax` optional on NCE | Whether sending the FR's IVA/IR on the NC line is expected | `DfeXmlBuilder` line taxes: the same `Tax` elements as the FR snapshot rates | Possibly rejected; can be dropped later | NC1 validates with IVA/IR line taxes | Accept |
+| G9 | Transmission block | Structure fixed (IssueMode, TransmitterTaxId, Software Code/Name/Version) | Real `Software.Code` (homologation) and transmitter NIF | `application.yml` `app.efatura.transmissao.*` (`EFATURA_TRANSMISSOR_NIF` 999999999, `EFATURA_SOFTWARE_CODIGO` LEXCVSIM, `EFATURA_SOFTWARE_NOME` LexCV, `EFATURA_SOFTWARE_VERSAO` 3.0.0), validated by `TransmissaoEfatura`; `MapeamentoEfatura.ISSUE_MODE_ONLINE = 1` | Real values required in the real-connection milestone | Transmission block present with the synthetic values | Accept for SIMULADO; real values in EFAT |
+| G10 | Totals tolerance | `TaxTotal` validated within floor/ceil; ≤5 decimals | Rounding tolerance for document totals | `TaxTotal` per Tax not sent (comment block in `MapeamentoEfatura`); totals from snapshot, 2 decimals HALF_UP (`DfeXmlBuilder` totals) | Rejection on rounding | Totals equal to the snapshot | Accept |
+| G11 | PaymentAmount | `stDecimal5MinExc0` | Gross (`total_documento`) or net (`valor_liquido`) | `DfeXmlBuilder` `setPaymentAmount(decimal(doc.valorLiquido()))` (documented in `MapeamentoEfatura`) | Semantics only | FR1 PaymentAmount 99130.43 = PayableAmount | Contabilista may confirm (candidate for `adjust-items`) |
+| G12 | Party.Contacts | XSD optional; Fields Map required except TVE | Whether the platform rejects its absence | Omitted (comment block in `MapeamentoEfatura`; no snapshot columns, no fabricated data) | Rejection in real mode; needs snapshot columns | Omitted; validates | Accept for SIMULADO; add snapshot columns in EFAT if required |
+| G13 | Quantity@UnitCode | Required, `[aA-zZ0-9]{1,10}` | Expected code for services | `MapeamentoEfatura.UNIT_CODE = "EA"` (+ `EMITTER_ID_FR`/`EMITTER_ID_NC`) | Cosmetic | `UnitCode="EA"` | Accept |
+| G14 | Licence/redistribution of the DNRE XSD | — | DNRE terms | Vendored for local validation; provenance in `backend/src/main/resources/xsd/efatura/README.md` | Remove the files and fetch at build time from the official source | Jar contains the 22 XSDs; validation works from the nested jar | Accept (private repo); revisit before any public distribution |
+| G15 | IsSpecimen | Optional, only `"true"` | — | Not sent (comment block in `MapeamentoEfatura`); `MapeamentoEfatura.REPOSITORIO_TESTE = 3` (`RepositoryCode` 3) already marks the test | — | RepositoryCode 3 on every XML | Accept, or send `IsSpecimen=true` as an extra layer (candidate for `adjust-items`) |
+
+### Decision (to be taken by the user)
+
+Close Phase 136 with the primary-source gate (G1–G15) still pending, or keep it open?
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **close-pending** (recommended) | Phase 137 can start. All risk is confined to SIMULADO. The gate items are tracked here and in STATE.md for the real-connection milestone (EFAT-01..06) | Format correctness against the current official package remains an assumption (A1–A13) |
+| keep-open | The format is verified before anything depends on it | Blocks 137 on an external access problem, with no fiscal benefit in SIMULADO |
+| adjust-items | Applies the contabilista's or user's answers now (e.g. G6 IssueReasonCode per motivo, G11 PaymentAmount, G15 IsSpecimen) | Needs a small follow-up plan touching `MapeamentoEfatura`/`DfeXmlBuilder` and their tests |
+
+**User decision:** _pending, to be recorded by the orchestrator._
