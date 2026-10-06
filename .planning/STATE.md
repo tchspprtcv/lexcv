@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-12-PLAN.md
-last_updated: "2026-10-06T17:32:13.000Z"
-last_activity: 2026-10-06 — Completed 136-12 (fail-fast EFATURA_MODE (exactly SIMULADO or startup aborts), EfaturaProperties/EfaturaConfig with the only SimuladoEfaturaGateway + TransmissaoEfatura beans, scheduler pool 3; EFATURA_* on .env.example, three compose files, CI, DEPLOYMENT.md; 17 context-runner tests, 1170 unit tests green)
+stopped_at: Completed 136-13-PLAN.md
+last_updated: "2026-10-06T17:39:16.000Z"
+last_activity: 2026-10-06 — Completed 136-13 (ProcessadorComunicacaoFiscal per-item pipeline: snapshot -> reuse XML or IUD + DFE + XSD validation -> insert-only XML -> simulated gateway -> single mapper -> versao-guarded result -> per-episode ERRO notification; 15 mock + 4 real-format pipeline tests green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 47
-  percent: 92
+  completed_plans: 48
+  percent: 94
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 12 of 16
-Status: In progress — 136-12 complete
-Last activity: 2026-10-06 — Completed 136-12 (fail-fast EFATURA_MODE (exactly SIMULADO or startup aborts), EfaturaProperties/EfaturaConfig with the only SimuladoEfaturaGateway + TransmissaoEfatura beans, scheduler pool 3; EFATURA_* on .env.example, three compose files, CI, DEPLOYMENT.md; 17 context-runner tests, 1170 unit tests green)
+Plan: 13 of 16
+Status: In progress — 136-13 complete
+Last activity: 2026-10-06 — Completed 136-13 (ProcessadorComunicacaoFiscal per-item pipeline: snapshot -> reuse XML or IUD + DFE + XSD validation -> insert-only XML -> simulated gateway -> single mapper -> versao-guarded result -> per-episode ERRO notification; 15 mock + 4 real-format pipeline tests green)
 
 ## Performance Metrics
 
@@ -147,6 +147,7 @@ Last activity: 2026-10-06 — Completed 136-12 (fail-fast EFATURA_MODE (exactly 
 | Phase 136 P10 | ~20 min | 2 tasks | 10 files |
 | Phase 136 P11 | ~20 min | 2 tasks | 5 files |
 | Phase 136 P12 | ~30 min | 2 tasks | 11 files |
+| Phase 136 P13 | ~25 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -227,6 +228,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: EstadoComunicacaoMapper.estadoPara is the single result->state function (exhaustive AmbienteFiscal switch, no default, MAX_TENTATIVAS 8: ErroTransitorio PENDENTE for 1..7, ERRO from 8); BackoffComunicacao.atraso(1..7) = 30s,2m,5m,15m,30m,1h,3h; a source-gate test forbids AUTORIZADO/PRODUCAO identifiers in main code (literal only in the ComunicacaoFiscal @Check)
 - [Phase 136]: Fiscal pages: list column id comunicacao (badge, after Tipo) + filtro-estado labelled Comunicação with Todas + the four ESTADOS_COMUNICACAO labels (URL key estado whitelisted via the same table); detail header shows one ComunicacaoEstadoBadge + descricaoEstadoComunicacao(estado, podeReprocessarComunicacao) line, ComunicacaoFiscalCard after Valores/Notas de crédito; notice copy now says the communication goes to a simulation service; verify:documentos-fiscais (h) forbids Autorizad|Aprovad|Validado pela DNRE|Comunicado à DNRE|AUTORIZADO in the eight fiscal UI files
 - [Phase 136]: EfaturaConfig accepts only EFATURA_MODE exactly SIMULADO (trimmed, case-sensitive; REAL/PRODUCAO/simulado/blank/absent abort startup with "só SIMULADO existe"), builds the only gateway new SimuladoEfaturaGateway(validador, falhasForcadas ? SEMPRE_TRANSITORIA : NENHUMA) and TransmissaoEfatura from app.efatura.transmissao.* (invalid -> IllegalStateException naming the property); application.yml defaults EFATURA_MODE:SIMULADO + synthetic G9 values (999999999/LEXCVSIM/LexCV/3.0.0), outbox PT30S/PT20S/20/PT2M, spring.task.scheduling.pool.size 3; compose uses ${EFATURA_MODE:-SIMULADO} in docker-compose.yml, .hostinger.yml and .prod.yml
+- [Phase 136]: ProcessadorComunicacaoFiscal.processar never throws (catch Throwable around computation, result recording and notification) and has no transaction annotation; NC without FR IUD -> transient ORIGEM_SEM_IUD before DocumentoComunicavel.de; invalid XML -> REJEITADO with the validator code and no XML row; unexpected failures -> transient FALHA_INTERNA (fixed text only); notification only when registarResultado returned 1 row with ERRO, episode = reprocessamentos
 
 
 ### Pending Todos
@@ -399,8 +401,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:32:13.000Z
-Stopped at: Completed 136-12-PLAN.md
+Last session: 2026-10-06T17:39:16.000Z
+Stopped at: Completed 136-13-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
