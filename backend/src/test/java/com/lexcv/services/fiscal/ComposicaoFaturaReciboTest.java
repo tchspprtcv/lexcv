@@ -104,6 +104,28 @@ class ComposicaoFaturaReciboTest {
     }
 
     @Test
+    void firmaComMaisDe150CaracteresERecusadaAntesDeEmitir() {
+        // WR-04 (136): uma firma > 150 (gravada antes do limite da 136) daria um documento que o
+        // eFatura nunca aceita; a composição (pré-visualização e emissão) recusa-o com 422.
+        Cliente c = cliente().build();
+        ConfiguracaoFiscal cfg = cfgNormal().firma("F".repeat(151)).build();
+        RecusaFiscalException e = assertThrows(RecusaFiscalException.class, () -> ComposicaoFaturaRecibo.compor(
+                cfg, c, processo(c.getId()), 7, req("100", null, "DINHEIRO", null), HOJE, IVA));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.getStatus());
+        assertEquals("FIRMA_EXCEDE_150", e.getCodigo());
+        assertEquals("firma", e.getCampo());
+    }
+
+    @Test
+    void firmaCom150CaracteresDepoisDeNormalizarOsEspacosEAceite() {
+        Cliente c = cliente().build();
+        ConfiguracaoFiscal cfg = cfgNormal().firma("F".repeat(148) + "   G").build();
+        ProjetoFaturaRecibo projeto = ComposicaoFaturaRecibo.compor(cfg, c, processo(c.getId()), 7,
+                req("100", null, "DINHEIRO", null), HOJE, IVA);
+        assertEquals("F".repeat(148) + "   G", projeto.emitenteFirma());
+    }
+
+    @Test
     void dataIgualAHojeEAceite() {
         Cliente c = cliente().build();
         ProjetoFaturaRecibo projeto = ComposicaoFaturaRecibo.compor(cfgNormal().build(), c, processo(c.getId()), 7,

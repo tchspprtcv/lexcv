@@ -22,7 +22,8 @@ import java.time.LocalDate;
  * <p>Pura: sem Spring beans, sem base de dados, sem relógio. {@code hoje} (Cabo Verde) e a taxa de
  * IVA vigente nesse dia são calculados pelo chamador, a partir do mesmo {@code hoje}.
  *
- * <p>Ordem das verificações (a primeira falha ganha): configuração completa → valor pago → data
+ * <p>Ordem das verificações (a primeira falha ganha): configuração completa → firma do emitente
+ * (≤ 150, WR-04 da 136) → valor pago → data
  * → método → retenção → NIF, nome e morada do adquirente.
  *
  * <p>Recebe só o id do honorário, nunca a entidade: a descrição livre do honorário (sigilo
@@ -50,6 +51,8 @@ public final class ComposicaoFaturaRecibo {
             throw new RecusaFiscalException(HttpStatus.UNPROCESSABLE_ENTITY, "CONFIGURACAO_FISCAL_INCOMPLETA",
                     MSG_CONFIGURACAO_INCOMPLETA);
         }
+        // WR-04 (136): uma firma com mais de 150 caracteres nunca seria comunicada (eFatura Name).
+        ValidacaoEmissao.validarFirmaEmitente(cfg.getFirma(), false);
         BigDecimal valor = ValidacaoEmissao.normalizarValor(req.valorPago());
         LocalDate data = ValidacaoEmissao.validarData(req.dataPagamento(), hoje);
         MetodoPagamento metodo = ValidacaoEmissao.validarMetodo(req.metodo());

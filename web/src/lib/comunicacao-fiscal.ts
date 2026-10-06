@@ -33,6 +33,11 @@ const PODE_REPROCESSAR = "Pode reprocessar a comunicação.";
 const PECA_PERMISSAO = "Peça a um utilizador com permissão para reprocessar.";
 const BASE_REJEITADO = "O documento foi recusado na validação do formato.";
 const BASE_ERRO = "A comunicação falhou após várias tentativas.";
+// WR-04 (136): o documento é imutável e o reprocessamento reenvia os mesmos dados, por isso uma
+// rejeição de formato quase nunca muda ao reprocessar. A copy não pode prometer que o resolve.
+const REJEITADO_COM_PERMISSAO =
+  "Veja a última falha antes de reprocessar: se a causa estiver nos dados do documento, o resultado será o mesmo.";
+const REJEITADO_SEM_PERMISSAO = "Veja a última falha. Para reprocessar, peça a um utilizador com permissão.";
 
 /** Tabela de badges do 136-UI-SPEC (exaustiva: o compilador obriga a cobrir cada estado). */
 export const ESTADOS_COMUNICACAO: Record<EstadoComunicacaoFiscal, ApresentacaoEstadoComunicacao> = {
@@ -54,8 +59,8 @@ export const ESTADOS_COMUNICACAO: Record<EstadoComunicacaoFiscal, ApresentacaoEs
     rotulo: "Rejeitado",
     variante: "secondary",
     icone: "CircleSlash",
-    descricao: `${BASE_REJEITADO} ${PODE_REPROCESSAR}`,
-    descricaoSemPermissao: `${BASE_REJEITADO} ${PECA_PERMISSAO}`,
+    descricao: `${BASE_REJEITADO} ${REJEITADO_COM_PERMISSAO}`,
+    descricaoSemPermissao: `${BASE_REJEITADO} ${REJEITADO_SEM_PERMISSAO}`,
   },
   ERRO: {
     rotulo: "Erro",

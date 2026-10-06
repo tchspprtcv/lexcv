@@ -97,6 +97,8 @@ export type CodigoErroFaturacao =
   | "MOTIVO_NC_OBRIGATORIO"
   | "VALOR_CREDITO_INVALIDO"
   | "PAGAMENTO_ESTORNO"
+  // Phase 136 (WR-04) -- firma do emitente acima do limite do eFatura (FR e NC).
+  | "FIRMA_EXCEDE_150"
   // Phase 136 -- reprocessamento da comunicação eFatura.
   | "COMUNICACAO_ESTADO_INVALIDO"
   | "MODO_NAO_SUPORTADO";

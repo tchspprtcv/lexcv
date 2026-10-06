@@ -244,6 +244,16 @@ export function interpretarErroNotaCredito(error: unknown, fase: FaseNotaCredito
   if (code && BANNERS_DEFINITIVOS_NC[code]) {
     return { tipo: "banner", codigo: code, mensagem: BANNERS_DEFINITIVOS_NC[code], definitivo: true };
   }
+  // WR-04 (136): a FR foi emitida com uma firma > 150 que o eFatura não aceita; nenhuma nova
+  // tentativa o resolve (a firma da NC é sempre a da FR). O texto vem do backend.
+  if (code === "FIRMA_EXCEDE_150") {
+    return {
+      tipo: "banner",
+      codigo: code,
+      mensagem: mensagemDoCorpo(error.body) ?? COPY_FALLBACK_CAMPO,
+      definitivo: true,
+    };
+  }
   if (code === "DATA_EMISSAO_ALTERADA") {
     return { tipo: "banner", codigo: code, mensagem: COPY_NC_DATA, definitivo: false };
   }

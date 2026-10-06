@@ -126,6 +126,16 @@ class ComposicaoNotaCreditoTest {
         assertTrue(tot.compareTo(fr.getTotalDocumento()) <= 0, "total acumulado " + tot + " > " + fr.getTotalDocumento());
     }
 
+    @Test
+    void frComFirmaDeMaisDe150CaracteresNaoAceitaNotaDeCredito() {
+        // WR-04 (136): a NC copia a firma da FR; acima de 150 caracteres nunca seria comunicada.
+        CalculoFiscal.ResultadoCalculo c = CalculoFiscal.calcular(bd("1000.00"), RegimeIva.NORMAL, bd("15"), null);
+        DocumentoFiscal origem = documento(TipoDocumentoFiscal.FR, RegimeIva.NORMAL, c, null)
+                .emitenteFirma("F".repeat(151)).build();
+        recusa(HttpStatus.UNPROCESSABLE_ENTITY, "FIRMA_EXCEDE_150", null,
+                () -> ComposicaoNotaCredito.compor(origem, List.of(), total(), HOJE));
+    }
+
     // ------------------------------------------------------------------ vetores de referência
 
     @Test

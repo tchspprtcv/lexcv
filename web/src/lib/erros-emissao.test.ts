@@ -374,6 +374,15 @@ describe("interpretarErroNotaCredito (Phase 135, UI-SPEC Surface 1)", () => {
     });
   });
 
+  it("FIRMA_EXCEDE_150 é um banner definitivo com a mensagem do backend (WR-04 da 136)", () => {
+    expect(interpretarErroNotaCredito(erro(422, "FIRMA_EXCEDE_150", undefined, "firma longa"), "emissao")).toEqual({
+      tipo: "banner",
+      codigo: "FIRMA_EXCEDE_150",
+      mensagem: "firma longa",
+      definitivo: true,
+    });
+  });
+
   it("NC_SOBRE_NC e FATURACAO_DESLIGADA são banners definitivos", () => {
     expect(interpretarErroNotaCredito(erro(422, "NC_SOBRE_NC", undefined, "x"), "pre-visualizacao")).toEqual({
       tipo: "banner",

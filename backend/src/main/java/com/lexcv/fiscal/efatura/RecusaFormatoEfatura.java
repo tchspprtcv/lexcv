@@ -14,7 +14,13 @@ public final class RecusaFormatoEfatura extends RuntimeException {
 
     /** Códigos fixos com a respetiva mensagem em português. */
     public enum Codigo {
-        FIRMA_EXCEDE_150("A firma do escritório tem mais de 150 caracteres. Corrija os dados fiscais."),
+        /**
+         * WR-04: o documento é imutável e guarda a firma com que foi emitido, por isso nenhum
+         * reprocessamento o corrige; a mensagem não o pode sugerir. A emissão nova já é recusada
+         * ({@code ValidacaoEmissao.validarFirmaEmitente}).
+         */
+        FIRMA_EXCEDE_150("A firma do escritório tem mais de 150 caracteres. Este documento mantém a firma com que "
+                + "foi emitido e reprocessar não o corrige. Corrija os dados fiscais para os próximos documentos."),
         NUMERO_FORA_DO_LIMITE("O número do documento está fora do limite do formato eFatura."),
         TEXTO_INVALIDO("Um texto do documento não cumpre o formato eFatura."),
         /**

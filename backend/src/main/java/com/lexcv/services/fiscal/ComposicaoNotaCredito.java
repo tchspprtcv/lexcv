@@ -21,6 +21,7 @@ import java.util.List;
  * pelo chamador; as NC anteriores da FR são lidas pelo chamador sob os locks da emissão.
  *
  * <p>Ordem das verificações (a primeira falha ganha): a origem é uma FR ({@code NC_SOBRE_NC}) →
+ * firma da FR ≤ 150 ({@code FIRMA_EXCEDE_150}, WR-04 da 136) →
  * tipo → motivo → texto do motivo → valor (TOTAL sem valor; PARCIAL com valor válido) → teto
  * cumulativo ({@code NC_EXCEDE_ORIGINAL}, 409).
  *
@@ -62,6 +63,8 @@ public final class ComposicaoNotaCredito {
     public static ProjetoNotaCredito compor(DocumentoFiscal origem, List<DocumentoFiscal> notasAnteriores,
                                             NotaCreditoRequest req, LocalDate hoje) {
         ValidacaoNotaCredito.exigirFaturaRecibo(origem);
+        // WR-04 (136): a NC copia a firma da FR; acima de 150 caracteres nunca seria comunicada.
+        ValidacaoEmissao.validarFirmaEmitente(origem.getEmitenteFirma(), true);
         TipoCredito tipo = ValidacaoNotaCredito.validarTipo(req.tipo());
         MotivoNotaCredito motivo = ValidacaoNotaCredito.validarMotivo(req.motivoCodigo());
         String motivoTexto = ValidacaoNotaCredito.validarMotivoTexto(req.motivoTexto());

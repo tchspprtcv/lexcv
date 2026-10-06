@@ -50,6 +50,20 @@ public final class ValidacaoEmissao {
     public static final int LOCALIDADE_MAX = 100;
     static final String MSG_CHAVE = "Pedido sem chave de idempotência. Reabra a confirmação e tente de novo.";
 
+    /**
+     * WR-04 (136): {@code Name} do eFatura tem no máximo 150 caracteres. A firma é fotografada no
+     * documento imutável, por isso uma firma mais longa daria um documento que nunca pode ser
+     * comunicado (REJEITADO para sempre, sem reprocessamento que o corrija). Recusa-se antes.
+     */
+    public static final int FIRMA_MAX = 150;
+    public static final String CODIGO_FIRMA_EXCEDE = "FIRMA_EXCEDE_150";
+    static final String MSG_FIRMA_FR = "A firma do escritório tem mais de 150 caracteres e não cabe no formato "
+            + "eFatura. Corrija-a em Definições → Faturação e tente de novo.";
+    static final String MSG_FIRMA_NC = "A fatura-recibo de origem foi emitida com uma firma do escritório com mais "
+            + "de 150 caracteres, que não cabe no formato eFatura. Não é possível emitir uma nota de crédito "
+            + "sobre esta fatura-recibo.";
+    private static final Pattern ESPACOS = Pattern.compile("\\s+");
+
     private ValidacaoEmissao() {
     }
 
@@ -134,6 +148,24 @@ public final class ValidacaoEmissao {
         }
         if (localidade != null && localidade.trim().length() > LOCALIDADE_MAX) {
             throw recusa("ADQUIRENTE_INCOMPLETO", MSG_LOCALIDADE, "localidade");
+        }
+    }
+
+    /**
+     * WR-04 (136): a firma do emitente, com os espaços normalizados como no XML eFatura, cabe em
+     * {@value #FIRMA_MAX} caracteres. Chamada pela composição da FR (firma da configuração) e da NC
+     * (firma copiada da FR), antes de qualquer escrita.
+     *
+     * @param nc {@code true} na nota de crédito (a firma vem da FR de origem e não pode ser corrigida)
+     */
+    public static void validarFirmaEmitente(String firma, boolean nc) {
+        if (firma == null) {
+            return;
+        }
+        if (ESPACOS.matcher(firma).replaceAll(" ").trim().length() > FIRMA_MAX) {
+            throw nc
+                    ? recusa(CODIGO_FIRMA_EXCEDE, MSG_FIRMA_NC, null)
+                    : recusa(CODIGO_FIRMA_EXCEDE, MSG_FIRMA_FR, "firma");
         }
     }
 

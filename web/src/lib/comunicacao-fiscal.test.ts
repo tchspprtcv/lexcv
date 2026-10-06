@@ -55,7 +55,8 @@ describe("ESTADOS_COMUNICACAO (136-UI-SPEC, tabela de badges)", () => {
       "Aceite pelo serviço de simulação. Não foi comunicado à administração fiscal e não tem validade fiscal.",
     );
     expect(ESTADOS_COMUNICACAO.REJEITADO.descricao).toBe(
-      "O documento foi recusado na validação do formato. Pode reprocessar a comunicação.",
+      "O documento foi recusado na validação do formato. Veja a última falha antes de reprocessar: " +
+        "se a causa estiver nos dados do documento, o resultado será o mesmo.",
     );
     expect(ESTADOS_COMUNICACAO.ERRO.descricao).toBe(
       "A comunicação falhou após várias tentativas. Pode reprocessar a comunicação.",
@@ -98,12 +99,16 @@ describe("descricaoEstadoComunicacao", () => {
     expect(descricaoEstadoComunicacao("ERRO", false)).toBe(
       "A comunicação falhou após várias tentativas. Peça a um utilizador com permissão para reprocessar.",
     );
+    // WR-04 (136): REJEITADO nunca promete que reprocessar resolve (o snapshot é imutável).
     expect(descricaoEstadoComunicacao("REJEITADO", true)).toBe(
-      "O documento foi recusado na validação do formato. Pode reprocessar a comunicação.",
+      "O documento foi recusado na validação do formato. Veja a última falha antes de reprocessar: " +
+        "se a causa estiver nos dados do documento, o resultado será o mesmo.",
     );
     expect(descricaoEstadoComunicacao("REJEITADO", false)).toBe(
-      "O documento foi recusado na validação do formato. Peça a um utilizador com permissão para reprocessar.",
+      "O documento foi recusado na validação do formato. Veja a última falha. " +
+        "Para reprocessar, peça a um utilizador com permissão.",
     );
+    expect(descricaoEstadoComunicacao("REJEITADO", true)).not.toContain("Pode reprocessar");
   });
 
   it("PENDENTE e ACEITE_SIMULADO não dependem da permissão", () => {
