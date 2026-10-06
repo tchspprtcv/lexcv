@@ -27,8 +27,8 @@ Principle ("frontend burro", unchanged): the frontend NEVER derives the delivery
 
 Types/hooks (planner may rename, shape is the contract):
 - `EstadoEntregaEmail = "NAO_CONFIGURADO" | "DESLIGADO" | "SEM_EMAIL" | "PENDENTE" | "ENVIADO" | "FALHOU"`.
-- On `DocumentoFiscalDetalhe`: `entregaEmail: { estado, destinatario, tentativas, ultimaTentativaEm, proximaTentativaEm, enviadoEm, ultimoErro, reenviavel } | null`. `reenviavel` is computed by the backend (true only when estado ∈ {FALHOU, ENVIADO, SEM_EMAIL} AND SMTP is configured AND the automatic toggle is on AND the communication is `ACEITE_SIMULADO`); `DESLIGADO`, `NAO_CONFIGURADO` and `PENDENTE` are never resendable.
-- On `DocumentoFiscalResumo`: `estadoEntregaEmail: EstadoEntregaEmail | null`.
+- On `DocumentoFiscalDetalhe`: `entregaEmail: { estado, destinatario, emailDestinatario, tentativas, ultimaTentativaEm, proximaTentativaEm, enviadoEm, ultimoErro, reenviavel } | null`. `emailDestinatario` = client's current record email (used by the SEM_EMAIL send dialog; null when none). `reenviavel` is computed by the backend (true only when estado ∈ {FALHOU, ENVIADO, SEM_EMAIL} AND SMTP is configured AND the automatic toggle is on AND the communication is `ACEITE_SIMULADO`); `DESLIGADO`, `NAO_CONFIGURADO` and `PENDENTE` are never resendable.
+- On `DocumentoFiscalResumo` (mandatory field, backend must add it): `estadoEntregaEmail: EstadoEntregaEmail | null` (null only when no delivery record exists).
 - Hooks in `use-faturacao.ts`: `useReenviarEmail(documentoId)` (POST), `useDescarregarPdf()`, `useDescarregarXml()`, `useExportarMesCsv()`; gate helper `podeReenviarEmail(permissions)` = exact `hasPermission(perms, "financeiro:edit")` (NEVER `hasScopedPermission`), with a unit test mirroring `podeReprocessarComunicacao`. All read/download/export gates use the existing exact `podeLerDocumentosFiscais` (`financeiro:view`).
 
 ---
@@ -62,7 +62,7 @@ Identical to 136 (multiples of 4 only):
 | 2xl | 48px | not used |
 | 3xl | 64px | not used |
 
-Exceptions: none on the web. Controls keep primitive heights (`h-10` default; icon buttons in the table use `size="icon"` = 36px visual, with the cell giving a >= 40px row hit area, same as the existing Financeiro "Exportar CSV" icon button). PDF uses print units (mm/pt), declared in Surface 6.
+Exceptions: one, declared. Controls keep primitive heights (`h-10` default). The table PDF/XML icon buttons use the primitive `size="icon"` = 36px x 36px, accepted explicitly: it exceeds the WCAG 2.2 SC 2.5.8 (Target Size, Minimum) 24px requirement, matches the existing Financeiro "Exportar CSV" icon button, and the two buttons are separated by a 4px gap (`gap-1`). PDF uses print units (mm/pt) on a 2mm grid, declared in Surface 6.
 
 ---
 
@@ -91,7 +91,7 @@ No new tokens.
 | Dominant (60%) | `--background` #f8fafc / #020617 | Page background |
 | Secondary (30%) | `--card`; slate-100/800 borders; `bg-slate-50 dark:bg-slate-900` for read-only blocks | Cards, tables, dialogs, context blocks, notices, tab content |
 | Accent (10%) | `--primary` #2563eb / #3b82f6 | reserved list below |
-| Destructive | `text-red-600` / `dark:text-red-400` | Inline errors in dialog banners and the month field error only |
+| Destructive | `text-red-600` / `dark:text-red-400` | Inline errors in dialog banners (resend, export), the month field error, and the client-tab load error line only |
 
 Accent reserved for:
 1. The single filled primary button inside each confirm dialog: "Reenviar email" / "Enviar email" (resend dialog) and "Exportar CSV" (month dialog). All page-level triggers ("Descarregar PDF", "Descarregar XML", "Reenviar email", "Exportar mês") are `variant="outline"`.
@@ -183,7 +183,7 @@ Trigger: `Button variant="outline"`, lucide `Send` 16px `aria-hidden`. Label via
 ### 1d. Resend confirm dialog (`Dialog`, single step, same pattern as `reprocessar-comunicacao.tsx`)
 - Title: "Reenviar email" (or "Enviar email" for SEM_EMAIL).
 - Description (`text-sm text-slate-500`): "O documento será enviado ao cliente com o PDF e o XML em anexo. O envio é feito em segundo plano e o documento não é alterado."
-- Context block (`bg-slate-50 dark:bg-slate-900 rounded-md p-4`, `dl`): "Documento" número (`font-mono`), "Destinatário" (email, `break-all`; for SEM_EMAIL: "Email atual do cliente, se existir"), "Estado atual" `EntregaEmailBadge`, "Tentativas" count.
+- Context block (`bg-slate-50 dark:bg-slate-900 rounded-md p-4`, `dl`): "Documento" número (`font-mono`), "Destinatário" (`entregaEmail.destinatario`, `break-all`; for SEM_EMAIL the backend returns the client's CURRENT record email in `entregaEmail.emailDestinatario` and the row shows it, or `text-sm text-slate-600 dark:text-slate-400` "O cliente não tem email na ficha" when absent), "Estado atual" `EntregaEmailBadge`, "Tentativas" count.
 - Helpers (`text-xs text-slate-600 dark:text-slate-400`): "O contador de tentativas volta a zero." For ENVIADO add: "Este documento já foi enviado. O cliente vai receber um novo email." For SEM_EMAIL add: "Será usado o email registado agora na ficha do cliente."
 - Error banner area `role="alert"`, `text-sm text-red-600 dark:text-red-400`.
 - Footer: "Fechar sem reenviar" (outline; becomes "Fechar" after a definitive inline error) + primary "Reenviar email"/"Enviar email". Pending: "A reenviar..." / "A enviar...", both buttons disabled, Esc/overlay blocked. Close X `sr-only`: "Fechar reenvio do email". On open focus goes to the dialog title (confirm not auto-focused).
@@ -195,7 +195,7 @@ Inline errors (`ApiError {message, code, campo}`; 409/422/503 inline without toa
 |---------------|----------|------|
 | 409 `ENTREGA_ESTADO_INVALIDO` (already pending/resent elsewhere) | banner; "Fechar"; document refetched | Este email já está a ser enviado. Atualizámos o estado; verifique antes de tentar de novo. |
 | 422 `SEM_EMAIL_CLIENTE` | banner; "Fechar" | O cliente continua sem email registado. Adicione um email na ficha do cliente e tente de novo. |
-| 422 `SMTP_NAO_CONFIGURADO` | banner; "Fechar"; document refetched | O servidor de email não está configurado nesta instalação. |
+| 422 `SMTP_NAO_CONFIGURADO` | banner; "Fechar"; document refetched | O servidor de email não está configurado nesta instalação. Peça ao administrador da instalação para configurar o servidor de email. |
 | 422 `ENVIO_EMAIL_DESLIGADO` | banner; "Fechar"; document refetched | O envio automático por email está desligado nas definições de faturação. |
 | 422 `COMUNICACAO_NAO_ACEITE` | banner; "Fechar" | O documento só pode ser enviado depois de aceite na comunicação. |
 | 403 | existing `apiFetch` behaviour; dialog closes | existing copy |
@@ -207,8 +207,8 @@ Inline errors (`ApiError {message, code, campo}`; 409/422/503 inline without toa
 
 ## Surface 2 — Documents list
 
-- New column "Email" right after "Comunicação" and before "Total": `EntregaEmailBadge` from `estadoEntregaEmail`, "—" when null. Not sortable. Ships only if the list DTO carries the field (planner confirms; it is cheap to add). No new "Email" filter in this phase.
-- New last column "Ações" (header `sr-only` "Ações", `enableHiding: false`, `w-0 whitespace-nowrap text-right`): two `Button variant="ghost" size="icon"` from `DescarregarDocumentoBotoes compact`, icons `FileDown` / `FileCode` 16px, `aria-label` "Descarregar PDF de {número}" / "Descarregar XML de {número}", each wrapped in a `Tooltip` "Descarregar PDF" / "Descarregar XML". Pending: icon swaps to spinning `Loader2`, button disabled. Same toasts as 1a.
+- New column "Email" right after "Comunicação" and before "Total": `EntregaEmailBadge` from `estadoEntregaEmail`, "—" when null (document without a delivery record). Not sortable. `estadoEntregaEmail` is MANDATORY on `DocumentoFiscalResumo` (backend list DTO must carry it); the column always ships. No new "Email" filter in this phase.
+- New last column "Ações" (header `sr-only` "Ações", `enableHiding: false`, `w-0 whitespace-nowrap text-right`): two `Button variant="ghost" size="icon"` (36px, `flex gap-1` = 4px between them) from `DescarregarDocumentoBotoes compact`, icons `FileDown` / `FileCode` 16px, `aria-label` "Descarregar PDF de {número}" / "Descarregar XML de {número}", each wrapped in a `Tooltip` "Descarregar PDF" / "Descarregar XML". Pending: icon swaps to spinning `Loader2`, button disabled. Same toasts as 1a.
 - Header description (replaces 136 sentence): "Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal. Os estados de comunicação e de envio por email são atualizados em segundo plano."
 - Empty/filtered-empty/error/loading states: unchanged.
 
@@ -223,7 +223,7 @@ Inline errors (`ApiError {message, code, campo}`; 409/422/503 inline without toa
   3. Table (reuse `useDocumentosFiscais({ clienteId, page, size: 10 })`, local page state, `overflow-x-auto`). Columns: "Número" (mono link to detail; NC shows "Corrige {documentoOrigemNumero}" below, as in the list), "Data", "Tipo" (secondary badge), "Total" (right, `tabular-nums`), "Comunicação" (`ComunicacaoEstadoBadge`), "Email" (`EntregaEmailBadge`), "Ações" (`DescarregarDocumentoBotoes compact`). Pagination: existing DataTable pagination controls when > 10.
   4. Helper under the table (`text-xs text-slate-500 dark:text-slate-400`): "Os documentos fiscais não podem ser apagados nem alterados. As correções são feitas por nota de crédito."
 - NO delete, edit, upload, rename or checkbox selection; no row menu. These documents are not in the common `documentos` table and never appear in "Documentos Entregues".
-- States: loading = 3 Skeleton rows; empty = `Empty` title "Sem documentos fiscais", description "Este cliente ainda não tem faturas-recibo nem notas de crédito emitidas."; error = `text-sm text-red-600` "Não foi possível carregar os documentos fiscais deste cliente." + outline "Tentar novamente".
+- States: loading = 3 Skeleton rows; empty = `Empty` title "Sem documentos fiscais", description "Este cliente ainda não tem faturas-recibo nem notas de crédito emitidas."; error = `text-sm text-red-600 dark:text-red-400` "Não foi possível carregar os documentos fiscais deste cliente." + outline "Tentar novamente".
 
 ---
 
@@ -234,7 +234,7 @@ Inline errors (`ApiError {message, code, campo}`; 409/422/503 inline without toa
   - Title: "Exportar documentos fiscais do mês". Description: "Gera um ficheiro CSV com as faturas-recibo e notas de crédito emitidas no mês, para entregar ao contabilista."
   - Field: `Label` "Mês" + `Input type="month"` (`id="exportar-mes"`), default = previous calendar month in `Atlantic/Cape_Verde`, `max` = current month. Helper `text-xs`: "Formato para Excel: separador ponto e vírgula, vírgula decimal e datas dd/mm/aaaa. As notas de crédito aparecem com valores negativos e a última linha tem os totais. Os documentos são simulados e não têm validade fiscal."
   - Client validation (inline under the field, `text-xs text-red-600 dark:text-red-400`, `aria-describedby`): empty -> "Escolha um mês."; future -> "Escolha um mês até ao mês atual."
-  - Footer: "Cancelar" (outline) + primary "Exportar CSV" (`Download` 16px). Pending: "A exportar...", both disabled, Esc blocked.
+  - Footer: "Fechar sem exportar" (outline) + primary "Exportar CSV" (`Download` 16px). Close X `sr-only`: "Fechar exportação do mês". Pending: "A exportar...", both disabled, Esc/overlay blocked.
   - Download: `apiFetch` GET (e.g. `/faturacao/relatorios/mensal.csv?mes=2026-09`) -> Blob -> object URL; file name from `Content-Disposition` (backend: `documentos-fiscais-simulacao-2026-09.csv`). The frontend never builds or post-processes CSV content.
   - Success: dialog closes, toast "Ficheiro CSV exportado.", focus returns to the trigger. A month without documents still downloads a file (header + zero totals line); no special copy.
   - Errors (dialog banner `role="alert"`): 422 `MES_INVALIDO` -> "O mês escolhido não é válido. Escolha um mês até ao mês atual."; 503 -> "O serviço está temporariamente indisponível. Aguarde um momento e tente novamente."; network/5xx -> "Não foi possível exportar o ficheiro. Verifique a ligação e tente novamente."; 403 -> existing behaviour.
@@ -270,29 +270,31 @@ Page and type tokens (print):
 
 | Token | Value |
 |-------|-------|
-| Page | A4 portrait, `@page { size: A4; margin: 28mm 15mm 18mm 15mm; }` (top margin holds the header band) |
-| Body | DejaVu Sans 9pt / 1.4, `#111827` |
-| Small (labels, footer, notes) | 7.5pt / 1.4, `#4b5563` |
-| Section heading | 10pt bold, uppercase not used (sentence case) |
-| Document title | 16pt bold |
-| Codes (NIF, série/número, IUD) | DejaVu Sans Mono 9pt; IUD `word-break: break-all` |
-| Spacing | 4mm between blocks, 2mm inside blocks, table cell padding 1.5mm 2mm |
+| Page | A4 portrait, `@page { size: A4; margin: 28mm 16mm 16mm 16mm; }` (28mm top holds the header band: 2mm grid exception justified by the running band height ~20mm + 8mm gap) |
+| Small | 7.5pt regular / 1.4, `#4b5563` — labels, footer, notes, band line 2, IUD note; table header row uses 7.5pt bold |
+| Body | 9pt regular / 1.4, `#111827` — block content, table cells |
+| Heading | 11pt bold / 1.2 — section headings (sentence case), band line 1, emitente firma, totals block lines label "Total do documento"/"Total a crédito" and its value |
+| Title | 16pt bold / 1.2 — document type ("Fatura-Recibo" / "Nota de Crédito") |
+| Weights | 2 only: regular (400) and bold (700) |
+| Watermark | 44pt bold is a decorative graphic, not part of the text scale |
+| Codes (NIF, série/número, IUD) | DejaVu Sans Mono at the size of their role (9pt Body); IUD `word-break: break-all` |
+| Spacing (2mm grid: 2/4/8mm) | 8mm between major blocks, 4mm between related blocks and as box padding, 2mm inside blocks and as table cell padding (`2mm` all sides). Rationale: a 2mm grid is the print analogue of the web 4px scale and keeps blocks aligned across pages |
 | Lines/borders | 0.5pt `#d1d5db`; zebra rows none |
 | Colour | greyscale only (prints cleanly on B/W); no blue, green or red anywhere |
 
 Repeated on every page:
-- Header band (running element in the top margin, full content width, `background: #e5e7eb; border: 0.75pt solid #6b7280; padding: 2mm 4mm; text-align: center`): line 1, 10pt bold `#111827`: "SIMULAÇÃO — SEM VALIDADE FISCAL"; line 2, 7.5pt: "Documento emitido em ambiente de teste e comunicado a um serviço de simulação, não à administração fiscal (DNRE)."
+- Header band (running element in the top margin, full content width, `background: #e5e7eb; border: 0.75pt solid #6b7280; padding: 2mm 4mm; text-align: center`): line 1, Heading 11pt bold `#111827`: "SIMULAÇÃO — SEM VALIDADE FISCAL"; line 2, Small 7.5pt: "Documento emitido em ambiente de teste e comunicado a um serviço de simulação, não à administração fiscal (DNRE)."
 - Diagonal watermark (`position: fixed`, centred on the page, `transform: rotate(-35deg)`, DejaVu Sans bold 44pt, `color: #9ca3af; opacity: 0.18`, behind content via `z-index: -1`): "SIMULAÇÃO — SEM VALIDADE FISCAL" (one line; if the renderer cannot fit it, break after the dash into two lines).
 - Footer (bottom margin, 7.5pt `#4b5563`, `border-top: 0.5pt solid #d1d5db`): left "{tipo} {série}/{número} · Documento simulado, sem validade fiscal"; right "Página {counter(page)} de {counter(pages)}".
 
 Body order:
 1. Top row, two columns (60/40):
-   - Left "Emitente": firma (10pt bold), NIF (mono), morada, localidade; "Regime de IVA: Normal | Isento".
-   - Right document box (`border 0.75pt #6b7280; padding 3mm`): title "Fatura-Recibo" or "Nota de Crédito" (16pt bold); "Série" + "Número" (mono, e.g. `FR 2026A/000123` as stored in `numeroFormatado`); "Data de emissão" dd/mm/aaaa; "IUD" (mono, wrapping) with 7.5pt note below "Ambiente de teste — sem validade fiscal".
+   - Left "Emitente": firma (Heading 11pt bold), NIF (mono), morada, localidade; "Regime de IVA: Normal | Isento".
+   - Right document box (`border 0.75pt #6b7280; padding 4mm`): title "Fatura-Recibo" or "Nota de Crédito" (16pt bold); "Série" + "Número" (mono, e.g. `FR 2026A/000123` as stored in `numeroFormatado`); "Data de emissão" dd/mm/aaaa; "IUD" (mono, wrapping) with 7.5pt note below "Ambiente de teste — sem validade fiscal".
 2. "Adquirente" block: nome; "NIF" (mono) or the text "Consumidor final" when the snapshot has no NIF; morada when present.
 3. NC only, "Documento de origem" block: "Corrige a Fatura-Recibo {número da FR}" + "de {data da FR}"; "Motivo: {motivoRotulo}"; "Descrição: {motivoTexto}" when present.
-4. Lines table (full width; header row `background #f3f4f6`, bold 8pt): "Descrição" (left) | "Base" | "Taxa IVA" | "IVA" | "Total" (numeric columns right-aligned, `white-space: nowrap`). Exempt line: "Taxa IVA" shows "Isento", "IVA" shows "{código}". `thead` repeats on page break; rows never split (`page-break-inside: avoid`).
-5. Totals block (right-aligned, 45% width): "Base tributável"; "IVA ({taxa}%)" OR "IVA: isento"; "Retenção na fonte ({taxa}%)" as "- {valor}" only when > 0; separator; "Total do documento" 11pt bold. NC: same lines, title of the final line "Total a crédito"; amounts printed as stored (positive) — the document type conveys the credit.
+4. Lines table (full width; header row `background #f3f4f6`, Small 7.5pt bold): "Descrição" (left) | "Base" | "Taxa IVA" | "IVA" | "Total" (numeric columns right-aligned, `white-space: nowrap`). Exempt line: "Taxa IVA" shows "Isento", "IVA" shows "{código}". `thead` repeats on page break; rows never split (`page-break-inside: avoid`).
+5. Totals block (right-aligned, 45% width): "Base tributável"; "IVA ({taxa}%)" OR "IVA: isento"; "Retenção na fonte ({taxa}%)" as "- {valor}" only when > 0; separator; "Total do documento" Heading 11pt bold (other total lines Body 9pt). NC: same lines, title of the final line "Total a crédito"; amounts printed as stored (positive) — the document type conveys the credit.
 6. Exemption statement (when isento, 7.5pt): "Motivo de isenção: {código} — {descrição}."
 7. Closing note (7.5pt): "Processado por computador. Documento simulado para testes, sem validade fiscal; não substitui o documento emitido no software de faturação homologado."
 
@@ -347,6 +349,7 @@ All copy in Portuguese (Cabo Verde / pt-PT), sentence case, no emojis.
 | Badge labels | Não configurado; Desligado; Sem email do cliente; Pendente; Enviado; Falhou |
 | Resend dismiss | Fechar sem reenviar -> Fechar; X sr-only "Fechar reenvio do email" |
 | Resend pending / success | A reenviar... / A enviar... ; toast "Email colocado na fila de envio." |
+| Export dismiss | Fechar sem exportar (X sr-only "Fechar exportação do mês") |
 | Export pending / success | A exportar... ; toast "Ficheiro CSV exportado." |
 | Empty (no delivery record) | O envio por email deste documento ainda não foi registado. |
 | Empty (client tab) | Sem documentos fiscais — Este cliente ainda não tem faturas-recibo nem notas de crédito emitidas. |
@@ -359,12 +362,12 @@ Long descriptions (badge `title` + `text-xs` line under "Estado"):
 
 | Estado | Long description |
 |--------|------------------|
-| NAO_CONFIGURADO | O servidor de email não está configurado nesta instalação. O documento foi emitido normalmente, mas não é enviado por email. |
+| NAO_CONFIGURADO | O servidor de email não está configurado nesta instalação. O documento foi emitido normalmente, mas não é enviado por email. Peça ao administrador da instalação para configurar o servidor de email. |
 | DESLIGADO | O envio automático por email está desligado nas definições de faturação do escritório. |
 | SEM_EMAIL | O cliente não tem email registado. Adicione um email na ficha do cliente para poder enviar o documento. |
 | PENDENTE | O email será enviado em segundo plano, com o PDF e o XML em anexo. |
 | ENVIADO | Email enviado ao cliente com o PDF e o XML em anexo. A receção pelo cliente não é confirmada. |
-| FALHOU | O envio falhou após 5 tentativas. Pode reenviar o email. (Without exact `financeiro:edit`: "O envio falhou após 5 tentativas. Peça a um utilizador com permissão para reenviar.") |
+| FALHOU | When `podeReenviarEmail(permissions) && entregaEmail.reenviavel`: "O envio falhou após 5 tentativas. Pode reenviar o email." Otherwise: "O envio falhou após 5 tentativas." (no promise of an action the user cannot see). The list column badge `title` uses the short variant. |
 
 Rules: "Enviado" is never paraphrased as "Entregue", "Recebido" or "Lido". The 136 rule still holds: no "Autorizado/Aprovado/Validado" anywhere, including PDF and email.
 
@@ -402,6 +405,7 @@ Rules: "Enviado" is never paraphrased as "Entregue", "Recebido" or "Lido". The 1
 
 ## Decisions Made Without Asking (Claude's discretion, consistent with 136 and the codebase)
 
+- Checker revisions (2026-10-06) applied: export dismiss copy, 4-size PDF text scale, FALHOU copy keyed on gate + `reenviavel`, admin hint for SMTP not configured, SEM_EMAIL recipient field, client-tab error in destructive list, PDF 2mm grid, 36px icon targets accepted, mandatory list email field.
 - Delivery badges all neutral; only "Falhou" is `secondary`; "Enviado" is not green.
 - Resend eligibility is a backend boolean `reenviavel`; frontend adds only the exact `financeiro:edit` gate. Resend allowed for FALHOU, ENVIADO and SEM_EMAIL ("Enviar email"); never for DESLIGADO (would bypass the office's recorded opt-in), NAO_CONFIGURADO or PENDENTE.
 - No email badge added to the detail header (one state badge in the header, as in 136); the email state lives in its Card, list column and client tab.
