@@ -37,7 +37,7 @@ class DfeValidadorTest {
 
     @Test
     void exemplosOficiaisSaoValidos() throws IOException {
-        assertThat(validar(exemplo(FRE))).isEqualTo(ResultadoValidacao.valido());
+        assertThat(validar(exemplo(FRE))).isEqualTo(ResultadoValidacao.sucesso());
         assertThat(validar(exemplo(NCE)).valido()).isTrue();
     }
 
