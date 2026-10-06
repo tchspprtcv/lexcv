@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-06-PLAN.md
-last_updated: "2026-10-06T16:59:32.000Z"
-last_activity: 2026-10-06 — Completed 136-06 (outbox DB side: FilaComunicacaoFiscal cross-tenant SKIP LOCKED claim with lease + versao/tenant-guarded result, ComunicacaoFiscalTransacoes short-tx bean; FilaComunicacaoFiscalIT 13/13 on PostgreSQL)
+stopped_at: Completed 136-07-PLAN.md
+last_updated: "2026-10-06T17:04:17.000Z"
+last_activity: 2026-10-06 — Completed 136-07 (detail read side: ComunicacaoFiscalResumo (estado, ambiente, tenant-scoped IUD, tentativas, sanitised ultimoErro only REJEITADO/ERRO, proxima only PENDENTE) on GET /documentos-fiscais/{id}; surefire 1079 green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 41
-  percent: 80
+  completed_plans: 42
+  percent: 82
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 6 of 16
-Status: In progress — 136-06 complete
-Last activity: 2026-10-06 — Completed 136-06 (outbox DB side: FilaComunicacaoFiscal cross-tenant SKIP LOCKED claim with lease + versao/tenant-guarded result, ComunicacaoFiscalTransacoes short-tx bean; FilaComunicacaoFiscalIT 13/13 on PostgreSQL)
+Plan: 7 of 16
+Status: In progress — 136-07 complete
+Last activity: 2026-10-06 — Completed 136-07 (detail read side: ComunicacaoFiscalResumo (estado, ambiente, tenant-scoped IUD, tentativas, sanitised ultimoErro only REJEITADO/ERRO, proxima only PENDENTE) on GET /documentos-fiscais/{id}; surefire 1079 green)
 
 ## Performance Metrics
 
@@ -215,6 +215,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: IudGerador.gerar(repositorio, dataEmissao, nif, led, tipo, numero): CV + repo + AAMMDD + NIF + LED(5) + tipo(2) + numero(9) + SecureRandom(10) + Luhn DV, Locale.ROOT; DfeMarshaller emits UTF-8 with its own declaration (no standalone, no formatting)
 - [Phase 136]: Outbox claim is the only cross-tenant statement (FilaComunicacaoFiscal, CTE FOR UPDATE SKIP LOCKED + UPDATE RETURNING, NULL proxima_tentativa_em due, expired lease reclaimable, attempt counted at claim); every later step is bound to the claimed tenant_id; result UPDATE guarded by versao = claimed versao (lost lease -> 0 rows)
 - [Phase 136]: ComunicacaoFiscalTransacoes owns the short transactions (reclamar, carregarSnapshot readOnly, gravarXml insert-only returning the winning row, registarResultado); the processor/job has no @Transactional and never builds XML or calls the gateway inside a transaction
+- [Phase 136]: Document detail carries comunicacao = ComunicacaoFiscalResumo.de(row, iud): IUD from t_documento_fiscal_xml of the caller's tenant (looked up only when a comunicação row exists), ultimoErro only when reprocessavel, proximaTentativaEm only for PENDENTE; estadoComunicacao kept for the list
 
 
 ### Pending Todos
@@ -387,8 +388,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T16:59:32.000Z
-Stopped at: Completed 136-06-PLAN.md
+Last session: 2026-10-06T17:04:17.000Z
+Stopped at: Completed 136-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
