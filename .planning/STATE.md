@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-03-PLAN.md
-last_updated: "2026-10-05T19:17:00.000Z"
-last_activity: 2026-10-05 — Completed 136-03 (non-silenceable COMUNICACAO_FISCAL_FALHOU + NotificacaoComunicacaoFiscal: effective financeiro:manage holders, per-episode dedup, never throws; surefire 1037 green)
+stopped_at: Completed 136-04-PLAN.md
+last_updated: "2026-10-06T16:43:40.000Z"
+last_activity: 2026-10-06 — Completed 136-04 (web contracts: four communication states, lib/comunicacao-fiscal, exact financeiro:edit reprocess gate + mutation, PENDENTE-only 15 s polling, COMUNICACAO_FISCAL_FALHOU non-silenceable, firma 150; vitest 318 green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 38
-  percent: 75
+  completed_plans: 39
+  percent: 76
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 3 of 16
-Status: In progress — 136-03 complete
-Last activity: 2026-10-05 — Completed 136-03 (non-silenceable COMUNICACAO_FISCAL_FALHOU + NotificacaoComunicacaoFiscal: effective financeiro:manage holders, per-episode dedup, never throws; surefire 1037 green)
+Plan: 4 of 16
+Status: In progress — 136-04 complete
+Last activity: 2026-10-06 — Completed 136-04 (web contracts: four communication states, lib/comunicacao-fiscal, exact financeiro:edit reprocess gate + mutation, PENDENTE-only 15 s polling, COMUNICACAO_FISCAL_FALHOU non-silenceable, firma 150; vitest 318 green)
 
 ## Performance Metrics
 
@@ -210,6 +210,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: t_comunicacao_fiscal gains lease_ate, ultima_tentativa_em, ultimo_erro(500), ultimo_erro_codigo(64), concluido_em, reprocessamentos NOT NULL DEFAULT 0 (deliberate default for ddl-auto update); CHECK ck_comunicacao_fiscal_autorizado_producao (estado <> AUTORIZADO OR ambiente = PRODUCAO) with no AUTORIZADO/PRODUCAO Java constants; Hibernate never adds a CHECK to an existing table, so script 136 is required on every pre-136 install, even on update
 - [Phase 136]: t_documento_fiscal_xml is insert-only: DocumentoFiscalXmlRepository has exactly inserirSeAusente (native INSERT ... ON CONFLICT DO NOTHING without target, returns 1/0) and findByTenantIdAndDocumentoFiscalId; the row id is assigned by the caller
 - [Phase 136]: Persistent eFatura failure notification (COMUNICACAO_FISCAL_FALHOU, not silenceable) goes to active users of the tenant whose permissions, composed exactly as JwtAuthenticationFilter does (UserPrincipal.create over resolverNomesPapeis + resolverPermissoesEfectivas, so ADMIN counts), include financeiro:manage; entidadeTipo documento_fiscal, entidadeId documentoId:episodio (reprocessamentos counter); call only after the ERRO commit
+- [Phase 136]: Web reprocess gate podeReprocessarComunicacao = exact hasPermission(financeiro:edit) (manage-only hidden); detail/list poll 15 s only while PENDENTE (refetchIntervalInBackground false); lib/comunicacao-fiscal is the single estado -> label/variant/icon-key/description source with neutral 'Estado desconhecido' fallback; FIRMA_MAX 150 on the web
+
 
 ### Pending Todos
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
@@ -381,8 +383,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-05T19:17:00.000Z
-Stopped at: Completed 136-03-PLAN.md
+Last session: 2026-10-06T16:43:40.000Z
+Stopped at: Completed 136-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
