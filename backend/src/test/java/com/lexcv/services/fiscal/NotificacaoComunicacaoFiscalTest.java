@@ -34,7 +34,8 @@ import static org.mockito.Mockito.when;
 /**
  * Phase 136 (DFE-07, T-136-08..11): a falha persistente de comunicação notifica, uma vez por
  * episódio, cada utilizador ATIVO do mesmo escritório cujas permissões efetivas (as mesmas que o
- * filtro de autenticação compõe) incluem {@code financeiro:manage}; a falha de um destinatário não
+ * filtro de autenticação compõe) incluem {@code financeiro:manage} ou {@code financeiro:edit} (WR-06);
+ * a falha de um destinatário não
  * impede os outros nem chega a quem chama.
  */
 @ExtendWith(MockitoExtension.class)
@@ -75,24 +76,39 @@ class NotificacaoComunicacaoFiscalTest {
     }
 
     @Test
-    void notificaSoOsAtivosComFinanceiroManageEfetivo() {
+    void notificaSoOsAtivosComFinanceiroManageOuEditEfetivo() {
         User a = utilizador(true, Set.of("financeiro:manage"));
         User b = utilizador(true, Set.of("financeiro:view", "financeiro:edit"));
         User c = utilizador(false, Set.of("financeiro:manage"));
         User d = utilizador(null, Set.of("financeiro:manage"));
-        when(userRepository.findByTenantId(tenant)).thenReturn(List.of(a, b, c, d));
+        User e = utilizador(true, Set.of("financeiro:view", "financeiro:create"));
+        User f = utilizador(false, Set.of("financeiro:edit"));
+        when(userRepository.findByTenantId(tenant)).thenReturn(List.of(a, b, c, d, e, f));
 
         int criadas = servico.notificarFalhaPersistente(tenant, documento, NUMERO, 0);
 
-        assertEquals(1, criadas);
-        verify(notificacaoService, times(1)).criar(eq(tenant), eq(a.getId()), anyString(), anyString(), anyString(),
+        assertEquals(2, criadas);
+        for (User notificado : List.of(a, b)) {
+            verify(notificacaoService, times(1)).criar(eq(tenant), eq(notificado.getId()), anyString(), anyString(),
+                    anyString(), anyString(), anyString(), anyString());
+        }
+        for (User excluido : List.of(c, d, e, f)) {
+            verify(notificacaoService, never()).criar(any(), eq(excluido.getId()), anyString(), anyString(),
+                    anyString(), anyString(), anyString(), anyString());
+        }
+    }
+
+    /** WR-06: papel de escritório só com manage (sem edit) é notificado; o texto não lhe promete o botão. */
+    @Test
+    void papelSoComManageENotificadoComTextoNeutro() {
+        User gestor = utilizador(true, Set.of("financeiro:view", "financeiro:manage"));
+        when(userRepository.findByTenantId(tenant)).thenReturn(List.of(gestor));
+
+        assertEquals(1, servico.notificarFalhaPersistente(tenant, documento, NUMERO, 0));
+        ArgumentCaptor<String> mensagem = ArgumentCaptor.forClass(String.class);
+        verify(notificacaoService).criar(eq(tenant), eq(gestor.getId()), anyString(), anyString(), mensagem.capture(),
                 anyString(), anyString(), anyString());
-        verify(notificacaoService, never()).criar(any(), eq(b.getId()), anyString(), anyString(), anyString(),
-                anyString(), anyString(), anyString());
-        verify(notificacaoService, never()).criar(any(), eq(c.getId()), anyString(), anyString(), anyString(),
-                anyString(), anyString(), anyString());
-        verify(notificacaoService, never()).criar(any(), eq(d.getId()), anyString(), anyString(), anyString(),
-                anyString(), anyString(), anyString());
+        org.junit.jupiter.api.Assertions.assertFalse(mensagem.getValue().contains("use \"Reprocessar"));
     }
 
     /** O papel ADMIN recebe financeiro:manage no UserPrincipal (como no filtro de autenticação). */
@@ -116,7 +132,8 @@ class NotificacaoComunicacaoFiscalTest {
         verify(notificacaoService).criar(tenant, a.getId(), "COMUNICACAO_FISCAL_FALHOU",
                 "Falha na comunicação do documento SIM-FR-2026/7",
                 "A comunicação do documento SIM-FR-2026/7 falhou após várias tentativas. "
-                        + "Abra o documento e use \"Reprocessar comunicação\".",
+                        + "Abra o documento para ver a última falha; quem tem permissão pode reprocessar a "
+                        + "comunicação.",
                 "documento_fiscal", documento + ":2", "/financeiro/documentos-fiscais/" + documento);
     }
 

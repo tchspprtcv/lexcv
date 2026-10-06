@@ -68,7 +68,8 @@ import static org.mockito.Mockito.when;
  * PostgreSQL real -- emissão real (FR por {@link PagamentoFaturadoService}, NC por
  * {@link NotaCreditoService}) -> o job -> XML + IUD -> {@code ACEITE_SIMULADO}; ordem FR antes de
  * NC na mesma execução; escritórios suspensos processados; {@code ERRO} com notificação só aos
- * titulares de {@code financeiro:manage} do escritório, uma vez por episódio.
+ * titulares de {@code financeiro:manage} ou {@code financeiro:edit} (WR-06) do escritório, uma vez por
+ * episódio.
  *
  * <p>O job é chamado diretamente ({@code executarUmaVez()}), sem esperar pelo scheduler (o slice
  * JPA não ativa {@code @EnableScheduling}). {@link ResolucaoPapeisService} é simulado e devolve as
@@ -314,6 +315,8 @@ class FiscalOutboxJobIT {
         UUID gestor2 = utilizador(tenant, true, "financeiro:manage");
         UUID inativo = utilizador(tenant, false, "financeiro:manage");
         UUID leitor = utilizador(tenant, true, "financeiro:view");
+        // WR-06: quem pode reprocessar (financeiro:edit exato) também é avisado.
+        UUID editor = utilizador(tenant, true, "financeiro:view", "financeiro:edit");
         UUID outroTenant = fixtura.criarTenantComFaturacao(RegimeIva.NORMAL);
         UUID gestorOutro = utilizador(outroTenant, true, "financeiro:manage");
 
@@ -339,15 +342,16 @@ class FiscalOutboxJobIT {
         assertThat(fixtura.contarNotificacoesDe(gestor2, CATEGORIA)).isEqualTo(1);
         assertThat(fixtura.contarNotificacoesDe(inativo, CATEGORIA)).isZero();
         assertThat(fixtura.contarNotificacoesDe(leitor, CATEGORIA)).isZero();
+        assertThat(fixtura.contarNotificacoesDe(editor, CATEGORIA)).isEqualTo(1);
         assertThat(fixtura.contarNotificacoesDe(gestorOutro, CATEGORIA)).isZero();
-        assertThat(fixtura.contarNotificacoes(tenant, CATEGORIA)).isEqualTo(2);
+        assertThat(fixtura.contarNotificacoes(tenant, CATEGORIA)).isEqualTo(3);
         assertThat(fixtura.contarNotificacoes(outroTenant, CATEGORIA)).isZero();
         assertThat(jdbc.queryForObject("SELECT entidade_id FROM t_notificacao WHERE destinatario_id = ?",
                 String.class, gestor1)).isEqualTo(nc + ":0");
 
         // Nova execução: a NC está em ERRO (não é reclamada) e nada novo é criado.
         assertThat(job.executarUmaVez()).isZero();
-        assertThat(fixtura.contarNotificacoes(tenant, CATEGORIA)).isEqualTo(2);
+        assertThat(fixtura.contarNotificacoes(tenant, CATEGORIA)).isEqualTo(3);
     }
 
     @Test

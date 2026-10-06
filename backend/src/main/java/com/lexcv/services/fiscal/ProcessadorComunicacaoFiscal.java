@@ -41,7 +41,8 @@ import java.util.Optional;
  * só se for válido) -> envia pela única porta {@link EfaturaGateway} (fora de transação) -> mapeia
  * o resultado com {@link EstadoComunicacaoMapper#estadoPara} -> regista o resultado (tx curta,
  * guardada pela versão) -> se a linha passou a {@code ERRO}, notifica os titulares de
- * {@code financeiro:manage} uma vez por episódio, DEPOIS do commit do resultado.
+ * {@code financeiro:manage} ou {@code financeiro:edit} (WR-06) uma vez por episódio, DEPOIS do commit
+ * do resultado.
  *
  * <p>Sem anotações de transação: todas as transações vivem em {@link ComunicacaoFiscalTransacoes}
  * (chamadas pelo proxy), para que nenhuma envolva o XML ou o gateway.
