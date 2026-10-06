@@ -125,6 +125,17 @@ export function mostrarReprocessar(
   return comunicacao.estado === "ERRO" || comunicacao.estado === "REJEITADO";
 }
 
+/**
+ * WR-07 (136): o banner "Modo simulado" é uma divulgação de segurança, por isso falha FECHADO no
+ * sentido oposto ao do botão: aparece enquanto o estado carrega, quando o pedido falha ou quando o
+ * campo falta (ou vem vazio), e só desaparece se o backend reportar EXPLICITAMENTE outro modo (que
+ * este build nem consegue arrancar).
+ */
+export function mostrarBannerModoSimulado(modoComunicacao: string | null | undefined): boolean {
+  const modo = typeof modoComunicacao === "string" ? modoComunicacao.trim() : "";
+  return modo === "" || modo === "SIMULADO";
+}
+
 // ---------------------------------------------------------------------------------------------
 // Erros do reprocessamento (Surface 2, tabela "Inline errors").
 

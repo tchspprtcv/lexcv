@@ -309,7 +309,9 @@ async function main() {
   }
   exigeContem("detalhe", texto, "<ComunicacaoFiscalCard");
   exigeContem("lista", texto, "O estado de comunicação é atualizado em segundo plano.");
-  exigeContem("bannerModo", texto, 'modoComunicacao === "SIMULADO"');
+  // WR-07 da revisão: o banner falha fechado (mostra-se sem resposta; só some com outro modo explícito).
+  exigeContem("bannerModo", texto, "mostrarBannerModoSimulado(modoComunicacao)");
+  exigeContem("libComunicacao", texto, 'return modo === "" || modo === "SIMULADO";');
   exigeNaoContem("bannerModo", texto, "NEXT_PUBLIC");
   exigeSemPadrao(
     "badgeComunicacao",

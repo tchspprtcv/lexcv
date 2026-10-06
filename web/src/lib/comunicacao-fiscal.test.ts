@@ -21,6 +21,7 @@ import {
   intervaloAtualizacaoComunicacao,
   intervaloAtualizacaoListaComunicacao,
   interpretarErroReprocessar,
+  mostrarBannerModoSimulado,
   mostrarReprocessar,
 } from "@/lib/comunicacao-fiscal";
 
@@ -252,5 +253,15 @@ describe("podeReprocessarComunicacao (gate EXATO financeiro:edit, checker clarif
   it("o fallback do frontend diria o contrário para manage -- por isso existe o gate exato", () => {
     expect(hasScopedPermission(["financeiro:manage"], "financeiro", "edit")).toBe(true);
     expect(podeReprocessarComunicacao(["financeiro:manage"])).toBe(false);
+  });
+});
+
+describe("mostrarBannerModoSimulado (WR-07: falha fechado)", () => {
+  it.each([undefined, null, "", "  ", "SIMULADO"])("modo %s -> mostra o banner", (modo) => {
+    expect(mostrarBannerModoSimulado(modo)).toBe(true);
+  });
+
+  it.each(["PRODUCAO", "REAL"])("modo explícito %s -> não mostra", (modo) => {
+    expect(mostrarBannerModoSimulado(modo)).toBe(false);
   });
 });
