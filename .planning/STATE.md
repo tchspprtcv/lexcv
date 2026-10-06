@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-10-PLAN.md
-last_updated: "2026-10-06T17:22:18.000Z"
-last_activity: 2026-10-06 — Completed 136-10 (EfaturaGateway port + sealed ResultadoComunicacao, XSD-validating SimuladoEfaturaGateway with InjetorFalhas, EstadoComunicacaoMapper (MAX_TENTATIVAS 8, AUTORIZADO source gate), BackoffComunicacao table; 46 tests green, SpotBugs clean)
+stopped_at: Completed 136-11-PLAN.md
+last_updated: "2026-10-06T17:26:04.000Z"
+last_activity: 2026-10-06 — Completed 136-11 (Phase 136 UI wired: Comunicação column + four-state filter on the list, header badge + Comunicação fiscal card on the detail, Modo simulado banner on list/detail/honorário; verify:documentos-fiscais section (h) incl. no-authorisation-wording gate; tsc/lint/vitest 318/verify green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 45
-  percent: 88
+  completed_plans: 46
+  percent: 90
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 10 of 16
-Status: In progress — 136-10 complete
-Last activity: 2026-10-06 — Completed 136-10 (EfaturaGateway port + sealed ResultadoComunicacao, XSD-validating SimuladoEfaturaGateway with InjetorFalhas, EstadoComunicacaoMapper (MAX_TENTATIVAS 8, AUTORIZADO source gate), BackoffComunicacao table; 46 tests green, SpotBugs clean)
+Plan: 11 of 16
+Status: In progress — 136-11 complete
+Last activity: 2026-10-06 — Completed 136-11 (Phase 136 UI wired: Comunicação column + four-state filter on the list, header badge + Comunicação fiscal card on the detail, Modo simulado banner on list/detail/honorário; verify:documentos-fiscais section (h) incl. no-authorisation-wording gate; tsc/lint/vitest 318/verify green)
 
 ## Performance Metrics
 
@@ -145,6 +145,7 @@ Last activity: 2026-10-06 — Completed 136-10 (EfaturaGateway port + sealed Res
 | Phase 136 P03 | ~30 min | 2 tasks | 4 files |
 | Phase 136 P09 | ~30 min | 2 tasks | 9 files |
 | Phase 136 P10 | ~20 min | 2 tasks | 10 files |
+| Phase 136 P11 | ~20 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -223,6 +224,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: DfeXmlBuilder.construir(DocumentoComunicavel, iud, TransmissaoEfatura) is pure JAXB, normalises whitespace in every text value and throws RecusaFormatoEfatura (FIRMA_EXCEDE_150, NUMERO_FORA_DO_LIMITE, TEXTO_INVALIDO, ORIGEM_SEM_IUD) with fixed messages; DocumentoComunicavel.de refuses an NC without the FR IUD (IllegalArgumentException), so 136-13 checks iudOrigem first; motivo_texto never enters the projection; firma capped at 150 on new edits
 - [Phase 136]: All communication goes through EfaturaGateway (ambiente, comunicar(PedidoComunicacao)) with sealed ResultadoComunicacao {AceiteSimulado, Rejeitado, ErroTransitorio}; SimuladoEfaturaGateway(DfeValidador, InjetorFalhas) is a plain class (bean built by 136-12), accepts only XSD-valid XML (reference SIMULADO-<IUD>), rejects with the validator code + fixed message (line only)
 - [Phase 136]: EstadoComunicacaoMapper.estadoPara is the single result->state function (exhaustive AmbienteFiscal switch, no default, MAX_TENTATIVAS 8: ErroTransitorio PENDENTE for 1..7, ERRO from 8); BackoffComunicacao.atraso(1..7) = 30s,2m,5m,15m,30m,1h,3h; a source-gate test forbids AUTORIZADO/PRODUCAO identifiers in main code (literal only in the ComunicacaoFiscal @Check)
+- [Phase 136]: Fiscal pages: list column id comunicacao (badge, after Tipo) + filtro-estado labelled Comunicação with Todas + the four ESTADOS_COMUNICACAO labels (URL key estado whitelisted via the same table); detail header shows one ComunicacaoEstadoBadge + descricaoEstadoComunicacao(estado, podeReprocessarComunicacao) line, ComunicacaoFiscalCard after Valores/Notas de crédito; notice copy now says the communication goes to a simulation service; verify:documentos-fiscais (h) forbids Autorizad|Aprovad|Validado pela DNRE|Comunicado à DNRE|AUTORIZADO in the eight fiscal UI files
 
 
 ### Pending Todos
@@ -395,8 +397,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:22:18.000Z
-Stopped at: Completed 136-10-PLAN.md
+Last session: 2026-10-06T17:26:04.000Z
+Stopped at: Completed 136-11-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
