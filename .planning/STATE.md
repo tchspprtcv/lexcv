@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-14-PLAN.md
-last_updated: "2026-10-06T17:49:10.000Z"
-last_activity: 2026-10-06 — Completed 136-14 (manual reprocess: POST /documentos-fiscais/{id}/comunicacao/reprocessar behind exact financeiro:edit, tenant-scoped conditional reset of ERRO/REJEITADO (409 otherwise, shared 404), audit event in the same transaction; modoComunicacao on estado-emissao; ReprocessarComunicacaoIT 8 tests, 1201 unit tests green)
+stopped_at: Completed 136-15-PLAN.md
+last_updated: "2026-10-06T17:57:08.000Z"
+last_activity: 2026-10-06 — Completed 136-15 (FiscalOutboxJob (@Scheduled fixedDelay PT30S, initial PT20S, lote 20, lease PT2M, catch Throwable top + per item, no tx); FiscalOutboxJobIT 6 + FalhasForcadasIT 1 on PostgreSQL with real FR/NC emission: ACEITE_SIMULADO with XSD-valid XML + CV3 IUD, FR->NC order, suspended office, ERRO + per-episode manage-only notification; DFE-03/04/05/07 complete; 1207 unit tests green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 49
-  percent: 96
+  completed_plans: 50
+  percent: 98
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 14 of 16
-Status: In progress — 136-14 complete
-Last activity: 2026-10-06 — Completed 136-14 (manual reprocess: POST /documentos-fiscais/{id}/comunicacao/reprocessar behind exact financeiro:edit, tenant-scoped conditional reset of ERRO/REJEITADO (409 otherwise, shared 404), audit event in the same transaction; modoComunicacao on estado-emissao; ReprocessarComunicacaoIT 8 tests, 1201 unit tests green)
+Plan: 15 of 16
+Status: In progress — 136-15 complete
+Last activity: 2026-10-06 — Completed 136-15 (FiscalOutboxJob (@Scheduled fixedDelay PT30S, initial PT20S, lote 20, lease PT2M, catch Throwable top + per item, no tx); FiscalOutboxJobIT 6 + FalhasForcadasIT 1 on PostgreSQL with real FR/NC emission: ACEITE_SIMULADO with XSD-valid XML + CV3 IUD, FR->NC order, suspended office, ERRO + per-episode manage-only notification; DFE-03/04/05/07 complete; 1207 unit tests green)
 
 ## Performance Metrics
 
@@ -149,6 +149,7 @@ Last activity: 2026-10-06 — Completed 136-14 (manual reprocess: POST /document
 | Phase 136 P12 | ~30 min | 2 tasks | 11 files |
 | Phase 136 P13 | ~25 min | 2 tasks | 3 files |
 | Phase 136 P14 | ~35 min | 2 tasks | 10 files |
+| Phase 136 P15 | ~30 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: EfaturaConfig accepts only EFATURA_MODE exactly SIMULADO (trimmed, case-sensitive; REAL/PRODUCAO/simulado/blank/absent abort startup with "só SIMULADO existe"), builds the only gateway new SimuladoEfaturaGateway(validador, falhasForcadas ? SEMPRE_TRANSITORIA : NENHUMA) and TransmissaoEfatura from app.efatura.transmissao.* (invalid -> IllegalStateException naming the property); application.yml defaults EFATURA_MODE:SIMULADO + synthetic G9 values (999999999/LEXCVSIM/LexCV/3.0.0), outbox PT30S/PT20S/20/PT2M, spring.task.scheduling.pool.size 3; compose uses ${EFATURA_MODE:-SIMULADO} in docker-compose.yml, .hostinger.yml and .prod.yml
 - [Phase 136]: ProcessadorComunicacaoFiscal.processar never throws (catch Throwable around computation, result recording and notification) and has no transaction annotation; NC without FR IUD -> transient ORIGEM_SEM_IUD before DocumentoComunicavel.de; invalid XML -> REJEITADO with the validator code and no XML row; unexpected failures -> transient FALHA_INTERNA (fixed text only); notification only when registarResultado returned 1 row with ERRO, episode = reprocessamentos
 - [Phase 136]: Reprocess = ReprocessamentoComunicacaoService (@Transactional): findByIdAndTenantId (else 404 DOCUMENTO_FISCAL_NAO_ENCONTRADO), FilaComunicacaoFiscal.reporPendente conditional UPDATE WHERE tenant_id AND estado IN ('ERRO','REJEITADO') (PENDENTE, tentativas 0, due now, error/lease/concluido cleared, reprocessamentos+1), 0 rows or no row -> 409 COMUNICACAO_ESTADO_INVALIDO, audit documento_fiscal_reprocessar_comunicacao (autorNome, numeroFormatado, estadoAnterior); route exact hasAuthority('financeiro:edit'), DocumentoFiscalController now 7 handlers; EstadoEmissaoResponse.modoComunicacao = gateway ambiente, set in the controller
+- [Phase 136]: FiscalOutboxJob (jobs package) = @Scheduled(fixedDelayString ${app.efatura.outbox.intervalo:PT30S}, initialDelayString ${app.efatura.outbox.atraso-inicial:PT20S}) executar() -> executarUmaVez(): transacoes.reclamar(lote, lease) then processador.processar per item, catch Throwable top and per item, no SecurityContext/tenant iteration/@Transactional; emission services untouched (the PENDENTE row is the outbox entry); ITs call executarUmaVez() directly with ResolucaoPapeisService as @MockitoBean
 
 
 ### Pending Todos
@@ -403,8 +405,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:49:10.000Z
-Stopped at: Completed 136-14-PLAN.md
+Last session: 2026-10-06T17:57:08.000Z
+Stopped at: Completed 136-15-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
