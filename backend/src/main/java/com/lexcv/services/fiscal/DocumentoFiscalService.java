@@ -1,5 +1,6 @@
 package com.lexcv.services.fiscal;
 
+import com.lexcv.dtos.ComunicacaoFiscalResumo;
 import com.lexcv.dtos.DocumentoFiscalDetalheResponse;
 import com.lexcv.dtos.DocumentoFiscalRef;
 import com.lexcv.dtos.DocumentoFiscalResumoResponse;
@@ -7,12 +8,14 @@ import com.lexcv.exceptions.RecusaFiscalException;
 import com.lexcv.models.ComunicacaoFiscal;
 import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
+import com.lexcv.models.DocumentoFiscalXml;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.repositories.ComunicacaoFiscalRepository;
 import com.lexcv.repositories.DocumentoFiscalLigacaoClienteRepository;
 import com.lexcv.repositories.DocumentoFiscalLinhaRepository;
 import com.lexcv.repositories.DocumentoFiscalRepository;
+import com.lexcv.repositories.DocumentoFiscalXmlRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -62,15 +65,18 @@ public class DocumentoFiscalService {
     private final DocumentoFiscalLinhaRepository documentoFiscalLinhaRepository;
     private final ComunicacaoFiscalRepository comunicacaoFiscalRepository;
     private final DocumentoFiscalLigacaoClienteRepository documentoFiscalLigacaoClienteRepository;
+    private final DocumentoFiscalXmlRepository documentoFiscalXmlRepository;
 
     public DocumentoFiscalService(DocumentoFiscalRepository documentoFiscalRepository,
                                   DocumentoFiscalLinhaRepository documentoFiscalLinhaRepository,
                                   ComunicacaoFiscalRepository comunicacaoFiscalRepository,
-                                  DocumentoFiscalLigacaoClienteRepository documentoFiscalLigacaoClienteRepository) {
+                                  DocumentoFiscalLigacaoClienteRepository documentoFiscalLigacaoClienteRepository,
+                                  DocumentoFiscalXmlRepository documentoFiscalXmlRepository) {
         this.documentoFiscalRepository = documentoFiscalRepository;
         this.documentoFiscalLinhaRepository = documentoFiscalLinhaRepository;
         this.comunicacaoFiscalRepository = comunicacaoFiscalRepository;
         this.documentoFiscalLigacaoClienteRepository = documentoFiscalLigacaoClienteRepository;
+        this.documentoFiscalXmlRepository = documentoFiscalXmlRepository;
     }
 
     /**
@@ -121,6 +127,9 @@ public class DocumentoFiscalService {
      *
      * <p>Phase 135: numa FR carrega as NC emitidas sobre ela (mais recentes primeiro); numa NC
      * carrega a referência à FR de origem, sempre no mesmo tenant.
+     *
+     * <p>Phase 136 (DFE-04, DFE-06): traz o resumo da comunicação (estado, tentativas, último erro
+     * sanitizado, próxima tentativa) e o IUD do satélite XML, ambos lidos com o tenant do chamador.
      */
     @Transactional(readOnly = true)
     public DocumentoFiscalDetalheResponse detalhe(UUID tenantId, UUID id) {
@@ -129,10 +138,15 @@ public class DocumentoFiscalService {
                         "DOCUMENTO_FISCAL_NAO_ENCONTRADO", MSG_NAO_ENCONTRADO));
         List<DocumentoFiscalLinha> linhas = documentoFiscalLinhaRepository
                 .findByTenantIdAndDocumentoFiscalIdOrderByNumeroLinhaAsc(tenantId, documento.getId());
-        EstadoComunicacaoFiscal estado = comunicacaoFiscalRepository
+        ComunicacaoFiscal comunicacao = comunicacaoFiscalRepository
                 .findByTenantIdAndDocumentoFiscalId(tenantId, documento.getId())
-                .map(ComunicacaoFiscal::getEstado)
                 .orElse(null);
+        EstadoComunicacaoFiscal estado = comunicacao == null ? null : comunicacao.getEstado();
+        // Phase 136: o IUD vem do satélite XML do MESMO tenant; só se procura com comunicação.
+        ComunicacaoFiscalResumo resumo = comunicacao == null ? null : ComunicacaoFiscalResumo.de(comunicacao,
+                documentoFiscalXmlRepository.findByTenantIdAndDocumentoFiscalId(tenantId, documento.getId())
+                        .map(DocumentoFiscalXml::getIud)
+                        .orElse(null));
         DocumentoFiscalRef origem = null;
         List<DocumentoFiscal> notasCredito = List.of();
         if (documento.getTipo() == TipoDocumentoFiscal.FR) {
@@ -143,7 +157,7 @@ public class DocumentoFiscalService {
                     .map(DocumentoFiscalRef::de)
                     .orElse(null);
         }
-        return DocumentoFiscalDetalheResponse.de(documento, linhas, estado, origem, notasCredito);
+        return DocumentoFiscalDetalheResponse.de(documento, linhas, estado, origem, notasCredito, resumo);
     }
 
     /**
