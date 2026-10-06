@@ -29,11 +29,11 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  # Phase 136 (Pitfall 7): AlertasDiariosJob (06:00) + FiscalOutboxJob (~30 s) partilham o
+  # scheduler; com o valor por omissão do Boot (1) um job atrasaria o outro.
   task:
     scheduling:
       pool:
-        # Phase 136 (Pitfall 7): AlertasDiariosJob (06:00) + FiscalOutboxJob (~30 s) partilham o
-        # scheduler; com o valor por omissão do Boot (1) um job atrasaria o outro.
         size: 3
 
 app:
