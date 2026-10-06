@@ -1,5 +1,5 @@
 ---
-status: awaiting-decision
+status: passed
 phase: 136-formato-efatura-e-adaptador-simulado
 source: [136-16-PLAN.md Task 1, Task 2, Task 3]
 started: 2026-10-06T17:58:00Z
@@ -133,4 +133,4 @@ Close Phase 136 with the primary-source gate (G1–G15) still pending, or keep i
 | keep-open | The format is verified before anything depends on it | Blocks 137 on an external access problem, with no fiscal benefit in SIMULADO |
 | adjust-items | Applies the contabilista's or user's answers now (e.g. G6 IssueReasonCode per motivo, G11 PaymentAmount, G15 IsSpecimen) | Needs a small follow-up plan touching `MapeamentoEfatura`/`DfeXmlBuilder` and their tests |
 
-**User decision:** _pending, to be recorded by the orchestrator._
+**User decision (2026-10-06):** close-pending — fechar a fase com o portão G1–G15 pendente; os itens ficam registados para confirmação contra as fontes primárias (efatura.cv) e o contabilista (G6, G11, G15) no marco de ligação real (EFAT-01..06).

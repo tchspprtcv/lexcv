@@ -167,7 +167,7 @@ Plans:
 - [x] 136-13-PLAN.md — ProcessadorComunicacaoFiscal: snapshot → IUD → XML → validate → persist → gateway → state → notify on ERRO
 - [x] 136-14-PLAN.md — Reprocessar route (exact financeiro:edit, 409/404, audit) + modoComunicacao on estado-emissao + ReprocessarComunicacaoIT
 - [x] 136-15-PLAN.md — FiscalOutboxJob (@Scheduled ≈30 s) + FiscalOutboxJobIT end to end on PostgreSQL
-- [ ] 136-16-PLAN.md — Full phase gate + live UAT from the jar + G1–G15 primary-source gate decision (checkpoint)
+- [x] 136-16-PLAN.md — Full phase gate + live UAT from the jar + G1–G15 primary-source gate decision (checkpoint)
 **UI hint**: yes
 
 Notas da fase:

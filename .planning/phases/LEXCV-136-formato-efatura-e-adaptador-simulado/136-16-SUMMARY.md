@@ -113,3 +113,8 @@ None.
 
 - FOUND: 136-HUMAN-UAT.md (12 step rows PASS, 15 G rows), deferred-items.md
 - FOUND: commits 5754573, acd4dd0
+
+
+## Gate decision
+
+User decision (2026-10-06): **close-pending**. Phase 136 closed with the G1–G15 primary-source gate pending; tracked in 136-HUMAN-UAT.md and STATE.md for the real-connection milestone. DFE-01 and DFE-02 marked complete (Phase 136 scope verified live); DFE-06 stays Pending (PDF/email marking belongs to Phase 137).

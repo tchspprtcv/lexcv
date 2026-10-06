@@ -57,8 +57,8 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 
 ### Formato eFatura e Comunicação
 
-- [ ] **DFE-01**: Cada documento emitido gera o XML no formato eFatura (DFE), validado contra o esquema oficial antes de ser dado como pronto
-- [ ] **DFE-02**: Cada documento recebe um IUD de 45 caracteres com a estrutura oficial, marcado como ambiente de teste enquanto a ligação for simulada
+- [x] **DFE-01**: Cada documento emitido gera o XML no formato eFatura (DFE), validado contra o esquema oficial antes de ser dado como pronto
+- [x] **DFE-02**: Cada documento recebe um IUD de 45 caracteres com a estrutura oficial, marcado como ambiente de teste enquanto a ligação for simulada
 - [x] **DFE-03**: A comunicação com o eFatura passa por um adaptador com interface única; o modo é escolhido por configuração do deployment (no v3.0 só "simulado" existe) e um modo desconhecido impede o arranque
 - [x] **DFE-04**: Cada documento mostra o seu estado de comunicação (pendente, aceite em simulação, rejeitado, erro), atualizado em segundo plano depois da emissão, sem atrasar o registo do pagamento; falhas transitórias são retentadas automaticamente
 - [x] **DFE-05**: Utilizador com `financeiro:edit` reprocessa a comunicação de um documento em erro
@@ -157,8 +157,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NCRD-01 | Phase 135 | Complete |
 | NCRD-02 | Phase 135 | Complete |
 | NCRD-03 | Phase 135 | Complete |
-| DFE-01 | Phase 136 | Pending |
-| DFE-02 | Phase 136 | Pending |
+| DFE-01 | Phase 136 | Complete |
+| DFE-02 | Phase 136 | Complete |
 | DFE-03 | Phase 136 | Complete |
 | DFE-04 | Phase 136 | Complete |
 | DFE-05 | Phase 136 | Complete |

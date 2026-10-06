@@ -236,6 +236,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 
 
 ### Pending Todos
+- **[v3.0] Portão G1–G15 (fontes primárias eFatura) — pendente por decisão do utilizador (2026-10-06, close-pending)**: confirmar contra efatura.cv e contabilista (G6 IssueReasonCode por motivo, G11 PaymentAmount, G15 IsSpecimen) no marco de ligação real. Tabela em `.planning/phases/LEXCV-136-formato-efatura-e-adaptador-simulado/136-HUMAN-UAT.md`.
 - **[v3.0] Validação do contabilista (pendente, decisão do utilizador 2026-10-04: avançar e validar depois)** — IVA 15% incluído no valor pago, advogados fora do REMPE, retenção manual por pagamento (sugestão 20% sobre a base sem IVA), data do pagamento sempre a de hoje. Tem de estar confirmada antes de ativar faturação real a um cliente. Taxas são parâmetros (`t_parametro_fiscal`).
 - **[v3.0] UAT humano da Phase 133** — 3 itens em `.planning/phases/LEXCV-133-funda-o-fiscal/133-HUMAN-UAT.md` (adiado pelo utilizador).
 
