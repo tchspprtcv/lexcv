@@ -57,6 +57,14 @@ public class ProcessadorComunicacaoFiscal {
 
     static final String ORIGEM_SEM_IUD = "ORIGEM_SEM_IUD";
     static final String MSG_ORIGEM_SEM_IUD = "A fatura-recibo de origem ainda não foi comunicada.";
+    /**
+     * WR-05: a FR de origem terminou sem XML ({@code REJEITADO}, ou {@code ERRO} sem nunca ter
+     * produzido o XML), por isso a NC nunca obtém o IUD de origem. Definitivo para esta NC: tentar de
+     * novo até esgotar as tentativas não muda nada.
+     */
+    static final String ORIGEM_REJEITADA = "ORIGEM_REJEITADA";
+    static final String MSG_ORIGEM_REJEITADA = "A fatura-recibo de origem não foi comunicada (foi rejeitada ou "
+            + "ficou em erro). Reprocesse primeiro a fatura-recibo e depois esta nota de crédito.";
     static final String DOCUMENTO_INEXISTENTE = "DOCUMENTO_INEXISTENTE";
     static final String MSG_DOCUMENTO_INEXISTENTE = "O documento fiscal não foi encontrado.";
     static final String IUD_COLISAO = "IUD_COLISAO";
@@ -163,6 +171,9 @@ public class ProcessadorComunicacaoFiscal {
         } else {
             boolean nc = documento.getTipo() == TipoDocumentoFiscal.NC;
             if (nc && snapshot.iudOrigem().isEmpty()) {
+                if (snapshot.estadoOrigem().filter(ProcessadorComunicacaoFiscal::terminalSemXml).isPresent()) {
+                    return new ResultadoComunicacao.Rejeitado(ORIGEM_REJEITADA, MSG_ORIGEM_REJEITADA);
+                }
                 return new ResultadoComunicacao.ErroTransitorio(ORIGEM_SEM_IUD, MSG_ORIGEM_SEM_IUD);
             }
             AmbienteFiscal ambiente = documento.getAmbiente();
@@ -213,6 +224,14 @@ public class ProcessadorComunicacaoFiscal {
         }
         return gateway.comunicar(new PedidoComunicacao(item.tenantId(), item.documentoFiscalId(), item.ambiente(),
                 linhaXml.getIud(), linhaXml.getXml()));
+    }
+
+    /**
+     * WR-05: a FR já não vai ser tentada automaticamente. Só se chega aqui sem XML de origem, por isso
+     * uma FR {@code ERRO} também nunca produziu o IUD; só um reprocessamento manual da FR o pode dar.
+     */
+    private static boolean terminalSemXml(EstadoComunicacaoFiscal estado) {
+        return estado == EstadoComunicacaoFiscal.REJEITADO || estado == EstadoComunicacaoFiscal.ERRO;
     }
 
     private void notificar(ComunicacaoReclamada item, String numeroFormatado) {

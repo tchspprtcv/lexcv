@@ -281,6 +281,23 @@ class FiscalOutboxJobIT {
     }
 
     @Test
+    void ncCujaFrFoiRejeitadaERejeitadaNaPrimeiraTentativa() {
+        // WR-05: a FR REJEITADO nunca terá XML, por isso a NC não pode esperar pelo IUD de origem.
+        Fr fr = emitirFr(fixtura.criarTenantComFaturacao(RegimeIva.NORMAL));
+        UUID nc = emitirNc(fr);
+        jdbc.update("UPDATE t_comunicacao_fiscal SET estado = 'REJEITADO', ultimo_erro_codigo = 'TEXTO_INVALIDO', "
+                + "concluido_em = now() WHERE documento_fiscal_id = ?", fr.id());
+
+        assertThat(job.executarUmaVez()).isEqualTo(1);
+
+        Map<String, Object> c = fixtura.linhaComunicacao(nc);
+        assertThat(c.get("estado")).isEqualTo("REJEITADO");
+        assertThat(c.get("ultimo_erro_codigo")).isEqualTo("ORIGEM_REJEITADA");
+        assertThat(((Number) c.get("tentativas")).intValue()).isEqualTo(1);
+        assertThat(fixtura.linhaXml(nc)).isEmpty();
+    }
+
+    @Test
     void escritorioSuspensoDepoisDaEmissaoEProcessado() {
         Fr fr = emitirFr(fixtura.criarTenantComFaturacao(RegimeIva.NORMAL));
         fixtura.suspenderTenant(fr.tenantId());

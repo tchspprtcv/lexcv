@@ -224,6 +224,44 @@ class ProcessadorComunicacaoFiscalTest {
     }
 
     @Test
+    void ncCujaFrFoiRejeitada_eRejeitadaDeImediatoComOrigemRejeitada() {
+        // WR-05: a FR REJEITADO nunca terá XML; a NC não gasta 8 tentativas à espera do IUD.
+        ncComOrigemTerminalERejeitada(EstadoComunicacaoFiscal.REJEITADO);
+    }
+
+    @Test
+    void ncCujaFrFicouEmErroSemXml_eRejeitadaDeImediatoComOrigemRejeitada() {
+        ncComOrigemTerminalERejeitada(EstadoComunicacaoFiscal.ERRO);
+    }
+
+    private void ncComOrigemTerminalERejeitada(EstadoComunicacaoFiscal estadoFr) {
+        when(transacoes.carregarSnapshot(tenantId, documentoId)).thenReturn(Optional.of(new SnapshotComunicacao(
+                nc(), linha(), Optional.empty(), Optional.empty(), Optional.of("SIM-FR-2026/1"),
+                Optional.of(estadoFr))));
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        verifyNoInteractions(builder, iudGerador, gateway, notificacao);
+        verificarGravarNunca();
+        verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.REJEITADO, "ORIGEM_REJEITADA",
+                ProcessadorComunicacaoFiscal.MSG_ORIGEM_REJEITADA, null);
+    }
+
+    @Test
+    void ncCujaFrAindaEstaPendente_continuaTransitoria() {
+        when(transacoes.carregarSnapshot(tenantId, documentoId)).thenReturn(Optional.of(new SnapshotComunicacao(
+                nc(), linha(), Optional.empty(), Optional.empty(), Optional.of("SIM-FR-2026/1"),
+                Optional.of(EstadoComunicacaoFiscal.PENDENTE))));
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.PENDENTE, "ORIGEM_SEM_IUD",
+                "A fatura-recibo de origem ainda não foi comunicada.", AGORA.plus(Duration.ofSeconds(30)));
+    }
+
+    @Test
     void renovaOLeaseDoItemAntesDoEnvio() {
         snapshot(fr(), Optional.of(linhaXml("CV3-E", "<e/>")), Optional.empty(), Optional.empty());
         ComunicacaoReclamada item = item(1);
