@@ -112,4 +112,35 @@ class DfeValidadorTest {
         assertThatThrownBy(() -> new DfeValidador("xsd/bindings/efatura.xjb"))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    /** IN-05: a classificação do DOCTYPE olha para o prólogo, não para o texto localizado do parser. */
+    @Test
+    void prologoTemDoctypeEEstruturalEIgnoraComentariosEInstrucoes() {
+        assertThat(DfeValidador.prologoTemDoctype(
+                "<?xml version=\"1.0\"?>\n<!-- c -->\n<?pi x?>\n<!DOCTYPE Dfe>\n<Dfe/>"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8))).isTrue();
+        byte[] comBom = ("\uFEFF<!DOCTYPE Dfe><Dfe/>").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(DfeValidador.prologoTemDoctype(comBom)).isTrue();
+        byte[] utf16 = ("\uFEFF<!DOCTYPE Dfe><Dfe/>").getBytes(java.nio.charset.StandardCharsets.UTF_16BE);
+        assertThat(DfeValidador.prologoTemDoctype(utf16)).isTrue();
+        assertThat(DfeValidador.prologoTemDoctype(
+                "<?xml version=\"1.0\"?><Dfe><!-- <!DOCTYPE x> --></Dfe>"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8))).isFalse();
+        assertThat(DfeValidador.prologoTemDoctype("<!-- sem fim".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .isFalse();
+        assertThat(DfeValidador.prologoTemDoctype(new byte[0])).isFalse();
+    }
+
+    /** IN-05: com a JVM noutra língua, o DOCTYPE continua a ser XML_PROIBIDO. */
+    @Test
+    void doctypeEProibidoQualquerQueSejaALinguaDaJvm() throws Exception {
+        java.util.Locale anterior = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.GERMANY);
+            String comDoctype = exemplo(FRE).replaceFirst("<Dfe ", "<!DOCTYPE Dfe>\n<Dfe ");
+            assertThat(validar(comDoctype).codigo()).isEqualTo(ResultadoValidacao.XML_PROIBIDO);
+        } finally {
+            java.util.Locale.setDefault(anterior);
+        }
+    }
 }
