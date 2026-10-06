@@ -28,9 +28,11 @@ import java.util.List;
  * linha tem um só dono. O pool do scheduler tem 3 threads (136-12), por isso este job não bloqueia
  * o job diário das 06:00.
  *
- * <p><b>Isolamento:</b> um {@code catch (Throwable)} no topo de {@link #executar()} (uma exceção
- * não tratada num {@code @Scheduled} pode cancelar as execuções seguintes) e outro por item, para
- * que um item com falha nunca pare o lote. Sem anotações de transação: as transações curtas vivem
+ * <p><b>Isolamento:</b> um {@code catch (Exception)} no topo de {@link #executar()} e outro por item,
+ * para que um item com falha nunca pare o lote. IN-08 da revisão: um {@link Error} (ex.
+ * {@code OutOfMemoryError}, {@code StackOverflowError}) já não é engolido -- interrompe esta
+ * passagem e chega ao scheduler do Spring, que o regista e mantém a tarefa periódica agendada; o
+ * item interrompido fica para a próxima reclamação (limitada por WR-01). Sem anotações de transação: as transações curtas vivem
  * em {@link ComunicacaoFiscalTransacoes}.
  */
 @Component
@@ -53,7 +55,7 @@ public class FiscalOutboxJob {
     public void executar() {
         try {
             executarUmaVez();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.error("Falha inesperada na execução do job do outbox fiscal", e);
         }
     }
@@ -69,7 +71,7 @@ public class FiscalOutboxJob {
         for (ComunicacaoReclamada item : itens) {
             try {
                 processador.processar(item);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 log.error("Falha ao processar a comunicação fiscal {} (documento {})", item.id(),
                         item.documentoFiscalId(), e);
             }
@@ -87,7 +89,7 @@ public class FiscalOutboxJob {
         List<ComunicacaoReclamada> esgotadas;
         try {
             esgotadas = transacoes.encerrarEsgotadas();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.error("Falha ao encerrar as comunicações fiscais esgotadas", e);
             return;
         }
@@ -96,7 +98,7 @@ public class FiscalOutboxJob {
                     item.id(), item.documentoFiscalId());
             try {
                 processador.notificarEsgotada(item);
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 log.error("Notificação da comunicação fiscal esgotada {} não criada", item.id(), e);
             }
         }

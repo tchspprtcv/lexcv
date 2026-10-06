@@ -47,9 +47,10 @@ import java.util.Optional;
  * <p>Sem anotações de transação: todas as transações vivem em {@link ComunicacaoFiscalTransacoes}
  * (chamadas pelo proxy), para que nenhuma envolva o XML ou o gateway.
  *
- * <p>Isolamento (T-136-51): {@link #processar} nunca lança. Há um {@code catch (Throwable)} à
- * volta do cálculo (vira {@code FALHA_INTERNA}, transitório), outro à volta do registo do
- * resultado e outro à volta da notificação. Só códigos e mensagens FIXOS chegam à base de dados
+ * <p>Isolamento (T-136-51): {@link #processar} nunca lança uma {@link Exception}. Há um
+ * {@code catch (Exception)} à volta do cálculo (vira {@code FALHA_INTERNA}, transitório), outro à
+ * volta do registo do resultado e outro à volta da notificação. IN-08: um {@link Error} da JVM não
+ * é engolido (propaga para o job e o scheduler; a linha volta a ser reclamada, com o limite do WR-01). Só códigos e mensagens FIXOS chegam à base de dados
  * (T-136-48): o texto de uma exceção nunca é gravado; vai só para o log do servidor.
  */
 @Slf4j
@@ -110,7 +111,7 @@ public class ProcessadorComunicacaoFiscal {
         this.lease = lease;
     }
 
-    /** Processa um item. Nunca lança. */
+    /** Processa um item. Nunca lança uma {@link Exception} (um {@link Error} da JVM propaga; IN-08). */
     public void processar(ComunicacaoReclamada item) {
         String[] numeroFormatado = new String[1];
         ResultadoComunicacao resultado;
@@ -120,7 +121,7 @@ public class ProcessadorComunicacaoFiscal {
             log.warn("Lease perdido antes do envio do documento fiscal {}: não enviado, fica para quem o reclamou",
                     item.documentoFiscalId());
             return;
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.error("Falha interna ao comunicar o documento fiscal {} (tentativa {})",
                     item.documentoFiscalId(), item.tentativas(), e);
             resultado = new ResultadoComunicacao.ErroTransitorio(FALHA_INTERNA, MSG_FALHA_INTERNA);
@@ -134,7 +135,7 @@ public class ProcessadorComunicacaoFiscal {
                     ? clock.instant().plus(BackoffComunicacao.atraso(Math.max(1, item.tentativas())))
                     : null;
             linhas = transacoes.registarResultado(item, estado, codigo(resultado), mensagem(resultado), proxima);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.error("Resultado da comunicação do documento fiscal {} não registado", item.documentoFiscalId(), e);
             return;
         }
@@ -150,7 +151,8 @@ public class ProcessadorComunicacaoFiscal {
 
     /**
      * WR-01: notifica uma linha que o job fechou em {@code ERRO} por ter esgotado as reclamações sem
-     * resultado (ver {@link ComunicacaoFiscalTransacoes#encerrarEsgotadas}). Nunca lança.
+     * resultado (ver {@link ComunicacaoFiscalTransacoes#encerrarEsgotadas}). Nunca lança uma
+     * {@link Exception}.
      */
     public void notificarEsgotada(ComunicacaoReclamada item) {
         notificar(item, null);
@@ -244,7 +246,7 @@ public class ProcessadorComunicacaoFiscal {
             }
             notificacao.notificarFalhaPersistente(item.tenantId(), item.documentoFiscalId(), numero,
                     item.reprocessamentos());
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.error("Notificação da falha de comunicação do documento fiscal {} não criada",
                     item.documentoFiscalId(), e);
         }

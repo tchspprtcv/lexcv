@@ -459,8 +459,19 @@ class ProcessadorComunicacaoFiscalTest {
     }
 
     @Test
-    void errorDeJvm_tambemNaoPropaga() {
+    void errorDeJvm_naoEEngolido() {
+        // IN-08: só Exception vira FALHA_INTERNA; um Error da JVM propaga e nada é registado (a
+        // linha volta a ser reclamada quando o lease expirar, com o limite do WR-01).
         when(transacoes.carregarSnapshot(any(), any())).thenThrow(new StackOverflowError());
+        ComunicacaoReclamada item = item(1);
+
+        org.junit.jupiter.api.Assertions.assertThrows(StackOverflowError.class, () -> processador.processar(item));
+        verify(transacoes, never()).registarResultado(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void excecaoNaoVerificada_viraFalhaInterna() {
+        when(transacoes.carregarSnapshot(any(), any())).thenThrow(new IllegalStateException("db"));
         ComunicacaoReclamada item = item(1);
 
         assertThatCode(() -> processador.processar(item)).doesNotThrowAnyException();

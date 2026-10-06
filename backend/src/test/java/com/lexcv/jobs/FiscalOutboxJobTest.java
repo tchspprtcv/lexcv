@@ -81,11 +81,21 @@ class FiscalOutboxJobTest {
         ComunicacaoReclamada b = item();
         ComunicacaoReclamada c = item();
         when(transacoes.reclamar(anyInt(), any())).thenReturn(List.of(a, b, c));
-        doThrow(new StackOverflowError()).when(processador).processar(a);
-        doThrow(new AssertionError("x")).when(processador).processar(b);
+        doThrow(new IllegalStateException("x")).when(processador).processar(a);
+        doThrow(new RuntimeException("y")).when(processador).processar(b);
 
         assertThat(job.executarUmaVez()).isEqualTo(3);
         verify(processador).processar(c);
+    }
+
+    /** IN-08: um Error da JVM não é engolido; chega ao scheduler, que mantém a tarefa agendada. */
+    @Test
+    void errorDaJvmNumItemNaoEEngolido() {
+        ComunicacaoReclamada a = item();
+        when(transacoes.reclamar(anyInt(), any())).thenReturn(List.of(a));
+        doThrow(new StackOverflowError()).when(processador).processar(a);
+
+        org.junit.jupiter.api.Assertions.assertThrows(StackOverflowError.class, () -> job.executar());
     }
 
     @Test
@@ -123,10 +133,11 @@ class FiscalOutboxJobTest {
     }
 
     @Test
-    void errorAoReclamarTambemNaoPropaga() {
+    void errorDaJvmAoReclamarChegaAoScheduler() {
+        // IN-08: o scheduler do Spring regista o Error e mantém a tarefa periódica.
         when(transacoes.reclamar(anyInt(), any())).thenThrow(new OutOfMemoryError("simulado"));
 
-        assertThatCode(() -> job.executar()).doesNotThrowAnyException();
+        org.junit.jupiter.api.Assertions.assertThrows(OutOfMemoryError.class, () -> job.executar());
     }
 
     @Test
