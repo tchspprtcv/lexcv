@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-07-PLAN.md
-last_updated: "2026-10-06T17:04:17.000Z"
-last_activity: 2026-10-06 — Completed 136-07 (detail read side: ComunicacaoFiscalResumo (estado, ambiente, tenant-scoped IUD, tentativas, sanitised ultimoErro only REJEITADO/ERRO, proxima only PENDENTE) on GET /documentos-fiscais/{id}; surefire 1079 green)
+stopped_at: Completed 136-08-PLAN.md
+last_updated: "2026-10-06T17:07:48.000Z"
+last_activity: 2026-10-06 — Completed 136-08 (web components: neutral ComunicacaoEstadoBadge, backend-driven ModoSimuladoBanner, read-only ComunicacaoFiscalCard and isolated ReprocessarComunicacao dialog; tsc/lint/vitest 318 green)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 42
-  percent: 82
+  completed_plans: 43
+  percent: 84
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 7 of 16
-Status: In progress — 136-07 complete
-Last activity: 2026-10-06 — Completed 136-07 (detail read side: ComunicacaoFiscalResumo (estado, ambiente, tenant-scoped IUD, tentativas, sanitised ultimoErro only REJEITADO/ERRO, proxima only PENDENTE) on GET /documentos-fiscais/{id}; surefire 1079 green)
+Plan: 8 of 16
+Status: In progress — 136-08 complete
+Last activity: 2026-10-06 — Completed 136-08 (web components: neutral ComunicacaoEstadoBadge, backend-driven ModoSimuladoBanner, read-only ComunicacaoFiscalCard and isolated ReprocessarComunicacao dialog; tsc/lint/vitest 318 green)
 
 ## Performance Metrics
 
@@ -216,6 +216,7 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: Outbox claim is the only cross-tenant statement (FilaComunicacaoFiscal, CTE FOR UPDATE SKIP LOCKED + UPDATE RETURNING, NULL proxima_tentativa_em due, expired lease reclaimable, attempt counted at claim); every later step is bound to the claimed tenant_id; result UPDATE guarded by versao = claimed versao (lost lease -> 0 rows)
 - [Phase 136]: ComunicacaoFiscalTransacoes owns the short transactions (reclamar, carregarSnapshot readOnly, gravarXml insert-only returning the winning row, registarResultado); the processor/job has no @Transactional and never builds XML or calls the gateway inside a transaction
 - [Phase 136]: Document detail carries comunicacao = ComunicacaoFiscalResumo.de(row, iud): IUD from t_documento_fiscal_xml of the caller's tenant (looked up only when a comunicação row exists), ultimoErro only when reprocessavel, proximaTentativaEm only for PENDENTE; estadoComunicacao kept for the list
+- [Phase 136]: Web: ComunicacaoFiscalCard is read-only and shows the reprocess trigger only via mostrarReprocessar(podeReprocessarComunicacao, comunicacao, modoComunicacao); all reprocess mutation code lives in reprocessar-comunicacao.tsx; ModoSimuladoBanner renders only when estado-emissao reports modoComunicacao SIMULADO
 
 
 ### Pending Todos
@@ -388,8 +389,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:04:17.000Z
-Stopped at: Completed 136-07-PLAN.md
+Last session: 2026-10-06T17:07:48.000Z
+Stopped at: Completed 136-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
