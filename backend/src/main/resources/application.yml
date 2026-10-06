@@ -29,6 +29,12 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  task:
+    scheduling:
+      pool:
+        # Phase 136 (Pitfall 7): AlertasDiariosJob (06:00) + FiscalOutboxJob (~30 s) partilham o
+        # scheduler; com o valor por omissão do Boot (1) um job atrasaria o outro.
+        size: 3
 
 app:
   seed:
@@ -39,6 +45,25 @@ app:
     secret: ${JWT_SECRET}
     expiration: ${JWT_ACCESS_EXPIRATION_MS}
     refresh-expiration: ${JWT_REFRESH_EXPIRATION_MS}
+  # Phase 136 (DFE-03): adaptador eFatura. Só SIMULADO existe neste build; qualquer outro valor
+  # (REAL, minúsculas, vazio) impede o arranque (EfaturaConfig).
+  efatura:
+    modo: ${EFATURA_MODE:SIMULADO}
+    # Bloco Transmission do DFE (gate G9): valores sintéticos de teste, válidos só em SIMULADO.
+    # Substituir pelos reais (código homologado, NIF do transmissor) no milestone de ligação real.
+    transmissao:
+      nif-transmissor: ${EFATURA_TRANSMISSOR_NIF:999999999}
+      software-codigo: ${EFATURA_SOFTWARE_CODIGO:LEXCVSIM}
+      software-nome: ${EFATURA_SOFTWARE_NOME:LexCV}
+      software-versao: ${EFATURA_SOFTWARE_VERSAO:3.0.0}
+    outbox:
+      intervalo: PT30S
+      atraso-inicial: PT20S
+      lote: 20
+      lease: PT2M
+    simulado:
+      # Alavanca de teste: torna toda a comunicação simulada transitoriamente falhada (nunca um sucesso).
+      falhas-forcadas: false
 
 minio:
   endpoint: ${MINIO_ENDPOINT}
