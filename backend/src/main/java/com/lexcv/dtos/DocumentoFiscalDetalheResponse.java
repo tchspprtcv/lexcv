@@ -28,6 +28,10 @@ import java.util.UUID;
  * menos essa soma -- calculados aqui, no backend, nunca na UI. Os montantes das NC são magnitudes
  * positivas (o sinal negativo vive só no pagamento de estorno). Campos que não se aplicam ao tipo
  * do documento são nulos ({@code notasCredito} é uma lista vazia).
+ *
+ * <p>Phase 136 (DFE-04, DFE-06): {@code comunicacao} resume o estado da comunicação, as
+ * tentativas e o IUD ({@link ComunicacaoFiscalResumo}); nulo quando ainda não há linha de
+ * comunicação. {@code estadoComunicacao} mantém-se para a listagem e os clientes antigos.
  */
 public record DocumentoFiscalDetalheResponse(
         UUID id,
@@ -76,7 +80,8 @@ public record DocumentoFiscalDetalheResponse(
         String motivoTexto,
         BigDecimal totalCreditado,
         BigDecimal valorCreditavelRestante,
-        List<NotaCreditoResumo> notasCredito
+        List<NotaCreditoResumo> notasCredito,
+        ComunicacaoFiscalResumo comunicacao
 ) {
 
     /** Cópias imutáveis das listas (EI_EXPOSE_REP; mesmo idioma de {@code WorkflowResponse}). */
@@ -139,6 +144,19 @@ public record DocumentoFiscalDetalheResponse(
                                                     EstadoComunicacaoFiscal estadoOuNulo,
                                                     DocumentoFiscalRef origemOuNulo,
                                                     List<DocumentoFiscal> notasCredito) {
+        return de(d, linhas, estadoOuNulo, origemOuNulo, notasCredito, null);
+    }
+
+    /**
+     * Phase 136.
+     *
+     * @param resumoOuNulo resumo da comunicação, ou {@code null} sem linha de comunicação
+     */
+    public static DocumentoFiscalDetalheResponse de(DocumentoFiscal d, List<DocumentoFiscalLinha> linhas,
+                                                    EstadoComunicacaoFiscal estadoOuNulo,
+                                                    DocumentoFiscalRef origemOuNulo,
+                                                    List<DocumentoFiscal> notasCredito,
+                                                    ComunicacaoFiscalResumo resumoOuNulo) {
         List<DocumentoFiscal> ncs = notasCredito == null ? List.of() : notasCredito;
         boolean fr = d.getTipo() == TipoDocumentoFiscal.FR;
         BigDecimal totalCreditado = null;
@@ -196,6 +214,7 @@ public record DocumentoFiscalDetalheResponse(
                 d.getMotivoTexto(),
                 totalCreditado,
                 restante,
-                fr ? ncs.stream().map(NotaCreditoResumo::de).toList() : List.of());
+                fr ? ncs.stream().map(NotaCreditoResumo::de).toList() : List.of(),
+                resumoOuNulo);
     }
 }
