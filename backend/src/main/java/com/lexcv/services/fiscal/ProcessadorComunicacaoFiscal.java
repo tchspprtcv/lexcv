@@ -190,9 +190,8 @@ public class ProcessadorComunicacaoFiscal {
                         MapeamentoEfatura.codigoTipoIud(doc.tipo()), doc.numero());
                 dfe = builder.construir(doc, iud, transmissao);
             } catch (RecusaFormatoEfatura recusa) {
-                if (recusa.tipo() == RecusaFormatoEfatura.Codigo.ORIGEM_SEM_IUD) {
-                    return new ResultadoComunicacao.ErroTransitorio(recusa.codigo(), recusa.mensagem());
-                }
+                // IN-01: toda a recusa do builder é definitiva. A falta do IUD de origem (o único caso
+                // transitório) é tratada acima, antes de projetar o snapshot.
                 return new ResultadoComunicacao.Rejeitado(recusa.codigo(), recusa.mensagem());
             } catch (IllegalArgumentException | NullPointerException invalido) {
                 // WR-03: o snapshot é imutável, por isso um dado que a projeção, o IUD ou o builder

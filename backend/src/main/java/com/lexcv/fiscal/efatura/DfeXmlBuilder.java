@@ -106,6 +106,8 @@ public final class DfeXmlBuilder {
                 dfe.setInvoiceReceipt(fr);
             }
             case NC -> {
+                // Pré-condição da API pública (IN-01): no caminho do job, o processador já trata a
+                // falta do IUD de origem e DocumentoComunicavel.de recusa a NC sem motivo/origem.
                 if (doc.iudOrigem() == null || doc.iudOrigem().isBlank()
                         || doc.numeroFormatadoOrigem() == null || doc.motivoCodigo() == null) {
                     throw new RecusaFormatoEfatura(RecusaFormatoEfatura.Codigo.ORIGEM_SEM_IUD);

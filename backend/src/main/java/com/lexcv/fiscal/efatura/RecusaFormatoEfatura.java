@@ -2,8 +2,9 @@ package com.lexcv.fiscal.efatura;
 
 /**
  * Phase 136: o snapshot não pode ser expresso no formato eFatura. O processador (136-13) grava
- * {@link #codigo()} e {@link #mensagem()} na comunicação ({@code REJEITADO}, ou transitório para
- * {@code ORIGEM_SEM_IUD}).
+ * {@link #codigo()} e {@link #mensagem()} na comunicação, sempre como {@code REJEITADO} (IN-01: a
+ * espera pelo IUD da FR de origem é decidida pelo processador antes do builder, por isso
+ * {@code ORIGEM_SEM_IUD} só chega aqui de uma chamada direta ao builder sem origem).
  *
  * <p>A mensagem é SEMPRE o texto fixo do código, seguro para o utilizador: nunca transporta a
  * mensagem de uma causa nem valores do documento.
