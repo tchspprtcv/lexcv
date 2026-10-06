@@ -16,6 +16,8 @@ import com.lexcv.repositories.ComunicacaoFiscalRepository;
 import com.lexcv.repositories.DocumentoFiscalLigacaoClienteRepository;
 import com.lexcv.repositories.DocumentoFiscalLinhaRepository;
 import com.lexcv.repositories.DocumentoFiscalRepository;
+import com.lexcv.repositories.DocumentoFiscalXmlRepository;
+import com.lexcv.models.DocumentoFiscalXml;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -67,6 +69,7 @@ class DocumentoFiscalServiceTest {
     private DocumentoFiscalLinhaRepository linhaRepo;
     private ComunicacaoFiscalRepository comunicacaoRepo;
     private DocumentoFiscalLigacaoClienteRepository ligacaoRepo;
+    private DocumentoFiscalXmlRepository xmlRepo;
     private DocumentoFiscalService servico;
 
     @BeforeEach
@@ -75,7 +78,8 @@ class DocumentoFiscalServiceTest {
         linhaRepo = mock(DocumentoFiscalLinhaRepository.class);
         comunicacaoRepo = mock(ComunicacaoFiscalRepository.class);
         ligacaoRepo = mock(DocumentoFiscalLigacaoClienteRepository.class);
-        servico = new DocumentoFiscalService(documentoRepo, linhaRepo, comunicacaoRepo, ligacaoRepo);
+        xmlRepo = mock(DocumentoFiscalXmlRepository.class);
+        servico = new DocumentoFiscalService(documentoRepo, linhaRepo, comunicacaoRepo, ligacaoRepo, xmlRepo);
     }
 
     private DocumentoFiscal doc(long numero, Integer pagamentoId) {
@@ -229,7 +233,58 @@ class DocumentoFiscalServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
         assertEquals("DOCUMENTO_FISCAL_NAO_ENCONTRADO", e.getCodigo());
         assertEquals("Documento fiscal não encontrado.", e.getMessage());
-        verifyNoInteractions(linhaRepo, comunicacaoRepo);
+        verifyNoInteractions(linhaRepo, comunicacaoRepo, xmlRepo);
+    }
+
+    // Phase 136 (DFE-04, DFE-06): resumo da comunicação e IUD do mesmo tenant.
+
+    @Test
+    void detalheTrazOResumoDaComunicacaoComOIudDoSateliteDoMesmoTenant() {
+        DocumentoFiscal d = doc(2, 20);
+        ComunicacaoFiscal c = comunicacao(d);
+        c.setTentativas(3);
+        DocumentoFiscalXml xml = mock(DocumentoFiscalXml.class);
+        when(xml.getIud()).thenReturn("CV3260615512345679999990200000000212345678901");
+        when(documentoRepo.findByIdAndTenantId(d.getId(), tenant)).thenReturn(Optional.of(d));
+        when(comunicacaoRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId())).thenReturn(Optional.of(c));
+        when(xmlRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId())).thenReturn(Optional.of(xml));
+
+        DocumentoFiscalDetalheResponse r = servico.detalhe(tenant, d.getId());
+
+        assertNotNull(r.comunicacao());
+        assertEquals("PENDENTE", r.comunicacao().estado());
+        assertEquals("SIMULADO", r.comunicacao().ambiente());
+        assertEquals(3, r.comunicacao().tentativas());
+        assertEquals("CV3260615512345679999990200000000212345678901", r.comunicacao().iud());
+        assertEquals("PENDENTE", r.estadoComunicacao());
+        verify(xmlRepo).findByTenantIdAndDocumentoFiscalId(tenant, d.getId());
+    }
+
+    @Test
+    void detalheSemXmlAindaTemIudNulo() {
+        DocumentoFiscal d = doc(3, 30);
+        when(documentoRepo.findByIdAndTenantId(d.getId(), tenant)).thenReturn(Optional.of(d));
+        when(comunicacaoRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId()))
+                .thenReturn(Optional.of(comunicacao(d)));
+        when(xmlRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId())).thenReturn(Optional.empty());
+
+        DocumentoFiscalDetalheResponse r = servico.detalhe(tenant, d.getId());
+
+        assertNotNull(r.comunicacao());
+        assertNull(r.comunicacao().iud());
+    }
+
+    @Test
+    void detalheSemLinhaDeComunicacaoNaoTemResumoNemConsultaOXml() {
+        DocumentoFiscal d = doc(4, 40);
+        when(documentoRepo.findByIdAndTenantId(d.getId(), tenant)).thenReturn(Optional.of(d));
+        when(comunicacaoRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId())).thenReturn(Optional.empty());
+
+        DocumentoFiscalDetalheResponse r = servico.detalhe(tenant, d.getId());
+
+        assertNull(r.comunicacao());
+        assertNull(r.estadoComunicacao());
+        verifyNoInteractions(xmlRepo);
     }
 
     @Test
