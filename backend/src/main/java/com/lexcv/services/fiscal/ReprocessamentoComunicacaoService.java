@@ -9,6 +9,7 @@ import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.repositories.ComunicacaoFiscalRepository;
 import com.lexcv.repositories.DocumentoFiscalRepository;
 import com.lexcv.repositories.FilaComunicacaoFiscal;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.util.UUID;
  * próxima tentativa reutiliza o XML já gravado (mesmo IUD), se existir.
  */
 @Service
+@RequiredArgsConstructor
 public class ReprocessamentoComunicacaoService {
 
     static final String CODIGO_ESTADO_INVALIDO = "COMUNICACAO_ESTADO_INVALIDO";
@@ -39,17 +41,6 @@ public class ReprocessamentoComunicacaoService {
     private final FilaComunicacaoFiscal fila;
     private final AuditoriaFiscalService auditoria;
     private final Clock clock;
-
-    public ReprocessamentoComunicacaoService(DocumentoFiscalRepository documentoRepository,
-                                             ComunicacaoFiscalRepository comunicacaoRepository,
-                                             FilaComunicacaoFiscal fila, AuditoriaFiscalService auditoria,
-                                             Clock clock) {
-        this.documentoRepository = documentoRepository;
-        this.comunicacaoRepository = comunicacaoRepository;
-        this.fila = fila;
-        this.auditoria = auditoria;
-        this.clock = clock;
-    }
 
     @Transactional
     public ReprocessarComunicacaoResponse reprocessar(UUID tenantId, UserPrincipal autor, UUID documentoId) {
