@@ -42,6 +42,10 @@ import java.util.UUID;
  * autor, o número da NC e o número da FR de origem. O texto livre do motivo nunca é passado a este
  * serviço (pode conter dados do cliente).
  *
+ * <p>Phase 136 (DFE-05): também grava o reprocessamento manual da comunicação de um documento
+ * ({@link #ACAO_REPROCESSAR_COMUNICACAO}) -- só o nome do autor, o número e o
+ * estado anterior.
+ *
  * <p>Cada {@code registar*} é {@code @Transactional(propagation = MANDATORY)}: o evento grava na
  * mesma transação da mudança que descreve; uma recusa (exceção) faz rollback e não deixa evento.
  */
@@ -60,6 +64,7 @@ public class AuditoriaFiscalService {
     public static final String ACAO_EMAIL_DESLIGAR = "faturacao_email_desligar";
     public static final String ACAO_EMITIR = "documento_fiscal_emitir";
     public static final String ACAO_EMITIR_NC = "documento_fiscal_emitir_nc";
+    public static final String ACAO_REPROCESSAR_COMUNICACAO = "documento_fiscal_reprocessar_comunicacao";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -135,6 +140,22 @@ public class AuditoriaFiscalService {
         put(detalhe, "numeroFormatado", numeroFormatado);
         put(detalhe, "documentoOrigem", numeroOrigem);
         gravar(tenantId, autor, ACAO_EMITIR_NC, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
+    }
+
+    /**
+     * Phase 136 (DFE-05, T-136-55): evento do reprocessamento manual da comunicação de um
+     * documento, na transação do {@code ReprocessamentoComunicacaoService}. Só o nome do autor, o
+     * número formatado e o estado anterior (ERRO ou REJEITADO).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarReprocessamentoComunicacao(UUID tenantId, UserPrincipal autor, UUID documentoId,
+                                                   String numeroFormatado, String estadoAnterior) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "numeroFormatado", numeroFormatado);
+        put(detalhe, "estadoAnterior", estadoAnterior);
+        gravar(tenantId, autor, ACAO_REPROCESSAR_COMUNICACAO, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId),
+                detalhe);
     }
 
     /**

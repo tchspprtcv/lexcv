@@ -30,7 +30,7 @@ import java.util.UUID;
  * {@code tenant_id} de cada linha, e todas as instruções seguintes (snapshot, XML, resultado)
  * ficam presas a esse tenant (T-136-21).
  *
- * <p>Os dois métodos exigem uma transação já aberta (MANDATORY): só correm dentro das transações curtas de
+ * <p>Os métodos exigem uma transação já aberta (MANDATORY): só correm dentro das transações curtas de
  * {@code ComunicacaoFiscalTransacoes}, nunca à volta de construção de XML ou de chamadas ao
  * gateway.
  */
@@ -80,6 +80,27 @@ public class FilaComunicacaoFiscal {
                    versao = versao + 1,
                    updated_at = :agora
              WHERE id = :id AND tenant_id = :tenantId AND versao = :versao
+            """;
+
+    /**
+     * Phase 136-14 (DFE-05): reprocessamento manual. Só uma comunicação em ERRO ou REJEITADO do
+     * tenant indicado volta a PENDENTE, devida já, com as tentativas a zero, o erro limpo e o
+     * contador de reprocessamentos + 1 (novo episódio de falha). Qualquer outro estado -> 0 linhas.
+     */
+    private static final String SQL_REPOR_PENDENTE = """
+            UPDATE t_comunicacao_fiscal
+               SET estado = 'PENDENTE',
+                   tentativas = 0,
+                   proxima_tentativa_em = :agora,
+                   ultimo_erro = NULL,
+                   ultimo_erro_codigo = NULL,
+                   lease_ate = NULL,
+                   concluido_em = NULL,
+                   reprocessamentos = reprocessamentos + 1,
+                   versao = versao + 1,
+                   updated_at = :agora
+             WHERE tenant_id = :tenantId AND documento_fiscal_id = :documentoId
+               AND estado IN ('ERRO', 'REJEITADO')
             """;
 
     @PersistenceContext
@@ -135,6 +156,20 @@ public class FilaComunicacaoFiscal {
                 .setParameter("id", id, StandardBasicTypes.UUID)
                 .setParameter("tenantId", tenantId, StandardBasicTypes.UUID)
                 .setParameter("versao", versao, StandardBasicTypes.LONG)
+                .executeUpdate();
+    }
+
+    /**
+     * Repõe em PENDENTE a comunicação em falha de um documento do tenant. Devolve 1 se repôs, 0 se
+     * a linha não existe nesse tenant ou não está em ERRO/REJEITADO.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int reporPendente(UUID tenantId, UUID documentoFiscalId, Instant agora) {
+        return entityManager.createNativeQuery(SQL_REPOR_PENDENTE)
+                .unwrap(NativeQuery.class)
+                .setParameter("agora", agora, StandardBasicTypes.INSTANT)
+                .setParameter("tenantId", tenantId, StandardBasicTypes.UUID)
+                .setParameter("documentoId", documentoFiscalId, StandardBasicTypes.UUID)
                 .executeUpdate();
     }
 
