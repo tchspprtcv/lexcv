@@ -4,11 +4,13 @@ import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.DocumentoFiscalResumoResponse;
 import com.lexcv.dtos.NotaCreditoRequest;
 import com.lexcv.dtos.PagamentoRequest;
+import com.lexcv.fiscal.efatura.EfaturaGateway;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -47,6 +49,11 @@ import java.util.UUID;
  *       (a Nota de Crédito que a emissão vai produzir, SEM efeitos) e
  *       {@code POST /api/v1/documentos-fiscais/{id}/notas-credito} (emite a NC sobre a FR
  *       {@code id}: 201 para uma NC nova, 200 para a repetição pela chave de idempotência).</li>
+ *   <li>Phase 136 (DFE-05): {@link #reprocessarComunicacao} (POST, debaixo do documento {@code id})
+ *       repõe em PENDENTE a comunicação de um documento em ERRO ou REJEITADO (200 com
+ *       {@code {estado, tentativas}}; 409 noutro estado; o mesmo 404 do detalhe para um id
+ *       inválido ou de outro escritório). Phase 136 (DFE-06): o estado de emissão leva também
+ *       {@code modoComunicacao}, o ambiente do gateway em execução (SIMULADO).</li>
  * </ul>
  *
  * <p><b>Porque um controlador novo:</b> {@link FaturacaoController} tem um gate de CLASSE
@@ -63,7 +70,9 @@ import java.util.UUID;
  * {@code view} quando detêm {@code edit}, por isso as duas camadas concordam na prática. As duas
  * rotas da Nota de Crédito exigem a autoridade EXATA {@code financeiro:manage} (CONTEXT "Só
  * financeiro:manage"); o frontend usa {@code hasPermission(perms, "financeiro:manage")}, também
- * sem equivalências, para as duas camadas concordarem.
+ * sem equivalências, para as duas camadas concordarem. Reprocessar a comunicação exige a
+ * autoridade EXATA {@code financeiro:edit}; o frontend usa {@code podeReprocessarComunicacao}, que
+ * aplica a mesma regra exata, por isso as duas camadas concordam (regra RBAC do CLAUDE.md).
  *
  * <p><b>Tenant só do principal autenticado</b>, nunca do caminho, da query ou do corpo
  * ({@link PagamentoRequest} não tem tenant). Os parâmetros da listagem chegam como texto e são
@@ -97,6 +106,8 @@ public class DocumentoFiscalController {
     private final PreVisualizacaoFaturaService preVisualizacaoFaturaService;
     private final DocumentoFiscalService documentoFiscalService;
     private final NotaCreditoService notaCreditoService;
+    private final ReprocessamentoComunicacaoService reprocessamentoComunicacaoService;
+    private final EfaturaGateway efaturaGateway;
 
     private UserPrincipal getPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -110,7 +121,8 @@ public class DocumentoFiscalController {
     @PreAuthorize("hasAnyAuthority('financeiro:view', 'financeiro:edit')")
     @GetMapping("/faturacao/estado-emissao")
     public ResponseEntity<?> estadoEmissao() {
-        return ResponseEntity.ok(preVisualizacaoFaturaService.estadoEmissao(getTenantId()));
+        return ResponseEntity.ok(preVisualizacaoFaturaService.estadoEmissao(getTenantId())
+                .comModo(efaturaGateway.ambiente().name()));
     }
 
     @PreAuthorize("hasAuthority('financeiro:edit')")
@@ -212,6 +224,17 @@ public class DocumentoFiscalController {
         }
         ResultadoNotaCredito r = notaCreditoService.emitir(getTenantId(), getPrincipal(), origemId.get(), req);
         return ResponseEntity.status(r.novo() ? HttpStatus.CREATED : HttpStatus.OK).body(r.resposta());
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:edit')")
+    @PostMapping("/documentos-fiscais/{id}/comunicacao/reprocessar")
+    public ResponseEntity<?> reprocessarComunicacao(@PathVariable String id) {
+        Optional<UUID> documentoId = idDocumento(id);
+        if (documentoId.isEmpty()) {
+            return naoEncontrado();
+        }
+        return ResponseEntity.ok(reprocessamentoComunicacaoService.reprocessar(getTenantId(), getPrincipal(),
+                documentoId.get()));
     }
 
     /** Id do caminho como UUID, ou vazio quando não é um UUID (o chamador devolve 404 sem oráculo). */
