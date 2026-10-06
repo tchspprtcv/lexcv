@@ -24,4 +24,15 @@ public record ResultadoValidacao(boolean valido, String codigo, int linha, int c
     public static ResultadoValidacao invalido(String codigo, int linha, int coluna) {
         return new ResultadoValidacao(false, codigo, linha, coluna);
     }
+
+    /**
+     * Mensagem fixa e segura para o utilizador de um DFE fora do formato: só a linha do erro, nunca
+     * o texto do parser nem valores do documento. Única definição (IN-07), usada pelo adaptador
+     * simulado e pelo processador.
+     */
+    public static String mensagemFormato(int linha) {
+        return linha > 0
+                ? "O documento não cumpre o formato eFatura (linha " + linha + ")."
+                : "O documento não cumpre o formato eFatura.";
+    }
 }

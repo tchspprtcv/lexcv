@@ -7,7 +7,10 @@ import {
 } from "@tanstack/react-query";
 
 import { apiFetch, isApiError } from "@/lib/api";
-import { INTERVALO_ATUALIZACAO_MS, intervaloAtualizacaoComunicacao } from "@/lib/comunicacao-fiscal";
+import {
+  intervaloAtualizacaoComunicacao,
+  intervaloAtualizacaoListaComunicacao,
+} from "@/lib/comunicacao-fiscal";
 import { construirQueryDocumentosFiscais, STATUS_INLINE_EMISSAO } from "@/lib/erros-emissao";
 import { hasPermission } from "@/lib/permissions";
 
@@ -257,11 +260,9 @@ export function useDocumentosFiscais(filtros: DocumentosFiscaisFiltros, enabled:
     enabled: enabled && typeof window !== "undefined",
     placeholderData: keepPreviousData,
     staleTime: 15_000,
-    // Phase 136: atualiza a cada 15 s só enquanto alguma linha visível está PENDENTE.
-    refetchInterval: (query) =>
-      query.state.data?.content?.some((linha) => linha.estadoComunicacao === "PENDENTE")
-        ? INTERVALO_ATUALIZACAO_MS
-        : false,
+    // Phase 136: atualiza a cada 15 s só enquanto alguma linha visível está PENDENTE (regra única
+    // da lib, testada; IN-07 da revisão).
+    refetchInterval: (query) => intervaloAtualizacaoListaComunicacao(query.state.data?.content),
     refetchIntervalInBackground: false,
   });
 }

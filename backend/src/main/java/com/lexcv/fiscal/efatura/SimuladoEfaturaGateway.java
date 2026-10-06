@@ -45,13 +45,6 @@ public final class SimuladoEfaturaGateway implements EfaturaGateway {
         if (r.valido()) {
             return new ResultadoComunicacao.AceiteSimulado(PREFIXO_REFERENCIA + pedido.iud());
         }
-        return new ResultadoComunicacao.Rejeitado(r.codigo(), mensagemFormato(r.linha()));
-    }
-
-    /** Mensagem fixa; só a linha do erro (nunca o texto do parser nem valores do documento). */
-    static String mensagemFormato(int linha) {
-        return linha > 0
-                ? "O documento não cumpre o formato eFatura (linha " + linha + ")."
-                : "O documento não cumpre o formato eFatura.";
+        return new ResultadoComunicacao.Rejeitado(r.codigo(), ResultadoValidacao.mensagemFormato(r.linha()));
     }
 }

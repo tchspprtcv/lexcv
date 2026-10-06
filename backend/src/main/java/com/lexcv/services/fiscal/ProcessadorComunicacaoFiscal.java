@@ -206,7 +206,7 @@ public class ProcessadorComunicacaoFiscal {
             ResultadoValidacao validacao = validador.validar(xml);
             if (!validacao.valido()) {
                 String codigo = validacao.codigo() != null ? validacao.codigo() : ResultadoValidacao.XSD_INVALIDO;
-                return new ResultadoComunicacao.Rejeitado(codigo, mensagemFormato(validacao.linha()));
+                return new ResultadoComunicacao.Rejeitado(codigo, ResultadoValidacao.mensagemFormato(validacao.linha()));
             }
             Optional<DocumentoFiscalXml> gravada = transacoes.gravarXml(item.tenantId(), item.documentoFiscalId(),
                     iud, ambiente, MapeamentoEfatura.repositorioPara(ambiente), MapeamentoEfatura.ledPara(ambiente),
@@ -273,13 +273,6 @@ public class ProcessadorComunicacaoFiscal {
             case ResultadoComunicacao.Rejeitado r -> r.mensagem();
             case ResultadoComunicacao.ErroTransitorio e -> e.mensagem();
         };
-    }
-
-    /** Mesma mensagem fixa do adaptador simulado: só a linha do erro, nunca o texto do parser. */
-    static String mensagemFormato(int linha) {
-        return linha > 0
-                ? "O documento não cumpre o formato eFatura (linha " + linha + ")."
-                : "O documento não cumpre o formato eFatura.";
     }
 
     static String sha256Hex(byte[] bytes) {
