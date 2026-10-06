@@ -165,7 +165,7 @@ Plans:
 - [x] 136-11-PLAN.md — Wire list/detail/honorário pages (column, filter, card, banner) + verify:documentos-fiscais Phase 136 gate
 - [x] 136-12-PLAN.md — EFATURA_MODE fail-fast config, transmission properties, scheduler pool 3; .env.example, three compose files, deploy.yml
 - [x] 136-13-PLAN.md — ProcessadorComunicacaoFiscal: snapshot → IUD → XML → validate → persist → gateway → state → notify on ERRO
-- [ ] 136-14-PLAN.md — Reprocessar route (exact financeiro:edit, 409/404, audit) + modoComunicacao on estado-emissao + ReprocessarComunicacaoIT
+- [x] 136-14-PLAN.md — Reprocessar route (exact financeiro:edit, 409/404, audit) + modoComunicacao on estado-emissao + ReprocessarComunicacaoIT
 - [ ] 136-15-PLAN.md — FiscalOutboxJob (@Scheduled ≈30 s) + FiscalOutboxJobIT end to end on PostgreSQL
 - [ ] 136-16-PLAN.md — Full phase gate + live UAT from the jar + G1–G15 primary-source gate decision (checkpoint)
 **UI hint**: yes
@@ -253,7 +253,7 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
 | 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
 | 135. Nota de Crédito | 13/13 | In progress | - |
-| 136. Formato eFatura e Adaptador Simulado | 13/16 | In progress | - |
+| 136. Formato eFatura e Adaptador Simulado | 14/16 | In progress | - |
 | 137. PDF, Armazenamento, Email e Relatório | 0/TBD | Not started | - |
 | 138. Plataforma como Emitente | 0/TBD | Not started | - |
 | 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |
