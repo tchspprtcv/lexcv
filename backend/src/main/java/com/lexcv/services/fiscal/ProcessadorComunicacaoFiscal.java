@@ -168,20 +168,30 @@ public class ProcessadorComunicacaoFiscal {
             AmbienteFiscal ambiente = documento.getAmbiente();
             byte[] xml;
             String iud;
+            Dfe dfe;
             try {
                 DocumentoComunicavel doc = DocumentoComunicavel.de(documento, snapshot.linha(),
                         snapshot.iudOrigem().orElse(null), nc ? snapshot.numeroFormatadoOrigem().orElse(null) : null);
+                DfeXmlBuilder.verificarNumero(doc.numero());
                 iud = iudGerador.gerar(MapeamentoEfatura.repositorioPara(ambiente), doc.dataEmissao(),
                         doc.emitenteNif(), MapeamentoEfatura.ledPara(ambiente),
                         MapeamentoEfatura.codigoTipoIud(doc.tipo()), doc.numero());
-                Dfe dfe = builder.construir(doc, iud, transmissao);
-                xml = marshaller.marshal(dfe);
+                dfe = builder.construir(doc, iud, transmissao);
             } catch (RecusaFormatoEfatura recusa) {
                 if (recusa.tipo() == RecusaFormatoEfatura.Codigo.ORIGEM_SEM_IUD) {
                     return new ResultadoComunicacao.ErroTransitorio(recusa.codigo(), recusa.mensagem());
                 }
                 return new ResultadoComunicacao.Rejeitado(recusa.codigo(), recusa.mensagem());
+            } catch (IllegalArgumentException | NullPointerException invalido) {
+                // WR-03: o snapshot é imutável, por isso um dado que a projeção, o IUD ou o builder
+                // recusam nunca passa numa nova tentativa: REJEITADO de imediato, código fixo. As
+                // mensagens destas exceções são textos fixos do nosso código (sem valores do documento).
+                log.warn("Snapshot do documento fiscal {} não exprimível em eFatura: {}", item.documentoFiscalId(),
+                        invalido.getMessage());
+                RecusaFormatoEfatura.Codigo codigo = RecusaFormatoEfatura.Codigo.DADOS_INVALIDOS;
+                return new ResultadoComunicacao.Rejeitado(codigo.name(), codigo.mensagem());
             }
+            xml = marshaller.marshal(dfe);
             ResultadoValidacao validacao = validador.validar(xml);
             if (!validacao.valido()) {
                 String codigo = validacao.codigo() != null ? validacao.codigo() : ResultadoValidacao.XSD_INVALIDO;

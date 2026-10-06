@@ -70,9 +70,7 @@ public final class DfeXmlBuilder {
         Objects.requireNonNull(iud, "iud");
         Objects.requireNonNull(transmissao, "transmissao");
 
-        if (doc.numero() < 1 || doc.numero() > MapeamentoEfatura.MAX_NUMERO) {
-            throw new RecusaFormatoEfatura(RecusaFormatoEfatura.Codigo.NUMERO_FORA_DO_LIMITE);
-        }
+        verificarNumero(doc.numero());
         String firma = norm(doc.emitenteFirma());
         if (firma != null && firma.length() > MapeamentoEfatura.MAX_NOME) {
             throw new RecusaFormatoEfatura(RecusaFormatoEfatura.Codigo.FIRMA_EXCEDE_150);
@@ -131,6 +129,18 @@ public final class DfeXmlBuilder {
         dfe.setTransmission(transmissao(transmissao));
         dfe.setRepositoryCode(BigInteger.valueOf(MapeamentoEfatura.repositorioPara(doc.ambiente())));
         return dfe;
+    }
+
+    /**
+     * WR-03: recusa um número fora de {@code 1..MAX_NUMERO}. Público porque o processador o chama
+     * ANTES de gerar o IUD (o gerador também recusaria o número, mas como erro genérico).
+     *
+     * @throws RecusaFormatoEfatura {@code NUMERO_FORA_DO_LIMITE}
+     */
+    public static void verificarNumero(long numero) {
+        if (numero < 1 || numero > MapeamentoEfatura.MAX_NUMERO) {
+            throw new RecusaFormatoEfatura(RecusaFormatoEfatura.Codigo.NUMERO_FORA_DO_LIMITE);
+        }
     }
 
     // ---- partes ----

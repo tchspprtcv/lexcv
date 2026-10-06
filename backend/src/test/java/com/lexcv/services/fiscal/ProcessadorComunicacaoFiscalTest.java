@@ -109,10 +109,14 @@ class ProcessadorComunicacaoFiscalTest {
     }
 
     private DocumentoFiscal documento(TipoDocumentoFiscal tipo, UUID origem, MotivoNotaCredito motivo) {
+        return documento(tipo, origem, motivo, 7L);
+    }
+
+    private DocumentoFiscal documento(TipoDocumentoFiscal tipo, UUID origem, MotivoNotaCredito motivo, long numero) {
         String serie = tipo == TipoDocumentoFiscal.FR ? "SIM-FR-2026" : "SIM-NC-2026";
         return DocumentoFiscal.builder()
                 .id(documentoId).tenantId(tenantId).tipo(tipo).ambiente(AmbienteFiscal.SIMULADO)
-                .serieCodigo(serie).ano(2026).numero(7L).numeroFormatado(serie + "/7")
+                .serieCodigo(serie).ano(2026).numero(numero).numeroFormatado(serie + "/" + numero)
                 .dataEmissao(DATA).emitidoEm(Instant.parse("2026-06-15T12:34:56Z"))
                 .emitenteNif(NIF).emitenteFirma("Silva & Associados").emitenteMorada("Avenida, 1")
                 .emitenteLocalidade("Praia").emitenteRegimeIva(RegimeIva.NORMAL)
@@ -292,6 +296,47 @@ class ProcessadorComunicacaoFiscalTest {
         verifyNoInteractions(gateway);
         verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.REJEITADO, "FIRMA_EXCEDE_150",
                 RecusaFormatoEfatura.Codigo.FIRMA_EXCEDE_150.mensagem(), null);
+    }
+
+    @Test
+    void dadoQueOIudRecusa_eRejeitadoDadosInvalidosSemNovaTentativa() {
+        snapshot(fr(), Optional.empty(), Optional.empty(), Optional.empty());
+        when(iudGerador.gerar(anyInt(), any(), anyString(), anyInt(), anyInt(), anyLong()))
+                .thenThrow(new IllegalArgumentException("NIF inválido para o IUD"));
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        verificarGravarNunca();
+        verifyNoInteractions(gateway, builder);
+        verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.REJEITADO, "DADOS_INVALIDOS",
+                RecusaFormatoEfatura.Codigo.DADOS_INVALIDOS.mensagem(), null);
+    }
+
+    @Test
+    void ncSemMotivo_eRejeitadoDadosInvalidos() {
+        snapshot(documento(TipoDocumentoFiscal.NC, UUID.randomUUID(), null), Optional.empty(),
+                Optional.of("CV3-ORIGEM"), Optional.of("SIM-FR-2026/1"));
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        verifyNoInteractions(gateway, builder, iudGerador);
+        verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.REJEITADO, "DADOS_INVALIDOS",
+                RecusaFormatoEfatura.Codigo.DADOS_INVALIDOS.mensagem(), null);
+    }
+
+    @Test
+    void numeroAcimaDoLimite_eRejeitadoNumeroForaDoLimiteAntesDoIud() {
+        DocumentoFiscal d = documento(TipoDocumentoFiscal.FR, null, null, 1_000_000_000L);
+        snapshot(d, Optional.empty(), Optional.empty(), Optional.empty());
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        verifyNoInteractions(gateway, builder, iudGerador);
+        verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.REJEITADO, "NUMERO_FORA_DO_LIMITE",
+                RecusaFormatoEfatura.Codigo.NUMERO_FORA_DO_LIMITE.mensagem(), null);
     }
 
     @Test
