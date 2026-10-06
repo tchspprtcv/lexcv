@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-09-PLAN.md
-last_updated: "2026-10-06T17:17:57.000Z"
-last_activity: 2026-10-06 — Completed 136-09 (snapshot → DFE mapping: MapeamentoEfatura single format table, DocumentoComunicavel projection, DfeXmlBuilder FR/NC validated against the XSD, firma ≤ 150; 27 new tests green, SpotBugs clean)
+stopped_at: Completed 136-10-PLAN.md
+last_updated: "2026-10-06T17:22:18.000Z"
+last_activity: 2026-10-06 — Completed 136-10 (EfaturaGateway port + sealed ResultadoComunicacao, XSD-validating SimuladoEfaturaGateway with InjetorFalhas, EstadoComunicacaoMapper (MAX_TENTATIVAS 8, AUTORIZADO source gate), BackoffComunicacao table; 46 tests green, SpotBugs clean)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 44
-  percent: 86
+  completed_plans: 45
+  percent: 88
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 9 of 16
-Status: In progress — 136-09 complete
-Last activity: 2026-10-06 — Completed 136-09 (snapshot → DFE mapping: MapeamentoEfatura single format table, DocumentoComunicavel projection, DfeXmlBuilder FR/NC validated against the XSD, firma ≤ 150; 27 new tests green, SpotBugs clean)
+Plan: 10 of 16
+Status: In progress — 136-10 complete
+Last activity: 2026-10-06 — Completed 136-10 (EfaturaGateway port + sealed ResultadoComunicacao, XSD-validating SimuladoEfaturaGateway with InjetorFalhas, EstadoComunicacaoMapper (MAX_TENTATIVAS 8, AUTORIZADO source gate), BackoffComunicacao table; 46 tests green, SpotBugs clean)
 
 ## Performance Metrics
 
@@ -144,6 +144,7 @@ Last activity: 2026-10-06 — Completed 136-09 (snapshot → DFE mapping: Mapeam
 | Phase 136 P02 | ~40 min | 2 tasks | 10 files |
 | Phase 136 P03 | ~30 min | 2 tasks | 4 files |
 | Phase 136 P09 | ~30 min | 2 tasks | 9 files |
+| Phase 136 P10 | ~20 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: Web: ComunicacaoFiscalCard is read-only and shows the reprocess trigger only via mostrarReprocessar(podeReprocessarComunicacao, comunicacao, modoComunicacao); all reprocess mutation code lives in reprocessar-comunicacao.tsx; ModoSimuladoBanner renders only when estado-emissao reports modoComunicacao SIMULADO
 - [Phase 136]: MapeamentoEfatura is the single table of eFatura format choices (LED_SIMULADO 99999, RepositoryCode 3, IssueReasonCode "2" for all motivos, UnitCode EA, EmitterIdentification HONORARIOS/NOTACREDITO, IssueMode 1) with exhaustive switches without default over AmbienteFiscal/TipoDocumentoFiscal/MotivoNotaCredito; the G1–G15 gate decision changes only this file
 - [Phase 136]: DfeXmlBuilder.construir(DocumentoComunicavel, iud, TransmissaoEfatura) is pure JAXB, normalises whitespace in every text value and throws RecusaFormatoEfatura (FIRMA_EXCEDE_150, NUMERO_FORA_DO_LIMITE, TEXTO_INVALIDO, ORIGEM_SEM_IUD) with fixed messages; DocumentoComunicavel.de refuses an NC without the FR IUD (IllegalArgumentException), so 136-13 checks iudOrigem first; motivo_texto never enters the projection; firma capped at 150 on new edits
+- [Phase 136]: All communication goes through EfaturaGateway (ambiente, comunicar(PedidoComunicacao)) with sealed ResultadoComunicacao {AceiteSimulado, Rejeitado, ErroTransitorio}; SimuladoEfaturaGateway(DfeValidador, InjetorFalhas) is a plain class (bean built by 136-12), accepts only XSD-valid XML (reference SIMULADO-<IUD>), rejects with the validator code + fixed message (line only)
+- [Phase 136]: EstadoComunicacaoMapper.estadoPara is the single result->state function (exhaustive AmbienteFiscal switch, no default, MAX_TENTATIVAS 8: ErroTransitorio PENDENTE for 1..7, ERRO from 8); BackoffComunicacao.atraso(1..7) = 30s,2m,5m,15m,30m,1h,3h; a source-gate test forbids AUTORIZADO/PRODUCAO identifiers in main code (literal only in the ComunicacaoFiscal @Check)
 
 
 ### Pending Todos
@@ -392,8 +395,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:17:57.000Z
-Stopped at: Completed 136-09-PLAN.md
+Last session: 2026-10-06T17:22:18.000Z
+Stopped at: Completed 136-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
