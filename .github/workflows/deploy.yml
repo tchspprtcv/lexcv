@@ -32,6 +32,10 @@ jobs:
       # no extra service/config needed on ubuntu-latest.
       - name: Run backend tests (unit + Testcontainers integration)
         working-directory: backend
+        # Phase 136: CI corre so o adaptador eFatura simulado (os jobs de build/push nao
+        # levam ambiente de execucao do backend).
+        env:
+          EFATURA_MODE: SIMULADO
         run: mvn -B verify
 
       # OWASP dependency-check:check is intentionally deferred — downloads the full

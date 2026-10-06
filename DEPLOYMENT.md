@@ -48,6 +48,7 @@ Edit `.env` — required changes:
 | `CORS_ALLOWED_ORIGINS` | `https://your-actual-domain.com` |
 | `SEED_ENABLED` | `true` on first run only to seed admin user; set `false` after |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` on first run only; `validate` from then on — see [Two-Stage Boot](#database-schema--two-stage-boot) |
+| `EFATURA_MODE` | Optional, defaults to `SIMULADO` — the only mode in this build; any other value (including `REAL` or an empty string) aborts backend startup |
 
 Generate a secure JWT secret:
 ```bash

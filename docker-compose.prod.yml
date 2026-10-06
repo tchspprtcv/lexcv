@@ -15,6 +15,15 @@ services:
     # removes the published port from the merged config while docker-compose.yml (used alone
     # for local dev) is untouched and keeps host access to 8089 for local testing.
     ports: !reset []
+    # eFatura (Phase 136): o Compose funde os mapas `environment` entre camadas -f, por isso
+    # producao fixa SIMULADO aqui explicitamente mesmo que a base mude. So SIMULADO existe neste
+    # build; qualquer outro valor impede o arranque.
+    environment:
+      EFATURA_MODE: "${EFATURA_MODE:-SIMULADO}"
+      EFATURA_TRANSMISSOR_NIF: "${EFATURA_TRANSMISSOR_NIF:-999999999}"
+      EFATURA_SOFTWARE_CODIGO: "${EFATURA_SOFTWARE_CODIGO:-LEXCVSIM}"
+      EFATURA_SOFTWARE_NOME: "${EFATURA_SOFTWARE_NOME:-LexCV}"
+      EFATURA_SOFTWARE_VERSAO: "${EFATURA_SOFTWARE_VERSAO:-3.0.0}"
     deploy:
       resources:
         limits:

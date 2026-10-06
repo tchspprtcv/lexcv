@@ -67,6 +67,15 @@ services:
       # nenhuma variavel que o sobrepusesse). Quem nao define nada nao ve diferenca.
       SEED_ENABLED: "${SEED_ENABLED:-true}"
       SPRING_JPA_HIBERNATE_DDL_AUTO: "${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}"
+      # eFatura (Phase 136): so SIMULADO existe neste build; qualquer outro valor impede o
+      # arranque. A forma ":-" tambem cobre uma variavel definida mas vazia, que de outro modo
+      # chegaria ao backend como "" e abortaria o arranque. Transmissao: valores sinteticos de
+      # teste, iguais aos de application.yml, validos so em SIMULADO.
+      EFATURA_MODE: "${EFATURA_MODE:-SIMULADO}"
+      EFATURA_TRANSMISSOR_NIF: "${EFATURA_TRANSMISSOR_NIF:-999999999}"
+      EFATURA_SOFTWARE_CODIGO: "${EFATURA_SOFTWARE_CODIGO:-LEXCVSIM}"
+      EFATURA_SOFTWARE_NOME: "${EFATURA_SOFTWARE_NOME:-LexCV}"
+      EFATURA_SOFTWARE_VERSAO: "${EFATURA_SOFTWARE_VERSAO:-3.0.0}"
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
