@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
 status: executing
-stopped_at: Completed 136-08-PLAN.md
-last_updated: "2026-10-06T17:07:48.000Z"
-last_activity: 2026-10-06 — Completed 136-08 (web components: neutral ComunicacaoEstadoBadge, backend-driven ModoSimuladoBanner, read-only ComunicacaoFiscalCard and isolated ReprocessarComunicacao dialog; tsc/lint/vitest 318 green)
+stopped_at: Completed 136-09-PLAN.md
+last_updated: "2026-10-06T17:17:57.000Z"
+last_activity: 2026-10-06 — Completed 136-09 (snapshot → DFE mapping: MapeamentoEfatura single format table, DocumentoComunicavel projection, DfeXmlBuilder FR/NC validated against the XSD, firma ≤ 150; 27 new tests green, SpotBugs clean)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 51
-  completed_plans: 43
-  percent: 84
+  completed_plans: 44
+  percent: 86
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-10-04)
 ## Current Position
 
 Phase: 136 of 139 (Formato eFatura e Adaptador Simulado)
-Plan: 8 of 16
-Status: In progress — 136-08 complete
-Last activity: 2026-10-06 — Completed 136-08 (web components: neutral ComunicacaoEstadoBadge, backend-driven ModoSimuladoBanner, read-only ComunicacaoFiscalCard and isolated ReprocessarComunicacao dialog; tsc/lint/vitest 318 green)
+Plan: 9 of 16
+Status: In progress — 136-09 complete
+Last activity: 2026-10-06 — Completed 136-09 (snapshot → DFE mapping: MapeamentoEfatura single format table, DocumentoComunicavel projection, DfeXmlBuilder FR/NC validated against the XSD, firma ≤ 150; 27 new tests green, SpotBugs clean)
 
 ## Performance Metrics
 
@@ -143,6 +143,7 @@ Last activity: 2026-10-06 — Completed 136-08 (web components: neutral Comunica
 | Phase 136 P01 | ~25 min | 2 tasks | 33 files |
 | Phase 136 P02 | ~40 min | 2 tasks | 10 files |
 | Phase 136 P03 | ~30 min | 2 tasks | 4 files |
+| Phase 136 P09 | ~30 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,8 @@ Decisões são registadas em PROJECT.md (Key Decisions). v2.16's full per-phase 
 - [Phase 136]: ComunicacaoFiscalTransacoes owns the short transactions (reclamar, carregarSnapshot readOnly, gravarXml insert-only returning the winning row, registarResultado); the processor/job has no @Transactional and never builds XML or calls the gateway inside a transaction
 - [Phase 136]: Document detail carries comunicacao = ComunicacaoFiscalResumo.de(row, iud): IUD from t_documento_fiscal_xml of the caller's tenant (looked up only when a comunicação row exists), ultimoErro only when reprocessavel, proximaTentativaEm only for PENDENTE; estadoComunicacao kept for the list
 - [Phase 136]: Web: ComunicacaoFiscalCard is read-only and shows the reprocess trigger only via mostrarReprocessar(podeReprocessarComunicacao, comunicacao, modoComunicacao); all reprocess mutation code lives in reprocessar-comunicacao.tsx; ModoSimuladoBanner renders only when estado-emissao reports modoComunicacao SIMULADO
+- [Phase 136]: MapeamentoEfatura is the single table of eFatura format choices (LED_SIMULADO 99999, RepositoryCode 3, IssueReasonCode "2" for all motivos, UnitCode EA, EmitterIdentification HONORARIOS/NOTACREDITO, IssueMode 1) with exhaustive switches without default over AmbienteFiscal/TipoDocumentoFiscal/MotivoNotaCredito; the G1–G15 gate decision changes only this file
+- [Phase 136]: DfeXmlBuilder.construir(DocumentoComunicavel, iud, TransmissaoEfatura) is pure JAXB, normalises whitespace in every text value and throws RecusaFormatoEfatura (FIRMA_EXCEDE_150, NUMERO_FORA_DO_LIMITE, TEXTO_INVALIDO, ORIGEM_SEM_IUD) with fixed messages; DocumentoComunicavel.de refuses an NC without the FR IUD (IllegalArgumentException), so 136-13 checks iudOrigem first; motivo_texto never enters the projection; firma capped at 150 on new edits
 
 
 ### Pending Todos
@@ -389,8 +392,8 @@ Known deferred items count at v2.16 close: 5 (all uat_gap), 0 functional defects
 
 ## Session Continuity
 
-Last session: 2026-10-06T17:07:48.000Z
-Stopped at: Completed 136-08-PLAN.md
+Last session: 2026-10-06T17:17:57.000Z
+Stopped at: Completed 136-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
