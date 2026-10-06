@@ -125,7 +125,9 @@ export function ComunicacaoFiscalCard({
               ) : null}
             </dl>
 
-            {c.ultimoErro && (c.estado === "REJEITADO" || c.estado === "ERRO") ? (
+            {/* IN-04 da revisão: o backend decide quando há última falha a mostrar (REJEITADO/ERRO e
+                PENDENTE depois de uma tentativa falhada); ACEITE_SIMULADO nunca a traz. */}
+            {c.ultimoErro && c.estado !== "ACEITE_SIMULADO" ? (
               <div role="status" className={NOTICE_CLASSES}>
                 <p className="font-semibold">{COPY_ULTIMA_FALHA}</p>
                 <p className="line-clamp-3 break-words whitespace-pre-line">{c.ultimoErro}</p>

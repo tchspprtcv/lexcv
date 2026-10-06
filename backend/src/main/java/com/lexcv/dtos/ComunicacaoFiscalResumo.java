@@ -10,8 +10,10 @@ import java.time.Instant;
  * ambiente, IUD (do satélite XML do mesmo tenant; nulo enquanto não foi gerado), tentativas e
  * datas. Calculado só no backend; a UI mostra estes valores tal como chegam (136-UI-SPEC).
  *
- * <p>Visibilidade: {@code ultimoErro} (mensagem curta e já sanitizada, nunca texto de exceção) só
- * em {@code REJEITADO}/{@code ERRO}; {@code proximaTentativaEm} só em {@code PENDENTE}.
+ * <p>Visibilidade: {@code ultimoErro} (mensagem curta e já sanitizada, nunca texto de exceção) em
+ * {@code REJEITADO}/{@code ERRO} e, desde o IN-04 da revisão, também em {@code PENDENTE} depois de
+ * pelo menos uma tentativa (a razão das novas tentativas fica visível em vez de horas de "Pendente"
+ * sem explicação); {@code proximaTentativaEm} só em {@code PENDENTE}.
  */
 public record ComunicacaoFiscalResumo(
         String estado,
@@ -35,7 +37,17 @@ public record ComunicacaoFiscalResumo(
                 iudOuNulo,
                 c.getTentativas(),
                 c.getUltimaTentativaEm(),
-                estado != null && estado.reprocessavel() ? c.getUltimoErro() : null,
+                mostraUltimoErro(estado, c.getTentativas()) ? c.getUltimoErro() : null,
                 estado == EstadoComunicacaoFiscal.PENDENTE ? c.getProximaTentativaEm() : null);
+    }
+
+    private static boolean mostraUltimoErro(EstadoComunicacaoFiscal estado, Integer tentativas) {
+        if (estado == null) {
+            return false;
+        }
+        if (estado == EstadoComunicacaoFiscal.PENDENTE) {
+            return tentativas != null && tentativas > 0;
+        }
+        return estado.reprocessavel();
     }
 }

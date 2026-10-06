@@ -34,7 +34,7 @@ class ComunicacaoFiscalResumoTest {
     }
 
     @Test
-    void pendenteMostraProximaTentativaESemErro() {
+    void pendenteComTentativasMostraProximaTentativaEOUltimoErro() {
         ComunicacaoFiscalResumo r = ComunicacaoFiscalResumo.de(
                 comunicacao(EstadoComunicacaoFiscal.PENDENTE, "Serviço indisponível", PROXIMA), null);
 
@@ -43,8 +43,16 @@ class ComunicacaoFiscalResumoTest {
         assertNull(r.iud());
         assertEquals(2, r.tentativas());
         assertEquals(ULTIMA, r.ultimaTentativaEm());
-        assertNull(r.ultimoErro(), "o erro só aparece em REJEITADO/ERRO");
+        // IN-04: a razão das novas tentativas fica visível enquanto a linha está pendente.
+        assertEquals("Serviço indisponível", r.ultimoErro());
         assertEquals(PROXIMA, r.proximaTentativaEm());
+    }
+
+    @Test
+    void pendenteSemTentativasNaoMostraErro() {
+        ComunicacaoFiscal c = comunicacao(EstadoComunicacaoFiscal.PENDENTE, "Antigo", PROXIMA);
+        c.setTentativas(0);
+        assertNull(ComunicacaoFiscalResumo.de(c, null).ultimoErro());
     }
 
     @Test
