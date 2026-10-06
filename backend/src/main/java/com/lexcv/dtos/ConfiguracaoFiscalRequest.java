@@ -23,7 +23,7 @@ public record ConfiguracaoFiscalRequest(
         String nif,
 
         @NotBlank(message = "Preencha este campo.")
-        @Size(max = 200, message = "A firma não pode ter mais de 200 caracteres.")
+        @Size(max = 150, message = "A firma não pode ter mais de 150 caracteres.")
         String firma,
 
         @NotBlank(message = "Preencha este campo.")
