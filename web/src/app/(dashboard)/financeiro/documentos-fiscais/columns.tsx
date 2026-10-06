@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { Badge } from "@/components/ui/badge";
+import { ComunicacaoEstadoBadge } from "@/components/shared/comunicacao-estado-badge";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 import type { DocumentoFiscalResumo } from "@/types/faturacao";
 
@@ -14,6 +15,9 @@ import type { DocumentoFiscalResumo } from "@/types/faturacao";
 // Phase 135 (135-UI-SPEC Surface 4): numa Nota de Crédito, por baixo do número, "Corrige {número
 // da FR}" vindo do backend (documentoOrigemNumero, nunca construído aqui). O total é mostrado como
 // devolvido, sem cor (o vermelho fica só para o estorno na lista de pagamentos).
+//
+// Phase 136 (136-UI-SPEC Surface 1): a coluna "Comunicação" (logo a seguir a "Tipo") mostra o
+// badge neutro partilhado para cada estado; "—" quando o documento ainda não tem comunicação.
 
 function formatarData(valor: string) {
   const d = new Date(valor.includes("T") ? valor : `${valor}T00:00:00`);
@@ -74,6 +78,15 @@ export const columns: ColumnDef<DocumentoFiscalResumo>[] = [
     cell: ({ row }) => <Badge variant="secondary">{row.original.tipoRotulo}</Badge>,
   },
   {
+    id: "comunicacao",
+    accessorKey: "estadoComunicacao",
+    enableSorting: false,
+    meta: { label: "Comunicação" },
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Comunicação" />,
+    cell: ({ row }) =>
+      row.original.estadoComunicacao ? <ComunicacaoEstadoBadge estado={row.original.estadoComunicacao} /> : "—",
+  },
+  {
     id: "total",
     accessorKey: "totalDocumento",
     enableSorting: false,
@@ -84,19 +97,6 @@ export const columns: ColumnDef<DocumentoFiscalResumo>[] = [
     cell: ({ row }) => (
       <div className="text-right tabular-nums">{formatarCVE(row.original.totalDocumento)}</div>
     ),
-  },
-  {
-    id: "estado",
-    accessorKey: "estadoComunicacao",
-    enableSorting: false,
-    meta: { label: "Estado" },
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
-    cell: ({ row }) =>
-      row.original.estadoComunicacao === "PENDENTE" ? (
-        <Badge variant="outline">Pendente</Badge>
-      ) : (
-        "—"
-      ),
   },
   {
     id: "ambiente",

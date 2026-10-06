@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { ModoSimuladoBanner } from "@/components/shared/modo-simulado-banner";
 import { useCliente } from "@/hooks/use-clientes";
 import { modoFormularioPagamento, podeRegistarPagamentos, useEstadoEmissao } from "@/hooks/use-faturacao";
 import {
@@ -261,6 +262,9 @@ function HonorarioDetailContent({
 
   return (
     <div className="space-y-6">
+      {/* Phase 136 (136-UI-SPEC Surface 3): os documentos fiscais deste honorário são simulados. */}
+      <ModoSimuladoBanner />
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Honorário</h1>

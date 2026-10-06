@@ -24,9 +24,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { DataTable } from "@/components/shared/data-table/data-table";
+import { ModoSimuladoBanner } from "@/components/shared/modo-simulado-banner";
 import { useClientes } from "@/hooks/use-clientes";
 import { podeLerDocumentosFiscais, useDocumentosFiscais } from "@/hooks/use-faturacao";
 import { usePermissions } from "@/hooks/use-permissions";
+import { ESTADOS_COMUNICACAO } from "@/lib/comunicacao-fiscal";
 import type { DocumentosFiscaisFiltros, EstadoComunicacaoFiscal, TipoDocumentoFiscal } from "@/types/faturacao";
 
 import { columns } from "./columns";
@@ -34,10 +36,13 @@ import { columns } from "./columns";
 // Lista "Documentos fiscais" (134-UI-SPEC Surface 3; D-16, D-17, EMIS-11). Filtros e paginação
 // vivem nos search params do URL e são aplicados no servidor; o backend só devolve documentos do
 // tenant do utilizador. Página só de leitura: não existe nenhuma ação de alteração.
+// Phase 136: filtro "Comunicação" com os quatro estados e o banner "Modo simulado" no topo.
 
 const TAMANHOS = [10, 20, 50] as const;
 const ERRO_PERIODO = "A data final não pode ser anterior à inicial.";
 const ISO_DATA = /^\d{4}-\d{2}-\d{2}$/;
+// Ordem do filtro "Comunicação" (136-UI-SPEC Surface 1); rótulos de lib/comunicacao-fiscal.
+const ESTADOS_FILTRO: readonly EstadoComunicacaoFiscal[] = ["PENDENTE", "ACEITE_SIMULADO", "REJEITADO", "ERRO"];
 
 function lerInteiro(valor: string | null, omissao: number) {
   if (!valor || !/^\d+$/.test(valor)) return omissao;
@@ -72,7 +77,12 @@ function DocumentosFiscaisConteudo() {
   // Phase 135: só "FR" ou "NC" (lista branca); qualquer outro valor do URL conta como "Todos".
   const tipoParam = searchParams.get("tipo");
   const tipo: TipoDocumentoFiscal | "" = tipoParam === "FR" || tipoParam === "NC" ? tipoParam : "";
-  const estado: EstadoComunicacaoFiscal | "" = searchParams.get("estado") === "PENDENTE" ? "PENDENTE" : "";
+  // Phase 136: só os quatro estados de comunicação (lista branca); qualquer outro valor conta como "Todas".
+  const estadoParam = searchParams.get("estado");
+  const estado: EstadoComunicacaoFiscal | "" =
+    estadoParam && Object.prototype.hasOwnProperty.call(ESTADOS_COMUNICACAO, estadoParam)
+      ? (estadoParam as EstadoComunicacaoFiscal)
+      : "";
   const pagina = Math.max(lerInteiro(searchParams.get("page"), 1), 1) - 1;
   const tamanhoLido = lerInteiro(searchParams.get("size"), 10);
   const tamanho = (TAMANHOS as readonly number[]).includes(tamanhoLido) ? tamanhoLido : 10;
@@ -137,6 +147,8 @@ function DocumentosFiscaisConteudo() {
 
   return (
     <div className="space-y-6">
+      <ModoSimuladoBanner />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Documentos fiscais</h1>
@@ -154,7 +166,7 @@ function DocumentosFiscaisConteudo() {
             </BreadcrumbList>
           </Breadcrumb>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal.
+            Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal. O estado de comunicação é atualizado em segundo plano.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -210,15 +222,19 @@ function DocumentosFiscaisConteudo() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="filtro-estado">Estado</Label>
+          <Label htmlFor="filtro-estado">Comunicação</Label>
           <NativeSelect
             id="filtro-estado"
             className="w-full"
             value={estado}
             onChange={(e) => mudarFiltro("estado", e.target.value)}
           >
-            <NativeSelectOption value="">Todos</NativeSelectOption>
-            <NativeSelectOption value="PENDENTE">Pendente</NativeSelectOption>
+            <NativeSelectOption value="">Todas</NativeSelectOption>
+            {ESTADOS_FILTRO.map((e) => (
+              <NativeSelectOption key={e} value={e}>
+                {ESTADOS_COMUNICACAO[e].rotulo}
+              </NativeSelectOption>
+            ))}
           </NativeSelect>
         </div>
 

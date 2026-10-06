@@ -20,16 +20,21 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
+import { ComunicacaoEstadoBadge } from "@/components/shared/comunicacao-estado-badge";
+import { ModoSimuladoBanner } from "@/components/shared/modo-simulado-banner";
 import {
   podeEmitirNotaCredito,
   podeLerDocumentosFiscais,
+  podeReprocessarComunicacao,
   useDocumentoFiscal,
   useEstadoEmissao,
 } from "@/hooks/use-faturacao";
 import { usePermissions } from "@/hooks/use-permissions";
 import { isApiError } from "@/lib/api";
+import { descricaoEstadoComunicacao } from "@/lib/comunicacao-fiscal";
 import type { DocumentoFiscalDetalhe } from "@/types/faturacao";
 
+import { ComunicacaoFiscalCard } from "./comunicacao-fiscal-card";
 import { NotaCreditoDialog } from "./nota-credito-dialog";
 
 // Detalhe de um documento fiscal (134-UI-SPEC Surface 4; D-18, EMIS-08, EMIS-11). Só de leitura:
@@ -43,6 +48,12 @@ import { NotaCreditoDialog } from "./nota-credito-dialog";
 // NOVO, emitido pelo diálogo (nota-credito-dialog.tsx, que concentra os pedidos); a FR nunca é
 // alterada. Numa Nota de Crédito mostra o documento original, o motivo e as ligações ao
 // honorário e ao estorno.
+//
+// Phase 136 (136-UI-SPEC Surface 2; DFE-04, DFE-05, DFE-06): o cabeçalho mostra UM badge de
+// comunicação (comunicacao.estado do backend) e o cartão "Comunicação fiscal" fica depois de
+// "Valores" (e de "Notas de crédito" numa FR), antes de "Ligações". O reprocessamento vive em
+// comunicacao-fiscal-card.tsx / reprocessar-comunicacao.tsx: esta página continua sem pedidos de
+// alteração. O banner "Modo simulado" fica no topo do conteúdo autorizado.
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -81,7 +92,9 @@ export default function DocumentoFiscalPage(props: PageProps) {
   const documento = useDocumentoFiscal(id, podeLer);
   const estadoEmissao = useEstadoEmissao(podeLer);
   const podeEmitirNc = podeEmitirNotaCredito(permissions.permissions);
+  const podeReprocessar = podeReprocessarComunicacao(permissions.permissions);
   const faturacaoDesligada = estadoEmissao.data?.ativa === false;
+  const modoComunicacao = estadoEmissao.data?.modoComunicacao ?? null;
 
   if (!permissions.isFetched) {
     return null;
@@ -100,6 +113,8 @@ export default function DocumentoFiscalPage(props: PageProps) {
 
   return (
     <div className="space-y-6">
+      <ModoSimuladoBanner />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Breadcrumb>
           <BreadcrumbList>
@@ -156,7 +171,9 @@ export default function DocumentoFiscalPage(props: PageProps) {
           documento={documento.data}
           canViewClientes={canViewClientes}
           podeEmitirNc={podeEmitirNc}
+          podeReprocessar={podeReprocessar}
           faturacaoDesligada={faturacaoDesligada}
+          modoComunicacao={modoComunicacao}
         />
       )}
     </div>
@@ -178,7 +195,7 @@ function CarregandoDocumento() {
           </Card>
         ))}
       </div>
-      {[0, 1, 2].map((i) => (
+      {[0, 1, 2, 3].map((i) => (
         <Card key={i}>
           <CardContent className="space-y-2 pt-6">
             <Skeleton className="h-4 w-full" />
@@ -194,12 +211,16 @@ function DetalheDocumento({
   documento: d,
   canViewClientes,
   podeEmitirNc,
+  podeReprocessar,
   faturacaoDesligada,
+  modoComunicacao,
 }: {
   documento: DocumentoFiscalDetalhe;
   canViewClientes: boolean;
   podeEmitirNc: boolean;
+  podeReprocessar: boolean;
   faturacaoDesligada: boolean;
+  modoComunicacao: string | null;
 }) {
   const isento = d.emitenteRegimeIva === "ISENTO";
   const isFr = d.tipo === "FR";
@@ -220,14 +241,19 @@ function DetalheDocumento({
           </h1>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{d.tipoRotulo}</Badge>
-            {d.estadoComunicacao === "PENDENTE" ? <Badge variant="outline">Pendente</Badge> : null}
+            {d.comunicacao ? (
+              <ComunicacaoEstadoBadge
+                estado={d.comunicacao.estado}
+                descricao={descricaoEstadoComunicacao(d.comunicacao.estado, podeReprocessar)}
+              />
+            ) : null}
             <Badge variant="outline" className="gap-1">
               <Info className="h-3 w-3" aria-hidden="true" />
               Simulação — sem validade fiscal
             </Badge>
           </div>
-          {d.estadoComunicacao === "PENDENTE" ? (
-            <p className={AJUDA}>Comunicação à administração fiscal ainda não efetuada.</p>
+          {d.comunicacao ? (
+            <p className={AJUDA}>{descricaoEstadoComunicacao(d.comunicacao.estado, podeReprocessar)}</p>
           ) : null}
         </div>
         {mostrarEmissaoNc ? (
@@ -239,8 +265,8 @@ function DetalheDocumento({
 
       <div className={NOTICE_CLASSES}>
         {isNc
-          ? "Esta nota de crédito é simulada e não tem validade fiscal. Fica registada como pendente de comunicação; a comunicação à administração fiscal chega numa versão futura."
-          : "Este documento é simulado e não tem validade fiscal. Fica registado como pendente de comunicação; a comunicação à administração fiscal chega numa versão futura."}
+          ? "Esta nota de crédito é simulada e não tem validade fiscal. A comunicação é feita a um serviço de simulação, não à administração fiscal."
+          : "Este documento é simulado e não tem validade fiscal. A comunicação é feita a um serviço de simulação, não à administração fiscal."}
       </div>
 
       {isNc && d.documentoOrigem ? (
@@ -392,6 +418,8 @@ function DetalheDocumento({
       </Card>
 
       {isFr ? <NotasCreditoCard documento={d} /> : null}
+
+      <ComunicacaoFiscalCard documento={d} modoComunicacao={modoComunicacao} />
 
       <Card>
         <CardHeader>
