@@ -109,7 +109,13 @@ findings:
   warning: 7
   info: 8
   total: 15
-status: issues_found
+status: fixed_partial
+fixed_at: 2026-10-06T22:20:00Z
+fix_summary:
+  in_scope: 13
+  fixed: 13
+  skipped: 0
+  out_of_scope: 2
 ---
 
 # Phase 136: Code Review Report
@@ -315,3 +321,40 @@ if (!enabled || !simulado) return null;
 _Reviewed: 2026-10-06T19:06:14Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fix Report
+
+**Fixed:** 2026-10-06 (gsd-code-fixer, two runs; the first run was interrupted after WR-03)
+**Scope:** WR-01..WR-07 and the cheap Info items IN-01, IN-04..IN-08. IN-02 and IN-03 were not in scope (they need a product decision or a new column).
+**Status:** `fixed_partial`. All 13 in-scope findings are fixed. IN-02 and IN-03 are still open.
+
+| ID | Status | Commit(s) | What changed |
+|----|--------|-----------|--------------|
+| WR-01 | fixed | b50548a | The claim skips rows with `tentativas >= MAX_TENTATIVAS`. A sweep closes exhausted rows whose lease has expired in `ERRO`/`FALHA_INTERNA`, and the job notifies them. |
+| WR-02 | fixed | 5a08db8 | Each item's lease is renewed, guarded by version, right before it goes to the gateway. If the renewal updates 0 rows, the item is neither sent nor recorded. |
+| WR-03 | fixed (requires human verification) | 8d7503b, 59e4255 | A deterministic defect in the snapshot, IUD or builder now gives `REJEITADO DADOS_INVALIDOS`. The number limit is checked before the IUD, so `NUMERO_FORA_DO_LIMITE` can be reached. Follow-up 59e4255 replaces the explicit NPE catch with `RuntimeException` (SpotBugs DCN) and logs only the exception class. |
+| WR-04 | fixed (requires human verification) | 3031155 | FR and NC composition (shared by preview and emission) returns 422 `FIRMA_EXCEDE_150` before any write when the firma, with spaces normalised, is over 150. The NC message explains that the firma comes from the original FR. The rejection message for already-issued documents says reprocessing does not fix them. The REJEITADO card copy no longer says "Pode reprocessar a comunicação". The NC dialog treats the code as a final banner. |
+| WR-05 | fixed (requires human verification) | 36f4eb8 | The snapshot now carries the origin FR's communication state. An NC with no origin IUD whose FR is `REJEITADO`/`ERRO` gets `REJEITADO ORIGEM_REJEITADA` at once ("Reprocesse primeiro a fatura-recibo..."). If the FR is still `PENDENTE`, the NC stays on the transient `ORIGEM_SEM_IUD` path. |
+| WR-06 | fixed | 4ab75b6 | Recipients are users with effective `financeiro:manage` (kept, per the user decision) OR `financeiro:edit`, resolved through ResolucaoPapeisService. The message is neutral: "Abra o documento para ver a última falha; quem tem permissão pode reprocessar a comunicação." There are tests for a manage-only role and for an edit-only user (unit tests and FiscalOutboxJobIT). |
+| WR-07 | fixed | 931b43d | `mostrarBannerModoSimulado` fails closed. The banner shows while loading, on error, when the field is missing or empty, and for users who cannot read the state. It hides only when the backend explicitly reports another mode. `verify:documentos-fiscais` checks this. |
+| IN-01 | fixed | 2ccbeda | Removed the dead `ORIGEM_SEM_IUD` branch in the processor. The builder's NC guard stays as a documented precondition of its public API. |
+| IN-02 | not in scope | - | A lost notification is still never retried. This needs a `notificado_em` column or a sweep. |
+| IN-03 | not in scope | - | `REJEITADO` does not notify. This needs a product decision. |
+| IN-04 | fixed | 6c54211 | `ultimoErro` is exposed for `PENDENTE` rows with `tentativas > 0`. A reprocess clears it. The card shows "Última falha" whenever the backend sends one. |
+| IN-05 | fixed | dc32b5c | The DOCTYPE check is structural: it scans the prolog (BOM, UTF-16, XML declaration, PIs and comments) and no longer depends on the JVM locale. The raw parser text is still logged only at DEBUG. |
+| IN-06 | fixed | 9b8eb51 | The card keeps the reprocess component mounted while its dialog is open. On close, focus moves to the card title after a success, or when the trigger is about to disappear (409). |
+| IN-07 | fixed | 6677022 | `ResultadoValidacao.mensagemFormato` is now the only copy. The list hook uses `intervaloAtualizacaoListaComunicacao`. |
+| IN-08 | fixed | d92cc6d | The job (both top level and per item) and the processor catch `Exception`. JVM `Error`s propagate to Spring's scheduler, which logs them and keeps the task scheduled. The SchedulingConfig comment is updated (pool of 3). |
+
+**Decisions to note:**
+- WR-04 blocks an NC on any FR whose snapshotted firma is longer than 150 characters, because that NC could never be communicated either. Such an FR cannot be credited until a human decides how to handle it. Only legacy data (firma 151-200) is affected.
+- The UI-SPEC copy for REJEITADO (WR-04) and the notification text (WR-06) were changed on purpose. The UI-SPEC copy table was not edited.
+- CONTEXT said "catch Throwable por item". IN-08 overrides that, as the orchestrator instructed.
+- CFG-03 was respected: `registarPagamentoLegado` and the SHA guard test were not touched.
+
+**Gates (after the last commit):**
+- Backend: `mvn -Dmaven.compiler.release=21 verify` with Testcontainers ITs. At d92cc6d: 1227 unit tests and 163 ITs, 0 failures, BUILD SUCCESS. Re-run after 59e4255: 1227 + 163, 0 failures, BUILD SUCCESS. `mvn spotbugs:check`: 0 bugs.
+- Web: `npx tsc --noEmit` passes. `pnpm lint` reports 0 errors; the 20 warnings are older and none are in files changed here. `pnpm test` passes 326/326. `pnpm verify:faturacao` and `pnpm verify:documentos-fiscais` are OK.
+
+_Fix report: Claude (gsd-code-fixer)_
+
