@@ -15,6 +15,11 @@
 // como "Estorno (NC n.º …)" sem botao de apagar; a lista de documentos filtra FR/NC e mostra
 // "Corrige …" com o numero da FR vindo do backend.
 //
+// Phase 136 (136-UI-SPEC Surfaces 1-3; DFE-04, DFE-05, DFE-06): estado da comunicacao com o badge
+// neutro partilhado na lista e no detalhe, cartao "Comunicacao fiscal" so de leitura com o IUD
+// marcado como ambiente de teste, reprocessamento isolado no seu componente com o gate EXATO
+// financeiro:edit, banner "Modo simulado" nas tres paginas e nenhuma linguagem de autorizacao.
+//
 // O QUE ESTE GATE NAO CONSEGUE PROVAR (fica para a verificacao ponta a ponta, 134-HUMAN-UAT.md):
 //   1. Que os ecras renderizam com o backend real e que o dialogo emite uma unica vez.
 //   2. Que o backend recusa 403/404 a quem nao tem permissao ou e de outro escritorio.
@@ -46,6 +51,12 @@ const FICHEIROS = {
   erros: path.join(SRC, "lib", "erros-emissao.ts"),
   idempotencia: path.join(SRC, "lib", "idempotencia.ts"),
   schema: path.join(SRC, "schemas", "financeiro.ts"),
+  // Phase 136 -- comunicacao eFatura simulada.
+  comunicacaoCard: path.join(DOCUMENTOS, "[id]", "comunicacao-fiscal-card.tsx"),
+  reprocessar: path.join(DOCUMENTOS, "[id]", "reprocessar-comunicacao.tsx"),
+  badgeComunicacao: path.join(SRC, "components", "shared", "comunicacao-estado-badge.tsx"),
+  bannerModo: path.join(SRC, "components", "shared", "modo-simulado-banner.tsx"),
+  libComunicacao: path.join(SRC, "lib", "comunicacao-fiscal.ts"),
 };
 
 const falhas = [];
@@ -260,13 +271,77 @@ async function main() {
   exigeContem("columns", texto, "Corrige ");
   exigeNaoContem("columns", texto, "text-red-600");
 
+  // (h) Phase 136 -- comunicação eFatura simulada (136-UI-SPEC).
+  for (const token of [
+    "Ambiente de teste — sem validade fiscal",
+    "Aceite (simulação)",
+    "Estado desconhecido",
+    "Modo simulado.",
+  ]) {
+    exigeContem("libComunicacao", texto, token);
+  }
+  for (const token of [
+    "COPY_IUD_TESTE",
+    "select-all",
+    "<ReprocessarComunicacao",
+    "mostrarReprocessar(",
+    "podeReprocessarComunicacao(permissions)",
+  ]) {
+    exigeContem("comunicacaoCard", texto, token);
+  }
+  exigeContem("reprocessar", texto, "useReprocessarComunicacao");
+  exigeContem("reprocessar", texto, "Fechar reprocessamento da comunicação");
+  for (const nome of ["reprocessar", "comunicacaoCard"]) {
+    exigeNaoContem(nome, texto, "hasScopedPermission");
+    exigeNaoContem(nome, texto, "dangerouslySetInnerHTML");
+  }
+  exigeNaoContem("comunicacaoCard", texto, "useMutation");
+  exigeNaoContem("detalhe", texto, "useReprocessarComunicacao");
+  exigeContem("hooksFaturacao", texto, 'PERMISSAO_REPROCESSAR_COMUNICACAO = "financeiro:edit"');
+  exigeContem("hooksFaturacao", texto, "hasPermission(permissions, PERMISSAO_REPROCESSAR_COMUNICACAO)");
+  exigeContem("hooksFaturacao", texto, "comunicacao/reprocessar");
+  exigeContem("hooksFaturacao", texto, "refetchIntervalInBackground: false");
+  for (const nome of ["lista", "detalhe", "honorarioPage"]) {
+    exigeContem(nome, texto, "<ModoSimuladoBanner");
+  }
+  for (const nome of ["columns", "detalhe"]) {
+    exigeContem(nome, texto, "<ComunicacaoEstadoBadge");
+  }
+  exigeContem("detalhe", texto, "<ComunicacaoFiscalCard");
+  exigeContem("lista", texto, "O estado de comunicação é atualizado em segundo plano.");
+  exigeContem("bannerModo", texto, 'modoComunicacao === "SIMULADO"');
+  exigeNaoContem("bannerModo", texto, "NEXT_PUBLIC");
+  exigeSemPadrao(
+    "badgeComunicacao",
+    texto,
+    /bg-(blue|green|amber|red)|text-(blue|green|amber|red)/,
+    "cor de acento ou de sucesso no estado",
+  );
+  for (const nome of [
+    "lista",
+    "columns",
+    "detalhe",
+    "comunicacaoCard",
+    "reprocessar",
+    "badgeComunicacao",
+    "bannerModo",
+    "libComunicacao",
+  ]) {
+    exigeSemPadrao(
+      nome,
+      texto,
+      /Autorizad|Aprovad|Validado pela DNRE|Comunicado à DNRE|AUTORIZADO/,
+      "linguagem de autorização",
+    );
+  }
+
   if (falhas.length > 0) {
     console.error(`verify:documentos-fiscais FALHOU (${falhas.length}):`);
     for (const f of falhas) console.error(`  - ${f}`);
     process.exit(1);
   }
   console.log(
-    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente, hooks, notas de crédito (financeiro:manage), estornos e filtro FR/NC.",
+    "verify:documentos-fiscais OK - gating financeiro:view, detalhe imutável, copy, sem contas de dinheiro no cliente, hooks, notas de crédito (financeiro:manage), estornos, filtro FR/NC e comunicação eFatura simulada da Phase 136 (badge neutro, cartão, reprocessar financeiro:edit, banner, sem linguagem de autorização).",
   );
 }
 
