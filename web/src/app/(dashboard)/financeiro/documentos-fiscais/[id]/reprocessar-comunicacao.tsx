@@ -42,13 +42,27 @@ const AJUDA = "text-xs text-slate-500 dark:text-slate-400";
 export function ReprocessarComunicacao({
   documento,
   tituloCardRef,
+  botaoVisivel = true,
+  onAbertoChange,
 }: {
   documento: DocumentoFiscalDetalhe;
   /** Título do cartão: recebe o foco depois do sucesso (o botão desaparece com o estado PENDENTE). */
   tituloCardRef?: React.RefObject<HTMLHeadingElement | null>;
+  /**
+   * IN-06: o cartão mantém este componente montado enquanto o diálogo está aberto, mesmo que o
+   * estado já não seja ERRO/REJEITADO (o documento é atualizado antes de `mutateAsync` resolver).
+   * Com `false`, o botão vai desaparecer: ao fechar, o foco vai para o título do cartão.
+   */
+  botaoVisivel?: boolean;
+  /** Avisa o cartão de que o diálogo abriu/fechou (para o manter montado enquanto está aberto). */
+  onAbertoChange?: (aberto: boolean) => void;
 }) {
   const reprocessar = useReprocessarComunicacao(documento.id);
-  const [aberto, setAberto] = React.useState(false);
+  const [aberto, setAbertoLocal] = React.useState(false);
+  const setAberto = (valor: boolean) => {
+    setAbertoLocal(valor);
+    onAbertoChange?.(valor);
+  };
   const [banner, setBanner] = React.useState<Banner | null>(null);
   const [aReprocessar, setAReprocessar] = React.useState(false);
   // Guarda síncrona contra duplo clique (o estado só é visível no render seguinte).
@@ -135,7 +149,9 @@ export function ReprocessarComunicacao({
           }}
           onCloseAutoFocus={(e) => {
             e.preventDefault();
-            if (focarCartaoRef.current) {
+            // IN-06: depois do sucesso, ou quando o botão já não existe (ex. 409 com o estado
+            // atualizado), o foco vai para o título do cartão e nunca fica perdido no <body>.
+            if (focarCartaoRef.current || !botaoVisivel) {
               focarCartaoRef.current = false;
               tituloCardRef?.current?.focus();
             } else {

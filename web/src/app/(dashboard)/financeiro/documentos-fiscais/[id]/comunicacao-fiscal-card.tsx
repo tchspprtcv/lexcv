@@ -64,6 +64,9 @@ export function ComunicacaoFiscalCard({
   const tituloRef = React.useRef<HTMLHeadingElement>(null);
   const c = documento.comunicacao;
   const mostrarBotao = mostrarReprocessar(podeReprocessar, c, modoComunicacao);
+  // IN-06: o reprocessamento atualiza o documento ANTES de o diálogo fechar; sem isto o componente
+  // (e o diálogo, com o banner de erro) desmontava a meio e o foco ficava perdido no <body>.
+  const [dialogoAberto, setDialogoAberto] = React.useState(false);
 
   return (
     <Card>
@@ -71,7 +74,14 @@ export function ComunicacaoFiscalCard({
         <CardTitle ref={tituloRef} tabIndex={-1} className="text-xl font-semibold outline-none">
           {COPY_CARD_TITULO}
         </CardTitle>
-        {mostrarBotao ? <ReprocessarComunicacao documento={documento} tituloCardRef={tituloRef} /> : null}
+        {mostrarBotao || dialogoAberto ? (
+          <ReprocessarComunicacao
+            documento={documento}
+            tituloCardRef={tituloRef}
+            botaoVisivel={mostrarBotao}
+            onAbertoChange={setDialogoAberto}
+          />
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         {!c ? (
