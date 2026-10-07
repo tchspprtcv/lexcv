@@ -7,8 +7,10 @@ import com.lexcv.dtos.MoldeCreateRequest;
 import com.lexcv.dtos.MoldeProvisionResponse;
 import com.lexcv.dtos.MoldesConsolaResponse;
 import com.lexcv.dtos.MoldesUpdateRequest;
+import com.lexcv.dtos.RegistarPagamentoSubscricaoRequest;
 import com.lexcv.dtos.SerieFiscalResponse;
 import com.lexcv.dtos.SetupInitializeRequest;
+import com.lexcv.dtos.SubscricaoFaturaResponse;
 import com.lexcv.dtos.TenantAdminSummaryResponse;
 import com.lexcv.dtos.TenantProvisionResponse;
 import com.lexcv.dtos.TenantUpdateRequest;
@@ -22,6 +24,7 @@ import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
 import com.lexcv.services.fiscal.PlatformFaturacaoConfigService;
+import com.lexcv.services.fiscal.SubscricaoFaturadaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -94,6 +97,7 @@ public class PlatformAdminController {
     private final PermissionRepository permissionRepository;
     private final TenantRoleRepository tenantRoleRepository;
     private final PlatformFaturacaoConfigService platformFaturacaoConfigService;
+    private final SubscricaoFaturadaService subscricaoFaturadaService;
 
     @PostMapping("/tenants")
     public ResponseEntity<?> createTenant(@RequestBody SetupInitializeRequest request) {
@@ -508,5 +512,17 @@ public class PlatformAdminController {
     @GetMapping("/faturacao/series")
     public ResponseEntity<List<SerieFiscalResponse>> listarSeriesFiscais() {
         return ResponseEntity.ok(platformFaturacaoConfigService.listarSeries());
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 138 (SUBS-02, SUBS-05): Emissão de Fatura-Recibo de Subscrição
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/subscricoes/pagamentos")
+    public ResponseEntity<SubscricaoFaturaResponse> registarPagamentoSubscricao(
+            @AuthenticationPrincipal UserPrincipal autor,
+            @Valid @RequestBody RegistarPagamentoSubscricaoRequest request) {
+        SubscricaoFaturaResponse response = subscricaoFaturadaService.registarPagamentoFaturado(autor, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
