@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Download, Plus, Receipt, X } from "lucide-react";
+import { Download, FileSpreadsheet, Plus, Receipt, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { columns } from "./columns";
+import { ExportarMesDialog } from "./exportar-mes-dialog";
 import { useClientes } from "@/hooks/use-clientes";
 import { podeLerDocumentosFiscais } from "@/hooks/use-faturacao";
 import { useHonorarios } from "@/hooks/use-financeiro";
@@ -162,6 +163,9 @@ function FinanceiroContent({
   const [filtroDataDe, setFiltroDataDe] = React.useState("");
   const [filtroDataAte, setFiltroDataAte] = React.useState("");
 
+  const [dialogoExportarMesAberto, setDialogoExportarMesAberto] = React.useState(false);
+  const triggerExportarMesRef = React.useRef<HTMLButtonElement>(null);
+
   const list = honorarios.data ?? [];
 
   let filteredList = list;
@@ -194,14 +198,25 @@ function FinanceiroContent({
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Exportar CSV"
+                  aria-label="Exportar honorários (CSV)"
                   onClick={() => exportHonorariosCsv(filteredList, processoById, clienteNomeById)}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Exportar CSV</TooltipContent>
+              <TooltipContent>Exportar honorários (CSV)</TooltipContent>
             </Tooltip>
+          ) : null}
+          {canVerDocumentosFiscais ? (
+            <Button
+              ref={triggerExportarMesRef}
+              type="button"
+              variant="outline"
+              onClick={() => setDialogoExportarMesAberto(true)}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Exportar mês
+            </Button>
           ) : null}
           {canVerDocumentosFiscais ? (
             <Button asChild variant="outline">
@@ -391,6 +406,14 @@ function FinanceiroContent({
           )}
         </CardContent>
       </Card>
+
+      {canVerDocumentosFiscais ? (
+        <ExportarMesDialog
+          open={dialogoExportarMesAberto}
+          onOpenChange={setDialogoExportarMesAberto}
+          triggerRef={triggerExportarMesRef}
+        />
+      ) : null}
     </div>
   );
 }
