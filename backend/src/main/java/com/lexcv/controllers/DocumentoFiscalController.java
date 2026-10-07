@@ -7,6 +7,8 @@ import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.fiscal.efatura.EfaturaGateway;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
+import com.lexcv.services.fiscal.DescargaDocumentoFiscalService;
+import com.lexcv.services.fiscal.DescargaDocumentoFiscalTransacoes;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
@@ -15,7 +17,10 @@ import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -28,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
@@ -59,6 +65,14 @@ import java.util.UUID;
  *       repõe em PENDENTE a entrega por email de um documento em FALHOU, ENVIADO ou SEM_EMAIL, com
  *       o email atual da ficha do cliente (200 com {@code {estado, tentativas}}; 409/422 com
  *       códigos fixos; o mesmo 404 do detalhe para um id inválido ou de outro escritório).</li>
+ *   <li>Phase 137 (ENTR-02): {@link #descarregarPdf} ({@code GET /api/v1/documentos-fiscais/{id}/pdf})
+ *       devolve {@code {url, nomeFicheiro, expiresIn}} (URL pré-assinado, gerado a pedido se o PDF
+ *       ainda não existir) e {@link #descarregarXml} ({@code GET /api/v1/documentos-fiscais/{id}/xml})
+ *       devolve o XML guardado como anexo ({@code application/xml;charset=UTF-8}, nome série/número).
+ *       Cada pedido fica na auditoria ({@code documento_fiscal_descarregar}); 503 com código fixo
+ *       ({@code FICHEIRO_INDISPONIVEL}, {@code STORAGE_INDISPONIVEL}, {@code FALHA_PDF}) quando o
+ *       ficheiro ainda não está disponível ou o armazenamento falhou; o mesmo 404 do detalhe para um
+ *       id inválido ou de outro escritório.</li>
  * </ul>
  *
  * <p><b>Porque um controlador novo:</b> {@link FaturacaoController} tem um gate de CLASSE
@@ -79,7 +93,8 @@ import java.util.UUID;
  * autoridade EXATA {@code financeiro:edit}; o frontend usa {@code podeReprocessarComunicacao}, que
  * aplica a mesma regra exata, por isso as duas camadas concordam (regra RBAC do CLAUDE.md).
  * Reenviar o email (Phase 137) exige a mesma autoridade EXATA {@code financeiro:edit}; o frontend
- * usa {@code podeReenviarEmail}, com a mesma regra exata.
+ * usa {@code podeReenviarEmail}, com a mesma regra exata. Descarregar o PDF/XML (Phase 137) exige
+ * {@code financeiro:view} exato, o mesmo gate do detalhe.
  *
  * <p><b>Tenant só do principal autenticado</b>, nunca do caminho, da query ou do corpo
  * ({@link PagamentoRequest} não tem tenant). Os parâmetros da listagem chegam como texto e são
@@ -116,6 +131,7 @@ public class DocumentoFiscalController {
     private final ReprocessamentoComunicacaoService reprocessamentoComunicacaoService;
     private final EfaturaGateway efaturaGateway;
     private final ReenvioEmailFiscalService reenvioEmailFiscalService;
+    private final DescargaDocumentoFiscalService descargaDocumentoFiscalService;
 
     private UserPrincipal getPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -254,6 +270,37 @@ public class DocumentoFiscalController {
         }
         return ResponseEntity.ok(reenvioEmailFiscalService.reenviar(getTenantId(), getPrincipal(),
                 documentoId.get()));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:view')")
+    @GetMapping("/documentos-fiscais/{id}/pdf")
+    public ResponseEntity<?> descarregarPdf(@PathVariable String id) {
+        Optional<UUID> documentoId = idDocumento(id);
+        if (documentoId.isEmpty()) {
+            return naoEncontrado();
+        }
+        DescargaDocumentoFiscalService.DescargaPdf pdf = descargaDocumentoFiscalService.descarregarPdf(getTenantId(),
+                getPrincipal(), documentoId.get());
+        return ResponseEntity.ok(Map.of(
+                "url", pdf.url(),
+                "nomeFicheiro", pdf.nomeFicheiro(),
+                "expiresIn", pdf.expiresIn()));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:view')")
+    @GetMapping("/documentos-fiscais/{id}/xml")
+    public ResponseEntity<?> descarregarXml(@PathVariable String id) {
+        Optional<UUID> documentoId = idDocumento(id);
+        if (documentoId.isEmpty()) {
+            return naoEncontrado();
+        }
+        DescargaDocumentoFiscalTransacoes.XmlDescarregavel xml = descargaDocumentoFiscalService.descarregarXml(
+                getTenantId(), getPrincipal(), documentoId.get());
+        return ResponseEntity.ok()
+                .contentType(new MediaType(MediaType.APPLICATION_XML, StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(xml.nomeFicheiro()).build().toString())
+                .body(xml.conteudo());
     }
 
     /** Id do caminho como UUID, ou vazio quando não é um UUID (o chamador devolve 404 sem oráculo). */

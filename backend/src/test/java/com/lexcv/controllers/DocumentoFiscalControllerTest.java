@@ -455,9 +455,9 @@ class DocumentoFiscalControllerTest {
     }
 
     @Test
-    void exatamenteOitoHandlersSemRotasQueAlterem() {
+    void exatamenteDezHandlersSemRotasQueAlterem() {
         List<Method> hs = handlers();
-        assertEquals(8, hs.size(), hs.toString());
+        assertEquals(10, hs.size(), hs.toString());
         for (Method m : hs) {
             assertFalse(m.isAnnotationPresent(PutMapping.class), m.getName());
             assertFalse(m.isAnnotationPresent(PatchMapping.class), m.getName());
@@ -477,6 +477,9 @@ class DocumentoFiscalControllerTest {
         // Phase 137 (ENTR-04): reenvio manual do email.
         assertEquals("/documentos-fiscais/{id}/email/reenviar",
                 handler("reenviarEmail").getAnnotation(PostMapping.class).value()[0]);
+        // Phase 137 (ENTR-02): descargas auditadas do PDF e do XML.
+        assertEquals("/documentos-fiscais/{id}/pdf", handler("descarregarPdf").getAnnotation(GetMapping.class).value()[0]);
+        assertEquals("/documentos-fiscais/{id}/xml", handler("descarregarXml").getAnnotation(GetMapping.class).value()[0]);
         assertEquals("/api/v1", DocumentoFiscalController.class.getAnnotation(RequestMapping.class).value()[0]);
     }
 
