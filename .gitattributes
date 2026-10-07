@@ -2,3 +2,7 @@
 # XsdEfaturaIntegridadeTest (SHA-256). Never let git rewrite their line endings.
 backend/src/main/resources/xsd/efatura/** -text
 backend/src/test/resources/efatura/** -text
+# Vendored DejaVu fonts embedded in fiscal PDFs are pinned byte-for-byte by
+# FontesPdfIntegridadeTest (SHA-256). Binary: no line-ending conversion, no diff.
+backend/src/main/resources/pdf/fonts/** -text
+backend/src/main/resources/pdf/fonts/*.ttf binary
