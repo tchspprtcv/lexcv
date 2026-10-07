@@ -6,6 +6,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { ComunicacaoEstadoBadge } from "@/components/shared/comunicacao-estado-badge";
 import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
+import { DescarregarDocumentoBotoes } from "@/components/shared/descarregar-documento-botoes";
+import { EntregaEmailBadge } from "@/components/shared/entrega-email-badge";
 import type { DocumentoFiscalResumo } from "@/types/faturacao";
 
 // Colunas da lista "Documentos fiscais" (134-UI-SPEC Surface 3). A ordem vem do servidor (data de
@@ -18,6 +20,10 @@ import type { DocumentoFiscalResumo } from "@/types/faturacao";
 //
 // Phase 136 (136-UI-SPEC Surface 1): a coluna "Comunicação" (logo a seguir a "Tipo") mostra o
 // badge neutro partilhado para cada estado; "—" quando o documento ainda não tem comunicação.
+//
+// Phase 137 (137-UI-SPEC Surface 2): a coluna "Email" (após "Comunicação" e antes de "Total") mostra
+// o estado de entrega por email (`estadoEntregaEmail`); a última coluna "Ações" inclui os botões
+// compactos de descarga PDF e XML.
 
 function formatarData(valor: string) {
   const d = new Date(valor.includes("T") ? valor : `${valor}T00:00:00`);
@@ -87,6 +93,19 @@ export const columns: ColumnDef<DocumentoFiscalResumo>[] = [
       row.original.estadoComunicacao ? <ComunicacaoEstadoBadge estado={row.original.estadoComunicacao} /> : "—",
   },
   {
+    id: "email",
+    accessorKey: "estadoEntregaEmail",
+    enableSorting: false,
+    meta: { label: "Email" },
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Email" />,
+    cell: ({ row }) =>
+      row.original.estadoEntregaEmail ? (
+        <EntregaEmailBadge estado={row.original.estadoEntregaEmail} />
+      ) : (
+        "—"
+      ),
+  },
+  {
     id: "total",
     accessorKey: "totalDocumento",
     enableSorting: false,
@@ -106,5 +125,20 @@ export const columns: ColumnDef<DocumentoFiscalResumo>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title="Ambiente" />,
     cell: ({ row }) =>
       row.original.ambiente === "SIMULADO" ? <Badge variant="outline">Simulado</Badge> : row.original.ambiente,
+  },
+  {
+    id: "acoes",
+    enableSorting: false,
+    enableHiding: false,
+    header: () => <span className="sr-only">Ações</span>,
+    cell: ({ row }) => (
+      <div className="w-0 whitespace-nowrap text-right">
+        <DescarregarDocumentoBotoes
+          documentoId={row.original.id}
+          numeroFormatado={row.original.numeroFormatado}
+          compact
+        />
+      </div>
+    ),
   },
 ];

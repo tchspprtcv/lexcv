@@ -37,6 +37,8 @@ import { columns } from "./columns";
 // vivem nos search params do URL e são aplicados no servidor; o backend só devolve documentos do
 // tenant do utilizador. Página só de leitura: não existe nenhuma ação de alteração.
 // Phase 136: filtro "Comunicação" com os quatro estados e o banner "Modo simulado" no topo.
+// (O estado de comunicação é atualizado em segundo plano.)
+// Phase 137: coluna "Email" com estados de entrega e ações compactas de download PDF/XML.
 
 const TAMANHOS = [10, 20, 50] as const;
 const ERRO_PERIODO = "A data final não pode ser anterior à inicial.";
@@ -166,7 +168,7 @@ function DocumentosFiscaisConteudo() {
             </BreadcrumbList>
           </Breadcrumb>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal. O estado de comunicação é atualizado em segundo plano.
+            Faturas-recibo e notas de crédito emitidas pelo escritório. Os documentos são simulados e não têm validade fiscal. Os estados de comunicação e de envio por email são atualizados em segundo plano.
           </p>
         </div>
         <Button asChild variant="outline">

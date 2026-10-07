@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { ComunicacaoEstadoBadge } from "@/components/shared/comunicacao-estado-badge";
+import { DescarregarDocumentoBotoes } from "@/components/shared/descarregar-documento-botoes";
 import { ModoSimuladoBanner } from "@/components/shared/modo-simulado-banner";
 import {
   podeEmitirNotaCredito,
@@ -35,6 +36,7 @@ import { descricaoEstadoComunicacao } from "@/lib/comunicacao-fiscal";
 import type { DocumentoFiscalDetalhe } from "@/types/faturacao";
 
 import { ComunicacaoFiscalCard } from "./comunicacao-fiscal-card";
+import { EntregaEmailCard } from "./entrega-email-card";
 import { NotaCreditoDialog } from "./nota-credito-dialog";
 
 // Detalhe de um documento fiscal (134-UI-SPEC Surface 4; D-18, EMIS-08, EMIS-11). Só de leitura:
@@ -195,7 +197,7 @@ function CarregandoDocumento() {
           </Card>
         ))}
       </div>
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardContent className="space-y-2 pt-6">
             <Skeleton className="h-4 w-full" />
@@ -256,11 +258,14 @@ function DetalheDocumento({
             <p className={AJUDA}>{descricaoEstadoComunicacao(d.comunicacao.estado, podeReprocessar)}</p>
           ) : null}
         </div>
-        {mostrarEmissaoNc ? (
-          <NotaCreditoDialog documento={d} tituloPaginaRef={tituloRef} />
-        ) : totalmenteCreditada ? (
-          <p className={AJUDA}>Esta fatura-recibo já foi totalmente creditada.</p>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <DescarregarDocumentoBotoes documentoId={d.id} numeroFormatado={d.numeroFormatado} />
+          {mostrarEmissaoNc ? (
+            <NotaCreditoDialog documento={d} tituloPaginaRef={tituloRef} />
+          ) : totalmenteCreditada ? (
+            <p className={AJUDA}>Esta fatura-recibo já foi totalmente creditada.</p>
+          ) : null}
+        </div>
       </div>
 
       <div className={NOTICE_CLASSES}>
@@ -420,6 +425,8 @@ function DetalheDocumento({
       {isFr ? <NotasCreditoCard documento={d} /> : null}
 
       <ComunicacaoFiscalCard documento={d} modoComunicacao={modoComunicacao} />
+
+      <EntregaEmailCard documento={d} />
 
       <Card>
         <CardHeader>
