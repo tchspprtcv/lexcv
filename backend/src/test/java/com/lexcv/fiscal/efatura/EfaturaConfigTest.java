@@ -159,7 +159,7 @@ class EfaturaConfigTest {
     void applicationYmlTemOModoPorOmissaoEOPoolDoScheduler() throws IOException {
         PropertySource<?> yml = applicationYml();
         assertThat(String.valueOf(yml.getProperty("app.efatura.modo"))).isEqualTo("${EFATURA_MODE:SIMULADO}");
-        assertThat(String.valueOf(yml.getProperty("spring.task.scheduling.pool.size"))).isEqualTo("3");
+        assertThat(String.valueOf(yml.getProperty("spring.task.scheduling.pool.size"))).isEqualTo("4");
         assertThat(String.valueOf(yml.getProperty("app.efatura.simulado.falhas-forcadas"))).isEqualTo("false");
     }
 

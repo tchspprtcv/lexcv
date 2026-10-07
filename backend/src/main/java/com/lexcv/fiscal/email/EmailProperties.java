@@ -34,13 +34,25 @@ public record EmailProperties(
      */
     public record Smtp(
             String host,
-            @DefaultValue("587") int port,
+            @DefaultValue("587") Integer port,
             String username,
             String password,
             String from,
-            @DefaultValue("true") boolean starttls,
+            @DefaultValue("true") Boolean starttls,
             @DefaultValue("PT10S") Duration ligacaoTimeout,
             @DefaultValue("PT20S") Duration leituraTimeout) {
+
+        /** Porta por omissão (submission com STARTTLS). */
+        public static final int PORTA_POR_OMISSAO = 587;
+
+        /**
+         * {@code SMTP_PORT=} e {@code SMTP_STARTTLS=} vazios (o caso do compose/CI) chegam aqui como
+         * {@code null}: passam a 587 e STARTTLS ligado, em vez de impedirem o arranque (ENTR-06).
+         */
+        public Smtp {
+            port = port == null ? Integer.valueOf(PORTA_POR_OMISSAO) : port;
+            starttls = starttls == null ? Boolean.TRUE : starttls;
+        }
 
         /** Configurado = host e remetente ambos preenchidos. */
         public boolean configurado() {
