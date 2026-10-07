@@ -24,6 +24,7 @@ import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
+import com.lexcv.services.fiscal.PlatformDocumentoFiscalService;
 import com.lexcv.services.fiscal.PlatformFaturacaoConfigService;
 import com.lexcv.services.fiscal.SubscricaoFaturadaService;
 import com.lexcv.services.fiscal.SubscricaoNotaCreditoService;
@@ -101,6 +102,7 @@ public class PlatformAdminController {
     private final PlatformFaturacaoConfigService platformFaturacaoConfigService;
     private final SubscricaoFaturadaService subscricaoFaturadaService;
     private final SubscricaoNotaCreditoService subscricaoNotaCreditoService;
+    private final PlatformDocumentoFiscalService platformDocumentoFiscalService;
 
     @PostMapping("/tenants")
     public ResponseEntity<?> createTenant(@RequestBody SetupInitializeRequest request) {
@@ -540,5 +542,50 @@ public class PlatformAdminController {
             @Valid @RequestBody CriarNotaCreditoSubscricaoRequest request) {
         SubscricaoFaturaResponse response = subscricaoNotaCreditoService.emitirNotaCredito(id, autor, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 138 (SUBS-03): Consulta e Descarga de Documentos Fiscais da Plataforma
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/documentos-fiscais")
+    public ResponseEntity<org.springframework.data.domain.Page<com.lexcv.dtos.DocumentoFiscalResumoResponse>> listarDocumentosFiscais(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) com.lexcv.models.TipoDocumentoFiscal tipo,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) com.lexcv.models.EstadoComunicacaoFiscal estado,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate de,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate ate,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(platformDocumentoFiscalService.listarDocumentos(tipo, estado, de, ate, page, size));
+    }
+
+    @GetMapping("/documentos-fiscais/{id}")
+    public ResponseEntity<com.lexcv.dtos.DocumentoFiscalDetalheResponse> obterDocumentoFiscal(@PathVariable UUID id) {
+        return ResponseEntity.ok(platformDocumentoFiscalService.obterDocumento(id));
+    }
+
+    @GetMapping("/documentos-fiscais/{id}/pdf")
+    public ResponseEntity<?> descarregarPdf(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal autor) {
+        com.lexcv.services.fiscal.DescargaDocumentoFiscalService.DescargaPdf pdf =
+                platformDocumentoFiscalService.descarregarPdf(autor, id);
+        return ResponseEntity.ok(Map.of(
+                "url", pdf.url(),
+                "nomeFicheiro", pdf.nomeFicheiro(),
+                "expiresIn", pdf.expiresIn()));
+    }
+
+    @GetMapping("/documentos-fiscais/{id}/xml")
+    public ResponseEntity<?> descarregarXml(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal autor) {
+        com.lexcv.services.fiscal.DescargaDocumentoFiscalTransacoes.XmlDescarregavel xml =
+                platformDocumentoFiscalService.descarregarXml(autor, id);
+        return ResponseEntity.ok()
+                .contentType(new org.springframework.http.MediaType(org.springframework.http.MediaType.APPLICATION_XML, java.nio.charset.StandardCharsets.UTF_8))
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition.attachment()
+                        .filename(xml.nomeFicheiro()).build().toString())
+                .body(xml.conteudo());
     }
 }

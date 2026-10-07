@@ -108,6 +108,9 @@ class PlatformAdminControllerTest {
     @Mock
     private com.lexcv.services.fiscal.SubscricaoNotaCreditoService subscricaoNotaCreditoService;
 
+    @Mock
+    private com.lexcv.services.fiscal.PlatformDocumentoFiscalService platformDocumentoFiscalService;
+
     @AfterEach
     void limparSecurityContext() {
         SecurityContextHolder.clearContext();
@@ -124,7 +127,8 @@ class PlatformAdminControllerTest {
     private PlatformAdminController novoController() {
         return new PlatformAdminController(setupService, tenantRepository, userRepository,
                 roleRepository, permissionRepository, tenantRoleRepository,
-                platformFaturacaoConfigService, subscricaoFaturadaService, subscricaoNotaCreditoService);
+                platformFaturacaoConfigService, subscricaoFaturadaService, subscricaoNotaCreditoService,
+                platformDocumentoFiscalService);
     }
 
     /**
