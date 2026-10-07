@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,12 @@ public class RelatorioMensalFiscalService {
     static final String TOTAIS = "Totais";
 
     private static final Map<EstadoComunicacaoFiscal, String> ROTULOS_COMUNICACAO = rotulos();
+    private static final Comparator<DocumentoFiscal> ORDEM = Comparator
+            .comparing(DocumentoFiscal::getDataEmissao, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(DocumentoFiscal::getEmitidoEm, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(DocumentoFiscal::getTipo, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(DocumentoFiscal::getAno, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(DocumentoFiscal::getNumero, Comparator.nullsLast(Comparator.naturalOrder()));
 
     private final DocumentoFiscalRepository documentoFiscalRepository;
     private final DocumentoFiscalXmlRepository documentoFiscalXmlRepository;
@@ -97,9 +104,12 @@ public class RelatorioMensalFiscalService {
 
     @Transactional
     public CsvMensal exportar(UUID tenantId, UserPrincipal autor, YearMonth mes) {
-        List<DocumentoFiscal> documentos = documentoFiscalRepository
+        List<DocumentoFiscal> documentos = new ArrayList<>(documentoFiscalRepository
                 .findByTenantIdAndDataEmissaoBetweenOrderByDataEmissaoAscAnoAscNumeroAsc(tenantId, mes.atDay(1),
-                        mes.atEndOfMonth());
+                        mes.atEndOfMonth()));
+        // FR e NC têm séries próprias: "FR n.º 1" e "NC n.º 1" do mesmo dia empatam em (data, ano, número).
+        // Desempate determinístico: hora de emissão, depois o tipo (FR antes de NC), depois o número.
+        documentos.sort(ORDEM);
         List<UUID> ids = documentos.stream().map(DocumentoFiscal::getId).toList();
 
         Map<UUID, String> iuds = ids.isEmpty() ? Map.of()
