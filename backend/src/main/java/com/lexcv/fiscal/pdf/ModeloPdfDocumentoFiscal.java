@@ -34,6 +34,8 @@ public final class ModeloPdfDocumentoFiscal {
     static final String NOTA_FINAL = "Processado por computador. Documento simulado para testes, sem validade "
             + "fiscal; não substitui o documento emitido no software de faturação homologado.";
     static final String CONSUMIDOR_FINAL = "Consumidor final";
+    static final String ROTULO_LIQUIDO_FR = "Valor recebido";
+    static final String ROTULO_LIQUIDO_NC = "Valor líquido a crédito";
 
     private ModeloPdfDocumentoFiscal() {
     }
@@ -160,11 +162,17 @@ public final class ModeloPdfDocumentoFiscal {
         } else {
             linhaTotal(h, "IVA (" + percentagem(t.taxaIva()) + ")", dinheiroOuVazio(t.iva(), moeda), false);
         }
-        if (t.retencao() != null && t.retencao().signum() > 0) {
+        boolean comRetencao = t.retencao() != null && t.retencao().signum() > 0;
+        if (comRetencao) {
             linhaTotal(h, "Retenção na fonte (" + percentagem(t.taxaRetencao()) + ")",
                     "- " + FormatacaoFiscal.dinheiro(t.retencao(), moeda), false);
         }
         linhaTotal(h, nc ? "Total a crédito" : "Total do documento", dinheiroOuVazio(t.totalDocumento(), moeda), true);
+        if (comRetencao) {
+            // Com retenção, o total (base + IVA) não é o que muda de mãos: a última linha mostra o
+            // valor líquido guardado (total menos a retenção). Sem retenção não há linha extra.
+            linhaTotal(h, nc ? ROTULO_LIQUIDO_NC : ROTULO_LIQUIDO_FR, dinheiroOuVazio(t.valorLiquido(), moeda), true);
+        }
         h.append("</table>");
 
         // 6. Isenção.

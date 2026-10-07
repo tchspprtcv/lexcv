@@ -62,7 +62,7 @@ class PdfDocumentoFiscalRendererTest {
                 LocalDate.of(2026, 3, 7), emitenteNormal(), adquirente(nomeAdquirente), linhas,
                 new DadosPdfDocumentoFiscal.Totais(new BigDecimal("10000.00"), new BigDecimal("1500.00"),
                         new BigDecimal("2000.00"), new BigDecimal("11500.00"), new BigDecimal("15.0000"),
-                        new BigDecimal("20.0000")),
+                        new BigDecimal("20.0000"), new BigDecimal("9500.00")),
                 "CVE", IUD, null, null, null, true);
     }
 
@@ -76,16 +76,28 @@ class PdfDocumentoFiscalRendererTest {
                 LocalDate.of(2026, 3, 8), emitenteIsento(), adquirente("João Tavares"),
                 List.of(linha("Honorários de consulta jurídica", "5000.00", "0.0000", "0.00", "02", "5000.00")),
                 new DadosPdfDocumentoFiscal.Totais(new BigDecimal("5000.00"), BigDecimal.ZERO.setScale(2),
-                        BigDecimal.ZERO.setScale(2), new BigDecimal("5000.00"), new BigDecimal("0.0000"), null),
+                        BigDecimal.ZERO.setScale(2), new BigDecimal("5000.00"), new BigDecimal("0.0000"), null,
+                        new BigDecimal("5000.00")),
                 "CVE", IUD, null, null, null, true);
     }
 
     private static DadosPdfDocumentoFiscal nc() {
+        return nc(new DadosPdfDocumentoFiscal.Totais(new BigDecimal("1000.00"), new BigDecimal("150.00"),
+                BigDecimal.ZERO.setScale(2), new BigDecimal("1150.00"), new BigDecimal("15.0000"), null,
+                new BigDecimal("1150.00")));
+    }
+
+    private static DadosPdfDocumentoFiscal ncComRetencao() {
+        return nc(new DadosPdfDocumentoFiscal.Totais(new BigDecimal("1000.00"), new BigDecimal("150.00"),
+                new BigDecimal("200.00"), new BigDecimal("1150.00"), new BigDecimal("15.0000"),
+                new BigDecimal("20.0000"), new BigDecimal("950.00")));
+    }
+
+    private static DadosPdfDocumentoFiscal nc(DadosPdfDocumentoFiscal.Totais totais) {
         return new DadosPdfDocumentoFiscal(TipoDocumentoFiscal.NC, "NC SIM-NC-2026/000007", "SIM-NC-2026",
                 LocalDate.of(2026, 4, 2), emitenteNormal(), adquirente("Maria Fernandes"),
                 List.of(linha("Correção de honorários", "1000.00", "15.0000", "150.00", null, "1150.00")),
-                new DadosPdfDocumentoFiscal.Totais(new BigDecimal("1000.00"), new BigDecimal("150.00"),
-                        BigDecimal.ZERO.setScale(2), new BigDecimal("1150.00"), new BigDecimal("15.0000"), null),
+                totais,
                 "CVE", IUD, new DadosPdfDocumentoFiscal.Origem("FR SIM-FR-2026/000123", LocalDate.of(2026, 3, 7)),
                 "Correção de valor", "Valor faturado em excesso no mandato de março", true);
     }
@@ -138,6 +150,37 @@ class PdfDocumentoFiscalRendererTest {
     void dinheiroUsaEspacoEstreitoInseparavel() throws IOException {
         String t = texto(renderer.renderizar(frNormal()));
         assertThat(t).contains("11" + NNBSP + "500,00 CVE");
+    }
+
+    @Test
+    void frComRetencaoTerminaNoValorRecebido() throws IOException {
+        String t = plano(texto(renderer.renderizar(frNormal())));
+        String total = plano(FormatacaoFiscal.dinheiro(new BigDecimal("11500.00"), "CVE"));
+        String retencao = "- " + plano(FormatacaoFiscal.dinheiro(new BigDecimal("2000.00"), "CVE"));
+        String liquido = plano(FormatacaoFiscal.dinheiro(new BigDecimal("9500.00"), "CVE"));
+        assertThat(t).contains("Total do documento " + total, retencao, "Valor recebido " + liquido);
+        assertThat(t.indexOf("Total do documento")).isLessThan(t.indexOf("Valor recebido"));
+        assertThat(t.indexOf(retencao)).isLessThan(t.indexOf("Valor recebido"));
+        assertThat(t.indexOf("Valor recebido")).isLessThan(t.indexOf("Processado por computador."));
+        assertThat(t).doesNotContain("Valor líquido a crédito");
+    }
+
+    @Test
+    void semRetencaoNaoHaLinhaDeValorLiquido() throws IOException {
+        assertThat(plano(texto(renderer.renderizar(frIsenta())))).doesNotContain("Valor recebido");
+        assertThat(plano(texto(renderer.renderizar(nc())))).doesNotContain("Valor líquido a crédito", "Valor recebido");
+    }
+
+    @Test
+    void ncComRetencaoTerminaNoValorLiquidoACredito() throws IOException {
+        String t = plano(texto(renderer.renderizar(ncComRetencao())));
+        String total = plano(FormatacaoFiscal.dinheiro(new BigDecimal("1150.00"), "CVE"));
+        String liquido = plano(FormatacaoFiscal.dinheiro(new BigDecimal("950.00"), "CVE"));
+        assertThat(t).contains("Total a crédito " + total,
+                "- " + plano(FormatacaoFiscal.dinheiro(new BigDecimal("200.00"), "CVE")),
+                "Valor líquido a crédito " + liquido);
+        assertThat(t.indexOf("Total a crédito")).isLessThan(t.indexOf("Valor líquido a crédito"));
+        assertThat(t).doesNotContain("Valor recebido");
     }
 
     @Test

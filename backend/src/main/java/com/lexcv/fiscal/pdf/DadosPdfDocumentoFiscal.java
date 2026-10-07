@@ -67,9 +67,12 @@ public record DadosPdfDocumentoFiscal(
                         BigDecimal taxaRetencao, BigDecimal valorRetencao, BigDecimal totalLinha) {
     }
 
-    /** Taxas em percentagem (ex.: {@code 15.0000}). */
+    /**
+     * Taxas em percentagem (ex.: {@code 15.0000}). {@code totalDocumento} = base + IVA;
+     * {@code valorLiquido} = total menos a retenção (o valor efetivamente recebido / creditado).
+     */
     public record Totais(BigDecimal base, BigDecimal iva, BigDecimal retencao, BigDecimal totalDocumento,
-                         BigDecimal taxaIva, BigDecimal taxaRetencao) {
+                         BigDecimal taxaIva, BigDecimal taxaRetencao, BigDecimal valorLiquido) {
     }
 
     /** NC: a Fatura-Recibo corrigida. */
@@ -105,7 +108,7 @@ public record DadosPdfDocumentoFiscal(
                         d.getAdquirenteLocalidade()),
                 copia,
                 new Totais(d.getTotalBase(), d.getTotalIva(), d.getTotalRetencao(), d.getTotalDocumento(),
-                        d.getTaxaIva(), d.getTaxaRetencao()),
+                        d.getTaxaIva(), d.getTaxaRetencao(), d.getValorLiquido()),
                 d.getMoeda(),
                 iud,
                 origemOuNulo == null ? null

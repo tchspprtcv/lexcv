@@ -275,7 +275,7 @@ Page and type tokens (print):
 | Page | A4 portrait, `@page { size: A4; margin: 28mm 16mm 16mm 16mm; }` (28mm top holds the header band: 2mm grid exception justified by the running band height ~20mm + 8mm gap) |
 | Small | 7.5pt regular / 1.4, `#4b5563` — labels, footer, notes, band line 2, IUD note; table header row uses 7.5pt bold |
 | Body | 9pt regular / 1.4, `#111827` — block content, table cells |
-| Heading | 11pt bold / 1.2 — section headings (sentence case), band line 1, emitente firma, totals block lines label "Total do documento"/"Total a crédito" and its value |
+| Heading | 11pt bold / 1.2 — section headings (sentence case), band line 1, emitente firma, totals block lines label "Total do documento"/"Total a crédito" and its value, plus "Valor recebido"/"Valor líquido a crédito" and its value when the retention is > 0 |
 | Title | 16pt bold / 1.2 — document type ("Fatura-Recibo" / "Nota de Crédito") |
 | Weights | 2 only: regular (400) and bold (700) |
 | Watermark | 44pt bold is a decorative graphic, not part of the text scale |
@@ -296,7 +296,7 @@ Body order:
 2. "Adquirente" block: nome; "NIF" (mono) or the text "Consumidor final" when the snapshot has no NIF; morada when present.
 3. NC only, "Documento de origem" block: "Corrige a Fatura-Recibo {número da FR}" + "de {data da FR}"; "Motivo: {motivoRotulo}"; "Descrição: {motivoTexto}" when present.
 4. Lines table (full width; header row `background #f3f4f6`, Small 7.5pt bold): "Descrição" (left) | "Base" | "Taxa IVA" | "IVA" | "Total" (numeric columns right-aligned, `white-space: nowrap`). Exempt line: "Taxa IVA" shows "Isento", "IVA" shows "{código}". `thead` repeats on page break; rows never split (`page-break-inside: avoid`).
-5. Totals block (right-aligned, 45% width): "Base tributável"; "IVA ({taxa}%)" OR "IVA: isento"; "Retenção na fonte ({taxa}%)" as "- {valor}" only when > 0; separator; "Total do documento" Heading 11pt bold (other total lines Body 9pt). NC: same lines, title of the final line "Total a crédito"; amounts printed as stored (positive) — the document type conveys the credit.
+5. Totals block (right-aligned, 45% width): "Base tributável"; "IVA ({taxa}%)" OR "IVA: isento"; "Retenção na fonte ({taxa}%)" as "- {valor}" only when > 0; separator; "Total do documento" (base + IVA) Heading 11pt bold (other total lines Body 9pt). When the retention is > 0, a further final line follows, also Heading 11pt bold: "Valor recebido" = the stored `valorLiquido` (total minus retention); with no retention there is no extra line. NC: same lines, the total line titled "Total a crédito" and the net line "Valor líquido a crédito"; amounts printed as stored (positive) — the document type conveys the credit. All amounts go through `FormatacaoFiscal`.
 6. Exemption statement (when isento, 7.5pt): "Motivo de isenção: {código} — {descrição}."
 7. Closing note (7.5pt): "Processado por computador. Documento simulado para testes, sem validade fiscal; não substitui o documento emitido no software de faturação homologado."
 

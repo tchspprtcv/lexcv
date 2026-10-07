@@ -94,7 +94,9 @@ Money and date formatting lives in the public `FormatacaoFiscal` helper, which t
 7. **Extra file `FalhaGeracaoPdf.java`.** The plan names the exception but does not list its file.
 8. **`Emitente.isento` added** (see decisions).
 
-## Open point for review
+9. **[Orchestrator decision, post-plan] Net amount after retention.** Commit `fix(137-06): show net amount received after retention on the PDF`. When the retention is > 0 the totals block keeps "Total do documento" (base + IVA) and "- Retenção", and ends with "Valor recebido" (FR) / "Valor líquido a crédito" (NC) = the stored `valorLiquido`, formatted by `FormatacaoFiscal`. With no retention there is no extra line. `DadosPdfDocumentoFiscal.Totais` gained a trailing `valorLiquido` component (copied from `DocumentoFiscal.valorLiquido`). `PdfDocumentoFiscalRendererTest` is now **15/15** (three new tests: FR with retention, NC with retention, no line without retention). 137-UI-SPEC Surface 6a totals block updated. This resolves the open point below.
+
+## Open point for review (resolved, see deviation 9)
 
 UI-SPEC totals order is: Base, IVA, "- Retenção", then "Total do documento". "Total do documento" prints `totalDocumento`, which is base + IVA, as the plan's `Totais` record defines. The retention is shown but not deducted, and the net amount (`valorLiquido`) is not printed. This follows the plan literally. If the line after the retention should be the net amount, that is a copy/UI-SPEC decision.
 
