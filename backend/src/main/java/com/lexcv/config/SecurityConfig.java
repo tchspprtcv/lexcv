@@ -82,11 +82,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .toList();
-        configuration.setAllowedOrigins(allowedOrigins);
+        List<String> allowedOrigins = (corsAllowedOrigins != null && !corsAllowedOrigins.isBlank())
+            ? Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList()
+            : List.of("http://localhost:*", "http://127.0.0.1:*", "http://lexcv:*", "https://alcv.tech", "https://*.alcv.tech");
+
+        configuration.setAllowedOriginPatterns(allowedOrigins.isEmpty()
+            ? List.of("http://localhost:*", "http://127.0.0.1:*", "http://lexcv:*", "https://alcv.tech", "https://*.alcv.tech")
+            : allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("Authorization"));
