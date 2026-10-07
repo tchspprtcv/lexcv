@@ -8,6 +8,7 @@ import com.lexcv.services.ResolucaoPapeisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -79,31 +80,53 @@ public class NotificacaoComunicacaoFiscal {
         String entidadeId = documentoId + ":" + episodio;
         String linkUrl = "/financeiro/documentos-fiscais/" + documentoId;
 
-        List<User> utilizadores;
-        try {
-            utilizadores = userRepository.findByTenantId(tenantId);
-        } catch (RuntimeException e) {
-            log.warn("Notificação de falha de comunicação não criada: documento {}, utilizadores não lidos ({})",
-                    documentoId, e.getClass().getSimpleName());
-            return 0;
-        }
-
         int criadas = 0;
-        for (User utilizador : utilizadores) {
+        for (UUID destinatario : destinatariosFalhaFiscal(tenantId)) {
             try {
-                if (!Boolean.TRUE.equals(utilizador.getAtivo()) || !temPermissao(utilizador)) {
-                    continue;
-                }
-                if (notificacaoService.criar(tenantId, utilizador.getId(), CATEGORIA, titulo, mensagem,
+                if (notificacaoService.criar(tenantId, destinatario, CATEGORIA, titulo, mensagem,
                         ENTIDADE_TIPO, entidadeId, linkUrl).isPresent()) {
                     criadas++;
                 }
             } catch (RuntimeException e) {
                 log.warn("Notificação de falha de comunicação não criada: documento {}, destinatário {} ({})",
-                        documentoId, utilizador.getId(), e.getClass().getSimpleName());
+                        documentoId, destinatario, e.getClass().getSimpleName());
             }
         }
         return criadas;
+    }
+
+    /**
+     * Phase 137 (ENTR-05): a regra única de destinatários das falhas fiscais persistentes, partilhada
+     * por {@code COMUNICACAO_FISCAL_FALHOU} e {@code EMAIL_FISCAL_FALHOU} para que ambas cheguem
+     * sempre às mesmas pessoas: utilizadores ATIVOS do tenant dado cujas permissões efetivas
+     * intersectam {@link #PERMISSOES_DESTINATARIO}.
+     *
+     * <p>Nunca lança: se os utilizadores não puderem ser lidos, regista (só o tipo da exceção) e
+     * devolve uma lista vazia; um utilizador cujas permissões não possam ser resolvidas é ignorado e
+     * os restantes continuam a ser avaliados.
+     */
+    public List<UUID> destinatariosFalhaFiscal(UUID tenantId) {
+        List<User> utilizadores;
+        try {
+            utilizadores = userRepository.findByTenantId(tenantId);
+        } catch (RuntimeException e) {
+            log.warn("Destinatários de falha fiscal não resolvidos: utilizadores do tenant não lidos ({})",
+                    e.getClass().getSimpleName());
+            return List.of();
+        }
+
+        List<UUID> destinatarios = new ArrayList<>();
+        for (User utilizador : utilizadores) {
+            try {
+                if (Boolean.TRUE.equals(utilizador.getAtivo()) && temPermissao(utilizador)) {
+                    destinatarios.add(utilizador.getId());
+                }
+            } catch (RuntimeException e) {
+                log.warn("Destinatário de falha fiscal ignorado: utilizador {}, permissões não resolvidas ({})",
+                        utilizador.getId(), e.getClass().getSimpleName());
+            }
+        }
+        return destinatarios;
     }
 
     /** Mesmas permissões que o {@code JwtAuthenticationFilter} põe no principal deste utilizador. */
