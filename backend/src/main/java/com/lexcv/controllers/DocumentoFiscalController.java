@@ -10,6 +10,7 @@ import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReenvioEmailFiscalService;
 import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +55,10 @@ import java.util.UUID;
  *       {@code {estado, tentativas}}; 409 noutro estado; o mesmo 404 do detalhe para um id
  *       inválido ou de outro escritório). Phase 136 (DFE-06): o estado de emissão leva também
  *       {@code modoComunicacao}, o ambiente do gateway em execução (SIMULADO).</li>
+ *   <li>Phase 137 (ENTR-04): {@link #reenviarEmail} ({@code POST /api/v1/documentos-fiscais/{id}/email/reenviar})
+ *       repõe em PENDENTE a entrega por email de um documento em FALHOU, ENVIADO ou SEM_EMAIL, com
+ *       o email atual da ficha do cliente (200 com {@code {estado, tentativas}}; 409/422 com
+ *       códigos fixos; o mesmo 404 do detalhe para um id inválido ou de outro escritório).</li>
  * </ul>
  *
  * <p><b>Porque um controlador novo:</b> {@link FaturacaoController} tem um gate de CLASSE
@@ -73,6 +78,8 @@ import java.util.UUID;
  * sem equivalências, para as duas camadas concordarem. Reprocessar a comunicação exige a
  * autoridade EXATA {@code financeiro:edit}; o frontend usa {@code podeReprocessarComunicacao}, que
  * aplica a mesma regra exata, por isso as duas camadas concordam (regra RBAC do CLAUDE.md).
+ * Reenviar o email (Phase 137) exige a mesma autoridade EXATA {@code financeiro:edit}; o frontend
+ * usa {@code podeReenviarEmail}, com a mesma regra exata.
  *
  * <p><b>Tenant só do principal autenticado</b>, nunca do caminho, da query ou do corpo
  * ({@link PagamentoRequest} não tem tenant). Os parâmetros da listagem chegam como texto e são
@@ -108,6 +115,7 @@ public class DocumentoFiscalController {
     private final NotaCreditoService notaCreditoService;
     private final ReprocessamentoComunicacaoService reprocessamentoComunicacaoService;
     private final EfaturaGateway efaturaGateway;
+    private final ReenvioEmailFiscalService reenvioEmailFiscalService;
 
     private UserPrincipal getPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -234,6 +242,17 @@ public class DocumentoFiscalController {
             return naoEncontrado();
         }
         return ResponseEntity.ok(reprocessamentoComunicacaoService.reprocessar(getTenantId(), getPrincipal(),
+                documentoId.get()));
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:edit')")
+    @PostMapping("/documentos-fiscais/{id}/email/reenviar")
+    public ResponseEntity<?> reenviarEmail(@PathVariable String id) {
+        Optional<UUID> documentoId = idDocumento(id);
+        if (documentoId.isEmpty()) {
+            return naoEncontrado();
+        }
+        return ResponseEntity.ok(reenvioEmailFiscalService.reenviar(getTenantId(), getPrincipal(),
                 documentoId.get()));
     }
 

@@ -80,7 +80,7 @@ import static org.mockito.Mockito.when;
  *
  * <p>Phase 136 (DFE-05, DFE-06): mais um handler -- reprocessar a comunicação de um documento
  * ({@code financeiro:edit} exato), com o mesmo 404 sem oráculo -- e o estado de emissão passa a
- * levar {@code modoComunicacao} do gateway em execução. Passam a ser 7 handlers.
+ * levar {@code modoComunicacao} do gateway em execução. Passam a ser 7 handlers; Phase 137 (ENTR-04) acrescenta o reenvio do email: 8.
  */
 class DocumentoFiscalControllerTest {
 
@@ -454,9 +454,9 @@ class DocumentoFiscalControllerTest {
     }
 
     @Test
-    void exatamenteSeteHandlersSemRotasQueAlterem() {
+    void exatamenteOitoHandlersSemRotasQueAlterem() {
         List<Method> hs = handlers();
-        assertEquals(7, hs.size(), hs.toString());
+        assertEquals(8, hs.size(), hs.toString());
         for (Method m : hs) {
             assertFalse(m.isAnnotationPresent(PutMapping.class), m.getName());
             assertFalse(m.isAnnotationPresent(PatchMapping.class), m.getName());
@@ -473,6 +473,9 @@ class DocumentoFiscalControllerTest {
                 handler("emitirNotaCredito").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/documentos-fiscais/{id}/comunicacao/reprocessar",
                 handler("reprocessarComunicacao").getAnnotation(PostMapping.class).value()[0]);
+        // Phase 137 (ENTR-04): reenvio manual do email.
+        assertEquals("/documentos-fiscais/{id}/email/reenviar",
+                handler("reenviarEmail").getAnnotation(PostMapping.class).value()[0]);
         assertEquals("/api/v1", DocumentoFiscalController.class.getAnnotation(RequestMapping.class).value()[0]);
     }
 

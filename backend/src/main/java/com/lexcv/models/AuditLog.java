@@ -43,7 +43,10 @@ public class AuditLog {
     // faturacao_dados_alterar | faturacao_ativar | faturacao_desativar | faturacao_email_ligar |
     // faturacao_email_desligar (Phase 133, entidadeTipo configuracao_fiscal; written only by
     // AuditoriaFiscalService) | documento_fiscal_emitir (Phase 134, entidadeTipo documento_fiscal;
-    // written only by AuditoriaFiscalService.registarEmissao)
+    // written only by AuditoriaFiscalService.registarEmissao) | documento_fiscal_reenviar_email
+    // (Phase 137, entidadeTipo documento_fiscal; AuditoriaFiscalService.registarReenvioEmail; detail
+    // never holds the recipient address -- documento_fiscal_descarregar and
+    // documento_fiscal_exportar_mes join this list in 137-15/137-18)
     @Column(name = "acao", nullable = false)
     private String acao;
 

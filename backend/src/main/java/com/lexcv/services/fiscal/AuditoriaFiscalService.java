@@ -65,6 +65,7 @@ public class AuditoriaFiscalService {
     public static final String ACAO_EMITIR = "documento_fiscal_emitir";
     public static final String ACAO_EMITIR_NC = "documento_fiscal_emitir_nc";
     public static final String ACAO_REPROCESSAR_COMUNICACAO = "documento_fiscal_reprocessar_comunicacao";
+    public static final String ACAO_REENVIAR_EMAIL = "documento_fiscal_reenviar_email";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -156,6 +157,21 @@ public class AuditoriaFiscalService {
         put(detalhe, "estadoAnterior", estadoAnterior);
         gravar(tenantId, autor, ACAO_REPROCESSAR_COMUNICACAO, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId),
                 detalhe);
+    }
+
+    /**
+     * Phase 137 (ENTR-04, T-137-48/49): evento do reenvio manual do email de um documento, na
+     * transação do {@code ReenvioEmailFiscalService}. Só o nome do autor, o número formatado e o
+     * estado anterior da entrega -- nunca o endereço do destinatário.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarReenvioEmail(UUID tenantId, UserPrincipal autor, UUID documentoId,
+                                     String numeroFormatado, String estadoAnterior) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "numeroFormatado", numeroFormatado);
+        put(detalhe, "estadoAnterior", estadoAnterior);
+        gravar(tenantId, autor, ACAO_REENVIAR_EMAIL, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
     }
 
     /**
