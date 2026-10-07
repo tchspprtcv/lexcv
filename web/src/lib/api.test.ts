@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/hooks/use-toast", () => ({ toast: { error: vi.fn() } }));
 
 import { toast } from "@/hooks/use-toast";
-import { ApiError, apiFetch, isApiError } from "@/lib/api";
+import { ApiError, apiFetch, apiFetchFicheiro, isApiError } from "@/lib/api";
 
 const fetchMock = vi.fn();
 
@@ -136,3 +136,72 @@ describe("isApiError", () => {
     expect(isApiError("x")).toBe(false);
   });
 });
+
+describe("apiFetchFicheiro", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("devolve blob e nome de ficheiro extraído de filename standard", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Blob(["conteudo"]), {
+        status: 200,
+        headers: {
+          "Content-Disposition": 'attachment; filename="fatura-FT-2026-1.xml"',
+          "Content-Type": "application/xml",
+        },
+      }),
+    );
+
+    const { blob, nomeFicheiro } = await apiFetchFicheiro("/documentos-fiscais/1/xml");
+
+    expect(nomeFicheiro).toBe("fatura-FT-2026-1.xml");
+    expect(await blob.text()).toBe("conteudo");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/documentos-fiscais/1/xml",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("devolve nome de ficheiro extraído de RFC 5987 filename*=UTF-8''", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Blob(["csv-dados"]), {
+        status: 200,
+        headers: {
+          "Content-Disposition": "attachment; filename*=UTF-8''relat%C3%B3rio-2026-10.csv",
+          "Content-Type": "text/csv",
+        },
+      }),
+    );
+
+    const { blob, nomeFicheiro } = await apiFetchFicheiro("/documentos-fiscais/exportacao-mensal?mes=2026-10");
+
+    expect(nomeFicheiro).toBe("relatório-2026-10.csv");
+    expect(await blob.text()).toBe("csv-dados");
+  });
+
+  it("devolve nomeFicheiro null quando não há cabeçalho Content-Disposition", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Blob(["dados"]), {
+        status: 200,
+      }),
+    );
+
+    const { nomeFicheiro } = await apiFetchFicheiro("/doc");
+    expect(nomeFicheiro).toBeNull();
+  });
+
+  it("trata erros com ApiError e toasts tal como apiFetch", async () => {
+    responder(JSON.stringify({ message: "Não encontrado", code: "DOC_NAO_ENCONTRADO" }), 404);
+
+    const erro = (await capturarErro(apiFetchFicheiro("/doc/xml", {}, { semToastParaStatus: [404] }))) as ApiError;
+
+    expect(erro).toBeInstanceOf(ApiError);
+    expect(erro.status).toBe(404);
+    expect(erro.code).toBe("DOC_NAO_ENCONTRADO");
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
