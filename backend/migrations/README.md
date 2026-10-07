@@ -163,6 +163,9 @@ Everything else in this directory is **skip** on a fresh install:
   `ddl-auto` already created `t_entrega_email_fiscal` and `t_documento_fiscal_pdf` with their
   unique keys and indexes, and every statement uses `IF NOT EXISTS`, so running it against a
   fresh database simply changes nothing.
+- `138-plataforma-faturacao.sql` — redundant on a fresh database: `ddl-auto` already created
+  `t_pagamento_subscricao` and configured `t_documento_fiscal` with nullable office fields and
+  the new `adquirente_tenant_id` and `pagamento_subscricao_id` columns and index.
 
 ---
 
@@ -197,6 +200,7 @@ database*. Verify per database, not per environment — the environments have dr
 | 21 | `135-add-nota-credito-documento-fiscal.sql` | Adds nullable `documento_origem_id`, `motivo_codigo`, `motivo_texto` and the index `idx_documento_fiscal_tenant_origem` to `t_documento_fiscal` (Phase 135, Nota de Crédito). Requires `134` first. An NC's `pagamento_id` is its own estorno payment, so no constraint changes. No backfill -- existing Fatura-Recibo rows keep `NULL` in the new columns. | **Yes** -- `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`. |
 | 22 | `136-efatura-comunicacao.sql` | Adds the outbox columns `lease_ate`, `ultima_tentativa_em`, `ultimo_erro`, `ultimo_erro_codigo`, `concluido_em` and `reprocessamentos INTEGER NOT NULL DEFAULT 0` (backfills existing rows with `0`) to `t_comunicacao_fiscal`, the CHECK `ck_comunicacao_fiscal_autorizado_producao` (`estado <> 'AUTORIZADO' OR ambiente = 'PRODUCAO'`), the index `idx_comunicacao_fiscal_estado_proxima`, and creates the insert-only `t_documento_fiscal_xml` (Phase 136, eFatura XML + simulated adapter). Requires `134` and `135` first. **Run it before booting a Phase 136 build** on any database that already has `t_comunicacao_fiscal`: even on `ddl-auto: update`, Hibernate adds the columns but never the CHECK to an existing table, so without this script the database-level "a simulated document is never AUTORIZADO" guarantee is missing. | **Yes** -- `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`; the CHECK is added only when `pg_constraint` lacks it. |
 | 23 | `137-entrega-documento-fiscal.sql` | Creates the mutable email-delivery satellite `t_entrega_email_fiscal` (one row per document, `uk_entrega_email_fiscal_documento`; `reenvios INTEGER NOT NULL DEFAULT 0`; indexes `idx_entrega_email_fiscal_estado_proxima` and `idx_entrega_email_fiscal_tenant_estado`) and the insert-only PDF record `t_documento_fiscal_pdf` (`uk_documento_fiscal_pdf_documento`, `uk_documento_fiscal_pdf_object_key`; the PDF bytes live in MinIO) (Phase 137, PDF, armazenamento e email). Requires `133`–`136` first. No foreign keys, no CHECK. No backfill -- documents issued before 137 have no delivery row and no PDF row; the PDF is generated on demand at first download. | **Yes — CREATE TABLE/INDEX IF NOT EXISTS**. |
+| 24 | `138-plataforma-faturacao.sql` | Creates `t_pagamento_subscricao`, alters `t_documento_fiscal` (drops NOT NULL on office fields, adds `adquirente_tenant_id` and `pagamento_subscricao_id`, creates adquirente index) (Phase 138, Plataforma como Emitente). Requires `133`–`137` first. | **Yes — CREATE TABLE/INDEX IF NOT EXISTS / safe ALTER**. |
 
 ### Verify before running `125`
 
@@ -234,6 +238,7 @@ Only **13 of 23** scripts tolerate being run twice:
 | `135-add-nota-credito-documento-fiscal.sql` | Yes -- `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` |
 | `136-efatura-comunicacao.sql` | every statement uses `IF NOT EXISTS`; the CHECK block checks `pg_constraint` first |
 | `137-entrega-documento-fiscal.sql` | every statement uses `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` |
+| `138-plataforma-faturacao.sql` | every statement uses `IF NOT EXISTS` / safe `ALTER TABLE` blocks |
 
 The other **10 must not be re-run**. Nine of them fail loudly (duplicate table / column /
 constraint / index) — annoying but safe. **`125` used to be the dangerous exception: it did
@@ -257,7 +262,7 @@ nothing. Verified by execution, not by reading the code.
 
 ## Known execution status
 
-As of the last verification, on a client (existing) database, **15 scripts are outstanding**:
+As of the last verification, on a client (existing) database, **16 scripts are outstanding**:
 
 | File | Status |
 |---|---|
@@ -276,6 +281,7 @@ As of the last verification, on a client (existing) database, **15 scripts are o
 | `135-add-nota-credito-documento-fiscal.sql` | Pending, new in this phase (v3.0, Phase 135). |
 | `136-efatura-comunicacao.sql` | Pending, new in this phase (v3.0, Phase 136). |
 | `137-entrega-documento-fiscal.sql` | Pending, new in this phase (v3.0, Phase 137). |
+| `138-plataforma-faturacao.sql` | Pending, new in this phase (v3.0, Phase 138). |
 
 `91`, `93`, `96`, `111` and `125` have **no trace at all** in `.planning/STATE.md`. That gap
 is precisely why this checklist exists: **do not treat planning documents as the record of

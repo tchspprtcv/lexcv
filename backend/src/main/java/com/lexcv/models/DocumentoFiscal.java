@@ -54,7 +54,8 @@ import java.util.UUID;
                @Index(name = "idx_documento_fiscal_tenant_cliente", columnList = "tenant_id, cliente_id"),
                @Index(name = "idx_documento_fiscal_tenant_processo", columnList = "tenant_id, processo_id"),
                @Index(name = "idx_documento_fiscal_tenant_honorario", columnList = "tenant_id, honorario_id"),
-               @Index(name = "idx_documento_fiscal_tenant_origem", columnList = "tenant_id, documento_origem_id")
+               @Index(name = "idx_documento_fiscal_tenant_origem", columnList = "tenant_id, documento_origem_id"),
+               @Index(name = "idx_documento_fiscal_adquirente_tenant", columnList = "adquirente_tenant_id, data_emissao")
        })
 @Getter
 @Builder
@@ -144,24 +145,37 @@ public class DocumentoFiscal {
     // ---- Origem ----
 
     /**
-     * Cliente de origem. É a ÚNICA coluna alguma vez re-apontada: a fusão de clientes (D-15)
-     * faz um UPDATE nativo; o Hibernate nunca a altera.
+     * Cliente de origem num documento de escritório. Nulo em documentos de subscrição da plataforma.
+     * É a ÚNICA coluna alguma vez re-apontada: a fusão de clientes (D-15) faz um UPDATE nativo; o Hibernate nunca a altera.
      */
-    @Column(name = "cliente_id", nullable = false, updatable = false)
+    @Column(name = "cliente_id", updatable = false)
     private UUID clienteId;
 
-    @Column(name = "processo_id", nullable = false, updatable = false)
+    @Column(name = "processo_id", updatable = false)
     private UUID processoId;
 
-    @Column(name = "honorario_id", nullable = false, updatable = false)
+    @Column(name = "honorario_id", updatable = false)
     private Integer honorarioId;
 
     /**
-     * FR: o pagamento faturado. NC (Phase 135): o id do próprio {@code Pagamento} de estorno
-     * (negativo) da NC -- por isso continua {@code NOT NULL} + {@code UNIQUE}.
+     * FR: o pagamento faturado de honorários. NC (Phase 135): o id do próprio {@code Pagamento} de estorno
+     * (negativo) da NC. Nulo em documentos de subscrição da plataforma.
      */
-    @Column(name = "pagamento_id", nullable = false, updatable = false)
+    @Column(name = "pagamento_id", updatable = false)
     private Integer pagamentoId;
+
+    /**
+     * Phase 138 (SUBS-02, SUBS-04): Tenant adquirente quando a fatura é emitida pela plataforma LexCV
+     * a um escritório cliente.
+     */
+    @Column(name = "adquirente_tenant_id", updatable = false)
+    private UUID adquirenteTenantId;
+
+    /**
+     * Phase 138 (SUBS-02): Pagamento de subscrição de origem quando a fatura é emitida pela plataforma.
+     */
+    @Column(name = "pagamento_subscricao_id", updatable = false)
+    private UUID pagamentoSubscricaoId;
 
     // ---- Nota de crédito (Phase 135) ----
 

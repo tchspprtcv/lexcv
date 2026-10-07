@@ -108,7 +108,13 @@ class DocumentoFiscalImutabilidadeTest {
                         "findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc",
                         "findByTenantIdAndIdIn", "existsByTenantIdAndPagamentoIdAndTipo",
                         // Phase 137 (RELF-01): documentos do mês para o CSV -- atualização deliberada.
-                        "findByTenantIdAndDataEmissaoBetweenOrderByDataEmissaoAscAnoAscNumeroAsc"),
+                        "findByTenantIdAndDataEmissaoBetweenOrderByDataEmissaoAscAnoAscNumeroAsc",
+                        // Phase 138 (SUBS-02..05): faturas de subscrição da plataforma -- atualização deliberada.
+                        "findByAdquirenteTenantIdAndTenantIdOrderByDataEmissaoDescNumeroDesc",
+                        "findByIdAndAdquirenteTenantIdAndTenantId",
+                        "findByTenantIdAndPagamentoSubscricaoId",
+                        "existsByTenantIdAndPagamentoSubscricaoId",
+                        "findByTenantIdAndAdquirenteTenantId"),
                 nomes(DocumentoFiscalRepository.class));
         for (Method m : DocumentoFiscalRepository.class.getMethods()) {
             assertFalse(m.isAnnotationPresent(Modifying.class), "@Modifying proibido: " + m.getName());
