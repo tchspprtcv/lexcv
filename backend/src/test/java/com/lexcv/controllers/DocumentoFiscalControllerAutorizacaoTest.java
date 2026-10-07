@@ -6,6 +6,8 @@ import com.lexcv.dtos.EstadoEmissaoResponse;
 import com.lexcv.dtos.PagamentoRequest;
 import com.lexcv.fiscal.efatura.EfaturaGateway;
 import com.lexcv.models.AmbienteFiscal;
+import com.lexcv.services.fiscal.DescargaDocumentoFiscalService;
+import com.lexcv.services.fiscal.DescargaDocumentoFiscalTransacoes;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
@@ -22,6 +24,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authorization.method.AuthorizationManagerBeforeMethodInterceptor;
@@ -29,14 +34,19 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -75,6 +85,11 @@ import static org.mockito.Mockito.when;
  *
  * <p>Phase 137 (ENTR-04, T-137-46): reenviar o email exige a mesma autoridade EXATA
  * {@code financeiro:edit} (o frontend usa {@code podeReenviarEmail}), com os mesmos casos recusados.
+ *
+ * <p>Phase 137 (ENTR-02, T-137-60): descarregar o PDF e o XML exige a autoridade EXATA
+ * {@code financeiro:view}, o mesmo gate do detalhe (o frontend usa {@code podeLerDocumentosFiscais});
+ * {@code financeiro:edit} sozinho, {@code financeiro:manage} sozinho e nenhuma autoridade são
+ * recusados e o serviço nunca é chamado.
  */
 class DocumentoFiscalControllerAutorizacaoTest {
 
@@ -84,6 +99,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
     private ReprocessamentoComunicacaoService reprocessamento;
     private EfaturaGateway gateway;
     private ReenvioEmailFiscalService reenvio;
+    private DescargaDocumentoFiscalService descarga;
 
     @BeforeEach
     void preparar() {
@@ -93,6 +109,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
         reprocessamento = mock(ReprocessamentoComunicacaoService.class);
         gateway = mock(EfaturaGateway.class);
         reenvio = mock(ReenvioEmailFiscalService.class);
+        descarga = mock(DescargaDocumentoFiscalService.class);
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
         when(preVisualizacao.estadoEmissao(any())).thenReturn(EstadoEmissaoResponse.desligada());
         when(documentos.listar(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
@@ -106,7 +123,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
     private DocumentoFiscalController novoProxyComMethodSecurity() {
         ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito,
-                reprocessamento, gateway, reenvio));
+                reprocessamento, gateway, reenvio, descarga));
         factory.setProxyTargetClass(true);
         factory.addAdvisor(AuthorizationManagerBeforeMethodInterceptor.preAuthorize());
         return (DocumentoFiscalController) factory.getProxy();
@@ -292,6 +309,96 @@ class DocumentoFiscalControllerAutorizacaoTest {
         assertThrows(AccessDeniedException.class, preVisualizarNc(proxy, UUID.randomUUID()));
         assertThrows(AccessDeniedException.class, emitirNc(proxy, UUID.randomUUID()));
         verifyNoInteractions(notasCredito);
+    }
+
+    // ------------------------------------------------------------------ descarregar PDF/XML (Phase 137)
+
+    private static Executable descarregarPdf(DocumentoFiscalController p, String id) {
+        return () -> p.descarregarPdf(id);
+    }
+
+    private static Executable descarregarXml(DocumentoFiscalController p, String id) {
+        return () -> p.descarregarXml(id);
+    }
+
+    @Test
+    void viewExatoDescarregaPdfEXmlComOTenantEOAutorDoPrincipal() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        UUID id = UUID.randomUUID();
+        when(descarga.descarregarPdf(any(), any(), any()))
+                .thenReturn(new DescargaDocumentoFiscalService.DescargaPdf("https://minio/x", "FR-1.pdf", 3600L));
+        when(descarga.descarregarXml(any(), any(), any()))
+                .thenReturn(new DescargaDocumentoFiscalTransacoes.XmlDescarregavel(new byte[]{1}, "FR-1.xml"));
+
+        assertDoesNotThrow(descarregarPdf(proxy, id.toString()));
+        assertDoesNotThrow(descarregarXml(proxy, id.toString()));
+
+        verify(descarga).descarregarPdf(principal.getTenantId(), principal, id);
+        verify(descarga).descarregarXml(principal.getTenantId(), principal, id);
+    }
+
+    static Stream<Arguments> semViewExato() {
+        return Stream.of(
+                Arguments.of((Object) new String[]{"financeiro:edit"}),
+                Arguments.of((Object) new String[]{"financeiro:manage"}),
+                Arguments.of((Object) new String[]{"ROLE_financeiro:view"}),
+                Arguments.of((Object) new String[]{}));
+    }
+
+    @ParameterizedTest
+    @MethodSource("semViewExato")
+    void semViewExatoAsDescargasSaoRecusadas(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, descarregarPdf(proxy, UUID.randomUUID().toString()));
+        assertThrows(AccessDeniedException.class, descarregarXml(proxy, UUID.randomUUID().toString()));
+        verifyNoInteractions(descarga);
+    }
+
+    @Test
+    void idMalformadoNasDescargasDa404SemChamarOServico() {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        for (ResponseEntity<?> r : List.of(proxy.descarregarPdf("nao-e-uuid"), proxy.descarregarXml("nao-e-uuid"))) {
+            assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+            assertEquals(Map.of("message", "Documento fiscal não encontrado.", "code", "DOCUMENTO_FISCAL_NAO_ENCONTRADO"),
+                    r.getBody());
+        }
+        verifyNoInteractions(descarga);
+    }
+
+    @Test
+    void pdfRespondeUrlNomeEValidade() {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        when(descarga.descarregarPdf(any(), any(), any()))
+                .thenReturn(new DescargaDocumentoFiscalService.DescargaPdf("https://minio/x", "FR-2026A-000123.pdf", 900L));
+
+        ResponseEntity<?> r = proxy.descarregarPdf(UUID.randomUUID().toString());
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals(Map.of("url", "https://minio/x", "nomeFicheiro", "FR-2026A-000123.pdf", "expiresIn", 900L),
+                r.getBody());
+    }
+
+    @Test
+    void xmlRespondeAnexoUtf8ComONomeDoDocumento() {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        byte[] bytes = "<Dfe nome=\"Conceição\"/>".getBytes(StandardCharsets.UTF_8);
+        when(descarga.descarregarXml(any(), any(), any()))
+                .thenReturn(new DescargaDocumentoFiscalTransacoes.XmlDescarregavel(bytes, "FR-2026A-000123.xml"));
+
+        ResponseEntity<?> r = proxy.descarregarXml(UUID.randomUUID().toString());
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals("application/xml;charset=UTF-8", r.getHeaders().getContentType().toString());
+        String disposicao = r.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertTrue(disposicao.startsWith("attachment; filename=\"FR-2026A-000123.xml\""), disposicao);
+        assertArrayEquals(bytes, (byte[]) r.getBody());
     }
 
     // ------------------------------------------------------------------ matriz existente

@@ -15,6 +15,7 @@ import com.lexcv.fiscal.efatura.EfaturaGateway;
 import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.models.TipoDocumentoFiscal;
+import com.lexcv.services.fiscal.DescargaDocumentoFiscalService;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
@@ -104,7 +105,7 @@ class DocumentoFiscalControllerTest {
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
         reenvio = mock(ReenvioEmailFiscalService.class);
         controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito, reprocessamento,
-                gateway, reenvio);
+                gateway, reenvio, mock(DescargaDocumentoFiscalService.class));
         tenant = UUID.randomUUID();
         principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
                 Set.of(), Set.of("financeiro:view", "financeiro:edit"), Set.of());
