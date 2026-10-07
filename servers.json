@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "LexCV PostgreSQL",
+      "Group": "LexCV Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "lexcvservice_db",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

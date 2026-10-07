@@ -67,6 +67,15 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  pgadmin:
+    restart: unless-stopped
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
   caddy:
     restart: unless-stopped
     environment:

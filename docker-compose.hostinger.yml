@@ -136,6 +136,29 @@ services:
           cpus: '0.5'
           memory: 256M
     restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lexcv_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@lexcv.cv}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+      SCRIPT_NAME: /pgadmin
+    volumes:
+      - lexcv_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - lexcv_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
+
   caddy:
     image: caddy:2-alpine
     container_name: lexcv_caddy
@@ -150,6 +173,11 @@ services:
         echo 'alcv.tech, www.alcv.tech {
             handle /api/* {
                 reverse_proxy backend:8080
+            }
+            handle /pgadmin* {
+                reverse_proxy pgadmin:80 {
+                    header_up X-Script-Name /pgadmin
+                }
             }
             @webpage {
                 path / /landing-static/*
@@ -168,6 +196,7 @@ services:
       - frontend
       - backend
       - webpage
+      - pgadmin
     networks:
       - lexcv_net
     restart: unless-stopped
@@ -178,6 +207,7 @@ volumes:
   caddy_data:
   caddy_config:
   lexcv_minio_data:
+  lexcv_pgadmin_data:
 
 networks:
   lexcv_net:

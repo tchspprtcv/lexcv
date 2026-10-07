@@ -3,6 +3,12 @@
         reverse_proxy backend:8080
     }
 
+    handle /pgadmin* {
+        reverse_proxy pgadmin:80 {
+            header_up X-Script-Name /pgadmin
+        }
+    }
+
     @webpage {
         path / /landing-static/*
     }

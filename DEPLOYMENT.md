@@ -44,6 +44,8 @@ Edit `.env` — required changes:
 |----------|-------|
 | `DOMAIN_NAME` | `your-actual-domain.com` |
 | `POSTGRES_PASSWORD` | Strong random password |
+| `PGADMIN_DEFAULT_EMAIL` | `admin@lexcv.cv` (pgAdmin initial login email) |
+| `PGADMIN_DEFAULT_PASSWORD` | Strong random password for pgAdmin |
 | `JWT_SECRET` | Base64-encoded random secret, minimum 32 bytes |
 | `CORS_ALLOWED_ORIGINS` | `https://your-actual-domain.com` |
 | `SEED_ENABLED` | `true` on first run only to seed admin user; set `false` after |
@@ -220,6 +222,43 @@ To roll back, remove the two keys from `.env` (or set them to `update`/`true`) a
 Stays on `validate` with `SEED_ENABLED=false`. If a release introduces new entities or new columns, run its migration script from `backend/migrations/` **before** starting the new image.
 
 Re-run the `printenv` check after any change to `.env` or to a compose file — it is the only cheap way to notice that an install has drifted back to `update`.
+
+## Database Management (pgAdmin)
+
+pgAdmin 4 is included in the LexCV stack for managing PostgreSQL databases, inspecting tables, executing SQL queries, running migrations, and monitoring performance.
+
+### Access Endpoints
+
+| Environment | URL | Port / Ingress | Authentication |
+|---|---|---|---|
+| **Local Development** | `http://localhost:5050` or `http://localhost/pgadmin` | Published on port `5050` & proxied by local Caddy on `:80/pgadmin` | `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` |
+| **Hostinger / Production VPS** | `https://alcv.tech/pgadmin` (or `https://your-domain.com/pgadmin`) | Proxied securely via Caddy reverse proxy on `443` HTTPS with `SCRIPT_NAME: /pgadmin` | `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` |
+
+### Environment Variables
+
+Configured in `.env`:
+- `PGADMIN_DEFAULT_EMAIL`: Login email for pgAdmin (default: `admin@lexcv.cv`).
+- `PGADMIN_DEFAULT_PASSWORD`: Master password for pgAdmin (default in `.env.example`: `change-me-pgadmin-password`).
+
+### Connecting to PostgreSQL inside pgAdmin
+
+In local environments with `docker-compose.yml`, pgAdmin mounts `servers.json` and automatically registers the database server on first startup.
+
+If registering manually in pgAdmin:
+1. Right-click **Servers** -> **Register** -> **Server...**
+2. In the **General** tab:
+   - Name: `LexCV PostgreSQL`
+3. In the **Connection** tab:
+   - **Host name/address**: `postgres` (internal Docker network service name)
+   - **Port**: `5432`
+   - **Maintenance database**: `lexcvservice_db` (or value of `${POSTGRES_DB}`)
+   - **Username**: `postgres` (or value of `${POSTGRES_USER}`)
+   - **Password**: value of `${POSTGRES_PASSWORD}`
+   - Save password: Check to remember password in pgAdmin.
+4. Click **Save**.
+
+### Persistence
+pgAdmin configuration, query history, and saved connections are persisted across container restarts in the Docker named volume `lexcv_pgadmin_data`.
 
 ## Verify
 

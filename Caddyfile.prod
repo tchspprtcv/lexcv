@@ -9,6 +9,12 @@
         reverse_proxy minio:9001
     }
 
+    handle /pgadmin* {
+        reverse_proxy pgadmin:80 {
+            header_up X-Script-Name /pgadmin
+        }
+    }
+
     @webpage {
         path / /landing-static/*
     }
