@@ -62,22 +62,22 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 - [x] **DFE-03**: A comunicação com o eFatura passa por um adaptador com interface única; o modo é escolhido por configuração do deployment (no v3.0 só "simulado" existe) e um modo desconhecido impede o arranque
 - [x] **DFE-04**: Cada documento mostra o seu estado de comunicação (pendente, aceite em simulação, rejeitado, erro), atualizado em segundo plano depois da emissão, sem atrasar o registo do pagamento; falhas transitórias são retentadas automaticamente
 - [x] **DFE-05**: Utilizador com `financeiro:edit` reprocessa a comunicação de um documento em erro
-- [ ] **DFE-06**: Um documento simulado nunca aparece como autorizado pela DNRE — estado, série, IUD, ecrãs, PDF e email marcam-no inequivocamente como "simulação, sem validade fiscal"
+- [x] **DFE-06**: Um documento simulado nunca aparece como autorizado pela DNRE — estado, série, IUD, ecrãs, PDF e email marcam-no inequivocamente como "simulação, sem validade fiscal"
 - [x] **DFE-07**: Uma falha persistente de comunicação gera uma notificação in-app para os responsáveis do escritório
 
 ### PDF e Entrega
 
-- [ ] **ENTR-01**: Cada Fatura-Recibo e Nota de Crédito tem um PDF gerado no servidor a partir dos dados guardados no documento, com os elementos legais (emitente, adquirente, NIFs, série e número, IUD, data, base, IVA ou motivo de isenção, retenção, total) e a marca de simulação
-- [ ] **ENTR-02**: Utilizador com `financeiro:view` descarrega o PDF e o XML de um documento do seu escritório, e cada descarga fica registada na auditoria
-- [ ] **ENTR-03**: Com o envio automático ligado, o cliente recebe por email o documento em PDF e XML, enviado só depois de o documento estar emitido e comunicado, nunca dentro da operação de registo do pagamento
-- [ ] **ENTR-04**: Utilizador vê o estado de entrega por email de cada documento e, com `financeiro:edit`, reenvia-o manualmente
-- [ ] **ENTR-05**: Uma falha persistente de envio de email gera uma notificação in-app para os responsáveis do escritório
-- [ ] **ENTR-06**: Sem SMTP configurado, o sistema arranca e emite normalmente, mostrando o envio como "não configurado"
-- [ ] **ENTR-07**: Os documentos fiscais de um cliente aparecem na sua ficha, apenas para consulta e descarga, sem poderem ser apagados como documentos comuns
+- [x] **ENTR-01**: Cada Fatura-Recibo e Nota de Crédito tem um PDF gerado no servidor a partir dos dados guardados no documento, com os elementos legais (emitente, adquirente, NIFs, série e número, IUD, data, base, IVA ou motivo de isenção, retenção, total) e a marca de simulação
+- [x] **ENTR-02**: Utilizador com `financeiro:view` descarrega o PDF e o XML de um documento do seu escritório, e cada descarga fica registada na auditoria
+- [x] **ENTR-03**: Com o envio automático ligado, o cliente recebe por email o documento em PDF e XML, enviado só depois de o documento estar emitido e comunicado, nunca dentro da operação de registo do pagamento
+- [x] **ENTR-04**: Utilizador vê o estado de entrega por email de cada documento e, com `financeiro:edit`, reenvia-o manualmente
+- [x] **ENTR-05**: Uma falha persistente de envio de email gera uma notificação in-app para os responsáveis do escritório
+- [x] **ENTR-06**: Sem SMTP configurado, o sistema arranca e emite normalmente, mostrando o envio como "não configurado"
+- [x] **ENTR-07**: Os documentos fiscais de um cliente aparecem na sua ficha, apenas para consulta e descarga, sem poderem ser apagados como documentos comuns
 
 ### Relatório Fiscal
 
-- [ ] **RELF-01**: Utilizador com `financeiro:view` exporta, por mês, um CSV com os documentos emitidos e as respetivas bases, IVA, retenções e totais, para entregar ao contabilista
+- [x] **RELF-01**: Utilizador com `financeiro:view` exporta, por mês, um CSV com os documentos emitidos e as respetivas bases, IVA, retenções e totais, para entregar ao contabilista
 
 ### Faturação da Plataforma
 
@@ -162,16 +162,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DFE-03 | Phase 136 | Complete |
 | DFE-04 | Phase 136 | Complete |
 | DFE-05 | Phase 136 | Complete |
-| DFE-06 | Phase 136 | Pending |
+| DFE-06 | Phase 136 + 137 | Complete |
 | DFE-07 | Phase 136 | Complete |
-| ENTR-01 | Phase 137 | Pending |
-| ENTR-02 | Phase 137 | Pending |
-| ENTR-03 | Phase 137 | Pending |
-| ENTR-04 | Phase 137 | Pending |
-| ENTR-05 | Phase 137 | Pending |
-| ENTR-06 | Phase 137 | Pending |
-| ENTR-07 | Phase 137 | Pending |
-| RELF-01 | Phase 137 | Pending |
+| ENTR-01 | Phase 137 | Complete |
+| ENTR-02 | Phase 137 | Complete |
+| ENTR-03 | Phase 137 | Complete |
+| ENTR-04 | Phase 137 | Complete |
+| ENTR-05 | Phase 137 | Complete |
+| ENTR-06 | Phase 137 | Complete |
+| ENTR-07 | Phase 137 | Complete |
+| RELF-01 | Phase 137 | Complete |
 | SUBS-01 | Phase 138 | Pending |
 | SUBS-02 | Phase 138 | Pending |
 | SUBS-03 | Phase 138 | Pending |

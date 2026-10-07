@@ -410,7 +410,7 @@ export const PERMISSAO_REENVIAR_EMAIL = "financeiro:edit";
  * do endpoint de reenvio (`POST /documentos-fiscais/{id}/email/reenviar`). O fallback do frontend
  * (manage => edit) mostraria um botão que o backend recusa com 403.
  */
-export function podeReenviarEmail(permissions: readonly string[] | undefined | null): boolean {
+export function podeReenviarEmail(permissions: readonly string[] | undefined): boolean {
   return hasPermission(permissions, PERMISSAO_REENVIAR_EMAIL);
 }
 

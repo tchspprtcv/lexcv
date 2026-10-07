@@ -19,7 +19,7 @@ The repo is a two-app monorepo:
 - Single test: `mvn test -Dtest=ClassName#methodName`
 - SAST (SpotBugs + FindSecBugs): `mvn spotbugs:check`
 
-Requires a `backend/.env` file (see `backend/.env.example`) — `application.yml` imports it and **every** value is a required env var (no defaults). PostgreSQL must be reachable at the configured `DB_*`. Set `SEED_ENABLED=true` to run `DatabaseSeeder` on startup.
+Requires a `backend/.env` file (see `backend/.env.example`). Required env vars without defaults: `SERVER_PORT`, `DB_*`, `JWT_*`, `CORS`, `SEED_ENABLED`, `MINIO_*` core. Optional env vars with sensible defaults: `EFATURA_*` (defaults to `SIMULADO`), `SMTP_*` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, etc.; defaults empty, meaning email delivery is "Não configurado"), `MINIO_PUBLIC_ENDPOINT`, `MINIO_PRESIGNED_EXPIRY`. PostgreSQL must be reachable at the configured `DB_*`. Set `SEED_ENABLED=true` to run `DatabaseSeeder` on startup.
 
 ### Frontend (`web/`, pnpm — `pnpm-lock.yaml` is authoritative)
 - Install: `pnpm install`
@@ -46,10 +46,18 @@ The frontend never calls the backend host directly. `next.config.ts` rewrites `/
 Every domain entity carries a `tenant_id`. Controllers derive the current tenant via `getTenantId()` (reads `UserPrincipal.getTenantId()` from the security context) and **must** scope all reads/writes by it. Unique constraints are per-tenant (e.g. `(tenant_id, documento_numero)`). When adding endpoints or queries, always filter by tenant id — this is the primary data-isolation boundary.
 
 ### Backend layout
-- `controllers/` — `ResourceController` is a deliberately large (~1000-line) controller holding the bulk of CRUD under `/api/v1` (clientes, processos+partes+fases+movimentacoes, eventos, documentos upload/download, honorarios+pagamentos, dashboard KPIs, cliente merge). `AuthController`, `AdminController` (`/api/v1/admin`), `SetupController` (`/api/v1/setup`, public).
+- `controllers/` — `ResourceController` is a deliberately large (~1000-line) controller holding the bulk of CRUD under `/api/v1` (clientes, processos+partes+fases+movimentacoes, eventos, documentos upload/download, honorarios+pagamentos, dashboard KPIs, cliente merge). `AuthController`, `AdminController` (`/api/v1/admin`), `SetupController` (`/api/v1/setup`, public), `DocumentoFiscalController` (`/api/v1/documentos-fiscais`, `/api/v1/faturacao`).
 - `models/` — JPA entities (Lombok `@Builder`/`@Data`). `config/` — security (`SecurityConfig`, JWT provider/filter, `UserPrincipal`). `repositories/`, `dtos/`, `services/`, `seed/`.
 - JPA schema: `application.yml` hardcodes `ddl-auto: update`, and that is what every environment runs today. `application-prod.yml` pins `validate`, but **nothing activates the `prod` profile** — `SPRING_PROFILES_ACTIVE` is set in no compose file, no `Dockerfile`, and not in `.github/workflows/deploy.yml` — so that file is currently dead config. The only thing that puts an install on `validate` is the `SPRING_JPA_HIBERNATE_DDL_AUTO` env var, which both compose files interpolate from `.env` (defaulting to `update`). There is no migration runner (no Flyway, no Liquibase); hand-written scripts live in `backend/migrations/` — see `backend/migrations/README.md` (authoritative checklist) and the "Database Schema — Two-Stage Boot" section of `DEPLOYMENT.md`.
-- File storage: **no files are written to the backend filesystem.** Uploads go to **MinIO** (S3-compatible, via the AWS SDK v2 `S3Client`) through `services/StorageService.java`, keyed `<tenantId>/<documentoId>/<filename>`; downloads are served as **presigned URLs**, not streamed through the API. Config is the `minio.*` block in `application.yml` (`MINIO_*` env vars). The `lexcv_uploads:/app/uploads` volume still present in the compose files is vestigial — nothing in `backend/src/main/` reads or writes it.
+- File storage: **no files are written to the backend filesystem.** Uploads go to **MinIO** (S3-compatible, via the AWS SDK v2 `S3Client`) through `services/StorageService.java`, keyed `<tenantId>/<documentoId>/<filename>`; downloads are served as **presigned URLs**, not streamed through the API. Fiscal PDFs (Phase 137) are stored under `<tenantId>/documentos-fiscais/<documentoId>/<filename>`. Fiscal documents never enter `t_documento`, so the generic document delete cannot reach them. Config is the `minio.*` block in `application.yml` (`MINIO_*` env vars). The `lexcv_uploads:/app/uploads` volume still present in the compose files is vestigial — nothing in `backend/src/main/` reads or writes it.
+
+### Fiscal PDF, email and monthly CSV (Phase 137)
+- OpenHTMLtoPDF renders A4 PDF with classpath-only resolver and vendored DejaVu fonts (no external network/fonts/images).
+- PDF generated automatically after communication reaches `ACEITE_SIMULADO` or on-demand on first download, stored in MinIO with presigned URL download.
+- Email delivery uses an outbox queue (`t_entrega_email_fiscal`) processed by `EmailFiscalOutboxJob` (SKIP LOCKED, lease, max 5 attempts, backoff).
+- SMTP configured exclusively via `app.email.smtp.*` from `SMTP_*` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, etc.) and never `spring.mail.*`.
+- Enqueued only in the transaction recording `ACEITE_SIMULADO`. Failed delivery raises non-silenceable `EMAIL_FISCAL_FALHOU` notifications.
+- Monthly accountant CSV export via `GET /api/v1/documentos-fiscais/exportacao-mensal?mes=AAAA-MM`. All fiscal endpoints live in `DocumentoFiscalController`, never `ResourceController`.
 
 ### Frontend layout
 - `src/app/(auth)/` and `src/app/(dashboard)/` are route groups; pages map to the domain (`clientes`, `processos`, `agenda`, `documentos`, `financeiro`, plus `clientes/merge`, `settings`, `profile`). `src/app/setup` is the first-run wizard.
