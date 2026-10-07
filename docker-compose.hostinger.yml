@@ -42,6 +42,7 @@ services:
 
   backend:
     image: ghcr.io/tchspprtcv/lexcv/backend:latest
+    pull_policy: always
     container_name: lexcv_backend
     depends_on:
       postgres:
@@ -102,6 +103,7 @@ services:
 
   frontend:
     image: ghcr.io/tchspprtcv/lexcv/frontend:latest
+    pull_policy: always
     container_name: lexcv_frontend
     depends_on:
       - backend
@@ -116,8 +118,10 @@ services:
           cpus: '0.5'
           memory: 256M
     restart: unless-stopped
+
   webpage:
     image: ghcr.io/tchspprtcv/lexcv/webpage:latest
+    pull_policy: always
     container_name: lexcv_webpage
     depends_on:
       - backend
