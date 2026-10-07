@@ -12,6 +12,7 @@ import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
 import com.lexcv.services.fiscal.ReenvioEmailFiscalService;
+import com.lexcv.services.fiscal.RelatorioMensalFiscalService;
 import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +36,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +105,9 @@ class DocumentoFiscalControllerAutorizacaoTest {
     private EfaturaGateway gateway;
     private ReenvioEmailFiscalService reenvio;
     private DescargaDocumentoFiscalService descarga;
+    private RelatorioMensalFiscalService relatorio;
+    /** 31/10/2026 23:30 em Cabo Verde (UTC-1): o mês atual ainda é outubro, já é novembro em UTC. */
+    private final Clock clock = Clock.fixed(Instant.parse("2026-11-01T00:30:00Z"), ZoneOffset.UTC);
 
     @BeforeEach
     void preparar() {
@@ -110,6 +118,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
         gateway = mock(EfaturaGateway.class);
         reenvio = mock(ReenvioEmailFiscalService.class);
         descarga = mock(DescargaDocumentoFiscalService.class);
+        relatorio = mock(RelatorioMensalFiscalService.class);
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
         when(preVisualizacao.estadoEmissao(any())).thenReturn(EstadoEmissaoResponse.desligada());
         when(documentos.listar(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
@@ -123,7 +132,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
     private DocumentoFiscalController novoProxyComMethodSecurity() {
         ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito,
-                reprocessamento, gateway, reenvio, descarga));
+                reprocessamento, gateway, reenvio, descarga, relatorio, clock));
         factory.setProxyTargetClass(true);
         factory.addAdvisor(AuthorizationManagerBeforeMethodInterceptor.preAuthorize());
         return (DocumentoFiscalController) factory.getProxy();
@@ -398,6 +407,79 @@ class DocumentoFiscalControllerAutorizacaoTest {
         assertEquals("application/xml;charset=UTF-8", r.getHeaders().getContentType().toString());
         String disposicao = r.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
         assertTrue(disposicao.startsWith("attachment; filename=\"FR-2026A-000123.xml\""), disposicao);
+        assertArrayEquals(bytes, (byte[]) r.getBody());
+    }
+
+    // ------------------------------------------------------------------ Phase 137: exportação mensal (RELF-01)
+
+    private static Executable exportar(DocumentoFiscalController p, String mes) {
+        return () -> p.exportarMes(mes);
+    }
+
+    @Test
+    void viewExatoExportaOMesComOTenantEOAutorDoPrincipal() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        when(relatorio.exportar(any(), any(), any()))
+                .thenReturn(new RelatorioMensalFiscalService.CsvMensal(new byte[]{1}, "x.csv", 0));
+
+        assertDoesNotThrow(exportar(proxy, "2026-09"));
+
+        verify(relatorio).exportar(principal.getTenantId(), principal, YearMonth.of(2026, 9));
+    }
+
+    @ParameterizedTest
+    @MethodSource("semViewExato")
+    void semViewExatoAExportacaoERecusada(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, exportar(proxy, "2026-09"));
+        verifyNoInteractions(relatorio);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "  ", "2026-13", "abc", "2026-9", "2026-09-01",
+            "2026-11", "2027-01"})
+    void mesInvalidoOuFuturoDa422SemChamarOServico(String mes) {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        ResponseEntity<?> r = proxy.exportarMes(mes);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, r.getStatusCode());
+        assertEquals(Map.of("message", "O mês escolhido não é válido. Escolha um mês até ao mês atual.",
+                "code", "MES_INVALIDO"), r.getBody());
+        verifyNoInteractions(relatorio);
+    }
+
+    @Test
+    void mesAtualEmCaboVerdeEAceite() {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        when(relatorio.exportar(any(), any(), any()))
+                .thenReturn(new RelatorioMensalFiscalService.CsvMensal(new byte[]{1}, "x.csv", 0));
+
+        assertEquals(HttpStatus.OK, proxy.exportarMes(" 2026-10 ").getStatusCode());
+        verify(relatorio).exportar(any(), any(), eq(YearMonth.of(2026, 10)));
+    }
+
+    @Test
+    void exportacaoRespondeAnexoCsvUtf8ComONomeDoMes() {
+        autenticarComAuthorities("financeiro:view");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        byte[] bytes = "\uFEFFData;Tipo\r\n".getBytes(StandardCharsets.UTF_8);
+        when(relatorio.exportar(any(), any(), any())).thenReturn(new RelatorioMensalFiscalService.CsvMensal(bytes,
+                "documentos-fiscais-simulacao-2026-09.csv", 0));
+
+        ResponseEntity<?> r = proxy.exportarMes("2026-09");
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertEquals("text/csv;charset=UTF-8", r.getHeaders().getContentType().toString());
+        String disposicao = r.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertTrue(disposicao.startsWith("attachment; filename=\"documentos-fiscais-simulacao-2026-09.csv\""),
+                disposicao);
         assertArrayEquals(bytes, (byte[]) r.getBody());
     }
 

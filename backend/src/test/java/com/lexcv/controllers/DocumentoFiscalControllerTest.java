@@ -105,7 +105,8 @@ class DocumentoFiscalControllerTest {
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
         reenvio = mock(ReenvioEmailFiscalService.class);
         controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito, reprocessamento,
-                gateway, reenvio, mock(DescargaDocumentoFiscalService.class));
+                gateway, reenvio, mock(DescargaDocumentoFiscalService.class),
+                mock(com.lexcv.services.fiscal.RelatorioMensalFiscalService.class), java.time.Clock.systemUTC());
         tenant = UUID.randomUUID();
         principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
                 Set.of(), Set.of("financeiro:view", "financeiro:edit"), Set.of());

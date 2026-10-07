@@ -414,4 +414,48 @@ class AuditoriaFiscalServiceTest {
         assertNotNull(tx);
         assertEquals(Propagation.MANDATORY, tx.propagation());
     }
+
+    // ------------------------------------------------------------------ Phase 137: exportação mensal (RELF-01)
+
+    @Test
+    void registarExportacaoMensal_gravaAutorMesEContagemSemEndereco() throws Exception {
+        service.registarExportacaoMensal(tenantId, autor, java.time.YearMonth.of(2026, 9), 2);
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_exportar_mes", log.getAcao());
+        assertEquals("documento_fiscal_exportar_mes", AuditoriaFiscalService.ACAO_EXPORTAR_MES);
+        assertEquals("relatorio_fiscal", log.getEntidadeTipo());
+        assertEquals("relatorio_fiscal", AuditoriaFiscalService.ENTIDADE_TIPO_RELATORIO);
+        assertEquals("2026-09", log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        assertFalse(log.getDetalhe().contains("@"), log.getDetalhe());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "mes", "numeroDocumentos"), chaves);
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("2026-09", d.get("mes").asText());
+        assertEquals(2, d.get("numeroDocumentos").asInt());
+    }
+
+    @Test
+    void registarExportacaoMensal_mesVazioGravaZeroDocumentos() throws Exception {
+        service.registarExportacaoMensal(tenantId, autor, java.time.YearMonth.of(2026, 1), 0);
+
+        JsonNode d = detalhe(unicoGravado());
+        assertEquals(0, d.get("numeroDocumentos").asInt());
+        assertEquals("2026-01", d.get("mes").asText());
+    }
+
+    @Test
+    void registarExportacaoMensal_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarExportacaoMensal",
+                UUID.class, UserPrincipal.class, java.time.YearMonth.class, int.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
+    }
 }
