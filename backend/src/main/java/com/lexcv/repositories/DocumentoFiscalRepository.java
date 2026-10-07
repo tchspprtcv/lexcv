@@ -94,6 +94,14 @@ public interface DocumentoFiscalRepository extends Repository<DocumentoFiscal, U
                     + "AND (CAST(:de AS date) IS NULL OR d.data_emissao >= CAST(:de AS date)) "
                     + "AND (CAST(:ate AS date) IS NULL OR d.data_emissao <= CAST(:ate AS date))",
             nativeQuery = true)
+    Page<DocumentoFiscal> buscar(@Param("tenantId") UUID tenantId,
+                                 @Param("clienteId") String clienteId,
+                                 @Param("tipo") String tipo,
+                                 @Param("estado") String estado,
+                                 @Param("de") LocalDate de,
+                                 @Param("ate") LocalDate ate,
+                                 Pageable pageable);
+
     /** Phase 138 (SUBS-02..05): finders para faturas de subscrição da plataforma */
     Page<DocumentoFiscal> findByAdquirenteTenantIdAndTenantIdOrderByDataEmissaoDescNumeroDesc(
             UUID adquirenteTenantId, UUID tenantId, Pageable pageable);
@@ -105,12 +113,4 @@ public interface DocumentoFiscalRepository extends Repository<DocumentoFiscal, U
     boolean existsByTenantIdAndPagamentoSubscricaoId(UUID tenantId, UUID pagamentoSubscricaoId);
 
     Page<DocumentoFiscal> findByTenantIdAndAdquirenteTenantId(UUID tenantId, UUID adquirenteTenantId, Pageable pageable);
-
-    Page<DocumentoFiscal> buscar(@Param("tenantId") UUID tenantId,
-                                 @Param("clienteId") String clienteId,
-                                 @Param("tipo") String tipo,
-                                 @Param("estado") String estado,
-                                 @Param("de") LocalDate de,
-                                 @Param("ate") LocalDate ate,
-                                 Pageable pageable);
 }

@@ -108,10 +108,8 @@ public class SubscricaoNotaCreditoService {
         estorno = pagamentoSubscricaoRepository.save(estorno);
 
         // 7. Persistência da NC DocumentoFiscal
-        UUID ncId = UUID.randomUUID();
         String numFormatado = numeroAtribuido.serieCodigo() + "/" + numeroAtribuido.numero();
         DocumentoFiscal nc = DocumentoFiscal.builder()
-                .id(ncId)
                 .tenantId(lexcvTenantId)
                 .tipo(TipoDocumentoFiscal.NC)
                 .ambiente(origem.getAmbiente())
@@ -153,10 +151,10 @@ public class SubscricaoNotaCreditoService {
                 .emitidoPorNome(autor != null ? autor.getNome() : "Plataforma LexCV")
                 .build();
         nc = documentoFiscalRepository.save(nc);
+        UUID ncId = nc.getId();
 
         // 8. Linha da NC
         DocumentoFiscalLinha linha = DocumentoFiscalLinha.builder()
-                .id(UUID.randomUUID())
                 .tenantId(lexcvTenantId)
                 .documentoFiscalId(ncId)
                 .numeroLinha(1)
@@ -175,6 +173,7 @@ public class SubscricaoNotaCreditoService {
         ComunicacaoFiscal comunicacao = ComunicacaoFiscal.builder()
                 .tenantId(lexcvTenantId)
                 .documentoFiscalId(ncId)
+                .ambiente(origem.getAmbiente())
                 .estado(EstadoComunicacaoFiscal.PENDENTE)
                 .tentativas(0)
                 .proximaTentativaEm(agora)

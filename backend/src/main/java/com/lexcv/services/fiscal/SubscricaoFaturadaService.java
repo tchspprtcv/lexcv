@@ -128,10 +128,8 @@ public class SubscricaoFaturadaService {
         pagamento = pagamentoSubscricaoRepository.save(pagamento);
 
         // 8. Persistência de DocumentoFiscal
-        UUID documentoId = UUID.randomUUID();
         String numFormatado = numeroAtribuido.serieCodigo() + "/" + numeroAtribuido.numero();
         DocumentoFiscal doc = DocumentoFiscal.builder()
-                .id(documentoId)
                 .tenantId(lexcvTenantId)
                 .tipo(TipoDocumentoFiscal.FR)
                 .ambiente(ambiente)
@@ -172,11 +170,11 @@ public class SubscricaoFaturadaService {
                 .emitidoPorNome(autor != null ? autor.getNome() : "Plataforma LexCV")
                 .build();
         doc = documentoFiscalRepository.save(doc);
+        UUID documentoId = doc.getId();
 
         // 9. Persistência da Linha
         String descLinha = "Subscrição LexCV - Plano " + plano + " (" + req.periodoInicio() + " a " + req.periodoFim() + ")";
         DocumentoFiscalLinha linha = DocumentoFiscalLinha.builder()
-                .id(UUID.randomUUID())
                 .tenantId(lexcvTenantId)
                 .documentoFiscalId(documentoId)
                 .numeroLinha(1)
@@ -195,6 +193,7 @@ public class SubscricaoFaturadaService {
         ComunicacaoFiscal comunicacao = ComunicacaoFiscal.builder()
                 .tenantId(lexcvTenantId)
                 .documentoFiscalId(documentoId)
+                .ambiente(ambiente)
                 .estado(EstadoComunicacaoFiscal.PENDENTE)
                 .tentativas(0)
                 .proximaTentativaEm(agora)
