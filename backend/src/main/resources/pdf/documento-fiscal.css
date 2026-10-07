@@ -1,0 +1,210 @@
+/*
+ * Phase 137 (ENTR-01, DFE-06): folha de estilo do PDF fiscal (137-UI-SPEC Surface 6a).
+ * Só tons de cinzento; grelha de 2mm (2/4/8mm); duas famílias registadas pelo renderer a partir do
+ * classpath (DejaVu Sans 400/700, DejaVu Sans Mono 400). Sem recursos externos: nenhuma fonte
+ * remota, nenhuma imagem, nenhuma importação de outra folha.
+ */
+
+@page {
+    size: A4;
+    margin: 28mm 16mm 16mm 16mm;
+
+    @top-center {
+        content: element(banda);
+        vertical-align: bottom;
+        padding-bottom: 8mm;
+    }
+
+    @bottom-left {
+        content: element(rodape);
+        border-top: 0.5pt solid #d1d5db;
+        vertical-align: top;
+        padding-top: 2mm;
+    }
+
+    @bottom-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: "DejaVu Sans";
+        font-size: 7.5pt;
+        color: #4b5563;
+        border-top: 0.5pt solid #d1d5db;
+        vertical-align: top;
+        padding-top: 2mm;
+    }
+}
+
+html, body {
+    font-family: "DejaVu Sans";
+    font-size: 9pt;
+    line-height: 1.4;
+    color: #111827;
+    margin: 0;
+    padding: 0;
+}
+
+#banda {
+    position: running(banda);
+    background: #e5e7eb;
+    border: 0.75pt solid #6b7280;
+    padding: 2mm 4mm;
+    text-align: center;
+}
+
+.banda-l1 {
+    font-size: 11pt;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #111827;
+}
+
+.banda-l2 {
+    font-size: 7.5pt;
+    line-height: 1.4;
+    color: #4b5563;
+}
+
+#rodape {
+    position: running(rodape);
+    font-size: 7.5pt;
+    color: #4b5563;
+}
+
+.marca-agua {
+    position: fixed;
+    top: 110mm;
+    left: -10mm;
+    width: 200mm;
+    text-align: center;
+    white-space: nowrap;
+    font-family: "DejaVu Sans";
+    font-weight: bold;
+    font-size: 44pt;
+    color: #9ca3af;
+    opacity: 0.18;
+    z-index: -1;
+    transform: rotate(-35deg);
+    transform-origin: 50% 50%;
+}
+
+.mono {
+    font-family: "DejaVu Sans Mono";
+}
+
+.iud {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+.pequeno, .rotulo, .rotulo-iud {
+    font-size: 7.5pt;
+    line-height: 1.4;
+    color: #4b5563;
+}
+
+.rotulo-iud {
+    margin-top: 2mm;
+}
+
+.seccao {
+    font-size: 11pt;
+    font-weight: bold;
+    line-height: 1.2;
+    margin-bottom: 2mm;
+}
+
+.firma {
+    font-size: 11pt;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+.titulo {
+    font-size: 16pt;
+    font-weight: bold;
+    line-height: 1.2;
+    margin-bottom: 2mm;
+}
+
+.bloco {
+    margin-top: 8mm;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table.topo {
+    width: 100%;
+}
+
+table.topo td {
+    vertical-align: top;
+}
+
+td.emitente {
+    width: 60%;
+    padding-right: 4mm;
+}
+
+td.caixa-documento {
+    width: 40%;
+    border: 0.75pt solid #6b7280;
+    padding: 4mm;
+}
+
+table.linhas {
+    width: 100%;
+    margin-top: 8mm;
+    -fs-table-paginate: paginate;
+}
+
+table.linhas thead {
+    display: table-header-group;
+}
+
+table.linhas th {
+    background: #f3f4f6;
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #4b5563;
+    text-align: left;
+    padding: 2mm;
+    border-bottom: 0.5pt solid #d1d5db;
+}
+
+table.linhas td {
+    padding: 2mm;
+    border-bottom: 0.5pt solid #d1d5db;
+    vertical-align: top;
+}
+
+table.linhas tr {
+    page-break-inside: avoid;
+}
+
+th.num, td.num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+table.totais {
+    width: 45%;
+    margin-top: 4mm;
+    margin-left: 55%;
+    page-break-inside: avoid;
+}
+
+table.totais td {
+    padding: 2mm;
+}
+
+table.totais tr.total-final td {
+    font-size: 11pt;
+    font-weight: bold;
+    line-height: 1.2;
+    border-top: 0.5pt solid #d1d5db;
+}
+
+.nota-final {
+    margin-top: 8mm;
+}
