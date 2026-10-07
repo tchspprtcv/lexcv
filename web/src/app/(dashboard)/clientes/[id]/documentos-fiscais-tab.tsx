@@ -21,7 +21,7 @@ import type { DocumentoFiscalResumo } from "@/types/faturacao";
 
 // Phase 137 (ENTR-07; 137-UI-SPEC Surface 3): aba "Documentos fiscais" na ficha do cliente.
 // Apenas consulta e descarga de PDF/XML. Sem eliminação, edição, upload, renomeação,
-// seleção por checkbox ou menu de linha. Não utiliza use-documentos nem a tabela comum de documentos.
+// seleção por checkbox ou menu de linha. Não utiliza a tabela comum de documentos do cliente.
 
 function formatarData(valor: string) {
   const d = new Date(valor.includes("T") ? valor : `${valor}T00:00:00`);

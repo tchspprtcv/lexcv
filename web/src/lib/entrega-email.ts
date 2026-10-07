@@ -30,7 +30,7 @@ export interface ApresentacaoEntregaEmail {
 }
 
 const BASE_FALHOU = "O envio do email falhou";
-const PODE_REENVIAR = "Pode reenviar o email.";
+const PODE_REENVIAR = " Pode reenviar o email.";
 
 /** Tabela de badges do 137-UI-SPEC (exaustiva: o compilador obriga a cobrir cada estado). */
 export const ESTADOS_ENTREGA_EMAIL: Record<EstadoEntregaEmail, ApresentacaoEntregaEmail> = {
@@ -39,8 +39,7 @@ export const ESTADOS_ENTREGA_EMAIL: Record<EstadoEntregaEmail, ApresentacaoEntre
     variante: "outline",
     icone: "MailX",
     descricao:
-      "O servidor de email não está configurado nesta instalação. O documento foi emitido normalmente, mas não é " +
-      "enviado por email. Peça ao administrador da instalação para configurar o servidor de email.",
+      "O servidor de email não está configurado nesta instalação. O documento foi emitido normalmente, mas não é enviado por email. Peça ao administrador da instalação para configurar o servidor de email.",
   },
   DESLIGADO: {
     rotulo: "Desligado",
@@ -70,7 +69,7 @@ export const ESTADOS_ENTREGA_EMAIL: Record<EstadoEntregaEmail, ApresentacaoEntre
     rotulo: "Falhou",
     variante: "secondary",
     icone: "TriangleAlert",
-    descricao: `${BASE_FALHOU}.`,
+    descricao: "O envio do email falhou.",
   },
 };
 
@@ -113,8 +112,8 @@ export function descricaoEntregaEmail(estado: string | null | undefined, context
   if (estado !== "FALHOU") return apresentacaoEntregaEmail(estado).descricao;
   const { tentativas } = contexto;
   if (typeof tentativas !== "number") return ESTADOS_ENTREGA_EMAIL.FALHOU.descricao;
-  const base = `${BASE_FALHOU} após ${textoTentativas(tentativas)}.`;
-  return contexto.podeReenviar && contexto.reenviavel ? `${base} ${PODE_REENVIAR}` : base;
+  const base = `O envio do email falhou após ${textoTentativas(tentativas)}.`;
+  return contexto.podeReenviar && contexto.reenviavel ? `${base}${PODE_REENVIAR}` : base;
 }
 
 /**
