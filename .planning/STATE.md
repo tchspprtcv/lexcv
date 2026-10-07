@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Faturação Eletrónica (eFatura CV)
-status: executing
-stopped_at: Phase 137 complete; starting Phase 138
-last_updated: "2026-10-07T16:58:00.000Z"
-last_activity: 2026-10-07 — Phase 137 complete: 24 plans executed, all gates green, UAT verified; starting Phase 138
+status: completed
+stopped_at: Milestone v3.0 complete; all 7 phases and 45 requirements verified
+last_updated: "2026-10-07T18:08:00.000Z"
+last_activity: 2026-10-07 — Milestone v3.0 complete: 7 phases, 90 plans executed, all gates green, SAST clean, UAT verified
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 75
-  completed_plans: 75
+  completed_phases: 7
+  total_plans: 90
+  completed_plans: 90
   percent: 100
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-04)
+See: .planning/PROJECT.md (updated 2026-10-07)
 
 **Core value:** Permitir que uma instituição gerencie o ciclo completo de processos jurídicos num único painel, com isolamento rigoroso por tenant.
-**Current focus:** Phase 138 — Plataforma como Emitente (v3.0 Faturação Eletrónica, eFatura CV)
+**Current focus:** Milestone v3.0 Complete (Faturação Eletrónica, eFatura CV)
 
 ## Current Position
 
-Phase: 138 of 139 (Plataforma como Emitente)
-Plan: 0 of TBD
-Status: In progress
-Last activity: 2026-10-07 — Phase 137 complete: 24 plans executed, all gates green, UAT verified; starting Phase 138
+Phase: 139 of 139 (Fecho — Isolamento, Segurança, Migrações e UAT)
+Plan: 5 of 5
+Status: Milestone complete
+Last activity: 2026-10-07 — Milestone v3.0 complete: 7 phases, 90 plans executed, all gates green, SAST clean, UAT verified
 
 ## Performance Metrics
 

@@ -52,6 +52,7 @@ A numeração de fases continua na **133** — nunca reinicia.
 
 ### Validated
 
+- ✓ Faturação Eletrónica (eFatura CV) — Emissão atómica de Faturas-Recibo, Notas de Crédito, XML eFatura XSD, PDF/MinIO, SMTP email, consola de subscrições da plataforma e isolamento estrito — v3.0
 - ✓ MVP Web (Next.js App Router) com mock backend `/api/v1` e seed multi-tenant — v1.0
 - ✓ Autenticação JWT mock (login/refresh/me) e sessão no frontend — v1.0
 - ✓ Dashboard com KPIs básicos — v1.0
