@@ -10,10 +10,13 @@ import com.lexcv.fiscal.efatura.EfaturaConfig;
 import com.lexcv.fiscal.efatura.IudGerador;
 import com.lexcv.models.RegimeIva;
 import com.lexcv.repositories.FilaComunicacaoFiscal;
+import com.lexcv.repositories.FilaEntregaEmail;
 import com.lexcv.services.NotificacaoService;
 import com.lexcv.services.ResolucaoPapeisService;
 import com.lexcv.services.fiscal.AuditoriaFiscalService;
 import com.lexcv.services.fiscal.ComunicacaoFiscalTransacoes;
+import com.lexcv.services.fiscal.EnfileiramentoEntregaEmail;
+import com.lexcv.services.fiscal.PdfDocumentoFiscalService;
 import com.lexcv.services.fiscal.FixturaEmissaoFiscal;
 import com.lexcv.services.fiscal.NotificacaoComunicacaoFiscal;
 import com.lexcv.services.fiscal.NumeracaoService;
@@ -61,6 +64,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @TestPropertySource(properties = "app.efatura.simulado.falhas-forcadas=true")
 @Import({FiscalOutboxJob.class, ProcessadorComunicacaoFiscal.class, ComunicacaoFiscalTransacoes.class,
+        EnfileiramentoEntregaEmail.class, FilaEntregaEmail.class,
         FilaComunicacaoFiscal.class, DfeXmlBuilder.class, DfeMarshaller.class, DfeValidador.class, IudGerador.class,
         EfaturaConfig.class, NotificacaoComunicacaoFiscal.class, NotificacaoService.class,
         PagamentoFaturadoService.class, PreVisualizacaoFaturaService.class, NumeracaoService.class,
@@ -99,6 +103,10 @@ class FiscalOutboxJobFalhasForcadasIT {
 
     @MockitoBean
     private ResolucaoPapeisService resolucaoPapeis;
+
+    /** Phase 137: o PDF/MinIO é coberto pelos testes de 137-10; aqui só a chamada depois do aceite. */
+    @MockitoBean
+    private PdfDocumentoFiscalService pdfDocumentoFiscalService;
 
     private FixturaEmissaoFiscal fixtura;
 

@@ -4,6 +4,7 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.DocumentoFiscalXml;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import com.lexcv.repositories.FilaComunicacaoFiscal;
+import com.lexcv.repositories.FilaEntregaEmail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +62,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
-@Import({ComunicacaoFiscalTransacoes.class, FilaComunicacaoFiscal.class, FilaComunicacaoFiscalIT.Apoio.class})
+@Import({ComunicacaoFiscalTransacoes.class, FilaComunicacaoFiscal.class, EnfileiramentoEntregaEmail.class,
+        FilaEntregaEmail.class, FilaComunicacaoFiscalIT.Apoio.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class FilaComunicacaoFiscalIT {
 

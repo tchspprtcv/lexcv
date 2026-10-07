@@ -12,10 +12,13 @@ import com.lexcv.fiscal.efatura.IudGerador;
 import com.lexcv.models.RegimeIva;
 import com.lexcv.models.User;
 import com.lexcv.repositories.FilaComunicacaoFiscal;
+import com.lexcv.repositories.FilaEntregaEmail;
 import com.lexcv.services.NotificacaoService;
 import com.lexcv.services.ResolucaoPapeisService;
 import com.lexcv.services.fiscal.AuditoriaFiscalService;
 import com.lexcv.services.fiscal.ComunicacaoFiscalTransacoes;
+import com.lexcv.services.fiscal.EnfileiramentoEntregaEmail;
+import com.lexcv.services.fiscal.PdfDocumentoFiscalService;
 import com.lexcv.services.fiscal.FixturaEmissaoFiscal;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.NotificacaoComunicacaoFiscal;
@@ -61,6 +64,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -81,6 +85,7 @@ import static org.mockito.Mockito.when;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @Import({FiscalOutboxJob.class, ProcessadorComunicacaoFiscal.class, ComunicacaoFiscalTransacoes.class,
+        EnfileiramentoEntregaEmail.class, FilaEntregaEmail.class,
         FilaComunicacaoFiscal.class, DfeXmlBuilder.class, DfeMarshaller.class, DfeValidador.class, IudGerador.class,
         EfaturaConfig.class, NotificacaoComunicacaoFiscal.class, NotificacaoService.class,
         PagamentoFaturadoService.class, NotaCreditoService.class, PreVisualizacaoFaturaService.class,
@@ -159,6 +164,10 @@ class FiscalOutboxJobIT {
 
     @MockitoBean
     private ResolucaoPapeisService resolucaoPapeis;
+
+    /** Phase 137: o PDF/MinIO é coberto pelos testes de 137-10; aqui só a chamada depois do aceite. */
+    @MockitoBean
+    private PdfDocumentoFiscalService pdfDocumentoFiscalService;
 
     private final Map<UUID, Set<String>> permissoes = new ConcurrentHashMap<>();
     private final DfeValidador validador = new DfeValidador();
@@ -257,6 +266,12 @@ class FiscalOutboxJobIT {
         assertThat(x.get("xml_sha256")).isEqualTo(sha256(xml));
         assertThat(validador.validar(xml.getBytes(StandardCharsets.UTF_8)).valido()).isTrue();
         assertThat(xml).contains("Id=\"" + iud + "\"");
+
+        // Phase 137 (ENTR-03): o aceite enfileirou a entrega por email na mesma transação; a
+        // fixtura deixa o envio automático desligado, por isso a linha é DESLIGADO (nunca
+        // reclamada). O PDF é pedido depois do commit, uma vez.
+        assertThat(linhasEntrega(fr.id())).containsExactly("DESLIGADO");
+        verify(pdfDocumentoFiscalService).garantirPdfSilencioso(fr.tenantId(), fr.id());
 
         // Uma segunda execução não tem nada para fazer.
         assertThat(job.executarUmaVez()).isZero();
@@ -402,5 +417,24 @@ class FiscalOutboxJobIT {
         assertThat(fixtura.estadoComunicacao(nc)).isEqualTo("ACEITE_SIMULADO");
         String iudFr = (String) fixtura.linhaXml(fr.id()).orElseThrow().get("iud");
         assertThat((String) fixtura.linhaXml(nc).orElseThrow().get("xml")).contains(iudFr);
+
+        // Phase 137 (T-137-71): o aceite depois do reprocessamento cria a entrega da NC uma vez.
+        assertThat(linhasEntrega(nc)).containsExactly("DESLIGADO");
+        assertThat(linhasEntrega(fr.id())).containsExactly("DESLIGADO");
+
+        // Um segundo ACEITE_SIMULADO do mesmo documento (comunicação reposta à força) nunca cria
+        // uma segunda linha de entrega.
+        jdbc.update("UPDATE t_comunicacao_fiscal SET estado = 'PENDENTE', concluido_em = NULL, lease_ate = NULL, "
+                + "proxima_tentativa_em = ?, tentativas = 0 WHERE documento_fiscal_id = ?",
+                java.sql.Timestamp.from(RELOGIO.instant()), fr.id());
+        job.executarUmaVez();
+        assertThat(fixtura.estadoComunicacao(fr.id())).isEqualTo("ACEITE_SIMULADO");
+        assertThat(linhasEntrega(fr.id())).containsExactly("DESLIGADO");
+    }
+
+    /** Estados das linhas de entrega por email do documento (Phase 137). */
+    private java.util.List<String> linhasEntrega(UUID documentoId) {
+        return jdbc.queryForList("SELECT estado FROM t_entrega_email_fiscal WHERE documento_fiscal_id = ?",
+                String.class, documentoId);
     }
 }
