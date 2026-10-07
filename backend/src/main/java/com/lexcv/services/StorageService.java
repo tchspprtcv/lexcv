@@ -22,11 +22,25 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class StorageService implements ApplicationRunner {
+
+    private static final String UUID_RE = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
+    /**
+     * Phase 137 (T-137-37): forma única das chaves fiscais,
+     * {@code <tenantId>/documentos-fiscais/<documentoId>/<nome>}. O segundo segmento nunca colide com
+     * uma chave genérica {@code <tenantId>/<documentoId>/...} (um UUID nunca é "documentos-fiscais").
+     */
+    static final Pattern CHAVE_FISCAL = Pattern.compile(
+            UUID_RE + "/documentos-fiscais/" + UUID_RE + "/[A-Za-z0-9._-]{1,200}");
+
+    /** Nome de anexo aceite em {@code Content-Disposition} (sem aspas, CR/LF ou separadores). */
+    static final Pattern NOME_ANEXO = Pattern.compile("[A-Za-z0-9._-]{1,200}");
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -76,6 +90,85 @@ public class StorageService implements ApplicationRunner {
             return s3Presigner.presignGetObject(presignRequest).url().toString();
         } catch (SdkException e) {
             throw new StorageUnavailableException("Storage service unavailable", e);
+        }
+    }
+
+    /**
+     * Phase 137: carrega bytes já em memória (PDF fiscal) sob uma chave fiscal. Só para chaves
+     * construídas por {@code PdfDocumentoFiscalService}; qualquer outra forma (incluindo "..",
+     * subpastas extra ou segmentos que não sejam UUID) é recusada antes de qualquer pedido.
+     *
+     * @throws IllegalArgumentException chave fora de {@link #CHAVE_FISCAL}
+     * @throws StorageUnavailableException falha do MinIO
+     */
+    public void uploadBytes(String objectKey, byte[] conteudo, String contentType) {
+        exigirChaveFiscal(objectKey);
+        if (conteudo == null) {
+            throw new IllegalArgumentException("Conteúdo em falta");
+        }
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(props.getBucketName())
+                .key(objectKey)
+                .contentType(contentType)
+                .contentLength((long) conteudo.length)
+                .build();
+        try {
+            s3Client.putObject(request, RequestBody.fromBytes(conteudo));
+        } catch (SdkException e) {
+            throw new StorageUnavailableException("Storage service unavailable", e);
+        }
+    }
+
+    /**
+     * Phase 137 (ENTR-02): URL pré-assinado (mesma expiração dos documentos) que força o
+     * descarregamento com o nome indicado ({@code Content-Disposition: attachment}).
+     *
+     * @param nomeFicheiroAnexo só {@code [A-Za-z0-9._-]} (ver {@code NomesFicheiroFiscal})
+     */
+    public String presignedDownloadUrl(String objectKey, String nomeFicheiroAnexo) {
+        if (nomeFicheiroAnexo == null || !NOME_ANEXO.matcher(nomeFicheiroAnexo).matches()) {
+            throw new IllegalArgumentException("Nome de ficheiro inválido");
+        }
+        GetObjectRequest.Builder get = GetObjectRequest.builder()
+                .bucket(props.getBucketName())
+                .key(objectKey)
+                .responseContentDisposition("attachment; filename=\"" + nomeFicheiroAnexo + "\"");
+        if (nomeFicheiroAnexo.endsWith(".pdf")) {
+            get.responseContentType("application/pdf");
+        } else if (nomeFicheiroAnexo.endsWith(".xml")) {
+            get.responseContentType("application/xml");
+        }
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofSeconds(props.getPresignedUrlExpiry()))
+                .getObjectRequest(get.build())
+                .build();
+        try {
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
+        } catch (SdkException e) {
+            throw new StorageUnavailableException("Storage service unavailable", e);
+        }
+    }
+
+    /**
+     * Phase 137: lê um objeto inteiro (o PDF fiscal anexado ao email).
+     *
+     * @throws StorageUnavailableException falha do MinIO (incluindo objeto inexistente)
+     */
+    public byte[] lerBytes(String objectKey) {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(props.getBucketName())
+                .key(objectKey)
+                .build();
+        try {
+            return s3Client.getObjectAsBytes(request).asByteArray();
+        } catch (SdkException e) {
+            throw new StorageUnavailableException("Storage service unavailable", e);
+        }
+    }
+
+    private static void exigirChaveFiscal(String objectKey) {
+        if (objectKey == null || !CHAVE_FISCAL.matcher(objectKey).matches()) {
+            throw new IllegalArgumentException("Chave de objeto fiscal inválida");
         }
     }
 

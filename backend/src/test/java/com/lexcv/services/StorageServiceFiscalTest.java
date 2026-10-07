@@ -151,6 +151,14 @@ class StorageServiceFiscalTest {
                 .isEqualTo("attachment; filename=\"FR-2026A-000123.xml\"");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"", "a\"b.pdf", "a\r\nX-Injetado: 1.pdf", "a;b.pdf", "a b.pdf"})
+    void urlPreAssinadoRecusaNomesDeAnexoInseguros(String nome) {
+        assertThatThrownBy(() -> storage.presignedDownloadUrl(CHAVE, nome))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(presigner, never()).presignGetObject(any(GetObjectPresignRequest.class));
+    }
+
     @Test
     void urlPreAssinadoComNomeFalhaDoSdkViraStorageUnavailable() {
         when(presigner.presignGetObject(any(GetObjectPresignRequest.class)))
@@ -221,7 +229,7 @@ class StorageServiceFiscalTest {
         assertThat(NomesFicheiroFiscal.pdf("FR 2026A/000123")).isEqualTo("FR-2026A-000123.pdf");
         assertThat(NomesFicheiroFiscal.xml("FR 2026A/000123")).isEqualTo("FR-2026A-000123.xml");
         assertThat(NomesFicheiroFiscal.base("NC SIM-NC-2026/000007")).isEqualTo("NC-SIM-NC-2026-000007");
-        assertThat(NomesFicheiroFiscal.base("FR ç\"x;\r\n/1")).isEqualTo("FR--x---1");
+        assertThat(NomesFicheiroFiscal.base("FR ç\"x;\r\n/1")).isEqualTo("FR---x----1");
         assertThat(NomesFicheiroFiscal.csv(YearMonth.of(2026, 9))).isEqualTo("documentos-fiscais-simulacao-2026-09.csv");
     }
 }
