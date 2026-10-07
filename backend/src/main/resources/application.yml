@@ -29,12 +29,13 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
-  # Phase 136 (Pitfall 7): AlertasDiariosJob (06:00) + FiscalOutboxJob (~30 s) partilham o
-  # scheduler; com o valor por omissão do Boot (1) um job atrasaria o outro.
+  # Phase 136 (Pitfall 7) / Phase 137: AlertasDiariosJob (06:00) + FiscalOutboxJob (~30 s) +
+  # EmailFiscalOutboxJob (~30 s) partilham o scheduler, mais uma thread de folga; com o valor por
+  # omissão do Boot (1) um job atrasaria os outros.
   task:
     scheduling:
       pool:
-        size: 3
+        size: 4
 
 app:
   seed:
@@ -64,6 +65,22 @@ app:
     simulado:
       # Alavanca de teste: torna toda a comunicação simulada transitoriamente falhada (nunca um sucesso).
       falhas-forcadas: false
+  # Phase 137 (ENTR-06): envio do documento fiscal por email. Todos os valores são opcionais;
+  # SMTP_HOST vazio = não configurado (a aplicação arranca e emite normalmente). SMTP_HOST definido
+  # sem um SMTP_FROM válido impede o arranque (EmailConfig). Nunca usar spring.mail.* (137-SPIKE C).
+  email:
+    smtp:
+      host: ${SMTP_HOST:}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      from: ${SMTP_FROM:}
+      starttls: ${SMTP_STARTTLS:true}
+    outbox:
+      intervalo: PT30S
+      atraso-inicial: PT40S
+      lote: 10
+      lease: PT2M
 
 minio:
   endpoint: ${MINIO_ENDPOINT}
