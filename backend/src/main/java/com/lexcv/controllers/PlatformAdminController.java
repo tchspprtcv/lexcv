@@ -1,9 +1,13 @@
 package com.lexcv.controllers;
 
+import com.lexcv.config.UserPrincipal;
+import com.lexcv.dtos.ConfiguracaoFiscalRequest;
+import com.lexcv.dtos.ConfiguracaoFiscalResponse;
 import com.lexcv.dtos.MoldeCreateRequest;
 import com.lexcv.dtos.MoldeProvisionResponse;
 import com.lexcv.dtos.MoldesConsolaResponse;
 import com.lexcv.dtos.MoldesUpdateRequest;
+import com.lexcv.dtos.SerieFiscalResponse;
 import com.lexcv.dtos.SetupInitializeRequest;
 import com.lexcv.dtos.TenantAdminSummaryResponse;
 import com.lexcv.dtos.TenantProvisionResponse;
@@ -17,11 +21,14 @@ import com.lexcv.repositories.TenantRepository;
 import com.lexcv.repositories.TenantRoleRepository;
 import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
+import com.lexcv.services.fiscal.PlatformFaturacaoConfigService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -86,6 +93,7 @@ public class PlatformAdminController {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final TenantRoleRepository tenantRoleRepository;
+    private final PlatformFaturacaoConfigService platformFaturacaoConfigService;
 
     @PostMapping("/tenants")
     public ResponseEntity<?> createTenant(@RequestBody SetupInitializeRequest request) {
@@ -480,5 +488,25 @@ public class PlatformAdminController {
                 .permissoes(chaves)
                 .escritoriosInstanciados(tenantRoleRepository.countByMoldeId(role.getId()))
                 .build();
+    }
+    // -------------------------------------------------------------------------
+    // Phase 138 (SUBS-01, SUBS-05): Configuração Fiscal e Séries da Plataforma
+    // -------------------------------------------------------------------------
+
+    @GetMapping("/faturacao/configuracao")
+    public ResponseEntity<ConfiguracaoFiscalResponse> obterConfiguracaoFiscal() {
+        return ResponseEntity.ok(platformFaturacaoConfigService.obterConfiguracao());
+    }
+
+    @PutMapping("/faturacao/configuracao")
+    public ResponseEntity<ConfiguracaoFiscalResponse> guardarConfiguracaoFiscal(
+            @AuthenticationPrincipal UserPrincipal autor,
+            @Valid @RequestBody ConfiguracaoFiscalRequest request) {
+        return ResponseEntity.ok(platformFaturacaoConfigService.guardarConfiguracao(autor, request));
+    }
+
+    @GetMapping("/faturacao/series")
+    public ResponseEntity<List<SerieFiscalResponse>> listarSeriesFiscais() {
+        return ResponseEntity.ok(platformFaturacaoConfigService.listarSeries());
     }
 }
