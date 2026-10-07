@@ -6,18 +6,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import { apiFetch, isApiError } from "@/lib/api";
-import {
-  intervaloAtualizacaoComunicacao,
-  intervaloAtualizacaoListaComunicacao,
-} from "@/lib/comunicacao-fiscal";
+import { apiFetch, apiFetchFicheiro, isApiError } from "@/lib/api";
+import { intervaloAtualizacaoListaComunicacao } from "@/lib/comunicacao-fiscal";
+import { deveSondarEntrega } from "@/lib/entrega-email";
 import { construirQueryDocumentosFiscais, STATUS_INLINE_EMISSAO } from "@/lib/erros-emissao";
+import { guardarFicheiro } from "@/lib/guardar-ficheiro";
 import { hasPermission } from "@/lib/permissions";
 
 import type {
   CodigoErroFaturacao,
   ConfiguracaoFiscal,
   ConfiguracaoFiscalPayload,
+  DescargaPdfResposta,
   DocumentoFiscalDetalhe,
   DocumentosFiscaisFiltros,
   EmailAutomaticoPayload,
@@ -28,6 +28,7 @@ import type {
   PaginaDocumentosFiscais,
   PreVisualizacaoFatura,
   PreVisualizacaoNotaCredito,
+  ReenviarEmailResposta,
   ReprocessarComunicacaoResposta,
   SerieFiscal,
 } from "@/types/faturacao";
@@ -280,8 +281,14 @@ export function useDocumentoFiscal(id: string, enabled: boolean) {
     enabled: enabled && Boolean(id) && typeof window !== "undefined",
     retry: (tentativas, error) => !(isApiError(error) && error.status === 404) && tentativas < 3,
     staleTime: 60_000,
-    // Phase 136: atualiza a cada 15 s só enquanto a comunicação está PENDENTE.
-    refetchInterval: (query) => intervaloAtualizacaoComunicacao(query.state.data?.comunicacao?.estado),
+    // Phase 136 + Phase 137: atualiza a cada 15 s só enquanto a comunicação OU a entrega estão PENDENTE.
+    refetchInterval: (query) =>
+      deveSondarEntrega(
+        query.state.data?.comunicacao?.estado,
+        query.state.data?.entregaEmail?.estado,
+      )
+        ? 15_000
+        : false,
     refetchIntervalInBackground: false,
   });
 }
@@ -388,6 +395,111 @@ export function useEmitirNotaCredito(documentoId: string) {
         queryClient.invalidateQueries({ queryKey: ["clientes", "conta-corrente"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] }),
       ]);
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 137 -- Entrega por email, descargas PDF/XML e exportação mensal.
+
+/** Autoridade EXATA exigida pelo backend para reenviar o email de um documento fiscal. */
+export const PERMISSAO_REENVIAR_EMAIL = "financeiro:edit";
+
+/**
+ * Gate do botão "Reenviar email": exige EXATAMENTE `financeiro:edit`, como o `@PreAuthorize`
+ * do endpoint de reenvio (`POST /documentos-fiscais/{id}/email/reenviar`). O fallback do frontend
+ * (manage => edit) mostraria um botão que o backend recusa com 403.
+ */
+export function podeReenviarEmail(permissions: readonly string[] | undefined | null): boolean {
+  return hasPermission(permissions ?? undefined, PERMISSAO_REENVIAR_EMAIL);
+}
+
+/** Status tratados inline no diálogo de reenvio (401/403 mantêm o comportamento do apiFetch). */
+const STATUS_INLINE_REENVIAR_EMAIL: readonly number[] = [404, 409, 422, 500, 502, 503, 504];
+
+/**
+ * POST do reenvio do email fiscal (financeiro:edit). Invalida em `onSettled`: um 409 significa
+ * estado desatualizado, e o reenvio pode criar um novo episódio e resolver notificações.
+ */
+export function useReenviarEmail(documentoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<ReenviarEmailResposta>(
+        `/documentos-fiscais/${encodeURIComponent(documentoId)}/email/reenviar`,
+        { method: "POST" },
+        { semToastParaStatus: STATUS_INLINE_REENVIAR_EMAIL },
+      ),
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: DOCUMENTOS_FISCAIS_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
+      ]);
+    },
+  });
+}
+
+/**
+ * GET /documentos-fiscais/{id}/pdf (financeiro:view). Obtém o URL pré-assinado e redireciona
+ * para iniciar a transferência no browser.
+ */
+export function useDescarregarPdf() {
+  return useMutation({
+    mutationFn: async ({ documentoId }: { documentoId: string }) => {
+      const res = await apiFetch<DescargaPdfResposta>(
+        `/documentos-fiscais/${encodeURIComponent(documentoId)}/pdf`,
+        {},
+        { semToastParaStatus: [404, 503] },
+      );
+      if (typeof window !== "undefined" && res.url) {
+        window.location.assign(res.url);
+      }
+      return res;
+    },
+  });
+}
+
+/**
+ * GET /documentos-fiscais/{id}/xml (financeiro:view). Obtém o blob XML e descarrega com o nome
+ * fornecido pelo servidor ou com o fallback derivado do número formatado.
+ */
+export function useDescarregarXml() {
+  return useMutation({
+    mutationFn: async ({
+      documentoId,
+      numeroFormatado,
+    }: {
+      documentoId: string;
+      numeroFormatado: string;
+    }) => {
+      const res = await apiFetchFicheiro(
+        `/documentos-fiscais/${encodeURIComponent(documentoId)}/xml`,
+        {},
+        { semToastParaStatus: [404, 503] },
+      );
+      const fallback = `${numeroFormatado.replace(/[/ ]/g, "-")}.xml`;
+      guardarFicheiro(res.blob, res.nomeFicheiro || fallback);
+      return res;
+    },
+  });
+}
+
+/**
+ * GET /documentos-fiscais/exportacao-mensal?mes=AAAA-MM (financeiro:view). Descarrega o ficheiro CSV
+ * com o resumo do mês.
+ */
+export function useExportarMesCsv() {
+  return useMutation({
+    mutationFn: async ({ mes }: { mes: string }) => {
+      const res = await apiFetchFicheiro(
+        `/documentos-fiscais/exportacao-mensal?mes=${encodeURIComponent(mes)}`,
+        {},
+        { semToastParaStatus: [422, 500, 502, 503, 504] },
+      );
+      const fallback = `relatorio-fiscal-${mes}.csv`;
+      guardarFicheiro(res.blob, res.nomeFicheiro || fallback);
+      return res;
     },
   });
 }

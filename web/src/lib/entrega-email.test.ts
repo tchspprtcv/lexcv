@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { PERMISSAO_REENVIAR_EMAIL, podeReenviarEmail } from "@/hooks/use-faturacao";
 import { ApiError } from "@/lib/api";
 import * as modulo from "@/lib/entrega-email";
+import { hasScopedPermission } from "@/lib/permissions";
 import {
   COPY_DESCARGA_NAO_ENCONTRADO,
   COPY_DESCARGA_PREPARAR,
@@ -310,3 +312,23 @@ describe("vocabulário proibido (T-137-66)", () => {
     }
   });
 });
+
+describe("podeReenviarEmail (gate EXATO financeiro:edit)", () => {
+  it("exige exatamente financeiro:edit, como o @PreAuthorize do backend", () => {
+    expect(PERMISSAO_REENVIAR_EMAIL).toBe("financeiro:edit");
+    expect(podeReenviarEmail(["financeiro:edit"])).toBe(true);
+    expect(podeReenviarEmail(["financeiro:view", "financeiro:edit"])).toBe(true);
+    expect(podeReenviarEmail(["financeiro:manage"])).toBe(false);
+    expect(podeReenviarEmail(["financeiro:view"])).toBe(false);
+    expect(podeReenviarEmail([])).toBe(false);
+    expect(podeReenviarEmail(undefined)).toBe(false);
+    expect(podeReenviarEmail(null)).toBe(false);
+    expect(podeReenviarEmail(["financeiro:view", "financeiro:manage"])).toBe(false);
+  });
+
+  it("o fallback do frontend diria o contrário para manage -- por isso existe o gate exato", () => {
+    expect(hasScopedPermission(["financeiro:manage"], "financeiro", "edit")).toBe(true);
+    expect(podeReenviarEmail(["financeiro:manage"])).toBe(false);
+  });
+});
+
