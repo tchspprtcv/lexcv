@@ -16,6 +16,10 @@ import java.util.UUID;
  * <p>Phase 135 (NCRD-01): numa Nota de Crédito, {@code documentoOrigemId} e
  * {@code documentoOrigemNumero} identificam a Fatura-Recibo corrigida (nulos numa FR). O total de
  * uma NC é uma magnitude positiva.
+ *
+ * <p>Phase 137 (ENTR-04, ENTR-06): {@code estadoEntregaEmail} é o estado apresentado da entrega
+ * por email ({@code RegrasEntregaEmail.estadoApresentado}, incluindo {@code NAO_CONFIGURADO});
+ * nulo só quando o documento não tem linha de entrega.
  */
 public record DocumentoFiscalResumoResponse(
         UUID id,
@@ -30,7 +34,8 @@ public record DocumentoFiscalResumoResponse(
         BigDecimal totalDocumento,
         String estadoComunicacao,
         UUID documentoOrigemId,
-        String documentoOrigemNumero
+        String documentoOrigemNumero,
+        String estadoEntregaEmail
 ) {
 
     public static DocumentoFiscalResumoResponse de(DocumentoFiscal d, EstadoComunicacaoFiscal estadoOuNulo) {
@@ -40,6 +45,12 @@ public record DocumentoFiscalResumoResponse(
     /** Phase 135: {@code origemNumeroOuNulo} é o número da FR de origem de uma NC. */
     public static DocumentoFiscalResumoResponse de(DocumentoFiscal d, EstadoComunicacaoFiscal estadoOuNulo,
                                                    String origemNumeroOuNulo) {
+        return de(d, estadoOuNulo, origemNumeroOuNulo, null);
+    }
+
+    /** Phase 137: {@code estadoEntregaOuNulo} é o estado apresentado da entrega por email. */
+    public static DocumentoFiscalResumoResponse de(DocumentoFiscal d, EstadoComunicacaoFiscal estadoOuNulo,
+                                                   String origemNumeroOuNulo, String estadoEntregaOuNulo) {
         return new DocumentoFiscalResumoResponse(
                 d.getId(),
                 d.getNumeroFormatado(),
@@ -53,6 +64,7 @@ public record DocumentoFiscalResumoResponse(
                 d.getTotalDocumento(),
                 estadoOuNulo == null ? null : estadoOuNulo.name(),
                 d.getDocumentoOrigemId(),
-                origemNumeroOuNulo);
+                origemNumeroOuNulo,
+                estadoEntregaOuNulo);
     }
 }

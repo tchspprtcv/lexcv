@@ -32,6 +32,9 @@ import java.util.UUID;
  * <p>Phase 136 (DFE-04, DFE-06): {@code comunicacao} resume o estado da comunicação, as
  * tentativas e o IUD ({@link ComunicacaoFiscalResumo}); nulo quando ainda não há linha de
  * comunicação. {@code estadoComunicacao} mantém-se para a listagem e os clientes antigos.
+ *
+ * <p>Phase 137 (ENTR-04, ENTR-06): {@code entregaEmail} resume a entrega por email
+ * ({@link EntregaEmailResumo}); nulo quando o documento ainda não tem linha de entrega.
  */
 public record DocumentoFiscalDetalheResponse(
         UUID id,
@@ -81,7 +84,8 @@ public record DocumentoFiscalDetalheResponse(
         BigDecimal totalCreditado,
         BigDecimal valorCreditavelRestante,
         List<NotaCreditoResumo> notasCredito,
-        ComunicacaoFiscalResumo comunicacao
+        ComunicacaoFiscalResumo comunicacao,
+        EntregaEmailResumo entregaEmail
 ) {
 
     /** Cópias imutáveis das listas (EI_EXPOSE_REP; mesmo idioma de {@code WorkflowResponse}). */
@@ -157,6 +161,20 @@ public record DocumentoFiscalDetalheResponse(
                                                     DocumentoFiscalRef origemOuNulo,
                                                     List<DocumentoFiscal> notasCredito,
                                                     ComunicacaoFiscalResumo resumoOuNulo) {
+        return de(d, linhas, estadoOuNulo, origemOuNulo, notasCredito, resumoOuNulo, null);
+    }
+
+    /**
+     * Phase 137.
+     *
+     * @param entregaOuNulo resumo da entrega por email, ou {@code null} sem linha de entrega
+     */
+    public static DocumentoFiscalDetalheResponse de(DocumentoFiscal d, List<DocumentoFiscalLinha> linhas,
+                                                    EstadoComunicacaoFiscal estadoOuNulo,
+                                                    DocumentoFiscalRef origemOuNulo,
+                                                    List<DocumentoFiscal> notasCredito,
+                                                    ComunicacaoFiscalResumo resumoOuNulo,
+                                                    EntregaEmailResumo entregaOuNulo) {
         List<DocumentoFiscal> ncs = notasCredito == null ? List.of() : notasCredito;
         boolean fr = d.getTipo() == TipoDocumentoFiscal.FR;
         BigDecimal totalCreditado = null;
@@ -215,6 +233,7 @@ public record DocumentoFiscalDetalheResponse(
                 totalCreditado,
                 restante,
                 fr ? ncs.stream().map(NotaCreditoResumo::de).toList() : List.of(),
-                resumoOuNulo);
+                resumoOuNulo,
+                entregaOuNulo);
     }
 }
