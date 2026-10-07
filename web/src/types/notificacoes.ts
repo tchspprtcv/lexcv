@@ -8,7 +8,9 @@ export type NotificacaoCategoria =
   | "EVENTO_PROXIMO"
   | "EVENTO_VENCIDO"
   | "HONORARIO_ATRASADO"
-  | "COMUNICACAO_FISCAL_FALHOU";
+  | "COMUNICACAO_FISCAL_FALHOU"
+  // Phase 137 (ENTR-05): falha persistente do envio do email fiscal ao cliente (não silenciável).
+  | "EMAIL_FISCAL_FALHOU";
 
 export interface Notificacao {
   id: string;

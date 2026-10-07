@@ -32,7 +32,7 @@ describe("COMUNICACAO_FISCAL_FALHOU", () => {
       value: "COMUNICACAO_FISCAL_FALHOU",
       label: "Falha de comunicação fiscal",
     });
-    expect(NOTIFICACAO_CATEGORIA_OPTIONS).toHaveLength(10);
+    expect(NOTIFICACAO_CATEGORIA_OPTIONS).toHaveLength(11);
   });
 });
 
