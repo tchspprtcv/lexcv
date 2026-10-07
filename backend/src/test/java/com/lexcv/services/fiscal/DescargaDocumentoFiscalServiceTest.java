@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -164,22 +165,25 @@ class DescargaDocumentoFiscalServiceTest {
     }
 
     @Test
-    void storageEmBaixoDa503StorageIndisponivelNoPdfENoPresign() {
+    void storageEmBaixoNoPdfDa503StorageIndisponivel() {
         pdfDevolve(() -> {
             throw new StorageUnavailableException("minio interno", new RuntimeException());
         });
         Throwable t = org.assertj.core.api.Assertions.catchThrowable(() -> service.descarregarPdf(tenantId, autor, documentoId));
         assertRecusa(t, HttpStatus.SERVICE_UNAVAILABLE, "STORAGE_INDISPONIVEL");
         assertThat(t.getMessage()).doesNotContain("minio interno");
+        verify(auditoria, times(1)).registarDescarga(tenantId, autor, documentoId, NUMERO, "PDF");
+    }
 
-        pdfDevolve(() -> Optional.of(new PdfDocumentoFiscalService.PdfArmazenado(CHAVE, "abc", 10L, NOME_PDF,
-                Optional.empty())));
-        when(storage.presignedDownloadUrl(CHAVE, NOME_PDF))
-                .thenThrow(new StorageUnavailableException("presign", new RuntimeException()));
-        t = org.assertj.core.api.Assertions.catchThrowable(() -> service.descarregarPdf(tenantId, autor, documentoId));
+    @Test
+    void presignComStorageEmBaixoDa503StorageIndisponivel() {
+        doThrow(new StorageUnavailableException("presign", new RuntimeException()))
+                .when(storage).presignedDownloadUrl(CHAVE, NOME_PDF);
+
+        Throwable t = org.assertj.core.api.Assertions.catchThrowable(() -> service.descarregarPdf(tenantId, autor, documentoId));
+
         assertRecusa(t, HttpStatus.SERVICE_UNAVAILABLE, "STORAGE_INDISPONIVEL");
-
-        verify(auditoria, times(2)).registarDescarga(tenantId, autor, documentoId, NUMERO, "PDF");
+        verify(auditoria, times(1)).registarDescarga(tenantId, autor, documentoId, NUMERO, "PDF");
     }
 
     @Test

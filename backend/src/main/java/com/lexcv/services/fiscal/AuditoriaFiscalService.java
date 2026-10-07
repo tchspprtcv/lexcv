@@ -46,6 +46,10 @@ import java.util.UUID;
  * ({@link #ACAO_REPROCESSAR_COMUNICACAO}) -- só o nome do autor, o número e o
  * estado anterior.
  *
+ * <p>Phase 137 (ENTR-04, ENTR-02): também grava o reenvio manual do email
+ * ({@link #ACAO_REENVIAR_EMAIL}) e cada descarga do PDF/XML ({@link #ACAO_DESCARREGAR}) -- só o
+ * nome do autor, o número e o estado anterior / o formato; nunca o endereço do cliente.
+ *
  * <p>Cada {@code registar*} é {@code @Transactional(propagation = MANDATORY)}: o evento grava na
  * mesma transação da mudança que descreve; uma recusa (exceção) faz rollback e não deixa evento.
  */
@@ -66,6 +70,7 @@ public class AuditoriaFiscalService {
     public static final String ACAO_EMITIR_NC = "documento_fiscal_emitir_nc";
     public static final String ACAO_REPROCESSAR_COMUNICACAO = "documento_fiscal_reprocessar_comunicacao";
     public static final String ACAO_REENVIAR_EMAIL = "documento_fiscal_reenviar_email";
+    public static final String ACAO_DESCARREGAR = "documento_fiscal_descarregar";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -172,6 +177,21 @@ public class AuditoriaFiscalService {
         put(detalhe, "numeroFormatado", numeroFormatado);
         put(detalhe, "estadoAnterior", estadoAnterior);
         gravar(tenantId, autor, ACAO_REENVIAR_EMAIL, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
+    }
+
+    /**
+     * Phase 137 (ENTR-02, T-137-62): evento de cada pedido de descarga do PDF ou do XML de um
+     * documento, na transação do {@code DescargaDocumentoFiscalTransacoes}. Só o nome do autor, o
+     * número formatado e o formato ({@code PDF} ou {@code XML}).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarDescarga(UUID tenantId, UserPrincipal autor, UUID documentoId, String numeroFormatado,
+                                 String formato) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "numeroFormatado", numeroFormatado);
+        put(detalhe, "formato", formato);
+        gravar(tenantId, autor, ACAO_DESCARREGAR, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
     }
 
     /**

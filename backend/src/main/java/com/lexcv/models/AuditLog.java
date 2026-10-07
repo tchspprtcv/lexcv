@@ -45,8 +45,10 @@ public class AuditLog {
     // AuditoriaFiscalService) | documento_fiscal_emitir (Phase 134, entidadeTipo documento_fiscal;
     // written only by AuditoriaFiscalService.registarEmissao) | documento_fiscal_reenviar_email
     // (Phase 137, entidadeTipo documento_fiscal; AuditoriaFiscalService.registarReenvioEmail; detail
-    // never holds the recipient address -- documento_fiscal_descarregar and
-    // documento_fiscal_exportar_mes join this list in 137-15/137-18)
+    // never holds the recipient address) | documento_fiscal_descarregar (Phase 137, entidadeTipo
+    // documento_fiscal; AuditoriaFiscalService.registarDescarga; detail {autorNome, numeroFormatado,
+    // formato PDF|XML}, one row per download request) -- documento_fiscal_exportar_mes joins this
+    // list in 137-18
     @Column(name = "acao", nullable = false)
     private String acao;
 
