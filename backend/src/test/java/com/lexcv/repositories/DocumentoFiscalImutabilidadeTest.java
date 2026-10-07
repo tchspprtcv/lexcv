@@ -3,6 +3,7 @@ package com.lexcv.repositories;
 import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.models.DocumentoFiscal;
 import com.lexcv.models.DocumentoFiscalLinha;
+import com.lexcv.models.DocumentoFiscalPdf;
 import com.lexcv.models.DocumentoFiscalXml;
 import com.lexcv.models.EstadoComunicacaoFiscal;
 import org.hibernate.annotations.Immutable;
@@ -63,9 +64,15 @@ class DocumentoFiscalImutabilidadeTest {
             DocumentoFiscalLigacaoClienteRepository.class,
             ComunicacaoFiscalRepository.class,
             // Phase 136 (DFE-02): satélite XML insert-only -- acrescentado deliberadamente.
-            DocumentoFiscalXmlRepository.class);
+            DocumentoFiscalXmlRepository.class,
+            // Phase 137 (ENTR-01/03/04, RELF-01): acrescentados deliberadamente -- satélite
+            // mutável da entrega por email (escritas só por SQL nativo na fila) e satélite PDF insert-only.
+            EntregaEmailFiscalRepository.class,
+            DocumentoFiscalPdfRepository.class);
 
     private static final String SQL_INSERIR_XML_PREFIXO = "INSERT INTO t_documento_fiscal_xml";
+
+    private static final String SQL_INSERIR_PDF_PREFIXO = "INSERT INTO t_documento_fiscal_pdf";
 
     private static final String SQL_REPONTAR =
             "UPDATE t_documento_fiscal SET cliente_id = :novo WHERE tenant_id = :tenantId AND cliente_id = :antigo";
@@ -99,7 +106,9 @@ class DocumentoFiscalImutabilidadeTest {
                         "existsByTenantIdAndHonorarioId", "buscar",
                         // Phase 135 (NCRD-01..03): finders das Notas de Crédito -- atualização deliberada.
                         "findByTenantIdAndDocumentoOrigemIdOrderByDataEmissaoDescNumeroDesc",
-                        "findByTenantIdAndIdIn", "existsByTenantIdAndPagamentoIdAndTipo"),
+                        "findByTenantIdAndIdIn", "existsByTenantIdAndPagamentoIdAndTipo",
+                        // Phase 137 (RELF-01): documentos do mês para o CSV -- atualização deliberada.
+                        "findByTenantIdAndDataEmissaoBetweenOrderByDataEmissaoAscAnoAscNumeroAsc"),
                 nomes(DocumentoFiscalRepository.class));
         for (Method m : DocumentoFiscalRepository.class.getMethods()) {
             assertFalse(m.isAnnotationPresent(Modifying.class), "@Modifying proibido: " + m.getName());
@@ -139,9 +148,33 @@ class DocumentoFiscalImutabilidadeTest {
     // ---- Teste 5b (Phase 136): XML -- só o INSERT ... ON CONFLICT DO NOTHING e um finder por tenant ----
     @Test
     void documentoFiscalXmlRepositoryEInsertOnly() {
-        assertEquals(Set.of("inserirSeAusente", "findByTenantIdAndDocumentoFiscalId"),
+        assertEquals(Set.of("inserirSeAusente", "findByTenantIdAndDocumentoFiscalId",
+                        // Phase 137 (RELF-01): IUDs em lote para o CSV -- atualização deliberada.
+                        "findByTenantIdAndDocumentoFiscalIdIn"),
                 nomes(DocumentoFiscalXmlRepository.class));
-        Method inserir = Arrays.stream(DocumentoFiscalXmlRepository.class.getMethods())
+        assertInsertOnly(DocumentoFiscalXmlRepository.class, SQL_INSERIR_XML_PREFIXO);
+    }
+
+    // ---- Teste 5d (Phase 137, ENTR-01): PDF -- só o INSERT ... ON CONFLICT DO NOTHING e um finder por tenant ----
+    @Test
+    void documentoFiscalPdfRepositoryEInsertOnly() {
+        assertEquals(Set.of("inserirSeAusente", "findByTenantIdAndDocumentoFiscalId"),
+                nomes(DocumentoFiscalPdfRepository.class));
+        assertInsertOnly(DocumentoFiscalPdfRepository.class, SQL_INSERIR_PDF_PREFIXO);
+    }
+
+    // ---- Teste 5e (Phase 137, ENTR-03/04): entrega por email -- só leituras por tenant, sem save ----
+    @Test
+    void entregaEmailFiscalRepositoryTemExatamenteOsMetodosFixados() {
+        assertEquals(Set.of("findByTenantIdAndDocumentoFiscalId", "findByTenantIdAndDocumentoFiscalIdIn"),
+                nomes(EntregaEmailFiscalRepository.class));
+        for (Method m : EntregaEmailFiscalRepository.class.getMethods()) {
+            assertFalse(m.isAnnotationPresent(Modifying.class), "@Modifying proibido: " + m.getName());
+        }
+    }
+
+    private static void assertInsertOnly(Class<?> repo, String prefixoSql) {
+        Method inserir = Arrays.stream(repo.getMethods())
                 .filter(m -> m.getName().equals("inserirSeAusente"))
                 .findFirst().orElseThrow();
         Query q = inserir.getAnnotation(Query.class);
@@ -149,9 +182,9 @@ class DocumentoFiscalImutabilidadeTest {
         assertTrue(q.nativeQuery(), "inserirSeAusente deve ser nativo");
         assertTrue(inserir.isAnnotationPresent(Modifying.class), "inserirSeAusente deve ser @Modifying");
         String sql = q.value().strip();
-        assertTrue(sql.startsWith(SQL_INSERIR_XML_PREFIXO), "inserirSeAusente deve ser um INSERT: " + sql);
+        assertTrue(sql.startsWith(prefixoSql), "inserirSeAusente deve ser um INSERT: " + sql);
         assertTrue(sql.endsWith("ON CONFLICT DO NOTHING"),
-                "inserirSeAusente deve terminar em ON CONFLICT DO NOTHING (sem alvo: cobre documento e IUD)");
+                "inserirSeAusente deve terminar em ON CONFLICT DO NOTHING (sem alvo: cobre todas as chaves únicas)");
         String minusculas = sql.toLowerCase(Locale.ROOT);
         assertFalse(minusculas.contains("do update"), "inserirSeAusente nunca atualiza uma linha existente");
         assertFalse(minusculas.contains("delete"), "inserirSeAusente nunca apaga");
@@ -195,7 +228,7 @@ class DocumentoFiscalImutabilidadeTest {
     @Test
     void entidadesSaoImutaveisESemSetters() {
         for (Class<?> entidade : List.of(DocumentoFiscal.class, DocumentoFiscalLinha.class,
-                DocumentoFiscalXml.class)) {
+                DocumentoFiscalXml.class, DocumentoFiscalPdf.class)) {
             assertTrue(entidade.isAnnotationPresent(Immutable.class), entidade.getSimpleName() + " sem @Immutable");
             List<String> setters = Arrays.stream(entidade.getDeclaredMethods())
                     .filter(m -> Modifier.isPublic(m.getModifiers()) && m.getName().startsWith("set"))
@@ -209,7 +242,9 @@ class DocumentoFiscalImutabilidadeTest {
     @Test
     void todoFinderRecebeTenantId() {
         for (Class<?> repo : List.of(DocumentoFiscalRepository.class, DocumentoFiscalLinhaRepository.class,
-                ComunicacaoFiscalRepository.class, DocumentoFiscalXmlRepository.class)) {
+                ComunicacaoFiscalRepository.class, DocumentoFiscalXmlRepository.class,
+                // Phase 137: novos repositórios -- acrescentados deliberadamente.
+                EntregaEmailFiscalRepository.class, DocumentoFiscalPdfRepository.class)) {
             for (Method m : repo.getDeclaredMethods()) {
                 if (m.getName().equals("save") || m.isSynthetic()) {
                     continue;
