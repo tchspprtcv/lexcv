@@ -47,15 +47,17 @@ public class AuditLog {
     // (Phase 137, entidadeTipo documento_fiscal; AuditoriaFiscalService.registarReenvioEmail; detail
     // never holds the recipient address) | documento_fiscal_descarregar (Phase 137, entidadeTipo
     // documento_fiscal; AuditoriaFiscalService.registarDescarga; detail {autorNome, numeroFormatado,
-    // formato PDF|XML}, one row per download request) -- documento_fiscal_exportar_mes joins this
-    // list in 137-18
+    // formato PDF|XML}, one row per download request) | documento_fiscal_exportar_mes (Phase 137,
+    // entidadeTipo relatorio_fiscal, entidadeId AAAA-MM; AuditoriaFiscalService.registarExportacaoMensal;
+    // detail {autorNome, mes, numeroDocumentos}, one row per monthly CSV export)
     @Column(name = "acao", nullable = false)
     private String acao;
 
     // Values: processo | documento | conflict_check_decisao | parecer_solicitacao | parecer_versao |
     // papel_escritorio (Phase 128: entidadeId = TenantRole.id) | atribuicao_papel (Phase 128:
     // entidadeId = target User.id) | configuracao_fiscal (Phase 133: entidadeId = ConfiguracaoFiscal.id) |
-    // documento_fiscal (Phase 134: entidadeId = DocumentoFiscal.id)
+    // documento_fiscal (Phase 134: entidadeId = DocumentoFiscal.id) | relatorio_fiscal (Phase 137:
+    // entidadeId = the exported month AAAA-MM)
     @Column(name = "entidade_tipo", nullable = false)
     private String entidadeTipo;
 

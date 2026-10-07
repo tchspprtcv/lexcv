@@ -456,9 +456,9 @@ class DocumentoFiscalControllerTest {
     }
 
     @Test
-    void exatamenteDezHandlersSemRotasQueAlterem() {
+    void exatamenteOnzeHandlersSemRotasQueAlterem() {
         List<Method> hs = handlers();
-        assertEquals(10, hs.size(), hs.toString());
+        assertEquals(11, hs.size(), hs.toString());
         for (Method m : hs) {
             assertFalse(m.isAnnotationPresent(PutMapping.class), m.getName());
             assertFalse(m.isAnnotationPresent(PatchMapping.class), m.getName());
@@ -481,6 +481,9 @@ class DocumentoFiscalControllerTest {
         // Phase 137 (ENTR-02): descargas auditadas do PDF e do XML.
         assertEquals("/documentos-fiscais/{id}/pdf", handler("descarregarPdf").getAnnotation(GetMapping.class).value()[0]);
         assertEquals("/documentos-fiscais/{id}/xml", handler("descarregarXml").getAnnotation(GetMapping.class).value()[0]);
+        // Phase 137 (RELF-01): CSV mensal para o contabilista.
+        assertEquals("/documentos-fiscais/exportacao-mensal",
+                handler("exportarMes").getAnnotation(GetMapping.class).value()[0]);
         assertEquals("/api/v1", DocumentoFiscalController.class.getAnnotation(RequestMapping.class).value()[0]);
     }
 
@@ -498,6 +501,7 @@ class DocumentoFiscalControllerTest {
                 handler("emitirNotaCredito").getAnnotation(PreAuthorize.class).value());
         assertEquals("hasAuthority('financeiro:edit')",
                 handler("reprocessarComunicacao").getAnnotation(PreAuthorize.class).value());
+        assertEquals("hasAuthority('financeiro:view')", handler("exportarMes").getAnnotation(PreAuthorize.class).value());
     }
 
     private static String nomeDoParametro(Parameter p) {

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +51,10 @@ import java.util.UUID;
  * ({@link #ACAO_REENVIAR_EMAIL}) e cada descarga do PDF/XML ({@link #ACAO_DESCARREGAR}) -- só o
  * nome do autor, o número e o estado anterior / o formato; nunca o endereço do cliente.
  *
+ * <p>Phase 137 (RELF-01): também grava cada exportação do CSV mensal ({@link #ACAO_EXPORTAR_MES},
+ * {@code entidadeTipo = relatorio_fiscal}, {@code entidadeId = AAAA-MM}) -- só o nome do autor, o mês
+ * e o número de documentos exportados.
+ *
  * <p>Cada {@code registar*} é {@code @Transactional(propagation = MANDATORY)}: o evento grava na
  * mesma transação da mudança que descreve; uma recusa (exceção) faz rollback e não deixa evento.
  */
@@ -60,6 +65,7 @@ public class AuditoriaFiscalService {
 
     public static final String ENTIDADE_TIPO = "configuracao_fiscal";
     public static final String ENTIDADE_TIPO_DOCUMENTO = "documento_fiscal";
+    public static final String ENTIDADE_TIPO_RELATORIO = "relatorio_fiscal";
 
     public static final String ACAO_DADOS_ALTERAR = "faturacao_dados_alterar";
     public static final String ACAO_ATIVAR = "faturacao_ativar";
@@ -71,6 +77,7 @@ public class AuditoriaFiscalService {
     public static final String ACAO_REPROCESSAR_COMUNICACAO = "documento_fiscal_reprocessar_comunicacao";
     public static final String ACAO_REENVIAR_EMAIL = "documento_fiscal_reenviar_email";
     public static final String ACAO_DESCARREGAR = "documento_fiscal_descarregar";
+    public static final String ACAO_EXPORTAR_MES = "documento_fiscal_exportar_mes";
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
@@ -192,6 +199,21 @@ public class AuditoriaFiscalService {
         put(detalhe, "numeroFormatado", numeroFormatado);
         put(detalhe, "formato", formato);
         gravar(tenantId, autor, ACAO_DESCARREGAR, ENTIDADE_TIPO_DOCUMENTO, idTexto(documentoId), detalhe);
+    }
+
+    /**
+     * Phase 137 (RELF-01, T-137-78): evento de cada exportação do CSV mensal, na transação do
+     * {@code RelatorioMensalFiscalService}. Só o nome do autor, o mês ({@code AAAA-MM}, também o
+     * {@code entidadeId}) e o número de documentos -- nunca dados dos clientes.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registarExportacaoMensal(UUID tenantId, UserPrincipal autor, YearMonth mes, int numeroDocumentos) {
+        Map<String, Object> detalhe = new LinkedHashMap<>();
+        put(detalhe, "autorNome", nomeDoAutor(autor));
+        put(detalhe, "mes", mes == null ? null : mes.toString());
+        put(detalhe, "numeroDocumentos", numeroDocumentos);
+        gravar(tenantId, autor, ACAO_EXPORTAR_MES, ENTIDADE_TIPO_RELATORIO, mes == null ? null : mes.toString(),
+                detalhe);
     }
 
     /**

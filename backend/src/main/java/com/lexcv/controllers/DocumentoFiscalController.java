@@ -13,6 +13,7 @@ import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
 import com.lexcv.services.fiscal.ReenvioEmailFiscalService;
+import com.lexcv.services.fiscal.RelatorioMensalFiscalService;
 import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import lombok.RequiredArgsConstructor;
@@ -34,11 +35,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Phase 134 (D-01, D-16, D-17, D-18, R-05; EMIS-02, EMIS-11): leitura e pré-visualização dos
@@ -73,6 +78,11 @@ import java.util.UUID;
  *       ({@code FICHEIRO_INDISPONIVEL}, {@code STORAGE_INDISPONIVEL}, {@code FALHA_PDF}) quando o
  *       ficheiro ainda não está disponível ou o armazenamento falhou; o mesmo 404 do detalhe para um
  *       id inválido ou de outro escritório.</li>
+ *   <li>Phase 137 (RELF-01): {@link #exportarMes} ({@code GET /api/v1/documentos-fiscais/exportacao-mensal?mes=AAAA-MM})
+ *       devolve o CSV do mês para o contabilista como anexo ({@code text/csv;charset=UTF-8}, nome
+ *       {@code documentos-fiscais-simulacao-AAAA-MM.csv}); cada exportação fica na auditoria
+ *       ({@code documento_fiscal_exportar_mes}). Um mês em falta, malformado ou futuro (no fuso de Cabo
+ *       Verde) devolve 422 {@code MES_INVALIDO} sem chamar o serviço.</li>
  * </ul>
  *
  * <p><b>Porque um controlador novo:</b> {@link FaturacaoController} tem um gate de CLASSE
@@ -94,7 +104,8 @@ import java.util.UUID;
  * aplica a mesma regra exata, por isso as duas camadas concordam (regra RBAC do CLAUDE.md).
  * Reenviar o email (Phase 137) exige a mesma autoridade EXATA {@code financeiro:edit}; o frontend
  * usa {@code podeReenviarEmail}, com a mesma regra exata. Descarregar o PDF/XML (Phase 137) exige
- * {@code financeiro:view} exato, o mesmo gate do detalhe.
+ * {@code financeiro:view} exato, o mesmo gate do detalhe. Exportar o CSV mensal (Phase 137) também
+ * exige {@code financeiro:view} exato; o frontend usa {@code podeLerDocumentosFiscais}.
  *
  * <p><b>Tenant só do principal autenticado</b>, nunca do caminho, da query ou do corpo
  * ({@link PagamentoRequest} não tem tenant). Os parâmetros da listagem chegam como texto e são
@@ -124,6 +135,13 @@ public class DocumentoFiscalController {
     static final String MSG_ESTADO = "O estado de comunicação indicado não é válido.";
     static final String MSG_NAO_ENCONTRADO = "Documento fiscal não encontrado.";
     static final String CODIGO_NAO_ENCONTRADO = "DOCUMENTO_FISCAL_NAO_ENCONTRADO";
+    static final String MSG_MES_INVALIDO = "O mês escolhido não é válido. Escolha um mês até ao mês atual.";
+    static final String CODIGO_MES_INVALIDO = "MES_INVALIDO";
+    static final MediaType TEXT_CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
+
+    private static final ZoneId FUSO_CABO_VERDE = ZoneId.of("Atlantic/Cape_Verde");
+    /** Só {@code AAAA-MM}; o {@code YearMonth.parse} valida depois o mês 01..12. */
+    private static final Pattern FORMATO_MES = Pattern.compile("\\d{4}-\\d{2}");
 
     private final PreVisualizacaoFaturaService preVisualizacaoFaturaService;
     private final DocumentoFiscalService documentoFiscalService;
@@ -132,6 +150,8 @@ public class DocumentoFiscalController {
     private final EfaturaGateway efaturaGateway;
     private final ReenvioEmailFiscalService reenvioEmailFiscalService;
     private final DescargaDocumentoFiscalService descargaDocumentoFiscalService;
+    private final RelatorioMensalFiscalService relatorioMensalFiscalService;
+    private final Clock clock;
 
     private UserPrincipal getPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -301,6 +321,41 @@ public class DocumentoFiscalController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename(xml.nomeFicheiro()).build().toString())
                 .body(xml.conteudo());
+    }
+
+    @PreAuthorize("hasAuthority('financeiro:view')")
+    @GetMapping("/documentos-fiscais/exportacao-mensal")
+    public ResponseEntity<?> exportarMes(@RequestParam(required = false) String mes) {
+        Optional<YearMonth> mesPedido = mesValido(mes);
+        if (mesPedido.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(Map.of("message", MSG_MES_INVALIDO, "code", CODIGO_MES_INVALIDO));
+        }
+        RelatorioMensalFiscalService.CsvMensal csv = relatorioMensalFiscalService.exportar(getTenantId(),
+                getPrincipal(), mesPedido.get());
+        return ResponseEntity.ok()
+                .contentType(TEXT_CSV_UTF8)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(csv.nomeFicheiro()).build().toString())
+                .body(csv.conteudo());
+    }
+
+    /**
+     * {@code AAAA-MM} até ao mês atual no fuso de Cabo Verde (T-137-80), ou vazio quando em falta,
+     * malformado ou futuro. Nada deste texto chega ao SQL: o serviço recebe um {@link YearMonth}.
+     */
+    private Optional<YearMonth> mesValido(String mes) {
+        if (vazio(mes) || !FORMATO_MES.matcher(mes.trim()).matches()) {
+            return Optional.empty();
+        }
+        YearMonth pedido;
+        try {
+            pedido = YearMonth.parse(mes.trim());
+        } catch (DateTimeParseException e) {
+            return Optional.empty();
+        }
+        YearMonth atual = YearMonth.now(clock.withZone(FUSO_CABO_VERDE));
+        return pedido.isAfter(atual) ? Optional.empty() : Optional.of(pedido);
     }
 
     /** Id do caminho como UUID, ou vazio quando não é um UUID (o chamador devolve 404 sem oráculo). */
