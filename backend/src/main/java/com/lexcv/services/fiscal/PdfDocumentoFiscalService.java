@@ -149,8 +149,7 @@ public class PdfDocumentoFiscalService {
         try {
             storage.delete(chave);
         } catch (RuntimeException e) {
-            log.warn("Objeto PDF duplicado do documento fiscal {} não apagado ({})", documentoId,
-                    e.getClass().getSimpleName());
+            log.warn("Objeto PDF duplicado do documento fiscal não apagado");
         }
     }
 

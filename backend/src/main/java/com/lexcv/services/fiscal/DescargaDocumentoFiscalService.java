@@ -62,10 +62,10 @@ public class DescargaDocumentoFiscalService {
             throw new RecusaFiscalException(HttpStatus.SERVICE_UNAVAILABLE, FicheiroFiscalIndisponivelException.CODIGO,
                     FicheiroFiscalIndisponivelException.MENSAGEM);
         } catch (StorageUnavailableException e) {
-            log.warn("PDF do documento fiscal {} não disponibilizado: armazenamento indisponível", documentoId);
+            log.warn("PDF do documento fiscal não disponibilizado: armazenamento indisponível");
             throw new RecusaFiscalException(HttpStatus.SERVICE_UNAVAILABLE, CODIGO_STORAGE_INDISPONIVEL, MSG_PREPARAR);
         } catch (FalhaGeracaoPdf e) {
-            log.warn("PDF do documento fiscal {} não disponibilizado: falha na geração", documentoId);
+            log.warn("PDF do documento fiscal não disponibilizado: falha na geração");
             throw new RecusaFiscalException(HttpStatus.SERVICE_UNAVAILABLE, CODIGO_FALHA_PDF, MSG_PREPARAR);
         }
     }

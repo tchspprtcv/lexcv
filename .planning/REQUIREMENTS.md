@@ -89,10 +89,10 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 
 ### Segurança e Operação
 
-- [ ] **OPER-01**: Documentos fiscais, séries e configurações ficam isolados por tenant — uma auditoria com dois escritórios e a plataforma confirma que nenhum endpoint devolve ou altera dados de outro tenant
-- [ ] **OPER-02**: Instalações existentes arrancam com as novas tabelas tanto em `ddl-auto=update` como em `validate`, com scripts de migração idempotentes registados em `backend/migrations/README.md`
-- [ ] **OPER-03**: Credenciais SMTP e configuração eFatura vêm só de variáveis de ambiente, nunca aparecem em logs, respostas de erro ou base de dados, e estão documentadas em `.env.example`, nos ficheiros compose e em `deploy.yml`
-- [ ] **OPER-04**: SpotBugs/FindSecBugs continua limpo sem novas exclusões para código próprio (parsing de XML endurecido contra XXE, PDF sem acesso a recursos externos)
+- [x] **OPER-01**: Documentos fiscais, séries e configurações ficam isolados por tenant — uma auditoria com dois escritórios e a plataforma confirma que nenhum endpoint devolve ou altera dados de outro tenant
+- [x] **OPER-02**: Instalações existentes arrancam com as novas tabelas tanto em `ddl-auto=update` como em `validate`, com scripts de migração idempotentes registados em `backend/migrations/README.md`
+- [x] **OPER-03**: Credenciais SMTP e configuração eFatura vêm só de variáveis de ambiente, nunca aparecem em logs, respostas de erro ou base de dados, e estão documentadas em `.env.example`, nos ficheiros compose e em `deploy.yml`
+- [x] **OPER-04**: SpotBugs/FindSecBugs continua limpo sem novas exclusões para código próprio (parsing de XML endurecido contra XXE, PDF sem acesso a recursos externos)
 
 ## Future Requirements
 
@@ -177,10 +177,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SUBS-03 | Phase 138 | Complete |
 | SUBS-04 | Phase 138 | Complete |
 | SUBS-05 | Phase 138 | Complete |
-| OPER-01 | Phase 139 | Pending |
-| OPER-02 | Phase 139 | Pending |
-| OPER-03 | Phase 139 | Pending |
-| OPER-04 | Phase 139 | Pending |
+| OPER-01 | Phase 139 | Complete |
+| OPER-02 | Phase 139 | Complete |
+| OPER-03 | Phase 139 | Complete |
+| OPER-04 | Phase 139 | Complete |
 
 **Coverage:**
 

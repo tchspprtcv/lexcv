@@ -274,7 +274,14 @@ Notas da fase:
   3. Credenciais SMTP e configuração eFatura vêm só de variáveis de ambiente, nunca aparecem em logs, respostas de erro ou base de dados, e estão documentadas em `.env.example`, nos ficheiros compose e em `deploy.yml`
   4. `mvn spotbugs:check` passa limpo sem novas exclusões para código próprio, com parsing de XML endurecido contra XXE e geração de PDF sem acesso a recursos externos
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [x] 139-01-PLAN.md — Multi-tenant isolation verification across 2 offices and platform (OPER-01)
+- [x] 139-02-PLAN.md — Database migrations idempotency and two-stage boot compatibility audit (OPER-02)
+- [x] 139-03-PLAN.md — Secrets and environment variable hygiene audit (OPER-03)
+- [x] 139-04-PLAN.md — SpotBugs / FindSecBugs SAST static security analysis (OPER-04)
+- [x] 139-05-PLAN.md — Milestone v3.0 final integration, UAT closeout, and verification gate (OPER-01..04)
 
 Notas da fase:
 
@@ -294,4 +301,4 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | 136. Formato eFatura e Adaptador Simulado | 16/16 | Complete | 2026-10-06 |
 | 137. PDF, Armazenamento, Email e Relatório | 24/24 | Complete | 2026-10-07 |
 | 138. Plataforma como Emitente | 10/10 | Complete | 2026-10-07 |
-| 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |
+| 139. Fecho — Isolamento, Segurança, Migrações e UAT | 5/5 | Complete | 2026-10-07 |
