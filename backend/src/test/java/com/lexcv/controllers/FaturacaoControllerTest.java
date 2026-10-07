@@ -95,7 +95,7 @@ class FaturacaoControllerTest {
     private static ConfiguracaoFiscalResponse resposta() {
         return new ConfiguracaoFiscalResponse(true, "123456789", "Escritorio Teste", "Rua A", "Praia",
                 ConfiguracaoFiscalResponse.PAIS, "geral@escritorio-teste.cv", "+238 9000000",
-                RegimeIva.NORMAL, null, true, false, false, false, true, false, null, null);
+                RegimeIva.NORMAL, null, true, false, false, false, true, false, null, null, false);
     }
 
     private static ConfiguracaoFiscalRequest pedido() {

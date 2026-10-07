@@ -83,6 +83,16 @@ class ConfiguracaoFiscalConcorrenciaIT {
         ObjectMapper objectMapper() {
             return new ObjectMapper();
         }
+
+        /** Phase 137: ConfiguracaoFiscalService lê se o SMTP está configurado; aqui não está. */
+        @Bean
+        com.lexcv.fiscal.email.EmailProperties emailProperties() {
+            return new com.lexcv.fiscal.email.EmailProperties(
+                    new com.lexcv.fiscal.email.EmailProperties.Smtp(null, 587, null, null, null, true,
+                            java.time.Duration.ofSeconds(10), java.time.Duration.ofSeconds(20)),
+                    new com.lexcv.fiscal.email.EmailProperties.Outbox(java.time.Duration.ofSeconds(30),
+                            java.time.Duration.ofSeconds(40), 10, java.time.Duration.ofMinutes(2)));
+        }
     }
 
     /** Tempo durante o qual T2 tem de continuar bloqueada enquanto T1 retém o lock. */

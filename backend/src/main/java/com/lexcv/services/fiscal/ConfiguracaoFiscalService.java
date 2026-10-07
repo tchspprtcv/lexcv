@@ -6,6 +6,7 @@ import com.lexcv.dtos.ConfiguracaoFiscalResponse;
 import com.lexcv.dtos.EmailAutomaticoRequest;
 import com.lexcv.dtos.SerieFiscalResponse;
 import com.lexcv.exceptions.RecusaFiscalException;
+import com.lexcv.fiscal.email.EmailProperties;
 import com.lexcv.models.ConfiguracaoFiscal;
 import com.lexcv.models.MotivoIsencaoIva;
 import com.lexcv.models.RegimeIva;
@@ -67,6 +68,8 @@ public class ConfiguracaoFiscalService {
     private final UserRepository userRepository;
     private final AuditoriaFiscalService auditoriaFiscalService;
     private final Clock clock;
+    /** Phase 137 (ENTR-06): só se lê {@code configurado()}; nunca host nem credenciais. */
+    private final EmailProperties emailProperties;
 
     // -----------------------------------------------------------------------------------------
     // Leitura
@@ -289,7 +292,7 @@ public class ConfiguracaoFiscalService {
         if (c == null) {
             return new ConfiguracaoFiscalResponse(false, null, null, null, null, ConfiguracaoFiscalResponse.PAIS,
                     null, null, null, null, false, false, documentosEmitidos, documentosEmitidos, false,
-                    false, null, null);
+                    false, null, null, emailProperties.configurado());
         }
         boolean ativa = Boolean.TRUE.equals(c.getAtiva());
         boolean email = Boolean.TRUE.equals(c.getEnvioEmailAutomatico());
@@ -322,6 +325,7 @@ public class ConfiguracaoFiscalService {
                 ativa && !documentosEmitidos,
                 email,
                 aceitePorNome,
-                aceiteEm);
+                aceiteEm,
+                emailProperties.configurado());
     }
 }

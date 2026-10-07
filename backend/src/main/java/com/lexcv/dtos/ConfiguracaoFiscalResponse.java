@@ -15,6 +15,9 @@ import java.time.Instant;
  *       São indicações para a UI; o servidor volta a verificar em cada pedido.</li>
  *   <li>{@code envioEmailAceitePorNome} só é preenchido quando o envio está ligado e o utilizador
  *       pertence ao mesmo tenant.</li>
+ *   <li>{@code smtpConfigurado} (Phase 137, ENTR-06): indicação da INSTALAÇÃO (não do escritório)
+ *       de que o servidor SMTP está configurado, para o cartão de definições avisar. Nunca expõe o
+ *       host, o remetente nem qualquer credencial.</li>
  * </ul>
  */
 public record ConfiguracaoFiscalResponse(
@@ -35,7 +38,8 @@ public record ConfiguracaoFiscalResponse(
         boolean podeDesativar,
         boolean envioEmailAutomatico,
         String envioEmailAceitePorNome,
-        Instant envioEmailAceiteEm
+        Instant envioEmailAceiteEm,
+        boolean smtpConfigurado
 ) {
     public static final String PAIS = "Cabo Verde";
 }
