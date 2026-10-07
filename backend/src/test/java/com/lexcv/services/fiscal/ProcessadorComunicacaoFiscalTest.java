@@ -70,6 +70,7 @@ class ProcessadorComunicacaoFiscalTest {
     private final IudGerador iudGerador = mock(IudGerador.class);
     private final EfaturaGateway gateway = mock(EfaturaGateway.class);
     private final NotificacaoComunicacaoFiscal notificacao = mock(NotificacaoComunicacaoFiscal.class);
+    private final PdfDocumentoFiscalService pdfService = mock(PdfDocumentoFiscalService.class);
     private final TransmissaoEfatura transmissao = new TransmissaoEfatura("512345679", "LEXCVSIM", "LexCV", "3.0.0");
     private final Clock clock = Clock.fixed(AGORA, ZoneOffset.UTC);
 
@@ -83,7 +84,7 @@ class ProcessadorComunicacaoFiscalTest {
     @BeforeEach
     void setUp() {
         processador = new ProcessadorComunicacaoFiscal(transacoes, builder, marshaller, validador, iudGerador,
-                gateway, transmissao, notificacao, clock, LEASE);
+                gateway, transmissao, notificacao, clock, LEASE, pdfService);
         when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenReturn(1);
         when(transacoes.renovarLease(any(), any())).thenReturn(true);
         when(iudGerador.gerar(anyInt(), any(), anyString(), anyInt(), anyInt(), anyLong())).thenReturn("CV3-GERADO");
@@ -498,5 +499,49 @@ class ProcessadorComunicacaoFiscalTest {
                     .as(m.getName()).isFalse();
         }
         assertThat(Modifier.isPublic(ProcessadorComunicacaoFiscal.class.getModifiers())).isTrue();
+    }
+
+    // ---- Phase 137 (ENTR-01): PDF em segundo plano depois do ACEITE_SIMULADO ----
+
+    @Test
+    void aceiteRegistado_geraOPdfUmaVezDepoisDoCommit() {
+        snapshot(fr(), Optional.of(linhaXml("CV3-EXISTENTE", "<existente/>")), Optional.empty(), Optional.empty());
+        ComunicacaoReclamada item = item(1);
+
+        processador.processar(item);
+
+        var ordem = org.mockito.Mockito.inOrder(transacoes, pdfService);
+        ordem.verify(transacoes).registarResultado(item, EstadoComunicacaoFiscal.ACEITE_SIMULADO, null, null, null);
+        ordem.verify(pdfService, times(1)).garantirPdfSilencioso(tenantId, documentoId);
+    }
+
+    @Test
+    void semAceiteOuComLeasePerdido_naoGeraOPdf() {
+        snapshot(fr(), Optional.of(linhaXml("CV3-EXISTENTE", "<existente/>")), Optional.empty(), Optional.empty());
+
+        when(gateway.comunicar(any())).thenReturn(new ResultadoComunicacao.ErroTransitorio("FALHA_SIMULADA", "x"));
+        processador.processar(item(1));
+        processador.processar(item(8));
+
+        when(gateway.comunicar(any())).thenReturn(new ResultadoComunicacao.Rejeitado("XSD_INVALIDO", "x"));
+        processador.processar(item(1));
+
+        when(gateway.comunicar(any())).thenReturn(new ResultadoComunicacao.AceiteSimulado("SIMULADO-X"));
+        when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenReturn(0);
+        processador.processar(item(1));
+
+        verifyNoInteractions(pdfService);
+    }
+
+    @Test
+    void falhaDefensivaDoPdf_naoMudaOResultadoNemPropaga() {
+        snapshot(fr(), Optional.of(linhaXml("CV3-EXISTENTE", "<existente/>")), Optional.empty(), Optional.empty());
+        doThrow(new IllegalStateException("pdf")).when(pdfService).garantirPdfSilencioso(any(), any());
+        ComunicacaoReclamada item = item(1);
+
+        assertThatCode(() -> processador.processar(item)).doesNotThrowAnyException();
+
+        verify(transacoes, times(1)).registarResultado(item, EstadoComunicacaoFiscal.ACEITE_SIMULADO, null, null, null);
+        verifyNoInteractions(notificacao);
     }
 }

@@ -85,7 +85,7 @@ class ProcessadorComunicacaoFiscalPipelineTest {
     private ProcessadorComunicacaoFiscal processador(InjetorFalhas injetor) {
         return new ProcessadorComunicacaoFiscal(transacoes, new DfeXmlBuilder(), new DfeMarshaller(), validador,
                 new IudGerador(), new SimuladoEfaturaGateway(validador, injetor), transmissao, notificacao,
-                Clock.fixed(AGORA, ZoneOffset.UTC), java.time.Duration.ofMinutes(2));
+                Clock.fixed(AGORA, ZoneOffset.UTC), java.time.Duration.ofMinutes(2), mock(PdfDocumentoFiscalService.class));
     }
 
     // ---- fixtures ----
