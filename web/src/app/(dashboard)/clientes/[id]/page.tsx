@@ -39,6 +39,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccessDeniedState } from "@/components/shared/access-denied-state";
 import { Combobox } from "@/components/shared/combobox";
 import { FileDropZone } from "@/components/shared/file-drop-zone";
+import { podeLerDocumentosFiscais } from "@/hooks/use-faturacao";
+import { ClienteDocumentosFiscaisTab } from "./documentos-fiscais-tab";
 import {
   useAddAdministrativo,
   useAddAdvogado,
@@ -105,6 +107,7 @@ type TabKey =
   | "pareceres"
   | "documentosEntregues"
   | "documentosATratar"
+  | "documentosFiscais"
   | "deslocacoes";
 
 function formatMoneyCVE(v: number) {
@@ -152,6 +155,7 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
   const canViewPareceres = permissions.can.view("pareceres");
   const canViewDocumentos = permissions.can.view("documentos");
   const canEditDocumentos = permissions.can.edit("documentos");
+  const canViewDocumentosFiscais = podeLerDocumentosFiscais(permissions.permissions);
   const canCreateProcessos = permissions.can.create("processos");
   const canCreatePareceres = permissions.can.create("pareceres");
   const cliente = useCliente(id);
@@ -477,6 +481,9 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               {canViewPareceres ? <TabsTrigger value="pareceres">Pareceres</TabsTrigger> : null}
               <TabsTrigger value="documentosEntregues">Documentos Entregues</TabsTrigger>
               <TabsTrigger value="documentosATratar">Documentos a Tratar</TabsTrigger>
+              {canViewDocumentosFiscais ? (
+                <TabsTrigger value="documentosFiscais">Documentos fiscais</TabsTrigger>
+              ) : null}
               <TabsTrigger value="deslocacoes">Deslocações</TabsTrigger>
             </TabsList>
           </div>
@@ -981,6 +988,12 @@ function ClienteDetailContent({ id, canEditClientes }: { id: string; canEditClie
               </CardContent>
             </Card>
           </TabsContent>
+
+          {canViewDocumentosFiscais ? (
+            <TabsContent value="documentosFiscais">
+              <ClienteDocumentosFiscaisTab clienteId={id} />
+            </TabsContent>
+          ) : null}
 
           <TabsContent value="deslocacoes">
             <Card>
