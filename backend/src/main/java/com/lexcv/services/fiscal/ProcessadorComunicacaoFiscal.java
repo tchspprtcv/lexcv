@@ -44,6 +44,12 @@ import java.util.Optional;
  * {@code financeiro:manage} ou {@code financeiro:edit} (WR-06) uma vez por episódio, DEPOIS do commit
  * do resultado.
  *
+ * <p>Phase 137 (ENTR-01): depois de o resultado {@code ACEITE_SIMULADO} fazer commit (a mesma
+ * transação já enfileirou o email, ver {@link ComunicacaoFiscalTransacoes#registarResultado}), gera
+ * o PDF do documento em segundo plano com {@link PdfDocumentoFiscalService#garantirPdfSilencioso},
+ * fora de qualquer transação e em melhor esforço: uma falha do PDF nunca altera o resultado da
+ * comunicação (o PDF volta a ser tentado a pedido na descarga ou no envio do email).
+ *
  * <p>Sem anotações de transação: todas as transações vivem em {@link ComunicacaoFiscalTransacoes}
  * (chamadas pelo proxy), para que nenhuma envolva o XML ou o gateway.
  *
@@ -84,21 +90,23 @@ public class ProcessadorComunicacaoFiscal {
     private final NotificacaoComunicacaoFiscal notificacao;
     private final Clock clock;
     private final Duration lease;
+    private final PdfDocumentoFiscalService pdfService;
 
     @Autowired
     public ProcessadorComunicacaoFiscal(ComunicacaoFiscalTransacoes transacoes, DfeXmlBuilder builder,
                                         DfeMarshaller marshaller, DfeValidador validador, IudGerador iudGerador,
                                         EfaturaGateway gateway, TransmissaoEfatura transmissao,
                                         NotificacaoComunicacaoFiscal notificacao, Clock clock,
-                                        EfaturaProperties propriedades) {
+                                        EfaturaProperties propriedades, PdfDocumentoFiscalService pdfService) {
         this(transacoes, builder, marshaller, validador, iudGerador, gateway, transmissao, notificacao, clock,
-                propriedades.outbox().lease());
+                propriedades.outbox().lease(), pdfService);
     }
 
     ProcessadorComunicacaoFiscal(ComunicacaoFiscalTransacoes transacoes, DfeXmlBuilder builder,
                                  DfeMarshaller marshaller, DfeValidador validador, IudGerador iudGerador,
                                  EfaturaGateway gateway, TransmissaoEfatura transmissao,
-                                 NotificacaoComunicacaoFiscal notificacao, Clock clock, Duration lease) {
+                                 NotificacaoComunicacaoFiscal notificacao, Clock clock, Duration lease,
+                                 PdfDocumentoFiscalService pdfService) {
         this.transacoes = transacoes;
         this.builder = builder;
         this.marshaller = marshaller;
@@ -109,6 +117,7 @@ public class ProcessadorComunicacaoFiscal {
         this.notificacao = notificacao;
         this.clock = clock;
         this.lease = lease;
+        this.pdfService = pdfService;
     }
 
     /** Processa um item. Nunca lança uma {@link Exception} (um {@link Error} da JVM propaga; IN-08). */
@@ -146,6 +155,19 @@ public class ProcessadorComunicacaoFiscal {
         }
         if (estado == EstadoComunicacaoFiscal.ERRO) {
             notificar(item, numeroFormatado[0]);
+        }
+        if (estado == EstadoComunicacaoFiscal.ACEITE_SIMULADO) {
+            gerarPdf(item);
+        }
+    }
+
+    /** Phase 137: PDF em melhor esforço depois do commit do aceite; nunca lança uma {@link Exception}. */
+    private void gerarPdf(ComunicacaoReclamada item) {
+        try {
+            pdfService.garantirPdfSilencioso(item.tenantId(), item.documentoFiscalId());
+        } catch (RuntimeException e) {
+            log.warn("PDF do documento fiscal {} não gerado depois do aceite ({})", item.documentoFiscalId(),
+                    e.getClass().getSimpleName());
         }
     }
 

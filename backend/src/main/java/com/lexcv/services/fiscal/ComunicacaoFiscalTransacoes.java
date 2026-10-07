@@ -35,6 +35,12 @@ import java.util.UUID;
  *
  * <p>Depois da reclamação (multi-tenant por desenho), cada leitura e escrita usa o
  * {@code tenantId} da linha reclamada (T-136-21).
+ *
+ * <p>Phase 137 (ENTR-03, outbox atómico): quando {@link #registarResultado} grava
+ * {@code ACEITE_SIMULADO} (a escrita guardada pela versão atualizou a linha), cria na MESMA
+ * transação a linha de entrega por email ({@link EnfileiramentoEntregaEmail}): o resultado e o
+ * enfileiramento fazem commit juntos ou nenhum. É o único ponto de enfileiramento; nunca acontece
+ * na transação do registo do pagamento nem da Nota de Crédito.
  */
 @Service
 public class ComunicacaoFiscalTransacoes {
@@ -45,17 +51,20 @@ public class ComunicacaoFiscalTransacoes {
     private final DocumentoFiscalXmlRepository xmlRepository;
     private final ComunicacaoFiscalRepository comunicacaoRepository;
     private final Clock clock;
+    private final EnfileiramentoEntregaEmail enfileiramentoEntregaEmail;
 
     public ComunicacaoFiscalTransacoes(FilaComunicacaoFiscal fila, DocumentoFiscalRepository documentoRepository,
                                        DocumentoFiscalLinhaRepository linhaRepository,
                                        DocumentoFiscalXmlRepository xmlRepository,
-                                       ComunicacaoFiscalRepository comunicacaoRepository, Clock clock) {
+                                       ComunicacaoFiscalRepository comunicacaoRepository, Clock clock,
+                                       EnfileiramentoEntregaEmail enfileiramentoEntregaEmail) {
         this.fila = fila;
         this.documentoRepository = documentoRepository;
         this.linhaRepository = linhaRepository;
         this.xmlRepository = xmlRepository;
         this.comunicacaoRepository = comunicacaoRepository;
         this.clock = clock;
+        this.enfileiramentoEntregaEmail = enfileiramentoEntregaEmail;
     }
 
     /**
@@ -144,14 +153,19 @@ public class ComunicacaoFiscalTransacoes {
     /**
      * Tx 3: regista o resultado da tentativa, guardado pela versão reclamada e pelo tenant.
      * {@code concluido_em} só é preenchido num estado terminal. Devolve as linhas atualizadas
-     * (0 = lease perdido).
+     * (0 = lease perdido). Phase 137: um {@code ACEITE_SIMULADO} gravado enfileira a entrega por
+     * email nesta mesma transação.
      */
     @Transactional
     public int registarResultado(ComunicacaoReclamada item, EstadoComunicacaoFiscal estado, String codigo,
                                  String mensagem, Instant proxima) {
         Instant agora = clock.instant();
         Instant concluido = estado.terminal() ? agora : null;
-        return fila.registarResultado(item.id(), item.tenantId(), item.versao(), estado, codigo, mensagem,
+        int linhas = fila.registarResultado(item.id(), item.tenantId(), item.versao(), estado, codigo, mensagem,
                 proxima, concluido, agora);
+        if (linhas == 1 && estado == EstadoComunicacaoFiscal.ACEITE_SIMULADO) {
+            enfileiramentoEntregaEmail.enfileirarAposAceite(item.tenantId(), item.documentoFiscalId(), agora);
+        }
+        return linhas;
     }
 }
