@@ -19,7 +19,7 @@ key-files:
     - backend/src/test/java/com/lexcv/services/fiscal/ProcessadorEntregaEmailTest.java
   modified: []
 decisions:
-  - "The email total is FormatacaoFiscal.dinheiro(totalDocumento, moeda), as the plan says. With retention the PDF also shows 'Valor recebido' (137-06 dev. 9); the email states only the document total."
+  - "The email total is FormatacaoFiscal.dinheiro(totalDocumento, moeda), as the plan says. With retention > 0 a following line states the net amount ('Valor recebido' FR / 'Valor líquido a crédito' NC = valorLiquido), the same rule as the PDF (137-06 dev. 9); see deviation 3."
   - "NC origin line is included only when the snapshot has numeroOrigem; otherwise the line is omitted rather than inventing copy"
   - "Closing line uses emitenteMorada only ('NIF {nif} · {morada}'), no localidade, matching UI-SPEC 6b literally"
   - "Order inside processar: snapshot -> recipient revalidation (RegrasEntregaEmail.emailValido) -> XML presence -> lerPdf -> compose -> renovarLease -> enviar. Snapshot first, so the notification always has the document number"
@@ -81,6 +81,7 @@ A lost lease means no send and no record. The processor never throws an `Excepti
 
 1. **Test-only fix in the GREEN commit (cc5a926).** The RED test re-stubbed `registarResultado` with `when(...)` after a throwing stub, which runs the throwing stub. It was changed to `doReturn`. Production code was not affected.
 2. Two tests beyond the plan's behaviour list: the lease renewal order, and the `notificarEsgotada` fallback when the snapshot is missing.
+3. **[Orchestrator decision, post-plan] Net amount after retention in the email.** Commit `fix(137-14): email shows net amount received after retention, matching the PDF`. When `totalRetencao` > 0, the paragraph with the document total gains a line right after the total sentence: "Valor recebido: {valorLiquido}." (FR) / "Valor líquido a crédito: {valorLiquido}." (NC), formatted by `FormatacaoFiscal`. With no retention there is no extra line. This is the same rule as the PDF (137-06 deviation 9). `ComposicaoEmailFiscalTest` is now **14/14**: three new tests cover FR with retention, NC with retention (the line comes before the origin line), and no line without retention. The 137-UI-SPEC 6b email copy block is updated.
 
 ## Threat Flags
 

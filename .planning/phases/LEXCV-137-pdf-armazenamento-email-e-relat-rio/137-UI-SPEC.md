@@ -315,6 +315,7 @@ Este documento foi emitido em modo de simulação e não tem validade fiscal. N�
 Exmo(a). Senhor(a) {nome do adquirente},
 
 Enviamos em anexo a {Fatura-Recibo|Nota de Crédito} {número}, emitida em {dd/mm/aaaa}, no valor total de {total}.
+[only when retention > 0:] {Valor recebido|Valor líquido a crédito}: {valorLiquido}.
 [NC only:] Esta nota de crédito corrige a Fatura-Recibo {número da FR}.
 
 Anexos: {nome}.pdf (documento) e {nome}.xml (formato eletrónico).
@@ -327,6 +328,8 @@ Mensagem enviada automaticamente. Para qualquer questão, responda a este email 
 ```
 
 (When there is no `Reply-To`, the last line reads "Mensagem enviada automaticamente. Para qualquer questão, contacte {firma do emitente}.")
+
+(Net amount line, same rule as the PDF totals block in 6a: only when the retention is > 0, right after the total sentence, "Valor recebido" on an FR and "Valor líquido a crédito" on an NC, followed by the stored `valorLiquido` formatted by `FormatacaoFiscal`. With no retention there is no extra line.)
 
 ---
 

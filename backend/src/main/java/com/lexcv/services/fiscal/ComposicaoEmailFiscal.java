@@ -37,6 +37,8 @@ public class ComposicaoEmailFiscal {
 
     private static final String AVISO = "Este documento foi emitido em modo de simulação e não tem validade fiscal. "
             + "Não foi comunicado à administração fiscal (DNRE).";
+    static final String ROTULO_LIQUIDO_FR = "Valor recebido";
+    static final String ROTULO_LIQUIDO_NC = "Valor líquido a crédito";
     private static final String TIPO_PDF = "application/pdf";
     private static final String TIPO_XML = "application/xml";
 
@@ -65,6 +67,12 @@ public class ComposicaoEmailFiscal {
         envio.add("Enviamos em anexo a " + tipo + " " + numero + ", emitida em "
                 + FormatacaoFiscal.data(d.getDataEmissao()) + ", no valor total de "
                 + FormatacaoFiscal.dinheiro(d.getTotalDocumento(), d.getMoeda()) + ".");
+        if (d.getTotalRetencao() != null && d.getTotalRetencao().signum() > 0) {
+            // Mesma regra do PDF (137-06): com retenção, o total não é o que muda de mãos; mostra-se o
+            // valor líquido guardado. Sem retenção não há linha extra.
+            envio.add((d.getTipo() == TipoDocumentoFiscal.NC ? ROTULO_LIQUIDO_NC : ROTULO_LIQUIDO_FR) + ": "
+                    + FormatacaoFiscal.dinheiro(d.getValorLiquido(), d.getMoeda()) + ".");
+        }
         if (d.getTipo() == TipoDocumentoFiscal.NC && snapshot.numeroOrigem().isPresent()) {
             envio.add("Esta nota de crédito corrige a Fatura-Recibo " + snapshot.numeroOrigem().get() + ".");
         }

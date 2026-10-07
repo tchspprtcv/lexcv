@@ -40,6 +40,11 @@ class ComposicaoEmailFiscalTest {
     // ---- fixtures ----
 
     private static DocumentoFiscal documento(TipoDocumentoFiscal tipo, String numero, String adquirente) {
+        return documento(tipo, numero, adquirente, BigDecimal.ZERO, TOTAL);
+    }
+
+    private static DocumentoFiscal documento(TipoDocumentoFiscal tipo, String numero, String adquirente,
+                                             BigDecimal retencao, BigDecimal liquido) {
         return DocumentoFiscal.builder()
                 .id(UUID.randomUUID()).tenantId(UUID.randomUUID()).tipo(tipo).ambiente(AmbienteFiscal.SIMULADO)
                 .serieCodigo("2026A").ano(2026).numero(123L).numeroFormatado(numero)
@@ -51,7 +56,7 @@ class ComposicaoEmailFiscalTest {
                 .documentoOrigemId(tipo == TipoDocumentoFiscal.NC ? UUID.randomUUID() : null)
                 .motivoCodigo(tipo == TipoDocumentoFiscal.NC ? MotivoNotaCredito.CORRECAO_VALOR : null)
                 .totalBase(new BigDecimal("10734.78")).totalIva(new BigDecimal("1610.22"))
-                .totalRetencao(BigDecimal.ZERO).totalDocumento(TOTAL).valorLiquido(TOTAL)
+                .totalRetencao(retencao).totalDocumento(TOTAL).valorLiquido(liquido)
                 .build();
     }
 
@@ -210,5 +215,46 @@ class ComposicaoEmailFiscalTest {
         assertThat(total).isEqualTo("12\u202F345,00 CVE");
         assertThat(m.textoSimples()).contains("emitida em " + data + ", no valor total de " + total + ".");
         assertThat(m.html()).contains("emitida em " + data + ", no valor total de " + total + ".");
+    }
+
+    // ---- valor líquido com retenção (mesma regra do PDF, 137-06 desvio 9) ----
+
+    private static final BigDecimal RETENCAO = new BigDecimal("1610.22");
+    private static final BigDecimal LIQUIDO = new BigDecimal("10734.78");
+
+    private static SnapshotEntregaEmail comRetencao(TipoDocumentoFiscal tipo, String numero) {
+        DocumentoFiscal d = documento(tipo, numero, "Cliente Teste", RETENCAO, LIQUIDO);
+        return new SnapshotEntregaEmail(d, Optional.of(linhaXml()),
+                tipo == TipoDocumentoFiscal.NC ? Optional.of("FR 2026A/000123") : Optional.empty(), Optional.empty());
+    }
+
+    @Test
+    void frComRetencaoMostraOValorRecebidoDepoisDoTotal() {
+        MensagemEmailFiscal m = composicao.compor(comRetencao(TipoDocumentoFiscal.FR, "FR 2026A/000123"), DESTINATARIO, PDF);
+        String total = FormatacaoFiscal.dinheiro(TOTAL, "CVE");
+        String liquido = FormatacaoFiscal.dinheiro(LIQUIDO, "CVE");
+
+        assertThat(m.textoSimples()).contains("no valor total de " + total + ".\nValor recebido: " + liquido + ".");
+        assertThat(m.html()).contains("no valor total de " + total + ".<br>Valor recebido: " + liquido + ".");
+        assertThat(m.textoSimples()).doesNotContain("Valor líquido a crédito");
+    }
+
+    @Test
+    void ncComRetencaoMostraOValorLiquidoACredito() {
+        MensagemEmailFiscal m = composicao.compor(comRetencao(TipoDocumentoFiscal.NC, "NC 2026A/000007"), DESTINATARIO, PDF);
+        String liquido = FormatacaoFiscal.dinheiro(LIQUIDO, "CVE");
+
+        assertThat(m.textoSimples()).contains(".\nValor líquido a crédito: " + liquido + ".\nEsta nota de crédito corrige");
+        assertThat(m.html()).contains("Valor líquido a crédito: " + liquido + ".");
+        assertThat(m.textoSimples()).doesNotContain("Valor recebido");
+    }
+
+    @Test
+    void semRetencaoNaoHaLinhaDeValorLiquido() {
+        for (SnapshotEntregaEmail s : java.util.List.of(fr("Cliente Teste", Optional.empty()), nc())) {
+            MensagemEmailFiscal m = composicao.compor(s, DESTINATARIO, PDF);
+            assertThat(m.textoSimples()).doesNotContain("Valor recebido").doesNotContain("Valor líquido a crédito");
+            assertThat(m.html()).doesNotContain("Valor recebido").doesNotContain("Valor líquido a crédito");
+        }
     }
 }
