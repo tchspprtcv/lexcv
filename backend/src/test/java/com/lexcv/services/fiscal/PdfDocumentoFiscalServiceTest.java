@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -234,7 +235,7 @@ class PdfDocumentoFiscalServiceTest {
         assertThatCode(() -> servico.garantirPdfSilencioso(TENANT, DOC)).doesNotThrowAnyException();
 
         dados(Optional.of(IUD), Optional.empty());
-        when(renderer.renderizar(any(DadosPdfDocumentoFiscal.class))).thenReturn(BYTES);
+        doReturn(BYTES).when(renderer).renderizar(any(DadosPdfDocumentoFiscal.class));
         doThrow(new StorageUnavailableException("Storage service unavailable", null))
                 .when(storage).uploadBytes(anyString(), any(), anyString());
         assertThatCode(() -> servico.garantirPdfSilencioso(TENANT, DOC)).doesNotThrowAnyException();
