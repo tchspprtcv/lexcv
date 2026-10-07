@@ -16,18 +16,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Info } from "lucide-react";
 import { mensagemErroFaturacao, useEmailAutomatico } from "@/hooks/use-faturacao";
 import { toast } from "@/hooks/use-toast";
 import { isApiError } from "@/lib/api";
 import type { ConfiguracaoFiscal } from "@/types/faturacao";
 
-// Card "Envio automático por email" (133-UI-SPEC Block 5, CFG-06). O Switch NÃO muda de forma
+// Card "Envio automático por email" (133-UI-SPEC Block 5, CFG-06; 137-UI-SPEC Surface 7). O Switch NÃO muda de forma
 // otimista: o valor mostrado é sempre o do servidor. Ligar exige a declaração explícita (checkbox
 // obrigatória, reposta a desmarcada em cada abertura); o backend volta a exigir
 // `aceiteDeclaracao` (DECLARACAO_NAO_ACEITE) e regista quem aceitou e quando.
 
 const SWITCH_ID = "faturacao-email-automatico";
 const CHECKBOX_ID = "faturacao-email-declaracao";
+
+const NOTICE_CLASSES =
+  "rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300";
 
 /** Reutilizado verbatim de processos/[id]/page.tsx:190-195 (toLocaleString("pt-CV")). */
 function formatDateTime(v: string | undefined) {
@@ -104,8 +108,7 @@ export function FaturacaoEmailCard({
                   id={`${SWITCH_ID}-ajuda`}
                   className="text-sm text-slate-500 dark:text-slate-400"
                 >
-                  Desligado por omissão. O envio real dos emails só começa numa versão futura;
-                  agora apenas regista a sua opção.
+                  Desligado por omissão. Quando ligado, cada documento aceite na comunicação é enviado ao cliente por email, com o PDF e o XML em anexo.
                 </p>
                 {!configuracao.ativa ? (
                   <p
@@ -128,6 +131,17 @@ export function FaturacaoEmailCard({
                 }
               />
             </div>
+
+            {configuracao.smtpConfigurado === false ? (
+              <div role="status" className={NOTICE_CLASSES}>
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-slate-500" aria-hidden="true" />
+                  <p>
+                    O servidor de email não está configurado nesta instalação. Pode ligar a opção, mas os emails só são enviados depois de o administrador configurar o SMTP.
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {configuracao.envioEmailAutomatico ? (
               <p className="text-xs text-slate-500 dark:text-slate-400">
