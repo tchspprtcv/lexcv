@@ -30,6 +30,8 @@ export interface ConfiguracaoFiscal {
   envioEmailAutomatico: boolean;
   envioEmailAceitePorNome: string | null;
   envioEmailAceiteEm: string | null;
+  /** Phase 137 (ENTR-06): a instalação tem servidor SMTP configurado (variáveis de ambiente). */
+  smtpConfigurado: boolean;
 }
 
 export interface ConfiguracaoFiscalPayload {
@@ -101,7 +103,17 @@ export type CodigoErroFaturacao =
   | "FIRMA_EXCEDE_150"
   // Phase 136 -- reprocessamento da comunicação eFatura.
   | "COMUNICACAO_ESTADO_INVALIDO"
-  | "MODO_NAO_SUPORTADO";
+  | "MODO_NAO_SUPORTADO"
+  // Phase 137 -- reenvio do email, descargas e exportação mensal.
+  | "ENTREGA_ESTADO_INVALIDO"
+  | "SEM_EMAIL_CLIENTE"
+  | "SMTP_NAO_CONFIGURADO"
+  | "ENVIO_EMAIL_DESLIGADO"
+  | "COMUNICACAO_NAO_ACEITE"
+  | "MES_INVALIDO"
+  | "FICHEIRO_INDISPONIVEL"
+  | "STORAGE_INDISPONIVEL"
+  | "FALHA_PDF";
 
 // ---------------------------------------------------------------------------------------------
 // Phase 134 -- Fatura-Recibo nos honorários. Espelham os DTOs de DocumentoFiscalController e da
@@ -136,6 +148,44 @@ export interface ComunicacaoFiscal {
 export interface ReprocessarComunicacaoResposta {
   estado: EstadoComunicacaoFiscal;
   tentativas: number;
+}
+
+/**
+ * Phase 137 (ENTR-03..06): estado APRESENTADO da entrega por email, calculado pelo backend
+ * (`NAO_CONFIGURADO` é derivado quando a instalação não tem SMTP e nunca é gravado). "Enviado"
+ * significa só que o servidor SMTP aceitou a mensagem. Apresentação em `lib/entrega-email.ts`.
+ */
+export type EstadoEntregaEmail = "NAO_CONFIGURADO" | "DESLIGADO" | "SEM_EMAIL" | "PENDENTE" | "ENVIADO" | "FALHOU";
+
+/** Phase 137: entrega por email no detalhe do documento (null se ainda não foi registada). */
+export interface EntregaEmail {
+  estado: EstadoEntregaEmail;
+  /** Endereço usado na entrega; null em SEM_EMAIL. */
+  destinatario: string | null;
+  /** Email ATUAL da ficha do cliente (o que um reenvio vai usar). */
+  emailDestinatario: string | null;
+  tentativas: number;
+  ultimaTentativaEm: string | null;
+  proximaTentativaEm: string | null;
+  enviadoEm: string | null;
+  /** Resumo curto já sanitizado pelo backend; mostrado só como texto. */
+  ultimoErro: string | null;
+  /** O backend decide se o reenvio é permitido agora; o frontend só junta o gate exato. */
+  reenviavel: boolean;
+}
+
+/** POST /documentos-fiscais/{id}/email/reenviar (financeiro:edit exato). */
+export interface ReenviarEmailResposta {
+  estado: "PENDENTE";
+  tentativas: number;
+}
+
+/** GET /documentos-fiscais/{id}/pdf (financeiro:view): URL pré-assinado, nunca construído no cliente. */
+export interface DescargaPdfResposta {
+  url: string;
+  nomeFicheiro: string;
+  /** Validade do URL em segundos. */
+  expiresIn: number;
 }
 
 /** GET /faturacao/estado-emissao (financeiro:view). */
@@ -193,6 +243,8 @@ export interface DocumentoFiscalResumo {
   adquirenteNif: string;
   totalDocumento: number;
   estadoComunicacao: EstadoComunicacaoFiscal | null;
+  /** Phase 137: estado apresentado da entrega por email; null sem linha de entrega. */
+  estadoEntregaEmail: EstadoEntregaEmail | null;
   /** Phase 135: numa NC, a FR que corrige; null numa FR. */
   documentoOrigemId: string | null;
   documentoOrigemNumero: string | null;
@@ -254,6 +306,8 @@ export interface DocumentoFiscalDetalhe {
   estadoComunicacao: EstadoComunicacaoFiscal | null;
   /** Phase 136: estado, IUD, tentativas e último erro da comunicação. */
   comunicacao: ComunicacaoFiscal | null;
+  /** Phase 137: estado, destinatário, tentativas e último erro da entrega por email. */
+  entregaEmail: EntregaEmail | null;
   emitidoPorNome: string | null;
   linhas: DocumentoFiscalLinha[];
   // Phase 135 -- numa NC: origem e motivo (null numa FR). Numa NC, `pagamentoId` é o id do estorno.
