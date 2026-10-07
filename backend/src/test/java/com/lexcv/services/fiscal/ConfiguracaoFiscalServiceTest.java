@@ -1,5 +1,6 @@
 package com.lexcv.services.fiscal;
 
+import com.lexcv.fiscal.email.EmailProperties;
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.ConfiguracaoFiscalRequest;
 import com.lexcv.dtos.ConfiguracaoFiscalResponse;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -73,7 +75,7 @@ class ConfiguracaoFiscalServiceTest {
         serieRepo = mock(SerieFiscalRepository.class);
         userRepo = mock(UserRepository.class);
         auditoria = mock(AuditoriaFiscalService.class);
-        service = new ConfiguracaoFiscalService(configRepo, serieRepo, userRepo, auditoria, RELOGIO);
+        service = servico(false);
         tenantId = UUID.randomUUID();
         autor = UserPrincipal.create(UUID.randomUUID(), tenantId, "Ana", "ana@example.cv",
                 Set.of(), Set.of(), Set.of());
@@ -200,6 +202,44 @@ class ConfiguracaoFiscalServiceTest {
             ordem.verify(serieRepo).existsByTenantIdAndUltimoNumeroGreaterThan(tenantId, 0L);
             verify(configRepo, never()).findByTenantId(any());
         }
+    }
+
+    /** Phase 137: o mesmo serviço com o SMTP da instalação configurado ou não. */
+    private ConfiguracaoFiscalService servico(boolean smtp) {
+        EmailProperties email = new EmailProperties(
+                new EmailProperties.Smtp(smtp ? "smtp.example.cv" : null, 587, "u", "segredo",
+                        smtp ? "faturacao@example.cv" : null, true, Duration.ofSeconds(10), Duration.ofSeconds(20)),
+                new EmailProperties.Outbox(Duration.ofSeconds(30), Duration.ofSeconds(40), 10, Duration.ofMinutes(2)));
+        return new ConfiguracaoFiscalService(configRepo, serieRepo, userRepo, auditoria, RELOGIO, email);
+    }
+
+    @Test
+    void obterIndicaSmtpConfiguradoComESemConfiguracaoDoTenant() {
+        assertFalse(servico(false).obter(tenantId).smtpConfigurado());
+        assertTrue(servico(true).obter(tenantId).smtpConfigurado());
+
+        existente(true, false);
+        assertFalse(servico(false).obter(tenantId).smtpConfigurado());
+        assertTrue(servico(true).obter(tenantId).smtpConfigurado());
+    }
+
+    @Test
+    void smtpConfiguradoNaoMudaNenhumOutroCampo() {
+        ConfiguracaoFiscalResponse semLinhaSem = servico(false).obter(tenantId);
+        ConfiguracaoFiscalResponse semLinhaCom = servico(true).obter(tenantId);
+        existente(true, false);
+        ConfiguracaoFiscalResponse comLinhaSem = servico(false).obter(tenantId);
+        ConfiguracaoFiscalResponse comLinhaCom = servico(true).obter(tenantId);
+
+        assertEquals(semLinhaSem, copiaComSmtp(semLinhaCom, false));
+        assertEquals(comLinhaSem, copiaComSmtp(comLinhaCom, false));
+    }
+
+    private static ConfiguracaoFiscalResponse copiaComSmtp(ConfiguracaoFiscalResponse r, boolean smtp) {
+        return new ConfiguracaoFiscalResponse(r.configurada(), r.nif(), r.firma(), r.morada(), r.localidade(),
+                r.pais(), r.emailContacto(), r.telefoneContacto(), r.regimeIva(), r.motivoIsencaoCodigo(),
+                r.completa(), r.ativa(), r.documentosEmitidos(), r.nifBloqueado(), r.podeDesativar(),
+                r.envioEmailAutomatico(), r.envioEmailAceitePorNome(), r.envioEmailAceiteEm(), smtp);
     }
 
     @Test
