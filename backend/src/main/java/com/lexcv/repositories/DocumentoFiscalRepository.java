@@ -61,6 +61,14 @@ public interface DocumentoFiscalRepository extends Repository<DocumentoFiscal, U
     boolean existsByTenantIdAndPagamentoIdAndTipo(UUID tenantId, Integer pagamentoId, TipoDocumentoFiscal tipo);
 
     /**
+     * Phase 137 (RELF-01): documentos do mês para o CSV do contabilista; sem paginação, tenant
+     * primeiro. Intervalo fechado {@code [de, ate]} sobre {@code data_emissao}, ordenado como a
+     * numeração ({@code data_emissao, ano, numero}).
+     */
+    List<DocumentoFiscal> findByTenantIdAndDataEmissaoBetweenOrderByDataEmissaoAscAnoAscNumeroAsc(
+            UUID tenantId, LocalDate de, LocalDate ate);
+
+    /**
      * Listagem filtrada e paginada no servidor (D-17). {@code tenant_id} é o primeiro predicado,
      * nunca opcional. Os filtros opcionais usam o idioma {@code CAST(:p AS text) IS NULL OR ...}
      * (o PostgreSQL não consegue tipar um null "nu"); o {@code clienteId} chega como String pelo

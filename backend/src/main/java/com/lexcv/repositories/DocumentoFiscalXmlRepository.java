@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,4 +42,7 @@ public interface DocumentoFiscalXmlRepository extends Repository<DocumentoFiscal
                          @Param("geradoEm") Instant geradoEm);
 
     Optional<DocumentoFiscalXml> findByTenantIdAndDocumentoFiscalId(UUID tenantId, UUID documentoFiscalId);
+
+    /** Phase 137 (RELF-01): XML (e IUD) de vários documentos do tenant de uma vez, para o CSV mensal. */
+    List<DocumentoFiscalXml> findByTenantIdAndDocumentoFiscalIdIn(UUID tenantId, Collection<UUID> documentoFiscalIds);
 }
