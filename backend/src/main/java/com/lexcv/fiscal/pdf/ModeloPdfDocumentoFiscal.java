@@ -25,6 +25,9 @@ public final class ModeloPdfDocumentoFiscal {
     /** Texto exato da banda e da marca d'água (U+2014). */
     public static final String MARCA_SIMULACAO = "SIMULAÇÃO — SEM VALIDADE FISCAL";
 
+    static final String MARCA_LINHA_1 = "SIMULAÇÃO —";
+    static final String MARCA_LINHA_2 = "SEM VALIDADE FISCAL";
+
     static final String BANDA_LINHA_2 = "Documento emitido em ambiente de teste e comunicado a um serviço de "
             + "simulação, não à administração fiscal (DNRE).";
     static final String NOTA_IUD = "Ambiente de teste — sem validade fiscal";
@@ -64,7 +67,10 @@ public final class ModeloPdfDocumentoFiscal {
         }
         h.append("</div>");
         if (d.simulado()) {
-            h.append("<div class=\"marca-agua\">").append(escapar(MARCA_SIMULACAO)).append("</div>");
+            // Duas linhas, quebradas depois do travessão: numa só linha o texto não cabe na página
+            // (UI-SPEC). A frase inteira, extraível, está na banda do cabeçalho de cada página.
+            h.append("<div class=\"marca-agua\"><span>").append(escapar(MARCA_LINHA_1)).append("</span><br/><span>")
+                    .append(escapar(MARCA_LINHA_2)).append("</span></div>");
         }
 
         // 1. Emitente + caixa do documento.
@@ -78,7 +84,7 @@ public final class ModeloPdfDocumentoFiscal {
         if (e.regimeIvaRotulo() != null) {
             h.append("<div>Regime de IVA: ").append(escapar(e.regimeIvaRotulo())).append("</div>");
         }
-        h.append("</td><td class=\"caixa-documento\">");
+        h.append("</td><td class=\"caixa-documento\"><div class=\"caixa\">");
         h.append("<div class=\"titulo\">").append(escapar(d.tipo().rotulo())).append("</div>");
         if (d.serieCodigo() != null) {
             h.append("<div>Série: <span class=\"mono\">").append(escapar(d.serieCodigo())).append("</span></div>");
@@ -89,7 +95,7 @@ public final class ModeloPdfDocumentoFiscal {
         if (d.simulado()) {
             h.append("<div class=\"pequeno\">").append(escapar(NOTA_IUD)).append("</div>");
         }
-        h.append("</td></tr></table>");
+        h.append("</div></td></tr></table>");
 
         // 2. Adquirente.
         DadosPdfDocumentoFiscal.Adquirente a = d.adquirente();
@@ -108,8 +114,9 @@ public final class ModeloPdfDocumentoFiscal {
         if (nc) {
             h.append("<div class=\"bloco\"><div class=\"seccao\">Documento de origem</div>");
             if (d.origem() != null) {
+                // Texto corrido (sem span mono): a frase fica contínua também na extração de texto.
                 h.append("<div>Corrige a ").append(escapar(TipoDocumentoFiscal.FR.rotulo())).append(' ')
-                        .append("<span class=\"mono\">").append(escapar(d.origem().numeroFormatado())).append("</span>");
+                        .append(escapar(d.origem().numeroFormatado()));
                 if (d.origem().dataEmissao() != null) {
                     h.append(" de ").append(escapar(FormatacaoFiscal.data(d.origem().dataEmissao())));
                 }

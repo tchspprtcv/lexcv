@@ -71,16 +71,17 @@ html, body {
 
 .marca-agua {
     position: fixed;
-    top: 110mm;
+    top: 100mm;
     left: -10mm;
-    width: 200mm;
+    width: 198mm;
     text-align: center;
-    white-space: nowrap;
+    line-height: 1.2;
     font-family: "DejaVu Sans";
     font-weight: bold;
     font-size: 44pt;
-    color: #9ca3af;
-    opacity: 0.18;
+    /* UI-SPEC: #9ca3af com opacity 0.18. O OpenHTMLtoPDF ignora opacity, por isso usa-se a cor
+       já composta sobre branco: 255 - 0.18 * (255 - c) por canal = #edeef1. */
+    color: #edeef1;
     z-index: -1;
     transform: rotate(-35deg);
     transform-origin: 50% 50%;
@@ -91,8 +92,8 @@ html, body {
 }
 
 .iud {
-    word-break: break-all;
-    overflow-wrap: anywhere;
+    /* UI-SPEC word-break: break-all; o equivalente suportado pelo OpenHTMLtoPDF é word-wrap. */
+    word-wrap: break-word;
 }
 
 .pequeno, .rotulo, .rotulo-iud {
@@ -135,6 +136,7 @@ table {
 
 table.topo {
     width: 100%;
+    table-layout: fixed;
 }
 
 table.topo td {
@@ -148,6 +150,10 @@ td.emitente {
 
 td.caixa-documento {
     width: 40%;
+    padding: 0;
+}
+
+.caixa {
     border: 0.75pt solid #6b7280;
     padding: 4mm;
 }
@@ -207,4 +213,9 @@ table.totais tr.total-final td {
 
 .nota-final {
     margin-top: 8mm;
+}
+
+/* Cada linha da marca d'água fica inteira (UI-SPEC: quebra só depois do travessão). */
+.marca-agua span {
+    white-space: nowrap;
 }
