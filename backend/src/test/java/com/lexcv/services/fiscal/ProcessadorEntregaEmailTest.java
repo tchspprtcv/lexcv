@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -368,7 +369,7 @@ class ProcessadorEntregaEmailTest {
         when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenThrow(new RuntimeException("bd"));
         assertThatCode(() -> processador.processar(item(1))).doesNotThrowAnyException();
 
-        when(transacoes.registarResultado(any(), any(), any(), any(), any())).thenReturn(1);
+        doReturn(1).when(transacoes).registarResultado(any(), any(), any(), any(), any());
         when(notificacao.notificarFalhaPersistente(any(), any(), any(), anyInt(), anyInt()))
                 .thenThrow(new RuntimeException("notif"));
         assertThatCode(() -> processador.processar(item(5))).doesNotThrowAnyException();
