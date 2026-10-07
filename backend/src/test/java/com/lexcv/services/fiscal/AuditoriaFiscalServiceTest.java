@@ -91,7 +91,7 @@ class AuditoriaFiscalServiceTest {
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> m.getName().startsWith("registar"))
                 .toList();
-        assertEquals(8, registar.size(), "esperados 8 métodos registar*: " + registar);
+        assertEquals(9, registar.size(), "esperados 9 métodos registar*: " + registar);
         for (Method m : registar) {
             Transactional tx = m.getAnnotation(Transactional.class);
             assertNotNull(tx, m.getName() + " sem @Transactional");
@@ -337,6 +337,42 @@ class AuditoriaFiscalServiceTest {
     @Test
     void registarReprocessamentoComunicacao_ehMandatory() throws Exception {
         Method m = AuditoriaFiscalService.class.getMethod("registarReprocessamentoComunicacao",
+                UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
+    }
+
+    // ------------------------------------------------------------------ Phase 137: reenvio de email
+
+    @Test
+    void registarReenvioEmail_gravaSoAutorNumeroEEstadoAnteriorSemEndereco() throws Exception {
+        UUID documentoId = UUID.randomUUID();
+
+        service.registarReenvioEmail(tenantId, autor, documentoId, "SIM-FR-2026/7", "FALHOU");
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_reenviar_email", log.getAcao());
+        assertEquals("documento_fiscal_reenviar_email", AuditoriaFiscalService.ACAO_REENVIAR_EMAIL);
+        assertEquals("documento_fiscal", log.getEntidadeTipo());
+        assertEquals(documentoId.toString(), log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        assertFalse(log.getDetalhe().contains("@"), log.getDetalhe());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "numeroFormatado", "estadoAnterior"), chaves);
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("SIM-FR-2026/7", d.get("numeroFormatado").asText());
+        assertEquals("FALHOU", d.get("estadoAnterior").asText());
+    }
+
+    @Test
+    void registarReenvioEmail_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarReenvioEmail",
                 UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
         Transactional tx = m.getAnnotation(Transactional.class);
         assertNotNull(tx);

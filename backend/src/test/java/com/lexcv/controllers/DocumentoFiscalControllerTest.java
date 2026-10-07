@@ -18,6 +18,7 @@ import com.lexcv.models.TipoDocumentoFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReenvioEmailFiscalService;
 import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
@@ -87,6 +88,7 @@ class DocumentoFiscalControllerTest {
     private DocumentoFiscalService documentos;
     private NotaCreditoService notasCredito;
     private ReprocessamentoComunicacaoService reprocessamento;
+    private ReenvioEmailFiscalService reenvio;
     private EfaturaGateway gateway;
     private DocumentoFiscalController controller;
     private UserPrincipal principal;
@@ -100,8 +102,9 @@ class DocumentoFiscalControllerTest {
         reprocessamento = mock(ReprocessamentoComunicacaoService.class);
         gateway = mock(EfaturaGateway.class);
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
+        reenvio = mock(ReenvioEmailFiscalService.class);
         controller = new DocumentoFiscalController(preVisualizacao, documentos, notasCredito, reprocessamento,
-                gateway);
+                gateway, reenvio);
         tenant = UUID.randomUUID();
         principal = UserPrincipal.create(UUID.randomUUID(), tenant, "Ana", "ana@example.cv",
                 Set.of(), Set.of("financeiro:view", "financeiro:edit"), Set.of());
@@ -172,6 +175,28 @@ class DocumentoFiscalControllerTest {
         assertEquals(HttpStatus.OK, r.getStatusCode());
         assertSame(resposta, r.getBody());
         verify(reprocessamento).reprocessar(tenant, principal, id);
+    }
+
+    @Test
+    void reenviarEmailDelegaComOTenantEOPrincipal() {
+        UUID id = UUID.randomUUID();
+        com.lexcv.dtos.ReenviarEmailResponse resposta = new com.lexcv.dtos.ReenviarEmailResponse("PENDENTE", 0);
+        when(reenvio.reenviar(tenant, principal, id)).thenReturn(resposta);
+
+        ResponseEntity<?> r = controller.reenviarEmail(id.toString());
+
+        assertEquals(HttpStatus.OK, r.getStatusCode());
+        assertSame(resposta, r.getBody());
+        verify(reenvio).reenviar(tenant, principal, id);
+    }
+
+    @Test
+    void reenviarEmailComIdInvalidoDa404SemChamarOServico() {
+        ResponseEntity<?> r = controller.reenviarEmail("nao-e-um-uuid");
+
+        assertEquals(HttpStatus.NOT_FOUND, r.getStatusCode());
+        assertEquals(controller.detalhe("abc").getBody(), r.getBody());
+        verifyNoInteractions(reenvio);
     }
 
     @Test

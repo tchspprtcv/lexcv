@@ -9,6 +9,7 @@ import com.lexcv.models.AmbienteFiscal;
 import com.lexcv.services.fiscal.DocumentoFiscalService;
 import com.lexcv.services.fiscal.NotaCreditoService;
 import com.lexcv.services.fiscal.PreVisualizacaoFaturaService;
+import com.lexcv.services.fiscal.ReenvioEmailFiscalService;
 import com.lexcv.services.fiscal.ReprocessamentoComunicacaoService;
 import com.lexcv.services.fiscal.ResultadoNotaCredito;
 import org.junit.jupiter.api.AfterEach;
@@ -71,6 +72,9 @@ import static org.mockito.Mockito.when;
  * {@code financeiro:edit} (o frontend usa {@code podeReprocessarComunicacao}, a mesma regra exata).
  * {@code financeiro:manage} sozinho, {@code view}, {@code view + manage}, a autoridade com prefixo
  * {@code ROLE_} e nenhuma autoridade são recusados -- no servidor não há cadeia de equivalências.
+ *
+ * <p>Phase 137 (ENTR-04, T-137-46): reenviar o email exige a mesma autoridade EXATA
+ * {@code financeiro:edit} (o frontend usa {@code podeReenviarEmail}), com os mesmos casos recusados.
  */
 class DocumentoFiscalControllerAutorizacaoTest {
 
@@ -79,6 +83,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
     private NotaCreditoService notasCredito;
     private ReprocessamentoComunicacaoService reprocessamento;
     private EfaturaGateway gateway;
+    private ReenvioEmailFiscalService reenvio;
 
     @BeforeEach
     void preparar() {
@@ -87,6 +92,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
         notasCredito = mock(NotaCreditoService.class);
         reprocessamento = mock(ReprocessamentoComunicacaoService.class);
         gateway = mock(EfaturaGateway.class);
+        reenvio = mock(ReenvioEmailFiscalService.class);
         when(gateway.ambiente()).thenReturn(AmbienteFiscal.SIMULADO);
         when(preVisualizacao.estadoEmissao(any())).thenReturn(EstadoEmissaoResponse.desligada());
         when(documentos.listar(any(), any(), any(), any(), any(), any(), anyInt(), anyInt()))
@@ -100,7 +106,7 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
     private DocumentoFiscalController novoProxyComMethodSecurity() {
         ProxyFactory factory = new ProxyFactory(new DocumentoFiscalController(preVisualizacao, documentos, notasCredito,
-                reprocessamento, gateway));
+                reprocessamento, gateway, reenvio));
         factory.setProxyTargetClass(true);
         factory.addAdvisor(AuthorizationManagerBeforeMethodInterceptor.preAuthorize());
         return (DocumentoFiscalController) factory.getProxy();
@@ -249,6 +255,33 @@ class DocumentoFiscalControllerAutorizacaoTest {
 
         assertThrows(AccessDeniedException.class, reprocessar(proxy, UUID.randomUUID()));
         verifyNoInteractions(reprocessamento);
+    }
+
+    // ------------------------------------------------------------------ reenviar email (Phase 137)
+
+    private static Executable reenviar(DocumentoFiscalController p, UUID id) {
+        return () -> p.reenviarEmail(id.toString());
+    }
+
+    @Test
+    void editExatoReenviaOEmailComOTenantEOAutorDoPrincipal() {
+        UserPrincipal principal = autenticarComAuthorities("financeiro:edit");
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+        UUID id = UUID.randomUUID();
+
+        assertDoesNotThrow(reenviar(proxy, id));
+
+        verify(reenvio).reenviar(principal.getTenantId(), principal, id);
+    }
+
+    @ParameterizedTest
+    @MethodSource("semEditExato")
+    void semEditExatoOReenvioDeEmailERecusado(String[] autoridades) {
+        autenticarComAuthorities(autoridades);
+        DocumentoFiscalController proxy = novoProxyComMethodSecurity();
+
+        assertThrows(AccessDeniedException.class, reenviar(proxy, UUID.randomUUID()));
+        verifyNoInteractions(reenvio);
     }
 
     @Test
