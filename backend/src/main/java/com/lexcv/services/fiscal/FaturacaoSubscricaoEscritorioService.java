@@ -1,11 +1,26 @@
 package com.lexcv.services.fiscal;
 
 import com.lexcv.config.UserPrincipal;
-import com.lexcv.dtos.*;
+import com.lexcv.dtos.ComunicacaoFiscalResumo;
+import com.lexcv.dtos.DocumentoFiscalDetalheResponse;
+import com.lexcv.dtos.DocumentoFiscalRef;
+import com.lexcv.dtos.DocumentoFiscalResumoResponse;
+import com.lexcv.dtos.EntregaEmailResumo;
 import com.lexcv.exceptions.RecusaFiscalException;
 import com.lexcv.fiscal.email.EmailProperties;
-import com.lexcv.models.*;
-import com.lexcv.repositories.*;
+import com.lexcv.models.ComunicacaoFiscal;
+import com.lexcv.models.DocumentoFiscal;
+import com.lexcv.models.DocumentoFiscalLinha;
+import com.lexcv.models.DocumentoFiscalXml;
+import com.lexcv.models.EntregaEmailFiscal;
+import com.lexcv.models.EstadoComunicacaoFiscal;
+import com.lexcv.models.Tenant;
+import com.lexcv.models.TipoDocumentoFiscal;
+import com.lexcv.repositories.ComunicacaoFiscalRepository;
+import com.lexcv.repositories.DocumentoFiscalLinhaRepository;
+import com.lexcv.repositories.DocumentoFiscalRepository;
+import com.lexcv.repositories.DocumentoFiscalXmlRepository;
+import com.lexcv.repositories.EntregaEmailFiscalRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,7 +28,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
