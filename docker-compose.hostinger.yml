@@ -75,6 +75,15 @@ services:
       EFATURA_SOFTWARE_CODIGO: "${EFATURA_SOFTWARE_CODIGO:-LEXCVSIM}"
       EFATURA_SOFTWARE_NOME: "${EFATURA_SOFTWARE_NOME:-LexCV}"
       EFATURA_SOFTWARE_VERSAO: "${EFATURA_SOFTWARE_VERSAO:-3.0.0}"
+      # Email fiscal (Phase 137, ENTR-03/ENTR-06): todos opcionais. SMTP_HOST vazio = envio "nao
+      # configurado" (a aplicacao arranca e emite normalmente). A forma ":-" tambem cobre uma variavel
+      # definida mas vazia. Com SMTP_HOST definido, SMTP_FROM e obrigatorio. Credenciais so via .env.
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USERNAME: "${SMTP_USERNAME:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      SMTP_STARTTLS: "${SMTP_STARTTLS:-true}"
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}

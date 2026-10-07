@@ -24,6 +24,17 @@ services:
       EFATURA_SOFTWARE_CODIGO: "${EFATURA_SOFTWARE_CODIGO:-LEXCVSIM}"
       EFATURA_SOFTWARE_NOME: "${EFATURA_SOFTWARE_NOME:-LexCV}"
       EFATURA_SOFTWARE_VERSAO: "${EFATURA_SOFTWARE_VERSAO:-3.0.0}"
+      # Email fiscal (Phase 137, ENTR-03/ENTR-06): todos opcionais. SMTP_HOST vazio = envio "nao
+      # configurado" (a aplicacao arranca e emite normalmente). A forma ":-" tambem cobre uma variavel
+      # definida mas vazia. Com SMTP_HOST definido, SMTP_FROM e obrigatorio. Credenciais so via .env.
+      # Compose junta os mapas environment entre camadas -f: repetido aqui para que a
+      # producao fixe os mesmos defaults seguros mesmo que a base mude.
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USERNAME: "${SMTP_USERNAME:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      SMTP_STARTTLS: "${SMTP_STARTTLS:-true}"
     deploy:
       resources:
         limits:

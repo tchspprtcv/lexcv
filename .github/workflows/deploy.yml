@@ -36,6 +36,8 @@ jobs:
         # levam ambiente de execucao do backend).
         env:
           EFATURA_MODE: SIMULADO
+          # Phase 137: CI nunca usa SMTP real; os testes usam o capturador local em processo.
+          SMTP_HOST: ""
         run: mvn -B verify
 
       # OWASP dependency-check:check is intentionally deferred — downloads the full
