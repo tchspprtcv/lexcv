@@ -240,7 +240,19 @@ Notas da fase:
   4. As séries e a numeração da LexCV são independentes das de qualquer escritório
   5. O escritório recebe a fatura de subscrição por email e consulta as suas faturas de subscrição em Definições, só em leitura, e **um escritório nunca vê, por nenhum endpoint, documentos emitidos a outro escritório nem documentos que o próprio escritório emitiu aos seus clientes misturados com os da plataforma** (critério de isolamento: a leitura cruzada só devolve documentos em que o escritório autenticado é o adquirente e a LexCV é o emitente)
 
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+- [ ] 138-01-PLAN.md — PagamentoSubscricao entity, DocumentoFiscal multi-tenant adjustments, migration 138 (idempotent), MigracaoFiscal138IT
+- [ ] 138-02-PLAN.md — Platform fiscal configuration (SUBS-01) and isolated platform series (SUBS-05) in PlatformAdminController
+- [ ] 138-03-PLAN.md — Atomic subscription invoice emission (SUBS-02, SUBS-05) + outbox queuing
+- [ ] 138-04-PLAN.md — Platform subscription credit notes (SUBS-03)
+- [ ] 138-05-PLAN.md — Platform admin document query, detail, and audited PDF/XML downloads (SUBS-03)
+- [ ] 138-06-PLAN.md — Office subscription consultation and download endpoint with strict multi-tenant filtering (SUBS-04)
+- [ ] 138-07-PLAN.md — Testcontainers integration tests: PlatformFaturacaoIT and SubscricaoIsolamentoTenantIT
+- [ ] 138-08-PLAN.md — Web platform billing console /plataforma/faturacao (SUBS-01, SUBS-02, SUBS-03)
+- [ ] 138-09-PLAN.md — Web office settings "Subscrição" tab (SUBS-04)
+- [ ] 138-10-PLAN.md — verify:plataforma-faturacao gate, full suite run, UAT record, and REQUIREMENTS update
 **UI hint**: yes
 
 Notas da fase:
