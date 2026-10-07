@@ -59,7 +59,7 @@ class PlatformFaturacaoConfigServiceTest {
 
     @Test
     void obterTenantPlataformaSucesso() {
-        when(tenantRepository.findByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
+        when(tenantRepository.findFirstByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
 
         Tenant t = platformFaturacaoConfigService.obterTenantPlataforma();
         assertNotNull(t);
@@ -68,28 +68,28 @@ class PlatformFaturacaoConfigServiceTest {
 
     @Test
     void obterTenantPlataformaNaoEncontradoLancaExcecao() {
-        when(tenantRepository.findByNome("LexCV")).thenReturn(Optional.empty());
+        when(tenantRepository.findFirstByNome("LexCV")).thenReturn(Optional.empty());
 
         assertThrows(IllegalStateException.class, () -> platformFaturacaoConfigService.obterTenantPlataforma());
     }
 
     @Test
     void guardarConfiguracaoDelegaEAtivaSeCompleta() {
-        when(tenantRepository.findByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
+        when(tenantRepository.findFirstByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
 
         UserPrincipal autor = mock(UserPrincipal.class);
         ConfiguracaoFiscalRequest req = new ConfiguracaoFiscalRequest(
                 "200000001", "LexCV Platform Lda", "Praia", "Praia",
-                "faturacao@lexcv.cv", "2610000", RegimeIva.GERAL, null);
+                "faturacao@lexcv.cv", "2610000", RegimeIva.NORMAL, null);
 
         ConfiguracaoFiscalResponse resInativa = new ConfiguracaoFiscalResponse(
                 true, "200000001", "LexCV Platform Lda", "Praia", "Praia", "Cabo Verde",
-                "faturacao@lexcv.cv", "2610000", RegimeIva.GERAL, null,
+                "faturacao@lexcv.cv", "2610000", RegimeIva.NORMAL, null,
                 true, false, false, false, false, false, null, null, false);
 
         ConfiguracaoFiscalResponse resAtiva = new ConfiguracaoFiscalResponse(
                 true, "200000001", "LexCV Platform Lda", "Praia", "Praia", "Cabo Verde",
-                "faturacao@lexcv.cv", "2610000", RegimeIva.GERAL, null,
+                "faturacao@lexcv.cv", "2610000", RegimeIva.NORMAL, null,
                 true, true, false, true, true, false, null, null, false);
 
         when(configuracaoFiscalService.guardar(eq(platformTenantId), eq(autor), any())).thenReturn(resInativa);
@@ -103,7 +103,7 @@ class PlatformFaturacaoConfigServiceTest {
 
     @Test
     void validarProntaParaEmitirLancaRecusaSeIncompleta() {
-        when(tenantRepository.findByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
+        when(tenantRepository.findFirstByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
         when(configuracaoFiscalRepository.findByTenantId(platformTenantId)).thenReturn(Optional.empty());
 
         assertThrows(RecusaFiscalException.class, () -> platformFaturacaoConfigService.validarProntaParaEmitir());
@@ -111,7 +111,7 @@ class PlatformFaturacaoConfigServiceTest {
 
     @Test
     void validarProntaParaEmitirPassaSeAtivaECompleta() {
-        when(tenantRepository.findByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
+        when(tenantRepository.findFirstByNome("LexCV")).thenReturn(Optional.of(lexcvTenant));
 
         ConfiguracaoFiscal config = ConfiguracaoFiscal.builder()
                 .tenantId(platformTenantId)
@@ -119,7 +119,7 @@ class PlatformFaturacaoConfigServiceTest {
                 .firma("LexCV Platform Lda")
                 .morada("Praia")
                 .localidade("Praia")
-                .regimeIva(RegimeIva.GERAL)
+                .regimeIva(RegimeIva.NORMAL)
                 .emailContacto("faturacao@lexcv.cv")
                 .telefoneContacto("2610000")
                 .ativa(true)

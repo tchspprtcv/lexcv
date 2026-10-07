@@ -3,6 +3,7 @@ package com.lexcv.controllers;
 import com.lexcv.config.UserPrincipal;
 import com.lexcv.dtos.ConfiguracaoFiscalRequest;
 import com.lexcv.dtos.ConfiguracaoFiscalResponse;
+import com.lexcv.dtos.CriarNotaCreditoSubscricaoRequest;
 import com.lexcv.dtos.MoldeCreateRequest;
 import com.lexcv.dtos.MoldeProvisionResponse;
 import com.lexcv.dtos.MoldesConsolaResponse;
@@ -25,6 +26,7 @@ import com.lexcv.repositories.UserRepository;
 import com.lexcv.services.SetupService;
 import com.lexcv.services.fiscal.PlatformFaturacaoConfigService;
 import com.lexcv.services.fiscal.SubscricaoFaturadaService;
+import com.lexcv.services.fiscal.SubscricaoNotaCreditoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -98,6 +100,7 @@ public class PlatformAdminController {
     private final TenantRoleRepository tenantRoleRepository;
     private final PlatformFaturacaoConfigService platformFaturacaoConfigService;
     private final SubscricaoFaturadaService subscricaoFaturadaService;
+    private final SubscricaoNotaCreditoService subscricaoNotaCreditoService;
 
     @PostMapping("/tenants")
     public ResponseEntity<?> createTenant(@RequestBody SetupInitializeRequest request) {
@@ -523,6 +526,19 @@ public class PlatformAdminController {
             @AuthenticationPrincipal UserPrincipal autor,
             @Valid @RequestBody RegistarPagamentoSubscricaoRequest request) {
         SubscricaoFaturaResponse response = subscricaoFaturadaService.registarPagamentoFaturado(autor, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 138 (SUBS-03, SUBS-05): Emissão de Nota de Crédito de Subscrição
+    // -------------------------------------------------------------------------
+
+    @PostMapping("/documentos-fiscais/{id}/notas-credito")
+    public ResponseEntity<SubscricaoFaturaResponse> emitirNotaCredito(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal autor,
+            @Valid @RequestBody CriarNotaCreditoSubscricaoRequest request) {
+        SubscricaoFaturaResponse response = subscricaoNotaCreditoService.emitirNotaCredito(id, autor, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

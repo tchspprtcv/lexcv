@@ -89,7 +89,7 @@ public class SubscricaoFaturadaService {
         // 5. Cálculo fiscal
         BigDecimal taxaIva = lexcvConfig.getRegimeIva() == RegimeIva.ISENTO
                 ? BigDecimal.ZERO
-                : parametroFiscalService.obterTaxaIvaNormal();
+                : parametroFiscalService.valorVigenteHoje(CodigoParametroFiscal.IVA_TAXA_NORMAL);
         CalculoFiscal.ResultadoCalculo calculo = CalculoFiscal.calcular(req.valorPago(), lexcvConfig.getRegimeIva(), taxaIva, null);
 
         Instant agora = clock.instant();
@@ -122,13 +122,14 @@ public class SubscricaoFaturadaService {
                 .periodoInicio(req.periodoInicio())
                 .periodoFim(req.periodoFim())
                 .plano(plano)
-                .criadoPorId(autor != null ? autor.getId() : null)
+                .criadoPorId(autor != null ? autor.getUserId() : null)
                 .createdAt(agora)
                 .build();
         pagamento = pagamentoSubscricaoRepository.save(pagamento);
 
         // 8. Persistência de DocumentoFiscal
         UUID documentoId = UUID.randomUUID();
+        String numFormatado = numeroAtribuido.serieCodigo() + "/" + numeroAtribuido.numero();
         DocumentoFiscal doc = DocumentoFiscal.builder()
                 .id(documentoId)
                 .tenantId(lexcvTenantId)
@@ -138,7 +139,7 @@ public class SubscricaoFaturadaService {
                 .serieCodigo(numeroAtribuido.serieCodigo())
                 .ano(numeroAtribuido.ano())
                 .numero(numeroAtribuido.numero())
-                .numeroFormatado(numeroAtribuido.numeroFormatado())
+                .numeroFormatado(numFormatado)
                 .dataEmissao(numeroAtribuido.dataEmissao())
                 .emitidoEm(agora)
                 .emitenteNif(lexcvConfig.getNif())
@@ -148,9 +149,9 @@ public class SubscricaoFaturadaService {
                 .emitenteRegimeIva(lexcvConfig.getRegimeIva())
                 .emitenteMotivoIsencaoCodigo(lexcvConfig.getMotivoIsencaoCodigo())
                 .emitenteMotivoIsencaoDescricao(lexcvConfig.getMotivoIsencaoCodigo() != null
-                        ? MotivoIsencaoIva.porCodigo(lexcvConfig.getMotivoIsencaoCodigo()).descricao() : null)
+                        ? MotivoIsencaoIva.porCodigo(lexcvConfig.getMotivoIsencaoCodigo()).map(MotivoIsencaoIva::descricao).orElse(null) : null)
                 .emitenteMotivoIsencaoMencao(lexcvConfig.getMotivoIsencaoCodigo() != null
-                        ? MotivoIsencaoIva.porCodigo(lexcvConfig.getMotivoIsencaoCodigo()).mencao() : null)
+                        ? MotivoIsencaoIva.porCodigo(lexcvConfig.getMotivoIsencaoCodigo()).map(MotivoIsencaoIva::mencao).orElse(null) : null)
                 .adquirenteNif(adqNif)
                 .adquirenteNome(adqNome)
                 .adquirenteMorada(adqMorada)
@@ -167,7 +168,7 @@ public class SubscricaoFaturadaService {
                 .totalDocumento(calculo.total())
                 .valorLiquido(calculo.liquidoRecebido())
                 .chaveIdempotencia(req.chaveIdempotencia())
-                .emitidoPorId(autor != null ? autor.getId() : null)
+                .emitidoPorId(autor != null ? autor.getUserId() : null)
                 .emitidoPorNome(autor != null ? autor.getNome() : "Plataforma LexCV")
                 .build();
         doc = documentoFiscalRepository.save(doc);
@@ -182,9 +183,10 @@ public class SubscricaoFaturadaService {
                 .descricao(descLinha)
                 .quantidade(new BigDecimal("1.0000"))
                 .precoUnitario(calculo.base())
+                .valorBase(calculo.base())
                 .taxaIva(calculo.taxaIva())
-                .totalBase(calculo.base())
-                .totalIva(calculo.iva())
+                .valorIva(calculo.iva())
+                .valorRetencao(BigDecimal.ZERO.setScale(2))
                 .totalLinha(calculo.total())
                 .build();
         documentoFiscalLinhaRepository.save(linha);
@@ -202,8 +204,7 @@ public class SubscricaoFaturadaService {
         comunicacaoFiscalRepository.save(comunicacao);
 
         // 11. Auditoria
-        auditoriaFiscalService.registar(lexcvTenantId, autor, "subscricao_pagamento_faturado",
-                "Fatura-Recibo de subscrição emitida: " + doc.getNumeroFormatado() + " para escritório " + adquirenteTenant.getNome());
+        auditoriaFiscalService.registarEmissao(lexcvTenantId, autor, documentoId, doc.getNumeroFormatado());
 
         return toResponse(doc, pagamento, EstadoComunicacaoFiscal.PENDENTE);
     }

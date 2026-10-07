@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DataJpaTest(properties =
         "spring.jpa.properties.hibernate.integrator_provider=com.lexcv.repositories.CapturaMetadataHibernate")
+@org.springframework.boot.autoconfigure.domain.EntityScan(basePackages = "com.lexcv.models")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

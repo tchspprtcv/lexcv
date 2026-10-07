@@ -88,7 +88,7 @@ class SubscricaoFaturadaServiceTest {
                 .id(officeTenantId)
                 .nome("Escritório Silva & Associados")
                 .nif("211111111")
-                .plano(TenantPlano.PROFESSIONAL)
+                .plano(TenantPlano.STANDARD)
                 .build();
 
         platformConfig = ConfiguracaoFiscal.builder()
@@ -97,7 +97,7 @@ class SubscricaoFaturadaServiceTest {
                 .firma("LexCV Platform Lda")
                 .morada("Praia")
                 .localidade("Praia")
-                .regimeIva(RegimeIva.GERAL)
+                .regimeIva(RegimeIva.NORMAL)
                 .emailContacto("faturacao@lexcv.cv")
                 .telefoneContacto("2610000")
                 .ativa(true)
@@ -116,16 +116,16 @@ class SubscricaoFaturadaServiceTest {
         when(documentoFiscalRepository.findByTenantIdAndChaveIdempotencia(eq(platformTenantId), any())).thenReturn(Optional.empty());
 
         UUID serieId = UUID.randomUUID();
-        NumeroFiscalAtribuido numAtribuido = new NumeroFiscalAtribuido(serieId, "FR-2026-SIM", 2026, 1L, "FR-2026-SIM/1", LocalDate.of(2026, 10, 7));
+        NumeroFiscalAtribuido numAtribuido = new NumeroFiscalAtribuido(serieId, "FR-2026-SIM", 2026, 1L, LocalDate.of(2026, 10, 7));
         when(numeracaoService.proximoNumero(eq(platformTenantId), eq(TipoDocumentoFiscal.FR), eq(AmbienteFiscal.SIMULADO))).thenReturn(numAtribuido);
-        when(parametroFiscalService.obterTaxaIvaNormal()).thenReturn(new BigDecimal("15.0000"));
+        when(parametroFiscalService.valorVigenteHoje(CodigoParametroFiscal.IVA_TAXA_NORMAL)).thenReturn(new BigDecimal("15.0000"));
 
         when(pagamentoSubscricaoRepository.save(any(PagamentoSubscricao.class))).thenAnswer(inv -> inv.getArgument(0));
         when(documentoFiscalRepository.save(any(DocumentoFiscal.class))).thenAnswer(inv -> inv.getArgument(0));
         when(documentoFiscalLinhaRepository.save(any(DocumentoFiscalLinha.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserPrincipal autor = mock(UserPrincipal.class);
-        when(autor.getId()).thenReturn(UUID.randomUUID());
+        when(autor.getUserId()).thenReturn(UUID.randomUUID());
         when(autor.getNome()).thenReturn("Admin Plataforma");
 
         RegistarPagamentoSubscricaoRequest req = new RegistarPagamentoSubscricaoRequest(
@@ -152,7 +152,7 @@ class SubscricaoFaturadaServiceTest {
         verify(documentoFiscalRepository).save(any(DocumentoFiscal.class));
         verify(documentoFiscalLinhaRepository).save(any(DocumentoFiscalLinha.class));
         verify(comunicacaoFiscalRepository).save(any(ComunicacaoFiscal.class));
-        verify(auditoriaFiscalService).registar(eq(platformTenantId), eq(autor), eq("subscricao_pagamento_faturado"), anyString());
+        verify(auditoriaFiscalService).registarEmissao(eq(platformTenantId), eq(autor), any(), eq("FR-2026-SIM/1"));
     }
 
     @Test

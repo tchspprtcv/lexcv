@@ -35,7 +35,7 @@ public class PlatformFaturacaoConfigService {
     private final SerieFiscalRepository serieFiscalRepository;
 
     public Tenant obterTenantPlataforma() {
-        return tenantRepository.findByNome(NOME_TENANT_PLATAFORMA)
+        return tenantRepository.findFirstByNome(NOME_TENANT_PLATAFORMA)
                 .orElseThrow(() -> new IllegalStateException("Tenant reservada '" + NOME_TENANT_PLATAFORMA + "' não encontrada"));
     }
 
@@ -73,7 +73,7 @@ public class PlatformFaturacaoConfigService {
         if (config == null || !Boolean.TRUE.equals(config.getAtiva())) {
             return false;
         }
-        return config.isCompleta();
+        return config.completa();
     }
 
     public void validarProntaParaEmitir() {
