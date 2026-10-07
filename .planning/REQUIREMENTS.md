@@ -81,11 +81,11 @@ confirmado contra o Manual Técnico vigente antes de fechar a fase do adaptador.
 
 ### Faturação da Plataforma
 
-- [ ] **SUBS-01**: `PLATAFORMA_ADMIN` regista os dados fiscais da LexCV (NIF, firma, morada, regime) na consola `/plataforma`; a emissão de faturas de subscrição fica bloqueada enquanto estiverem incompletos
-- [ ] **SUBS-02**: `PLATAFORMA_ADMIN` regista em `/plataforma` um pagamento de subscrição recebido de um escritório (valor, data, método, período coberto), o que emite na mesma operação uma Fatura-Recibo da LexCV para os dados fiscais do escritório
-- [ ] **SUBS-03**: `PLATAFORMA_ADMIN` lista as faturas de subscrição emitidas, descarrega o PDF e emite Notas de Crédito sobre elas
-- [ ] **SUBS-04**: O escritório recebe a fatura de subscrição por email e consulta as suas faturas de subscrição em Definições (só leitura), sem acesso a documentos emitidos a outros escritórios
-- [ ] **SUBS-05**: As séries e a numeração da LexCV são independentes das de qualquer escritório
+- [x] **SUBS-01**: `PLATAFORMA_ADMIN` regista os dados fiscais da LexCV (NIF, firma, morada, regime) na consola `/plataforma`; a emissão de faturas de subscrição fica bloqueada enquanto estiverem incompletos
+- [x] **SUBS-02**: `PLATAFORMA_ADMIN` regista em `/plataforma` um pagamento de subscrição recebido de um escritório (valor, data, método, período coberto), o que emite na mesma operação uma Fatura-Recibo da LexCV para os dados fiscais do escritório
+- [x] **SUBS-03**: `PLATAFORMA_ADMIN` lista as faturas de subscrição emitidas, descarrega o PDF e emite Notas de Crédito sobre elas
+- [x] **SUBS-04**: O escritório recebe a fatura de subscrição por email e consulta as suas faturas de subscrição em Definições (só leitura), sem acesso a documentos emitidos a outros escritórios
+- [x] **SUBS-05**: As séries e a numeração da LexCV são independentes das de qualquer escritório
 
 ### Segurança e Operação
 
@@ -172,11 +172,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENTR-06 | Phase 137 | Complete |
 | ENTR-07 | Phase 137 | Complete |
 | RELF-01 | Phase 137 | Complete |
-| SUBS-01 | Phase 138 | Pending |
-| SUBS-02 | Phase 138 | Pending |
-| SUBS-03 | Phase 138 | Pending |
-| SUBS-04 | Phase 138 | Pending |
-| SUBS-05 | Phase 138 | Pending |
+| SUBS-01 | Phase 138 | Complete |
+| SUBS-02 | Phase 138 | Complete |
+| SUBS-03 | Phase 138 | Complete |
+| SUBS-04 | Phase 138 | Complete |
+| SUBS-05 | Phase 138 | Complete |
 | OPER-01 | Phase 139 | Pending |
 | OPER-02 | Phase 139 | Pending |
 | OPER-03 | Phase 139 | Pending |

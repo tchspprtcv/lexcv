@@ -243,16 +243,16 @@ Notas da fase:
 **Plans**: 10 plans
 
 Plans:
-- [ ] 138-01-PLAN.md — PagamentoSubscricao entity, DocumentoFiscal multi-tenant adjustments, migration 138 (idempotent), MigracaoFiscal138IT
-- [ ] 138-02-PLAN.md — Platform fiscal configuration (SUBS-01) and isolated platform series (SUBS-05) in PlatformAdminController
-- [ ] 138-03-PLAN.md — Atomic subscription invoice emission (SUBS-02, SUBS-05) + outbox queuing
-- [ ] 138-04-PLAN.md — Platform subscription credit notes (SUBS-03)
-- [ ] 138-05-PLAN.md — Platform admin document query, detail, and audited PDF/XML downloads (SUBS-03)
-- [ ] 138-06-PLAN.md — Office subscription consultation and download endpoint with strict multi-tenant filtering (SUBS-04)
-- [ ] 138-07-PLAN.md — Testcontainers integration tests: PlatformFaturacaoIT and SubscricaoIsolamentoTenantIT
-- [ ] 138-08-PLAN.md — Web platform billing console /plataforma/faturacao (SUBS-01, SUBS-02, SUBS-03)
-- [ ] 138-09-PLAN.md — Web office settings "Subscrição" tab (SUBS-04)
-- [ ] 138-10-PLAN.md — verify:plataforma-faturacao gate, full suite run, UAT record, and REQUIREMENTS update
+- [x] 138-01-PLAN.md — PagamentoSubscricao entity, DocumentoFiscal multi-tenant adjustments, migration 138 (idempotent), MigracaoFiscal138IT
+- [x] 138-02-PLAN.md — Platform fiscal configuration (SUBS-01) and isolated platform series (SUBS-05) in PlatformAdminController
+- [x] 138-03-PLAN.md — Atomic subscription invoice emission (SUBS-02, SUBS-05) + outbox queuing
+- [x] 138-04-PLAN.md — Platform subscription credit notes (SUBS-03)
+- [x] 138-05-PLAN.md — Platform admin document query, detail, and audited PDF/XML downloads (SUBS-03)
+- [x] 138-06-PLAN.md — Office subscription consultation and download endpoint with strict multi-tenant filtering (SUBS-04)
+- [x] 138-07-PLAN.md — Testcontainers integration tests: PlatformFaturacaoIT and SubscricaoIsolamentoTenantIT
+- [x] 138-08-PLAN.md — Web platform billing console /plataforma/faturacao (SUBS-01, SUBS-02, SUBS-03)
+- [x] 138-09-PLAN.md — Web office settings "Subscrição" tab (SUBS-04)
+- [x] 138-10-PLAN.md — verify:plataforma-faturacao gate, full suite run, UAT record, and REQUIREMENTS update
 **UI hint**: yes
 
 Notas da fase:
@@ -293,5 +293,5 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | 135. Nota de Crédito | 13/13 | Complete | 2026-10-06 |
 | 136. Formato eFatura e Adaptador Simulado | 16/16 | Complete | 2026-10-06 |
 | 137. PDF, Armazenamento, Email e Relatório | 24/24 | Complete | 2026-10-07 |
-| 138. Plataforma como Emitente | 0/TBD | In progress | - |
+| 138. Plataforma como Emitente | 10/10 | Complete | 2026-10-07 |
 | 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |

@@ -411,7 +411,7 @@ export const PERMISSAO_REENVIAR_EMAIL = "financeiro:edit";
  * (manage => edit) mostraria um botão que o backend recusa com 403.
  */
 export function podeReenviarEmail(permissions: readonly string[] | undefined | null): boolean {
-  return hasPermission(permissions ?? undefined, PERMISSAO_REENVIAR_EMAIL);
+  return hasPermission(permissions, PERMISSAO_REENVIAR_EMAIL);
 }
 
 /** Status tratados inline no diálogo de reenvio (401/403 mantêm o comportamento do apiFetch). */

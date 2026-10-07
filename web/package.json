@@ -17,7 +17,8 @@
     "verify:auditoria-rbac": "node scripts/verify-auditoria-rbac.mjs",
     "verify:faturacao": "node scripts/verify-faturacao.mjs",
     "verify:documentos-fiscais": "node scripts/verify-documentos-fiscais.mjs",
-    "verify:entrega-fiscal": "node scripts/verify-entrega-fiscal.mjs"
+    "verify:entrega-fiscal": "node scripts/verify-entrega-fiscal.mjs",
+    "verify:plataforma-faturacao": "node scripts/verify-plataforma-faturacao.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

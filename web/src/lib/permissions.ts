@@ -26,7 +26,7 @@ export function resolveScopedPermissions(scope: string, action: PermissionAction
 }
 
 export function hasScopedPermission(
-  permissions: readonly string[] | undefined,
+  permissions: readonly string[] | undefined | null,
   scope: string,
   action: PermissionAction,
 ) {
@@ -36,7 +36,7 @@ export function hasScopedPermission(
 }
 
 export function hasPermission(
-  permissions: readonly string[] | undefined,
+  permissions: readonly string[] | undefined | null,
   permission: string | undefined,
 ) {
   if (!permission) return true;
