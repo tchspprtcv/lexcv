@@ -194,30 +194,30 @@ Notas da fase:
 **Plans**: 24 plans
 
 Plans:
-- [ ] 137-01-PLAN.md — Spike (OpenHTMLtoPDF/PDFBox + Java 21, Spring Mail auto-config, GreenMail vs Mailpit, DejaVu fonts) -> 137-SPIKE.md; pom deps; vendored fonts + SHA-256 test
-- [ ] 137-02-PLAN.md — JPA model: t_entrega_email_fiscal (mutable), t_documento_fiscal_pdf (insert-only), narrow repos + month/XML finders pinned in DocumentoFiscalImutabilidadeTest
-- [ ] 137-03-PLAN.md — EMAIL_FISCAL_FALHOU (non-silenceable) + NotificacaoEntregaEmailFiscal reusing the COMUNICACAO_FISCAL_FALHOU recipients
-- [ ] 137-04-PLAN.md — Migration 137 (idempotent) + README rows + MigracaoFiscal137IT
-- [ ] 137-05-PLAN.md — Pure rules (TDD): RegrasEntregaEmail, BackoffEntregaEmail (cap 5), CsvFiscal (';', BOM, decimal comma, field-scoped guard)
-- [ ] 137-06-PLAN.md — PDF renderer: ClasspathPdfResolver whitelist, escaped XHTML template, watermark + band, embedded fonts
-- [ ] 137-07-PLAN.md — Email outbox DB side: FilaEntregaEmail (SKIP LOCKED, lease, versao, episodes) + EntregaEmailTransacoes + IT
-- [ ] 137-08-PLAN.md — Email port + sealed result + EmailProperties (masked) + NaoConfigurado + SMTP adapter tested on the local harness
-- [ ] 137-09-PLAN.md — EmailConfig (optional SMTP, fail-fast only on half config), app.email.* in application.yml, scheduler pool 4
-- [ ] 137-10-PLAN.md — StorageService additive methods + PdfDocumentoFiscalService (generate-once, idempotent on demand, no tx around I/O) + IT
-- [ ] 137-11-PLAN.md — Read side: entregaEmail on detail, estadoEntregaEmail on list, smtpConfigurado on configuration
-- [ ] 137-12-PLAN.md — Resend route (exact financeiro:edit, 404/409/422, new episode, audit) + ReenviarEmailIT
-- [ ] 137-13-PLAN.md — SMTP_* in both .env.example, three compose files and deploy.yml (CI SMTP_HOST empty)
-- [ ] 137-14-PLAN.md — ComposicaoEmailFiscal (pt-PT, simulation mark, 2 attachments) + ProcessadorEntregaEmail (lease-before-send, cap 5, notify)
-- [ ] 137-15-PLAN.md — PDF/XML download routes (financeiro:view, audited, 503 codes) + ENTR-07 guard test
-- [ ] 137-16-PLAN.md — Web contracts: types, lib/entrega-email, EntregaEmailBadge, EMAIL_FISCAL_FALHOU maps
-- [ ] 137-17-PLAN.md — Wire into 136: enqueue in the ACEITE_SIMULADO transaction, background PDF after commit, payment-path guard, 136 ITs adapted
-- [ ] 137-18-PLAN.md — Monthly CSV export route (financeiro:view, audited, MES_INVALIDO) + RelatorioMensalFiscalServiceIT
-- [ ] 137-19-PLAN.md — EmailFiscalOutboxJob + end-to-end IT (payment -> accepted -> email with PDF+XML; not configured; failures; episodes; concurrency)
-- [ ] 137-20-PLAN.md — Web data layer: apiFetchFicheiro, exact podeReenviarEmail, download/export/resend hooks, polling, DescarregarDocumentoBotoes
-- [ ] 137-21-PLAN.md — Detail + list: download buttons, "Entrega por email" card, resend dialog, Email/Ações columns
-- [ ] 137-22-PLAN.md — Client "Documentos fiscais" tab (read/download only), "Exportar mês" dialog, settings SMTP notice
-- [ ] 137-23-PLAN.md — verify:entrega-fiscal static UI gate
-- [ ] 137-24-PLAN.md — Full phase gate + CLAUDE.md refresh + live UAT from the jar with local mail catcher + real-SMTP human checkpoint + DFE-06 complete
+- [x] 137-01-PLAN.md — Spike (OpenHTMLtoPDF/PDFBox + Java 21, Spring Mail auto-config, GreenMail vs Mailpit, DejaVu fonts) -> 137-SPIKE.md; pom deps; vendored fonts + SHA-256 test
+- [x] 137-02-PLAN.md — JPA model: t_entrega_email_fiscal (mutable), t_documento_fiscal_pdf (insert-only), narrow repos + month/XML finders pinned in DocumentoFiscalImutabilidadeTest
+- [x] 137-03-PLAN.md — EMAIL_FISCAL_FALHOU (non-silenceable) + NotificacaoEntregaEmailFiscal reusing the COMUNICACAO_FISCAL_FALHOU recipients
+- [x] 137-04-PLAN.md — Migration 137 (idempotent) + README rows + MigracaoFiscal137IT
+- [x] 137-05-PLAN.md — Pure rules (TDD): RegrasEntregaEmail, BackoffEntregaEmail (cap 5), CsvFiscal (';', BOM, decimal comma, field-scoped guard)
+- [x] 137-06-PLAN.md — PDF renderer: ClasspathPdfResolver whitelist, escaped XHTML template, watermark + band, embedded fonts
+- [x] 137-07-PLAN.md — Email outbox DB side: FilaEntregaEmail (SKIP LOCKED, lease, versao, episodes) + EntregaEmailTransacoes + IT
+- [x] 137-08-PLAN.md — Email port + sealed result + EmailProperties (masked) + NaoConfigurado + SMTP adapter tested on the local harness
+- [x] 137-09-PLAN.md — EmailConfig (optional SMTP, fail-fast only on half config), app.email.* in application.yml, scheduler pool 4
+- [x] 137-10-PLAN.md — StorageService additive methods + PdfDocumentoFiscalService (generate-once, idempotent on demand, no tx around I/O) + IT
+- [x] 137-11-PLAN.md — Read side: entregaEmail on detail, estadoEntregaEmail on list, smtpConfigurado on configuration
+- [x] 137-12-PLAN.md — Resend route (exact financeiro:edit, 404/409/422, new episode, audit) + ReenviarEmailIT
+- [x] 137-13-PLAN.md — SMTP_* in both .env.example, three compose files and deploy.yml (CI SMTP_HOST empty)
+- [x] 137-14-PLAN.md — ComposicaoEmailFiscal (pt-PT, simulation mark, 2 attachments) + ProcessadorEntregaEmail (lease-before-send, cap 5, notify)
+- [x] 137-15-PLAN.md — PDF/XML download routes (financeiro:view, audited, 503 codes) + ENTR-07 guard test
+- [x] 137-16-PLAN.md — Web contracts: types, lib/entrega-email, EntregaEmailBadge, EMAIL_FISCAL_FALHOU maps
+- [x] 137-17-PLAN.md — Wire into 136: enqueue in the ACEITE_SIMULADO transaction, background PDF after commit, payment-path guard, 136 ITs adapted
+- [x] 137-18-PLAN.md — Monthly CSV export route (financeiro:view, audited, MES_INVALIDO) + RelatorioMensalFiscalServiceIT
+- [x] 137-19-PLAN.md — EmailFiscalOutboxJob + end-to-end IT (payment -> accepted -> email with PDF+XML; not configured; failures; episodes; concurrency)
+- [x] 137-20-PLAN.md — Web data layer: apiFetchFicheiro, exact podeReenviarEmail, download/export/resend hooks, polling, DescarregarDocumentoBotoes
+- [x] 137-21-PLAN.md — Detail + list: download buttons, "Entrega por email" card, resend dialog, Email/Ações columns
+- [x] 137-22-PLAN.md — Client "Documentos fiscais" tab (read/download only), "Exportar mês" dialog, settings SMTP notice
+- [x] 137-23-PLAN.md — verify:entrega-fiscal static UI gate
+- [x] 137-24-PLAN.md — Full phase gate + CLAUDE.md refresh + live UAT from the jar with local mail catcher + real-SMTP human checkpoint + DFE-06 complete
 **UI hint**: yes
 
 Notas da fase:
@@ -277,9 +277,9 @@ Fases executam-se por ordem numérica: 133 → 134 → {135, 136 em paralelo pos
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 133. Fundação Fiscal | 8/8 | Complete   | 2026-10-04 |
-| 134. Fatura-Recibo Atómica nos Honorários | 14/14 | In progress | - |
-| 135. Nota de Crédito | 13/13 | In progress | - |
-| 136. Formato eFatura e Adaptador Simulado | 15/16 | In progress | - |
-| 137. PDF, Armazenamento, Email e Relatório | 0/24 | Not started | - |
-| 138. Plataforma como Emitente | 0/TBD | Not started | - |
+| 134. Fatura-Recibo Atómica nos Honorários | 14/14 | Complete | 2026-10-05 |
+| 135. Nota de Crédito | 13/13 | Complete | 2026-10-06 |
+| 136. Formato eFatura e Adaptador Simulado | 16/16 | Complete | 2026-10-06 |
+| 137. PDF, Armazenamento, Email e Relatório | 24/24 | Complete | 2026-10-07 |
+| 138. Plataforma como Emitente | 0/TBD | In progress | - |
 | 139. Fecho — Isolamento, Segurança, Migrações e UAT | 0/TBD | Not started | - |
