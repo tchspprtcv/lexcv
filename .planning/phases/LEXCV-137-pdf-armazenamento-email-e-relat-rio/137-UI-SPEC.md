@@ -253,12 +253,13 @@ Registrations only (no new UI components):
 | `CATEGORIA_LABEL_MAP` | "Falha de envio de email fiscal" |
 | `categoriaToBadgeVariant` | `"red"` (same as `COMUNICACAO_FISCAL_FALHOU`) |
 | Silenciável | NO: add to `NOTIFICACAO_CATEGORIAS_NAO_SILENCIAVEIS` (and backend `silenciavel(false)`); update `notificacao-categoria.test.ts` expected array to `["PRAZO_VENCIDO", "COMUNICACAO_FISCAL_FALHOU", "EMAIL_FISCAL_FALHOU"]`. The preferences screen shows it with the existing non-silenceable treatment (no new copy). |
-| Recipients | same rule as `COMUNICACAO_FISCAL_FALHOU` (office users with `financeiro:manage`); one per failure episode (manual resend opens a new episode) |
-| `entidadeTipo` / `linkUrl` | `DOCUMENTO_FISCAL` / `/financeiro/documentos-fiscais/{documentoId}` |
+| Recipients | active office users with `financeiro:manage` ou `financeiro:edit` (mesma regra de `COMUNICACAO_FISCAL_FALHOU`); one per failure episode (manual resend opens a new episode) |
+| `entidadeTipo` / `linkUrl` | `documento_fiscal` (the code value already used by `COMUNICACAO_FISCAL_FALHOU`) / `/financeiro/documentos-fiscais/{documentoId}` |
 
 Backend copy (rendered as-is; no email address, no SMTP error text, no personal data):
 - `titulo`: "Falha no envio por email do documento {número}"
-- `mensagem`: "O envio do documento {número} ao cliente falhou após 5 tentativas. Abra o documento para ver a última falha; quem tem permissão pode reenviar o email."
+- `mensagem`: "O envio do email do documento {número} ao cliente falhou após {n} tentativa(s). Abra o documento para ver a última falha; quem tem permissão pode reenviar o email."
+- `{n}` = the row's `tentativas` at the moment it ended FALHOU (a permanent failure can end after 1 attempt; exhaustion ends after 5). "{n} tentativa(s)" is rendered count-aware: "1 tentativa" (singular) or "{n} tentativas" (plural) — never the literal "(s)" and never a hardcoded 5.
 
 ---
 
@@ -368,7 +369,7 @@ Long descriptions (badge `title` + `text-xs` line under "Estado"):
 | SEM_EMAIL | O cliente não tem email registado. Adicione um email na ficha do cliente para poder enviar o documento. |
 | PENDENTE | O email será enviado em segundo plano, com o PDF e o XML em anexo. |
 | ENVIADO | Email enviado ao cliente com o PDF e o XML em anexo. A receção pelo cliente não é confirmada. |
-| FALHOU | When `podeReenviarEmail(permissions) && entregaEmail.reenviavel`: "O envio falhou após 5 tentativas. Pode reenviar o email." Otherwise: "O envio falhou após 5 tentativas." (no promise of an action the user cannot see). The list column badge `title` uses the short variant. |
+| FALHOU | Base sentence, count-aware with n = `entregaEmail.tentativas`: "O envio do email falhou após {n} tentativa(s)." rendered as "O envio do email falhou após 1 tentativa." (n = 1, e.g. a permanent failure) or "O envio do email falhou após {n} tentativas." (n ≥ 2). When `podeReenviarEmail(permissions) && entregaEmail.reenviavel` append " Pode reenviar o email."; otherwise the base sentence alone (no promise of an action the user cannot see). The list column badge `title` uses the short variant; the list row carries no attempt count, so it reads "O envio do email falhou." (never a hardcoded "5 tentativas"). |
 
 Rules: "Enviado" is never paraphrased as "Entregue", "Recebido" or "Lido". The 136 rule still holds: no "Autorizado/Aprovado/Validado" anywhere, including PDF and email.
 
