@@ -18,6 +18,16 @@ import com.lexcv.repositories.DocumentoFiscalLinhaRepository;
 import com.lexcv.repositories.DocumentoFiscalRepository;
 import com.lexcv.repositories.DocumentoFiscalXmlRepository;
 import com.lexcv.models.DocumentoFiscalXml;
+import com.lexcv.dtos.EntregaEmailResumo;
+import com.lexcv.fiscal.email.EmailProperties;
+import com.lexcv.models.Cliente;
+import com.lexcv.models.ConfiguracaoFiscal;
+import com.lexcv.models.EntregaEmailFiscal;
+import com.lexcv.models.EstadoEntregaEmail;
+import com.lexcv.repositories.ClienteRepository;
+import com.lexcv.repositories.ConfiguracaoFiscalRepository;
+import com.lexcv.repositories.EntregaEmailFiscalRepository;
+import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -70,6 +80,9 @@ class DocumentoFiscalServiceTest {
     private ComunicacaoFiscalRepository comunicacaoRepo;
     private DocumentoFiscalLigacaoClienteRepository ligacaoRepo;
     private DocumentoFiscalXmlRepository xmlRepo;
+    private EntregaEmailFiscalRepository entregaRepo;
+    private ConfiguracaoFiscalRepository configRepo;
+    private ClienteRepository clienteRepo;
     private DocumentoFiscalService servico;
 
     @BeforeEach
@@ -79,7 +92,20 @@ class DocumentoFiscalServiceTest {
         comunicacaoRepo = mock(ComunicacaoFiscalRepository.class);
         ligacaoRepo = mock(DocumentoFiscalLigacaoClienteRepository.class);
         xmlRepo = mock(DocumentoFiscalXmlRepository.class);
-        servico = new DocumentoFiscalService(documentoRepo, linhaRepo, comunicacaoRepo, ligacaoRepo, xmlRepo);
+        entregaRepo = mock(EntregaEmailFiscalRepository.class);
+        configRepo = mock(ConfiguracaoFiscalRepository.class);
+        clienteRepo = mock(ClienteRepository.class);
+        servico = servico(true);
+    }
+
+    /** Phase 137: o mesmo serviço com o SMTP configurado ou não (registo construído diretamente). */
+    private DocumentoFiscalService servico(boolean smtp) {
+        EmailProperties.Smtp s = new EmailProperties.Smtp(smtp ? "smtp.example.cv" : "", 587, null, null,
+                smtp ? "faturacao@example.cv" : "", true, Duration.ofSeconds(10), Duration.ofSeconds(20));
+        EmailProperties email = new EmailProperties(s, new EmailProperties.Outbox(Duration.ofSeconds(30),
+                Duration.ofSeconds(40), 10, Duration.ofMinutes(2)));
+        return new DocumentoFiscalService(documentoRepo, linhaRepo, comunicacaoRepo, ligacaoRepo, xmlRepo,
+                entregaRepo, configRepo, clienteRepo, email);
     }
 
     private DocumentoFiscal doc(long numero, Integer pagamentoId) {
@@ -492,5 +518,157 @@ class DocumentoFiscalServiceTest {
     void naoLeOContextoDeSeguranca() throws IOException {
         String fonte = Files.readString(Path.of("src/main/java/com/lexcv/services/fiscal/DocumentoFiscalService.java"));
         assertFalse(fonte.contains("SecurityContextHolder"));
+    }
+
+    // ------------------------------------------------------------------ Phase 137: entrega por email
+
+    private EntregaEmailFiscal entrega(DocumentoFiscal d, EstadoEntregaEmail estado) {
+        return EntregaEmailFiscal.builder().id(UUID.randomUUID()).tenantId(tenant).documentoFiscalId(d.getId())
+                .estado(estado).destinatario("antigo@exemplo.cv").tentativas(2)
+                .ultimaTentativaEm(Instant.parse("2026-10-04T12:05:00Z"))
+                .proximaTentativaEm(Instant.parse("2026-10-04T12:20:00Z"))
+                .ultimoErro("O servidor de email não respondeu. Nova tentativa automática.")
+                .build();
+    }
+
+    private void cenario(DocumentoFiscal d, EstadoEntregaEmail estado, EstadoComunicacaoFiscal comunicacao,
+                         boolean envioAutomatico, String emailCliente) {
+        when(documentoRepo.findByIdAndTenantId(d.getId(), tenant)).thenReturn(Optional.of(d));
+        ComunicacaoFiscal c = ComunicacaoFiscal.builder().tenantId(tenant).documentoFiscalId(d.getId())
+                .ambiente(AmbienteFiscal.SIMULADO).estado(comunicacao).build();
+        when(comunicacaoRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId())).thenReturn(Optional.of(c));
+        if (estado != null) {
+            when(entregaRepo.findByTenantIdAndDocumentoFiscalId(tenant, d.getId()))
+                    .thenReturn(Optional.of(entrega(d, estado)));
+        }
+        ConfiguracaoFiscal cfg = ConfiguracaoFiscal.builder().tenantId(tenant).envioEmailAutomatico(envioAutomatico)
+                .build();
+        when(configRepo.findByTenantId(tenant)).thenReturn(Optional.of(cfg));
+        Cliente cliente = Cliente.builder().id(d.getClienteId()).tenantId(tenant).email(emailCliente).build();
+        when(clienteRepo.findById(d.getClienteId())).thenReturn(Optional.of(cliente));
+    }
+
+    @Test
+    void detalheFalhouComSmtpEEnvioLigadoEReenviavel() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.FALHOU, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo.cv");
+
+        EntregaEmailResumo e = servico.detalhe(tenant, d.getId()).entregaEmail();
+
+        assertNotNull(e);
+        assertEquals("FALHOU", e.estado());
+        assertEquals("O servidor de email não respondeu. Nova tentativa automática.", e.ultimoErro());
+        assertTrue(e.reenviavel());
+        assertEquals("ana@exemplo.cv", e.emailDestinatario());
+        assertEquals("antigo@exemplo.cv", e.destinatario());
+        assertEquals(2, e.tentativas());
+        assertEquals(Instant.parse("2026-10-04T12:05:00Z"), e.ultimaTentativaEm());
+    }
+
+    @Test
+    void detalheSemSmtpPendenteApareceNaoConfiguradoSemErroNemReenvio() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.PENDENTE, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo.cv");
+
+        EntregaEmailResumo e = servico(false).detalhe(tenant, d.getId()).entregaEmail();
+
+        assertEquals("NAO_CONFIGURADO", e.estado());
+        assertFalse(e.reenviavel());
+        assertNull(e.ultimoErro());
+        assertNull(e.destinatario());
+        assertNull(e.proximaTentativaEm());
+    }
+
+    @Test
+    void detalheSemEmailSoEReenviavelDepoisDeOClienteTerEmail() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.SEM_EMAIL, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, null);
+        EntregaEmailResumo antes = servico.detalhe(tenant, d.getId()).entregaEmail();
+        assertEquals("SEM_EMAIL", antes.estado());
+        assertNull(antes.emailDestinatario());
+        assertNull(antes.destinatario());
+        assertFalse(antes.reenviavel());
+
+        cenario(d, EstadoEntregaEmail.SEM_EMAIL, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, " ana@exemplo.cv ");
+        EntregaEmailResumo depois = servico.detalhe(tenant, d.getId()).entregaEmail();
+        assertEquals("ana@exemplo.cv", depois.emailDestinatario());
+        assertTrue(depois.reenviavel());
+    }
+
+    @Test
+    void detalheComEmailInvalidoDoClienteNaoOExpoeNemPermiteReenvio() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.FALHOU, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo\r\nBcc:x@y.cv");
+        EntregaEmailResumo e = servico.detalhe(tenant, d.getId()).entregaEmail();
+        assertNull(e.emailDestinatario());
+        assertFalse(e.reenviavel());
+    }
+
+    @Test
+    void detalheDesligadoNuncaEReenviavel() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.DESLIGADO, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo.cv");
+        EntregaEmailResumo e = servico.detalhe(tenant, d.getId()).entregaEmail();
+        assertEquals("DESLIGADO", e.estado());
+        assertFalse(e.reenviavel());
+        assertNull(e.ultimoErro());
+    }
+
+    @Test
+    void detalheSemLinhaDeEntregaTemEntregaNulaENaoLeClienteNemConfiguracao() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, null, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo.cv");
+        assertNull(servico.detalhe(tenant, d.getId()).entregaEmail());
+        verify(clienteRepo, never()).findById(any());
+        verify(configRepo, never()).findByTenantId(any());
+    }
+
+    @Test
+    void detalheIgnoraClienteDeOutroTenantComOMesmoId() {
+        DocumentoFiscal d = doc(1, 10);
+        cenario(d, EstadoEntregaEmail.FALHOU, EstadoComunicacaoFiscal.ACEITE_SIMULADO, true, "ana@exemplo.cv");
+        Cliente outro = Cliente.builder().id(d.getClienteId()).tenantId(UUID.randomUUID()).email("x@outro.cv").build();
+        when(clienteRepo.findById(d.getClienteId())).thenReturn(Optional.of(outro));
+
+        EntregaEmailResumo e = servico.detalhe(tenant, d.getId()).entregaEmail();
+
+        assertNull(e.emailDestinatario());
+        assertFalse(e.reenviavel());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listarCarregaOsEstadosDeEntregaNumaSoChamada() {
+        DocumentoFiscal d1 = doc(3, 30);
+        DocumentoFiscal d2 = doc(2, 20);
+        DocumentoFiscal d3 = doc(1, 10);
+        when(documentoRepo.buscar(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(d1, d2, d3)));
+        when(entregaRepo.findByTenantIdAndDocumentoFiscalIdIn(eq(tenant), any()))
+                .thenReturn(List.of(entrega(d1, EstadoEntregaEmail.ENVIADO), entrega(d2, EstadoEntregaEmail.PENDENTE)));
+
+        Page<DocumentoFiscalResumoResponse> r = servico.listar(tenant, null, null, null, null, null, 0, 10);
+
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(entregaRepo, times(1)).findByTenantIdAndDocumentoFiscalIdIn(eq(tenant), ids.capture());
+        assertEquals(Set.of(d1.getId(), d2.getId(), d3.getId()), Set.copyOf(ids.getValue()));
+        assertEquals("ENVIADO", r.getContent().get(0).estadoEntregaEmail());
+        assertEquals("PENDENTE", r.getContent().get(1).estadoEntregaEmail());
+        assertNull(r.getContent().get(2).estadoEntregaEmail());
+    }
+
+    @Test
+    void listarSemSmtpApresentaNaoConfiguradoMasMantemOHistorico() {
+        DocumentoFiscal d1 = doc(3, 30);
+        DocumentoFiscal d2 = doc(2, 20);
+        when(documentoRepo.buscar(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(d1, d2)));
+        when(entregaRepo.findByTenantIdAndDocumentoFiscalIdIn(eq(tenant), any()))
+                .thenReturn(List.of(entrega(d1, EstadoEntregaEmail.ENVIADO), entrega(d2, EstadoEntregaEmail.PENDENTE)));
+
+        Page<DocumentoFiscalResumoResponse> r = servico(false).listar(tenant, null, null, null, null, null, 0, 10);
+
+        assertEquals("ENVIADO", r.getContent().get(0).estadoEntregaEmail());
+        assertEquals("NAO_CONFIGURADO", r.getContent().get(1).estadoEntregaEmail());
     }
 }
