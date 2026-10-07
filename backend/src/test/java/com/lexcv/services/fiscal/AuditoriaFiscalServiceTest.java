@@ -91,7 +91,7 @@ class AuditoriaFiscalServiceTest {
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> m.getName().startsWith("registar"))
                 .toList();
-        assertEquals(9, registar.size(), "esperados 9 métodos registar*: " + registar);
+        assertEquals(10, registar.size(), "esperados 10 métodos registar*: " + registar);
         for (Method m : registar) {
             Transactional tx = m.getAnnotation(Transactional.class);
             assertNotNull(tx, m.getName() + " sem @Transactional");
@@ -373,6 +373,42 @@ class AuditoriaFiscalServiceTest {
     @Test
     void registarReenvioEmail_ehMandatory() throws Exception {
         Method m = AuditoriaFiscalService.class.getMethod("registarReenvioEmail",
+                UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
+        Transactional tx = m.getAnnotation(Transactional.class);
+        assertNotNull(tx);
+        assertEquals(Propagation.MANDATORY, tx.propagation());
+    }
+
+    // ------------------------------------------------------------------ Phase 137: descarga PDF/XML
+
+    @Test
+    void registarDescarga_gravaAutorNumeroEFormatoSemEndereco() throws Exception {
+        UUID documentoId = UUID.randomUUID();
+
+        service.registarDescarga(tenantId, autor, documentoId, "SIM-FR-2026/7", "PDF");
+
+        AuditLog log = unicoGravado();
+        assertEquals(tenantId, log.getTenantId());
+        assertNull(log.getProcessoId());
+        assertNull(log.getId());
+        assertEquals("documento_fiscal_descarregar", log.getAcao());
+        assertEquals("documento_fiscal_descarregar", AuditoriaFiscalService.ACAO_DESCARREGAR);
+        assertEquals("documento_fiscal", log.getEntidadeTipo());
+        assertEquals(documentoId.toString(), log.getEntidadeId());
+        assertEquals(autor.getUserId(), log.getAutorId());
+        assertFalse(log.getDetalhe().contains("@"), log.getDetalhe());
+        JsonNode d = detalhe(log);
+        java.util.Set<String> chaves = new java.util.HashSet<>();
+        d.fieldNames().forEachRemaining(chaves::add);
+        assertEquals(Set.of("autorNome", "numeroFormatado", "formato"), chaves);
+        assertEquals("Ana", d.get("autorNome").asText());
+        assertEquals("SIM-FR-2026/7", d.get("numeroFormatado").asText());
+        assertEquals("PDF", d.get("formato").asText());
+    }
+
+    @Test
+    void registarDescarga_ehMandatory() throws Exception {
+        Method m = AuditoriaFiscalService.class.getMethod("registarDescarga",
                 UUID.class, UserPrincipal.class, UUID.class, String.class, String.class);
         Transactional tx = m.getAnnotation(Transactional.class);
         assertNotNull(tx);
